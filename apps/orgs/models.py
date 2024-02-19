@@ -11,40 +11,95 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from invitations import signals
 from invitations.adapters import get_invitations_adapter
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+
+User = get_user_model()
+
 
 class Company(models.Model):
-    name = models.CharField(max_length=200)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='owned_companies', on_delete=models.CASCADE)
+    name = models.CharField(max_length=200,unique=True)
+    members = models.ManyToManyField(User, through='Membership',
+        through_fields=('company', 'user'),)
+    owner = models.ForeignKey(User, related_name='owned_companies', on_delete=models.CASCADE)
+    creator = models.ForeignKey(User, related_name='created_companies', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('name', 'owner')
+        # permissions = [
+        #     ("view_company", "Can view company"),
+        #     ("edit_company", "Can edit company"),
+        #     ("delete_company", "Can delete company"),
+        #     ("invite_to_company", "Can invite to company"),
+        #     ("remove_from_company", "Can remove from company"),
+        #     ("change_role", "Can change role"),
+        # ]
 
     def __str__(self):
         return self.name
-    
 
-class Membership(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    def get_absolute_url(self):
+        return reverse('orgs_company_detail', args=[str(self.id)])
+
+class CompanyOwnership(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    role = models.ForeignKey('Role', on_delete=models.CASCADE,null=True,blank=True)
-    date_joined = models.DateTimeField(auto_now_add=True)
-    invite_reason = models.CharField(max_length=64)
+    start_date = models.DateTimeField(auto_now_add=True)
+    end_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'company')
 
     def __str__(self):
-        return f"{self.user} in {self.company}"
+        return f"{self.user} owns {self.company} since {self.start_date}"
+
+    from django.utils import timezone
+
+# Transfer ownership of a company to a new user
+# def transfer_ownership(company, new_owner):
+#     # End the current ownership
+#     current_ownership = CompanyOwnership.objects.filter(company=company, end_date__isnull=True).first()
+#     if current_ownership:
+#         current_ownership.end_date = timezone.now()
+#         current_ownership.save()
+
+#     # Start a new ownership
+#     new_ownership = CompanyOwnership(user=new_owner, company=company)
+#     new_ownership.save()
+
+class Membership(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,related_name='memberships')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    role = models.ForeignKey('Role', on_delete=models.CASCADE,null=True,blank=True,related_name = 'memberships')
+    date_joined = models.DateTimeField(auto_now_add=True)
+    invite_reason = models.CharField(max_length=64)
+
+    class Meta:
+        unique_together = ('user', 'company')
+        # permissions = [
+        #     ("invite_to_company", "Can invite to company"),
+        #     ("remove_from_company", "Can remove from company"),
+        #     ("change_role", "Can change role"),
+
+        # ]
+
+    def __str__(self):
+        return f"{self.user} as {self.role} in {self.company} since {self.date_joined}"
+
 
 class Role(models.Model):
     name = models.CharField(max_length=100)
+    permissions = models.ManyToManyField(Permission)
 
     def __str__(self):
         return self.name
 
 
+
 class CompanyInvitation(AbstractBaseInvitation):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="invitations")
     email = models.EmailField(
         unique=True,
         verbose_name=_("e-mail address"),
@@ -96,4 +151,4 @@ class CompanyInvitation(AbstractBaseInvitation):
         )
 
     def __str__(self):
-        return f"Invite: {self.email}"
+        return f"Invited: {self.email} Accepted: {self.accepted} "

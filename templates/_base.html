@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
   <meta charset="utf-8">
@@ -33,6 +33,9 @@
         <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
           <li><a href="{% url 'home' %}" class="nav-link px-2 link-secondary">Home</a></li>
           <li><a href="{% url 'about' %}" class="nav-link px-2 link-dark">About</a></li>
+          {% if user.is_authenticated %}
+          <li><a href="{% url 'profile' %}" class="nav-link px-2 link-dark">Profile</a></li>
+          {% endif %}
         </ul>
 
         <div class="dropdown text-end">

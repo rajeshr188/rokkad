@@ -11,3 +11,6 @@ tenants:
         can choose to clear workspace toreturn to public
 logging:
 testing:
+user type:
+    client:
+    customer:

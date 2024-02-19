@@ -1,0 +1,36 @@
+{% extends 'account/profile.html' %}
+{% load crispy_forms_tags %}
+{% block profile-content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-6">
+            <h2 class="mb-3">Create a Company</h2>
+            <div class="card">
+                <div class="card-body">
+                    <form action="{% url 'orgs_company_create' %}" method="POST">
+                        {% csrf_token %}
+                        <!-- Company form fields go here -->
+                        {{form|crispy}}
+                        <button class="btn btn-success mt-3" type="submit">Create</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h2 class="mb-3">List of Companies</h2>
+            <div class="list-group overflow-auto" style="max-height: 250px;">
+                <!-- Loop through the list of companies and display them -->
+                {% for company in companies %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <a href="{%url 'orgs_company_detail' company.id%}">{{ company.name }}</a>
+                    <span class="badge bg-primary rounded-pill">{{ company.num_members }}</span>
+                    <a href="{% url 'orgs_company_delete' company.id %}" class="text-danger">
+                        <i class="bi bi-trash-fill"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

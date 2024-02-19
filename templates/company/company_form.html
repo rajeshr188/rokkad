@@ -1,0 +1,12 @@
+{% extends 'account/profile.html' %}
+{% load crispy_forms_tags %}
+
+{% block profile-content %}
+  <h1>Create a New Company</h1>
+
+  <form method="POST">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit">Submit</button>
+  </form>
+{% endblock %}

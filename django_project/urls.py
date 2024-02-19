@@ -8,6 +8,7 @@ urlpatterns = [
     path("", include("pages.urls")),
     path("invitations/", include("invitations.urls")),
     path("orgs/", include("apps.orgs.urls")),
+    path("profile/", include("accounts.urls")),
 ]
 
 if settings.DEBUG:

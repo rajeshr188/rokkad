@@ -75,7 +75,6 @@ class CompanyInvitationForm(CustomCleanEmailMixin, forms.ModelForm):
         instance.send_invitation(self.request)
         return instance
 
-
 class InvitationAdminAddForm(forms.ModelForm, CleanEmailMixin):
     email = forms.EmailField(
         label=_("E-mail"),
@@ -99,8 +98,12 @@ class InvitationAdminAddForm(forms.ModelForm, CleanEmailMixin):
         model = Invitation
         fields = ("email", "inviter","company")
 
-
 class InvitationAdminChangeForm(forms.ModelForm):
     class Meta:
         model = Invitation
         fields = "__all__"
+
+class CompanyForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = ('name',)

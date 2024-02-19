@@ -4,7 +4,7 @@ from django.contrib import admin
 # admin.py
 from django import forms
 from invitations.admin import InvitationAdmin
-from .models import CompanyInvitation,Company,Membership
+from .models import CompanyInvitation,Company,Membership,Role
 
 admin.site.register(Membership)
 
@@ -21,3 +21,5 @@ class CompanyAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Company, CompanyAdmin)
+
+admin.site.register(Role)

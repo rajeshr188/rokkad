@@ -1,0 +1,58 @@
+{% extends 'account/profile.html' %}
+
+{% block profile-content %}
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">Details</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-tab-pane" type="button" role="tab" aria-controls="profile-tab-pane" aria-selected="false">Members</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">Invitations</button>
+    </li>
+  
+  </ul>
+  <div class="tab-content" id="myTabContent">
+    <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+        <div class="card">
+            
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ company.name }}</p>
+                <p><strong>Creator:</strong> {{ company.creator }}</p>
+                <p><strong>Owner:</strong> {{ company.owner }}</p>
+                <p><strong>Created At:</strong> {{ company.created_at }}</p>
+                <p><strong>Updated At:</strong> {{ company.updated_at }}</p>
+                <a href="{% url 'orgs_company_update' company.id%}">Edit</a>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
+        <div class="card">
+            
+            <div class="card-body">
+                <a href="{% url 'invite_to_company'%}">Invite</a>
+                <ul class="list-group list-group-flush">
+                    {% for member in company.membership_set.all %}
+                    <li class="list-group-item">{{member}} <a href="">Edit</a><a href="">Delete</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+        <div class="card">
+            <!-- if owned then send invites -->
+            
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for invitation in company.invitations.all %}
+                    <li class="list-group-item">{{invitation}} <a href="">Edit</a><a href="">Delete</a></li>
+                    {% endfor %}    
+                </ul>   
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="disabled-tab-pane" role="tabpanel" aria-labelledby="disabled-tab" tabindex="0">...</div>
+  </div>
+{% endblock %}
