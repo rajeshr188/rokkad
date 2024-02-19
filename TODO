@@ -1,0 +1,13 @@
+permissions:
+subscriptions:
+tenants:
+    public:
+        to create companies,
+        manage memberships,
+        send invites,
+        change wotkspace
+    tenant:
+        work with tenant apps
+        can choose to clear workspace toreturn to public
+logging:
+testing:
