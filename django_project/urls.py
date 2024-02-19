@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include
+from django.conf.urls import i18n
 
 urlpatterns = [
+    path('i18n/', include(i18n)),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("", include("pages.urls")),

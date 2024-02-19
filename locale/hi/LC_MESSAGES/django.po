@@ -1,0 +1,68 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-02-20 01:35+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+#: .\apps\orgs\forms.py:29
+msgid "This e-mail address has already been invited."
+msgstr ""
+
+#: .\apps\orgs\forms.py:31
+msgid "This e-mail address has already accepted an invite."
+msgstr ""
+
+#: .\apps\orgs\forms.py:47 .\apps\orgs\forms.py:80
+msgid "E-mail"
+msgstr ""
+
+#: .\apps\orgs\models.py:105
+msgid "e-mail address"
+msgstr ""
+
+#: .\apps\orgs\models.py:108
+msgid "created"
+msgstr ""
+
+#: .\templates\_base.html:35
+msgid "Rokkad"
+msgstr "रॉककड "
+
+#: .\templates\_base.html:52
+msgid "Change"
+msgstr ""
+
+#: .\templates\account\email\password_reset_key_message.txt:2
+#, python-format
+msgid ""
+"Hello from %(site_name)s!\n"
+"\n"
+"We've received a request to reset your password. If you didn't make this "
+"request, you can safely ignore this email. Otherwise, click the button below "
+"to reset your password."
+msgstr ""
+
+#: .\templates\account\email\password_reset_key_message.txt:8
+#, python-format
+msgid "In case you forgot, your username is %(username)s."
+msgstr ""
+
+#: .\templates\account\email\password_reset_key_message.txt:10
+#, python-format
+msgid ""
+"Thank you for using %(site_name)s!\n"
+"%(site_domain)s"
+msgstr ""
