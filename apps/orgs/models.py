@@ -13,11 +13,12 @@ from invitations import signals
 from invitations.adapters import get_invitations_adapter
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django_tenants.models import TenantMixin, DomainMixin
 
 User = get_user_model()
 
 
-class Company(models.Model):
+class Company(TenantMixin):
     name = models.CharField(max_length=200,unique=True)
     members = models.ManyToManyField(User, through='Membership',
         through_fields=('company', 'user'),)
@@ -25,6 +26,9 @@ class Company(models.Model):
     creator = models.ForeignKey(User, related_name='created_companies', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    auto_create_schema = True
+    auto_drop_schema = True
 
     class Meta:
         unique_together = ('name', 'owner')
@@ -42,6 +46,9 @@ class Company(models.Model):
 
     def get_absolute_url(self):
         return reverse('orgs_company_detail', args=[str(self.id)])
+
+class Domain(DomainMixin):
+    pass
 
 class CompanyOwnership(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
