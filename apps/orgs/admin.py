@@ -5,8 +5,7 @@ from django.contrib import admin
 from django import forms
 from invitations.admin import InvitationAdmin
 from .models import CompanyInvitation,Company,Membership,Role
-
-admin.site.register(Membership)
+from django_tenants.admin import TenantAdminMixin
 
 class CompanyAdminForm(forms.ModelForm):
     class Meta:
@@ -14,12 +13,12 @@ class CompanyAdminForm(forms.ModelForm):
         fields = ['name', 'owner']  # Specify the fields you want to include
 
 
-class CompanyAdmin(admin.ModelAdmin):
+@admin.register(Company)
+class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
     form = CompanyAdminForm
-    list_display = ('name', 'owner')
+    list_display = ('name','owner')
     search_fields = ['name']
 
 
-admin.site.register(Company, CompanyAdmin)
-
+admin.site.register(Membership)
 admin.site.register(Role)

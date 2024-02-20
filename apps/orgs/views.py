@@ -2,11 +2,11 @@ from django.shortcuts import render,redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from invitations.views import AcceptInvite
-from .models import Membership,Role,Company,CompanyInvitation
+from .models import Membership,Role,Company,CompanyInvitation,Domain
 from .forms import CompanyInvitationForm,CompanyForm
 from .decorators import role_required,company_member_required
 from django.db.models import Count
-
+from django_tenants.utils import remove_www
 #
 # Create your views here.
 
@@ -52,9 +52,13 @@ def company_create(request):
         form = CompanyForm(request.POST)
         if form.is_valid():
             company = form.save(commit=False)
+            company.schema_name = company.name.lower().replace(' ', '_')
             company.creator = request.user
             company.owner = request.user
             company.save()
+            domain = remove_www(request.get_host().split(":")[0]).lower()
+            company_domain = f"{company.schema_name}.{domain}"
+            Domain.objects.create(tenant=company, domain=company_domain, is_primary=True)
             Membership.objects.create(user=request.user, company=company, role=Role.objects.get(name='Owner'))
             return redirect('orgs_company_list')
     else:

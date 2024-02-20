@@ -24,10 +24,12 @@ DEBUG = env('DEBUG')
 SECRET_KEY = env('SECRET_KEY')
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1","*"]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
-INSTALLED_APPS = [
+SHARED_APPS = [
+    "django_tenants",  # mandatory
+    "apps.orgs",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -46,11 +48,27 @@ INSTALLED_APPS = [
     "accounts",
     "pages",
     "invitations",
-    "apps.orgs",
+    
 ]
+
+TENANT_APPS = [
+    'apps.contacts',
+    'apps.dashboard',
+]
+
+INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
+
+TENANT_MODEL = "orgs.Company" # app.Model
+
+TENANT_DOMAIN_MODEL = "orgs.Domain"  # app.Model
+
+# for localhost search for workaround hint:edit hosts file
+# SESSION_COOKIE_DOMAIN = '.rokkad.com'
+# CSRF_COOKIE_DOMAIN = '.rokkad.com'
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
+    "django_tenants.middleware.main.TenantMainMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # WhiteNoise
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -66,6 +84,8 @@ MIDDLEWARE = [
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
+# ROOT_URLCONF = "apps.dashboard.urls"
+# PUBLIC_SCHEMA_URLCONF = "django_project.urls"
 ROOT_URLCONF = "django_project.urls"
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
@@ -89,24 +109,27 @@ TEMPLATES = [
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
-# For Docker/PostgreSQL usage uncomment this and comment the DATABASES config above
 # DATABASES = {
 #     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": "postgres",
-#         "USER": "postgres",
-#         "PASSWORD": "postgres",
-#         "HOST": "db",  # set in docker-compose.yml
-#         "PORT": 5432,  # default postgres port
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
 #     }
 # }
+
+# For Docker/PostgreSQL usage uncomment this and comment the DATABASES config above
+DATABASES = {
+    "default": {
+        "ENGINE": "django_tenants.postgresql_backend",
+        "NAME": "tenanttest",
+        "USER": "postgres",
+        "PASSWORD": "kanchan",
+        "HOST": "localhost",  # set in docker-compose.yml
+        "PORT": 5432,  # default postgres port
+    }
+}
+DATABASE_ROUTERS = (
+    'django_tenants.routers.TenantSyncRouter',
+)
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
