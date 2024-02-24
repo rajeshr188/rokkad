@@ -19,31 +19,31 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 #: .\apps\orgs\forms.py:29
 msgid "This e-mail address has already been invited."
-msgstr ""
+msgstr "यह ई-मेल पता पहले ही आमंत्रित किया जा चुका है."
 
 #: .\apps\orgs\forms.py:31
 msgid "This e-mail address has already accepted an invite."
-msgstr ""
+msgstr "यह ई-मेल पता पहले ही एक आमंत्रण स्वीकार कर चुका है"
 
 #: .\apps\orgs\forms.py:47 .\apps\orgs\forms.py:80
 msgid "E-mail"
-msgstr ""
+msgstr "ई-मेल"
 
 #: .\apps\orgs\models.py:105
 msgid "e-mail address"
-msgstr ""
+msgstr "ई-मेल पता"
 
 #: .\apps\orgs\models.py:108
 msgid "created"
-msgstr ""
+msgstr "बनाया था"
 
 #: .\templates\_base.html:35
 msgid "Rokkad"
-msgstr "रॉककड "
+msgstr "रोकड़ "
 
 #: .\templates\_base.html:52
 msgid "Change"
-msgstr ""
+msgstr "बदलें"
 
 #: .\templates\account\email\password_reset_key_message.txt:2
 #, python-format
@@ -53,12 +53,14 @@ msgid ""
 "We've received a request to reset your password. If you didn't make this "
 "request, you can safely ignore this email. Otherwise, click the button below "
 "to reset your password."
-msgstr ""
+msgstr "हमें आपका पासवर्ड रीसेट करने का अनुरोध प्राप्त हुआ है। यदि आपने इसे नहीं बनाया है"
+"अनुरोध, आप इस ईमेल को सुरक्षित रूप से अनदेखा कर सकते हैं। अन्यथा, नीचे दिए गए बटन पर क्लिक करें"
+"अपना पासवर्ड रीसेट करने के लिए"
 
 #: .\templates\account\email\password_reset_key_message.txt:8
 #, python-format
 msgid "In case you forgot, your username is %(username)s."
-msgstr ""
+msgstr "यदि आप भूल गए हैं, तो आपका उपयोगकर्ता नाम %(username)s है।"
 
 #: .\templates\account\email\password_reset_key_message.txt:10
 #, python-format
@@ -66,3 +68,75 @@ msgid ""
 "Thank you for using %(site_name)s!\n"
 "%(site_domain)s"
 msgstr ""
+
+msgid "About"
+msgstr "के बारे में"
+
+msgid "Profile"
+msgstr "प्रोफ़ाइल"
+
+msgid "Settings"
+msgstr "सेटिंग्स "
+
+msgid "Log out"
+msgstr "लॉग आउट"
+
+msgid "Log in"
+msgstr "लॉग इन"
+
+msgid "Sign up"
+msgstr "साइन अप"
+
+msgid "Sign out"
+msgstr "साइन आउट"
+
+msgid "Forgot password?"
+msgstr "पासवर्ड भूल गए?"
+
+msgid "Membership"
+msgstr "सदस्यता"
+
+msgid "Organizations"
+msgstr "संगठन"
+
+msgid "Create"
+msgstr "बनाएँ"
+
+msgid "Join"
+msgstr "शामिल हों"
+
+msgid "Search"
+msgstr "खोजें"
+
+msgid "invite"
+msgstr "आमंत्रित करें"
+
+msgid "Members"
+msgstr "सदस्य"
+
+msgid "Subscription"
+msgstr "सदस्यता"
+
+msgid "Billing"
+msgstr "बिलिंग"
+
+msgid "Invoices"
+msgstr "चालान"
+
+msgid "Payment methods"
+msgstr "भुगतान के तरीके"
+
+msgid "Payment"
+msgstr "भुगतान"
+
+msgid "Plans"
+msgstr "योजनाएँ"
+
+msgid "Workspace"
+msgstr "कार्यस्थल"
+
+msgid "Company"
+msgstr "कंपनी"
+
+msgid "Invitations"
+msgstr "निमंत्रण"

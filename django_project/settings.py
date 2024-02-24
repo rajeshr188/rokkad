@@ -53,7 +53,6 @@ SHARED_APPS = [
 
 TENANT_APPS = [
     'apps.contacts',
-    'apps.dashboard',
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
@@ -68,7 +67,6 @@ TENANT_DOMAIN_MODEL = "orgs.Domain"  # app.Model
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
-    "django_tenants.middleware.main.TenantMainMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # WhiteNoise
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -77,10 +75,10 @@ MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",  # Django Debug Toolbar
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.orgs.middleware.WorkspaceMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "allauth.account.middleware.AccountMiddleware",  # django-allauth
-    
+    "allauth.account.middleware.AccountMiddleware",  # django-allauth  
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
