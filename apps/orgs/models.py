@@ -14,16 +14,17 @@ from invitations.adapters import get_invitations_adapter
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django_tenants.models import TenantMixin, DomainMixin
+from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
 
 
 class Company(TenantMixin):
-    name = models.CharField(max_length=200,unique=True)
+    name = models.CharField(_("Name"),max_length=200,unique=True)
     members = models.ManyToManyField(User, through='Membership',
         through_fields=('company', 'user'),)
-    owner = models.ForeignKey(User, related_name='owned_companies', on_delete=models.CASCADE)
-    creator = models.ForeignKey(User, related_name='created_companies', on_delete=models.CASCADE)
+    owner = models.ForeignKey(verbose_name = _("Owner"), to = User, related_name='owned_companies', on_delete=models.CASCADE)
+    creator = models.ForeignKey(verbose_name = _("Creator"),to = User, related_name='created_companies', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -32,6 +33,8 @@ class Company(TenantMixin):
 
     class Meta:
         unique_together = ('name', 'owner')
+        verbose_name = _("Company")
+        verbose_name_plural = _("Companies")
         # permissions = [
         #     ("view_company", "Can view company"),
         #     ("edit_company", "Can edit company"),
@@ -51,8 +54,8 @@ class Domain(DomainMixin):
     pass
 
 class CompanyOwnership(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    user = models.ForeignKey(verbose_name = _("User"),to = User, on_delete=models.CASCADE)
+    company = models.ForeignKey(verbose_name = _("Company"), to =Company, on_delete=models.CASCADE)
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(null=True, blank=True)
 
@@ -97,12 +100,15 @@ class Membership(models.Model):
 
 
 class Role(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(_("name"),max_length=100)
     permissions = models.ManyToManyField(Permission)
+
+    class Meta:
+        verbose_name = _("role")
+        verbose_name_plural = _("roles")
 
     def __str__(self):
         return self.name
-
 
 
 class CompanyInvitation(AbstractBaseInvitation):

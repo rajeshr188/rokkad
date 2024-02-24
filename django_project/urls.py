@@ -11,6 +11,7 @@ urlpatterns = [
     path("invitations/", include("invitations.urls")),
     path("orgs/", include("apps.orgs.urls")),
     path("profile/", include("accounts.urls")),
+    path("contacts/", include("apps.contacts.urls")),
 ]
 
 if settings.DEBUG:
