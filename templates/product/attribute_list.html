@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+{% block content %}
+<p>
+    <a class="btn btn-default" href="{% url 'product_attribute_list' %}">Attribute Listing</a>
+    <a class="btn btn-primary" href="{% url 'product_attribute_create' %}">Create new Attribute</a>
+</p>
+<table class="table table-sm table-striped">
+    <tr>
+        <td>ID</td>
+        <td>Link</td>
+        <td>slug</td>
+        <td>name</td>
+    </tr>
+    {% for object in object_list %}
+    <tr>
+        <td>{{object.pk}}</td>
+        <td><a href="{{object.get_absolute_url}}">{{object}}</a></td>
+        <td>{{ object.slug }}</td>
+        <td>{{ object.name }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -1,5 +1,6 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
+
 
 class Plan(models.Model):
     name = models.CharField(max_length=255)
@@ -7,14 +8,19 @@ class Plan(models.Model):
     description = models.TextField()
 
     class BillingCycleChoices(models.TextChoices):
-        MONTHLY = 'monthly', 'Monthly'
-        YEARLY = 'yearly', 'Yearly'
+        MONTHLY = "monthly", "Monthly"
+        YEARLY = "yearly", "Yearly"
 
-    billing_cycle = models.CharField(max_length=10, choices=BillingCycleChoices.choices,default=BillingCycleChoices.MONTHLY)
+    billing_cycle = models.CharField(
+        max_length=10,
+        choices=BillingCycleChoices.choices,
+        default=BillingCycleChoices.MONTHLY,
+    )
     # Add other fields as needed, such as the features that the plan includes'
 
     def __str__(self):
         return self.name
+
 
 class Subscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -22,7 +28,7 @@ class Subscription(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     is_active = models.BooleanField(default=True)
-    
+
     def __str__(self):
         return f"{self.customer}'s {self.plan} Subscription"
 
@@ -37,6 +43,7 @@ class Subscription(models.Model):
 
     # Add other fields as needed, such as the status of the subscriptionfrom django.db import models
 
+
 # Create your models here.
 class Invoice(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
@@ -48,6 +55,7 @@ class Invoice(models.Model):
     def __str__(self):
         return f"Invoice for {self.subscription.user.username}: {self.amount}"
 
+
 class Payment(models.Model):
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE)
     date = models.DateField()
@@ -56,4 +64,3 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment of {self.amount} for {self.invoice.subscription.user.username}"
-

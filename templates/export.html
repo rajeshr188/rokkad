@@ -1,0 +1,18 @@
+{% extends '_base.html'%}
+{% load crispy_forms_tags %}
+{% block title %}Export{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Export</h1>
+                <p>Export your data to a CSV,Excel file.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <button type="submit" class="btn btn-primary">Export</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

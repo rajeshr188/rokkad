@@ -1,16 +1,21 @@
-permissions:
 subscriptions:
-tenants:
-    public:
-        to create companies,
-        manage memberships,
-        send invites,
-        change wotkspace
-    tenant:
-        work with tenant apps
-        can choose to clear workspace toreturn to public
 logging:
 testing:
-user type:
-    client:
-    customer:
+newapps:
+    savings_scheme:
+        - create savings scheme
+        - create savings scheme product
+        - create savings scheme variant
+        - create savings scheme product variant
+
+    loyality program:
+
+move postgres to managed gcloud postgres
+add dea(only hurdle is psycopg composite register and adapt for version3),sales,purchase so currently use psycopg2 with django5
+archived views of dea on/as dashboard
+on import page upon selection of model to import show info of fields required in the import file for the model via htmx
+
+manage membership
+protect tenant apps with roles and permission
+add wagtail
+django-waffle

@@ -1,0 +1,33 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="mb-3 "><a class="btn btn-default" href="{% url 'product_producttype_list' %}">ProductType Listing</a>
+            </h1>
+    
+            <p class="mb-3 ">
+                <a class="btn btn-primary" href="{% url 'product_producttype_create' %}">Create new ProductType</a>
+            </p>
+            <table class="table table-sm table-striped table-bordered">
+                <tr>
+    
+                    <td>Name</td>
+                    <td>has_variants</td>
+                    <td>Actions</td>
+    
+                </tr>
+                {% for object in object_list %}
+                <tr>
+    
+                    <td><a href="{{object.get_absolute_url}}">{{object.name}}</a></td>
+                    <td>{{ object.has_variants }}</td>
+                    <td><a class="btn btn-danger" href="{% url 'product_producttype_delete' object.id%}">Delete</a></td>
+    
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

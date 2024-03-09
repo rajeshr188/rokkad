@@ -1,15 +1,15 @@
 {% extends 'account/profile.html' %}
-
+{% load i18n %}
 {% block profile-content %}
 <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">Details</button>
+      <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">{%trans "Details"%}</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-tab-pane" type="button" role="tab" aria-controls="profile-tab-pane" aria-selected="false">Members</button>
+      <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-tab-pane" type="button" role="tab" aria-controls="profile-tab-pane" aria-selected="false">{%trans "Members"%}</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">Invitations</button>
+      <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">{%trans "Invitations"%}</button>
     </li>
   
   </ul>
@@ -18,12 +18,12 @@
         <div class="card">
             
             <div class="card-body">
-                <p><strong>Name:</strong> {{ company.name }}</p>
+                <p><strong>Company Name:</strong> {{ company.name }}</p>
                 <p><strong>Creator:</strong> {{ company.creator }}</p>
                 <p><strong>Owner:</strong> {{ company.owner }}</p>
                 <p><strong>Created At:</strong> {{ company.created_at }}</p>
                 <p><strong>Updated At:</strong> {{ company.updated_at }}</p>
-                <a href="{% url 'orgs_company_update' company.id%}">Edit</a>
+                <a class="btn btn-warning" href="{% url 'orgs_company_update' company.id%}">Edit</a>
             </div>
         </div>
     </div>
@@ -31,12 +31,29 @@
         <div class="card">
             
             <div class="card-body">
-                <a href="{% url 'invite_to_company'%}">Invite</a>
-                <ul class="list-group list-group-flush">
-                    {% for member in company.membership_set.all %}
-                    <li class="list-group-item">{{member}} <a href="">Edit</a><a href="">Delete</a></li>
+                <a class="btn btn-success" href="{% url 'invite_to_company'%}">Invite</a>
+                <table class="table table-bordered table-sm">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Role</th>
+                            <th>Company</th>
+                            <th>Date Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in company.memberships.all %}
+                    <tr>
+                        <td>{{member.user}}</td>
+                        <td>{{member.role}}</td>
+                        <td>{{member.company}}</td>
+                        <td>{{member.date_joined}}</td>
+                        <td><a href="">Edit</a><a href="">Delete</a></td>
+                    </tr>
                     {% endfor %}
-                </ul>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -45,11 +62,32 @@
             <!-- if owned then send invites -->
             
             <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    {% for invitation in company.invitations.all %}
-                    <li class="list-group-item">{{invitation}} <a href="">Edit</a><a href="">Delete</a></li>
-                    {% endfor %}    
-                </ul>   
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Invited</th>
+                            <th>Invited By</th>
+                            <th>Company</th>
+                            <th>Role</th>
+                            <th>Invited At</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invitation in company.invitations.all %}
+                        <tr>
+                            <td>{{invitation.email}}</td>
+                            <td>{{invitation.inviter}}</td>
+                            <td>{{invitation.company}}</td>
+                            <td>{{invitation.role}}</td>
+                            <td>{{invitation.created}}</td>
+                            <td>{{invitation.accepted}}</td>
+                            <td><a href="">Edit</a><a href="">Delete</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

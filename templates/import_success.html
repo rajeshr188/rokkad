@@ -1,0 +1,41 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<h1>Import Successful</h1>
+<table>
+    <tbody>
+        <tr>
+            <th>Rows Imported</th>
+            <td>{{ rows_imported|length }}</td>
+        </tr>
+        <tr>
+            <th>Rows Skipped</th>
+            <td>{{ rows_skipped|length }}</td>
+        </tr>
+    </tbody>
+</table>
+<p>Data has been successfully imported.</p>
+{% if rows_skipped %}
+    <h2>Skipped Rows</h2>
+    <ul>
+    {% for row in rows_skipped %}
+        <li>{{ row.error }}</li>
+    {% endfor %}
+    </ul>
+{% endif %}
+{% if rows_imported %}
+    <h2>Imported Rows</h2>
+    <ul>
+        {% for row in rows_imported %}
+            <li>
+                <strong>Row number:</strong> {{ row.number }}<br>
+                <strong>Import type:</strong> {{ row.import_type }}<br>
+                <strong>Diff:</strong> {{ row.diff|safe }}<br>
+            </li>
+        {% endfor %}
+        </ul>
+{% endif %}
+
+
+
+{% endblock %}
