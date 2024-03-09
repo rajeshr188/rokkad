@@ -1,0 +1,15 @@
+{% load crispy_forms_tags %}
+{{form.media}}
+<form hx-post="{{ request.path }}" class="modal-content">
+    {% csrf_token %}
+    <div class="modal-header">
+      <h5 class="modal-title">Add  for {{customer.name}}</h5>
+    </div>
+    <div class="modal-body">
+      {{form|crispy}}      
+    </div>
+    <div class="modal-footer">
+      <button type="button" hx-get="{{current_url}}" hx-target="#content" hx-swap="innerHTML"data-bs-dismiss="modal" class="btn btn-danger">Cancel</button>
+      <button type="submit" class="btn btn-success">Save</button>
+    </div>
+  </form>

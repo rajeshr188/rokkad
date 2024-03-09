@@ -1,0 +1,50 @@
+{%extends "_base.html"%}
+{%load static%}
+{%block content%}
+<form class="row row-cols-lg-auto g-3 align-items-center" method="get">
+  <div class="col-12">
+    <label class="visually-hidden" for="inlineFormInputGroupUsername">Years Back</label>
+    <div class="input-group">
+      <div class="input-group-text"></div>
+      <input type="text" name="qyr" class="form-control" id="inlineFormInputGroupUsername" placeholder="Years Back">
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="inlineFormCheck">
+      <label class="form-check-label" for="inlineFormCheck">
+        is_worth
+      </label>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+</form>
+
+<div class = "card mb-3">
+  <ul class="list-group">
+    <li class="list-group-item">Total customers with outdated Loans : {{data.cust.count}}</li>
+    <li class="list-group-item">Total outdated Loans : {{data.loancount}}</li>
+    <li class="list-group-item">Total Loan Amount : {{data.total}}</li>
+    <li class="list-group-item">Total Interest Due: {{data.interest}}</li>
+  <ul>
+  </div>
+
+{% regroup data.loans by customer.name as customer_list %}
+
+<ul>
+{% for customer in customer_list %}
+    <li>{{ customer.grouper }}
+    <ul>
+        {% for loan in customer.list %}
+          <li>{{ loan }}</li>
+        {% endfor %}
+    </ul>
+    </li>
+{% endfor %}
+</ul>
+
+{%endblock%}

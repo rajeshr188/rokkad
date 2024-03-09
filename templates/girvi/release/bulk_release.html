@@ -1,0 +1,38 @@
+{% extends "_base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+{% block content %}
+{{form.media}}
+<div class="card  mt-4">
+  <div class="card-header">
+    <h3 class="card-title">Bulk Release</h3>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="row g-3 mb-3">
+          <div class="col-md-12 ">
+            <label for="{{ field.id_for_label }}">{{ form.date.label }}</label>
+            {{ form.date.errors }}
+            {{ form.date|add_class:'form-control' }}
+          </div>
+          <div class="col-md-12" 
+                hx-post="{% url 'girvi:bulk_release_details' %}" 
+                hx-swap="innerHTML" hx-trigger="load,change" hx-target="#details">
+            <label for="{{ field.id_for_label }}">{{ form.loans.label }}</label>
+            {{ form.loans.errors }}
+            {% render_field form.loans class="form-control"%} 
+          </div>
+      </div>
+  
+      <button class="btn btn-primary" type="submit">Release all</button>
+  
+    </form>
+    <div id="details" class="col-auto mt-3">
+    </div>
+  </div>
+</div>
+ 
+
+{% endblock %}

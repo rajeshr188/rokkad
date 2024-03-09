@@ -1,0 +1,45 @@
+{% extends "_base.html" %}
+{% block content %}
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page" 
+      hx-get="{% url 'product_category_list' %}"
+      hx-target="#product-content"
+      hx-swap = "innerHTML"
+      hx-push-url="true">Category</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" hx-get="{% url 'product_producttype_list' %}"
+      hx-target="#product-content"
+      hx-swap = "innerHTML"
+      hx-push-url="true"> Product Type</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" hx-get="{% url 'product_product_list' %}"
+      hx-target="#product-content"
+      hx-swap = "innerHTML"
+      hx-push-url="true">Product</a>  
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" hx-get="{% url 'product_productvariant_list' %}"
+      hx-target="#product-content"
+      hx-swap = "innerHTML"
+      hx-push-url="true">Variant</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" hx-get="{% url 'product_stock_list' %}"
+      hx-target="#product-content"
+      hx-swap = "innerHTML"
+      hx-push-url="true">Stock</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" hx-get="{% url 'product_stockstatement_list' %}"
+      hx-target="#product-content"
+      hx-swap = "innerHTML"
+      hx-push-url="true">Stock Statement</a>  
+  </li>
+
+</ul>
+<div id="product-content"></div>
+
+{% endblock %}

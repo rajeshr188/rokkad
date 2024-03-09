@@ -1,5 +1,6 @@
-import environ
 import os
+
+import environ
 
 env = environ.Env(
     # set casting, default value
@@ -11,20 +12,22 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 LOCALE_PATHS = [
-    os.path.join(BASE_DIR, 'locale'),
+    os.path.join(BASE_DIR, "locale"),
 ]
 # Take environment variables from .env file
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # False if not in os.environ because of casting above
-DEBUG = env('DEBUG')
+DEBUG = env("DEBUG")
 
 # Raises Django's ImproperlyConfigured
 # exception if SECRET_KEY not in os.environ
-SECRET_KEY = env('SECRET_KEY')
+# https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-SECRET_KEY
+SECRET_KEY = env("SECRET_KEY")
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1","*"]
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")
+
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 SHARED_APPS = [
@@ -38,35 +41,58 @@ SHARED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "django.contrib.postgres",
     # Third-party
+    "django_select2",
     "allauth",
     "allauth.account",
+    "allauth.socialaccount",  # new
+    "allauth.socialaccount.providers.google",  # new
     "crispy_forms",
     "crispy_bootstrap5",
     "debug_toolbar",
+    "mptt",
+    "phonenumber_field",
+    "django_tables2",
+    "django_filters",
+    "djmoney",
+    "actstream",
+    "widget_tweaks",
+    "dynamic_preferences",
+    "django_htmx",
+    "import_export",
     # Local
     "accounts",
     "pages",
     "invitations",
-    
 ]
 
 TENANT_APPS = [
-    'apps.contacts',
+    # 'apps.tenant_apps.approval',
+    "apps.tenant_apps.contact",
+    "apps.tenant_apps.girvi",
+    "apps.tenant_apps.product",
+    # 'apps.tenant_apps.terms',
+    "apps.tenant_apps.rates",
+    "apps.tenant_apps.notify",
+    # 'apps.tenant_apps.dea',
+    # 'apps.tenant_apps.purchase',
+    # 'apps.tenant_apps.sales',
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
-TENANT_MODEL = "orgs.Company" # app.Model
+TENANT_MODEL = "orgs.Company"  # app.Model
 
 TENANT_DOMAIN_MODEL = "orgs.Domain"  # app.Model
 
-# for localhost search for workaround hint:edit hosts file
+# in case using domain to set tenants us this to persist sessions.for localhost search for workaround hint:edit hosts file
 # SESSION_COOKIE_DOMAIN = '.rokkad.com'
 # CSRF_COOKIE_DOMAIN = '.rokkad.com'
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
+    "django_htmx.middleware.HtmxMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # WhiteNoise
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -76,9 +102,10 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "apps.orgs.middleware.WorkspaceMiddleware",
+    "apps.tenant_apps.rates.middleware.RateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "allauth.account.middleware.AccountMiddleware",  # django-allauth  
+    "allauth.account.middleware.AccountMiddleware",  # django-allauth
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
@@ -107,27 +134,18 @@ TEMPLATES = [
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
-
-# For Docker/PostgreSQL usage uncomment this and comment the DATABASES config above
 DATABASES = {
     "default": {
         "ENGINE": "django_tenants.postgresql_backend",
-        "NAME": "tenanttest",
-        "USER": "postgres",
-        "PASSWORD": "kanchan",
-        "HOST": "localhost",  # set in docker-compose.yml
-        "PORT": 5432,  # default postgres port
+        "NAME": env("DB_NAME"),
+        "USER": env("DB_USER"),
+        "PASSWORD": env("DB_PASSWORD"),
+        "HOST": env("DB_HOST"),
+        "PORT": env("DB_PORT"),
     }
 }
-DATABASE_ROUTERS = (
-    'django_tenants.routers.TenantSyncRouter',
-)
+
+DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
@@ -149,8 +167,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 LANGUAGE_CODE = "en-us"
 LANGUAGES = [
-    ('en', 'English'),
-    ('hi', 'Hindi'),
+    ("en", "English"),
+    ("hi", "Hindi"),
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#time-zone
@@ -162,6 +180,13 @@ USE_I18N = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
 USE_TZ = True
 
+DATETIME_INPUT_FORMATS = ("%d-%m-%Y %H:%M:%S",)
+DATE_INPUT_FORMATS = (
+    "%d-%m-%Y",
+    "%d/%m/%Y",
+    "%d-%m-%y",
+    "%d/%m/%y",
+)
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-root
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
@@ -170,6 +195,9 @@ STATIC_URL = "/static/"
 
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # https://whitenoise.readthedocs.io/en/latest/django.html
 STORAGES = {
@@ -186,13 +214,13 @@ STORAGES = {
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'your_email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'your_email_password'
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_PORT = env("EMAIL_PORT")
+EMAIL_USE_TLS = env("EMAIL_USE_TLS")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
 # django-debug-toolbar
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html
@@ -229,5 +257,35 @@ INVITATIONS_INVITATION_MODEL = "orgs.CompanyInvitation"
 # INVITATIONS_INVITE_FORM = "apps.orgs.forms.InviteForm"
 INVITATIONS_INVITE_FORM = "apps.orgs.forms.CompanyInvitationForm"
 INVITATIONS_ADMIN_ADD_FORM = "apps.orgs.forms.InvitationAdminAddForm"
-ACCOUNT_ADAPTER="invitations.models.InvitationsAdapter"
-INVITATIONS_ADAPTER="invitations.models.InvitationsAdapter"
+ACCOUNT_ADAPTER = "invitations.models.InvitationsAdapter"
+INVITATIONS_ADAPTER = "invitations.models.InvitationsAdapter"
+
+PHONENUMBER_DEFAULT_REGION = "IN"
+PHONENUMBER_DEFAULT_FORMAT = "NATIONAL"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    },
+    "select2": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/2",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    },
+}
+
+# Set the cache backend to select2
+SELECT2_CACHE_BACKEND = "select2"

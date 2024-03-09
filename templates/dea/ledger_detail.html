@@ -1,0 +1,56 @@
+{% extends '_base.html' %}
+
+{% block title %}Ledger detail{% endblock %}
+
+{% block content %}
+<h1 class="display-6">{{object}} Details</h1>
+<div class="card">
+    <div class="card-body">
+        <figure class="text-center">
+            Opening Bal: {{ object.ledgerstatements.latest.get_cb}} |
+            <a href="{% url 'dea_ledger_setob' object.id%}">Set Op Bal</a><br>
+            From : {{object.ledgerstatements.latest.created|date:"jS F Y H:i"}}
+            To : {% now "jS F Y H:i" %}
+        </figure>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-6 p-3">
+        <div class="card border-success">
+            <div class="card-header">
+                <h5 class="card-title text-center">Debit</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for i in dtxns%}
+                    <li class="list-group-item">{{i.created|date}} {{i.amount}}</li>
+                    {%endfor%}
+                </ul>
+                
+                <a href="#" class="btn btn-primary">Add</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 p-3">
+        <div class="card border-danger">
+            <div class="card-header text-center">
+                <h5 class="card-title">Credit </h5>
+            </div>
+            <div class="card-body">     
+                <ul class="list-group list-group-flush">
+                    {% for i in ctxns%}
+                    <li class ="list-group-item">{{i.created|date}} {{i.amount}}</li>
+                    {%endfor%}
+                </ul>
+                <a href="#" class="btn btn-primary">Add</a>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card text-right">
+    <div class="card-body">
+        Closing Bal: {{object.current_balance}}
+    </div>
+</div>
+
+{% endblock %}

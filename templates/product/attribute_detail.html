@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+        <h1>{{ attribute.name }}</h1>
+        <p>{{ attribute.description }}</p>
+        <p>{{ attribute.value }}</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+        <a href="{% url 'product_attribute_list' %}">Back to list</a>
+        </div>
+    </div>
+    <p><a class="btn btn-info" href="{% url 'product_attribute_list' %}">Attribute Listing</a></p>
+<table class="table">
+<tr><td>slug</td><td>{{ object.slug }}</td></tr>
+<tr><td>name</td><td>{{ object.name }}</td></tr>
+</table>
+<a class="btn btn-primary" href="{{object.get_update_url}}">Edit Attribute</a>
+<a class="btn btn-danger" href="{{object.get_delete_url}}">Delete Attribute</a>
+    
+
+    
+</div>
+{% endblock %}

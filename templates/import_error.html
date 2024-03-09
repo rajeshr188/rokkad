@@ -1,0 +1,11 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<h1>Import Error</h1>
+<p>There were errors during the import process:</p>
+<ul>
+{% for error in errors %}
+    <li>{{ error }}</li>
+{% endfor %}
+</ul>
+{% endblock %}

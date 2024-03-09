@@ -1,0 +1,21 @@
+{%extends "_base.html"%}
+{% load static %}
+{%block content%}
+<p><a href="{% url 'girvi:loan_archive' %}">Loans Archive</a> </p>
+<h1>All Loans for {{ year|date:"Y" }} - {{object_list.count}}  </h1>
+<h2>{{object_list.total}} - {{object_list.with_interest|floatformat:2}}</h2>
+<ul>
+    {% for month in date_list %}
+        <li><a href="{% url 'girvi:archive_month' month|date:"Y" month|date:"M" %}">{{ month|date }}</a></li>
+    {% endfor %}
+</ul>
+
+<!-- <div>
+    <h1>All Loans for {{ year|date:"Y" }}</h1>
+    {% for obj in object_list %}
+        <p>
+            {{ obj.loanid }} - {{ obj.created|date:"F j, Y" }}
+        </p>
+    {% endfor %}
+</div> -->
+{%endblock%}

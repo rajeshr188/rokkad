@@ -17,11 +17,15 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
 
-  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <!-- <link rel="stylesheet" href="{% static 'css/base.css' %}"> -->
+  <link rel="stylesheet" href="{% static 'css/camera.css' %}" type="text/css" media="all">
   {% endblock %}
+  {% block extra_js %}
+    <script src="{% static 'js/jquery.js' %}"></script>
+    {% endblock%}
 </head>
 
-<body>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' >
   <header class="p-3 mb-3 border-bottom">
     <div class="container">
       <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
@@ -32,31 +36,81 @@
         </a>
 
         <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-          <li><a href="{% url 'home' %}" class="nav-link px-2 link-secondary">{% trans "Rokkad" %}</a></li>
-          <li><a href="{% url 'about' %}" class="nav-link px-2 link-dark">{%trans "About"%}</a></li>
           {% if user.is_authenticated %}
-          <li><a href="{% url 'profile' %}" class="nav-link px-2 link-dark">{%trans "Profile"%}</a></li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              {% if user.workspace %}{{user.workspace.name}}{%else%}{%trans "Workspace"%}{%endif%}
+              {% if user.workspace %}{{user.workspace.name|capfirst}}{%else%}{%trans "Workspace"%}{%endif%}
             </a>
             <ul class="dropdown-menu">
               {%for i in user.company_set.all%}
               {%if not i == request.user.workspace%}
-              <li><a class="dropdown-item" href="{% url 'switch_workspace' i.id%}">{{i.name}}</a></li>
+              <li><a class="dropdown-item" href="{% url 'switch_workspace' i.id%}">{{i.name|capfirst}}</a></li>
               <li><hr class="dropdown-divider"></li>
               {%endif%}
               {%endfor%}
-              {%if user.workspace%}
-              <li><a class="dropdown-item" href="{% url 'clear_workspace'%}">Public</a></li>
+              {%if user.workspace and user.workspace.schema_name != 'public'%}
+              <li><a class="dropdown-item" href="{% url 'clear_workspace'%}">{%trans "Rokkad"%}</a></li>
               {%endif%}
             </ul>
           </li>
-          {% if user.workspace.schema_name != 'public'%}
-          <li><a href="{% url 'contact_list' %}" class="nav-link px-2 link-dark">{%trans "Contacts"%}</a></li>
+          <li><a href="{% url 'profile' %}" class="nav-link px-2 link-dark">{%trans "Profile"%}</a></li>
+          {% if user.workspace and user.workspace.schema_name != 'public'%}
+          <li><a href="{% url 'contact_customer_list' %}" class="nav-link px-2 link-dark">{%trans "Customer"%}</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              {%trans "Girvi"%}
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" href="{% url 'girvi:girvi_loan_list' %}">{% trans "Loans" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'girvi:girvi_release_list' %}">{% trans "Release" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'girvi:girvi_license_list' %}">{% trans "License" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'notify_noticegroup_list' %}">{% trans "Notice" %}</a></li>
+            </ul>
+          </li>
+          
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Product
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" hx-get="{% url 'product_category_list'%}"
+                hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url = "true">Category</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" hx-get="{% url 'product_producttype_list'%}"
+                hx-target="#content" hx-swap="innerHTML" hx-push-url = "true">Product Type</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" hx-get="{% url 'product_product_list'%}"
+                hx-target="#content" hx-swap="innerHTML" hx-push-url = "true">Product</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" hx-get="{% url 'product_productvariant_list'%}"
+                hx-target="#content" hx-swap="innerHTML" hx-push-url = "true">Product Variant</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" hx-get="{%url 'product_stock_list' %}"
+                hx-target="#content" hx-swap="innerHTML" hx-push-url = "true">Stock</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" hx-get="{%url 'product_stockstatement_list' %}"
+                hx-target="#content" hx-swap="innerHTML" hx-push-url = "true">Stock Statement</a></li>  
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{%url 'product_pricingtier_list' %}"
+                >Pricing Tier</a></li>  
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+              {%trans "Rates"%}
+            </a>
+            <ul class="dropdown-menu">
+              <li class="dropdown-item"><a href="{% url 'rate_detail' request.grate.id%}">{{request.grate}}</a></li>
+              <li class="dropdown-item"><a href="{% url 'rate_detail' request.srate.id%}">{{request.srate}}</a></li>
+            </ul>
+          </li>
           {%endif%}
+          {%else%}
+          <li><a href="{% url 'home' %}" class="nav-link px-2 link-secondary">{% trans "Rokkad" %}</a></li>
+          <li><a href="{% url 'about' %}" class="nav-link px-2 link-dark">{%trans "About"%}</a></li>
           {% endif %}
-          <li><form class="d-flex" action="{% url 'set_language' %}" method="post">
+          <li>
+            <form class="d-flex" action="{% url 'set_language' %}" method="post">
             {% csrf_token %}
             <select name="language" class="form-control me-2">
                 {% get_current_language as LANGUAGE_CODE %}
@@ -69,7 +123,8 @@
                 {% endfor %}
             </select>
             <input class="btn btn-outline-success" type="submit" value="{% trans 'Change' %}">
-        </form></li>
+            </form>
+          </li>
         </ul>
 
         <div class="dropdown text-end">
@@ -79,6 +134,16 @@
             {{ user.email }}
           </a>
           <ul class="dropdown-menu text-small">
+            {%if request.user.workspace.schema_name != 'public'%}
+            <li><a class="dropdown-item" href="{% url 'company-preferences' %}">{%trans "Preferences"%}</a></li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            <li><a class="dropdown-item" href="{% url 'dashboard' %}">{%trans "Dashboard"%}</a></li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            {%endif%}
             <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{%trans "Change password"%}</a></li>
             <li>
               <hr class="dropdown-divider">
@@ -96,15 +161,22 @@
     </div>
   </header>
 
-  <div class="container">
+  <div id="content" class="container">
     {% block content %}
     <p>Default content...</p>
     {% endblock content %}
   </div>
-
+  {% include "toasts.html" %}
+  <br/>
   <footer class="footer">
     <div class="container">
-      <span class="text-muted">Footer...</span>
+      <!-- <span class="text-muted">Footer...</span> -->
+      <div class="row">
+        <div class="col-12 col-md">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="d-block mb-2"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>
+          <small class="d-block mb-3 text-muted">&copy; 2017-2024 rajeshrathodh </small>
+        </div>
+      </div>
     </div>
   </footer>
 
@@ -113,10 +185,14 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
     crossorigin="anonymous"></script>
-
+    <script src="https://unpkg.com/hyperscript.org@0.9.9"></script>
+    <script src="{% static 'js/htmx.min.js'%}" ></script> 
+    <script src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha384-GNFwBvfVxBkLMJpYMOABq3c+d3KnQxudP/mGPkzpZSTYykLBNsZEnG2D9G/X/+7D" crossorigin="anonymous" async></script>
+    
   <!-- Project JS -->
   <script src="{% static 'js/base.js' %}"></script>
-
+  <script src="{% static 'js/webcapture.v1.js' %}"></script>
+  <script src="{% static 'js/toasts.js' %}"></script>
   {% endblock javascript %}
 
 </body>
