@@ -3,13 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django_tenants.utils import remove_www
+from django_tenants.utils import get_public_schema_name, remove_www, schema_context
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 
 from .decorators import company_member_required, role_required
-from .forms import (CompanyForm, CompanyInvitationForm,
-                    company_preference_form_builder)
+from .forms import CompanyForm, CompanyInvitationForm, company_preference_form_builder
 from .models import Company, CompanyInvitation, Domain, Membership, Role
 
 # Create your views here.
@@ -106,16 +105,27 @@ def company_update(request, company_id):
     return render(request, "company/company_form.html", {"form": form})
 
 
-@role_required("Owner")
+# @role_required("Owner")
 def company_delete(request, company_id):
     company = get_object_or_404(Company, id=company_id)
 
-    # Check if the user has the permission to delete the company
-    if request.user != company.owner:
-        return redirect("error_page")  # Redirect to an error page
+    if request.method == "GET":
+        return render(
+            request, "company/company_delete_confirm.html", {"company": company}
+        )
 
-    company.delete()
-    return redirect("orgs_company_list")  # Redirect to the list of companies
+    elif request.method == "POST":
+        if request.user != company.owner:
+            return redirect("error_page")  # Redirect to an error page
+
+        # Switch to the public schema before deleting the company
+        with schema_context(get_public_schema_name()):
+            company.delete()
+
+            # Reset the user's workspace to the public schema
+            request.user.workspace = None
+            request.user.save()
+        return redirect("orgs_company_list")
 
 
 @login_required
@@ -171,3 +181,53 @@ class CompanyPreferenceBuilder(PreferenceFormView):
     def get_form_class(self):
         # return CompanyPreferenceForm(instance=self.request.user.workspace)
         return company_preference_form_builder(instance=self.request.user.workspace)
+
+
+@login_required
+def delete_membership(request, company_id):
+    company = get_object_or_404(Company, id=company_id)
+    membership = get_object_or_404(Membership, user=request.user, company=company)
+
+    # Check if the user has the permission to delete the membership
+    if membership.role.name != "Owner":
+        return redirect("error_page")  # Redirect to an error page
+
+    membership.delete()
+    return redirect("orgs_company_list")  # Redirect to the list of companies
+
+
+@login_required
+def edit_membership(request, company_id, membership_id):
+    company = get_object_or_404(Company, id=company_id)
+    membership = get_object_or_404(Membership, id=membership_id, company=company)
+
+    # Check if the user has the permission to edit the membership
+    if membership.role.name != "Owner":
+        return redirect("error_page")  # Redirect to an error page
+
+    if request.method == "POST":
+        form = MembershipForm(request.POST, instance=membership)
+        if form.is_valid():
+            form.save()
+            return redirect("orgs_company_detail", company_id=company_id)
+    else:
+        form = MembershipForm(instance=membership)
+    return render(request, "company/edit_membership.html", {"form": form})
+
+
+# view to delete a given invitation
+
+
+@login_required
+def delete_invitation(request, invitation_id):
+    invitation = get_object_or_404(CompanyInvitation, id=invitation_id)
+
+    # Check if the user has the permission to delete the invitation
+    if request.user != invitation.inviter:
+        return redirect("error_page")  # Redirect to an error page
+
+    invitation.delete()
+
+    return redirect(
+        "orgs_companyinvitations_list"
+    )  # Redirect to the list of invitations

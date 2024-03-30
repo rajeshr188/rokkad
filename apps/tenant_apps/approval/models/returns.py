@@ -31,7 +31,7 @@ class Return(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     created_by = models.ForeignKey(
-        "users.CustomUser", on_delete=models.CASCADE, null=True, blank=True
+        "users.CustomUser", on_delete=models.DO_NOTHING, null=True, blank=True
     )
     contact = models.ForeignKey(
         Customer, related_name="approval_returns", on_delete=models.CASCADE

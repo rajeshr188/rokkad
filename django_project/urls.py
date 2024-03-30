@@ -1,12 +1,16 @@
+import environ
 from django.conf import settings
 from django.conf.urls import i18n
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+env = environ.Env()
+environ.Env.read_env()
+
 urlpatterns = [
     path("i18n/", include(i18n)),
-    path("admin/", admin.site.urls),
+    path(env("SECRET_ADMIN_URL") + "/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("accounts/", include("allauth.socialaccount.urls")),
     path("activity/", include("actstream.urls")),

@@ -17,8 +17,13 @@ from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
 from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.attributes import get_product_attributes_data
-from apps.tenant_apps.product.models import (Attribute, ProductVariant, Stock,
-                                             StockLot, StockTransaction)
+from apps.tenant_apps.product.models import (
+    Attribute,
+    ProductVariant,
+    Stock,
+    StockLot,
+    StockTransaction,
+)
 from apps.tenant_apps.terms.models import PaymentTerm
 
 from ..managers import PurchaseQueryset

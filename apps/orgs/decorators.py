@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import Http404, HttpResponseForbidden
 from django_tenants.utils import get_public_schema_name
 
 from apps.orgs.models import Company, Membership
@@ -11,14 +11,51 @@ def role_required(role_name):
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
             company = request.user.workspace
+
+            print(f"User: {user} Company:{company} role_required: {role_name}")
             # company_id = kwargs.get('company_id')  # Assuming tenant is passed as a keyword argument to the view
             # company = Company.objects.get(id=company_id)
             try:
                 membership = Membership.objects.get(user=user, company=company)
+                print(
+                    f"Membership {membership} Role: {membership.role.name} {membership.role.name == role_name}"
+                )
                 if membership.role.name != role_name:
-                    return HttpResponseForbidden()
+                    raise Http404(
+                        "Need to be A Company Owner to proceed with this action."
+                    )
+                    # return HttpResponseForbidden()
             except Membership.DoesNotExist:
-                return HttpResponseForbidden()
+                # return HttpResponseForbidden()
+                raise Http404("Need to be A Company Owner to proceed with this action.")
+            return view_func(request, *args, **kwargs)
+
+        return _wrapped_view
+
+    return decorator
+
+
+def roles_required(allowed_roles):
+    def decorator(view_func):
+        @login_required
+        def _wrapped_view(request, *args, **kwargs):
+            user = request.user
+            company = request.user.workspace
+
+            print(f"User: {user} Company:{company} roles_required: {allowed_roles}")
+            try:
+                membership = Membership.objects.get(user=user, company=company)
+                print(
+                    f"Membership {membership} Role: {membership.role.name} {membership.role.name in allowed_roles}"
+                )
+                if membership.role.name not in allowed_roles:
+                    raise Http404(
+                        "You do not have the required role to proceed with this action."
+                    )
+            except Membership.DoesNotExist:
+                raise Http404(
+                    "You do not have the required role to proceed with this action."
+                )
             return view_func(request, *args, **kwargs)
 
         return _wrapped_view

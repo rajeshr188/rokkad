@@ -2,10 +2,19 @@ import datetime
 
 from django.core.cache import cache
 from django.db import models
-from django.db.models import (Case, DecimalField, ExpressionWrapper, F, Func,
-                              OuterRef, Subquery, Sum, Value, When)
-from django.db.models.functions import (Coalesce, ExtractMonth, ExtractYear,
-                                        Round)
+from django.db.models import (
+    Case,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    Func,
+    OuterRef,
+    Subquery,
+    Sum,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear, Round
 from django.utils import timezone
 
 from apps.tenant_apps.rates.models import Rate

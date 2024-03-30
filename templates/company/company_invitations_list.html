@@ -19,7 +19,7 @@
             <td>{{i.company}}</td>
             <td>{{i.inviter}}</td>
             <td>{{i.email}}</td>
-            <td>{{i.accepted}}</td>
+            <td>{{i.accepted|yesno:"Accepted,Rejected"}}</td>
         </tr>
         {%endfor%}
     </tbody>

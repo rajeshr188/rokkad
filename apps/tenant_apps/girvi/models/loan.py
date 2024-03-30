@@ -1,6 +1,7 @@
 import math
 from datetime import datetime
 from decimal import Decimal
+
 # from qrcode.image.pure import PyImagingImage
 from io import BytesIO
 
@@ -10,22 +11,31 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.cache import cache
 from django.db import models, transaction
-from django.db.models import (BooleanField, Case, DecimalField,
-                              ExpressionWrapper, F, Func, Q, Sum, Value, When)
-from django.db.models.functions import (Coalesce, Concat, ExtractMonth,
-                                        ExtractYear)
+from django.db.models import (
+    BooleanField,
+    Case,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    Func,
+    Q,
+    Sum,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce, Concat, ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
+
 # from dea.models import JournalEntry  # , JournalTypes
 # from dea.models import Journal
 from apps.tenant_apps.rates.models import Rate
 
-from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
-                        UnReleasedManager)
+from ..managers import LoanManager, LoanQuerySet, ReleasedManager, UnReleasedManager
 
 
 class Loan(models.Model):
@@ -33,7 +43,11 @@ class Loan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     created_by = models.ForeignKey(
-        "accounts.CustomUser", on_delete=models.CASCADE, null=True, blank=True
+        "accounts.CustomUser",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True,
+        related_name="loans_created",
     )
     loan_date = models.DateTimeField(default=timezone.now, verbose_name=_("Loan Date"))
     lid = models.IntegerField(blank=True, null=True)
@@ -111,6 +125,11 @@ class Loan(models.Model):
         return hasattr(self, "release")
 
     @property
+    def last_notified(self):
+        notice = self.notification_set.last()
+        return notice.created_at if notice else None
+
+    @property
     def get_pure(self):
         return self.loanitems.values("itemtype").annotate(
             pure_weight=Sum(
@@ -125,13 +144,10 @@ class Loan(models.Model):
         return self.loanitems.values("itemtype").annotate(total_weight=Sum("weight"))
 
     @property
-    def last_notified(self):
-        notice = self.notification_set.last()
-        return notice
-
-    # function to get no of months since loan was taken
-
     def get_loanamount(self):
+        return self.loanitems.aggregate(Sum("loanamount"))["loanamount__sum"] or 0
+
+    def get_remaining_loanamount(self):
         payments = (
             self.loan_payments.aggregate(Sum("payment_amount"))["payment_amount__sum"]
             or 0
@@ -182,27 +198,22 @@ class Loan(models.Model):
         return total_current_value
 
     def total(self):
-        return self.interestdue() + self.get_loanamount()
+        return self.interestdue() + self.get_loanamount
 
     def due(self):
-        # a = self.get_total_adjustments()
-        # payment = (
-        #     self.loan_payments.aggregate(Sum("payment_amount"))["payment_amount__sum"]
-        #     or 0
-        # )
         total_payments = self.get_total_payments()
-        return self.loan_amount + self.interestdue() - total_payments
+        return self.total() - total_payments
 
     def is_worth(self):
-        return self.current_value() < self.total()
+        return self.current_value() < self.due()
 
     def get_worth(self):
-        return self.current_value() - self.total()
+        return self.current_value() - self.due()
 
     def calculate_months_to_exceed_value(self):
         try:
             if not self.is_released and self.loanitems.exists():
-                return math.ceil((self.current_value() - self.total()) / self.interest)
+                return round((self.current_value() - self.due()) / self.interest, 1)
         except Exception as e:
             return 0
         return 0
@@ -361,17 +372,26 @@ class LoanItem(models.Model):
             kwargs={"id": self.id, "parent_id": self.loan.id},
         )
 
-    # def current_value(self):
-    #     rate = (
-    #         Rate.objects.filter(metal=self.itemtype).latest("timestamp").buying_rate
-    #         if Rate.objects.filter(metal=self.itemtype).exists()
-    #         else 0
-    #     )
-    #     return round(self.weight * self.purity * Decimal(0.01) * rate)
+    from django.core.cache import cache
 
     def current_value(self):
-        rate = cache.get("gold_rate", 0)
-        return round(self.weight * self.purity * Decimal(0.01) * rate.buying_rate)
+        if self.itemtype == "Gold":
+            rate = cache.get("grate")
+        elif self.itemtype == "Silver":
+            rate = cache.get("srate")
+        else:
+            rate = cache.get("brate")
+        if not rate:
+            rate = (
+                Rate.objects.filter(metal=self.itemtype).latest("timestamp").buying_rate
+            )
+            if self.itemtype == "Gold":
+                cache.set("grate", rate, 60 * 60 * 24)
+            elif self.itemtype == "Silver":
+                cache.set("srate", rate, 60 * 60 * 24)
+            else:
+                cache.set("brate", rate, 60 * 60 * 24)
+        return round(self.weight * self.purity * Decimal(0.01) * rate, 2)
 
     def save(self, *args, **kwargs):
         self.interest = (self.interestrate / 100) * self.loanamount
@@ -389,7 +409,11 @@ class LoanPayment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     created_by = models.ForeignKey(
-        "accounts.CustomUser", on_delete=models.CASCADE, null=True, blank=True
+        "accounts.CustomUser",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True,
+        related_name="loan_payments_created",
     )
     loan = models.ForeignKey(
         "Loan", on_delete=models.CASCADE, related_name="loan_payments"
@@ -498,7 +522,11 @@ class LoanPayment(models.Model):
 class Statement(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        "accounts.CustomUser", on_delete=models.CASCADE, null=True, blank=True
+        "accounts.CustomUser",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True,
+        related_name="loan_statements_created",
     )
     # loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
 

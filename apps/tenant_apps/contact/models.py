@@ -29,10 +29,11 @@ class Customer(models.Model):
     updated = models.DateTimeField(auto_now=True, editable=False)
     created_by = models.ForeignKey(
         "accounts.CustomUser",
-        on_delete=models.CASCADE,
+        on_delete=models.DO_NOTHING,
         null=True,
         blank=True,
         verbose_name=_("Created By"),
+        related_name="customers_created",
     )
     name = models.CharField(max_length=255, blank=True, verbose_name=_("Name"))
     firstname = models.CharField(
