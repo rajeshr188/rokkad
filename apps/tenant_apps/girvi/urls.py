@@ -125,6 +125,26 @@ urlpatterns += (
         views.loan_delete,
         name="girvi_loan_delete",
     ),
+    path("girvi/loan/print_labels/", views.print_labels, name="print_labels"),
+    path(
+        "girvi/loan-report/", views.LoanTimeSeriesReport.as_view(), name="loan_report"
+    ),
+    path(
+        "girvi/series-report/",
+        views.SeriesReport.as_view(),
+        name="series_report",
+    ),
+    path(
+        "girvi/license-report/",
+        views.LicenseReport.as_view(),
+        name="license_report",
+    ),
+    path(
+        "girvi/loan-crosstab/", views.LoanCrosstabReport.as_view(), name="loan_crosstab"
+    ),
+    path(
+        "girvi/loan-listreport/", views.LoanListReport.as_view(), name="Loan_list_repot"
+    ),
 )
 
 # urls for loanitem

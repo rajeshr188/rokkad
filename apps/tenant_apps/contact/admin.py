@@ -13,6 +13,10 @@ class CustomerResource(resources.ModelResource):
     class Meta:
         model = Customer
         skip_unchanged = True
+        exclude = (
+            "created",
+            "updated",
+        )
 
     # def before_import_row(self, row, **kwargs):
     #     row['created'] = self.fields['created'].clean(row)
@@ -23,6 +27,7 @@ class AddressResource(resources.ModelResource):
     class Meta:
         model = Address
         skip_unchanged = True
+        report_skipped = True
 
 
 class ContactResource(resources.ModelResource):

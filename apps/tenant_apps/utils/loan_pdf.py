@@ -13,9 +13,20 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import (Flowable, Frame, Image, KeepTogether,
-                                ListFlowable, ListItem, PageBreak, Paragraph,
-                                SimpleDocTemplate, Spacer, Table, TableStyle)
+from reportlab.platypus import (
+    Flowable,
+    Frame,
+    Image,
+    KeepTogether,
+    ListFlowable,
+    ListItem,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from reportlab.platypus.doctemplate import PageTemplate
 from reportlab.rl_config import defaultPageSize
 
@@ -131,7 +142,7 @@ def get_loan_pdf(loan):
 
     # Define the text for the paragraphs
 
-    shop = """<font color=blue size=14>J Champalal</font> <br />
+    shop = f"""<font color=blue size=14>J Champalal</font> <br />
                 <font size = 10 >Pawn Brokers</font>
                 no:8, Lathid sahib street,<br />
                 R.N Palayam,Vellore<br/>
@@ -146,7 +157,6 @@ def get_loan_pdf(loan):
 
     # Create the Paragraph objects
     logo = Image("static/images/falconx.png", 50, 50)
-    # print(loan.customer)
     # customer_img = Image(loan.customer.pic.url,50,50)
 
     simple_tblstyle = TableStyle(
@@ -168,7 +178,7 @@ def get_loan_pdf(loan):
             ]
         ]
     )
-    # table1.setStyle(simple_tblstyle)
+
     shop = Table(
         [
             [logo, Paragraph(shop, normal)],
@@ -183,19 +193,22 @@ def get_loan_pdf(loan):
         ]
     )
     loanid_date.setStyle(simple_tblstyle)
-    loanitems = Table(
+    loanitems = loan.loanitems.all()
+    table_data = [["#", "Item Description", "Weight", "Purity", "loanamount"]]
+    table_data.extend(
         [
             [
-                ListFlowable(
-                    [
-                        # ListItem(Paragraph('Paragraph #2', normal),
-                        #         bulletColor="blue",),
-                        Paragraph(f"{loan.item_desc}", normal),
-                    ]
-                )
+                i + 1,
+                item.itemdesc,
+                item.weight,
+                item.purity,
+                loan.loan_amount,
             ]
+            for i, item in enumerate(loanitems)
         ]
     )
+    loanitems = Table(table_data)
+
     result = []
     for item in loan.get_weight:
         item_type = item["itemtype"]
@@ -241,8 +254,6 @@ def get_loan_pdf(loan):
                             normal,
                         ),
                         Paragraph("Above mentioned articles are my own"),
-                        # ListItem(Paragraph('Paragraph #2', normal),
-                        #          bulletColor="blue",),
                     ]
                 )
             ]
@@ -304,8 +315,6 @@ def get_loan_pdf(loan):
         )
     )
 
-    # right_flowables.append(Paragraph('ipsum lorem', normal))
-
     left_frame = Frame(
         10 * mm, 10 * mm, width=(w - 30 * mm) / 2, height=h - 20 * mm, showBoundary=1
     )
@@ -330,7 +339,7 @@ def get_loan_pdf(loan):
 
     # Draw the dotted line from top to bottom at the center of the page
     my_canvas.line(center_x, landscape(A4)[1], center_x, 0)
-    my_canvas.line(w / 2, 110, w, 110)
+    # my_canvas.line(w / 2, 110, w, 110)
 
     my_canvas.save()
     pdf = buffer.getvalue()

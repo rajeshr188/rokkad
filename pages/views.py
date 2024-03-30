@@ -8,11 +8,14 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views.generic import TemplateView
 
+from apps.orgs.decorators import roles_required
 from apps.orgs.models import Membership
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.contact.services import (active_customers,
-                                               get_customers_by_type,
-                                               get_customers_by_year)
+from apps.tenant_apps.contact.services import (
+    active_customers,
+    get_customers_by_type,
+    get_customers_by_year,
+)
 from apps.tenant_apps.girvi.models import Loan
 from apps.tenant_apps.girvi.services import *
 
@@ -58,7 +61,8 @@ class FaqPageView(TemplateView):
     template_name = "pages/faq.html"
 
 
-@login_required
+# @login_required
+@roles_required(["Owner", "Admin"])
 def Dashboard(request):
     context = {}
     # context['stream'] = user_stream(request.user, with_user_activity=True)
@@ -172,6 +176,7 @@ def Dashboard(request):
     context["customer_data_by_year"] = get_customers_by_year()
     context["customer_data_by_type"] = get_customers_by_type()
     context["active_customers"] = active_customers()
+    context["avg_loan_per_day"] = get_average_loan_instance_per_day()
     context["maxloans"] = (
         Customer.objects.filter(loan__release__isnull=True)
         .annotate(

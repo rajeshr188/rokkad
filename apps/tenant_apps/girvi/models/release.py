@@ -26,9 +26,10 @@ class Release(models.Model):
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="created_releases",
+        on_delete=models.DO_NOTHING,
+        null=True,
         verbose_name=_("Created By"),
+        related_name="releases_created",
     )
     released_by = models.ForeignKey(
         Customer,

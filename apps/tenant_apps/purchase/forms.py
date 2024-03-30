@@ -2,8 +2,15 @@ from datetime import datetime
 
 from contact.models import Customer
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import (ButtonHolder, Column, Field, Fieldset, Layout,
-                                 Row, Submit)
+from crispy_forms.layout import (
+    ButtonHolder,
+    Column,
+    Field,
+    Fieldset,
+    Layout,
+    Row,
+    Submit,
+)
 from django import forms
 from django.db.models import Q
 from django.urls import reverse_lazy

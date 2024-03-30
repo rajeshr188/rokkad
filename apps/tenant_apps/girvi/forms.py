@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from crispy_bootstrap5.bootstrap5 import FloatingField
@@ -11,16 +11,28 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django_select2 import forms as s2forms
-from django_select2.forms import (ModelSelect2Widget, Select2Mixin,
-                                  Select2MultipleWidget, Select2Widget)
+from django_select2.forms import (
+    ModelSelect2Widget,
+    Select2Mixin,
+    Select2MultipleWidget,
+    Select2Widget,
+)
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.rates.models import Rate
 
-from .models import (License, Loan, LoanItem, LoanPayment, Release, Series,
-                     Statement, StatementItem)
+from .models import (
+    License,
+    Loan,
+    LoanItem,
+    LoanPayment,
+    Release,
+    Series,
+    Statement,
+    StatementItem,
+)
 
 
 class LoansWidget(s2forms.ModelSelect2Widget):
@@ -53,6 +65,83 @@ class SeriesForm(forms.ModelForm):
     class Meta:
         model = Series
         fields = ["name", "license", "is_active"]
+
+
+class LoanReportForm(forms.Form):
+    filter_choices = (
+        ("all", "All"),
+        ("released", "Released"),
+        ("unreleased", "Unreleased"),
+    )
+    start_date = forms.DateField(
+        required=False,
+        label="Start Date",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    end_date = forms.DateField(
+        required=False, label="End Date", widget=forms.DateInput(attrs={"type": "date"})
+    )
+    time_series_pattern = forms.ChoiceField(
+        choices=(
+            ("daily", "Daily"),
+            ("weekly", "Weekly"),
+            ("monthly", "Monthly"),
+            ("quarterly", "Quarterly"),
+            ("semiannually", "Semiannually"),
+            ("annually", "Annually"),
+        ),
+        initial="annually",
+    )
+    filter_loans = forms.ChoiceField(
+        choices=filter_choices, required=False, label="Loan Filter", initial="all"
+    )
+
+    class Meta:
+        model = Loan
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["start_date"].initial = date.today()
+        self.fields["end_date"].initial = date.today()
+
+    def get_crispy_helper(self):
+        helper = FormHelper()
+        helper.form_method = "POST"
+        # customize the form layout as needed
+        return helper
+
+    def get_crosstab_compute_remainder(self):
+        # replace with your actual implementation
+        return True
+
+    def get_filters(self):
+        # return the filters to be used in the report
+        # Note: the use of Q filters and kwargs filters
+        filters = {}
+        q_filters = []
+        if self.cleaned_data["filter_loans"] == "unreleased":
+            filters["release__isnull"] = True
+        elif self.cleaned_data["filter_loans"] == "released":
+            filters["release__isnull"] = False
+        # if self.cleaned_data["method"]:
+        #     filters["method"] = self.cleaned_data["method"]
+        # if self.cleaned_data["response"]:
+        #     filters["response"] = self.cleaned_data["response"]
+        # if self.cleaned_data["other_people_only"]:
+        #     q_filters.append(~Q(user=self.request.user))
+
+        return q_filters, filters
+
+    def get_start_date(self):
+        return self.cleaned_data["start_date"]
+
+    def get_end_date(self):
+        return self.cleaned_data["end_date"]
+
+    def get_time_series_pattern(self):
+        # replace with your actual implementation
+        return self.cleaned_data.get("time_series_pattern", "monthly")
 
 
 class LoanForm(forms.ModelForm):
@@ -89,11 +178,11 @@ class LoanForm(forms.ModelForm):
         widget=forms.DateTimeInput(
             attrs={
                 # "type":"text",
-                "type": "datetime",
-                # "data-date-format": "DD MMMM YYYY",
+                "type": "datetime-local",
+                "data-date-format": "DD MMMM YYYY",
                 "max": datetime.now(),
             },
-            format="%d-%m-%Y %H:%M:%S",
+            # format="%d-%m-%Y %H:%M:%S",
         ),
     )
 

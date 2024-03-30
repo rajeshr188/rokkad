@@ -10,11 +10,19 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
-from .forms import (AccountForm, AccountStatementForm, LedgerForm,
-                    LedgerStatementForm)
+from .forms import AccountForm, AccountStatementForm, LedgerForm, LedgerStatementForm
+
 # Create your views here.
-from .models import (Account, Accountbalance, AccountStatement, JournalEntry,
-                     Ledger, Ledgerbalance, LedgerStatement, LedgerTransaction)
+from .models import (
+    Account,
+    Accountbalance,
+    AccountStatement,
+    JournalEntry,
+    Ledger,
+    Ledgerbalance,
+    LedgerStatement,
+    LedgerTransaction,
+)
 
 
 def home(request):

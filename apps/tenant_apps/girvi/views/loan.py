@@ -8,8 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.files.base import ContentFile
-from django.db.models import (Count, F, Max, OuterRef, Prefetch, Q, Subquery,
-                              Sum)
+from django.db.models import Count, F, Max, OuterRef, Prefetch, Q, Subquery, Sum
 from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,9 +17,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods  # new
 from django.views.decorators.http import require_POST
-from django.views.generic.dates import (DayArchiveView, MonthArchiveView,
-                                        TodayArchiveView, WeekArchiveView,
-                                        YearArchiveView)
+from django.views.generic.dates import (
+    DayArchiveView,
+    MonthArchiveView,
+    TodayArchiveView,
+    WeekArchiveView,
+    YearArchiveView,
+)
 from django_tables2.config import RequestConfig
 from django_tables2.export.export import TableExport
 from dynamic_preferences.registries import global_preferences_registry
@@ -37,7 +40,7 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 from apps.tenant_apps.utils.loan_pdf import get_loan_pdf, get_notice_pdf
 
 from ..filters import LoanFilter
-from ..forms import LoanForm, LoanItemForm, LoanRenewForm
+from ..forms import LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm
 from ..models import *
 from ..tables import LoanTable
 
@@ -410,7 +413,6 @@ def loan_detail(request, pk):
     rate_dict = {
         "Gold": request.grate.buying_rate,
         "Silver": request.srate.buying_rate,
-        # Add more item types here if needed
     }
 
     # Calculate the total value
@@ -524,6 +526,40 @@ def deleteLoan(request):
         i.delete()
     messages.error(request, f"Deleted {len(id_list)} loans")
     return loan_list(request)
+
+
+def print_labels(request):
+    # check if user wanted all rows to be selected
+    all = request.POST.get("selectall")
+    selected_loans = None
+
+    if all == "selected":
+        print("all selected")
+        # get query parameters if all row selected and retrive queryset
+        print(request.GET)
+        filter = LoanFilter(
+            request.GET,
+            queryset=Loan.objects.unreleased()
+            .select_related("customer", "release")
+            .prefetch_related("notifications", "loanitems"),
+        )
+
+        selected_loans = filter.qs.order_by("customer")
+        print(f"selected loans: {selected_loans.count()}")
+    else:
+        print("partially selected")
+        # get the selected loan ids from the request
+        selection = request.POST.getlist("selection")
+
+        selected_loans = (
+            Loan.objects.unreleased().filter(id__in=selection).order_by("customer")
+        )
+
+    if selected_loans:
+        # TODO print the labels
+        pass
+
+    return HttpResponse(status=200, content="No unreleased loans selected.")
 
 
 @login_required
@@ -898,3 +934,117 @@ def loanitem_delete(request, parent_id, id):
 def loanitem_detail(request, pk):
     item = get_object_or_404(LoanItem, pk=pk)
     return render(request, "girvi/partials/item-inline.html", {"object": item})
+
+
+from django.utils.translation import gettext as _
+from slick_reporting.fields import ComputationField
+from slick_reporting.views import Chart, ListReportView, ReportView
+
+
+class LoanTimeSeriesReport(ReportView):
+    queryset = Loan.unreleased.all()
+    form_class = LoanReportForm
+    group_by = "customer__name"
+    time_series_pattern = "monthly"
+    # options are: "daily", "weekly", "bi-weekly", "monthly", "quarterly", "semiannually", "annually" and "custom"
+
+    time_series_selector = True
+    time_series_selector_choices = (
+        ("daily", _("Daily")),
+        ("weekly", _("Weekly")),
+        ("bi-weekly", _("Bi-Weekly")),
+        ("monthly", _("Monthly")),
+    )
+    time_series_selector_default = "bi-weekly"
+
+    time_series_selector_label = _("Period Pattern")
+    # The label for the time series selector
+
+    time_series_selector_allow_empty = True
+
+    date_field = "loan_date"
+    title = _("Loan Time Series Report")
+    time_series_columns = [
+        ComputationField.create(Sum, "loan_amount", verbose_name="Total Loan Amount"),
+    ]
+    columns = [
+        "customer__name",
+        "__time_series__",
+        ComputationField.create(Sum, "loan_amount", verbose_name="Total Loan Amount"),
+    ]
+    chart_settings = [
+        Chart(
+            "Customer Loan Time Series",
+            Chart.BAR,
+            data_source=["sum__loan_amount"],
+            title_source=["__time_series__"],
+        ),
+        Chart(
+            "Total Loan AmountMonthly",
+            Chart.PIE,
+            data_source=["sum__loan_amount"],
+            title_source=["customer__name"],
+            plot_total=True,
+        ),
+        Chart(
+            "Total Loan Amount [Area Chart]",
+            Chart.AREA,
+            data_source=["sum__loan_amount"],
+            title_source="customer",
+        ),
+    ]
+
+
+class SeriesReport(ReportView):
+    queryset = Loan.objects.unreleased()
+    form_class = LoanReportForm
+    group_by = "series__name"
+    columns = [
+        "series__name",
+        ComputationField.create(Sum, "loan_amount", verbose_name="total_loan_amount"),
+    ]
+    chart_settings = [
+        Chart(
+            "Loan Time Series",
+            Chart.PIE,
+            data_source=["sum__loan_amount"],
+            title_source=["__time_series__"],
+        ),
+    ]
+
+
+class LicenseReport(ReportView):
+    queryset = Loan.objects.unreleased()
+    form_class = LoanReportForm
+    group_by = "series__license__name"
+    columns = [
+        "series__license__name",
+        ComputationField.create(Sum, "loan_amount", verbose_name="total_loan_amount"),
+    ]
+    chart_settings = [
+        Chart(
+            "Loan Time Series",
+            Chart.PIE,
+            data_source=["sum__loan_amount"],
+            title_source=["__time_series__"],
+        ),
+    ]
+
+
+class LoanCrosstabReport(ReportView):
+    report_title = "Cross tab Report"
+    queryset = Loan.unreleased.all()
+    group_by = "customer__name"
+    date_field = "loan_date"
+    form_class = LoanReportForm
+
+    columns = [
+        "customer__name",
+        "__crosstab__",
+        ComputationField.create(Sum, "loan_amount", verbose_name="Loan Sum"),
+    ]
+
+
+class LoanListReport(ListReportView):
+    queryset = Loan.unreleased.all()
+    columns = ["id", "loan_date", "customer__name", "loan_amount"]
