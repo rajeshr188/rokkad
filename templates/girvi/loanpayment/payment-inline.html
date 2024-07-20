@@ -1,6 +1,7 @@
 <tr>
     <td>     {{ i.id }}</td>
     <td> {{ i.payment_date }}</td>
+    <td>{{i.journal_entries.latest}}</td>
     <td>{{ i.payment_amount }}</td>
     <td>{{ i.principal_payment }}</td>
     <td>{{ i.interest_payment }}</td>

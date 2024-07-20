@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class PurchaseConfig(AppConfig):
-    name = "purchase"
+    name = "apps.tenant_apps.purchase"
 
     def ready(self):
-        import purchase.signals
+        import apps.tenant_apps.purchase.signals

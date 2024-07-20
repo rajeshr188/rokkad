@@ -1,72 +1,85 @@
 from typing import List
 
-from contact.models import Customer
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from django_tables2.config import RequestConfig
 from num2words import num2words
-from product.models import PricingTier, PricingTierProductPrice, ProductVariant
 from render_block import render_block_to_string
 
-from ..filters import InvoiceFilter
-from ..forms import InvoiceForm, InvoiceItemForm
-from ..models import Invoice, InvoiceItem
-from ..tables import InvoiceTable
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.product.models import (PricingTier,
+                                             PricingTierProductPrice,
+                                             ProductVariant)
+from apps.tenant_apps.utils.htmx_utils import for_htmx
+
+from ..filters import PurchaseFilter
+from ..forms import PurchaseForm, PurchaseItemForm
+from ..models import Purchase, PurchaseItem
+from ..tables import PurchaseTable
 
 
+def generate_stock(request, purchase_id):
+    obj = Purchase.objects.get(id=purchase_id)
+    for i in obj.purchase_items.all():
+        i.post()
+    return redirect("purchase:purchase_invoice_detail", pk=purchase_id)
+
+
+@for_htmx(use_block="content")
 @login_required
 def purchase_list(request):
-    filter = InvoiceFilter(
-        request.GET, queryset=Invoice.objects.all().select_related("supplier", "term")
+    filter = PurchaseFilter(
+        request.GET, queryset=Purchase.objects.all().select_related("supplier", "term")
     )
-    table = InvoiceTable(filter.qs)
+    table = PurchaseTable(filter.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
     context = {"filter": filter, "table": table}
-    if request.htmx:
-        response = render_block_to_string(
-            "purchase/invoice_list.html", "content", context, request
-        )
-        return HttpResponse(response)
-    else:
-        return render(request, "purchase/invoice_list.html", context)
+    return TemplateResponse(request, "purchase/purchase_list.html", context)
 
 
 @login_required
 def purchase_create(request):
-    form = InvoiceForm(request.POST or None)
+    if request.method == "POST":
+        form = PurchaseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("purchase:purchase_invoice_list")
+    form = PurchaseForm()
     context = {"form": form}
-    if form.is_valid():
-        obj = form.save()
-        if request.htmx:
-            headers = {"HX-Redirect": obj.get_absolute_url()}
-            return HttpResponse("Created", headers=headers)
-        return redirect("purchase_invoice_list")
-    return render(request, "sales/create_update.html", context)
+    return render(request, "purchase/purchase_form.html", context)
 
 
 # trigger signals to reallot if any payments since the invoice is updated
-@login_required
-def purchase_update(request, id=None):
-    obj = get_object_or_404(Invoice, pk=id)
+import logging
 
-    form = InvoiceForm(request.POST or None, instance=obj)
-    new_item_url = reverse(
-        "purchase:purchase_invoiceitem_create", kwargs={"parent_id": obj.id}
-    )
-    context = {"object": obj, "form": form, "new_item_url": new_item_url}
-    if form.is_valid():
-        form.save()
-        context["message"] = "Updated"
-    if request.htmx:
-        return render(request, "sales/partials/forms.html", context)
-    return render(request, "sales/create_update.html", context)
+logger = logging.getLogger(__name__)
+
+
+@login_required
+def purchase_update(request, id):
+    logger.info("Starting purchase_update")
+    obj = Purchase.objects.get(id=id)
+    logger.info("Fetched purchase object")
+    if request.method == "POST":
+        form = PurchaseForm(request.POST, instance=obj)
+        logger.info("Created form")
+        if form.is_valid():
+            logger.info("Form is valid")
+            form.save()
+            logger.info("Saved form")
+            return redirect("purchase:purchase_invoice_list")
+    logger.info("Finished purchase_update")
+    form = PurchaseForm(instance=obj)
+    context = {"form": form}
+    return render(request, "purchase/purchase_form.html", context)
 
 
 @login_required
 def purchase_detail_view(request, pk=None):
-    obj = Invoice.objects.get(pk=pk)
+    obj = Purchase.objects.get(pk=pk)
     context = {
         "object": obj,
         "previous": obj.get_previous(),
@@ -79,7 +92,7 @@ def purchase_detail_view(request, pk=None):
 
 @login_required
 def purchase_delete_view(request, id=None):
-    obj = Invoice.objects.get(id=id)
+    obj = Purchase.objects.get(id=id)
     if request.method == "POST":
         obj.delete()
         success_url = reverse("purchase:purchase_invoice_list")
@@ -93,7 +106,7 @@ def purchase_delete_view(request, id=None):
 
 @login_required
 def purchase_ratecut_change(request, id):
-    obj = Invoice.objects.get(pk=id)
+    obj = Purchase.objects.get(pk=id)
     print(f"purchase_ratecut_change: {obj}")
     print(f"purchase_ratecut_change: {obj.is_ratecut}")
     if request.method == "POST":
@@ -102,18 +115,16 @@ def purchase_ratecut_change(request, id):
         print(f"purchase_ratecut_changed: {obj.is_ratecut}")
         for i in obj.purchase_items.all():
             i.save()
-        success_url = reverse("purchase:purchase_invoice_list")
+        success_url = reverse("purchase:purchase_invoice_detail", kwargs={"pk": id})
         if request.htmx:
             headers = {"HX-Redirect": success_url}
             return HttpResponse("Success", headers=headers)
         return redirect(success_url)
-    # this return is nonsense
-    return render(request, "purchase/invoice_confirm_delete.html", {"object": obj})
 
 
 @login_required
 def purchase_gst_change(request, id):
-    obj = Invoice.objects.get(pk=id)
+    obj = Purchase.objects.get(pk=id)
     print(f"purchase_gst_change: {obj}")
     print(f"purchase_gst_change: {obj.is_gst}")
     if request.method == "POST":
@@ -122,13 +133,11 @@ def purchase_gst_change(request, id):
         print(f"purchase_gst_changed: {obj.is_gst}")
         for i in obj.purchase_items.all():
             i.save()
-        success_url = reverse("purchase:purchase_invoice_list")
+        success_url = reverse("purchase:purchase_invoice_detail", kwargs={"pk": id})
         if request.htmx:
             headers = {"HX-Redirect": success_url}
             return HttpResponse("Success", headers=headers)
         return redirect(success_url)
-    # this return is nonsense
-    return render(request, "purchase/invoice_confirm_delete.html", {"object": obj})
 
 
 @login_required
@@ -136,7 +145,7 @@ def purchase_item_update_hx_view(request, parent_id=None, id=None):
     if not request.htmx:
         raise Http404
     try:
-        parent_obj = Invoice.objects.get(id=parent_id)
+        parent_obj = Purchase.objects.get(id=parent_id)
     except:
         parent_obj = None
     if parent_obj is None:
@@ -144,10 +153,10 @@ def purchase_item_update_hx_view(request, parent_id=None, id=None):
     instance = None
     if id is not None:
         try:
-            instance = InvoiceItem.objects.get(invoice=parent_obj, id=id)
+            instance = PurchaseItem.objects.get(invoice=parent_obj, id=id)
         except:
             instance = None
-    form = InvoiceItemForm(request.POST or None, instance=instance)
+    form = PurchaseItemForm(request.POST or None, instance=instance)
     url = reverse(
         "purchase:purchase_invoiceitem_create", kwargs={"parent_id": parent_obj.id}
     )
@@ -166,7 +175,7 @@ def purchase_item_update_hx_view(request, parent_id=None, id=None):
 
 @login_required
 def purchaseitem_detail(request, pk):
-    obj = InvoiceItem.objects.get(pk=pk)
+    obj = PurchaseItem.objects.get(pk=pk)
     context = {
         "object": obj,
     }
@@ -176,7 +185,7 @@ def purchaseitem_detail(request, pk):
 @login_required
 def purchase_item_delete_view(request, parent_id=None, id=None):
     try:
-        obj = InvoiceItem.objects.get(
+        obj = PurchaseItem.objects.get(
             invoice__id=parent_id,
             id=id,
         )
@@ -188,7 +197,7 @@ def purchase_item_delete_view(request, parent_id=None, id=None):
         raise Http404
     if request.method == "POST":
         id = obj.id
-        obj.delete()
+        obj.delete(delete_stock=True)
         success_url = reverse(
             "purchase:purchase_invoice_detail", kwargs={"pk": parent_id}
         )
@@ -226,7 +235,7 @@ def get_product_price(request):
     #     price = Price.objects.filter(product=product, customer=customer).first()
     #     selling_price = price.selling_price if price else None
 
-    form = InvoiceItemForm(initial={"touch": purchase_price})
+    form = PurchaseItemForm(initial={"touch": purchase_price})
     context = {
         "field": form["touch"],
     }
@@ -235,7 +244,7 @@ def get_product_price(request):
 
 def home(request):
     context = {}
-    qs = Invoice.objects
+    qs = Purchase.objects
     qs_posted = qs.posted()
 
     total = dict()
@@ -291,7 +300,7 @@ def home(request):
 #         ).order_by().values('supplier')
 #     grec=payments.annotate(grec=Sum('total',filter=Q(type='Gold'))).values('grec')
 #     crec=payments.annotate(crec=Sum('total',filter=Q(type='Cash'))).values('crec')
-#     invoices = Invoice.objects.posted().filter(
+#     invoices = Purchase.objects.posted().filter(
 #         supplier=OuterRef('pk'),
 #         created__gte=Subquery(acs.values('created'))
 #         ).order_by().values('supplier')

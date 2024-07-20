@@ -1,19 +1,21 @@
 import django_tables2 as tables
 from django_tables2.utils import A
 
-from .models import Invoice, Payment
+from .models import Payment, Purchase
 
 
-class InvoiceTable(tables.Table):
+class PurchaseTable(tables.Table):
     id = tables.Column(linkify=True)
     supplier = tables.Column(linkify=True)
-    paid = tables.Column(
-        accessor="get_total_payments", verbose_name="Paid", orderable=False
-    )
+    # paid = tables.Column(
+    #     accessor="get_total_payments", verbose_name="Paid", orderable=False
+    # )
     net_wt = tables.Column(
-        accessor="get_net_wt", verbose_name="Net Wt", orderable=False
+        accessor="get_net_wt", verbose_name="Net Wt", orderable=False, empty_values=[]
     )
-    # balance = tables.Column(accessor = "balance", verbose_name="Balance", orderable=False)
+    balance = tables.Column(
+        accessor="get_balance", verbose_name="Balance", orderable=False, empty_values=[]
+    )
     edit = tables.Column(
         linkify=("purchase:purchase_invoice_update", [tables.A("pk")]),
         empty_values=(),
@@ -28,8 +30,8 @@ class InvoiceTable(tables.Table):
     def render_supplier(self, value):
         return value.name
 
-    def render_created(self, value):
-        return value.date
+    def render_voucher_date(self, value):
+        return value.strftime("%d/%m/%y")
 
     def render_edit(self):
         return "Edit"
@@ -38,13 +40,13 @@ class InvoiceTable(tables.Table):
         return "Delete"
 
     class Meta:
-        model = Invoice
+        model = Purchase
         fields = (
             "id",
-            "created",
+            "voucher_date",
             "supplier",
             "net_wt",
-            # "balance",
+            "balance",
             "status",
             "is_gst",
             "term",
@@ -73,8 +75,8 @@ class PaymentTable(tables.Table):
     def render_supplier(self, value):
         return value.name
 
-    def render_created(self, value):
-        return value.date
+    def render_voucher_date(self, value):
+        return value.strftime("%d/%m/%y")
 
     # def render_edit(self):
     #     return 'Edit'
@@ -85,7 +87,7 @@ class PaymentTable(tables.Table):
         model = Payment
         fields = (
             "id",
-            "created",
+            "voucher_date",
             "supplier",
             "total",
             "status",

@@ -1,4 +1,4 @@
-{% extends '_base.html' %}
+{% extends 'tenant.html' %}
 
 {% block title %}Ledger detail{% endblock %}
 
@@ -23,7 +23,7 @@
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     {% for i in dtxns%}
-                    <li class="list-group-item">{{i.created|date}} {{i.amount}}</li>
+                    <li class="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
                     {%endfor%}
                 </ul>
                 
@@ -39,7 +39,7 @@
             <div class="card-body">     
                 <ul class="list-group list-group-flush">
                     {% for i in ctxns%}
-                    <li class ="list-group-item">{{i.created|date}} {{i.amount}}</li>
+                    <li class ="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
                     {%endfor%}
                 </ul>
                 <a href="#" class="btn btn-primary">Add</a>

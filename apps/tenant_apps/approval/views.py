@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from dea.models import JournalEntry
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
@@ -10,10 +9,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
 from django.views.generic import DeleteView
-from invoice.models import PaymentTerm
-from sales.models import Invoice as sinv
-from sales.models import InvoiceItem as sinvitem
-from utils.htmx_utils import for_htmx
+
+from apps.tenant_apps.dea.models import JournalEntry
+from apps.tenant_apps.sales.models import Invoice as sinv
+from apps.tenant_apps.sales.models import InvoiceItem as sinvitem
+from apps.tenant_apps.terms.models import PaymentTerm
+from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from .filters import ApprovalFilter, ApprovalLineFilter
 from .forms import ApprovalForm, ApprovalLineForm, ReturnForm, ReturnItemForm

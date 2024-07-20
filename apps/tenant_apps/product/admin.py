@@ -2,24 +2,10 @@
 from django import forms
 from django.contrib import admin
 
-from .models import (
-    Attribute,
-    AttributeValue,
-    Category,
-    Movement,
-    Price,
-    PricingTier,
-    PricingTierProductPrice,
-    Product,
-    ProductImage,
-    ProductType,
-    ProductVariant,
-    Stock,
-    StockLot,
-    StockStatement,
-    StockTransaction,
-    VariantImage,
-)
+from .models import (Attribute, AttributeValue, Category, Movement, Price,
+                     PricingTier, PricingTierProductPrice, Product,
+                     ProductImage, ProductType, ProductVariant, Stock,
+                     StockStatement, StockTransaction, VariantImage)
 
 
 class PriceAdminForm(forms.ModelForm):
@@ -199,41 +185,17 @@ class VariantImageAdmin(admin.ModelAdmin):
 admin.site.register(VariantImage, VariantImageAdmin)
 
 
-class StockAdminForm(forms.ModelForm):
-    class Meta:
-        model = Stock
-        fields = "__all__"
+# class StockAdminForm(forms.ModelForm):
+#     class Meta:
+#         model = Stock
+#         fields = "__all__"
 
 
-class StockAdmin(admin.ModelAdmin):
-    form = StockAdminForm
+# class StockAdmin(admin.ModelAdmin):
+#     form = StockAdminForm
 
 
-admin.site.register(Stock, StockAdmin)
-
-
-class StockLotAdminForm(forms.ModelForm):
-    class Meta:
-        model = StockLot
-        fields = "__all__"
-
-
-class StockLotAdmin(admin.ModelAdmin):
-    form = StockLotAdminForm
-    list_display = [
-        "id",
-        "variant",
-        "weight",
-        "quantity",
-        "barcode",
-        "huid",
-        # "purchase_item",
-        "purchase_rate",
-        "purchase_touch",
-    ]
-
-
-admin.site.register(StockLot, StockLotAdmin)
+# admin.site.register(Stock, StockAdmin)
 
 
 class StockTransactionAdminForm(forms.ModelForm):

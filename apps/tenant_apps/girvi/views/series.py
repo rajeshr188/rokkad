@@ -21,7 +21,7 @@ def series_new(request):
         if form.is_valid():
             series = form.save(commit=False)
             series.save()
-            return redirect("series_detail", pk=series.pk)
+            return redirect("girvi:girvi_series_detail", pk=series.pk)
     else:
         form = SeriesForm()
     return render(request, "girvi/series/series_edit.html", {"form": form})

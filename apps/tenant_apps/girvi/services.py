@@ -1,7 +1,8 @@
 from collections import Counter
 from datetime import datetime
 
-from django.db.models import Avg, Case, Count, IntegerField, Q, Sum, Value, When
+from django.db.models import (Avg, Case, Count, IntegerField, Q, Sum, Value,
+                              When)
 from django.db.models.functions import ExtractYear, TruncDate
 
 from .models import Customer, Loan, LoanItem, LoanPayment, Release
@@ -14,6 +15,10 @@ def get_average_loan_instance_per_day():
     # Get the earliest and latest Loan instance
     earliest_loan = Loan.objects.order_by("loan_date").first()
     latest_loan = Loan.objects.order_by("-loan_date").first()
+
+    # If there are no Loan instances, return 0
+    if earliest_loan is None or latest_loan is None:
+        return 0
 
     # Calculate the number of days between the earliest and latest Loan instance
     num_days = (latest_loan.loan_date - earliest_loan.loan_date).days + 1

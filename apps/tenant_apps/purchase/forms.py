@@ -1,31 +1,22 @@
 from datetime import datetime
 
-from contact.models import Customer
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import (
-    ButtonHolder,
-    Column,
-    Field,
-    Fieldset,
-    Layout,
-    Row,
-    Submit,
-)
 from django import forms
-from django.db.models import Q
 from django.urls import reverse_lazy
 from django_select2.forms import Select2Widget
-from product.models import ProductVariant
-from utils.custom_layout_object import *
 
-from .models import Invoice, InvoiceItem, Payment, PaymentAllocation
+from apps.tenant_apps.contact.forms import CustomerWidget
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.product.models import ProductVariant
+from apps.tenant_apps.utils.custom_layout_object import *
+
+from .models import Payment, Purchase, PurchaseItem
 
 
-class InvoiceForm(forms.ModelForm):
+class PurchaseForm(forms.ModelForm):
     supplier = forms.ModelChoiceField(
-        queryset=Customer.objects.exclude(customer_type="Re"), widget=Select2Widget
+        queryset=Customer.objects.exclude(customer_type="Re"), widget=CustomerWidget
     )
-    created = forms.DateTimeField(
+    voucher_date = forms.DateTimeField(
         widget=forms.DateTimeInput(
             attrs={
                 "class": "form-control datetimepicker-input",
@@ -35,9 +26,9 @@ class InvoiceForm(forms.ModelForm):
     )
 
     class Meta:
-        model = Invoice
+        model = Purchase
         fields = [
-            "created",
+            "voucher_date",
             "is_gst",
             "is_ratecut",
             "supplier",
@@ -45,62 +36,21 @@ class InvoiceForm(forms.ModelForm):
             "status",
         ]
 
-    def __init__(self, *args, **kwargs):
-        super(InvoiceForm, self).__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_tag = True
-        self.helper.form_class = "form-group"
-        self.helper.label_class = "col-md-6 create-label"
-        self.helper.field_class = "col-md-12"
-        self.helper.layout = Layout(
-            Row(
-                Column(
-                    Field("created", css_class="form-control"),
-                    css_class="form-group col-md-3 mb-0",
-                ),
-                Column(
-                    Field("supplier", css_class="form-control"),
-                    css_class="form-group col-md-3 mb-0",
-                ),
-                Column(Field("is_gst"), css_class="form-group col-md-3 mb-0"),
-                css_class="form-row",
-            ),
-            Row(
-                Column(
-                    Field("is_ratecut", css_class="form-control"),
-                ),
-            ),
-            Row(
-                Column("term", css_class="form-group col-md-3 mb-0"),
-                Column("status", css_class="form-group col-md-3 mb-0"),
-                css_class="form-row",
-            ),
-            ButtonHolder(Submit("submit", "save")),
-        )
 
-
-class InvoiceUpdateForm(InvoiceForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.helper.layout.fields[-1].value = "Save Changes"
-
-
-class InvoiceItemForm(forms.ModelForm):
+class PurchaseItemForm(forms.ModelForm):
     product = forms.ModelChoiceField(
         queryset=ProductVariant.objects.all(), widget=Select2Widget
     )
 
     class Meta:
-        model = InvoiceItem
+        model = PurchaseItem
         fields = [
-            "is_return",
+            "huid",
             "product",
             "quantity",
             "weight",
             "touch",
             "making_charge",
-            "rate",
-            # "net_wt",
         ]
         widgets = {
             "weight": forms.NumberInput(
@@ -116,7 +66,7 @@ class InvoiceItemForm(forms.ModelForm):
 
 
 class PaymentForm(forms.ModelForm):
-    created = forms.DateTimeField(
+    voucher_date = forms.DateTimeField(
         widget=forms.DateTimeInput(attrs={"type": "datetime-local"})
     )
     supplier = forms.ModelChoiceField(
@@ -127,7 +77,7 @@ class PaymentForm(forms.ModelForm):
         model = Payment
         fields = [
             "supplier",
-            "created",
+            "voucher_date",
             # "payment_type",
             "weight",
             "touch",

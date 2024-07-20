@@ -11,28 +11,16 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django_select2 import forms as s2forms
-from django_select2.forms import (
-    ModelSelect2Widget,
-    Select2Mixin,
-    Select2MultipleWidget,
-    Select2Widget,
-)
+from django_select2.forms import (ModelSelect2Widget, Select2Mixin,
+                                  Select2MultipleWidget, Select2Widget)
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.rates.models import Rate
 
-from .models import (
-    License,
-    Loan,
-    LoanItem,
-    LoanPayment,
-    Release,
-    Series,
-    Statement,
-    StatementItem,
-)
+from .models import (License, Loan, LoanItem, LoanPayment, Release, Series,
+                     Statement, StatementItem)
 
 
 class LoansWidget(s2forms.ModelSelect2Widget):
@@ -229,28 +217,6 @@ class LoanForm(forms.ModelForm):
             self.add_error("lid", "A loan with this LoanID already exists.")
             # raise forms.ValidationError("A loan with this LoanID already exists.")
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.helper = FormHelper(self)
-    #     self.helper.form_tag = False
-    #     self.helper.help_text_inline = True
-    #     self.helper.layout = Layout(
-    #         Row(
-    #             Column(FloatingField("loan_type"), css_class="col-md"),
-    #             Column(FloatingField("created"), css_class="col-md date"),
-    #             css_class="row",
-    #         ),
-    #         Row(
-    #             Column(FloatingField("series"), css_class="col-md"),
-    #             Column(FloatingField("lid"), css_class="col-md"),
-    #             css_class="row",
-    #         ),
-    #         Row(
-    #             Column("customer", css_class="col-md"),
-    #             css_class="row",
-    #         ),
-    #     )
-
 
 class LoanRenewForm(forms.Form):
     amount = forms.IntegerField()
@@ -282,6 +248,7 @@ class LoanItemForm(forms.ModelForm):
             }
         ),
     )
+    loanamount = forms.DecimalField(required=True)
 
     class Meta:
         model = LoanItem
@@ -306,7 +273,9 @@ class LoanItemForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
 
-        loanamount = self.cleaned_data["loanamount"]
+        loanamount = cleaned_data.get("loanamount")
+        if loanamount is None:
+            return cleaned_data
         weight = self.cleaned_data["weight"]
         purity = self.cleaned_data["purity"]
         itemtype = self.cleaned_data["itemtype"]
@@ -323,6 +292,12 @@ class LoanItemForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class LoanSelectionForm(forms.Form):
+    loans = forms.ModelMultipleChoiceField(
+        queryset=Loan.objects.all(), widget=MultipleLoansWidget
+    )
 
 
 class ReleaseForm(forms.ModelForm):
@@ -405,26 +380,6 @@ class ReleaseForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
-
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.helper = FormHelper()
-    #     self.helper.layout = Layout(
-    #         Row(
-    #             Column("release_id", css_class="form-group col-md-4 mb-0"),
-    #             Column("release_date", css_class="form-group col-md-4 mb-0"),
-    #             css_class="form-row",
-    #         ),
-    #         Row(
-    #             Column("loan", css_class="form-group col-md-4 mb-0"),
-    #             Column("released_by", css_class="form-group col-md-4 mb-0"),
-    #             css_class="form-row",
-    #         ),
-    #         Row(
-    #             Column("release_amount", css_class="form-group  col-md-4 mb-0"),
-    #         ),
-    #         Submit("submit", "Submit"),
-    #     )
 
 
 class BulkReleaseForm(forms.Form):

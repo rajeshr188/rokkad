@@ -110,14 +110,10 @@ class Customer(models.Model):
         return reverse("contact_customer_update", args=(self.pk,))
 
     # def save(self, *args, **kwargs):
-    #     try:
-    #         this = Customer.objects.get(id=self.id)
-    #         if this.pic != self.pic:
-    #             this.pic.delete(save=False)
-
-    #     except:
-    #         pass
-    #     super(Customer, self).save(*args, **kwargs)
+    #     if not self.id:
+    #         self.created = timezone.now()
+    #     self.updated = timezone.now()
+    #     super().save(*args, **kwargs)
 
     def merge(self, dup):
         # to merge one customer into another existing one
@@ -395,7 +391,7 @@ class CustomerRelationship(models.Model):
 
 class Address(models.Model):
     # Relationships
-    Customer = models.ForeignKey(
+    customer = models.ForeignKey(
         "contact.Customer",
         on_delete=models.CASCADE,
         related_name="address",
@@ -414,6 +410,7 @@ class Address(models.Model):
     last_updated = models.DateTimeField(auto_now=True, editable=False)
     street = models.TextField(max_length=100, verbose_name=_("Street"))
     city = models.CharField(max_length=30, default="Vellore", verbose_name=_("City"))
+    is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
 
     class Meta:
         ordering = ("-created",)
@@ -436,7 +433,7 @@ class Contact(models.Model):
         related_name="contactno",
         verbose_name=_("Customer"),
     )
-
+    is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
     # Fields
     created = models.DateTimeField(auto_now_add=True, editable=False)
 
@@ -470,12 +467,13 @@ class Contact(models.Model):
 
 class Proof(models.Model):
     # Relationships
-    Customer = models.ForeignKey(
+    customer = models.ForeignKey(
         "contact.Customer",
         on_delete=models.CASCADE,
         related_name="proofs",
         verbose_name=_("Customer"),
     )
+    is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
 
     # Fields
     class DocType(models.TextChoices):

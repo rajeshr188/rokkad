@@ -2,7 +2,6 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Case, F, Sum, Value, When, Window
-from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
@@ -51,6 +50,7 @@ class Account(models.Model):
         EntityType,
         null=True,
         on_delete=models.SET_NULL,
+        default="Person",
     )
     AccountType_Ext = models.ForeignKey(
         AccountType_Ext,
@@ -66,7 +66,7 @@ class Account(models.Model):
         ordering = ("id",)
 
     def __str__(self):
-        return f"{self.id}"
+        return f"{self.id} | {self.contact} | {self.AccountType_Ext}"
 
     def get_absolute_url(self):
         return reverse("dea_account_detail", kwargs={"pk": self.pk})
@@ -101,22 +101,21 @@ class Account(models.Model):
             return None
 
     def txns(self, since=None):
+        txns = (
+            self.accounttransactions.all()
+            .select_related(
+                "journal_entry",
+                # "journal_entry__content_object",not possible in django for gfks
+                "journal_entry__content_type",
+                "Account",
+                "XactTypeCode",
+                "XactTypeCode_ext",
+                "ledgerno",
+            )
+            .prefetch_related("journal_entry__content_object")
+        )
         if since:
-            txns = self.accounttransactions.filter(created__gte=since).select_related(
-                "journal_entry",
-                "journal_entry__content_type",
-                "Account",
-                "XactTypeCode",
-                "XactTypeCode_ext",
-            )
-        else:
-            txns = self.accounttransactions.all().select_related(
-                "journal_entry",
-                "journal_entry__content_type",
-                "Account",
-                "XactTypeCode",
-                "XactTypeCode_ext",
-            )
+            txns = txns.filter(created__gte=since)
         return txns
 
     def total_credit(self, since=None):
@@ -124,7 +123,10 @@ class Account(models.Model):
         return Balance(
             [
                 Money(r["total"], r["amount_currency"])
-                for r in txns.filter(XactTypeCode__XactTypeCode="Dr")
+                for r in txns.filter(
+                    # XactTypeCode_ext__in=["LT", "LR", "IR", "CPU", "CRPU", "RCT", "AC"]
+                    XactTypeCode__XactTypeCode="Dr"
+                )
                 .values("amount_currency")
                 .annotate(total=Sum("amount"))
             ]
@@ -135,40 +137,38 @@ class Account(models.Model):
         return Balance(
             [
                 Money(r["total"], r["amount_currency"])
-                for r in txns.filter(XactTypeCode__XactTypeCode="Cr")
+                for r in txns.filter(
+                    # XactTypeCode_ext__in=["LG", "LP", "IP", "PYT", "CRSL", "AD"]
+                    XactTypeCode__XactTypeCode="Cr"
+                )
                 .values("amount_currency")
                 .annotate(total=Sum("amount"))
             ]
         )
 
     def current_balance(self):
-        return self.total_credit() - self.total_debit()
-        # ls = self.latest_stmt()
-        # if ls is None:
-        #     cb = Balance()
-        #     ac_txn = self.txns()
-        # else:
-        #     cb = ls.get_cb()
-        #     ac_txn = self.txns(since=ls.created)
+        # return self.total_credit(since =) - self.total_debit(since =)
+        ls = self.latest_stmt()
+        if ls is None:
+            cb = Balance()
+            ac_txn = self.txns()
+            cr_bal = self.total_credit()
+            dr_bal = self.total_debit()
+        else:
+            cb = ls.get_cb()
+            ac_txn = self.txns(since=ls.created)
+            cr_bal = self.total_credit(since=ls.created)
+            dr_bal = self.total_debit(since=ls.created)
 
-        # credit = (
-        #     ac_txn.filter(
-        #         XactTypeCode_ext__in=["LT", "LR", "IR", "CPU", "CRPU", "RCT", "AC"]
-        #     )
-        #     .values("amount_currency")
-        #     .annotate(total=Sum("amount"))
-        # )
-        # debit = (
-        #     ac_txn.filter(XactTypeCode_ext__in=["LG", "LP", "IP", "PYT", "CRSL", "AD"])
-        #     .values("amount_currency")
-        #     .annotate(total=Sum("amount"))
-        # )
-        # credit_bal = Balance([Money(r["total"], r["amount_currency"]) for r in credit])
+        if self.AccountType_Ext.XactTypeCode_id == "Dr":
+            bal = cb + (dr_bal - cr_bal)
+        else:
+            bal = cb + (cr_bal - dr_bal)
 
-        # debit_bal = Balance([Money(r["total"], r["amount_currency"]) for r in debit])
-        # bal = cb + (credit_bal - debit_bal)
-        # print(f"cb:{cb} credit_bal:{credit_bal} debit_bal:{debit_bal} bal:{bal}")
         return bal
+
+    def get_balance(self):
+        return self.accountbalance
 
 
 # account statement for ext account
@@ -188,7 +188,7 @@ class AccountStatement(models.Model):
         get_latest_by = "created"
 
     def __str__(self):
-        return f"{self.id} | {self.AccountNo} = {self.ClosingBalance}({self.TotalDebit} - {self.TotalCredit})"
+        return f"{self.id} | {self.AccountNo} = {Balance(self.ClosingBalance)}({Balance(self.TotalDebit)} - {Balance(self.TotalCredit)})"
 
     def get_cb(self):
         return Balance(self.ClosingBalance)
@@ -205,17 +205,17 @@ class TransactionType_Ext(models.Model):
 
 class AccountTransactionManager(models.Manager):
     def create_txn(
-        self, journal_entry, ledgerno, xacttypecode, xacttypecode_ext, account, amount
+        self, journal_entry, ledgerno, XactTypeCode, XactTypeCode_ext, Account, amount
     ):
         l = Ledger.objects.get(name=ledgerno)
-        xc = TransactionType_DE.objects.get(XactTypeCode=xacttypecode)
-        xc_ext = TransactionType_Ext.objects.get(XactTypeCode_ext=xacttypecode_ext)
+        xc = TransactionType_DE.objects.get(XactTypeCode=XactTypeCode)
+        xc_ext = TransactionType_Ext.objects.get(XactTypeCode_ext=XactTypeCode_ext)
         txn = self.create(
             journal_entry=journal_entry,
             ledgerno=l,
             XactTypeCode=xc,
             XactTypeCode_ext=xc_ext,
-            Account=account,
+            Account=Account,
             amount=amount,
         )
         return txn
@@ -225,12 +225,16 @@ class AccountTransaction(models.Model):
     journal_entry = models.ForeignKey(
         "JournalEntry", on_delete=models.CASCADE, related_name="atxns"
     )
-    ledgerno = models.ForeignKey("Ledger", on_delete=models.CASCADE)
+    # ledger to be credited or debited opp action of XactTypeCode(cr,dr) against account
+    ledgerno = models.ForeignKey(
+        "Ledger", on_delete=models.CASCADE, related_name="aleg"
+    )
     created = models.DateTimeField(
         auto_now_add=True,
         # unique = True
     )
     XactTypeCode = models.ForeignKey(TransactionType_DE, on_delete=models.CASCADE)
+    # xacttypecode_ext denotes the kind of transaction like sales,purchase...etc
     XactTypeCode_ext = models.ForeignKey(TransactionType_Ext, on_delete=models.CASCADE)
     Account = models.ForeignKey(
         Account, on_delete=models.CASCADE, related_name="accounttransactions"
@@ -239,7 +243,7 @@ class AccountTransaction(models.Model):
         max_digits=13,
         decimal_places=3,
         default_currency="INR",
-        validators=[MinValueValidator(limit_value=0.0)],
+        # validators=[MinValueValidator(limit_value=0.0)],
     )
     objects = AccountTransactionManager()
 
@@ -255,18 +259,21 @@ class AccountTransaction(models.Model):
     def __str__(self):
         return f"{self.XactTypeCode_ext}"
 
+    def get_voucher_url(self):
+        voucher = self.journal_entry.content_object
+        return voucher.get_absolute_url()
+
 
 class Accountbalance(models.Model):
-    entity = models.CharField(max_length=30)
-    acc_type = models.CharField(max_length=30)
-    acc_name = models.CharField(max_length=50)
     AccountNo = models.OneToOneField(
-        Account, on_delete=models.DO_NOTHING, primary_key=True
+        Account,
+        on_delete=models.DO_NOTHING,
+        primary_key=True,
+        related_name="accountbalance",
     )
-    created = models.DateTimeField()
-    TotalCredit = ArrayField(MoneyValueField(null=True, blank=True))
-    TotalDebit = ArrayField(MoneyValueField(null=True, blank=True))
-    ClosingBalance = ArrayField(MoneyValueField(null=True, blank=True))
+    ls_created = models.DateTimeField()
+    opening_balance = ArrayField(MoneyValueField(null=True, blank=True))
+    closing_balance = ArrayField(MoneyValueField(null=True, blank=True))
     cr = ArrayField(MoneyValueField(null=True, blank=True))
     dr = ArrayField(MoneyValueField(null=True, blank=True))
 
@@ -274,5 +281,28 @@ class Accountbalance(models.Model):
         managed = False
         db_table = "account_balance"
 
+    def __str__(self):
+        return f"{self.get_currbal()}"
+
     def get_currbal(self):
-        return Balance(self.ClosingBalance) + Balance(self.dr) - Balance(self.cr)
+        # more like op + cb(dr-cr if acc.type == dr else cr-dr)
+        if self.AccountNo.AccountType_Ext.XactTypeCode_id == "Dr":
+            return (
+                Balance(self.opening_balance) - self.get_cb()
+            )  # (self.get_cr() - self.get_dr())
+        else:
+            return (
+                Balance(self.opening_balance) + self.get_cb()
+            )  # (self.get_dr() - self.get_cr())
+
+    def get_cb(self):
+        return Balance(self.closing_balance)
+
+    def get_cr(self):
+        return Balance(self.cr)
+
+    def get_dr(self):
+        return Balance(self.dr)
+
+    def get_ob(self):
+        return Balance(self.opening_balance)

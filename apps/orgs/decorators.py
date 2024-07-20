@@ -10,11 +10,13 @@ def role_required(role_name):
         @login_required
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
-            company = request.user.workspace
+            # company = request.user.workspace
 
-            print(f"User: {user} Company:{company} role_required: {role_name}")
-            # company_id = kwargs.get('company_id')  # Assuming tenant is passed as a keyword argument to the view
-            # company = Company.objects.get(id=company_id)
+            # print(f"User: {user} Company:{company} role_required: {role_name}")
+            company_id = kwargs.get(
+                "company_id"
+            )  # Assuming tenant is passed as a keyword argument to the view
+            company = Company.objects.get(id=company_id)
             try:
                 membership = Membership.objects.get(user=user, company=company)
                 print(
@@ -27,7 +29,9 @@ def role_required(role_name):
                     # return HttpResponseForbidden()
             except Membership.DoesNotExist:
                 # return HttpResponseForbidden()
-                raise Http404("Need to be A Company Owner to proceed with this action.")
+                raise Http404(
+                    "Need to be A member or Company Owner to proceed with this action."
+                )
             return view_func(request, *args, **kwargs)
 
         return _wrapped_view
@@ -100,3 +104,19 @@ def membership_required(role_name):
         return _wrapped_view
 
     return decorator
+
+
+from functools import wraps
+
+from django.core.exceptions import PermissionDenied
+
+
+def workspace_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if request.user.is_authenticated and request.user.workspace.name != "Public":
+            return view_func(request, *args, **kwargs)
+        else:
+            raise PermissionDenied
+
+    return _wrapped_view

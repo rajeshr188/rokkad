@@ -1,6 +1,6 @@
-{%extends '_base.html'%}
+{%extends 'tenant.html'%}
 {% block title %}Acount detail{% endblock %}
-
+{% load zip_lists%}
 {% block content %}
 
 <div class="container col-auto">
@@ -9,10 +9,12 @@
             <div class="row g-0 border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative">
                 <div class="col p-4 d-flex flex-column position-static">
                     <strong class="d-inline-block mb-2 text-primary"></strong>
-                    <h3 class="mb-0">{{object}}</h3>
-                    <div class="mb-1 text-muted">Nov 12</div>
-                    <p class="card-text mb-auto">This is a wider card with supporting text below as a natural lead-in to
-                        additional content.</p>
+                    <h3 class="mb-0">{{object.contact}}</h3>
+                    <div class="mb-1 text-muted">{{object.contact.created}}</div>
+                    <p class="card-text mb-auto">Account : {{object.id}}
+                        <a class="btn btn-info" href="{% url 'dea_account_audit' object.id%}">Audit</a>
+
+                    </p>
                     
                 </div>
                 <div class="col-auto d-none d-lg-block">
@@ -21,106 +23,130 @@
                         <title>Placeholder</title>
                         <rect width="100%" height="100%" fill="#55595c" /><text x="50%" y="50%" fill="#eceeef"
                             dy=".3em">{{object}}</text>
-                </svg>
+                    </svg>
                 </div>
             </div>
         </div>
        
     </div>
-    <div class="card">
-        <div class="card-body">
-            Opening Bal: {{ ct.acc_stmt.get_cb}} | {{ct.acc_stmt.created}}
-            <a href="{% url 'dea_account_setob' object.id%}">Set Op Bal</a>
-    
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-sm">
+    <nav>
+        <div class="nav nav-tabs" id="nav-tab" role="tablist">
+          <button class="nav-link active" id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="true">List</button>
+          <button class="nav-link" id="nav-profile-tab" data-bs-toggle="tab" data-bs-target="#nav-profile" type="button" role="tab" aria-controls="nav-profile" aria-selected="false">T-View</button>
+          </div>
+      </nav>
+      <div class="tab-content" id="nav-tabContent">
+        <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab" tabindex="0">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Debit </h5>
-                    <p class="card-text">
-                        {% for i in ct.raw%}
-                        {%if i.XactTypeCode.XactTypeCode == 'Dr'%}
-                        <li>{{i.amount}} | {{i.created|date}} To : {{i.ledgerno}} via : {{i.XactTypeCode_ext.description}}</li>
-                        {%endif%}
-                        {%endfor%}
-                    </p>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th>Voucher</th>
+                                    <th>Desc</th>
+                                    <th>Dr</th>
+                                    <th>Cr</th>
+                                    <th>Balance</th>
+                        
+                                </tr>
+                            </thead>
+                            <tbody class="table-group-divider">
+                                <tr>
+                                    <td></td>
+                                    <td>{{ ct.accountbalance.ls_created|date }}</td>
+                                    <td></td>
+                                    <td>Opening Balance</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>{{ ct.opening_balance}}</td>
+                                    
+                                </tr>
+                                {%for i,running_total in ct.raw|zip_lists:ct.running_totals%}
+                                <tr>
+                                    <td>{{ forloop.counter|add:"1"}}</td>
+                                    <td>{{i.journal_entry.content_object.voucher_date|date}}</td>
+                                    <td>
+                                        <a href="{{i.journal_entry.get_voucher_url}}">
+                                        {{i.journal_entry.content_object.pk}}</a>
+                                    </td>
+                                    <td>{{i.XactTypeCode_ext.description}}</td>
+                                    <td>{%if i.XactTypeCode.XactTypeCode == 'Dr'%}{{i.amount}}{%else%}-{%endif%}</td>
+                                    <td>{%if i.XactTypeCode.XactTypeCode == 'Cr'%}{{i.amount}}{%else%}-{%endif%}</td>
+                                    <td>{{running_total}}</td>
+                                </tr>
+                                {%endfor%}
+                                
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>{{ct.opening_balance}}</td>
+                                    <td>{{ct.accountbalance.get_cr}}</td>
+                                    <td>{{ct.accountbalance.get_dr}}</td>
+                                    <td>{{ct.closing_balance}} </td>
+                                </tr>
+                              </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm">
+        <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab" tabindex="0">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Credit </h5>
-                    <p class="card-text">
-                        {% for i in ct.raw%}
-                        {%if i.XactTypeCode.XactTypeCode == 'Cr'%}
-                        <li>{{i.amount}} | {{i.created|date}} From : {{i.ledgerno}} Via : {{i.XactTypeCode_ext.description }} </li>
-                        {%endif%}
-                        {%endfor%}
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="card text-right">
-        <div class="card-body">
-            Closing Bal: {{object.current_balance}}
-            <a class="btn btn-info" href="{% url 'dea_account_audit' object.id%}">Audit</a>
-        </div>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Voucher</th>
-                    <th>Desc</th>
-                    <th>Dr</th>
-                    <th>Cr</th>
-                    <th>Balance</th>
-        
-                </tr>
-            </thead>
-            <tbody class="table-group-divider">
-                <tr>
-                    <td>{{ ct.acc_stmt.created }}</td>
-                    <td>{{ct.acc_stmt}}</td>
-                    <td>Opening Balance</td>
-                    <td></td>
-                    <td></td>
-                    <td>{{ ct.acc_stmt.get_cb}}</td>
+                    <div class="card">
+                        <div class="card-body">
+                            Opening Bal: {{ ct.opening_balance}} | {{ct.accountbalance.ls_created}}
+                            <a href="{% url 'dea_account_setob' object.id%}">Set Op Bal</a>
                     
-                </tr>
-                {%for i in ct.raw%}
-                <tr>
-                    <td>{{i.created}}</td>
-                    <td>
-                        <!-- this is heavy on db -->
-                        <a href="{{i.journal.get_url_string}}">
-                        {{i.journal_entry.content_object}}</a>
-                    </td>
-                    <td>{{i.XactTypeCode_ext.description}}</td>
-                    <td>{%if i.XactTypeCode.XactTypeCode == 'Dr'%}{{i.amount}}{%else%}-{%endif%}</td>
-                    <td>{%if i.XactTypeCode.XactTypeCode == 'Cr'%}{{i.amount}}{%else%}-{%endif%}</td>
-                    <td>{{i.running_total}}</td>
-                </tr>
-                {%endfor%}
-                
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td></td>
-                    <td></td>
-                    <td>Closing Balance</td>
-                    <td></td>
-                    <td></td>
-                    <td>{{object.current_balance}}</td>
-                </tr>
-              </tfoot>
-        </table>
-    </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Debit </h5>
+                                    <p class="card-text">
+                                        {% for i in ct.raw%}
+                                        {%if i.XactTypeCode.XactTypeCode == 'Dr'%}
+                                        <li>{{i.amount}} | {{i.created|date}} To : {{i.ledgerno}} via : {{i.XactTypeCode_ext.description}}</li>
+                                        {%endif%}
+                                        {%endfor%}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Credit </h5>
+                                    <p class="card-text">
+                                        {% for i in ct.raw%}
+                                        {%if i.XactTypeCode.XactTypeCode == 'Cr'%}
+                                        <li>{{i.amount}} | {{i.created|date}} From : {{i.ledgerno}} Via : {{i.XactTypeCode_ext.description }} </li>
+                                        {%endif%}
+                                        {%endfor%}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card text-right">
+                        <div class="card-body">
+                            Closing Bal: {{ct.closing_balance}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    
+    
 </div>
 
 {% endblock %}

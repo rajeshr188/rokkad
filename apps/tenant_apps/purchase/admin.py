@@ -1,10 +1,11 @@
 import decimal
 
-from contact.models import Customer
 from django import forms
 from django.contrib import admin
 
-from .models import Invoice, InvoiceItem, Payment
+from apps.tenant_apps.contact.models import Customer
+
+from .models import Payment, Purchase, PurchaseItem
 
 # from import_export import fields, resources
 # from import_export.admin import (ImportExportActionModelAdmin,
@@ -28,13 +29,13 @@ from .models import Invoice, InvoiceItem, Payment
 #         return self.model.objects.get_or_create(name=value, type="Wh")[0]
 
 
-class InvoiceAdminForm(forms.ModelForm):
+class PurchaseAdminForm(forms.ModelForm):
     class Meta:
-        model = Invoice
+        model = Purchase
         fields = "__all__"
 
 
-# class InvoiceResource(resources.ModelResource):
+# class PurchaseResource(resources.ModelResource):
 #     supplier = fields.Field(
 #         column_name="supplier",
 #         attribute="supplier",
@@ -42,7 +43,7 @@ class InvoiceAdminForm(forms.ModelForm):
 #     )
 
 #     class Meta:
-#         model = Invoice
+#         model = Purchase
 #         fields = (
 #             "id",
 #             "supplier",
@@ -56,10 +57,10 @@ class InvoiceAdminForm(forms.ModelForm):
 #         report_skipped = False
 
 
-# class InvoiceAdmin(ImportExportActionModelAdmin):
-class InvoiceAdmin(admin.ModelAdmin):
-    form = InvoiceAdminForm
-    # resource_class = InvoiceResource
+# class PurchaseAdmin(ImportExportActionModelAdmin):
+class PurchaseAdmin(admin.ModelAdmin):
+    form = PurchaseAdminForm
+    # resource_class = PurchaseResource
     list_display = [
         "id",
         "created",
@@ -72,23 +73,23 @@ class InvoiceAdmin(admin.ModelAdmin):
     ]
 
 
-admin.site.register(Invoice, InvoiceAdmin)
+admin.site.register(Purchase, PurchaseAdmin)
 
 
-class InvoiceItemAdminForm(forms.ModelForm):
+class PurchaseItemAdminForm(forms.ModelForm):
     class Meta:
-        model = InvoiceItem
+        model = PurchaseItem
         fields = "__all__"
 
 
-class InvoiceItemAdmin(admin.ModelAdmin):
-    form = InvoiceItemAdminForm
-    list_display = ["weight", "touch", "is_return", "quantity"]
+class PurchaseItemAdmin(admin.ModelAdmin):
+    form = PurchaseItemAdminForm
+    list_display = ["weight", "touch", "quantity"]
     list_filter = ("invoice",)
     search_fields = ("invoice__id",)
 
 
-admin.site.register(InvoiceItem, InvoiceItemAdmin)
+admin.site.register(PurchaseItem, PurchaseItemAdmin)
 
 
 class PaymentAdminForm(forms.ModelForm):

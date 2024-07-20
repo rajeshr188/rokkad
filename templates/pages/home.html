@@ -1,23 +1,359 @@
 {% extends '_base.html' %}
-{% load static %}
-
+{% load i18n %}
 {% block title %}Home page{% endblock title %}
 
 {% block content %}
-  {% if user.is_authenticated %}
 
-  {% block tenant_content%}
-  <div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-    <h1 class="display-4">Welcome to Rokkad</h1>
-    <p class="lead">A Django starter project with batteries.</p>
-  </div>
-  {% endblock tenant_content%}
-  
-  {% else %}
-  <div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-    <img src="{% static 'images/logo.png' %}" class="img-fluid" alt="DjangoX logo"/>
-    <p class="lead">A Django starter project with batteries.</p>
-  </div>
-  {% endif %} 
+  <div class="container-fluid">
+     <!-- Hero Section -->
+     <section class="bg-primary text-white text-center py-5">
+        <div class="container">
+            <h1 class="display-4">Transform Your Business with Our ERP System</h1>
+            <p class="lead">Comprehensive Loan Management and Double Entry Accounting</p>
+            <a href="" class="btn btn-light btn-lg mt-3">Get Started Today</a>
+        </div>
+        </section>
+    
+        <!-- Features Section -->
+        <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-4">Features</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Loan Management</h5>
+                            <p class="card-text">Efficiently manage loans with detailed tracking and reporting.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Double Entry Accounting</h5>
+                            <p class="card-text">Ensure accurate financial records with our double-entry accounting system.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Comprehensive Reporting</h5>
+                            <p class="card-text">Generate insightful reports to make informed business decisions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </section>
+    
+        <!-- Pricing Section -->
+        <section class="bg-light py-5">
+        <div class="container">
+            <h2 class="text-center mb-4">Pricing Plans</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Basic</h5>
+                            <p class="card-text">$49/month</p>
+                            <ul class="list-unstyled mt-3 mb-4">
+                                <li>Loan Management</li>
+                                <li>Basic Accounting</li>
+                                <li>Email Support</li>
+                            </ul>
+                            <a href="#" class="btn btn-primary">Sign Up</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Standard</h5>
+                            <p class="card-text">$99/month</p>
+                            <ul class="list-unstyled mt-3 mb-4">
+                                <li>All Basic Features</li>
+                                <li>Double Entry Accounting</li>
+                                <li>Priority Support</li>
+                            </ul>
+                            <a href="#" class="btn btn-primary">Sign Up</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Premium</h5>
+                            <p class="card-text">$199/month</p>
+                            <ul class="list-unstyled mt-3 mb-4">
+                                <li>All Standard Features</li>
+                                <li>Advanced Reporting</li>
+                                <li>Dedicated Support</li>
+                            </ul>
+                            <a href="#" class="btn btn-primary">Sign Up</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </section>
 
+        <!-- Pricing -->
+        <h3 class="fw-bold mb-3">Pricing</h3>
+        <div class="row justify-content-center align-items-center mb-1">
+          <div class="col-md-3 ps-md-0">
+            <div class="card card-pricing">
+              <div class="card-header">
+                <h4 class="card-title">Basic</h4>
+                <div class="card-price">
+                  <span class="price">$25</span>
+                  <span class="text">/mo</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <ul class="specification-list">
+                  <li>
+                    <span class="name-specification">Customizer</span>
+                    <span class="status-specification">14 days trial</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Chat History</span>
+                    <span class="status-specification">No</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Statistics</span>
+                    <span class="status-specification">14 days trial</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Support</span>
+                    <span class="status-specification">Yes</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Live Support</span>
+                    <span class="status-specification">No</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary w-100">
+                  <b>Get Started</b>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 ps-md-0 pe-md-0">
+            <div class="card card-pricing card-pricing-focus card-primary">
+              <div class="card-header">
+                <h4 class="card-title">Professional</h4>
+                <div class="card-price">
+                  <span class="price">$35</span>
+                  <span class="text">/mo</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <ul class="specification-list">
+                  <li>
+                    <span class="name-specification">Customizer</span>
+                    <span class="status-specification">Yes</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Chat History</span>
+                    <span class="status-specification">3 Month</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Statistics</span>
+                    <span class="status-specification">3 Month</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Support</span>
+                    <span class="status-specification">Yes</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Live Support</span>
+                    <span class="status-specification">Yes</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-light w-100">
+                  <b>Get Started</b>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 pe-md-0">
+            <div class="card card-pricing">
+              <div class="card-header">
+                <h4 class="card-title">Team</h4>
+                <div class="card-price">
+                  <span class="price">$75</span>
+                  <span class="text">/mo</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <ul class="specification-list">
+                  <li>
+                    <span class="name-specification">Customizer</span>
+                    <span class="status-specification">Yes</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Chat History</span>
+                    <span class="status-specification">1 Year</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Statistics</span>
+                    <span class="status-specification">1 Year</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Support</span>
+                    <span class="status-specification">Yes</span>
+                  </li>
+                  <li>
+                    <span class="name-specification">Live Support</span>
+                    <span class="status-specification">Yes</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary w-100">
+                  <b>Get Started</b>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="fw-bold mb-3">Pricing 2</h3>
+        <div class="row justify-content-center align-items-center mb-5">
+          <div class="col-md-3 ps-md-0">
+            <div class="card-pricing2 card-success">
+              <div class="pricing-header">
+                <h3 class="fw-bold mb-3">Standard</h3>
+                <span class="sub-title">Lorem ipsum</span>
+              </div>
+              <div class="price-value">
+                <div class="value">
+                  <span class="currency">$</span>
+                  <span class="amount">10.<span>99</span></span>
+                  <span class="month">/month</span>
+                </div>
+              </div>
+              <ul class="pricing-content">
+                <li>50GB Disk Space</li>
+                <li>50 Email Accounts</li>
+                <li>50GB Monthly Bandwidth</li>
+                <li class="disable">10 Subdomains</li>
+                <li class="disable">15 Domains</li>
+              </ul>
+              <a
+                href="#"
+                class="btn btn-success btn-border btn-lg w-75 fw-bold mb-3"
+                >Sign up</a
+              >
+            </div>
+          </div>
+          <div class="col-md-3 ps-md-0 pe-md-0">
+            <div class="card-pricing2 card-primary">
+              <div class="pricing-header">
+                <h3 class="fw-bold mb-3">Business</h3>
+                <span class="sub-title">Lorem ipsum</span>
+              </div>
+              <div class="price-value">
+                <div class="value">
+                  <span class="currency">$</span>
+                  <span class="amount">20.<span>99</span></span>
+                  <span class="month">/month</span>
+                </div>
+              </div>
+              <ul class="pricing-content">
+                <li>60GB Disk Space</li>
+                <li>60 Email Accounts</li>
+                <li>60GB Monthly Bandwidth</li>
+                <li>15 Subdomains</li>
+                <li class="disable">20 Domains</li>
+              </ul>
+              <a
+                href="#"
+                class="btn btn-primary btn-border btn-lg w-75 fw-bold mb-3"
+                >Sign up</a
+              >
+            </div>
+          </div>
+          <div class="col-md-3 pe-md-0">
+            <div class="card-pricing2 card-secondary">
+              <div class="pricing-header">
+                <h3 class="fw-bold mb-3">Premium</h3>
+                <span class="sub-title">Lorem ipsum</span>
+              </div>
+              <div class="price-value">
+                <div class="value">
+                  <span class="currency">$</span>
+                  <span class="amount">30.<span>99</span></span>
+                  <span class="month">/month</span>
+                </div>
+              </div>
+              <ul class="pricing-content">
+                <li>70GB Disk Space</li>
+                <li>70 Email Accounts</li>
+                <li>70GB Monthly Bandwidth</li>
+                <li>20 Subdomains</li>
+                <li>25 Domains</li>
+              </ul>
+              <a
+                href="#"
+                class="btn btn-secondary btn-border btn-lg w-75 fw-bold mb-3"
+                >Sign up</a
+              >
+            </div>
+          </div>
+        </div>
+
+    
+        <!-- Testimonials Section -->
+        <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-4">What Our Clients Say</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <blockquote class="blockquote">
+                                <p class="mb-0">"This ERP system has transformed our loan management process. Highly recommended!"</p>
+                                <footer class="blockquote-footer">John Doe, CEO of Example Corp</footer>
+                            </blockquote>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <blockquote class="blockquote">
+                                <p class="mb-0">"The double-entry accounting feature ensures our financial records are always accurate."</p>
+                                <footer class="blockquote-footer">Jane Smith, CFO of Business Inc</footer>
+                            </blockquote>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <blockquote class="blockquote">
+                                <p class="mb-0">"Excellent customer support and comprehensive reporting tools."</p>
+                                <footer class="blockquote-footer">Mike Johnson, Manager at FinTech Solutions</footer>
+                            </blockquote>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </section>
+    
+        <!-- Call to Action Section -->
+        <section class="bg-primary text-white text-center py-5">
+        <div class="container">
+            <h2 class="mb-4">Ready to Get Started?</h2>
+            <a href="" class="btn btn-light btn-lg">Sign Up Now</a>
+        </div>
+        </section>
+  </div>
 {% endblock content %}

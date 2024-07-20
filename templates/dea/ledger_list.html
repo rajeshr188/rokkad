@@ -1,4 +1,4 @@
-{% extends '_base.html' %}
+{% extends 'tenant.html' %}
 {% load mptt_tags %}
 {% block title %}Ledger List{% endblock %}
 
@@ -9,7 +9,7 @@
         <div class="card-body">
             <div class="btn-group" role="group" aria-label="Basic outlined example">
                 <a type="button" class="btn btn-outline-success" href="{% url 'dea_ledger_create' %}">Add Ledger</a>
-                <a type="button" class="btn btn-outline-primary" href="{% url 'dea_account_create' %}">Add txn</a>
+                <a type="button" class="btn btn-outline-primary" href="">Add txn</a>
                 <a type="button" class="btn btn-outline-info" href="{% url 'dea_ledger_audit' %}">Audit</a>
             </div>
             <div class="row">
@@ -18,7 +18,7 @@
                     <ul class="list-group list-group-flush p-3 root">
                         {% recursetree node %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <!-- {{node.AccountType}} -->
+                            {{node.AccountType}}
                             <a href="{% url 'dea_ledger_detail' node.id%}">
                                 {{ node.name }}
                             </a>

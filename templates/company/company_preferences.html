@@ -1,21 +1,25 @@
-{% extends "_base.html" %}
+{% extends 'tenant.html'%}
 {% load crispy_forms_tags %}
-{% load i18n%}
+{% load i18n %}
 {% block content %}
 
-    <div class="container">
-        <div class="card">
-            <div class="card-header">
-                <h2>{{request.user.workspace|capfirst}} Preferences</h2>
-            </div>
-            <div class="card-body">
-                <form action="." method="POST">
-                    {% csrf_token %}
-                    {{ form|crispy}}
-                    <button class="btn btn-success" type="submit">Save</button>
-                </form>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2>{{ request.user.workspace|capfirst }} Preferences</h2>
+                </div>
+                <div class="card-body">
+                    <form action="." method="POST">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <button class="btn btn-success w-100 mt-3" type="submit">Save</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
+</div>
 
 {% endblock content %}

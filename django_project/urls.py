@@ -20,13 +20,6 @@ urlpatterns = [
     path("invitations/", include("invitations.urls")),
     path("orgs/", include("apps.orgs.urls")),
     path("profile/", include("accounts.urls")),
-    path("contact/", include("apps.tenant_apps.contact.urls")),
-    path("girvi/", include("apps.tenant_apps.girvi.urls")),
-    path("rates/", include("apps.tenant_apps.rates.urls")),
-    path("product/", include("apps.tenant_apps.product.urls")),
-    path("notify/", include("apps.tenant_apps.notify.urls")),
-    # path("dea/", include("apps.tenant_apps.dea.urls")),
-    # path("contacts/", include("apps.contacts.urls")),
 ]
 
 if settings.DEBUG:

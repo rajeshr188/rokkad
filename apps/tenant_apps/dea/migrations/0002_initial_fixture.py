@@ -47,6 +47,9 @@ def insertData(apps, schema_editor):
             transactiontype_ext(XactTypeCode_ext="LP", description="Loan Paid"),
             transactiontype_ext(XactTypeCode_ext="PYT", description="Payment"),
             transactiontype_ext(XactTypeCode_ext="RCT", description="Receipt"),
+            transactiontype_ext(
+                XactTypeCode_ext="CXC", description="Currency Exchange"
+            ),
         ]
     )
 
@@ -282,6 +285,9 @@ def insertData(apps, schema_editor):
         rght=0,
         level=0,
         tree_id=0,
+    )
+    ledger.objects.create(
+        AccountType_id=4, name="Trading", lft=0, rght=0, level=0, tree_id=0
     )
 
 

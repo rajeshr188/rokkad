@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.dea.models import JournalEntry
 
 from ..models import LoanPayment
 

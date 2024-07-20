@@ -1,12 +1,13 @@
 import django_filters
-from contact.forms import CustomerWidget
-from contact.models import Customer
 from django_select2.forms import Select2Widget
 
-from .models import Invoice, Payment
+from apps.tenant_apps.contact.forms import CustomerWidget
+from apps.tenant_apps.contact.models import Customer
+
+from .models import Payment, Purchase
 
 
-class InvoiceFilter(django_filters.FilterSet):
+class PurchaseFilter(django_filters.FilterSet):
     supplier = django_filters.ModelChoiceFilter(
         queryset=Customer.objects.all(),
         # widget=Select2Widget creates N=1 problem with customer contacts
@@ -16,7 +17,7 @@ class InvoiceFilter(django_filters.FilterSet):
     # posted = django_filters.BooleanFilter(field_name="posted", lookup_expr="isnull")
 
     class Meta:
-        model = Invoice
+        model = Purchase
         fields = [
             "id",
             "created",
@@ -27,7 +28,7 @@ class InvoiceFilter(django_filters.FilterSet):
 
 class PaymentFilter(django_filters.FilterSet):
     supplier = django_filters.ModelChoiceFilter(
-        queryset=Customer.objects.all(), widget=Select2Widget
+        queryset=Customer.objects.all(), widget=CustomerWidget
     )
 
     class Meta:

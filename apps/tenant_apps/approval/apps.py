@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class ApprovalConfig(AppConfig):
-    name = "approval"
+    name = "apps.tenant_apps.approval"
 
     def ready(self):
-        import approval.signals
+        from . import signals

@@ -70,7 +70,7 @@ urlpatterns += (
 
 urlpatterns += (
     # urls for Receipt
-    path("sales/receipt/", views.ReceiptListView.as_view(), name="sales_receipt_list"),
+    path("sales/receipt/", views.receipt_list, name="sales_receipt_list"),
     path(
         "sales/receipt/create/",
         views.ReceiptCreateView.as_view(),

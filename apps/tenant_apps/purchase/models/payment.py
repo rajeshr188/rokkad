@@ -4,32 +4,32 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models, transaction
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
+from django.forms import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
 from moneyed import Money
-from purchase.models.purchase import Purchase
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
+from apps.tenant_apps.dea.models import (AccountStatement,  # , JournalTypes
+                                         JournalEntry)
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.attributes import get_product_attributes_data
-from apps.tenant_apps.product.models import (
-    Attribute,
-    ProductVariant,
-    Stock,
-    StockLot,
-    StockTransaction,
-)
+from apps.tenant_apps.product.models import (Attribute, ProductVariant, Stock,
+                                             StockTransaction)
 from apps.tenant_apps.terms.models import PaymentTerm
+
+from .purchase import Purchase
 
 
 # how do you know which is gst payment?
 class Payment(models.Model):
     # Fields
-    created = models.DateTimeField(default=timezone.now)
-    updated = models.DateTimeField(auto_now_add=True, editable=False)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    voucher_date = models.DateTimeField(default=timezone.now)
+    voucher_no = models.CharField(max_length=50, null=True, blank=True)
     created_by = models.ForeignKey(
         "accounts.CustomUser", on_delete=models.CASCADE, null=True, blank=True
     )
@@ -46,7 +46,7 @@ class Payment(models.Model):
     status = models.CharField(
         max_length=18, choices=status_choices, default="Unallotted"
     )
-    # journal_entries = GenericRelation(JournalEntry, related_query_name="payment_doc")
+    journal_entries = GenericRelation(JournalEntry, related_query_name="payment_doc")
     # Relationship Fields
     supplier = models.ForeignKey(
         Customer,
@@ -204,13 +204,57 @@ class Payment(models.Model):
         at = [
             {
                 "ledgerno": "Sundry Creditors",
-                "xacttypecode": "Dr",
-                "xacttypecode_ext": "PYT",
-                "account": self.supplier.account,
+                "XactTypeCode": "Cr",
+                "XactTypeCode_ext": "PYT",
+                "Account": self.supplier.account,
                 "amount": self.total,
             }
         ]
         return lt, at
+
+    def get_journal_entry(self, desc=None):
+        if self.journal_entries.exists():
+            return self.journal_entries.latest()
+        else:
+            return JournalEntry.objects.create(
+                content_object=self, desc=self.__class__.__name__
+            )
+
+    def delete_journal_entry(self):
+        for entry in self.journal_entries.all():
+            entry.delete()
+
+    def create_transactions(self):
+        print("Creating transactions")
+        lt, at = self.get_transactions()
+        if lt and at:
+            journal_entry = self.get_journal_entry()
+            journal_entry.transact(lt, at)
+
+    def reverse_transactions(self):
+        # i.e if je is older than the latest statement then reverse the transactions else do nothing
+        print("Reversing transactions")
+        try:
+            statement = self.supplier.account.accountstatements.latest("created")
+        except AccountStatement.DoesNotExist:
+            statement = None
+        journal_entry = self.get_journal_entry()
+
+        if journal_entry and statement and journal_entry.created < statement.created:
+            lt, at = self.get_transactions()
+            if lt and at:
+                journal_entry.untransact(lt, at)
+        else:
+            self.delete_journal_entry()
+
+    def is_changed(self, old_instance):
+        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
+        # TODO efficient way to compare old and new instances
+        # Implement logic to compare old and new instances
+        # Compare all fields using dictionaries
+        return model_to_dict(self, fields=["total"]) != model_to_dict(
+            old_instance, fields=["total"]
+        )
 
 
 class PaymentAllocation(models.Model):

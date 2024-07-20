@@ -11,7 +11,7 @@
             {%trans "Filter"%}
         </div>
         <div class="card-body">
-            <form hx-trigger="keyup,change,listChanged from:body delay:100ms" 
+            <form hx-trigger="keyup,changed,listChanged from:body delay:100ms" 
                     hx-get="."
                     hx-select="#results" 
                     hx-target="#results"
@@ -24,6 +24,7 @@
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 </div>
                 {%endfor%}
+                
             </form>
         </div>
     </div>

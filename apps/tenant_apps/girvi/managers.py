@@ -2,19 +2,10 @@ import datetime
 
 from django.core.cache import cache
 from django.db import models
-from django.db.models import (
-    Case,
-    DecimalField,
-    ExpressionWrapper,
-    F,
-    Func,
-    OuterRef,
-    Subquery,
-    Sum,
-    Value,
-    When,
-)
-from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear, Round
+from django.db.models import (Case, DecimalField, ExpressionWrapper, F, Func,
+                              OuterRef, Q, Subquery, Sum, Value, When)
+from django.db.models.functions import (Coalesce, ExtractMonth, ExtractYear,
+                                        Round)
 from django.utils import timezone
 
 from apps.tenant_apps.rates.models import Rate
@@ -73,11 +64,52 @@ class LoanQuerySet(models.QuerySet):
 
         return self.annotate(
             months_since_created=ExpressionWrapper(
-                Func(
-                    (ExtractYear(current_time) - ExtractYear(F("loan_date"))) * 12
-                    + (ExtractMonth(current_time) - ExtractMonth(F("loan_date")))
-                    + (current_time.day - F("loan_date__day")) / 30,
-                    function="ROUND",
+                # Func(
+                #     (ExtractYear(current_time) - ExtractYear(F("loan_date"))) * 12
+                #     + (ExtractMonth(current_time) - ExtractMonth(F("loan_date")))
+                #     + (current_time.day - F("loan_date__day")) / 30,
+                #     function="ROUND",
+                #     output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                # ),
+                # output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                Case(
+                    When(
+                        Q(release__isnull=True),
+                        then=Func(
+                            (ExtractYear(current_time) - ExtractYear(F("loan_date")))
+                            * 12
+                            + (
+                                ExtractMonth(current_time)
+                                - ExtractMonth(F("loan_date"))
+                            )
+                            + (current_time.day - F("loan_date__day")) / 30,
+                            function="ROUND",
+                            output_field=models.DecimalField(
+                                max_digits=10, decimal_places=2
+                            ),
+                        ),
+                    ),
+                    When(
+                        Q(release__isnull=False),
+                        then=Func(
+                            (
+                                ExtractYear(F("release__release_date"))
+                                - ExtractYear(F("loan_date"))
+                            )
+                            * 12
+                            + (
+                                ExtractMonth(F("release__release_date"))
+                                - ExtractMonth(F("loan_date"))
+                            )
+                            + (F("release__release_date__day") - F("loan_date__day"))
+                            / 30,
+                            function="ROUND",
+                            output_field=models.DecimalField(
+                                max_digits=10, decimal_places=2
+                            ),
+                        ),
+                    ),
+                    default=Value(0),
                     output_field=models.DecimalField(max_digits=10, decimal_places=2),
                 ),
                 output_field=models.DecimalField(max_digits=10, decimal_places=2),

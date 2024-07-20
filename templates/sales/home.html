@@ -1,0 +1,87 @@
+{% block content %}
+<h1>Sales</h1>
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page" 
+      href=""
+      hx-get="{% url 'sales_invoice_list'%}"
+      hx-target="#sales-content"
+      hx-swap="innerHTML"
+      hx-push-url="true">Invoices</a>
+
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href=""
+      hx-get="{% url 'sales_receipt_list'%}"
+      hx-target="#sales-content"
+      hx-swap="innerHTML">Receipts</a>
+  </li> 
+</ul>
+<div id="sales-content">
+  <div class="card-columns">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">ALL Purchase</h5>
+        <p class="card-text">
+          Total:
+        <ul>
+          <li>
+            Cash : {{total.total.cash}} (Gold:{{total.total.cash_g}}) (Silver:{{total.total.cash_s}})
+          </li>
+          <li>Gold : {{total.total.gold}}</li>
+          <li>Silver:{{total.total.silver}}</li>
+        </ul>
+        </li>
+        Map:
+        <ul>
+          <li>Gold - {{total.total.gmap}}</li>
+          <li>Silver - {{total.total.smap}}</li>
+        </ul>
+        </p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">GST</h5>
+        <p class="card-text">
+          Total
+        <ul>
+          <li>Cash : {{total.gst.cash}} (Gold:{{total.gst.cash_g}}) (Silver:{{total.gst.cash_s}})</li>
+          <li>Gold : {{total.gst.gold}}</li>
+          <li>Silver:{{total.gst.silver}}</li>
+        </ul>
+        Map:
+        <ul>
+          <li>Gold - {{total.gst.gmap}}</li>
+          <li>Silver - {{total.gst.smap}}</li>
+        </ul>
+        </p>
+        <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Non-GST</h5>
+        <p class="card-text">
+          Total
+        <ul>
+          <li>
+            Cash : {{total.nongst.cash}} (Gold:{{total.nongst.cash_g}}) (Silver:{{total.nongst.cash_s}})
+          </li>
+          <li>Gold : {{total.nongst.gold}}</li>
+          <li>Silver:{{total.nongst.silver}}</li>
+        </ul>
+        Map:
+        <ul>
+          <li>Gold - {{total.nongst.gmap}}</li>
+          <li>Silver - {{total.nongst.smap}}</li>
+        </ul>
+        </p>
+        <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

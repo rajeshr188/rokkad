@@ -245,14 +245,17 @@ class StockForm(forms.ModelForm):
 
 class StockWidget(s2forms.ModelSelect2Widget):
     search_fields = [
-        "barcode__icontains",
         "huid__icontains",
         "variant__name__icontains",
+        "serial_no__icontains",
+        "lot_no__icontains",
     ]
 
 
 class UniqueForm(forms.Form):
     weight = forms.DecimalField(max_digits=10, decimal_places=3)
+    quantity = forms.IntegerField()
+    is_unique = forms.BooleanField(initial=True)
 
 
 class StockStatementForm(forms.Form):
@@ -261,11 +264,6 @@ class StockStatementForm(forms.Form):
     class Meta:
         model = StockStatement
         fields = ["stock", "Closing_wt", "Closing_qty"]
-
-
-stockstatement_formset = forms.modelformset_factory(
-    StockStatement, fields=("stock", "Closing_qty", "Closing_wt"), extra=1
-)
 
 
 class PricingTierForm(forms.ModelForm):
@@ -280,21 +278,78 @@ class PricingTierProductPriceForm(forms.ModelForm):
         fields = "__all__"
 
 
-class StockJournalForm(forms.Form):
-    stock = forms.ModelChoiceField(queryset=Stock.objects.all(), widget=Select2Widget)
+from django.forms import HiddenInput
 
-    class StockJournalType(models.TextChoices):
-        IN = "IN", "IN"
-        OUT = "OUT", "OUT"
 
-    sj_type = forms.ChoiceField(
-        choices=StockJournalType.choices, required=False, label="Type"
+class StockInForm(forms.ModelForm):
+    variant = forms.ModelChoiceField(
+        queryset=ProductVariant.objects.all(), widget=Select2Widget
     )
-    # import error for datepicker
-    lot = forms.ModelChoiceField(
-        queryset=StockLot.objects.all(), widget=Select2Widget, required=False
-    )
-    weight = forms.DecimalField(max_digits=10, decimal_places=3)
-    quantity = forms.DecimalField(max_digits=10, decimal_places=3)
-    cost_price = forms.DecimalField(max_digits=10, decimal_places=3)
-    price = forms.DecimalField(max_digits=10, decimal_places=3)
+    touch = forms.DecimalField(max_digits=10, decimal_places=3)
+    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 2, "cols": 15}))
+    stock = forms.ModelChoiceField(queryset=Stock.objects.all(), required=False)
+
+    class Meta:
+        model = StockTransaction
+        fields = [
+            "variant",
+            "quantity",
+            "weight",
+            "touch",
+            "description",
+            "stock",
+            "movement_type",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["movement_type"].widget = HiddenInput()
+        self.fields["movement_type"].initial = Movement.objects.get(name="IN")
+        self.fields["stock"].widget = HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        stock = cleaned_data.get("stock")
+        if not stock:
+            variant = cleaned_data.get("variant")
+            sku = cleaned_data.get("sku")
+            quantity = cleaned_data.get("quantity")
+            weight = cleaned_data.get("weight")
+            touch = cleaned_data.get("touch")
+            stock = Stock.objects.create(
+                weight=weight,
+                quantity=quantity,
+                variant=variant,
+                sku=sku,
+                purchase_touch=touch,
+            )
+            print(f"stock: {stock}")
+            cleaned_data["stock"] = stock
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.movement_type = Movement.objects.get(name="IN")
+        if commit:
+            instance.save()
+        return instance
+
+
+class StockOutForm(forms.ModelForm):
+    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 2, "cols": 15}))
+
+    class Meta:
+        model = StockTransaction
+        fields = ["stock", "quantity", "weight", "description", "movement_type"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["movement_type"].initial = Movement.objects.get(name="OUT")
+        self.fields["movement_type"].widget = HiddenInput()
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.movement_type = Movement.objects.get(name="OUT")
+        if commit:
+            instance.save()
+        return instance

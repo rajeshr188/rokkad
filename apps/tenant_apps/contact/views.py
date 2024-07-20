@@ -25,16 +25,9 @@ from tablib import Dataset
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from .filters import CustomerFilter
-from .forms import (
-    AddressForm,
-    ContactForm,
-    CustomerForm,
-    CustomerMergeForm,
-    CustomerRelationshipForm,
-    CustomerReportForm,
-    ExportForm,
-    ImportForm,
-)
+from .forms import (AddressForm, ContactForm, CustomerForm, CustomerMergeForm,
+                    CustomerRelationshipForm, CustomerReportForm, ExportForm,
+                    ImportForm)
 from .models import Address, Contact, Customer, CustomerRelationship, Proof
 from .tables import CustomerExportTable, CustomerTable
 
@@ -148,6 +141,7 @@ def import_data(request):
 
 @login_required
 @for_htmx(use_block_from_params=True)
+# @for_htmx(use_block="content")
 def customer_list(request):
     context = {}
     f = CustomerFilter(
@@ -372,7 +366,6 @@ def contact_create(request, pk=None):
 
 @login_required
 def contact_list(request, pk: int = None):
-    print(f"called")
     customer = get_object_or_404(Customer, id=pk)
     contacts = customer.contactno.all()
     return render(
@@ -384,7 +377,6 @@ def contact_list(request, pk: int = None):
 
 @login_required
 def address_list(request, pk: int = None):
-    print(f"called")
     customer = get_object_or_404(Customer, id=pk)
     addresses = customer.address.all()
     return render(
@@ -434,7 +426,7 @@ def address_create(request, pk=None):
 
     if request.method == "POST" and form.is_valid():
         address = form.save(commit=False)
-        address.Customer = customer
+        address.customer = customer
 
         address.save()
         messages.success(request, messages.SUCCESS, f"Address {address} created.")
@@ -515,7 +507,6 @@ class CustomerReport(ReportView):
     group_by = "customer_type"
     # What do you want to calculate
     columns = [
-        "created_by",
         "customer_type",
         ComputationField.create(
             method=Count,

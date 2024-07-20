@@ -1,23 +1,6 @@
 from django.db import connection, models
 from moneyed import Money
 
-# # old way of registering adapter
-# from psycopg2.extensions import AsIs, adapt, register_adapter
-# from psycopg2.extras import register_composite
-
-# MoneyValue = register_composite(
-#     "money_value", connection.cursor().cursor, globally=True
-# ).type
-
-
-# def moneyvalue_adapter(value):
-#     return AsIs(
-#         "(%s,%s)::money_value" % (adapt(value.amount), adapt(value.currency.code))
-#     )
-
-
-# register_adapter(Money, moneyvalue_adapter)
-
 
 class MoneyValueField(models.Field):
     description = "wrapper for money_value composite type in postgres"
@@ -45,3 +28,34 @@ class MoneyValueField(models.Field):
 
     def db_type(self, connection):
         return "money_value"
+
+
+# class MoneyValueField(models.Field):
+#     description = "A custom field for PostgreSQL money_value type"
+
+#     def db_type(self, connection):
+#         return 'money_value'
+
+#     def from_db_value(self, value, expression, connection):
+#         if value is None:
+#             return value
+#         amount, currency = value[1:-1].split(',')
+#         return Money(amount=Decimal(amount), currency=currency)
+
+#     def get_prep_value(self, value):
+#         if value is None:
+#             return None
+#         if isinstance(value, Money):
+#             return f'({value.amount},{value.currency.code})'
+#         return value
+
+#     def to_python(self, value):
+#         if isinstance(value, Money):
+#             return value
+#         if value is None:
+#             return value
+#         amount, currency = value[1:-1].split(',')
+#         return Money(amount=Decimal(amount), currency=currency)
+
+#     def get_internal_type(self):
+#         return 'MoneyValueField'

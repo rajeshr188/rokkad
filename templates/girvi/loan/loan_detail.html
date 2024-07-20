@@ -1,5 +1,6 @@
-{% extends "_base.html" %}
+{% extends "tenant.html" %}
 {% load static %}
+{% load l10n %}
 {% block content %}
 <div class="container" hx-trigger="loanChanged from:body" hx-get="{% url 'girvi:girvi_loan_detail' loan.id %}"
   hx-target="#content" hx-swap="innerHTML transition:true" hx-trigger="click" hx-vals='{"use_block":"content"}'>
@@ -47,7 +48,7 @@
             d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5z" />
         </svg> {{loan.get_next.loanid}}</a>
       {%endif%}
-      <a class = "btn btn-dark" href="{%url 'girvi:original' loan.id%}">
+      <a class = "btn btn-dark" hx-disable href="{%url 'girvi:loan_pdf' loan.id%}">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer"
             viewBox="0 0 16 16">
             <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
@@ -122,8 +123,10 @@
                     <tr>
                       <td>Customer <br />
                         {% if loan.pic %}
-                        <img src="/media/{{loan.pic}}" alt="{{ loan.customer.name }}'s Profile Picture"
-                          class="profile-img img-fluid" width="150" height="150">
+                        <div class="avatar avatar-sm">
+                          <img src="{{loan.pic.url}}" alt="..." class="avatar-img rounded-circle">
+                        </div>
+                        
                         {% else %}
                         <img src="/media/customer_pics/profile-pic.jpg" alt="Default Profile Picture" width="200"
                           height="200" class="img-fluid px-3 px-sm-4 mt-3 mb-4" style="width: 15rem;">
@@ -205,10 +208,21 @@
                       <td>{{value}}</td>
                     </tr>
                     <tr>
-                      <td>OverDue?</td>
-                      <td>{{object.is_worth}}</td>
+                      <td>Amount:Value %</td>
+                      <td>
+                        <div class="progress progress-sm mr-2">
+                          <div class="progress-bar bg-info" role="progressbar"
+                              style="width: {{lvratio}}%" aria-valuenow="{{loan_progress}}"
+                              aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                      <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{lvratio}}%</div>
+                      </td>
                     </tr>
-                    <tr><td>Expires In</td><td>{{object.calculate_months_to_exceed_value}}</td></tr>
+                    <tr>
+                      <td>OverDue?</td>
+                      <td>{{object.is_worth|localize}}</td>
+                    </tr>
+                    <tr><td>Expires In</td><td>{{object.calculate_months_to_exceed_value}} Months</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -223,7 +237,7 @@
                   <tbody>
                     <tr>
                       <td>Amount</td>
-                      <td class="table-warning">{{ object.loan_amount }}</td>
+                      <td class="table-warning">{{ object.get_loanamount_with_currency }}</td>
                     </tr>
                     <tr>
                       <td>Interest Due</td>
@@ -235,7 +249,7 @@
                     </tr>
                     <tr>
                       <td>Total Due </td>
-                      <td class="table-success">{{object.due}}</td>
+                      <td class="table-success">{{object.due_with_currency}}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -279,24 +293,31 @@
             {%endif%}
           </div>
         </div>
-        <div class="card">
-          <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <div class="row">
+          <div class="col"><ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
               <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane"
                 type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">
                 Items <span class="badge text-bg-secondary">{{object.loanitems.count}}</span>
               </button>
             </li>
-            <li class="nav-item" role="presentation">
+            <!-- <li class="nav-item" role="presentation">
               <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-tab-pane"
                 type="button" role="tab" aria-controls="profile-tab-pane" aria-selected="false">
-                Journal Entries :<!-- <span class="badge text-bg-secondary">{{journal_entries.count}}</span> -->
+                Journal Entries :<span class="badge text-bg-secondary">{{loan.journal_entries.count}}</span>
               </button>
-            </li>
+            </li> -->
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="payment-tab" data-bs-toggle="tab" data-bs-target="#payment-tab-pane"
                 type="button" role="tab" aria-controls="payment-tab-pane" aria-selected="false">
                 Payment :<span class="badge text-bg-secondary">{{object.loan_payments.count}}</span>
+              </button>
+            </li>
+            <!-- add another tab here -->
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="txns-tab" data-bs-toggle="tab" data-bs-target="#txns-tab-pane"
+                type="button" role="tab" aria-controls="txns-tab-pane" aria-selected="false">
+                Transactions
               </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -341,11 +362,11 @@
                         height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
                         <path fill-rule="evenodd"
                           d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
-                      </svg> Item</button>
+                      </svg> Loan Item</button>
                 </p>
               </div>
             </div>
-            <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
+            <!-- <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
               <div class="container table-responsive">
                 <table class="table table-sm table-striped">
                   <thead>
@@ -353,23 +374,23 @@
                     <th>Created</th>
                     <th>Description</th>
                   </thead>
-                  <!-- {%for i in journal_entries%}
+                  {%for i in loan.journal_entries.all%}
                   {% include 'girvi/journal_entries-inline.html' with object=i %}
-                  {%endfor%} -->
+                  {%endfor%}
                 </table>
               </div>
-            </div>
+            </div> -->
             <div class="tab-pane fade" id="payment-tab-pane" role="tabpanel" aria-labelledby="payment-tab" tabindex="0">
               <div class="container table-responsive">
                 <table class="table table-sm table-striped">
                   <thead>
                     <th>Id</th>
                     <th>Created</th>
+                    <th>JE</th>
                     <th>Amount</th>
                     <th>Principal</th>
                     <th>Interest</th>
                     <th>with_release</th>
-                    <th>Balance</th>
                   </thead>
                   <tbody id="payment-items" >
                     {%for i in object.loan_payments.all%}
@@ -386,6 +407,90 @@
                       </svg> Payment</a>
                 </p>
               </div>
+            </div>
+            <div class="tab-pane fade" id="txns-tab-pane" role="tabpanel" aria-labelledby="txns-tab" tabindex="0">
+              <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title">Transactions</h3>
+                    <div class="table-responsive">
+                        <table class="table table-hover caption-top">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Debit Acc</th>
+                                    <th>Credit Acc</th>
+                                </tr>
+                            </thead>
+                            <caption>Account Transactions</caption>
+                            <tbody class="table-group-divider">
+                                {%for i in loan.get_atxns%}
+                                <tr class="table-light">
+                                    <td>{{i.id}}</td>
+                                    <td>{{i.created|date}}</td>
+                                    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.amount}}</a></td>
+                                    {% if i.XactTypeCode.XactTypeCode == 'Dr'%}
+                                    <td>{{i.ledgerno}}</td>
+                                    <td>{{i.Account.contact.name}}</td>
+                                    {%else%}
+                                    <td>{{i.Account.contact.name}}</td>
+                                    <td>{{i.ledgerno}}</td>
+                                    {%endif%}
+                                </tr>
+                                {%endfor%}
+                            </tbody>
+                        </table>
+                        <table class="table table-hover caption-top">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Debit Acc</th>
+                                    <th>Credit Acc</th>
+                                </tr>
+                            </thead>
+                            <caption>Ledger Transactions</caption>
+                            <tbody class="table-group-divider">
+                                
+                                {%for i in object.get_ltxns%}
+                                <tr class="table-info">
+                                    <td>{{i.id}}</td>
+                                    <td>{{i.created|date}}</td>
+                                    <td>{{i.amount}}</td>
+                                    <td>{{i.ledgerno_dr}}</td>
+                                    <td>{{i.ledgerno}}</td>
+                                </tr>
+                                {%endfor%}
+                            </tbody>
+                        </table>
+                        <table class="table table-hover caption-top">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date</th>
+                                    <th>Stock</th>
+                                    <th>Debit</th>
+                                    <th>Credit</th>
+                                </tr>
+                            </thead>
+                            <caption>Stock Transactions</caption>
+                            <tbody class="table-group-divider">
+                                {%for i in object.stxns.all%}
+                                <tr class="table-dark">
+                                    <td>{{i.id}}</td>
+                                    <td>{{i.created|date}}</td>
+                                    <td>{{i.stock}} {{i.lot.barcode}}</td>
+                                    <td>{%if i.movement_type.direction == '+'%}+{{i.quantity}} nos +{{i.weight}} gms{%endif%}</td>
+                                    <td>{%if i.movement_type.direction == '-'%}-{{i.quantity}} nos -{{i.weight}} gms{%endif%}</td>
+                                </tr>
+                                {%endfor%}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
             </div>
             <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
               {%if statements%}
@@ -423,7 +528,8 @@
               <a class="btn btn-success" href="{% url 'girvi:girvi_loan_notice' loan.id%}">Create Notice</a>
             </div>
             
-          </div>
+          </div></div>
+          
         </div>
       </div>
     </div>

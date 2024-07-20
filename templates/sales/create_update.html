@@ -1,0 +1,57 @@
+{% extends "tenant.html" %}
+{% load crispy_forms_tags%}
+{%load model_name%}
+{% block content %}
+
+<style>
+    .ingredient-form {
+        border-bottom: 1px solid black;
+    }
+    .hidden {
+        display: none
+    }
+</style>
+<div class="container">
+    <div class='row'>
+        <div class='{% if object.id %}col-12 col-md-6 {% else %} col-md-6 mx-auto {% endif %}'>
+            {% if not object.id %}
+                <h1>Create Sale</h1>
+            {%else%}
+                <h1>Update {{object|model_name}}</h1>
+                <a class="btn btn-danger" href='{{ object.get_delete_url }}'>Delete</a> </p>
+
+            {% endif %}
+
+
+            {% include 'sales/partials/forms.html' %}
+        </div>
+
+        <div class='{% if object.id %}col-12 col-md-6 {% else %} d-none {% endif %}'>
+            <h3>Items</h3>
+            total:{{ object.get_invoiceitem_children.count }}
+            <div class="table-responsive">
+                {% if new_item_url %}
+                <a hx-get="{{ new_item_url }}" hx-trigger="click"
+                    hx-target="#items" hx-swap="beforeend" class="btn btn-success">
+                    Add Items</a>      
+                {% endif %}
+                <table class="table table-sm table-bordered table-hover table-striped">
+                    <thead>
+                        <th>Return</th>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>weight</th>
+                        <th>Touch</th>
+                        <th>Total</th>
+                    </thead>
+                    <tbody id="items" hx-target = "closest tr" hx-swap="outerHTML">
+                        {% for item in object.get_invoiceitem_children %}
+                        {% include 'sales/partials/item-inline.html' with object=item %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

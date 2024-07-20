@@ -25,6 +25,8 @@ DATABASES = {
 #     # 'crispy_bootsrap4',
 # ]
 
-# MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware', ]
+MIDDLEWARE += [
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
+]
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

@@ -1,8 +1,9 @@
 import django_filters
-from contact.forms import CustomerWidget
-from contact.models import Customer
 from django_select2.forms import ModelSelect2Widget
-from product.models import StockLot
+
+from apps.tenant_apps.contact.forms import CustomerWidget
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.product.models import Stock
 
 from .models import Approval, ApprovalLine
 
@@ -28,7 +29,7 @@ class ApprovalLineFilter(django_filters.FilterSet):
         widget=CustomerWidget(empty_label="Customer"),
     )
     product = django_filters.ModelChoiceFilter(
-        queryset=StockLot.objects.all(),
+        queryset=Stock.objects.all(),
         widget=ModelSelect2Widget(
             empty_label="stock", search_fields=["variant__name__icontains"]
         ),

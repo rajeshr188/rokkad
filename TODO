@@ -3,19 +3,38 @@ logging:
 testing:
 newapps:
     savings_scheme:
-        - create savings scheme
-        - create savings scheme product
-        - create savings scheme variant
-        - create savings scheme product variant
-
     loyality program:
+    chitfund
 
-move postgres to managed gcloud postgres
-add dea(only hurdle is psycopg composite register and adapt for version3),sales,purchase so currently use psycopg2 with django5
+move postgres to managed gcloud postgres or neon postgres
+using django5 with psycopg2(only hurdle is psycopg composite register and adapt for version3)
 archived views of dea on/as dashboard
 on import page upon selection of model to import show info of fields required in the import file for the model via htmx
 
-manage membership
-protect tenant apps with roles and permission
-add wagtail
+manage membership(kickout a member by revoking his membership)
 django-waffle
+
+improve stock merge if possible venture out django-mptt in stock and django-taggit
+given a product with variant attributes generate all variants in one go
+should the charges(hallmark,making,stone) be further normalized from invoiceitem
+fetch rates and store from where paisa app is getting
+
+then show purchase,sales,receipt,payment total
+import opening balance stock_list
+creating opening balances to accounts must balance the ledgers(assets=liabilities+equity)
+
+if possible create abstract voucher from which sales,purchase,receipt,payment will inherit
+
+account baalnce of debtor is shown as dr if +ve else cr,balance of creditor is shown as cr if +ve else dr (its better to KISS)
+
+check receipt and payment allocation management and report
+
+set opening balances for accounts
+
+add a view to account_detail for je wise balance and running total
+
+change default of area of address to be set from preferences
+
+print ledger type loan details with release date by series
+
+add custom_user profile with gravatar and other fields

@@ -69,16 +69,16 @@ SHARED_APPS = [
 ]
 
 TENANT_APPS = [
-    # 'apps.tenant_apps.approval',
+    "apps.tenant_apps.approval",
     "apps.tenant_apps.contact",
     "apps.tenant_apps.girvi",
     "apps.tenant_apps.product",
-    # 'apps.tenant_apps.terms',
+    "apps.tenant_apps.terms",
     "apps.tenant_apps.rates",
     "apps.tenant_apps.notify",
-    # 'apps.tenant_apps.dea',
-    # 'apps.tenant_apps.purchase',
-    # 'apps.tenant_apps.sales',
+    "apps.tenant_apps.dea",
+    "apps.tenant_apps.purchase",
+    "apps.tenant_apps.sales",
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
@@ -99,7 +99,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",  # Django Debug Toolbar
+    # "debug_toolbar.middleware.DebugToolbarMiddleware",  # Django Debug Toolbar
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "apps.orgs.middleware.WorkspaceMiddleware",
@@ -107,12 +107,13 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",  # django-allauth
+    "django_project.middleware.HtmxMessagesMiddleware",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
-# ROOT_URLCONF = "apps.dashboard.urls"
-# PUBLIC_SCHEMA_URLCONF = "django_project.urls"
-ROOT_URLCONF = "django_project.urls"
+ROOT_URLCONF = "django_project.tenant_urls"
+PUBLIC_SCHEMA_URLCONF = "django_project.urls"
+# ROOT_URLCONF = "django_project.urls"
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
 WSGI_APPLICATION = "django_project.wsgi.application"
@@ -181,7 +182,10 @@ USE_I18N = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
 USE_TZ = True
 
-DATETIME_INPUT_FORMATS = ("%d-%m-%Y %H:%M:%S",)
+DATETIME_INPUT_FORMATS = ("%d-%m-%Y, %H:%M:%S.%f%z",)
+DATETIME_INPUT_FORMATS += ("%Y-%m-%d, %H:%M %p",)
+DATETIME_INPUT_FORMATS += ("%d-%m-%Y, %H:%M:%S",)
+DATETIME_INPUT_FORMATS += ("%d/%m/%Y, %H:%M:%S",)
 DATE_INPUT_FORMATS = (
     "%d-%m-%Y",
     "%d/%m/%Y",
@@ -311,3 +315,6 @@ SLICK_REPORTING_SETTINGS = {
         },
     },
 }
+
+CURRENCIES = ("USD", "INR", "AUD")
+DEFAULT_CURRENCY = "INR"

@@ -1,0 +1,23 @@
+{% extends "tenant.html" %}
+{% load static %}
+{%load widget_tweaks%}
+{% block content %}
+{{form.media}}
+  <p>
+    <a class="btn btn-default" href="{% url 'approval:approval_approval_list' %}">Approval Listing</a>
+    Add Approval
+  </p>
+<form action="." method="post">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <div class="form-row">
+    <div class="form-group col-md-3">
+      {{ form.contact.errors }}
+      {{ form.contact|add_label_class:"label_class_1 label_class_2" }}
+      {% render_field form.contact class="form-control" %}
+    </div>
+  </div>
+  <button class="btn btn-primary" type="submit">Save Approval</button>
+</form>
+
+{% endblock %}

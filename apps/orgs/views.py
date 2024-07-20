@@ -1,14 +1,18 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django_tenants.utils import get_public_schema_name, remove_www, schema_context
+from django_tenants.utils import (get_public_schema_name, remove_www,
+                                  schema_context)
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
+from render_block import render_block_to_string
 
 from .decorators import company_member_required, role_required
-from .forms import CompanyForm, CompanyInvitationForm, company_preference_form_builder
+from .forms import (CompanyForm, CompanyInvitationForm,
+                    company_preference_form_builder)
 from .models import Company, CompanyInvitation, Domain, Membership, Role
 
 # Create your views here.
@@ -102,7 +106,9 @@ def company_update(request, company_id):
             return redirect("orgs_company_list")
     else:
         form = CompanyForm(instance=company)
-    return render(request, "company/company_form.html", {"form": form})
+    return render(
+        request, "company/company_form.html", {"form": form, "company": company}
+    )
 
 
 # @role_required("Owner")
@@ -182,6 +188,18 @@ class CompanyPreferenceBuilder(PreferenceFormView):
         # return CompanyPreferenceForm(instance=self.request.user.workspace)
         return company_preference_form_builder(instance=self.request.user.workspace)
 
+    def render_to_response(self, context, **response_kwargs):
+        # Check if the request is made via HTMX
+        if self.request.headers.get("HX-Request", False):
+            # Render only the specific block content for HTMX requests
+            content = render_block_to_string(
+                "company/company_preferences.html", "content", context, self.request
+            )
+            return HttpResponse(content)
+        else:
+            # Proceed with the normal flow for non-HTMX requests
+            return super().render_to_response(context, **response_kwargs)
+
 
 @login_required
 def delete_membership(request, company_id):
@@ -215,7 +233,18 @@ def edit_membership(request, company_id, membership_id):
     return render(request, "company/edit_membership.html", {"form": form})
 
 
+@login_required
+def membership_list(request):
+    memberships = request.user.memberships.all()
+    return render(request, "company/membership_list.html", {"memberships": memberships})
+
+
 # view to delete a given invitation
+
+
+@login_required
+def profile(request):
+    return render(request, "company/profile.html")
 
 
 @login_required

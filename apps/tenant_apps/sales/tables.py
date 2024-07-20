@@ -24,8 +24,11 @@ class InvoiceTable(tables.Table):
         empty_values=(),
     )
 
-    def render_created(self, value):
-        return value.date
+    def render_customer(self, value):
+        return f"{value.name}"
+
+    def render_voucher_date(self, value):
+        return value.strftime("%d/%m/%y")
 
     def render_due_date(self, value):
         return value.strftime("%d/%m/%Y") if value else value
@@ -39,7 +42,7 @@ class InvoiceTable(tables.Table):
         model = Invoice
         fields = (
             "id",
-            "created",
+            "voucher_date",
             "customer",
             "gross_wt",
             "net_wt",
@@ -75,8 +78,8 @@ class ReceiptTable(tables.Table):
     def render_customer(self, value):
         return f"{value.name}"
 
-    def render_created(self, value):
-        return value.date
+    def render_voucher_date(self, value):
+        return value.strftime("%d/%m/%y")
 
     def render_edit(self):
         return "Edit"
@@ -86,6 +89,6 @@ class ReceiptTable(tables.Table):
 
     class Meta:
         model = Receipt
-        fields = ("id", "created", "customer", "total", "description", "status")
+        fields = ("id", "voucher_date", "customer", "total", "description", "status")
         attrs = {"class": "table table-striped table-bordered"}
         empty_text = "No Receipts Found matching your search..."

@@ -4,8 +4,6 @@ from . import views
 
 urlpatterns = [
     # other url patterns
-    path("profile/", views.profile, name="profile"),
-    path("membership/list/", views.membership_list, name="orgs_membership_list"),
     path(
         "switch/workspace/<int:workspace_id>/",
         views.switch_workspace,

@@ -1,7 +1,9 @@
-from approval.models import ApprovalLine, ReturnItem
-from dea.models import JournalEntry
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
+
+from apps.tenant_apps.dea.models import JournalEntry
+
+from .models import ApprovalLine, ReturnItem
 
 
 @receiver(post_save, sender=ApprovalLine)

@@ -34,6 +34,7 @@ class LoanTable(tables.Table):
         exclude_from_export=True,
     )
     # notified = tables.Column(accessor="last_notified", exclude_from_export=True)
+    total_interest = tables.Column(verbose_name="Interest")
     months_since_created = tables.Column(
         verbose_name="Months", exclude_from_export=True
     )
@@ -55,26 +56,13 @@ class LoanTable(tables.Table):
         return record.customer.name
 
     def render_total_weight(self, record):
-        result = []
-        for item in record.get_weight:
-            item_type = item["itemtype"]
-            total_weight_purity = round(item["total_weight"])
-            result.append(f"{item_type}:{total_weight_purity}")
-
-        # Join the results into a single string
-        pure = " gms,".join(result)
-        return f"{pure} gms"
+        
+        return f"G:{record.total_gold_weight} gms  S:{record.total_silver_weight} gms"
 
     def value_total_weight(self, record):
-        result = []
-        for item in record.get_weight:
-            item_type = item["itemtype"]
-            total_weight_purity = round(item["total_weight"])
-            result.append(f"{item_type}:{total_weight_purity}")
+        
+        return f"G:{record.total_gold_weight} gms  S:{record.total_silver_weight} gms"
 
-        # Join the results into a single string
-        pure = " gms,".join(result)
-        return f"{pure} gms"
 
     def render_loan_id(self, record):
         return format_html(
@@ -107,6 +95,12 @@ class LoanTable(tables.Table):
     #     # footer=lambda table: sum(x.total_interest for x in table.data)
     # )
     total_due = tables.Column(verbose_name="Due")
+
+    def render_months_since_created(self, record):
+        return record.noofmonths()
+
+    def render_total_interest(self, record):
+        return record.interestdue()
 
     def value_total_due(self, record):
         return record.total_due
