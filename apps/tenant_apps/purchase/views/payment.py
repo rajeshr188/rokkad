@@ -3,7 +3,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django_tables2 import RequestConfig
 from num2words import num2words
-from utils.htmx_utils import for_htmx
+
+from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import PaymentFilter
 from ..forms import PaymentForm

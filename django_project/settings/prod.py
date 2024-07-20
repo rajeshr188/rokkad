@@ -7,9 +7,9 @@ from .base import *
 env = environ.Env()
 environ.Env.read_env()
 
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ["rokkad.com", "www.rokkad.com"]
+ALLOWED_HOSTS = ["*", "rokkad.com", "www.rokkad.com"]
 
 DATABASES = {
     "default": {
@@ -22,14 +22,14 @@ DATABASES = {
     }
 }
 
-STATIC_ROOT = "/var/www/rokkad/static"
-MEDIA_ROOT = "/var/www/rokkad/media"
-STATICFILES_DIRS = []
+# STATIC_ROOT = "/var/www/rokkad/static"
+# MEDIA_ROOT = "/var/www/rokkad/media"
+# STATICFILES_DIRS = []
 
-SECURE_SSL_REDIRECT = True
+# SECURE_SSL_REDIRECT = True
 
-SESSION_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
 
-CSRF_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
 
-SECURE_BROWSER_XSS_FILTER = True
+# SECURE_BROWSER_XSS_FILTER = True

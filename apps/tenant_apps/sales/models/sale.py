@@ -1,22 +1,26 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from approval.models import ReturnItem
-from contact.models import Customer
-from dea.models import JournalEntry  # , JournalTypes
-from dea.models.moneyvalue import MoneyValueField
-from dea.utils.currency import Balance
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.db.models import F, Func, Q, Sum
+from django.forms import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
-from invoice.models import PaymentTerm
 from moneyed import Money
-from product.models import StockLot, StockTransaction
+
+from apps.tenant_apps.approval.models import ReturnItem
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.dea.models import (AccountStatement,  # , JournalTypes
+                                         JournalEntry)
+from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
+from apps.tenant_apps.dea.utils.currency import Balance
+from apps.tenant_apps.product.models import Stock, StockTransaction
+from apps.tenant_apps.terms.models import PaymentTerm
 
 # from sympy import content
 
@@ -97,11 +101,13 @@ class SalesQueryset(models.QuerySet):
 
 class Invoice(models.Model):
     # Fields
-    created = models.DateTimeField(default=timezone.now, db_index=True)
-    updated = models.DateTimeField(auto_now_add=True, editable=False)
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated = models.DateTimeField(auto_now=True, editable=False)
+    voucher_date = models.DateTimeField(default=timezone.now)
+    voucher_no = models.CharField(max_length=20, null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     created_by = models.ForeignKey(
-        "users.CustomUser",
+        get_user_model(),
         on_delete=models.CASCADE,
         null=True,
         blank=True,
@@ -117,7 +123,19 @@ class Invoice(models.Model):
         ("Unpaid", "Unpaid"),
     )
     status = models.CharField(max_length=15, choices=status_choices, default="Unpaid")
-
+    # make rates auto fill from the latest rates
+    gold_rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    silver_rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    balance_cash = MoneyField(
+        max_digits=14, decimal_places=3, default_currency="INR", null=True, blank=True
+    )
+    balance_gold = MoneyField(
+        max_digits=14, decimal_places=3, default_currency="USD", null=True, blank=True
+    )
+    balance_silver = MoneyField(
+        max_digits=14, decimal_places=3, default_currency="EUR", null=True, blank=True
+    )
+    balance = ArrayField(MoneyValueField(null=True, blank=True), null=True, blank=True)
     # Relationship Fields
     customer = models.ForeignKey(
         Customer,
@@ -174,10 +192,46 @@ class Invoice(models.Model):
         return Invoice.objects.filter(id__lt=self.id).order_by("id").last()
 
     def get_gross_wt(self):
-        return self.sale_items.aggregate(t=Sum("weight"))["t"] or 0
+        # this should return the sum of all purchaseitems weight by metal_balance_currency
+        weights = self.sale_items.values("metal_balance_currency").annotate(
+            amount=Sum("weight"), currency=F("metal_balance_currency")
+        )
+        money_values = [Money(item["amount"], item["currency"]) for item in weights]
+        return Balance(money_values)
 
     def get_net_wt(self):
-        return self.sale_items.aggregate(t=Sum("net_wt"))["t"] or 0
+        weights = self.sale_items.values("metal_balance_currency").annotate(
+            amount=Sum("net_wt"), currency=F("metal_balance_currency")
+        )
+        money_values = [Money(item["amount"], item["currency"]) for item in weights]
+        return Balance(money_values)
+
+    def get_sum_metal_balance(self):
+        return self.sale_items.values("metal_balance_currency").annotate(
+            total=Sum("metal_balance")
+        )
+
+    def get_sum_gold_balance(self):
+        bal = (
+            self.sale_items.aggregate(
+                total=Sum("metal_balance", filter=Q(metal_balance_currency="USD"))
+            )["total"]
+            or 0
+        )
+        return Money(bal, "USD")
+
+    def get_sum_silver_balance(self):
+        bal = (
+            self.sale_items.aggregate(
+                total=Sum("metal_balance", filter=Q(metal_balance_currency="EUR"))
+            )["total"]
+            or 0
+        )
+        return Money(bal, "EUR")
+
+    def get_sum_cash_balance(self):
+        bal = self.sale_items.aggregate(total=Sum("cash_balance"))["total"] or 0
+        return Money(bal, "INR")
 
     @property
     def overdue_days(self):
@@ -192,11 +246,41 @@ class Invoice(models.Model):
         gst = Money(amount * Decimal(0.03), "INR")
         return gst
 
-    def save(self, *args, **kwargs):
-        if not self.due_date:
-            self.due_date = self.created + timedelta(days=self.term.due_days)
+    def calculate_balances(self):
+        self.balance = Balance().monies()
+        if self.is_ratecut:
+            self.balance_cash = Money(
+                self.get_sum_cash_balance().amount
+                + self.get_sum_gold_balance().amount * self.gold_rate
+                + self.get_sum_silver_balance().amount * self.silver_rate,
+                "INR",
+            )
+            if self.is_gst:
+                self.balance_cash.amount += self.balance_cash.amount * Decimal(0.03)
+            self.balance_gold = Money(0, "USD")
+            self.balance_silver = Money(0, "EUR")
+        else:
+            self.balance_cash = self.get_sum_cash_balance()
+            self.balance_gold = self.get_sum_gold_balance()
+            self.balance_silver = self.get_sum_silver_balance()
+        self.balance = Balance(
+            [self.balance_cash, self.balance_gold, self.balance_silver]
+        ).monies()
 
-        return super(Invoice, self).save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.pk:
+            self.calculate_balances()
+
+        if not self.due_date:
+            if self.term:
+                self.due_date = self.voucher_date + timedelta(days=self.term.due_days)
+
+        super(Invoice, self).save(*args, **kwargs)
+
+    # def delete(self, *args, **kwargs):
+    #     if self.approval:
+    #         self.approval.is_billed = False
+    #     super(Invoice, self).delete(*args, **kwargs)
 
     @classmethod
     def with_outstanding_balance(cls):
@@ -263,50 +347,12 @@ class Invoice(models.Model):
         return Balance(0, "INR")
 
     def get_balance(self):
-        return self.balance - self.get_allocations()
-
-    @property
-    def balance(self):
-        sale_balance = self.sale_balance
-        try:
-            return Balance(sale_balance.balances)
-        except SaleBalance.DoesNotExist:
-            return None
-
-    # def delete(self, *args, **kwargs):
-    #     if self.approval:
-    #         self.approval.is_billed = False
-    #     super(Invoice, self).delete(*args, **kwargs)
-
-    def create_journal_entry(self):
-        return JournalEntry.objects.create(
-            content_object=self,
-            desc="Sale",
-        )
-        # ledgerjournal = JournalE.objects.create(
-        #     content_object=self,
-        #     desc="sale",
-        #     journal_type=JournalTypes.LJ,
-        # )
-        # accountjournal = Journal.objects.create(
-        #     content_object=self,
-        #     desc="sale",
-        #     journal_type=JournalTypes.AJ,
-        # )
-        # return ledgerjournal, accountjournal
-
-    def get_journal_entry(self):
-        if not self.journal_entries.exists():
-            return self.create_journal_entry()
-        return self.journal_entries.first()
-        # ledgerjournal = self.journals.filter(journal_type=JournalTypes.LJ)
-        # accountjournal = self.journals.filter(journal_type=JournalTypes.AJ)
-
-        # if ledgerjournal.exists() and accountjournal.exists():
-        #     return ledgerjournal.first(), accountjournal.first()
-        # return self.create_journals()
+        return Balance(self.balance)
+        # return self.balance - self.get_allocations()
 
     def get_transactions(self):
+        if not hasattr(self.customer, "account"):
+            self.customer.save()
         """
         if self.approval:
 
@@ -327,64 +373,56 @@ class Invoice(models.Model):
         inv = "GST INV" if self.is_gst else "Non-GST INV"
         cogs = "GST COGS" if self.is_gst else "Non-GST COGS"
         tax = self.get_gst()
-        # lt = [
-        #     {"ledgerno": "Sales", "ledgerno_dr": "Sundry Debtors", "amount": money},
-        #     {"ledgerno": inv, "ledgerno_dr": cogs, "amount": money},
-        #     {
-        #         "ledgerno": "Output Igst",
-        #         "ledgerno_dr": "Sundry Debtors",
-        #         "amount": tax,
-        #     },
-        # ]
-        # at = [
-        #     {
-        #         "ledgerno": "Sales",
-        #         "xacttypecode": "Cr",
-        #         "xacttypecode_ext": "CRSL",
-        #         "account": self.customer.account,
-        #         "amount": money + tax,
-        #     }
-        # ]
         lt, at = [], []
-        balance = self.sale_balance
-        cash_balance = balance.cash_balance
-        gold_balance = balance.gold_balance
-        silver_balance = balance.silver_balance
-        lt.append(
-            {
-                "ledgerno": "Sales",
-                "ledgerno_dr": "Sundry Debtors",
-                "amount": cash_balance,
-            }
+
+        cash_balance = self.balance_cash  # self.balance["INR"]
+        gold_balance = self.balance_gold  # self.balance["USD"]
+        silver_balance = self.balance_silver  # self.balance["EUR"]
+        print(
+            f"cash_balance:{cash_balance} gold_balance:{gold_balance} silver_balance:{silver_balance}"
         )
-        lt.append({"ledgerno": inv, "ledgerno_dr": cogs, "amount": cash_balance})
-        at.append(
-            {
-                "ledgerno": "Sales",
-                "xacttypecode": "Cr",
-                "xacttypecode_ext": "CRSL",
-                "account": self.customer.account,
-                "amount": cash_balance,
-            }
-        )
-        if self.is_gst:
+
+        if all(v is None for v in [cash_balance, gold_balance, silver_balance]):
+            print("No balances to post")
+            return None, None
+
+        if cash_balance.amount != 0:
             lt.append(
                 {
-                    "ledgerno": "Output Igst",
+                    "ledgerno": "Sales",
                     "ledgerno_dr": "Sundry Debtors",
-                    "amount": tax,
-                },
+                    "amount": cash_balance,
+                }
             )
+            lt.append({"ledgerno": inv, "ledgerno_dr": cogs, "amount": cash_balance})
             at.append(
                 {
                     "ledgerno": "Sales",
-                    "xacttypecode": "Cr",
-                    "xacttypecode_ext": "CRSL",
-                    "account": self.customer.account,
-                    "amount": tax,
+                    "XactTypeCode": "Cr",
+                    "XactTypeCode_ext": "CRSL",
+                    "Account": self.customer.account,
+                    "amount": cash_balance,
                 }
             )
-        if gold_balance != 0:
+            if self.is_gst:
+                lt.append(
+                    {
+                        "ledgerno": "Output Igst",
+                        "ledgerno_dr": "Sundry Debtors",
+                        "amount": tax,
+                    },
+                )
+                at.append(
+                    {
+                        "ledgerno": "Sales",
+                        "XactTypeCode": "Cr",
+                        "XactTypeCode_ext": "CRSL",
+                        "Account": self.customer.account,
+                        "amount": tax,
+                    }
+                )
+
+        if gold_balance.amount != 0:
             lt.append(
                 {
                     "ledgerno": "Sales",
@@ -396,13 +434,14 @@ class Invoice(models.Model):
             at.append(
                 {
                     "ledgerno": "Sales",
-                    "xacttypecode": "Cr",
-                    "xacttypecode_ext": "CRSL",
-                    "account": self.customer.account,
+                    "XactTypeCode": "Cr",
+                    "XactTypeCode_ext": "CRSL",
+                    "Account": self.customer.account,
                     "amount": gold_balance,
                 }
             )
-        if silver_balance != 0:
+
+        if silver_balance and silver_balance.amount != 0:
             lt.append(
                 {
                     "ledgerno": "Sales",
@@ -414,41 +453,64 @@ class Invoice(models.Model):
             at.append(
                 {
                     "ledgerno": "Sales",
-                    "xacttypecode": "Cr",
-                    "xacttypecode_ext": "CRSL",
-                    "account": self.customer.account,
+                    "XactTypeCode": "Cr",
+                    "XactTypeCode_ext": "CRSL",
+                    "Account": self.customer.account,
                     "amount": silver_balance,
                 }
             )
         return lt, at
 
-    @transaction.atomic()
+    def get_journal_entry(self, desc=None):
+        if self.journal_entries.exists():
+            return self.journal_entries.latest()
+        else:
+            return JournalEntry.objects.create(
+                content_object=self, desc=self.__class__.__name__
+            )
+
+    def delete_journal_entry(self):
+        for entry in self.journal_entries.all():
+            entry.delete()
+
     def create_transactions(self):
-        journal_entry = self.get_journal_entry()
+        print("Creating transactions")
         lt, at = self.get_transactions()
-        journal_entry.transact(lt, at)
-        # ledger_journal, account_journal = self.get_journals()
-        # lt, at = self.get_transactions()
+        if lt and at:
+            journal_entry = self.get_journal_entry()
+            journal_entry.transact(lt, at)
 
-        # ledger_journal.transact(lt)
-        # account_journal.transact(at)
-
-    @transaction.atomic()
     def reverse_transactions(self):
+        # i.e if je is older than the latest statement then reverse the transactions else do nothing
+        print("Reversing transactions")
+        try:
+            statement = self.customer.account.accountstatements.latest("created")
+        except AccountStatement.DoesNotExist:
+            statement = None
         journal_entry = self.get_journal_entry()
-        lt, at = self.get_transactions()
-        journal_entry.transact(lt, at)
-        # ledger_journal, Account_journal = self.get_journals()
-        # lt, at = self.get_transactions()
 
-        # ledger_journal.untransact(lt)
-        # account_journal.untransact(at)
+        if journal_entry and statement and journal_entry.created < statement.created:
+            lt, at = self.get_transactions()
+            if lt and at:
+                journal_entry.untransact(lt, at)
+        else:
+            self.delete_journal_entry()
+
+    def is_changed(self, old_instance):
+        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
+        # TODO efficient way to compare old and new instances
+        # Implement logic to compare old and new instances
+        # Compare all fields using dictionaries
+        return model_to_dict(
+            self, fields=["balance_cash", "balance_gold", "balance_silver"]
+        ) != model_to_dict(
+            old_instance, fields=["balance_cash", "balance_gold", "balance_silver"]
+        )
 
 
 class InvoiceItem(models.Model):
     # Fields
     is_return = models.BooleanField(default=False, verbose_name="Return")
-    huid = models.CharField(max_length=6, null=True, blank=True, unique=True)
     quantity = models.IntegerField()
     weight = models.DecimalField(max_digits=10, decimal_places=3)
     # remove less stone
@@ -458,7 +520,6 @@ class InvoiceItem(models.Model):
     touch = models.DecimalField(max_digits=10, decimal_places=3)
     wastage = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     net_wt = models.DecimalField(max_digits=10, decimal_places=3, default=0)
-    rate = models.DecimalField(max_digits=10, decimal_places=3)
     making_charge = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     hallmark_charge = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     metal_balance = MoneyField(
@@ -470,7 +531,7 @@ class InvoiceItem(models.Model):
 
     # Relationship Fields
     product = models.ForeignKey(
-        StockLot, on_delete=models.CASCADE, related_name="sold_items"
+        Stock, on_delete=models.CASCADE, related_name="sold_items"
     )
     invoice = models.ForeignKey(
         "sales.Invoice", on_delete=models.CASCADE, related_name="sale_items"
@@ -482,7 +543,6 @@ class InvoiceItem(models.Model):
         blank=True,
         related_name="sold_items",
     )
-    journal_entries = GenericRelation(JournalEntry, related_query_name="sale_items")
 
     class Meta:
         ordering = ("-pk",)
@@ -509,50 +569,36 @@ class InvoiceItem(models.Model):
     def get_nettwt(self):
         return (self.weight * self.touch) / 100
 
-    # @property
-    # def get_total(self):
-    #     if self.invoice.is_ratecut:
-    #         return self.get_nettwt() * self.invoice.rate
-    #     else:
-    #         return self.get_nettwt()
-
     def save(self, *args, **kwargs):
         self.net_wt = self.get_nettwt()
-        self.rate = self.rate
         self.metal_balance_currency = (
-            "USD" if "gold" in self.product.variant.name else "EUR"
+            "USD" if self.product.variant.product.category.name == "Gold" else "EUR"
         )
-        if self.invoice.is_ratecut:
-            self.cash_balance = (
-                self.net_wt * self.rate + self.making_charge + self.hallmark_charge
-            )
-            if self.invoice.is_gst:
-                self.cash_balance += self.cash_balance * Decimal(0.03)
-            self.metal_balance = 0
-        else:
-            self.cash_balance = self.making_charge + self.hallmark_charge
-            self.metal_balance = self.net_wt
-            print(self.metal_balance)
+        self.cash_balance = self.making_charge + self.hallmark_charge
+        self.metal_balance = self.net_wt
         return super(InvoiceItem, self).save(*args, **kwargs)
+
+    def delete(self, unpost=False, *args, **kwargs):
+        if unpost:
+            self.unpost()
+        super(InvoiceItem, self).delete(*args, **kwargs)
 
     def balance(self):
         return Balance([self.metal_balance, self.cash_balance])
 
-    def create_journal_entry(self):
-        stock_journal_entry = JournalEntry.objects.create(
-            content_object=self,
-            desc=f"sale-item {self.invoice.pk}",
-        )
-        return stock_journal_entry
+    def is_changed(self, old_instance):
+        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
+        # TODO efficient way to compare old and new instances
+        # Implement logic to compare old and new instances
+        # Compare all fields using dictionaries
+        from django.forms import model_to_dict
 
-    def get_journal_entry(self):
-        stock_journal_entry = self.journal_entries
-        if stock_journal_entry.exists():
-            return stock_journal_entry.first()
-        return self.create_journal_entry()
+        return model_to_dict(
+            self, fields=["product", "quantity", "weight"]
+        ) != model_to_dict(old_instance, fields=["product", "quantity", "weight"])
 
     @transaction.atomic()
-    def post(self, jrnl_entry):
+    def post(self):
         if not self.is_return:
             if self.approval_line:
                 # unpost the approval line to return the stocklot from approvalline
@@ -560,21 +606,21 @@ class InvoiceItem(models.Model):
                 self.approval_line.unpost(stock_journal)
                 self.approval_line.update_status()
             # post the invoice item to deduct the stock from stocklot
-            self.product.transact(self.weight, self.quantity, jrnl_entry, "S")
+            self.product.transact(self.weight, self.quantity, "S")
         else:
-            self.product.transact(self.weight, self.quantity, jrnl_entry, "SR")
+            self.product.transact(self.weight, self.quantity, "SR")
 
     @transaction.atomic()
-    def unpost(self, jrnl_entry):
+    def unpost(self):
         if self.is_return:
-            self.product.transact(self.weight, self.quantity, jrnl_entry, "S")
+            self.product.transact(self.weight, self.quantity, "S")
         else:
             if self.approval_line:
                 # post the approval line to deduct the stock from invoiceitem
                 stock_journal_entry = self.approval_line.get_journal()
                 self.approval_line.post(stock_journal_entry)
                 self.approval_line.update_status()
-            self.product.transact(self.weight, self.quantity, jrnl_entry, "SR")
+            self.product.transact(self.weight, self.quantity, "SR")
 
 
 class SaleBalance(models.Model):
@@ -610,7 +656,7 @@ class SaleBalance(models.Model):
 
     class Meta:
         managed = False
-        db_table = "sale_balance"
+        db_table = "sales_balance"
 
     def __str__(self):
         return f"Balance:{Balance([self.balances]) - Balance([self.received])}"

@@ -33,10 +33,113 @@ class Migration(migrations.Migration):
         ("dea", "0002_initial_fixture"),
     ]
 
+    ledger_balance_sql_v4_ob_cb = """
+    need to unnest arrays then perform + - operations
+    CREATE VIEW ledger_balance AS
+        WITH ls AS (
+            SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
+                dea_ledgerstatement.id,
+                dea_ledgerstatement.created,
+                dea_ledgerstatement."ClosingBalance",
+                dea_ledgerstatement.ledgerno_id
+            FROM dea_ledgerstatement
+            ORDER BY dea_ledgerstatement.ledgerno_id, dea_ledgerstatement.created DESC
+        )
+        SELECT dea_ledger.id AS ledgerno_id,
+            ls.created AS ls_created,
+            ls."ClosingBalance" AS opening_balance,
+            SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_id = dea_ledger.id)::numeric(14,0) AS cr,
+            SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id)::numeric(14,0) AS dr,
+            (ls."ClosingBalance" + SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_id = dea_ledger.id) - SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id))::numeric(14,0) AS closing_balance
+        FROM dea_ledger
+        LEFT JOIN ls ON dea_ledger.id = ls.ledgerno_id
+        LEFT JOIN dea_ledgertransaction ON dea_ledger.id = dea_ledgertransaction.ledgerno_id OR dea_ledger.id = dea_ledgertransaction.ledgerno_dr_id
+        WHERE (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
+        GROUP BY dea_ledger.id, ls.created, ls."ClosingBalance";
+    """
+    ledger_balance_sql_v3_with_filter = """
+    CREATE VIEW ledger_balance AS
+        WITH ls AS (
+            SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
+                dea_ledgerstatement.id,
+                dea_ledgerstatement.created,
+                dea_ledgerstatement."ClosingBalance",
+                dea_ledgerstatement.ledgerno_id
+            FROM dea_ledgerstatement
+            ORDER BY dea_ledgerstatement.ledgerno_id, dea_ledgerstatement.created DESC
+        )
+        SELECT dea_ledger.id AS ledgerno_id,
+            ls.created AS ls_created,
+            ls."ClosingBalance" AS opening_balance,
+            ARRAY(
+                SELECT ROW(
+                    SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_id = dea_ledger.id)::numeric(14,0),
+                    dea_ledgertransaction.amount_currency
+                )::money_value AS "row"
+                FROM dea_ledgertransaction
+                WHERE (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
+                GROUP BY dea_ledgertransaction.amount_currency
+            ) AS cr,
+            ARRAY(
+                SELECT ROW(
+                    SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id)::numeric(14,0),
+                    dea_ledgertransaction.amount_currency
+                )::money_value AS "row"
+                FROM dea_ledgertransaction
+                WHERE (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
+                GROUP BY dea_ledgertransaction.amount_currency
+            ) AS dr,
+            ARRAY(
+                SELECT ROW(
+                    (SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_id = dea_ledger.id) - SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id))::numeric(14,0),
+                    dea_ledgertransaction.amount_currency
+                )::money_value AS "row"
+                FROM dea_ledgertransaction
+                WHERE (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
+                GROUP BY dea_ledgertransaction.amount_currency
+            ) AS closing_balance
+        FROM dea_ledger
+        LEFT JOIN ls ON dea_ledger.id = ls.ledgerno_id
+        JOIN dea_accounttype at ON at.id = dea_ledger."AccountType_id";
+    """
+    ledger_balance_sql_v2 = """
+        CREATE VIEW ledger_balance AS
+        WITH ls AS (
+        SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
+            dea_ledgerstatement.id,
+            dea_ledgerstatement.created,
+            dea_ledgerstatement."ClosingBalance",
+            dea_ledgerstatement.ledgerno_id
+           FROM dea_ledgerstatement
+          ORDER BY dea_ledgerstatement.ledgerno_id, dea_ledgerstatement.created DESC
+        )
+        SELECT dea_ledger.id AS ledgerno_id,
+            ls.created AS ls_created,
+            ls."ClosingBalance" AS opening_balance,
+            ARRAY( SELECT ROW(sum(dea_ledgertransaction.amount)::numeric(14,0), dea_ledgertransaction.amount_currency)::money_value AS "row"
+                FROM dea_ledgertransaction
+                WHERE dea_ledgertransaction.ledgerno_id = dea_ledger.id 
+                AND (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
+                GROUP BY dea_ledgertransaction.amount_currency) AS cr,
+            ARRAY( SELECT ROW(sum(dea_ledgertransaction.amount)::numeric(14,0), dea_ledgertransaction.amount_currency)::money_value AS "row"
+                FROM dea_ledgertransaction
+                WHERE dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id AND (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
+                GROUP BY dea_ledgertransaction.amount_currency) AS dr
+            ARRAY(SELECT ROW((sum(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_id = dea_ledger.id) - sum(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id))::numeric(14,0), dea_ledgertransaction.amount_currency)::money_value AS "row"
+                FROM dea_ledgertransaction
+                WHERE (dea_ledgertransaction.ledgerno_id = dea_ledger.id OR dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id) AND (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
+                GROUP BY dea_ledgertransaction.amount_currency) AS closing_balance 
+
+        FROM dea_ledger
+        LEFT JOIN ls ON dea_ledger.id = ls.ledgerno_id
+        JOIN dea_accounttype at ON at.id = dea_ledger."AccountType_id";        
+            """
+
     ledger_balance_sql_v1 = """
         CREATE VIEW ledger_balance AS
         WITH ls AS (
-        SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) dea_ledgerstatement.id,
+        SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
+            dea_ledgerstatement.id,
             dea_ledgerstatement.created,
             dea_ledgerstatement."ClosingBalance",
             dea_ledgerstatement.ledgerno_id
@@ -65,7 +168,8 @@ class Migration(migrations.Migration):
 
     ledger_balance_sql = """
          WITH ls AS (
-         SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) dea_ledgerstatement.id,
+         SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
+            dea_ledgerstatement.id,
             dea_ledgerstatement.created,
             dea_ledgerstatement."ClosingBalance",
             dea_ledgerstatement.ledgerno_id,
@@ -139,10 +243,72 @@ class Migration(migrations.Migration):
         FROM ls ls(id, created, "ClosingBalance", ledgerno_id, id_1, name, lft, rght, tree_id, level, "AccountType_id", parent_id)
             JOIN dea_accounttype at ON at.id = ls."AccountType_id";
     """
+    account_balance_sql_v3 = """
+    doesnt work dont bother.need to unnest arrays and perform + - operations
+    CREATE VIEW account_balance AS
+        WITH acc_st AS (
+            SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") 
+                dea_accountstatement.id,
+                dea_accountstatement.created,
+                dea_accountstatement."ClosingBalance",
+                dea_accountstatement."AccountNo_id"
+            FROM dea_accountstatement
+            ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+        )
+        SELECT dea_account.id AS "AccountNo_id",
+            dea_account.contact_id AS contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+            SUM(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Dr'::text)::numeric(14,0) AS cr,
+            SUM(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Cr'::text)::numeric(14,0) AS dr,
+            (acc_st."ClosingBalance" + SUM(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Dr'::text) - SUM(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Cr'::text))::numeric(14,0) AS closing_balance
+        FROM dea_account
+        LEFT JOIN acc_st ON dea_account.id = acc_st."AccountNo_id"
+        LEFT JOIN dea_accounttransaction ON dea_account.id = dea_accounttransaction."Account_id"
+        WHERE (acc_st.created IS NULL OR dea_accounttransaction.created >= acc_st.created)
+        GROUP BY dea_account.id, dea_account.contact_id, acc_st.created, acc_st."ClosingBalance";
+    """
+    account_balance_sql_v2 = """
+    CREATE VIEW account_balance AS
+        WITH acc_st AS (
+            SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") 
+                dea_accountstatement.id,
+                dea_accountstatement.created,
+                dea_accountstatement."ClosingBalance",
+                dea_accountstatement."AccountNo_id"
+            FROM dea_accountstatement
+            ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+            )
+        SELECT dea_account.id AS "AccountNo_id",
+            dea_account.contact_id AS contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+            ARRAY( SELECT ROW(sum(dea_accounttransaction.amount)::numeric(14,0), dea_accounttransaction.amount_currency)::money_value AS "row"
+                FROM dea_accounttransaction
+                WHERE dea_accounttransaction."Account_id" = dea_account.id 
+                AND dea_accounttransaction."XactTypeCode_id"::text = 'Dr'::text 
+                AND ((acc_st.created isnull) or dea_accounttransaction.created >= acc_st.created)
+                GROUP BY dea_accounttransaction.amount_currency) AS cr,
+            ARRAY( SELECT ROW(sum(dea_accounttransaction.amount)::numeric(14,0), dea_accounttransaction.amount_currency)::money_value AS "row"
+                FROM dea_accounttransaction
+                WHERE dea_accounttransaction."Account_id" = dea_account.id 
+                AND dea_accounttransaction."XactTypeCode_id"::text = 'Cr'::text 
+                AND ((acc_st.created isnull) or dea_accounttransaction.created >= acc_st.created)
+                GROUP BY dea_accounttransaction.amount_currency) AS dr
+            ARRAY( SELECT ROW(sum(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Dr'::text) - sum(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Cr'::text))::numeric(14,0), dea_accounttransaction.amount_currency)::money_value AS "row"
+                FROM dea_accounttransaction
+                WHERE dea_accounttransaction."Account_id" = dea_account.id
+                AND ((acc_st.created IS NULL) or dea_accounttransaction.created >= acc_st.created)
+                GROUP BY dea_accounttransaction.amount_currency) AS closing_balance
+        FROM dea_account
+            LEFT JOIN acc_st ON dea_account.id = acc_st."AccountNo_id"            
+    """
+
     account_balance_sql_v1 = """
     CREATE VIEW account_balance AS
         WITH acc_st AS (
-            SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") dea_accountstatement.id,
+            SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") 
+                dea_accountstatement.id,
                 dea_accountstatement.created,
                 dea_accountstatement."ClosingBalance",
                 dea_accountstatement."TotalCredit",
@@ -181,7 +347,8 @@ class Migration(migrations.Migration):
     
         WITH astmt AS
         (
-         SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") et.name AS entity,
+         SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") 
+            et.name AS entity,
             acte.description AS acc_type,
             cu.name AS acc_name,
             dea_accountstatement.id,
@@ -223,6 +390,6 @@ class Migration(migrations.Migration):
     operations = [
         # CreateView("ledger_balance", ledger_balance_sql_v1),
         # CreateView("account_balance", account_balance_sql_v1),
-        migrations.RunSQL(ledger_balance_sql_v1, reverse_sql=migrations.RunSQL.noop),
-        migrations.RunSQL(account_balance_sql_v1, reverse_sql=migrations.RunSQL.noop),
+        # migrations.RunSQL(ledger_balance_sql_v1, reverse_sql=migrations.RunSQL.noop),
+        # migrations.RunSQL(account_balance_sql_v1, reverse_sql=migrations.RunSQL.noop),
     ]

@@ -7,17 +7,6 @@ from apps.orgs.decorators import company_member_required
 from apps.orgs.models import Company
 
 
-@login_required
-def profile(request):
-    return render(request, "account/profile.html")
-
-
-@login_required
-def membership_list(request):
-    memberships = request.user.memberships.all()
-    return render(request, "account/membership_list.html", {"memberships": memberships})
-
-
 @company_member_required
 def switch_workspace(request, workspace_id):
     tenant = Company.objects.get(pk=workspace_id)

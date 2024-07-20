@@ -24,7 +24,9 @@ class AccountType(models.Model):
 # ledger is chart of accounts
 # add ledgerno
 class Ledger(MPTTModel):
-    AccountType = models.ForeignKey(AccountType, on_delete=models.CASCADE)
+    AccountType = models.ForeignKey(
+        AccountType, on_delete=models.CASCADE, related_name="ledgers"
+    )
     name = models.CharField(max_length=100)
     parent = TreeForeignKey(
         "self", null=True, blank=True, on_delete=models.CASCADE, related_name="children"
@@ -40,7 +42,7 @@ class Ledger(MPTTModel):
         ]
 
     def __str__(self):
-        return self.name
+        return f"{self.name} - {self.AccountType}"
 
     def get_absolute_url(self):
         return reverse("dea_ledger_detail", kwargs={"pk": self.pk})
@@ -54,7 +56,7 @@ class Ledger(MPTTModel):
     def get_closing_balance(self):
         ls = self.get_latest_stmt()
         if ls is None:
-            return Balance()
+            return Balance(self.ledgerbalance.ClosingBalance)
         else:
             return Balance(ls.ClosingBalance)
 
@@ -77,6 +79,12 @@ class Ledger(MPTTModel):
         else:
             return self.debit_txns.all()
 
+    def aleg_txns(self, since=None, xacttypcode=None):
+        if since is not None:
+            return self.aleg.filter(created__gte=since, XactTypeCode=xacttypcode)
+        else:
+            return self.aleg.filter(XactTypeCode=xacttypcode)
+
     def audit(self):
         # this statement will serve as opening balance for this acc
         return LedgerStatement.objects.create(
@@ -85,9 +93,9 @@ class Ledger(MPTTModel):
 
     def current_balance_wrt_descendants(self):
         descendants = [
-            i.current_balance() for i in self.get_descendants(include_self=False)
+            i.get_balance() for i in self.get_descendants(include_self=False)
         ]
-        bal = sum(descendants, self.current_balance())
+        bal = sum(descendants, self.get_balance())
         return bal
 
     def current_balance(self):
@@ -131,9 +139,28 @@ class Ledger(MPTTModel):
             if self.dtxns(since=since)
             else Balance()
         )
+        aleg_cr = Balance(
+            [
+                Money(r["total"], r["amount_currency"])
+                for r in self.aleg_txns(since, "Cr")
+                .values("amount_currency")
+                .annotate(total=Sum("amount"))
+            ]
+        )
+        aleg_dr = Balance(
+            [
+                Money(r["total"], r["amount_currency"])
+                for r in self.aleg_txns(since, "Dr")
+                .values("amount_currency")
+                .annotate(total=Sum("amount"))
+            ]
+        )
 
-        bal = cb + d_bal - c_bal
+        bal = cb + (d_bal - c_bal) + (aleg_cr - aleg_dr)
         return bal
+
+    def get_balance(self):
+        return self.ledgerbalance.get_currbal()
 
 
 class LedgerTransactionManager(models.Manager):
@@ -160,12 +187,10 @@ class LedgerTransaction(models.Model):
     ledgerno_dr = models.ForeignKey(
         Ledger, on_delete=models.CASCADE, related_name="debit_txns"
     )
-    # amount = models.DecimalField(max_digits=13, decimal_places=3)
     amount = MoneyField(
         max_digits=13,
         decimal_places=3,
         default_currency="INR",
-        validators=[MinValueValidator(limit_value=0.0)],
     )
     objects = LedgerTransactionManager()
 
@@ -211,26 +236,30 @@ class LedgerStatement(models.Model):
 # postgresql read-only-view
 class Ledgerbalance(models.Model):
     ledgerno = models.OneToOneField(
-        Ledger, on_delete=models.DO_NOTHING, primary_key=True
+        Ledger,
+        on_delete=models.DO_NOTHING,
+        primary_key=True,
+        related_name="ledgerbalance",
     )
-    name = models.CharField(max_length=20)
-    AccountType = models.CharField(max_length=20)
-    created = models.DateTimeField()
-    ClosingBalance = ArrayField(MoneyValueField(null=True, blank=True))
+    ls_created = models.DateTimeField()
+    opening_balance = ArrayField(MoneyValueField(null=True, blank=True))
+    closing_balance = ArrayField(MoneyValueField(null=True, blank=True))
     cr = ArrayField(MoneyValueField(null=True, blank=True))
     dr = ArrayField(MoneyValueField(null=True, blank=True))
 
     class Meta:
         managed = False
         db_table = "ledger_balance"
-        # db_table = "ledger_balance_plain"
-        ordering = ["AccountType", "ledgerno__name"]
+        ordering = ["ledgerno__AccountType", "ledgerno__name"]
 
     def get_currbal(self):
-        return self.get_cb() + self.get_dr() - self.get_cr()
+        return Balance(self.opening_balance) + Balance(self.closing_balance)
+
+    def get_ob(self):
+        return Balance(self.opening_balance)
 
     def get_cb(self):
-        return Balance(self.ClosingBalance)
+        return Balance(self.closing_balance)
 
     def get_running_balance(self):
         return sum(

@@ -8,7 +8,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.files.base import ContentFile
-from django.db.models import Count, F, Max, OuterRef, Prefetch, Q, Subquery, Sum
+from django.db.models import (Count, F, Max, OuterRef, Prefetch, Q, Subquery,
+                              Sum)
 from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,30 +18,32 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods  # new
 from django.views.decorators.http import require_POST
-from django.views.generic.dates import (
-    DayArchiveView,
-    MonthArchiveView,
-    TodayArchiveView,
-    WeekArchiveView,
-    YearArchiveView,
-)
+from django.views.generic.dates import (DayArchiveView, MonthArchiveView,
+                                        TodayArchiveView, WeekArchiveView,
+                                        YearArchiveView)
 from django_tables2.config import RequestConfig
 from django_tables2.export.export import TableExport
 from dynamic_preferences.registries import global_preferences_registry
+from moneyed import Money
 from num2words import num2words
 from openpyxl import load_workbook
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
+from reportlab.platypus import Paragraph, Table, TableStyle
 
 from apps.orgs.registries import company_preference_registry
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.notify.models import NoticeGroup, Notification
 from apps.tenant_apps.rates.models import Rate
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-from apps.tenant_apps.utils.loan_pdf import get_loan_pdf, get_notice_pdf
+from apps.tenant_apps.utils.loan_pdf import (get_custom_jsk, get_loan_template,
+                                             get_notice_pdf, print_labels_pdf)
 
 from ..filters import LoanFilter
-from ..forms import LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm
+from ..forms import (LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm,
+                     LoanSelectionForm)
 from ..models import *
 from ..tables import LoanTable
 
@@ -108,6 +111,7 @@ class LoanTodayArchiveView(TodayArchiveView):
 
 
 def ld(request):
+    # TODO get last date by series
     # default_date = global_preferences["Loan__Default_Date"]
     default_date = request.user.workspace.preferences["Loan__Default_Date"]
     if default_date == "N":
@@ -171,7 +175,12 @@ def loan_list(request):
             dataset_kwargs={"title": "loans"},
         )
         return exporter.response(f"table.{export_format}")
-    context = {"filter": filter, "table": table}
+    context = {
+        "filter": filter,
+        "table": table,
+        "total_loan_amount": filter.qs.total_loanamount(),
+        "total_interest": filter.qs.aggregate(total=Sum("total_interest")),
+    }
     return TemplateResponse(request, "girvi/loan/loan_list.html", context)
 
 
@@ -188,7 +197,7 @@ def create_loan(request, pk=None):
             if image_data:
                 image_file = ContentFile(
                     base64.b64decode(image_data.split(",")[1]),
-                    name=f"{l.loan_id}__{l.customer.name}_{l.id}.jpg",
+                    name=f"{l.loan_id}_{l.customer.name}_{l.id}.jpg",
                 )
                 l.pic = image_file
 
@@ -224,11 +233,10 @@ def create_loan(request, pk=None):
             lid = 1
         else:
             lid = last_loan.lid + 1
-    except Loan.DoesNotExist:
+    except (Loan.DoesNotExist, Series.DoesNotExist):
         series = Series.objects.first()
         if series is None:
-            # Handle the case where there are no Series objects
-            raise ValueError("No Series objects in database.")
+            messages.error(request, "No Series objects in database.")
         # if series is None:
         #     # Check if there are any License objects
         #     license = License.objects.first()
@@ -269,7 +277,7 @@ def loan_update(request, id=None):
         if image_data:
             image_file = ContentFile(
                 base64.b64decode(image_data.split(",")[1]),
-                name=f"{l.loan_id}__{l.customer.name}_{l.id}.jpg",
+                name=f"{l.loan_id}_{l.customer.name}_{l.id}.jpg",
             )
             l.pic = image_file
 
@@ -327,71 +335,6 @@ def next_loanid(request):
         )
 
 
-# @login_required
-# @for_htmx(use_block_from_params=True)
-# def loan_detail(request, pk):
-#     loan = get_object_or_404(
-#         Loan.objects.select_related(
-#             "customer", "series", "release", "created_by"
-#         ).prefetch_related("loan_payments", "loanitems"),
-#         pk=pk,
-#     )
-#     result = []
-#     for item in loan.get_weight:
-#         item_type = item["itemtype"]
-#         total_weight_purity = round(item["total_weight"])
-#         result.append(f"{item_type}:{total_weight_purity}")
-
-#     # Join the results into a single string
-#     weight = " ".join(result)
-#     result = {}
-#     for item in loan.get_pure:
-#         item_type = item["itemtype"]
-#         total_weight_purity = round(item["pure_weight"], 3)
-#         result[item["itemtype"]] = total_weight_purity
-
-#     # Subquery to get the latest timestamp for each metal type
-#     latest_timestamps = (
-#         Rate.objects.filter(metal=OuterRef("metal"))
-#         .order_by("-timestamp")
-#         .values("timestamp")[:1]
-#     )
-
-#     # Query to get the latest rate for each metal type
-#     latest_rates = Rate.objects.filter(
-#         timestamp__in=Subquery(latest_timestamps)
-#     ).values("metal", "buying_rate")
-
-#     # Create a dictionary to store the latest rates for each metal type
-#     rate_dict = {rate["metal"]: rate["buying_rate"] for rate in latest_rates}
-
-#     # Calculate the values using the latest rates from the database
-#     result_dict = {
-#         itemtype: rate_dict.get(itemtype, None) * weight
-#         for itemtype, weight in result.items()
-#     }
-#     # Join the results into a single string
-
-#     value = round(sum(result_dict.values()))
-#     context = {
-#         "object": loan,
-#         "sunken": loan.total() < value,
-#         "items": loan.loanitems.all(),
-#         "statements": loan.statementitem_set.all(),
-#         "loan": loan,
-#         "weight": weight,  # loan.get_weight,
-#         "pure": result,
-#         "value": value,
-#         "worth": value - loan.due(),
-#         # "journal_entries": loan.journal_entries.all(),
-#         "new_item_url": reverse(
-#             "girvi:girvi_loanitem_create", kwargs={"parent_id": loan.id}
-#         ),
-#     }
-
-#     return TemplateResponse(request, "girvi/loan/loan_detail.html", context)
-
-
 @login_required
 @for_htmx(use_block_from_params=True)
 def loan_detail(request, pk):
@@ -421,7 +364,10 @@ def loan_detail(request, pk):
         for itemtype, weight in result.items()
     }
     value = round(sum(result_dict.values()))
-
+    try:
+        lvratio = round(loan.loan_amount / value, 2) * 100
+    except ZeroDivisionError:
+        lvratio = 0
     context = {
         "object": loan,
         "sunken": loan.total() < value,
@@ -430,8 +376,10 @@ def loan_detail(request, pk):
         "loan": loan,
         "weight": weight,
         "pure": result,
-        "value": value,
+        # "customer_pic_url":f"{l.loan_id}_{l.customer.name}_{l.id}.jpg",
+        "value": Money(value, "INR"),
         "worth": value - loan.due(),
+        "lvratio": lvratio,
         "new_item_url": reverse(
             "girvi:girvi_loanitem_create", kwargs={"parent_id": loan.id}
         ),
@@ -458,21 +406,25 @@ def loan_renew(request, pk):
                 series=loan.series,
                 customer=loan.customer,
                 lid=Loan.objects.filter(series=loan.series).latest("lid").lid + 1,
-                loanamount=new_loanamount,
+                loan_amount=new_loanamount,
             )
             newloan.save()
             # copy and create loan.loanitems to newloan.items
             for item in loan.loanitems.all():
                 newloan.loanitems.add(item)
-            # create a new release object
-            Release.objects.create(
-                releaseid=Release.objects.latest("id").id + 1,
-                loan=loan,
-                interestpaid=form.cleaned_data["interest"],
-            )
             newloan.save()
+            # create a new release object
+            try:
+                releaseid = Release.objects.latest("id").id + 1
+            except Release.DoesNotExist:
+                releaseid = 1  # if no release objects exist
+            Release.objects.create(
+                release_id=releaseid,
+                loan=loan,
+            )
+
             # redirect to a new URL:
-            messages.success(request, f"Renewed Loan : {newloan.loanid}")
+            messages.success(request, f"Renewed Loan : {newloan.loan_id}")
             return redirect(newloan)
 
     # if a GET (or any other method) we'll create a blank form
@@ -556,10 +508,31 @@ def print_labels(request):
         )
 
     if selected_loans:
-        # TODO print the labels
-        pass
+        form = LoanSelectionForm(initial={"loans": selected_loans})
+        from render_block import render_block_to_string
+
+        response = render_block_to_string(
+            "girvi/loan/print_labels.html", "content", {"form": form}, request
+        )
+        return HttpResponse(content=response)
+        # return render(request, 'girvi/loan/print_labels.html', {'form': form})
 
     return HttpResponse(status=200, content="No unreleased loans selected.")
+
+
+@for_htmx(use_block="content")
+def print_label(request):
+    if request.method == "POST":
+        form = LoanSelectionForm(request.POST)
+        if form.is_valid():
+            loans = form.cleaned_data["loans"]
+            return print_labels_pdf(loans)
+
+        return render(request, "girvi/loan/print_labels.html", {"form": form})
+
+    else:
+        form = LoanSelectionForm()
+        return render(request, "girvi/loan/print_labels.html", {"form": form})
 
 
 @login_required
@@ -592,7 +565,7 @@ def notify_print(request):
 
     if selected_loans:
         # Create a new NoticeGroup
-        ng = NoticeGroup.objects.create(name=datetime.datetime.now())
+        ng = NoticeGroup.objects.create(name=datetime.now())
 
         # Get a queryset of customers with selected loans
         customers = Customer.objects.filter(loan__in=selected_loans).distinct()
@@ -625,7 +598,11 @@ def notify_print(request):
 @login_required
 def print_loan(request, pk=None):
     loan = get_object_or_404(Loan, pk=pk)
-    pdf = get_loan_pdf(loan=loan)
+    template = request.user.workspace.preferences["Loan__LoanPDFTemplate"]
+    if template == "c":
+        pdf = get_custom_jsk(loan=loan)
+    else:
+        pdf = get_loan_template(loan=loan)
     # Create a response object
     response = HttpResponse(pdf, content_type="application/pdf")
     # response["Content-Disposition"] = 'attachment; filename="pledge.pdf"'
@@ -633,157 +610,7 @@ def print_loan(request, pk=None):
     return response
 
 
-@login_required
-def generate_original(request, pk=None):
-    loan = get_object_or_404(Loan, pk=pk)
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f"inline; filename='{loan.lid}.pdf'"
-
-    page_width = 14.6 * cm
-    page_height = 21 * cm
-    c = canvas.Canvas(response, pagesize=(page_width, page_height))
-
-    # Grid spacing
-    grid_spacing = 1 * cm  # Adjust this value based on your preference
-    c.setFillColorRGB(0, 0, 0)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(12 * cm, 18.2 * cm, f"{loan.lid}")
-    c.drawString(11.5 * cm, 17.2 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
-
-    # Wrap the text if its length is greater than 35 characters
-    customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
-    lines = textwrap.wrap(customer, width=35)
-    # Draw the wrapped text on the canvas
-    y = 15.5 * cm
-    for line in lines:
-        c.drawString(2 * cm, y, line)
-        y -= 0.5 * cm
-    c.setFont("Helvetica", 12)
-    address = f"{loan.customer.address.first()}"
-    lines = textwrap.wrap(address, width=35)
-    # Draw the wrapped text on the canvas
-    y = 15 * cm
-    for line in lines:
-        c.drawString(2 * cm, y, line)
-        y -= 0.5 * cm
-    c.setFont("Helvetica", 12)
-    c.drawString(2 * cm, 14 * cm, f"Ph: {loan.customer.contactno.first()}")
-
-    result = []
-    for item in loan.get_weight:
-        item_type = item["itemtype"]
-        total_weight_purity = item["total_weight"]
-        result.append(f"{item_type}:{total_weight_purity}")
-
-    # Join the results into a single string
-    weight = " ".join(result)
-
-    c.setFont("Helvetica", 8)
-    c.drawString(10 * cm, 11.8 * cm, f"{weight}gms ")
-    result = []
-    for item in loan.get_pure:
-        item_type = item["itemtype"]
-        total_weight_purity = round(item["pure_weight"])
-        result.append(f"{item_type}:{total_weight_purity}")
-    # Join the results into a single string
-    pure = " ".join(result)
-    c.drawString(10 * cm, 9.8 * cm, f"{pure} gms ")
-    c.drawString(10 * cm, 8 * cm, f"{loan.current_value()}")
-
-    c.setFont("Helvetica-Bold", 14)
-    # c.drawString(7 * cm, 12.5 * cm, f"{loan.itemtype}")
-    c.drawString(8 * cm, 6.5 * cm, f"{loan.loan_amount}")
-    # Wrap the text if its length is greater than 35 characters
-    lines = textwrap.wrap(loan.item_desc, width=30)
-    # Draw the wrapped text on the canvas
-    y = 11 * cm
-    for line in lines:
-        c.drawString(2.5 * cm, y, line)
-        y -= 0.5 * cm
-
-    c.setFont("Helvetica", 12)
-    c.drawString(
-        2 * cm, 6 * cm, f"{num2words(loan.loan_amount, lang='en_IN')} rupees only"
-    )
-    c.showPage()
-    c.setFont("Helvetica", 12)
-    # Grid spacing
-    grid_spacing = 1 * cm  # Adjust this value based on your preference
-
-    c.drawString(3 * cm, 17 * cm, f"{loan.lid}")
-    c.drawString(11 * cm, 17 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
-    c.drawString(5 * cm, 16.5 * cm, f"{loan.customer.name}")
-    c.drawString(
-        5 * cm,
-        16 * cm,
-        f"{loan.customer.get_relatedas_display()} {loan.customer.relatedto}",
-    )
-    address = textwrap.wrap(f"{loan.customer.address.first()}")
-    # Draw the wrapped text on the canvas
-    y = 15 * cm
-    for line in address:
-        c.drawString(5 * cm, y, line)
-        y -= 0.5 * cm
-
-    c.drawString(5 * cm, 14 * cm, f"{loan.customer.contactno.first()}")
-    c.drawString(5 * cm, 13.5 * cm, f"{loan.loan_amount}")
-
-    lines = textwrap.wrap(
-        f"{num2words(loan.loan_amount, lang='en_IN')} rupees only", width=45
-    )
-
-    # Wrap the text if its length is greater than 35 characters
-    lines = textwrap.wrap(loan.item_desc, width=35)
-    # Draw the wrapped text on the canvas
-    y = 10 * cm
-    for line in lines:
-        c.drawString(3 * cm, y, line)
-        y -= 0.5 * cm
-
-    c.setFont("Helvetica", 8)
-    result = []
-    for item in loan.get_weight:
-        item_type = item["itemtype"]
-        total_weight_purity = round(item["total_weight"])
-        result.append(f"{item_type}:{total_weight_purity}")
-
-    # Join the results into a single string
-    weight = " ".join(result)
-    c.drawString(3 * cm, 7 * cm, f"{weight}gms")
-    result = []
-    for item in loan.get_pure:
-        item_type = item["itemtype"]
-        total_weight_purity = round(item["pure_weight"])
-        result.append(f"{item_type}:{total_weight_purity}")
-
-    # Join the results into a single string
-    pure = " ".join(result)
-    c.drawString(7 * cm, 7 * cm, f"{pure}")
-    c.setFont("Helvetica", 12)
-    c.drawString(12 * cm, 7 * cm, f"{loan.current_value()}")
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(1 * cm, 3.5 * cm, f"{loan.lid}")
-    c.drawString(1 * cm, 3 * cm, f"{loan.loan_date.strftime('%d/%m/%y')}")
-    c.drawString(1 * cm, 2.5 * cm, f"{loan.loan_amount}   {weight}")
-    c.drawString(1 * cm, 2 * cm, f"{loan.customer.name}")
-    # Wrap the text if its length is greater than 35 characters
-    lines = textwrap.wrap(f"{loan.item_desc}", width=35)
-    # Draw the wrapped text on the canvas
-    y = 1.5 * cm
-    for line in lines:
-        c.drawString(1 * cm, y, line)
-        y -= 0.5 * cm
-
-    c.save()
-    return response
-
-
 # @user_passes_test(lambda user: user.is_superuser)
-
-from django.db import transaction
-from django.http import HttpResponse, JsonResponse
-
-
 def statement_create(request):
     if request.method == "POST":
         try:
@@ -913,13 +740,6 @@ def loan_item_update_hx_view(request, parent_id=None, id=None):
     return render(request, "girvi/partials/item-form.html", context)
 
 
-# @login_required
-# def get_loan_items(request, loan):
-#     l = get_object_or_404(Loan, pk=loan)
-#     items = l.loanitem_set.all()
-#     return render(request, "", context={"items": items})
-
-
 @login_required
 def loanitem_delete(request, parent_id, id):
     item = get_object_or_404(LoanItem, id=id, loan_id=parent_id)
@@ -980,7 +800,7 @@ class LoanTimeSeriesReport(ReportView):
             title_source=["__time_series__"],
         ),
         Chart(
-            "Total Loan AmountMonthly",
+            "Total Loan Amount Monthly",
             Chart.PIE,
             data_source=["sum__loan_amount"],
             title_source=["customer__name"],

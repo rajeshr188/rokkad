@@ -1,11 +1,13 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
-from django.db.models import F, Q, Sum
+from django.db.models import Case, CharField, F, Q, Sum, Value, When
 from django.db.models.functions import Coalesce
+from django.forms import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -13,17 +15,13 @@ from djmoney.models.fields import MoneyField
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
+from apps.tenant_apps.dea.models import (AccountStatement,  # , JournalTypes
+                                         JournalEntry)
 from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.attributes import get_product_attributes_data
-from apps.tenant_apps.product.models import (
-    Attribute,
-    ProductVariant,
-    Stock,
-    StockLot,
-    StockTransaction,
-)
+from apps.tenant_apps.product.models import (Attribute, ProductVariant, Stock,
+                                             StockTransaction)
 from apps.tenant_apps.terms.models import PaymentTerm
 
 from ..managers import PurchaseQueryset
@@ -31,11 +29,13 @@ from ..managers import PurchaseQueryset
 
 class Purchase(models.Model):
     # Fields
-    created = models.DateTimeField(default=timezone.now, db_index=True)
-    updated = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    voucher_date = models.DateTimeField(default=timezone.now, db_index=True)
+    voucher_no = models.CharField(max_length=20, null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     created_by = models.ForeignKey(
-        "users.CustomUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         null=True,  # cant be null
         blank=True,  # cant be blank
@@ -51,7 +51,19 @@ class Purchase(models.Model):
         ("Unpaid", "Unpaid"),
     )
     status = models.CharField(max_length=15, choices=status_choices, default="Unpaid")
-    balance = ArrayField(MoneyValueField(null=True, blank=True))
+    # make rates auto fill from the latest rates
+    gold_rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    silver_rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    balance_cash = MoneyField(
+        max_digits=14, decimal_places=3, default_currency="INR", null=True, blank=True
+    )
+    balance_gold = MoneyField(
+        max_digits=14, decimal_places=3, default_currency="USD", null=True, blank=True
+    )
+    balance_silver = MoneyField(
+        max_digits=14, decimal_places=3, default_currency="EUR", null=True, blank=True
+    )
+    balance = ArrayField(MoneyValueField(null=True, blank=True), null=True, blank=True)
     # Relationship Fields
     supplier = models.ForeignKey(
         Customer,
@@ -66,10 +78,10 @@ class Purchase(models.Model):
         blank=True,
         null=True,
     )
-    # journal_entries = GenericRelation(
-    #     JournalEntry,
-    #     related_query_name="purchase_doc",
-    # )
+    journal_entries = GenericRelation(
+        JournalEntry,
+        related_query_name="purchase_doc",
+    )
     objects = PurchaseQueryset.as_manager()
 
     class Meta:
@@ -82,10 +94,10 @@ class Purchase(models.Model):
         return f"{self.id}"
 
     def get_absolute_url(self):
-        return reverse("purchase:purchase_detail", args=(self.pk,))
+        return reverse("purchase:purchase_invoice_detail", args=(self.pk,))
 
     def get_update_url(self):
-        return reverse("purchase:purchase_update", args=(self.pk,))
+        return reverse("purchase:purchase_invoice_update", args=(self.id,))
 
     def get_next(self):
         return self.__class__.objects.filter(id__gt=self.id).order_by("id").first()
@@ -97,10 +109,46 @@ class Purchase(models.Model):
         return self.purchase_items.all()
 
     def get_gross_wt(self):
-        return self.purchase_items.aggregate(t=Sum("weight"))["t"]
+        # this should return the sum of all purchaseitems weight by metal_balance_currency
+        weights = self.purchase_items.values("metal_balance_currency").annotate(
+            amount=Sum("weight"), currency=F("metal_balance_currency")
+        )
+        money_values = [Money(item["amount"], item["currency"]) for item in weights]
+        return Balance(money_values)
 
     def get_net_wt(self):
-        return self.purchase_items.aggregate(t=Sum("net_wt"))["t"]
+        weights = self.purchase_items.values("metal_balance_currency").annotate(
+            amount=Sum("net_wt"), currency=F("metal_balance_currency")
+        )
+        money_values = [Money(item["amount"], item["currency"]) for item in weights]
+        return Balance(money_values)
+
+    def get_sum_metal_balance(self):
+        return self.purchase_items.values("metal_balance_currency").annotate(
+            total=Sum("metal_balance")
+        )
+
+    def get_sum_gold_balance(self):
+        bal = (
+            self.purchase_items.aggregate(
+                total=Sum("metal_balance", filter=Q(metal_balance_currency="USD"))
+            )["total"]
+            or 0
+        )
+        return Money(bal, "USD")
+
+    def get_sum_silver_balance(self):
+        bal = (
+            self.purchase_items.aggregate(
+                total=Sum("metal_balance", filter=Q(metal_balance_currency="EUR"))
+            )["total"]
+            or 0
+        )
+        return Money(bal, "EUR")
+
+    def get_sum_cash_balance(self):
+        bal = self.purchase_items.aggregate(total=Sum("cash_balance"))["total"] or 0
+        return Money(bal, "INR")
 
     @property
     def overdue_days(self):
@@ -111,10 +159,33 @@ class Purchase(models.Model):
         gst = Money(amount * Decimal(0.03), "INR")
         return gst
 
-    def save(self, *args, **kwargs):
+    def calculate_balances(self):
+        self.balance = Balance().monies()
+        if self.is_ratecut:
+            self.balance_cash = Money(
+                self.get_sum_cash_balance().amount
+                + self.get_sum_gold_balance().amount * self.gold_rate
+                + self.get_sum_silver_balance().amount * self.silver_rate,
+                "INR",
+            )
+            if self.is_gst:
+                self.balance_cash.amount += self.balance_cash.amount * Decimal(0.03)
+            self.balance_gold = Money(0, "USD")
+            self.balance_silver = Money(0, "EUR")
+        else:
+            self.balance_cash = self.get_sum_cash_balance()
+            self.balance_gold = self.get_sum_gold_balance()
+            self.balance_silver = self.get_sum_silver_balance()
+        self.balance = Balance(
+            [self.balance_cash, self.balance_gold, self.balance_silver]
+        ).monies()
+
+    def save(self, calculate_balances=True, *args, **kwargs):
+        if self.pk and calculate_balances:
+            self.calculate_balances()
         if not self.due_date:
             if self.term:
-                self.due_date = self.created + timedelta(days=self.term.due_days)
+                self.due_date = self.voucher_date + timedelta(days=self.term.due_days)
         super(Purchase, self).save(*args, **kwargs)
 
     # def delete(self, *args, **kwargs):
@@ -198,84 +269,69 @@ class Purchase(models.Model):
         return Balance(0, "INR")
 
     def get_balance(self):
+        return Balance(
+            [
+                self.balance_cash or Money(0, "INR"),
+                self.balance_gold or Money(0, "USD"),
+                self.balance_silver or Money(0, "EUR"),
+            ]
+        )
+
+    def get_balance_with_allocations(self):
         return self.balance - self.get_allocations()
 
-    @property
-    def balance(self):
-        # or just use return Balance(self.balance)
-        purchase_balance = self.purchase_balance
-        try:
-            return Balance(purchase_balance.balances)
-        except PurchaseBalance.DoesNotExist:
-            return None
-
     def get_transactions(self):
-        try:
-            self.supplier.account
-        except self.supplier.account.DOESNOTEXIST:
+        if not hasattr(self.supplier, "account"):
+            # Create the account here
             self.supplier.save()
 
         inv = "GST INV" if self.is_gst else "Non-GST INV"
-        # money = Money(self.balance, self.balancetype)
-        tax = self.get_gst()  # Money(self.get_gst(), "INR")
-        # lt = [
-        #     {"ledgerno": "Sundry Creditors", "ledgerno_dr": inv, "amount": money},
-        #     {
-        #         "ledgerno": "Sundry Creditors",
-        #         "ledgerno_dr": "Input Igst",
-        #         "amount": tax,
-        #     },
-        # ]
-        # at = [
-        #     {
-        #         "ledgerno": "Sundry Creditors",
-        #         "xacttypecode": "Dr",
-        #         "xacttypecode_ext": "CRPU",
-        #         "account": self.supplier.account,
-        #         "amount": money + tax if self.is_gst else money,
-        #     }
-        # ]
-        lt, at = [], []
-        balance = self.purchase_balance  # self.balance
-        cash_balance = balance.cash_balance  # self.balance["INR"]
-        gold_balance = balance.gold_balance  # self.balance["USD"]
-        silver_balance = balance.silver_balance  # self.balance["EUR"]
+        tax = self.get_gst()
 
-        lt.append(
-            {
-                "ledgerno": "Sundry Creditors",
-                "ledgerno_dr": inv,
-                "amount": cash_balance,
-            }
-        )
-        at.append(
-            {
-                "ledgerno": "Sundry Creditors",
-                "xacttypecode": "Dr",
-                "account": self.supplier.account,
-                "xacttypecode_ext": "CRPU",
-                "amount": cash_balance,
-            }
-        )
-        if self.is_gst:
+        lt, at = [], []
+
+        cash_balance = self.balance_cash  # self.balance["INR"]
+        gold_balance = self.balance_gold  # self.balance["USD"]
+        silver_balance = self.balance_silver  # self.balance["EUR"]
+        if all(v is None for v in [cash_balance, gold_balance, silver_balance]):
+            print("No balances to post")
+            return None, None
+        if cash_balance is not None:
             lt.append(
                 {
                     "ledgerno": "Sundry Creditors",
-                    "ledgerno_dr": "Input Igst",
-                    "amount": tax,
+                    "ledgerno_dr": inv,
+                    "amount": cash_balance,
                 }
             )
             at.append(
                 {
                     "ledgerno": "Sundry Creditors",
-                    "xacttypecode": "Cr",
-                    "xacttypecode_ext": "CRPU",
-                    "account": self.supplier.account,
-                    "amount": tax,
+                    "XactTypeCode": "Dr",
+                    "Account": self.supplier.account,
+                    "XactTypeCode_Ext": "CRPU",
+                    "amount": cash_balance,
                 }
             )
+            if self.is_gst:
+                lt.append(
+                    {
+                        "ledgerno": "Sundry Creditors",
+                        "ledgerno_dr": "Input Igst",
+                        "amount": tax,
+                    }
+                )
+                at.append(
+                    {
+                        "ledgerno": "Sundry Creditors",
+                        "XactTypeCode": "Cr",
+                        "XactTypeCode_Ext": "CRPU",
+                        "Account": self.supplier.account,
+                        "amount": tax,
+                    }
+                )
 
-        if gold_balance != 0:
+        if gold_balance is not None:
             lt.append(
                 {
                     "ledgerno": "Sundry Creditors",
@@ -286,14 +342,14 @@ class Purchase(models.Model):
             at.append(
                 {
                     "ledgerno": "Sundry Creditors",
-                    "xacttypecode": "Dr",
-                    "xacttypecode_ext": "CRPU",
-                    "account": self.supplier.account,
+                    "XactTypeCode": "Dr",
+                    "XactTypeCode_Ext": "CRPU",
+                    "Account": self.supplier.account,
                     "amount": gold_balance,
                 }
             )
 
-        if silver_balance != 0:
+        if silver_balance is not None:
             lt.append(
                 {
                     "ledgerno": "Sundry Creditors",
@@ -304,25 +360,77 @@ class Purchase(models.Model):
             at.append(
                 {
                     "ledgerno": "Sundry Creditors",
-                    "xacttypecode": "Dr",
-                    "xacttypecode_ext": "CRPU",
-                    "account": self.supplier.account,
+                    "XactTypeCode": "Dr",
+                    "XactTypeCode_Ext": "CRPU",
+                    "Account": self.supplier.account,
                     "amount": silver_balance,
                 }
             )
         return lt, at
+
+    def get_journal_entry(self, desc=None):
+        if self.journal_entries.exists():
+            return self.journal_entries.latest()
+        else:
+            return JournalEntry.objects.create(
+                content_object=self, desc=self.__class__.__name__
+            )
+
+    def delete_journal_entry(self):
+        for entry in self.journal_entries.all():
+            entry.delete()
+
+    def create_transactions(self):
+        # if no je or je older than statement create je and txns else update txns
+        # if not self.journal_entries.exists() or self.journal_entries.latest().created < self.supplier.account.accountstatements.latest('created').created:
+
+        # je = self.journal_entries.latest('created') or None
+        # statement = self.supplier.account.accountstatements.latest('created') or None
+        # if je and (statement is None or statement.created < je.created):
+        #     self.delete_journal_entry()
+
+        lt, at = self.get_transactions()
+        if lt and at:
+            journal_entry = self.get_journal_entry()
+            journal_entry.transact(lt, at)
+
+    def reverse_transactions(self):
+        # i.e if je is older than the latest statement then reverse the transactions else do nothing
+        try:
+            statement = self.supplier.account.accountstatements.latest("created")
+        except AccountStatement.DoesNotExist:
+            statement = None
+        journal_entry = self.get_journal_entry()
+
+        if journal_entry and statement and journal_entry.created < statement.created:
+            lt, at = self.get_transactions()
+            if lt and at:
+                journal_entry.untransact(lt, at)
+        else:
+            self.delete_journal_entry()
+
+    def is_changed(self, old_instance):
+        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
+        # TODO efficient way to compare old and new instances
+        # Implement logic to compare old and new instances
+        # Compare all fields using dictionaries
+        return model_to_dict(
+            self, fields=["balance_cash", "balance_gold", "balance_silver"]
+        ) != model_to_dict(
+            old_instance, fields=["balance_cash", "balance_gold", "balance_silver"]
+        )
 
 
 class PurchaseItem(models.Model):
     # TODO:if saved and lot has sold items this shouldnt/cant be edited
 
     # Fields
-    is_return = models.BooleanField(default=False, verbose_name="Return")
+    huid = models.CharField(max_length=7, blank=True, null=True, unique=True)
     quantity = models.IntegerField()
     weight = models.DecimalField(max_digits=14, decimal_places=3)
     touch = models.DecimalField(max_digits=14, decimal_places=3)
     net_wt = models.DecimalField(max_digits=14, decimal_places=3, default=0, blank=True)
-    rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    # normalize charges
     making_charge = models.DecimalField(
         max_digits=14, decimal_places=3, blank=True, null=True, default=0
     )
@@ -339,10 +447,6 @@ class PurchaseItem(models.Model):
     invoice = models.ForeignKey(
         "purchase.Purchase", on_delete=models.CASCADE, related_name="purchase_items"
     )
-    # journal_entries = GenericRelation(
-    #     JournalEntry,
-    #     # related_query_name="purchaseitems"
-    # )
 
     class Meta:
         ordering = ("-pk",)
@@ -371,103 +475,70 @@ class PurchaseItem(models.Model):
 
     def save(self, *args, **kwargs):
         self.net_wt = self.get_nettwt()
-        self.rate = self.rate
         self.metal_balance_currency = (
-            "USD" if "gold" in self.product.product.category.name else "EUR"
+            "USD" if self.product.product.category.name == "Gold" else "EUR"
         )
-        if self.invoice.is_ratecut:
-            self.cash_balance = (
-                self.net_wt * self.rate + self.making_charge + self.hallmark_charge
-            )
-            if self.invoice.is_gst:
-                self.cash_balance += self.cash_balance * Decimal(0.03)
-            self.metal_balance = 0
-        else:
-            self.cash_balance = self.making_charge + self.hallmark_charge
-            self.metal_balance = self.net_wt
-        super(InvoiceItem, self).save(*args, **kwargs)
+        self.cash_balance = self.making_charge + self.hallmark_charge
+        self.metal_balance = self.net_wt
+        super(PurchaseItem, self).save(*args, **kwargs)
 
     def balance(self):
         return Balance([self.metal_balance, self.cash_balance])
 
-    # def create_journal_entry(self):
-    #     stock_journal_entry = JournalEntry.objects.create(
-    #         content_object=self,
-    #         desc=f"for purchase-item {self.invoice.pk}",
-    #     )
-    #     return stock_journal_entry
+    def is_changed(self, old_instance):
+        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
+        # TODO efficient way to compare old and new instances
+        # Implement logic to compare old and new instances
+        # Compare all fields using dictionaries
+        from django.forms import model_to_dict
 
-    def get_journal_entry(self):
-        return self.invoice.get_journal_entry()
-        # stock_journal = self.journal_entries
-        # if stock_journal.exists():
-        #     return stock_journal.first()
-        # return self.create_journal_entry()
+        return model_to_dict(
+            self, fields=["product", "quantity", "weight"]
+        ) != model_to_dict(old_instance, fields=["product", "quantity", "weight"])
 
     @transaction.atomic()
-    def post(self, journal_entry):
-        """
-        if not return item create/add a stocklot then transact,
-        if return item then remove the lot from stocklot"""
-        if not self.is_return:
-            stock, created = Stock.objects.get_or_create(variant=self.product)
-            stock_lot = StockLot.objects.create(
-                variant=self.product,
-                stock=stock,
-                weight=self.weight,
-                quantity=self.quantity,
-                purchase_touch=self.touch,
-                purchase_rate=self.rate,
-                purchase_item=self,
-            )
-            stock_lot.transact(
-                weight=self.weight,
-                quantity=self.quantity,
-                journal_entry=journal_entry,
-                movement_type="P",
-            )
-
-        else:
-            # each return item in purchase invoice item shall deduct same stock from any available lot
-            lot = StockLot.objects.get(
-                stock__variant=self.product, purchase=self.invoice
-            )
-            # lot = StockLotBalance.objects.get(Closing_wt__gte = self.weight,Closing_qty__gte = self.qty)
-            lot.transact(
-                journal_entry=journal_entry,
-                weight=self.weight,
-                quantity=self.quantity,
-                movement_type="PR",
-            )
+    def post(self):
+        stock, created = Stock.objects.get_or_create(
+            purchase_item=self,
+            variant=self.product,
+            weight=self.weight,
+            quantity=self.quantity,
+            purchase_touch=self.touch,
+            purchase_rate=self.invoice.gold_rate
+            if self.product.product.category.name == "Gold"
+            else self.invoice.silver_rate,
+            huid=self.huid,
+        )
+        stock.transact(
+            weight=self.weight,
+            quantity=self.quantity,
+            movement_type="P",
+        )
 
     @transaction.atomic()
-    def unpost(self, journal_entry):
+    def unpost(self):
         """
         add lot back to stock lot if item is_return,
         remove lot from stocklot if item is not return item"""
-        if self.is_return:
-            try:
-                lot = self.item_lots.latest("created")
-                lot.transact(
-                    journal_entry=journal_entry,
-                    weight=lot.weight,
-                    quantity=lot.quantity,
-                    movement_type="P",
-                )
-            except StockLot.DoesNotExist:
-                print("Oops!while Posting  there was no said stock.  Try again...")
-        else:
-            try:
-                lot = self.item_lots.latest("created")
-                lot.transact(
-                    journal_entry=journal_entry,
-                    weight=lot.weight,
-                    quantity=lot.quantity,
-                    movement_type="PR",
-                )
+        try:
+            # self.stock_item.delete()
+            lot = self.stock_item
+            lot.transact(
+                # journal_entry=journal_entry,
+                weight=lot.weight,
+                quantity=lot.quantity,
+                movement_type="PR",
+            )
 
-            except StockLot.DoesNotExist:
-                print("Oops!while Unposting there was no said stock.  Try again...")
+        except Stock.DoesNotExist:
+            print("Oops!while Unposting there was no said stock.  Try again...")
+
+    def delete(self, delete_stock=False, *args, **kwargs):
+        purchase = self.invoice
+        if delete_stock and hasattr(self, "stock_item"):
+            self.stock_item.delete()
+        super().delete(*args, **kwargs)
+        purchase.save()
 
 
 """
@@ -522,23 +593,24 @@ class PurchaseItem(models.Model):
 # db view for tracking the balance of a invoice from its invoice items in multicurrency
 class PurchaseBalance(models.Model):
     voucher = models.OneToOneField(
-        Invoice,
+        Purchase,
         on_delete=models.DO_NOTHING,
         primary_key=True,
         related_name="purchase_balance",
     )
-    cash_balance = models.DecimalField(max_digits=14, decimal_places=3)
-    gold_balance = models.DecimalField(max_digits=14, decimal_places=3)
-    silver_balance = models.DecimalField(max_digits=14, decimal_places=3)
+    cash_balance = MoneyValueField(null=True, blank=True)
+    gold_balance = MoneyValueField(null=True, blank=True)
+    silver_balance = MoneyValueField(null=True, blank=True)
     balances = ArrayField(MoneyValueField(null=True, blank=True))
-    cash_received = models.DecimalField(max_digits=14, decimal_places=3)
-    gold_received = models.DecimalField(max_digits=14, decimal_places=3)
-    silver_received = models.DecimalField(max_digits=14, decimal_places=3)
-    received = ArrayField(MoneyValueField(null=True, blank=True))
+    # cash_received = models.DecimalField(max_digits=14, decimal_places=3)
+    # gold_received = models.DecimalField(max_digits=14, decimal_places=3)
+    # silver_received = models.DecimalField(max_digits=14, decimal_places=3)
+    # received = ArrayField(MoneyValueField(null=True, blank=True))
 
     class Meta:
         managed = False
         db_table = "purchase_balance"
 
     def __str__(self):
-        return f"Balance:{Balance([self.balances]) - Balance([self.received])}"
+        # return f"Balance:{Balance([self.balances]) - Balance([self.received])}"
+        return f"Balance:{Balance([self.balances])}"

@@ -21,4 +21,7 @@ urlpatterns = [
     path("help/", HelpPageView.as_view(), name="help"),
     path("faq/", FaqPageView.as_view(), name="faq"),
     path("dashboard/", Dashboard, name="dashboard"),
+    # path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path("company_dashboard/", company_dashboard, name="company_dashboard"),
+    path("maxxupload/", maxx_files_upload, name="maxx_upload"),
 ]

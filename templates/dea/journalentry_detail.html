@@ -1,4 +1,4 @@
-{% extends '_base.html'%}
+{% extends 'tenant.html'%}
 {% block title %}Acount detail{% endblock %}
 
 {% block content %}
@@ -8,15 +8,18 @@
             <div class="card">
                 <div class="card-body">
                     <h3 class="card-title">JournalEntry {{object.id}}</h3>
+                    <p>
+                        
+                        <a href="{% url 'dea_journal_entry_delete' object.id %}" class="btn btn-danger">Delete</a>
+                    </p>
                     <table>
                         <tbody class="table-group-divider">
-                        <tr><td>Created</td><td>{{object.created}}</td></tr>
+                        <tr><td>Created</td><td>{{object.created|date}}</td></tr>
                         <tr><td>Desc</td><td>{{object.desc}}</td></tr>
                         <tr>
                             <td>Doc</td>
-                            <td>
-                                
-                                <a href="{{object.get_url_string}}">
+                            <td> 
+                                <a href="{{object.get_voucher_url}}">
                                 {{object.content_type}}:{{content_object}}</a>
                             </td>
                             </tr>
@@ -27,28 +30,36 @@
         </div>
         <div class="col-md-9">
             <div class="card">
-                <div class="card-body">
+                <div class="card-body"></div>
                     <h3 class="card-title">Transactions</h3>
+                    
                     <div class="table-responsive">
                         <table class="table table-hover caption-top">
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>Date</th>
-                                    <th>Account</th>
-                                    <th>Debit</th>
-                                    <th>Credit</th>
+                                    <th>Amount</th>
+                                    <th>Debit Acc</th>
+                                    <th>Credit Acc</th>
                                 </tr>
                             </thead>
-                            <caption>Ledger Transactions</caption>
+                            <caption>Account Transactions</caption>
+                            <p>
+                                <a href="{% url 'dea_accounttransaction_create' object.id %}" class="btn btn-primary">Add Transaction</a>
                             <tbody class="table-group-divider">
                                 {%for i in object.atxns.all%}
                                 <tr class="table-light">
                                     <td>{{i.id}}</td>
                                     <td>{{i.created|date}}</td>
-                                    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.Account.contact.name}}</a></td>
-                                    <td>{%if i.XactTypeCode.XactTypeCode == 'Dr'%}{{i.amount}}{%endif%}</td>
-                                    <td>{%if i.XactTypeCode.XactTypeCode == 'Cr'%}{{i.amount}}{%endif%}</td>
+                                    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.amount}}</a></td>
+                                    {% if i.XactTypeCode.XactTypeCode == 'Dr'%}
+                                    <td>{{i.ledgerno}}</td>
+                                    <td>{{i.Account.contact.name}}</td>
+                                    {%else%}
+                                    <td>{{i.Account.contact.name}}</td>
+                                    <td>{{i.ledgerno}}</td>
+                                    {%endif%}
                                 </tr>
                                 {%endfor%}
                             </tbody>
@@ -63,7 +74,9 @@
                                     <th>Credit Acc</th>
                                 </tr>
                             </thead>
-                            <caption>Account Transactions</caption>
+                            <caption>Ledger Transactions</caption>
+                            <p>
+                                <a href="{% url 'dea_ledgertransaction_create' object.id %}" class="btn btn-primary">Add Transaction</a>
                             <tbody class="table-group-divider">
                                 
                                 {%for i in object.ltxns.all%}

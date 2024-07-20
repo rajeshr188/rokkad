@@ -1,4 +1,4 @@
-{% extends '_base.html' %}
+{% extends 'tenant.html' %}
 {% load mptt_tags %}
 {% block title %}DEA{% endblock %}
 
@@ -19,7 +19,6 @@
                 <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab" tabindex="0">
                     <div class="btn-group" role="group" aria-label="Basic outlined example">
                         <button type="button" class="btn btn-outline-success" href="{% url 'dea_ledger_create' %}">Add Ledger</button>
-                        <button type="button" class="btn btn-outline-primary" href="{% url 'dea_account_create' %}">Add txn</button>
                         <a  class="btn btn-outline-info" href="{% url 'dea_ledger_audit' %}">Audit</a>
                     </div>
                   
@@ -36,9 +35,9 @@
                         <tbody>
                             {%for i in data.ledger%}
                             <tr>
-                                <td>{{i.AccountType}}</td>
-                                <td><a href="{% url 'dea_ledger_detail' i.ledgerno_id %}">{{ i.name }}</a></td>
-                                <td>{{i.created}}</td>
+                                <td>{{i.ledgerno.AccountType}}</td>
+                                <td><a href="{% url 'dea_ledger_detail' i.ledgerno_id %}">{{ i.ledgerno.name }}</a></td>
+                                <td>{{i.ls_created}}</td>
                                 <td>{{i.get_cb}}</td>
                                 <td>{{i.get_dr}}</td>
                                 <td>{{i.get_cr}}</td>
@@ -54,7 +53,7 @@
                              <ul class="list-group list-group-flush">
                                  {%for i in data.balancesheet.assets%}
                                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                                     {{i.name}} 
+                                     {{i.ledgerno.name}} 
                                      <span>{{i.get_currbal}}</span>
                                  </li>
                                  {%endfor%}
@@ -68,7 +67,7 @@
                              <ul class="list-group list-group-flush">
                              {%for i in data.balancesheet.liabilities%}
                              <li class="list-group-item d-flex justify-content-between align-items-center">
-                                 {{i.name}} 
+                                 {{i.ledgerno.name}} 
                                  <span>{{i.get_currbal}}</span>
                              </li>
                              {%endfor%} 
@@ -86,7 +85,7 @@
                             <ul class="list-group list-group-flush">
                                 {%for i in data.pnloss.income%}
                                 <li class="list-group-item d-flex justify-content-between align-items-center" >
-                                    {{i.name}}
+                                    {{i.ledgerno.name}}
                                     <span>{{i.get_currbal}}</span> 
                                 </li>
                                 {%endfor%}
@@ -99,7 +98,7 @@
                             <ul class="list-group list-group-flush">
                                 {%for i in data.pnloss.expense%}
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    {{i.name}} 
+                                    {{i.ledgerno.name}} 
                                     Total :<span>{{i.get_currbal}}</span>
                                 </li>
                                 {%endfor%}

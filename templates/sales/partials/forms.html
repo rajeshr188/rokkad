@@ -1,0 +1,23 @@
+
+{%load crispy_forms_tags%}
+{{form.media}}
+
+    <form action='.' method="POST" 
+            hx-post='.' hx-swap='outerHTML' 
+            hx-trigger='{% if form.instance.id %}change delay:100ms,{% endif %} submit'>
+       {% csrf_token %}        
+       {{form|crispy}}
+        
+       {% if object%}
+        <p>
+            gross_wt : {{object.get_gross_wt}}
+            Nett_wt: {{object.get_net_wt}}
+            Balance : cash:{{object.cash_balance}} gold:{{object.gold_balance}}
+
+        {%endif%}
+        {% if message %}
+            <p>{{ message }}</p>
+        {% endif %}
+            <input class="btn btn-success"type = "submit" name="submit">
+    </form>
+

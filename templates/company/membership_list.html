@@ -1,0 +1,19 @@
+{% extends 'tenant.html' %}
+
+{% block content %}
+  <h2>Membership List</h2>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Since</th><th>Company</th><th>Role</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for membership in user.memberships.all %}
+                <tr>
+                    <td>{{ membership.date_joined }}</td><td><a href="{% url 'orgs_company_detail' membership.company.id%}">{{membership.company}}</a></td><td>{{membership.role}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

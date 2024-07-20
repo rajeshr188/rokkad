@@ -1,9 +1,10 @@
-from contact.forms import CustomerWidget
-from contact.models import Customer
 from django import forms
 from django.db.models import Sum
 from django_select2.forms import Select2Widget
-from product.models import StockLot
+
+from apps.tenant_apps.contact.forms import CustomerWidget
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.product.models import Stock
 
 from .models import Approval, ApprovalLine, Return, ReturnItem
 
@@ -23,7 +24,7 @@ class ApprovalForm(forms.ModelForm):
 class ApprovalLineForm(forms.ModelForm):
     product = forms.ModelChoiceField(
         # change filter to available
-        queryset=StockLot.objects.all(),
+        queryset=Stock.objects.all(),
         widget=Select2Widget,
     )
 

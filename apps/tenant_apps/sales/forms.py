@@ -1,15 +1,17 @@
-from approval.models import Approval
-from contact.forms import CustomerWidget
-from contact.models import Customer
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import ButtonHolder, Column, Field, Layout, Row, Submit
+from crispy_forms.layout import (ButtonHolder, Column, Field, Layout, Row,
+                                 Submit)
 from django import forms
 from django.urls import reverse_lazy
 from django_select2.forms import Select2Widget
 from django_tables2 import Column
-from product.forms import StockWidget
-from product.models import StockLot
-from utils.custom_layout_object import *
+
+from apps.tenant_apps.approval.models import Approval
+from apps.tenant_apps.contact.forms import CustomerWidget
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.product.forms import StockWidget
+from apps.tenant_apps.product.models import Stock
+from apps.tenant_apps.utils.custom_layout_object import *
 
 from .models import Invoice, InvoiceItem, Receipt
 
@@ -30,9 +32,9 @@ class DateTimeLocalField(forms.DateTimeField):
 
 
 class InvoiceForm(forms.ModelForm):
-    created = DateTimeLocalField()
+    voucher_date = DateTimeLocalField()
     customer = forms.ModelChoiceField(
-        queryset=Customer.objects.all(), widget=Select2Widget
+        queryset=Customer.objects.all(), widget=CustomerWidget
     )
     approval = forms.ModelChoiceField(
         queryset=Approval.objects.filter(status="Pending"),
@@ -43,12 +45,14 @@ class InvoiceForm(forms.ModelForm):
     class Meta:
         model = Invoice
         fields = [
-            "created",
+            "voucher_date",
             "approval",
             "is_ratecut",
             "is_gst",
             "term",
             "customer",
+            "gold_rate",
+            "silver_rate",
         ]
 
     def __init__(self, *args, **kwargs):
@@ -62,12 +66,18 @@ class InvoiceForm(forms.ModelForm):
 
         self.helper.layout = Layout(
             Row(
-                Column(Field("created", css_class="form-control ")),
+                Column(Field("voucher_date", css_class="form-control ")),
                 Column(Field("customer", css_class="form-control ")),
                 css_class="form-row",
             ),
             Row(
+                Column(Field("gold_rate", css_class="form-control ")),
+                Column(Field("silver_rate", css_class="form-control ")),
+                css_class="form-row",
+            ),
+            Row(
                 Column(Field("is_ratecut", css_class="form-control ")),
+                Column(Field("is_gst", css_class="form-control ")),
                 css_class="form-row",
             ),
             Row(
@@ -75,7 +85,6 @@ class InvoiceForm(forms.ModelForm):
                 Column(Field("term", css_class="form-control ")),
                 css_class="form-row",
             ),
-            Field("is_gst"),
             ButtonHolder(Submit("submit", "save")),
         )
 
@@ -84,7 +93,7 @@ class InvoiceItemForm(forms.ModelForm):
     # TODO filter only lots that has qty and wt > 0
     # TODO add form validation
     product = forms.ModelChoiceField(
-        queryset=StockLot.objects.all(),
+        queryset=Stock.objects.exclude(status="Empty"),
         widget=StockWidget,
     )
 
@@ -96,11 +105,10 @@ class InvoiceItemForm(forms.ModelForm):
             "quantity",
             "weight",
             "less_stone",
-            "net_wt",
             "touch",
             "wastage",
-            "rate",
             "making_charge",
+            "net_wt",
         ]
         widgets = {
             "weight": forms.NumberInput(
@@ -119,12 +127,12 @@ class ReceiptForm(forms.ModelForm):
     customer = forms.ModelChoiceField(
         queryset=Customer.objects.exclude(customer_type="S"), widget=CustomerWidget
     )
-    created = DateTimeLocalInput()
+    voucher_date = DateTimeLocalInput()
 
     class Meta:
         model = Receipt
         fields = [
-            "created",
+            "voucher_date",
             "customer",
             "weight",
             "touch",

@@ -1,11 +1,13 @@
-from approval.models import ApprovalLine
-from contact.models import Customer
-from dea.models import JournalEntry  # , JournalTypes
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models, transaction
 from django.db.models import Sum
 from django.urls import reverse
-from product.models import StockLot
+
+from apps.tenant_apps.approval.models import ApprovalLine
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
+from apps.tenant_apps.product.models import Stock
 
 """
 When an approval voucher is created, the stock items that are being approved for release to a contact should be recorded in the database or inventory management system, along with the contact's information.
@@ -31,7 +33,7 @@ class Return(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     created_by = models.ForeignKey(
-        "users.CustomUser", on_delete=models.DO_NOTHING, null=True, blank=True
+        get_user_model(), on_delete=models.DO_NOTHING, null=True, blank=True
     )
     contact = models.ForeignKey(
         Customer, related_name="approval_returns", on_delete=models.CASCADE

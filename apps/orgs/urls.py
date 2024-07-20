@@ -24,6 +24,8 @@ urlpatterns = [
         views.company_delete,
         name="orgs_company_delete",
     ),
+    path("membership/list/", views.membership_list, name="orgs_membership_list"),
+    path("profile/", views.profile, name="profile"),
     path(
         "company/invitations/",
         views.companyinvitations_list,

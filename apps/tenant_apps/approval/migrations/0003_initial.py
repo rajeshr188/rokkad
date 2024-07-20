@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contact", "0001_initial"),
-        ("product", "0002_initial"),
+        ("product", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("approval", "0002_initial"),
     ]

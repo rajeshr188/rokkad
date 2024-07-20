@@ -1,0 +1,34 @@
+<!-- Add this to the <head> section of base.html -->
+<style>
+    .card {
+        border: none;
+        border-radius: 10px;
+    }
+    .card-body {
+        padding: 2rem;
+    }
+    .card-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    .card-text {
+        font-size: 1rem;
+        color: #6c757d;
+    }
+    .bg-primary {
+        background-color: #007bff !important;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+    .footer {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        text-align: center;
+    }
+</style>

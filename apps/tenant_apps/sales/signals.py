@@ -1,8 +1,10 @@
-from dea.models import JournalEntry
+from django.db import transaction
 from django.db.models import signals
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from sales.models import Invoice, InvoiceItem, Receipt, ReceiptAllocation
+
+from apps.tenant_apps.dea.models import JournalEntry
+from apps.tenant_apps.sales.models import Invoice, InvoiceItem, Receipt
 
 # @receiver(signals.post_delete, sender=ReceiptAllocation)
 # def delete_status(sender, instance, *args, **kwargs):
@@ -16,43 +18,47 @@ from sales.models import Invoice, InvoiceItem, Receipt, ReceiptAllocation
 #     inv.save()
 
 
-# @receiver(post_save, sender=Invoice)
-@receiver(post_save, sender=Receipt)
-def create_sales_journal(sender, instance, created, **kwargs):
-    # lt, at = instance.get_transactions()
-    if created:
-        print("newly created journal")
-        # lj, aj = instance.create_journals()
-        # lj.transact(lt)
-        # aj.transact(at)
-        instance.create_transactions()
+@receiver(pre_save, sender=Receipt)
+@receiver(pre_save, sender=Invoice)
+def reverse_journal_entry(sender, instance, **kwargs):
+    print(" in pre_save:reverse journal entry")
+    if instance.pk:  # If journal is being updated
+        # Retrieve the old data from the database
+        try:
+            old_instance = sender.objects.get(pk=instance.pk)
+        except ObjectDoesNotExist:
+            # Handle the case where the instance does not exist in the database
+            return
+        # Compare the old and new instances
+        if old_instance.is_changed(instance):
+            print("change of balances in instances")
+            old_instance.reverse_transactions()
+            instance.create_transactions()
 
-    else:
-        print("existing journal:appending txns")
-        # lj, aj = instance.get_journals()
-        # lj.untransact(lt)
-        # aj.untransact(at)
-        # lj.transact(lt)
-        # aj.transact(at)
-        instance.reverse_transactions()
-        instance.create_transactions()
-    return instance
+
+@receiver(post_save, sender=Receipt)
+@receiver(post_save, sender=Invoice)
+def create_journal_entry(sender, instance, created, **kwargs):
+    print(" in post_save:create journal entry")
+    if created:
+        with transaction.atomic():
+            instance.create_transactions()
+
+
+@receiver(pre_save, sender=InvoiceItem)
+def reverse_stock_entry(sender, instance, **kwargs):
+    #     # Access model and subclass:
+    if instance.pk:  # If journal is being updated
+        # Retrieve the old data from the database
+        old_instance = sender.objects.get(pk=instance.pk)
+        if old_instance.is_changed(instance):
+            old_instance.unpost()
+            instance.post()
 
 
 @receiver(post_save, sender=InvoiceItem)
-# @receiver(post_save, sender=PaymentAllocation)
-def create_stock_journal(sender, instance, created, **kwargs):
+def create_stock_entry(sender, instance, created, **kwargs):
     if created:
-        print("newly created stock journal")
-        sj = instance.create_journal()
-        instance.post(sj)
-        instance.invoice.create_transactions()
+        instance.post()
 
-    else:
-        print("existing stock journal:appending txns")
-        sj = instance.get_journal()
-        instance.unpost(sj)
-        instance.post(sj)
-        instance.invoice.reverse_transactions()
-        instance.invoice.create_transactions()
-    return instance
+    instance.invoice.save()

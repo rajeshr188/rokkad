@@ -23,6 +23,8 @@ class CustomerExportTable(tables.Table):
 
 class CustomerTable(tables.Table):
     name = tables.Column(verbose_name="Name")
+    relatedas = tables.Column(verbose_name="Related As")
+    relatedto = tables.Column(verbose_name="Related To")
     # pic = ImageColumn()
     address = tables.Column(verbose_name="Address", orderable=False, empty_values=())
     phonenumber = tables.Column(
@@ -41,11 +43,11 @@ class CustomerTable(tables.Table):
                 </a>
                 """,
             record.id,
-            f"{record.name} {record.get_relatedas_display()} {record.relatedto}",
+            f"{record.name}",
         )
 
-    def value_name(self, record):
-        return f"{record.name} {record.get_relatedas_display()} {record.relatedto}"
+    # def value_name(self, record):
+    #     return f"{record.name} {record.get_relatedas_display()} {record.relatedto}"
 
     def render_address(self, record):
         addresses = [

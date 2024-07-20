@@ -1,4 +1,4 @@
-{%extends "_base.html"%}
+{%extends "tenant.html"%}
 {% load static %}
 {%block content%}
 <div class="container col-auto card-body mt-4">
@@ -30,7 +30,7 @@
         <ul class="list-group list-group-flush">
       
           {% for y in date_list %}
-          <li class = "list-group-item"></li>
+          <li class = "list-group-item">
           <a href = "{% url 'girvi:loan_year_archive' y|date:"Y" %}">{{y|date:"Y"}} </a>
         </li>
           {% endfor %}

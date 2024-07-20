@@ -1,42 +1,49 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
-from django.views.generic import (
-    CreateView,
-    DeleteView,
-    DetailView,
-    ListView,
-    UpdateView,
-)
+from django.views.decorators.http import require_http_methods  # new
+from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
+                                  UpdateView)
 from django.views.generic.base import TemplateView
+from django_tables2.config import RequestConfig
 
 # from dea.models import JournalEntry  # , JournalTypes
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import StockFilter
-from ..forms import StockForm, StockJournalForm, UniqueForm, stockstatement_formset
-from ..models import Stock, StockLot, StockStatement, StockTransaction
+from ..forms import StockInForm, StockOutForm, UniqueForm
+from ..models import Stock, StockBalance, StockStatement, StockTransaction
+from ..tables import StockTable
 
 
 @login_required
+@for_htmx(use_block="content")
 def split_lot(request, pk):
     stock = get_object_or_404(Stock, pk=pk)
+    if stock.is_unique:
+        messages.error(request, "Cannot split unique stock")
+
     if request.method == "POST":
         form = UniqueForm(request.POST or None)
         if form.is_valid():
             weight = form.cleaned_data["weight"]
-            stock.split(weight)
-            return reverse_lazy("product_stock_list")
-    else:
-        form = UniqueForm(initial={"stock": stock})
+            quantity = form.cleaned_data["quantity"]
+            is_unique = form.cleaned_data["is_unique"]
+            try:
+                stock.split(wt=weight, qty=quantity, is_unique=is_unique)
+            except Exception as e:
+                messages.error(request, f"Error: {e}")
+            return HttpResponseRedirect(reverse("product_stock_list"))
+
+    form = UniqueForm(initial={"stock": stock})
     context = {
         "form": form,
     }
-
-    return render(request, "product/split_lot.html", context)
+    return TemplateResponse(request, "product/stock/split_lot.html", context)
 
 
 @login_required
@@ -50,56 +57,41 @@ def merge_lot(request, pk):
 @login_required
 @for_htmx(use_block="content")
 def stock_list(request):
-    context = {}
-    # st = StockBalance.objects.all().select_related('stock','stock__variant')
-    # stock_filter = StockFilter(request.GET,queryset = st)
-    st = Stock.objects.all()
-    stock_filter = StockFilter(request.GET, queryset=st)
-    stock = []
-    for i in stock_filter.qs:
-        bal = {}
-        try:
-            ls = i.stockstatement_set.latest()
-            cwt = ls.Closing_wt
-            cqty = ls.Closing_qty
-        except StockStatement.DoesNotExist:
-            ls = None
-            cwt = 0
-            cqty = 0
-        in_txns = i.stock_in_txns(ls)
-        out_txns = i.stock_out_txns(ls)
-        bal["wt"] = cwt + (in_txns["wt"] - out_txns["wt"])
-        bal["qty"] = cqty + (in_txns["qty"] - out_txns["qty"])
-        stock.append([i, bal])
-    context["stock"] = stock
-    return TemplateResponse(
-        request, "product/stock_list.html", {"filter": stock_filter, "data": context}
+    filter = StockFilter(
+        request.GET,
+        queryset=Stock.objects.all().select_related("variant", "stockbalance"),
     )
+    table = StockTable(filter.qs)
+    RequestConfig(request, paginate={"per_page": 10}).configure(table)
+    context = {"filter": filter, "table": table}
+    return TemplateResponse(request, "product/stock/stock_list.html", context)
+
+
+@require_http_methods(["DELETE"])
+def stock_delete(request, pk):
+    stock = get_object_or_404(Stock, pk=pk)
+    stock.delete()
+    messages.error(request, messages.DEBUG, f"Deleted customer {stock.variant}")
+    return HttpResponse("")
 
 
 class StockDetailView(LoginRequiredMixin, DetailView):
+    template_name = "product/stock/stock_detail.html"
     model = Stock
-
-
-class StockLotDetailView(LoginRequiredMixin, DetailView):
-    model = StockLot
-
-
-class StockDeleteView(LoginRequiredMixin, DeleteView):
-    model = Stock
-    success_url = reverse_lazy("product_stock_list")
 
 
 class StockTransactionListView(LoginRequiredMixin, ListView):
+    template_name = "product/stock/stocktransaction_list.html"
     model = StockTransaction
 
 
 class StockStatementListView(LoginRequiredMixin, ListView):
+    template_name = "product/stock/stockstatement_list.html"
     model = StockStatement
 
 
 class StockStatementView(TemplateView):
-    template_name = "product/add_stockstatement.html"
+    template_name = "product/stock/add_stockstatement.html"
 
     def get(self, *args, **kwargs):
         formset = stockstatement_formset(queryset=StockStatement.objects.none())
@@ -129,46 +121,35 @@ def stock_select(request, q):
     objects = Stock.objects.filter(
         Q(variant__name__icontains=q) | Q(barcode__icontains=q) | Q(huid__contains=q)
     )
-    return render(request, "product/stock_select.html", context={"result": objects})
+    return render(
+        request, "product/stock/stock_select.html", context={"result": objects}
+    )
 
 
-def stockjournal_create(request):
+def stockin_journalentry(request):
+    form = StockInForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect("product_stock_list")
+    return render(
+        request, "product/stock/stock_journalentry.html", context={"form": form}
+    )
+
+
+@for_htmx(use_block="content")
+def stockout_journalentry(request, pk=None):
     if request.method == "POST":
-        form = StockJournalForm(request.POST)
+        form = StockOutForm(request.POST)
         if form.is_valid():
-            journal = Journal.objects.create(
-                journal_type=JournalTypes.SJ, desc="Stock Journal"
-            )
-            sj_type = form.cleaned_data["sj_type"]
-            stock = form.cleaned_data["stock"]
-            lot = form.cleaned_data["lot"]
-            weight = form.cleaned_data["weight"]
-            quantity = form.cleaned_data["quantity"]
-            cost = form.cleaned_data["cost_price"]
-            price = form.cleaned_data["price"]
-            if sj_type == "IN":
-                lot = StockLot.objects.create(
-                    stock=stock,
-                    weight=weight,
-                    quantity=quantity,
-                    variant=stock.variant,
-                    purchase_touch=cost,
-                )
-                lot.transact(
-                    weight=weight,
-                    quantity=quantity,
-                    journal=journal,
-                    movement_type="IN",
-                )
-            else:
-                lot.transact(
-                    weight=weight,
-                    quantity=quantity,
-                    journal=journal,
-                    movement_type="OUT",
-                )
+            form.save()
+            return redirect("product_stock_list")
+    else:  # GET request
+        initial_data = {}
+        if pk is not None:
+            stock = get_object_or_404(Stock, pk=pk)
+            initial_data = {"stock": stock}
+        form = StockOutForm(initial=initial_data)
 
-            return redirect("dea_journal_detail", pk=journal.pk)
-    else:
-        form = StockJournalForm()
-    return render(request, "product/stockjournal_create.html", context={"form": form})
+    return TemplateResponse(
+        request, "product/stock/stock_journalentry.html", context={"form": form}
+    )

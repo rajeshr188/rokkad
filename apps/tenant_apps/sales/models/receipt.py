@@ -1,9 +1,6 @@
 from datetime import date, timedelta
 
-from approval.models import ReturnItem
-from contact.models import Customer
-from dea.models import JournalEntry  # , JournalTypes
-from dea.models.moneyvalue import MoneyValueField
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
@@ -12,22 +9,33 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
-from invoice.models import PaymentTerm
 from moneyed import Money
-from product.models import StockLot, StockTransaction
+
+from apps.tenant_apps.approval.models import ReturnItem
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
+from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
+from apps.tenant_apps.product.models import Stock, StockTransaction
+from apps.tenant_apps.terms.models import PaymentTerm
 
 
 class Receipt(models.Model):
     # Fields
-    created = models.DateTimeField(default=timezone.now)
-    updated = models.DateTimeField(auto_now=True, editable=False)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    voucher_date = models.DateTimeField(default=timezone.now)
+    voucher_no = models.CharField(max_length=20, null=True, blank=True)
     created_by = models.ForeignKey(
-        "users.CustomUser", on_delete=models.CASCADE, null=True, blank=True
+        get_user_model(), on_delete=models.CASCADE, null=True, blank=True
     )
     weight = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     touch = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    convert = models.BooleanField(default=False)
     rate = models.IntegerField(default=0)
     total = MoneyField(max_digits=10, decimal_places=3, default_currency="INR")
+    amount = MoneyField(
+        max_digits=10, decimal_places=3, default_currency="INR", null=True, blank=True
+    )
     description = models.TextField(max_length=50, default="describe here")
     status_choices = (
         ("Allotted", "Allotted"),
@@ -80,17 +88,57 @@ class Receipt(models.Model):
         self.receiptline_set.all().delete()
         self.update_status()
 
+    # def allot(self):
+    #     print(f"allotting receipt {self.id} amount: {self.total}")
+
+    #     invpaid = 0 if self.get_line_totals() is None else self.get_line_totals()
+
+    #     remaining_amount = self.total - invpaid
+
+    #     try:
+    #         invtopay = (
+    #             Invoice.objects.filter(
+    #                 customer=self.customer,
+    #                 # balancetype=self.type, posted=True
+    #             )
+    #             .exclude(status="Paid")
+    #             .order_by("created")
+    #         )
+    #         print(f"invtopay:{invtopay}")
+    #     except IndexError:
+    #         invtopay = None
+
+    #     for i in invtopay:
+    #         print(f"i:{i} bal:{i.get_balance()}")
+    #         if remaining_amount <= 0:
+    #             break
+    #         bal = i.get_balance()
+    #         if remaining_amount >= bal:
+    #             remaining_amount -= bal
+    #             ReceiptLine.objects.create(receipt=self, invoice=i, amount=bal)
+    #             i.status = "Paid"
+    #         else:
+    #             ReceiptAllocation.objects.create(
+    #                 receipt=self, invoice=i, allocated_amount=remaining_amount
+    #             )
+    #             i.status = "PartiallyPaid"
+    #             remaining_amount = 0
+    #         i.save()
+
+    #     self.update_status()
+
     def allot(self):
         print(f"allotting receipt {self.id} amount: {self.total}")
 
         invpaid = 0 if self.get_line_totals() is None else self.get_line_totals()
-
         remaining_amount = self.total - invpaid
+        invoices_to_update = []
 
         try:
             invtopay = (
                 Invoice.objects.filter(
-                    customer=self.customer, balancetype=self.type, posted=True
+                    customer=self.customer,
+                    # balancetype=self.type, posted=True
                 )
                 .exclude(status="Paid")
                 .order_by("created")
@@ -98,6 +146,10 @@ class Receipt(models.Model):
             print(f"invtopay:{invtopay}")
         except IndexError:
             invtopay = None
+
+        if invtopay is None:
+            print("No invoices to pay.")
+            return
 
         for i in invtopay:
             print(f"i:{i} bal:{i.get_balance()}")
@@ -114,8 +166,9 @@ class Receipt(models.Model):
                 )
                 i.status = "PartiallyPaid"
                 remaining_amount = 0
-            i.save()
+            invoices_to_update.append(i)
 
+        Invoice.objects.bulk_update(invoices_to_update, ["status"])
         self.update_status()
 
     def amount_allotted(self):
@@ -125,7 +178,7 @@ class Receipt(models.Model):
             )
             return Money(amount_allotted["amount"], self.total_currency)
         else:
-            return None
+            return Money(0, self.total_currency)
 
     def get_allocated_total(self):
         return (
@@ -189,68 +242,120 @@ class Receipt(models.Model):
         #     self.save()
         self.update_status()
 
-    def create_journal_entries(self):
-        # create journal entries for this receipt
-        return JournalEntry.objects.create(content_object=self, desc="Receipt")
-        # ledgerjournal = LedgerJournal.objects.create(
-        #     content_object=self,
-        #     desc="receipt",
-        #     journal_type=JournalTypes.LJ,
-        # )
-        # accountjournal = AccountJournal.objects.create(
-        #     content_object=self,
-        #     desc="receipt",
-        #     journal_type=JournalTypes.AJ,
-        # )
-        # return ledgerjournal, accountjournal
-
-    def get_journal_entries(self):
-        if not self.journal_entries.exists():
-            return self.create_journal_entries()
-        return self.journal_entries.first()
-        # ledgerjournal = self.journals.filter(journal_type=JournalTypes.LJ)
-        # accountjournal = self.journals.filter(journal_type=JournalTypes.AJ)
-
-        # if ledgerjournal.exists() and accountjournal.exists():
-        #     return ledgerjournal.first(), accountjournal.first()
-        # return self.create_journals()
-
     def get_transactions(self):
-        lt = [
-            {"ledgerno": "Sundry Debtors", "ledgerno_dr": "Cash", "amount": self.total}
-        ]
-        at = [
-            {
-                "ledgerno": "Sundry Debtors",
-                "xacttypecode": "Dr",
-                "xacttypecode_ext": "RCT",
-                "account": self.customer.account,
-                "amount": self.total,
-            }
-        ]
+        lt = []
+        at = []
+        if self.total.amount == 0:
+            return None, None
+
+        if self.convert:
+            pure_gold = self.weight * self.touch * 0.01
+            rate = self.rate
+            at.append(
+                {
+                    "ledgerno": "Trading",
+                    "XactTypeCode": "Cr",
+                    "XactTypeCode_ext": "CXC",
+                    "Account": self.customer.account,
+                    "amount": Money(pure_gold * rate, "INR"),
+                }
+            )
+            at.append(
+                {
+                    "ledgerno": "Trading",
+                    "XactTypeCode": "Dr",
+                    "XactTypeCode_ext": "CXC",
+                    "Account": self.customer.account,
+                    "amount": Money(pure_gold, "USD"),
+                }
+            )
+            at.append(
+                {
+                    "ledgerno": "Sundry Debtors",
+                    "XactTypeCode": "Dr",
+                    "XactTypeCode_ext": "RCT",
+                    "Account": self.customer.account,
+                    "amount": self.amount,
+                }
+            )
+            # if self.amount_currency == "INR":
+            #    pure_gold = self.weight * self.touch *0.01
+            #    rate = self.rate
+            #             #  customer balance is converted from gold to cash
+            #    lt.append({ "ledgerno": "Sundry Debtors", "ledgerno_dr": "Trading", "amount": Money(pure_gold,"USD") })
+            #    lt.append({ "ledgerno": "Trading", "ledgerno_dr": "Sundry Debtors", "amount": Money(pure_gold * rate,"INR") })
+            #    at.append({ "ledgerno": "Trading", "XactTypeCode": "Dr", "XactTypeCode_ext": "CXC","Account": self.customer.account, "amount": Money(pure_gold*rate,"INR")})
+            #    at.append({ "ledgerno": "Trading", "XactTypeCode": "Cr", "XactTypeCode_ext": "CXC","Account": self.customer.account, "amount": Money(pure_gold,"USD") })
+            # elif self.total_currency == "USD":
+            #     pure_gold = self.weight * self.touch *0.1
+            #     rate = self.rate
+            #     # customer balance is converted from cash to gold
+            #     lt.append({ "ledgerno": "Sundry Debtors", "ledgerno_dr": "Trading", "amount": Money(pure_gold * rate,"INR") })
+            #     lt.append({ "ledgerno": "Trading", "ledgerno_dr": "Sundry Debtors", "amount": Money(pure_gold,"USD")})
+            #     at.append({ "ledgerno": "Trading", "XactTypeCode": "Dr", "XactTypeCode_ext": "CXC","Account": self.customer.account, "amount": Money(pure_gold,"USD") })
+            #     at.append({ "ledgerno": "Trading", "XactTypeCode": "Cr", "XactTypeCode_ext": "CXC","Account": self.customer.account, "amount": Money(pure_gold * rate,"INR") })
+        else:
+            lt.append(
+                {
+                    "ledgerno": "Sundry Debtors",
+                    "ledgerno_dr": "Cash",
+                    "amount": self.total,
+                }
+            )
+            at.append(
+                {
+                    "ledgerno": "Sundry Debtors",
+                    "XactTypeCode": "Dr",
+                    "XactTypeCode_ext": "RCT",
+                    "Account": self.customer.account,
+                    "amount": self.total,
+                }
+            )
         return lt, at
 
-    @transaction.atomic()
+    def get_journal_entry(self, desc=None):
+        if self.journal_entries.exists():
+            return self.journal_entries.latest()
+        else:
+            return JournalEntry.objects.create(
+                content_object=self, desc=self.__class__.__name__
+            )
+
+    def delete_journal_entry(self):
+        for entry in self.journal_entries.all():
+            entry.delete()
+
     def create_transactions(self):
-        journal_entry = self.get_journal_entries()
+        print("Creating transactions")
         lt, at = self.get_transactions()
-        journal_entry.transact(lt, at)
-        # ledger_journal, Account_journal = self.get_journals()
-        # lt, at = self.get_transactions()
+        if lt and at:
+            journal_entry = self.get_journal_entry()
+            journal_entry.transact(lt, at)
 
-        # ledger_journal.transact(lt)
-        # account_journal.transact(at)
-
-    @transaction.atomic()
     def reverse_transactions(self):
-        journal_entry = self.get_journal_entries()
-        lt, at = self.get_transactions()
-        journal_entry.untransact(lt, at)
-        # ledger_journal, Account_journal = self.get_journals()
-        # lt, at = self.get_transactions()
+        # i.e if je is older than the latest statement then reverse the transactions else do nothing
+        print("Reversing transactions")
+        try:
+            statement = self.customer.account.accountstatements.latest("created")
+        except AccountStatement.DoesNotExist:
+            statement = None
+        journal_entry = self.get_journal_entry()
 
-        # ledger_journal.untransact(lt)
-        # account_journal.untransact(at)
+        if journal_entry and statement and journal_entry.created < statement.created:
+            lt, at = self.get_transactions()
+            if lt and at:
+                journal_entry.untransact(lt, at)
+        else:
+            self.delete_journal_entry()
+
+    def is_changed(self, old_instance):
+        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
+        # TODO efficient way to compare old and new instances
+        # Implement logic to compare old and new instances
+        # Compare all fields using dictionaries
+        return model_to_dict(self, fields=["total"]) != model_to_dict(
+            old_instance, fields=["total"]
+        )
 
 
 class ReceiptAllocation(models.Model):

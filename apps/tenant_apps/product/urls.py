@@ -56,7 +56,6 @@ urlpatterns += (
     ),
 )
 
-
 urlpatterns += (
     # urls for Product
     path("product/", views.product_list, name="product_product_list"),
@@ -210,17 +209,17 @@ urlpatterns += (
         views.StockDetailView.as_view(),
         name="product_stock_detail",
     ),
-    path(
-        "stocklot/detail/<int:pk>/",
-        views.StockLotDetailView.as_view(),
-        name="product_stocklot_detail",
-    ),
-    path("stock/split/<int:pk>", views.split_lot, name="product_stock_split"),
+    path("stock/<int:pk>/delete/", views.stock_delete, name="product_stock_delete"),
+    path("stock/<int:pk>/split/", views.split_lot, name="product_stock_split"),
     path("stock/merge/<int:pk>", views.merge_lot, name="product_stock_merge"),
     path("stock/audit/", views.audit_stock, name="product_stock_audit"),
     path("stock/search/", views.stock_select, name="stock_select"),
+    path("stock/create/", views.stockin_journalentry, name="stock_in_journalentry"),
+    path("stock/transaction/", views.stockout_journalentry, name="stock_journalentry"),
     path(
-        "stock/journal/create/", views.stockjournal_create, name="stock_journal_create"
+        "stock/transaction/<int:pk>/",
+        views.stockout_journalentry,
+        name="stock_journalentry",
     ),
 )
 urlpatterns += (

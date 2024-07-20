@@ -2,21 +2,14 @@ import datetime
 
 from django import forms
 from django.apps import apps
-
 # from product.models import PricingTier
 from django.conf import settings
 from django.core.exceptions import NON_FIELD_ERRORS
 from django_select2 import forms as s2forms
 from import_export.formats import base_formats
 
-from .models import (
-    Address,
-    Contact,
-    Customer,
-    CustomerRelationship,
-    Proof,
-    RelationType,
-)
+from .models import (Address, Contact, Customer, CustomerRelationship, Proof,
+                     RelationType)
 
 
 class ExportForm(forms.Form):
@@ -75,7 +68,15 @@ class CustomerReportForm(BaseReportForm, forms.ModelForm):
 
     class Meta:
         model = Customer
-        fields = "__all__"
+        # fields = "__all__"
+        exclude = [
+            "gender",
+            "pic",
+            "relatedas",
+            "relatedto",
+            "customer_type",
+            "religion",
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -89,10 +90,10 @@ class CustomerReportForm(BaseReportForm, forms.ModelForm):
         # Note: the use of Q filters and kwargs filters
         filters = {}
         q_filters = []
-        # if self.cleaned_data["secure"] == "secure":
-        #     filters["is_secure"] = True
-        # elif self.cleaned_data["secure"] == "non-secure":
-        #     filters["is_secure"] = False
+        # if self.cleaned_data["customer_type"] == "S":
+        #     filters["customer_type"] = 'S'
+        # elif self.cleaned_data["gender"] == "M":
+        #     filters["gender"] = 'M'
         # if self.cleaned_data["method"]:
         #     filters["method"] = self.cleaned_data["method"]
         # if self.cleaned_data["response"]:
@@ -182,7 +183,7 @@ class ProofForm(forms.ModelForm):
             "proof_type",
             "proof_no",
             "doc",
-            "Customer",
+            "customer",
         ]
 
     def __init__(self, *args, **kwargs):

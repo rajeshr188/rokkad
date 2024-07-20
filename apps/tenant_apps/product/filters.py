@@ -1,37 +1,34 @@
 import django_filters
+from django.db.models import Q
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 
-from .models import (
-    Attribute,
-    AttributeValue,
-    Category,
-    Product,
-    ProductType,
-    ProductVariant,
-    Stock,
-    StockLot,
-    StockTransaction,
-)
+from .models import (Attribute, AttributeValue, Category, Product, ProductType,
+                     ProductVariant, Stock, StockTransaction)
 
 
 class StockFilter(django_filters.FilterSet):
+    query = django_filters.CharFilter(method="universal_search", label="Search")
     variant = django_filters.ModelChoiceFilter(
         queryset=ProductVariant.objects.all(), widget=Select2Widget
     )
 
     class Meta:
-        model = StockLot
+        model = Stock
         fields = ["variant"]
 
+    def universal_search(self, queryset, name, value):
+        # if value.replace(".", "", 1).isdigit():
+        #     value = Decimal(value)
+        #     return Customer.objects.filter(
+        #         Q(price=value) | Q(cost=value)
+        #     )
 
-class StockLotFilter(django_filters.FilterSet):
-    variant = django_filters.ModelChoiceFilter(
-        queryset=ProductVariant.objects.all(), widget=Select2Widget
-    )
-
-    class Meta:
-        model = StockLot
-        fields = ["variant", "stock", "barcode", "huid"]
+        return Stock.objects.filter(
+            Q(huid__icontains=value)
+            | Q(lot_no__icontains=value)
+            | Q(serial_no__icontains=value)
+            | Q(variant__sku__icontains=value)
+        )
 
 
 class StockTransactionFilter(django_filters.FilterSet):

@@ -1,8 +1,9 @@
 import decimal
 
-from contact.models import Customer
 from django import forms
 from django.contrib import admin
+
+from apps.tenant_apps.contact.models import Customer
 
 from .models import Invoice, InvoiceItem, Receipt
 

@@ -1,6 +1,6 @@
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import reverse
 from django.utils.text import slugify
@@ -143,25 +143,16 @@ class ProductVariant(models.Model):
         return get_product_attributes_data(self.product)
 
     def get_bal(self):
-        st = StockTransaction.objects.filter(stock__variant_id=self.id)
-        ins = st.filter(movement_type__in=["P", "SR", "AR"])
-        i = {}
-        o = {}
-        if ins.exists():
-            i = ins.aggregate(wt=Sum("weight"), qty=Sum("quantity"))
+        # total = self.stocks.annotate(
+        #     total = Sum(
+        #         F('stockbalance__Closing_wt')+
+        #         F('stockbalance__in_wt')-
+        #         F('stockbalance__out_wt')
+        #     )
+        # )["total"]
 
-        else:
-            i["wt"] = 0
-            i["qty"] = 0
-        out = st.filter(movement_type__in=["S", "PR", "A"])
-        if out.exists():
-            o = out.aggregate(wt=Sum("weight"), qty=Sum("quantity"))
-        else:
-            o["wt"] = 0
-            o["qty"] = 0
-
-        total = {"wt": i["wt"] - o["wt"], "qty": i["qty"] - o["qty"]}
-        return total
+        # return total
+        pass
 
     def get_absolute_url(self):
         return reverse("product_productvariant_detail", args=(self.pk,))

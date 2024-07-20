@@ -6,7 +6,7 @@ from django.views.decorators.http import require_http_methods
 
 from apps.tenant_apps.girvi.models import Loan
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-from apps.tenant_apps.utils.loan_pdf import get_loan_pdf, get_notice_pdf
+from apps.tenant_apps.utils.loan_pdf import get_notice_pdf
 
 from .forms import NoticeGroupForm, NotificationForm
 from .models import NoticeGroup, Notification

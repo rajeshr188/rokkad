@@ -4,9 +4,21 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models, transaction
 from django.forms import model_to_dict
+from django.urls import reverse
 
 from .account import AccountTransaction
 from .ledger import LedgerTransaction
+
+# create a voucher you create a je
+# edit voucher:
+#     if changed and statement created after the voucher created then reverse the transactions and create new transactions
+#     else if changed and statement created before the voucher created then update the transactions
+#     else if not changed then do nothing
+
+#  to change acc balance in gold to cash
+#     1. create a receipt with gold as payment mode
+#     2. create a payment with cash as payment mode
+#     3. create a journal entry with both receipt and payment as voucher
 
 
 def reverse_journal_entry(sender, instance, **kwargs):
@@ -26,6 +38,7 @@ def create_journal_entry(sender, instance, created, **kwargs):
             instance.create_transactions()
 
 
+# no longer relevant
 class Journal(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -100,10 +113,9 @@ class JournalEntry(models.Model):
     desc = models.TextField(blank=True, null=True)
     # Below the mandatory fields for generic relation
     content_type = models.ForeignKey(
-        ContentType,
-        on_delete=models.CASCADE,
+        ContentType, on_delete=models.CASCADE, null=True, blank=True
     )
-    object_id = models.PositiveIntegerField()
+    object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = GenericForeignKey("content_type", "object_id")
 
     class Meta:
@@ -113,40 +125,16 @@ class JournalEntry(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.content_type}{self.desc}"
+        return f"{self.content_type}# {self.object_id}"
 
-    def get_url_string(self):
-        # check if the object.content_type is a invoice item
+    def get_absolute_url(self):
+        return reverse("dea_journal_entry_detail", kwargs={"pk": self.pk})
 
-        if self.content_type and self.content_object:
-            from django.urls import reverse
-            from purchase.models import Invoice as pinv
-            from purchase.models import InvoiceItem as pi
-            from sales.models import Invoice as sinv
-            from sales.models import InvoiceItem as si
-
-            si_ct = ContentType.objects.get_for_model(si)
-            pi_ct = ContentType.objects.get_for_model(pi)
-            sinv_ct = ContentType.objects.get_for_model(sinv)
-            pinv_ct = ContentType.objects.get_for_model(pinv)
-
-            if self.content_type in [si_ct, pi_ct]:
-                # <!-- <a href="{% url ''|add:object.get_url_string pk=object.object_id %}"> -->
-                # return f"{self.invoice.content_type.app_label}:{self.invoice.content_type.app_label}_{self.content_type.model}_detail"
-                model = sinv_ct if self.content_type is si_ct else pinv_ct
-
-                return reverse(
-                    f"{self.content_type.app_label}:{self.content_type.app_label}_invoice_detail",
-                    kwargs={"pk": self.content_object.invoice.pk},
-                )
-
-            # return f"{self.content_type.app_label}:{self.content_type.app_label}_{self.content_type.model}_detail"
-            return reverse(
-                f"{self.content_type.app_label}:{self.content_type.app_label}_{self.content_type.model}_detail",
-                kwargs={"pk": self.object_id},
-            )
+    def get_voucher_url(self):
+        voucher = self.content_object
+        if voucher is not None:
+            return voucher.get_absolute_url()
         else:
-            # print("returning none")
             return None
 
     def check_data_integrity(self, lt, at):
@@ -204,9 +192,9 @@ class JournalEntry(models.Model):
             AccountTransaction.objects.create_txn(
                 self,
                 i["ledgerno"],
-                i["xacttypecode"],
-                i["xacttypecode_ext"],
-                i["account"],
+                i["XactTypeCode"],
+                i["XactTypeCode_Ext"],
+                i["Account"],
                 i["amount"],
             )
 
@@ -222,7 +210,7 @@ class JournalEntry(models.Model):
         for i in at:
             xacttypecode = ""
             xacttypecode_ext = ""
-            if i["xacttypecode"] == "Cr":
+            if i["XactTypeCode"] == "Cr":
                 xacttypecode = "Dr"
                 xacttypecode_ext = "AC"
             else:
@@ -233,6 +221,6 @@ class JournalEntry(models.Model):
                 i["ledgerno"],
                 xacttypecode,
                 xacttypecode_ext,
-                i["account"],
+                i["Account"],
                 i["amount"],
             )

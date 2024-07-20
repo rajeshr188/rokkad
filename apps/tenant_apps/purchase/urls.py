@@ -25,6 +25,9 @@ urlpatterns = (
         views.purchase_gst_change,
         name="purchase_gst_change",
     ),
+    path(
+        "<int:purchase_id>/generate_stock/", views.generate_stock, name="generate_stock"
+    ),
 )
 urlpatterns += (
     # path('purchase/balance/',views.list_balance,name='purchase_balance'),
@@ -42,7 +45,7 @@ urlpatterns += (
     path(
         "<int:parent_id>/invoiceitem/detail/<int:id>/",
         views.purchase_item_update_hx_view,
-        name="purchase_invoiceitem_detail",
+        name="purchase_purchaseitem_detail",
     ),
     path(
         "purchase/item/<int:pk>/detail",
@@ -52,7 +55,7 @@ urlpatterns += (
     path(
         "<int:parent_id>/invoiceitem/delete/<int:id>/",
         views.purchase_item_delete_view,
-        name="purchase_invoiceitem_delete",
+        name="purchase_purchaseitem_delete",
     ),
 )
 

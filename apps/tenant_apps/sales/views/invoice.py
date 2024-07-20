@@ -3,7 +3,6 @@ from typing import List
 
 import pytz
 import tablib
-from contact.models import Customer
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
@@ -11,19 +10,18 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_tables2.config import RequestConfig
 from openpyxl import load_workbook
-from product.models import (
-    PricingTier,
-    PricingTierProductPrice,
-    ProductVariant,
-    StockLot,
-)
 from render_block import render_block_to_string
+
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.product.models import (PricingTier,
+                                             PricingTierProductPrice,
+                                             ProductVariant, Stock)
+from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 # from ..admin import InvoiceResource, ReceiptResource
 from ..filters import InvoiceFilter
 from ..forms import InvoiceForm, InvoiceItemForm
 from ..models import Invoice, InvoiceItem
-
 # from ..render import Render
 from ..tables import InvoiceTable
 
@@ -72,6 +70,7 @@ def home(request):
     return render(request, "sales/home.html", context)
 
 
+# @for_htmx(use_block="content")
 def sales_list(request):
     filter = InvoiceFilter(
         request.GET,
@@ -150,21 +149,10 @@ def sales_delete_view(request, id=None):
 
 @login_required
 def sale_item_delete_view(request, parent_id=None, id=None):
-    # try:
-    #     obj = InvoiceItem.objects.get(
-    #         invoice__id=parent_id,
-    #         id=id,
-    #     )
-    # except:
-    #     obj = None
-    # if obj is None:
-    #     if request.htmx:
-    #         return HttpResponse("Not Found")
-    #     raise Http404
     obj = get_object_or_404(InvoiceItem, id=id)
     if request.method == "POST":
         id = obj.id
-        obj.delete()
+        obj.delete(unpost=True)
         success_url = reverse("sales:hx-detail", kwargs={"pk": parent_id})
         if request.htmx:
             return render(
@@ -215,7 +203,7 @@ def sales_ratecut_change(request, id):
 
         for i in obj.sale_items.all():
             i.save()
-        success_url = reverse("sales:sales_invoice_list")
+        success_url = reverse("sales:sales_invoice_detail", kwargs={"pk": obj.id})
         if request.htmx:
             headers = {"HX-Redirect": success_url}
             return HttpResponse("Success", headers=headers)
@@ -234,7 +222,7 @@ def sales_gst_change(request, id):
 
         for i in obj.sale_items.all():
             i.save()
-        success_url = reverse("sales:sales_invoice_list")
+        success_url = reverse("sales:sales_invoice_detail", kwargs={"pk": obj.id})
         if request.htmx:
             headers = {"HX-Redirect": success_url}
             return HttpResponse("Success", headers=headers)
@@ -364,7 +352,7 @@ def saleitem_detail(request, pk):
 @login_required
 # not done yet
 def get_sale_price(request):
-    product = StockLot.objects.get(id=request.GET.get("product", "")).variant
+    product = Stock.objects.get(id=request.GET.get("product", "")).variant
     contact = Customer.objects.get(id=request.GET.get("contact", ""))
 
     # Traverse the pricing tier hierarchy to get the effective selling price for the customer and product

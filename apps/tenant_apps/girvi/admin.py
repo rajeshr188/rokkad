@@ -4,7 +4,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 from import_export import fields, resources
 from import_export.admin import ImportExportModelAdmin
-from import_export.widgets import ForeignKeyWidget
+from import_export.fields import Field
+from import_export.widgets import DateTimeWidget, ForeignKeyWidget
 
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
@@ -13,15 +14,86 @@ from .forms import LoanForm
 from .models import License, Loan, LoanItem, LoanPayment, Release, Series
 
 
+class LicenseResource(resources.ModelResource):
+    class Meta:
+        model = License
+        import_id_fields = ("id",)
+        fields = (
+            "id",
+            "name",
+            "type",
+            "shopname",
+            "address",
+            "phonenumber",
+            "propreitor",
+            "renewal_date",
+        )
+        created = Field(
+            attribute="created",
+            column_name="created",
+            widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+        )
+        updated = Field(
+            attribute="updated",
+            column_name="updated",
+            widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+        )
+
+
+class SeriesResource(admin.ModelAdmin):
+    class Meta:
+        model = Series
+        import_id_fields = ("id",)
+        fields = (
+            "id",
+            "name",
+            "license",
+            "is_active",
+            # "description",
+            # "prefix",
+            # "start",
+            # "end",
+            "created",
+            "last_updated",
+        )
+        created = Field(
+            attribute="created",
+            column_name="created",
+            widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+        )
+        last_updated = Field(
+            attribute="last_updated",
+            column_name="last_updated",
+            widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+        )
+
+
 class LoanResource(resources.ModelResource):
+    created_at = Field(
+        attribute="created_at",
+        column_name="created_at",
+        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+    )
+    updated_at = Field(
+        attribute="updated_at",
+        column_name="updated_at",
+        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+    )
+    loan_date = Field(
+        attribute="loan_date",
+        column_name="loan_date",
+        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+    )
     customer = fields.Field(
         column_name="customer",
         attribute="customer",
         widget=ForeignKeyWidget(Customer, "pk"),
     )
-    # license=fields.Field(column_name='license',
-    #                         attribute='license',
-    #                         widget=ForeignKeyWidget(License,'id'))
+    license = fields.Field(
+        column_name="license",
+        attribute="license",
+        widget=ForeignKeyWidget(License, "id"),
+    )
     series = fields.Field(
         column_name="series", attribute="series", widget=ForeignKeyWidget(Series, "id")
     )
@@ -29,6 +101,9 @@ class LoanResource(resources.ModelResource):
     class Meta:
         model = Loan
         import_id_fields = ("id",)
+        skip_unchanged = True
+        report_skipped = True
+        use_bulk = True
 
 
 class LoanItemResource(resources.ModelResource):
@@ -46,6 +121,16 @@ class LoanItemResource(resources.ModelResource):
 
 
 class LoanPaymentResource(resources.ModelResource):
+    created_at = Field(
+        attribute="created_at",
+        column_name="created_at",
+        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+    )
+    updated_at = Field(
+        attribute="updated_at",
+        column_name="updated_at",
+        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+    )
     loan = fields.Field(
         column_name="loan", attribute="loan", widget=ForeignKeyWidget(Loan, "pk")
     )
@@ -55,6 +140,21 @@ class LoanPaymentResource(resources.ModelResource):
 
 
 class ReleaseResource(resources.ModelResource):
+    created_at = Field(
+        attribute="created_at",
+        column_name="created_at",
+        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+    )
+    updated_at = Field(
+        attribute="updated_at",
+        column_name="updated_at",
+        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+    )
+    release_date = Field(
+        attribute="release_date",
+        column_name="release_date",
+        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
+    )
     loan = fields.Field(
         column_name="loan", attribute="loan", widget=ForeignKeyWidget(Loan, "pk")
     )
@@ -76,6 +176,7 @@ class LicenseAdminForm(forms.ModelForm):
 
 class LicenseAdmin(admin.ModelAdmin):
     form = LicenseAdminForm
+    resource_class = LicenseResource
     list_display = [
         "name",
         "id",
@@ -121,7 +222,7 @@ class LoanAdmin(admin.ModelAdmin):
 
     print.short_description = "Print Options"
     form = LoanAdminForm
-    # resource_class = LoanResource
+    resource_class = LoanResource
     list_display = [
         "id",
         "loan_id",
@@ -145,7 +246,7 @@ class ReleaseAdminForm(forms.ModelForm):
 # class ReleaseAdmin(ImportExportModelAdmin):
 class ReleaseAdmin(admin.ModelAdmin):
     form = ReleaseAdminForm
-    # resource_class = ReleaseResource
+    resource_class = ReleaseResource
 
     list_display = [
         "release_id",

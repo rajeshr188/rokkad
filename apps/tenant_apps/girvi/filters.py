@@ -7,7 +7,7 @@ from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 
 from .forms import LoansWidget
-from .models import Loan, LoanPayment, Release
+from .models import Loan, LoanItem, LoanPayment, Release
 
 
 class LoanFilter(django_filters.FilterSet):
@@ -16,18 +16,48 @@ class LoanFilter(django_filters.FilterSet):
         queryset=Customer.objects.all(),
         widget=CustomerWidget(),
     )
-    status = django_filters.BooleanFilter(field_name="release", method="filter_status")
-    loan_date = django_filters.DateFromToRangeFilter(help_text="dd/mm/yy")
+    loan_date = django_filters.DateFromToRangeFilter(
+        help_text="dd/mm/yy", label="Loan Date"
+    )
+
     # notice = django_filters.CharFilter(
     #     field_name="notifications__notice_type", lookup_expr="icontains"
     # )
     # loan_type = django_filters.ChoiceFilter(
     #     choices=Loan.LoanType.choices, empty_label="Select Loan Type"
     # )
+    def filter_item_type(self, queryset, name, value):
+        return queryset.filter(loanitems__itemtype=value)
+
+    item_type = django_filters.ChoiceFilter(
+        method="filter_item_type",
+        choices=LoanItem.ItemType.choices,
+        empty_label="Select Item Type",
+        label="Item Type",
+    )
     sunk = django_filters.BooleanFilter(method="sunken", label="sunken")
 
+    STATUS_CHOICES = [
+        ("All", "All"),
+        ("Released", "Released"),
+        ("UnReleased", "Not Released"),
+    ]
+
+    status = django_filters.ChoiceFilter(
+        choices=STATUS_CHOICES,
+        method="filter_status",
+        label="Status",
+    )
+
     def filter_status(self, queryset, name, value):
-        return queryset.filter(release__isnull=value)
+        if value == "Released":
+            return queryset.filter(release__isnull=False)
+        elif value == "UnReleased":
+            return queryset.filter(release__isnull=True)
+        return queryset
+
+    # def filter_status(self, queryset, name, value):
+    #     return queryset.filter(release__isnull=value)
 
     class Meta:
         model = Loan

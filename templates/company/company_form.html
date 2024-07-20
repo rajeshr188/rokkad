@@ -1,9 +1,12 @@
-{% extends 'account/profile.html' %}
+{% extends 'tenant.html' %}
 {% load crispy_forms_tags %}
 
-{% block profile-content %}
+{% block content %}
+{%if company%}
+<h1>Update Company</h1>
+{%else%}
   <h1>Create a New Company</h1>
-
+{%endif%}
   <form method="POST">
     {% csrf_token %}
     {{ form|crispy }}
