@@ -1,6 +1,5 @@
 {% extends "tenant.html" %}
 {% load static %}
-{% load render_table from django_tables2 %}
 {% block content %}
 <div id="content" class="container mt-2">
 
@@ -13,16 +12,9 @@
         </div>
         <div class="card-body">
           <p class="demo">
-            {% if customer.pic %}
             <div class="avatar avatar-xxl">
-              <img src="{{customer.pic.url}}" alt="{{ customer.name }}'s Profile Picture" class="avatar-img rounded-circle">
-            </div>
-            {% else %}
-            <div class="avatar avatar-xxl">
-              <img src="{% static '/theme/assets/img/jm_denis.jpg'%}" alt="..." class="avatar-img rounded-circle">
-            </div>
-            {% endif %}
-            
+              <img src="{{customer.get_pic}}" alt="{{ customer.name }}'s Profile Picture" class="avatar-img rounded-circle">
+            </div>            
             <div class="customer-info">
               <p class="ml-3">
                 <strong>{{customer.name|title}} {{customer.get_relatedas_display}} {{customer.relatedto|title}}
@@ -37,13 +29,7 @@
               <p><strong>Created By: </strong> {{customer.created_by}}</p>
               <div class="btn-toolbar" role="toolbar">
                 <div class="btn-group mr-2" role="group">
-                  {%if customer.account%}
-                  <a class="btn btn-primary ml-2" role="button" href=""
-                    hx-get="{% url 'dea_account_detail' object.account.id%}" hx-target="#content" hx-push-url="true"
-                    hx-swap="innerHTML transition:true">Account</a>
-                  <a class="btn btn-primary ml-2 " role="button"
-                    href="{% url 'dea_account_audit' customer.account.id%}">Audit</a>
-                    <a class="btn btn-primary " hx-get="{% url 'contact_customer_update' object.id%}" hx-target="#content"
+                  <a class="btn btn-primary " hx-get="{% url 'contact_customer_update' object.id%}" hx-target="#content"
                       hx-push-url="true" hx-swap="innerHTML transition:true"><svg xmlns="http://www.w3.org/2000/svg"
                         width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
                         <path
@@ -51,11 +37,11 @@
                         <path fill-rule="evenodd"
                           d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
                       </svg></a>
-                  {%endif%}
                 </div>
               </div>
             </div>
           </p>
+           
         </div>
       </div>
     </div>
@@ -88,6 +74,8 @@
                 id="line-profile-tab"
                 data-bs-toggle="pill"
                 href="#line-profile"
+                hx-get="{% url 'dea_account_detail' object.account.id%}" hx-target="#line-profile" hx-push-url="true"
+                hx-swap="innerHTML transition:true"
                 role="tab"
                 aria-controls="pills-profile"
                 aria-selected="false"
@@ -187,20 +175,6 @@
               role="tabpanel"
               aria-labelledby="line-profile-tab"
             >
-              <p>
-                Even the all-powerful Pointing has no control about
-                the blind texts it is an almost unorthographic life
-                One day however a small line of blind text by the name
-                of Lorem Ipsum decided to leave for the far World of
-                Grammar.
-              </p>
-              <p>
-                The Big Oxmox advised her not to do so, because there
-                were thousands of bad Commas, wild Question Marks and
-                devious Semikoli, but the Little Blind Text didnâ€™t
-                listen. She packed her seven versalia, put her initial
-                into the belt and made herself on the way.
-              </p>
             </div>
             <div
               class="tab-pane fade"
@@ -420,8 +394,7 @@
             </div>
           </div>
         </div>
-    </div>
-      
+    </div>      
   </div>
 </div>
 {% endblock %}
