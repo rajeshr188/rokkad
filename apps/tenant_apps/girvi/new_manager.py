@@ -4,8 +4,8 @@ from django.core.cache import cache
 from django.db import models
 from django.db.models import (Case, DecimalField, ExpressionWrapper, F, Func,
                               OuterRef, Q, Subquery, Sum, Value, When)
-from django.db.models.functions import (Coalesce, ExtractMonth, ExtractYear,ExtractDay,
-                                        Round)
+from django.db.models.functions import (Coalesce, ExtractDay, ExtractMonth,
+                                        ExtractYear, Round)
 from django.utils import timezone
 
 from apps.tenant_apps.rates.models import Rate
@@ -31,35 +31,53 @@ class LoanQuerySet(models.QuerySet):
 
     def unreleased(self):
         return self.filter(release__isnull=True)
+
     # ------------------chatgpt suggestion------------------
     def months_since(self):
         # Annotate each loan with the number of months since its creation
         months_since_annotation = ExpressionWrapper(
-            (ExtractYear(timezone.now()) - ExtractYear(F('loan_date'))) * 12 +
-            (ExtractMonth(timezone.now()) - ExtractMonth(F('loan_date'))),
-            output_field=DecimalField()
+            (ExtractYear(timezone.now()) - ExtractYear(F("loan_date"))) * 12
+            + (ExtractMonth(timezone.now()) - ExtractMonth(F("loan_date"))),
+            output_field=DecimalField(),
         )
-        
+
         return self.annotate(months_since=months_since_annotation)
 
     def months_since_or_to_release(self):
         # Calculate months since loan_date or between loan_date and release_date with date precision and rounding
         months_since_annotation = Case(
             # If release_date is not None, calculate months between loan_date and release_date with day precision
-            When(release__isnull=False,
+            When(
+                release__isnull=False,
                 then=ExpressionWrapper(
-                    ((ExtractYear(F('release__release_date')) - ExtractYear(F('loan_date'))) * 12 +
-                    (ExtractMonth(F('release__release_date')) - ExtractMonth(F('loan_date'))) +
-                    (ExtractDay(F('release__release_date')) - ExtractDay(F('loan_date'))) / 30.0),
-                    output_field=DecimalField(max_digits=10, decimal_places=2)
-                )),
+                    (
+                        (
+                            ExtractYear(F("release__release_date"))
+                            - ExtractYear(F("loan_date"))
+                        )
+                        * 12
+                        + (
+                            ExtractMonth(F("release__release_date"))
+                            - ExtractMonth(F("loan_date"))
+                        )
+                        + (
+                            ExtractDay(F("release__release_date"))
+                            - ExtractDay(F("loan_date"))
+                        )
+                        / 30.0
+                    ),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                ),
+            ),
             # Default case: Calculate months since loan_date to now with day precision
             default=ExpressionWrapper(
-                ((ExtractYear(timezone.now()) - ExtractYear(F('loan_date'))) * 12 +
-                (ExtractMonth(timezone.now()) - ExtractMonth(F('loan_date'))) +
-                (timezone.now().day - ExtractDay(F('loan_date'))) / 30.0),
-                output_field=DecimalField(max_digits=10, decimal_places=2)
-            )
+                (
+                    (ExtractYear(timezone.now()) - ExtractYear(F("loan_date"))) * 12
+                    + (ExtractMonth(timezone.now()) - ExtractMonth(F("loan_date")))
+                    + (timezone.now().day - ExtractDay(F("loan_date"))) / 30.0
+                ),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            ),
         )
         # Custom annotation to calculate months with date precision, rounding up if 1 month and 1 or more days
         # months_since_annotation = Case(
@@ -85,7 +103,7 @@ class LoanQuerySet(models.QuerySet):
         #         output_field=IntegerField()
         #     )
         # )
-    
+
         return self.annotate(months_since=months_since_annotation)
 
     def with_interest_calculated(self):
@@ -94,59 +112,96 @@ class LoanQuerySet(models.QuerySet):
         # Then, calculate interest due using the annotated months_since
         interest_due = ExpressionWrapper(
             Func(
-                (F('months_since') * F('interest')),
-                function='ROUND',
-                output_field=DecimalField(max_digits=10, decimal_places=2)),
-            output_field=DecimalField()
+                (F("months_since") * F("interest")),
+                function="ROUND",
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            ),
+            output_field=DecimalField(),
         )
         return loans_with_months_since.annotate(total_interest=interest_due)
 
     def with_due(self):
         with_interest_calculated = self.with_interest_calculated()
         total_due = ExpressionWrapper(
-            F('loan_amount') + F('total_interest'),
-            output_field=DecimalField()
+            F("loan_amount") + F("total_interest"), output_field=DecimalField()
         )
         return with_interest_calculated.annotate(total_due=total_due)
-    
+
     def with_aggregate_weight_by_itemtype(self):
         return self.annotate(
-            total_weight_gold=Coalesce(Sum(Case(
-                When(loanitems__item_type='Gold', then='loanitems__weight'),
-                default=Value(0),
-                output_field=models.DecimalField()
-            )), Value(0)),
-            total_weight_silver=Coalesce(Sum(Case(
-                When(loanitems__item_type='Silver', then='loanitems__weight'),
-                default=Value(0),
-                output_field=models.DecimalField()
-            )), Value(0)),
-            total_weight_bronze=Coalesce(Sum(Case(
-                When(loanitems__item_type='Bronze', then='loanitems__weight'),
-                default=Value(0),
-                output_field=models.DecimalField()
-            )), Value(0))
+            total_weight_gold=Coalesce(
+                Sum(
+                    Case(
+                        When(loanitems__item_type="Gold", then="loanitems__weight"),
+                        default=Value(0),
+                        output_field=models.DecimalField(),
+                    )
+                ),
+                Value(0),
+            ),
+            total_weight_silver=Coalesce(
+                Sum(
+                    Case(
+                        When(loanitems__item_type="Silver", then="loanitems__weight"),
+                        default=Value(0),
+                        output_field=models.DecimalField(),
+                    )
+                ),
+                Value(0),
+            ),
+            total_weight_bronze=Coalesce(
+                Sum(
+                    Case(
+                        When(loanitems__item_type="Bronze", then="loanitems__weight"),
+                        default=Value(0),
+                        output_field=models.DecimalField(),
+                    )
+                ),
+                Value(0),
+            ),
         )
-    
+
     def with_aggregate_pure_weight_by_itemtype(self):
         return self.annotate(
-            total_pure_weight_gold=Coalesce(Sum(Case(
-                When(loanitems__item_type='Gold', then='loanitems__weight' * 'loanitems__purity' / 100),
-                default=Value(0),
-                output_field=models.DecimalField()
-            )), Value(0)),
-            total_pure_weight_silver=Coalesce(Sum(Case(
-                When(loanitems__item_type='Silver', then
-                ='loanitems__weight' * 'loanitems__purity' / 100),
-                default=Value(0),
-                output_field=models.DecimalField()
-            )), Value(0)),
-            total_pure_weight_bronze=Coalesce(Sum(Case(
-                When(loanitems__item_type='Bronze', then
-                ='loanitems__weight' * 'loanitems__purity' / 100),
-                default=Value(0),
-                output_field=models.DecimalField()
-            )), Value(0))
+            total_pure_weight_gold=Coalesce(
+                Sum(
+                    Case(
+                        When(
+                            loanitems__item_type="Gold",
+                            then="loanitems__weight" * "loanitems__purity" / 100,
+                        ),
+                        default=Value(0),
+                        output_field=models.DecimalField(),
+                    )
+                ),
+                Value(0),
+            ),
+            total_pure_weight_silver=Coalesce(
+                Sum(
+                    Case(
+                        When(
+                            loanitems__item_type="Silver",
+                            then="loanitems__weight" * "loanitems__purity" / 100,
+                        ),
+                        default=Value(0),
+                        output_field=models.DecimalField(),
+                    )
+                ),
+                Value(0),
+            ),
+            total_pure_weight_bronze=Coalesce(
+                Sum(
+                    Case(
+                        When(
+                            loanitems__item_type="Bronze",
+                            then="loanitems__weight" * "loanitems__purity" / 100,
+                        ),
+                        default=Value(0),
+                        output_field=models.DecimalField(),
+                    )
+                ),
+                Value(0),
+            ),
         )
 
     # -------------------------------------------------------
@@ -166,15 +221,14 @@ class LoanQuerySet(models.QuerySet):
         interest_due = ExpressionWrapper(
             # F('months_since') * F('interest_rate') * F('loan_amount') / 100,
             Func(
-                    (F("interest") * F("months_since")),
-                    function="ROUND",
-                    output_field=models.DecimalField(max_digits=10, decimal_places=2),
-                ),
-            output_field=DecimalField()
+                (F("interest") * F("months_since")),
+                function="ROUND",
+                output_field=models.DecimalField(max_digits=10, decimal_places=2),
+            ),
+            output_field=DecimalField(),
         )
         # return loans_with_months_since.annotate(interest_due=interest_due)
         return loans_with_months_since.annotate(total_interest=interest_due)
-
 
     def with_details(self, grate=None, srate=None):
         current_time = timezone.now()
@@ -221,7 +275,6 @@ class LoanQuerySet(models.QuerySet):
             #     ),
             #     output_field=models.DecimalField(max_digits=10, decimal_places=2),
             # ),
-            
             total_gold_weight=Sum(
                 Case(
                     When(loanitems__itemtype="Gold", then=F("loanitems__weight")),
@@ -365,9 +418,11 @@ class LoanQuerySet(models.QuerySet):
 
 class LoanManager(models.Manager):
     def get_queryset(self):
-        return LoanQuerySet(self.model, using=self._db).select_related(
-            "series", "release", "customer"
-        ).prefetch_related("loanitems")
+        return (
+            LoanQuerySet(self.model, using=self._db)
+            .select_related("series", "release", "customer")
+            .prefetch_related("loanitems")
+        )
 
     def released(self):
         return self.get_queryset().released()

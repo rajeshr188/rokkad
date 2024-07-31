@@ -75,7 +75,7 @@ def Dashboard(request):
 @roles_required(["Owner", "Admin"])
 def company_dashboard(request):
     context = {}
-    
+
     # context['stream'] = user_stream(request.user, with_user_activity=True)
     # context['any_stream'] = any_stream(request.user)
     # context['actor_stream'] = actor_stream(request.user)
@@ -133,7 +133,7 @@ def company_dashboard(request):
     # except ZeroDivisionError:
     #     context["p_map"] = 0.0
     # context['s_map'] = round(total_sbal_ratecut['bal']/total_sbal_ratecut['net_wt'],3)
-    
+
     context["new_customers"] = Customer.objects.all()[0:5]
     context["customer_count"] = Customer.objects.values("customer_type").annotate(
         count=Count("id")
