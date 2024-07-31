@@ -56,13 +56,10 @@ class LoanTable(tables.Table):
         return record.customer.name
 
     def render_total_weight(self, record):
-        
         return f"G:{record.total_gold_weight} gms  S:{record.total_silver_weight} gms"
 
     def value_total_weight(self, record):
-        
         return f"G:{record.total_gold_weight} gms  S:{record.total_silver_weight} gms"
-
 
     def render_loan_id(self, record):
         return format_html(

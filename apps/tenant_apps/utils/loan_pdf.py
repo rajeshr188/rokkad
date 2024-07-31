@@ -633,94 +633,6 @@ def get_loan_template(loan):
     return pdf
 
 
-# from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, Spacer, Paragraph, Table, TableStyle
-# from reportlab.lib.pagesizes import A4, landscape
-# from reportlab.lib import colors
-# from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-# from reportlab.lib.enums import TA_JUSTIFY
-# from reportlab.pdfbase import pdfmetrics
-# from reportlab.pdfbase.ttfonts import TTFont
-# import io
-# from reportlab.platypus import Flowable
-
-# def get_loan_template(loan):
-#     pdfmetrics.registerFont(TTFont("custom_noto", "static/fonts/custom_noto.ttf"))
-#     buffer = io.BytesIO()
-
-#     # Document setup
-#     doc = BaseDocTemplate(buffer, pagesize=landscape(A4))
-#     w, h = landscape(A4)
-#     margin = 10
-#     separation = 10
-
-#     # Define styles
-#     styles = getSampleStyleSheet()
-#     normal = styles["Normal"]
-#     normal.alignment = TA_JUSTIFY
-
-#     simple_tblstyle = TableStyle([
-#         ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
-#         ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
-#         ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
-#         ("FONTSIZE", (0, 0), (-1, -1), 10),
-#         ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-#         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-#         ("LEFTPADDING", (0, 0), (-1, -1), 6),
-#         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-#         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-#         ("TOPPADDING", (0, 0), (-1, -1), 6),
-#     ])
-
-#     # Define frames for each page
-#     frame1_left, frame1_right = create_frames(w, h, margin, separation)
-#     frame2_left, frame2_right = create_frames(w, h, margin, separation)
-#     # frame3 = Frame(margin, margin, w/2 - (2*margin + separation), h - 2*margin, id='frame3')
-#     # frame4 = Frame(w/2 + separation, margin, w/2 - (2*margin + separation), h - 2*margin, id='frame4')
-
-#     # Define flowables for each frame
-#     flowables_left = [
-#         create_loan_header_table(loan, styles,Spacer(0, 0.15 * inch)),
-#         generate_loan_items_table(loan, styles), Spacer(0, 0.15 * inch),
-#         create_signature_flowable(styles, simple_tblstyle),
-#         create_terms_flowable(styles, simple_tblstyle), ]
-
-
-#     flowables_right = [
-#         create_loan_header_table(loan, styles,Spacer(0, 0.15 * inch)),
-#         generate_loan_items_table(loan, styles), Spacer(0, 0.15 * inch),
-#         create_signature_flowable(styles, simple_tblstyle),Spacer(0, 0.15 * inch),
-#         Paragraph(f"""
-#             Principle Rs. {loan.loan_amount} Interest Rs. ...............Total Rs. ....................I hereby acknowledge to have paid <br/>on .........
-#             and received the Jewel/Jewels in good condition and this cancels my account.<br/>
-#             Signature or Thumb Impression of the Pawner:............................................<br />
-#             """, normal),
-#         BoxyLine(), Spacer(0, 0.15 * inch),
-#         # get_label(loan, styles)
-#         ]
-
-#     flowables2_left = page3(styles)
-#     flowables2_right = page4(styles)
-
-
-#     # Assign flowables to frames using PageTemplates
-#     doc.addPageTemplates([
-#         PageTemplate(id='Page1', frames=[frame1_left, frame1_right], onPage=lambda canvas, doc: draw_center_dotted_line(canvas)),
-#         PageTemplate(id='Page2', frames=[frame2_left, frame2_right], onPage=lambda canvas, doc: draw_center_dotted_line(canvas)),
-#         # PageTemplate(id='Page3', frames=[frame3], onPage=lambda canvas, doc: draw_center_dotted_line(canvas)),
-#         # PageTemplate(id='Page4', frames=[frame4], onPage=lambda canvas, doc: draw_center_dotted_line(canvas)),
-#     ])
-
-#     # Build the document
-#     all_flowables =  flowables_left + [FrameBreak()]+ flowables_right + [FrameBreak()] + flowables2_left +[FrameBreak()]+ flowables2_right
-
-#     # Build the document with a flat list of flowables
-#     doc.build(all_flowables)
-#     pdf = buffer.getvalue()
-#     buffer.close()
-#     return pdf
-
-
-# Implement other functions like create_loan_header_table, generate_loan_items_table, create_terms_flowable, create_signature_flowable as needed
 def get_custom_jsk(loan):
     page_width = 14.6 * cm
     page_height = 21 * cm
@@ -731,8 +643,8 @@ def get_custom_jsk(loan):
 
     c.setFillColorRGB(0, 0, 0)
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(12 * cm, 18.2 * cm, f"{loan.lid}")
-    c.drawString(11.5 * cm, 17.2 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
+    c.drawString(12 * cm, 18.5 * cm, f"{loan.lid}")
+    c.drawString(11.5 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
 
     styles = getSampleStyleSheet()
 
@@ -796,17 +708,17 @@ def get_custom_jsk(loan):
     # Grid spacing
     grid_spacing = 1 * cm  # Adjust this value based on your preference
 
-    c.drawString(3 * cm, 17 * cm, f"{loan.lid}")
-    c.drawString(11 * cm, 17 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
-    c.drawString(5 * cm, 16.5 * cm, f"{loan.customer.name}")
+    c.drawString(3 * cm, 17.5 * cm, f"{loan.lid}")
+    c.drawString(11 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
+    c.drawString(5 * cm, 17 * cm, f"{loan.customer.name}")
     c.drawString(
         5 * cm,
-        16 * cm,
+        16.5 * cm,
         f"{loan.customer.get_relatedas_display()} {loan.customer.relatedto}",
     )
 
     width, height = address_paragraph.wrap(page_width, page_height)
-    address_paragraph.drawOn(c, 5 * cm, 15 * cm - height)
+    address_paragraph.drawOn(c, 5 * cm, 16 * cm - height)
     c.drawString(5 * cm, 14 * cm, f"{loan.customer.contactno.first()}")
     c.drawString(5 * cm, 13.5 * cm, f"{loan.loan_amount}")
 
@@ -814,7 +726,7 @@ def get_custom_jsk(loan):
 
     item_desc_paragraph = Paragraph(loan.item_desc, styles["Normal"])
     width, height = item_desc_paragraph.wrap(page_width, page_height)
-    item_desc_paragraph.drawOn(c, 5 * cm, 12 * cm - height)
+    item_desc_paragraph.drawOn(c, 3 * cm, 11 * cm - height)
 
     c.setFont("Helvetica", 8)
     c.drawString(3 * cm, 7 * cm, f"{weight}gms")

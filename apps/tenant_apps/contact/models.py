@@ -2,6 +2,8 @@ import decimal
 from itertools import chain, islice, tee
 
 from dateutil import relativedelta
+from django.conf import settings
+from django.core.files.storage import default_storage
 from django.db import models, transaction
 from django.db.models import Avg, Case, Count, FloatField, Q, Sum, When
 from django.db.models.expressions import OrderBy
@@ -10,8 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.modelfields import PhoneNumberField
-from django.core.files.storage import default_storage
-from django.conf import settings
+
 
 class RelationType(models.TextChoices):
     Son = "s", "S/o"
@@ -116,8 +117,6 @@ class Customer(models.Model):
     #     self.updated = timezone.now()
     #     super().save(*args, **kwargs)
 
-    
-    
     def get_pic(self):
         try:
             # Assuming `self.pic` is the field storing the picture's path
@@ -127,7 +126,7 @@ class Customer(models.Model):
                 raise FileNotFoundError
         except FileNotFoundError:
             # Return the URL/path to a default picture
-            return settings.STATIC_URL + 'images/falconx.png'
+            return settings.STATIC_URL + "images/falconx.png"
 
     def merge(self, dup):
         # to merge one customer into another existing one

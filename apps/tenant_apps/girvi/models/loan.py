@@ -77,6 +77,7 @@ class Loan(models.Model):
     interest = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, null=True, blank=True
     )
+
     # -----------------------------------
     class InterestType(models.TextChoices):
         SIMPLE = "Simple", "Simple"
@@ -287,7 +288,7 @@ class Loan(models.Model):
         )
         loan_amount = aggregates["loan_amount"]
         interest = aggregates["interest"]
-        
+
         try:
             # Update the loan object with the aggregated values
             with transaction.atomic():
