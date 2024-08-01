@@ -7,7 +7,7 @@ from .base import *
 env = environ.Env()
 environ.Env.read_env()
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["*", "rokkad.com", "www.rokkad.com"]
 
@@ -22,9 +22,9 @@ DATABASES = {
     }
 }
 
-# STATIC_ROOT = "/var/www/rokkad/static"
-# MEDIA_ROOT = "/var/www/rokkad/media"
-# STATICFILES_DIRS = []
+STATIC_ROOT = "/var/www/rokkad/static"
+MEDIA_ROOT = "/var/www/rokkad/media"
+STATICFILES_DIRS = []
 
 # SECURE_SSL_REDIRECT = True
 

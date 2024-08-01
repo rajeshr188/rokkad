@@ -15,7 +15,7 @@ from apps.tenant_apps.contact.services import (active_customers,
                                                get_customers_by_year)
 from apps.tenant_apps.girvi.models import Loan
 from apps.tenant_apps.girvi.services import *
-
+import datetime
 
 class HomePageView(TemplateView):
     def dispatch(self, request, *args, **kwargs):
@@ -143,7 +143,10 @@ def company_dashboard(request):
     released = loan.released()
     unreleased = loan.unreleased()
     sunken = unreleased.filter(is_overdue="True")
-
+    today = datetime.date.today()
+    today_loan = LoanItem.objects.filter(loan__loan_date__gte=today).aggregate(amount=Sum("loanamount"),interest = Sum("interest"))
+    today_release = Release.objects.filter(release_date__gte=today).aggregate(amount=Sum("loan__loan_amount"),interest = Sum("loan__interest"))
+    context["today_loan"] = today_loan
     context["loan_count"] = unreleased.count()
 
     context["due_amount"] = unreleased.aggregate(
