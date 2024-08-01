@@ -177,7 +177,7 @@
           <div class="card-body">
             <div class="chart-container" >
               <div class="div-holder">
-                {% get_widget_from_url url_name="customer_report" display_table=False%}
+                {% get_widget_from_url url_name="customer_report" display_table=False %}
             </div>
             
               <canvas id="customerChart" ></canvas>
@@ -507,6 +507,22 @@
                     </script>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Jama</div>
+            <div class="card-body"><p>loan : {{today_loan.amount}} interest : {{today_loan.interest}}</p></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Nave</div>
+            <div class="card-body"><p>loan : {{today_release.amount}}</p> interest : {{today_release.interest}}</p></div>
         </div>
       </div>
     </div>

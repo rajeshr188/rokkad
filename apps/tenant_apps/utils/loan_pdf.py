@@ -1,4 +1,5 @@
 import io
+import os
 from io import BytesIO
 from itertools import groupby
 
@@ -654,15 +655,42 @@ def get_custom_jsk(loan):
     width, height = customer_paragraph.wrap(page_width, page_height)
 
     # Draw the paragraph on the canvas at the specified position
-    customer_paragraph.drawOn(c, 2 * cm, 16 * cm - height)
+    customer_paragraph.drawOn(c, 5 * cm, 16 * cm - height)
+
+    # Load the customer image from the ImageField
+    customer_image_path = loan.pic.path  # Use .path to get the file system path
+
+    # Debug: Check if the image path is correct
+    if not os.path.exists(customer_image_path):
+        print(f"Image not found at path: {customer_image_path}")
+    else:
+        print(f"Image found at path: {customer_image_path}")
+
+        # Set the desired dimensions for the image (e.g., 5x5 cm)
+        desired_width = 2.5 * cm
+        desired_height = 2.5 * cm
+
+        # Calculate the position for the image
+        image_x = 2 * cm 
+        image_y = 16 * cm - desired_height
+
+        # Draw the image on the canvas
+        customer_image = Image(customer_image_path, width=desired_width, height=desired_height)
+        customer_image.drawOn(c, image_x, image_y)
+
+        # Draw a border around the image
+        border_padding = 2  # Padding around the image for the border
+        c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
+        c.setLineWidth(1)  # Set the border width
+        c.rect(image_x - border_padding, image_y - border_padding, desired_width + 2 * border_padding, desired_height + 2 * border_padding)
 
     address = f"{loan.customer.address.first()}"
     address_paragraph = Paragraph(address, styles["Normal"])
     # Calculate the width and height of the paragraph
     width, height = address_paragraph.wrap(page_width, page_height)
-    address_paragraph.drawOn(c, 2 * cm, 15 * cm - height)
+    address_paragraph.drawOn(c, 5 * cm, 15 * cm - height)
 
-    c.drawString(2 * cm, 14 * cm, f"Ph: {loan.customer.contactno.first()}")
+    c.drawString(5 * cm, 14 * cm, f"Ph: {loan.customer.contactno.first()}")
 
     c.setFont("Helvetica", 8)
     weight = loan.formatted_weight(joiner=",")

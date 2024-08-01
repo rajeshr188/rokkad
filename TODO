@@ -38,3 +38,7 @@ change default of area of address to be set from preferences
 print ledger type loan details with release date by series
 
 add custom_user profile with gravatar and other fields
+
+when deploy
+change manage.py settings to prod
+.env settings to prod
