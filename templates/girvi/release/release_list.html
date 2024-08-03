@@ -39,10 +39,10 @@
 
     <div class="col-md-3" id="filter">{% include 'filter.html'%}</div>
 
-    <div class="col-md-9" id="results">
-      <div class="table table-sm table-responsive text-center">
-        {% render_table table %}
-      </div>
+    <div class="col-md table-responsive" id="table">
+      {%block table%}
+      {% render_table table %}
+      {%endblock%}
     </div>
   </div>
 </div>

@@ -1,11 +1,17 @@
 from collections import Counter
 from datetime import datetime
 
-from django.db.models import (Avg, Case, Count, IntegerField, Q, Sum, Value,
-                              When)
+from django.db.models import (Avg, Case, Count, IntegerField, Q, Sum, Value,Window,F,
+                              When, Subquery, OuterRef)
 from django.db.models.functions import ExtractYear, TruncDate
 
 from .models import Customer, Loan, LoanItem, LoanPayment, Release
+
+def get_loan_cumulative_amount():
+    loans = Loan.unreleased.annotate(
+            cumsum = Window(Sum('loan_amount'), order_by=F('loan_date').asc())
+        ).values('loan_date__date', 'cumsum').order_by('loan_date')
+    return loans
 
 
 def get_average_loan_instance_per_day():

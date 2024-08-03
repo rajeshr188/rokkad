@@ -5,9 +5,7 @@
 {% block title %}Home page{% endblock title %}
 
 {% block content %}
-<div class="container">
-  <div class="page-inner">
-    <div
+<div
       class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4"
     >
       <div>
@@ -17,6 +15,17 @@
       <div class="ms-md-auto py-2 py-md-0">
         <a href="#" class="btn btn-label-info btn-round me-2">Manage</a>
         <a href="#" class="btn btn-primary btn-round">Add Customer</a>
+        <a class="btn btn-success btn-round" 
+            hx-get="{% url 'contact_customer_create' %}" 
+            hx-push-url="true"
+            hx-target="#content"
+            hx-swap="innerHTML transition:true"
+            hx-trigger="click, keyup[shiftKey&&key=='N'] from:body"
+            role="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16">
+              <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+              </svg></a>
       </div>
     </div>
     <div class="row">
@@ -33,7 +42,15 @@
               </div>
               <div class="col col-stats ms-3 ms-sm-0">
                 <div class="numbers">
-                  <p class="card-category">Customers</p>
+                  <p class="card-category">
+                    <a href="" hx-get="{% url 'contact_customer_list' %}" 
+                            hx-target="#content" 
+                            hx-swap="innerHTML" 
+                            hx-vals='{"use_block": "content"}'
+                            hx-push-url ="true">
+                      <span class="sub-item">{% trans 'Customer'%}</span>
+                </a>
+                  </p>
                   <h4 class="card-title">{{active_customers}}</h4>
                 </div>
               </div>
@@ -54,7 +71,16 @@
               </div>
               <div class="col col-stats ms-3 ms-sm-0">
                 <div class="numbers">
-                  <p class="card-category">Loans</p>
+                  <p class="card-category">
+                    <a href="" 
+                          hx-get="{% url 'girvi:girvi_loan_list' %}"
+                          hx-target="#content" 
+                          hx-swap="innerHTML" 
+                          hx-vals='{"use_block": "content"}'
+                          hx-push-url ="true" >
+                        <span class="sub-item">{% trans "Loans" %}</span>
+                      </a>
+                  </p>
                   <h4 class="card-title">{{loan_count}}</h4>
                 </div>
               </div>
@@ -148,6 +174,18 @@
           </div>
         </div>
       </div>
+      <div class="col-sm-6 col-md-3">
+        <div class="card card-round">
+          <div class="card-body pb-0">
+            <div class="h1 fw-bold float-end text-primary">+5%</div>
+            <h2 class="mb-2">17</h2>
+            <p class="text-muted">Users online</p>
+            <div class="pull-in sparkline-fix">
+              <div id="lineChart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="row">
       <div class="col-md-4">
@@ -175,12 +213,7 @@
             </div>
           </div>
           <div class="card-body">
-            <div class="chart-container" >
-              <div class="div-holder">
-                {% get_widget_from_url url_name="customer_report" display_table=False %}
-            </div>
-            
-              <canvas id="customerChart" ></canvas>
+            <canvas id="customerChart" ></canvas>
                     <script>
                         // Your JavaScript code to generate the customer chart
                         document.addEventListener('DOMContentLoaded', function () {
@@ -221,10 +254,6 @@
                             });
                         });
                     </script>
-            </div>
-            <div id="myChartLegend">
-              
-            </div>
           </div>
         </div>
       </div>
@@ -234,52 +263,50 @@
             <div class="card-title">Loan Chart</div>
           </div>
           <div class="card-body">
-            <div class="chart-container">
-              <canvas id="loanChart" ></canvas>
-                    <script>
-                        // Your JavaScript code to generate the loan chart
-                        document.addEventListener('DOMContentLoaded', function () {
-                            var ctx = document.getElementById('loanChart').getContext('2d');
+            <canvas id="loanChart" ></canvas>
+            <script>
+                // Your JavaScript code to generate the loan chart
+                document.addEventListener('DOMContentLoaded', function () {
+                    var ctx = document.getElementById('loanChart').getContext('2d');
 
-                            // Fetch data from the Django view
-                            var data = {
-                                labels: [{% for entry in loanbyitemtype %}"{{ entry.itemtype }}", {% endfor %}],
-                            datasets: [{
-                                label: 'Total Loan Amount',
-                                data: [{% for entry in loanbyitemtype %}{{ entry.total_loan_amount }}, {% endfor %}],
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1,
-                            fill: true
-                }]
-            };
+                    // Fetch data from the Django view
+                    var data = {
+                        labels: [{% for entry in loanbyitemtype %}"{{ entry.itemtype }}", {% endfor %}],
+                    datasets: [{
+                        label: 'Total Loan Amount',
+                        data: [{% for entry in loanbyitemtype %}{{ entry.total_loan_amount }}, {% endfor %}],
+                    backgroundColor: ["#1d7af3", "#f3545d", "#fdaf4b"],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: true
+        }]
+    };
 
-                        var options = {
-                            scales: {
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: 'Loan Type',
-                                    },
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: 'Total Loan Amount',
-                                    },
-                                }
-                            }
-                        };
+                var options = {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Loan Type',
+                            },
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Total Loan Amount',
+                            },
+                        }
+                    }
+                };
 
-                        var loanChart = new Chart(ctx, {
-                            type: 'pie',  // Use 'bar' for a bar chart or 'line' for a line chart
-                            data: data,
-                            options: options
-                        });
-        });
-                    </script>
-            </div>
+                var loanChart = new Chart(ctx, {
+                    type: 'pie',  // Use 'bar' for a bar chart or 'line' for a line chart
+                    data: data,
+                    options: options
+                });
+});
+            </script>
           </div>
         </div>
       </div>
@@ -324,27 +351,42 @@
             </div>
           </div>
         </div>
-        <div class="card card-round">
-          <div class="card-body pb-0">
-            <div class="h1 fw-bold float-end text-primary">+5%</div>
-            <h2 class="mb-2">17</h2>
-            <p class="text-muted">Users online</p>
-            <div class="pull-in sparkline-fix">
-              <div id="lineChart"></div>
-            </div>
-          </div>
-        </div>
       </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div class="div-holderl">
+          {% get_widget_from_url url_name="girvi:loan_report" display_table=False extra_params="time_series_pattern=monthly"%}
+      </div>
+      </div>
+      <div class="col-md-6">
+        <div class="div-holderl">
+          {% get_widget_from_url url_name="girvi:loan_by_customer" display_table=False extra_params="time_series_pattern=monthly"%}
+      </div>
+      </div>
+    </div>
+    <div class="row">
+      
+      <div class="col-md-6">
+        <div class="div-holderl">
+          {% get_widget_from_url url_name="girvi:series_report" display_table=False extra_params="time_series_pattern=monthly"%}
+      </div>
+      </div>
+      <div class="col-md-6">
+        <div class="div-holderl">
+          {% get_widget_from_url url_name="girvi:license_report" display_table=False extra_params="time_series_pattern=monthly"%}
+      </div>
+      </div>
+    
     </div>
     <div class="row">
       <div class="col-md-4">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Line Chart</div>
+            <div class="card-title">Grouped Loans Chart</div>
           </div>
           <div class="card-body">
-            <div class="chart-container">
-              <canvas id="cglChart" width="400" height="200"></canvas>
+            <canvas id="cglChart" width="400" height="200"></canvas>
                     
                     <script>
                         // Your JavaScript code to generate the chart
@@ -386,18 +428,16 @@
                             });
                         });
                     </script>
-            </div>
           </div>
         </div>
       </div>
       <div class="col-md-4">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Line Chart</div>
+            <div class="card-title">Interest Received Chart</div>
           </div>
           <div class="card-body">
-            <div class="chart-container">
-                <canvas id="interestPaidChart"></canvas>
+            <canvas id="interestPaidChart"></canvas>
 
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
@@ -443,18 +483,16 @@
                     });
                 });
             </script>
-            </div>
           </div>
         </div>
       </div>
       <div class="col-md-4">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Line Chart</div>
+            <div class="card-title">Loan By Year Chart</div>
           </div>
           <div class="card-body">
-            <div class="chart-container">
-              <canvas id="lChart" width="400" height="200"></canvas>
+            <canvas id="lChart" width="400" height="200"></canvas>
                     <script>
                         // Your JavaScript code to generate the chart
                         document.addEventListener('DOMContentLoaded', function () {
@@ -505,17 +543,18 @@
                         });
             });
                     </script>
-            </div>
           </div>
         </div>
       </div>
     </div>
+
     <div class="row">
       <div class="col">
         <div class="card">
           <div class="card-header">
             <div class="card-title">Jama</div>
             <div class="card-body"><p>loan : {{today_loan.amount}} interest : {{today_loan.interest}}</p></div>
+          </div>
         </div>
       </div>
       <div class="col">
@@ -523,15 +562,16 @@
           <div class="card-header">
             <div class="card-title">Nave</div>
             <div class="card-body"><p>loan : {{today_release.amount}}</p> interest : {{today_release.interest}}</p></div>
+          </div>
         </div>
       </div>
     </div>
     <div class="row">
-      <div class="col-md-12">
+      <div class="col-md-6">
         <div class="card card-round">
           <div class="card-header">
             <div class="card-head-row card-tools-still-right">
-              <h4 class="card-title">Users Geolocation</h4>
+              <h4 class="card-title">Asset Summary</h4>
               <div class="card-tools">
                 <button
                   class="btn btn-icon btn-link btn-primary btn-xs"
@@ -555,102 +595,108 @@
             </p>
           </div>
           <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <div class="table-responsive table-hover table-sales">
-                  <table class="table table-sm">
-                    <thead>
-                        <th></th>
-                        <th>Gold</th>
-                        <th>Silver</th>
-                        <th>Bronze</th>
-                        <th>Total</th>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Weight</td>
-                            <td>{{weight.gold}}</td>
-                            <td>{{weight.silver}}</td>
-                            <td>{{weight.bronze}}</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Pure</td>
-                            <td>{{pure_weight.gold}}</td>
-                            <td>{{pure_weight.silver}}</td>
-                            <td>{{pure_weight.bronze}}</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Loan Amt</td>
-                            <td>{{assets.gold_loanamount}}</td>
-                            <td>{{assets.silver_loanamount}}</td>
-                            <td>{{assets.bronze_loanamount}}</td>
-                            <td>{{total_loan_amount}}</td>
-                        </tr>
-                        <tr>
-                            <td>Value</td>
-                            <td>{{itemwise_value.gold}}</td>
-                            <td>{{itemwise_value.silver}}</td>
-                            <td></td>
-                            <td>{{current_value.total}}</td>
-                        </tr>
-                    </tbody>
-                    <tbody>
+            <div class="table-responsive table-hover table-sales">
+              <table class="table table-sm">
+                <thead>
+                    <th></th>
+                    <th>Gold</th>
+                    <th>Silver</th>
+                    <th>Bronze</th>
+                    <th>Total</th>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Weight</td>
+                        <td>{{weight.gold}}</td>
+                        <td>{{weight.silver}}</td>
+                        <td>{{weight.bronze}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Pure</td>
+                        <td>{{pure_weight.gold}}</td>
+                        <td>{{pure_weight.silver}}</td>
+                        <td>{{pure_weight.bronze}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Loan Amt</td>
+                        <td>{{assets.gold_loanamount}}</td>
+                        <td>{{assets.silver_loanamount}}</td>
+                        <td>{{assets.bronze_loanamount}}</td>
+                        <td>{{total_loan_amount}}</td>
+                    </tr>
+                    <tr>
+                        <td>Value</td>
+                        <td>{{itemwise_value.gold}}</td>
+                        <td>{{itemwise_value.silver}}</td>
+                        <td></td>
+                        <td>{{current_value.total}}</td>
+                    </tr>
+                </tbody>
+                <tbody>
 
-                    </tbody>
-                </table>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="table-responsive table-hover table-sales">
-                  <table class="table table-sm">
-                    <thead>
-                        <th></th>
-                        <th>Gold</th>
-                        <th>Silver</th>
-                        <th>Bronze</th>
-                        <th>Total</th>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Weight</td>
-                            <td>{{sunken.weight.gold}}</td>
-                            <td>{{sunken.weight.silver}}</td>
-                            <td>{{sunken.weight.bronze}}</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Pure</td>
-                            <td>{{sunken.pure_weight.gold}}</td>
-                            <td>{{sunken.pure_weight.silver}}</td>
-                            <td>{{sunken.pure_weight.bronze}}</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Loan Amt</td>
-                            <td>{{sunken.assets.gold_loanamount}}</td>
-                            <td>{{sunken.assets.silver_loanamount}}</td>
-                            <td>{{sunken.assets.bronze_loanamount}}</td>
-                            <td>{{sunken.total_loan_amount.total}}</td>
-                        </tr>
-                        <tr>
-                            <td>Value</td>
-                            <td>{{sunken.itemwise_value.gold}}</td>
-                            <td>{{subken.itemwise_value.silver}}</td>
-                            <td></td>
-                            <td>{{sunken.current_value.total}}</td>
-                        </tr>
-                    </tbody>
-                    <tbody>
-
-                    </tbody>
-                </table>
-                </div>
-              </div>
+                </tbody>
+            </table>
             </div>
           </div>
         </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card card-round">
+          <div class="card-header">
+            <div class="card-head-row card-tools-still-right">
+              <h4 class="card-title">Sunken</h4>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive table-hover table-sales">
+              <table class="table table-sm">
+                <thead>
+                    <th></th>
+                    <th>Gold</th>
+                    <th>Silver</th>
+                    <th>Bronze</th>
+                    <th>Total</th>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Weight</td>
+                        <td>{{sunken.weight.gold}}</td>
+                        <td>{{sunken.weight.silver}}</td>
+                        <td>{{sunken.weight.bronze}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Pure</td>
+                        <td>{{sunken.pure_weight.gold}}</td>
+                        <td>{{sunken.pure_weight.silver}}</td>
+                        <td>{{sunken.pure_weight.bronze}}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Loan Amt</td>
+                        <td>{{sunken.assets.gold_loanamount}}</td>
+                        <td>{{sunken.assets.silver_loanamount}}</td>
+                        <td>{{sunken.assets.bronze_loanamount}}</td>
+                        <td>{{sunken.total_loan_amount.total}}</td>
+                    </tr>
+                    <tr>
+                        <td>Value</td>
+                        <td>{{sunken.itemwise_value.gold}}</td>
+                        <td>{{sunken.itemwise_value.silver}}</td>
+                        <td></td>
+                        <td>{{sunken.current_value.total}}</td>
+                    </tr>
+                </tbody>
+                <tbody>
+
+                </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
     <div class="row">
@@ -689,15 +735,14 @@
               <div class="item-list">
                 <div class="avatar">
                   <img
-                    src="{%if customer.pic %}{{customer.pic.url}}
-                    {%else%}{{STATIC_URL}}/assets/img/profile.jpg{%endif%}"
+                    src="{{customer.get_pic}}"
                     alt="..."
                     class="avatar-img rounded-circle"
                   />
                 </div>
                 <div class="info-user ms-3">
                   <div class="username">{{customer.name}}</div>
-                  <div class="status">{{customer.Address}}</div>
+                  <div class="status">{{customer.address.first}}</div>
                 </div>
                 <button class="btn btn-icon btn-link op-8 me-1">
                   <i class="far fa-envelope"></i>
@@ -770,96 +815,7 @@
                       <span class="badge badge-success">Completed</span>
                     </td>
                   </tr>
-                  <tr>
-                    <th scope="row">
-                      <button
-                        class="btn btn-icon btn-round btn-success btn-sm me-2"
-                      >
-                        <i class="fa fa-check"></i>
-                      </button>
-                      Payment from #10231
-                    </th>
-                    <td class="text-end">Mar 19, 2020, 2.45pm</td>
-                    <td class="text-end">$250.00</td>
-                    <td class="text-end">
-                      <span class="badge badge-success">Completed</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">
-                      <button
-                        class="btn btn-icon btn-round btn-success btn-sm me-2"
-                      >
-                        <i class="fa fa-check"></i>
-                      </button>
-                      Payment from #10231
-                    </th>
-                    <td class="text-end">Mar 19, 2020, 2.45pm</td>
-                    <td class="text-end">$250.00</td>
-                    <td class="text-end">
-                      <span class="badge badge-success">Completed</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">
-                      <button
-                        class="btn btn-icon btn-round btn-success btn-sm me-2"
-                      >
-                        <i class="fa fa-check"></i>
-                      </button>
-                      Payment from #10231
-                    </th>
-                    <td class="text-end">Mar 19, 2020, 2.45pm</td>
-                    <td class="text-end">$250.00</td>
-                    <td class="text-end">
-                      <span class="badge badge-success">Completed</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">
-                      <button
-                        class="btn btn-icon btn-round btn-success btn-sm me-2"
-                      >
-                        <i class="fa fa-check"></i>
-                      </button>
-                      Payment from #10231
-                    </th>
-                    <td class="text-end">Mar 19, 2020, 2.45pm</td>
-                    <td class="text-end">$250.00</td>
-                    <td class="text-end">
-                      <span class="badge badge-success">Completed</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">
-                      <button
-                        class="btn btn-icon btn-round btn-success btn-sm me-2"
-                      >
-                        <i class="fa fa-check"></i>
-                      </button>
-                      Payment from #10231
-                    </th>
-                    <td class="text-end">Mar 19, 2020, 2.45pm</td>
-                    <td class="text-end">$250.00</td>
-                    <td class="text-end">
-                      <span class="badge badge-success">Completed</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">
-                      <button
-                        class="btn btn-icon btn-round btn-success btn-sm me-2"
-                      >
-                        <i class="fa fa-check"></i>
-                      </button>
-                      Payment from #10231
-                    </th>
-                    <td class="text-end">Mar 19, 2020, 2.45pm</td>
-                    <td class="text-end">$250.00</td>
-                    <td class="text-end">
-                      <span class="badge badge-success">Completed</span>
-                    </td>
-                  </tr>
+              
                 </tbody>
               </table>
             </div>
@@ -902,12 +858,177 @@
           <div class="card-body">
             <ol class="activity-feed">
               
+              <!-- {% activity_stream 'actor' user %}
+              {% for action in stream %}
+              <li class="feed-item feed-item-secondary">
+                <time class="date" datetime="9-25">{{action.timestamp}}</time>
+                <span class="text">
+                  <a href="#">{% display_action action %}</a></span>
+              </li>
+              {%endfor%} -->
             </ol>
           </div>
         </div>
       </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-head-row">
+              <div class="card-title">Support Tickets</div>
+              <div class="card-tools">
+                <ul
+                  class="nav nav-pills nav-secondary nav-pills-no-bd nav-sm"
+                  id="pills-tab"
+                  role="tablist"
+                >
+                  <li class="nav-item">
+                    <a
+                      class="nav-link"
+                      id="pills-today"
+                      data-bs-toggle="pill"
+                      href="#pills-today"
+                      role="tab"
+                      aria-selected="true"
+                      >Today</a
+                    >
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      class="nav-link active"
+                      id="pills-week"
+                      data-bs-toggle="pill"
+                      href="#pills-week"
+                      role="tab"
+                      aria-selected="false"
+                      >Week</a
+                    >
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      class="nav-link"
+                      id="pills-month"
+                      data-bs-toggle="pill"
+                      href="#pills-month"
+                      role="tab"
+                      aria-selected="false"
+                      >Month</a
+                    >
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="d-flex">
+              <div class="avatar avatar-online">
+                <span
+                  class="avatar-title rounded-circle border border-white bg-info"
+                  >J</span
+                >
+              </div>
+              <div class="flex-1 ms-3 pt-1">
+                <h6 class="text-uppercase fw-bold mb-1">
+                  Joko Subianto
+                  <span class="text-warning ps-3">pending</span>
+                </h6>
+                <span class="text-muted"
+                  >I am facing some trouble with my viewport. When i
+                  start my</span
+                >
+              </div>
+              <div class="float-end pt-1">
+                <small class="text-muted">8:40 PM</small>
+              </div>
+            </div>
+            <div class="separator-dashed"></div>
+            <div class="d-flex">
+              <div class="avatar avatar-offline">
+                <span
+                  class="avatar-title rounded-circle border border-white bg-secondary"
+                  >P</span
+                >
+              </div>
+              <div class="flex-1 ms-3 pt-1">
+                <h6 class="text-uppercase fw-bold mb-1">
+                  Prabowo Widodo
+                  <span class="text-success ps-3">open</span>
+                </h6>
+                <span class="text-muted"
+                  >I have some query regarding the license issue.</span
+                >
+              </div>
+              <div class="float-end pt-1">
+                <small class="text-muted">1 Day Ago</small>
+              </div>
+            </div>
+            <div class="separator-dashed"></div>
+            <div class="d-flex">
+              <div class="avatar avatar-away">
+                <span
+                  class="avatar-title rounded-circle border border-white bg-danger"
+                  >L</span
+                >
+              </div>
+              <div class="flex-1 ms-3 pt-1">
+                <h6 class="text-uppercase fw-bold mb-1">
+                  Lee Chong Wei
+                  <span class="text-muted ps-3">closed</span>
+                </h6>
+                <span class="text-muted"
+                  >Is there any update plan for RTL version near
+                  future?</span
+                >
+              </div>
+              <div class="float-end pt-1">
+                <small class="text-muted">2 Days Ago</small>
+              </div>
+            </div>
+            <div class="separator-dashed"></div>
+            <div class="d-flex">
+              <div class="avatar avatar-offline">
+                <span
+                  class="avatar-title rounded-circle border border-white bg-secondary"
+                  >P</span
+                >
+              </div>
+              <div class="flex-1 ms-3 pt-1">
+                <h6 class="text-uppercase fw-bold mb-1">
+                  Peter Parker
+                  <span class="text-success ps-3">open</span>
+                </h6>
+                <span class="text-muted"
+                  >I have some query regarding the license issue.</span
+                >
+              </div>
+              <div class="float-end pt-1">
+                <small class="text-muted">2 Day Ago</small>
+              </div>
+            </div>
+            <div class="separator-dashed"></div>
+            <div class="d-flex">
+              <div class="avatar avatar-away">
+                <span
+                  class="avatar-title rounded-circle border border-white bg-danger"
+                  >L</span
+                >
+              </div>
+              <div class="flex-1 ms-3 pt-1">
+                <h6 class="text-uppercase fw-bold mb-1">
+                  Logan Paul <span class="text-muted ps-3">closed</span>
+                </h6>
+                <span class="text-muted"
+                  >Is there any update plan for RTL version near
+                  future?</span
+                >
+              </div>
+              <div class="float-end pt-1">
+                <small class="text-muted">2 Days Ago</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
   </div>
-</div>
 {% endblock content %}
 {% block extrajs %}
     {% include "slick_reporting/js_resources.html" %}

@@ -129,6 +129,7 @@ urlpatterns += (
     path(
         "girvi/loan-report/", views.LoanTimeSeriesReport.as_view(), name="loan_report"
     ),
+    path("girvi/loanbycustomer/", views.LoanByCustomerReport.as_view(), name="loan_by_customer"),
     path(
         "girvi/series-report/",
         views.SeriesReport.as_view(),

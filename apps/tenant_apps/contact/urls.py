@@ -18,7 +18,6 @@ urlpatterns = (
         views.customer_detail,
         name="contact_customer_detail",
     ),
-    path("customer_report/", views.CustomerReport.as_view(), name="customer_report"),
     path(
         "customer/update/<int:pk>/", views.customer_edit, name="contact_customer_update"
     ),

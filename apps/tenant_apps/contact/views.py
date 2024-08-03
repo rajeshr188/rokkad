@@ -141,7 +141,6 @@ def import_data(request):
 
 @login_required
 @for_htmx(use_block_from_params=True)
-# @for_htmx(use_block="content")
 def customer_list(request):
     context = {}
     f = CustomerFilter(
@@ -255,6 +254,9 @@ def customer_detail(request, pk=None):
     context["object"] = cust
     context["customer"] = cust
     loans = cust.loan_set.unreleased().with_details(request.grate, request.srate)
+    context["loans"] = loans
+    context["total_loans"] = loans.count()
+    context["total_amount"] = sum([i.loan_amount for i in loans])
     worth = [i.worth for i in loans]
     context["worth"] = sum(worth)
     return TemplateResponse(request, "contact/customer_detail.html", context)
@@ -471,58 +473,3 @@ def address_delete(request, pk):
     address.delete()
     messages.error(request, messages.ERROR, f"Address {address} deleted.")
     return HttpResponse("")
-
-
-# from slick_reporting.views import SlickReportView
-# from django.db.models import Count
-# from .models import Customer
-
-# class CustomerReport(SlickReportView):
-#     form_class = CustomerForm
-#     report_model = Customer
-#     date_field = 'created'
-#     report_fields = ['created']
-#     group_by = 'created'
-#     columns = ['created', '_total']
-#     compute_totals = ['created']
-#     time_series_pattern = 'monthly'
-#     time_series_columns = ['_total']
-
-#     def get_queryset(self):
-#         return super().get_queryset().annotate(_total=Count('created'))
-
-from django.db.models import Count, Sum
-from slick_reporting.fields import ComputationField
-from slick_reporting.views import Chart, ReportView
-
-
-class CustomerReport(ReportView):
-    # The model where you have the data
-    report_model = Customer
-    form_class = CustomerReportForm
-    # the main date field used for the model
-    date_field = "created"
-
-    # Group by options
-    group_by = "customer_type"
-    # What do you want to calculate
-    columns = [
-        "customer_type",
-        ComputationField.create(
-            method=Count,
-            field="id",
-            name="id__count",
-            verbose_name="Total Customers",
-            is_summable=True,
-        ),
-    ]
-
-    # Charts
-    chart_settings = [
-        Chart(
-            "Total sold $",
-            Chart.BAR,
-            data_source=["id__count"],
-            title_source=["name"],
-        ),
-    ]
