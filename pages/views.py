@@ -204,6 +204,7 @@ def company_dashboard(request):
         .order_by("-num_loans", "sum_loans", "tint")
     )
     context["interest_received"] = get_interest_paid()
+    context['loan_cumsum'] = list(get_loan_cumulative_amount())
     return render(request, "pages/company_dashboard.html", context)
 
 

@@ -35,7 +35,7 @@ def increlid():
 
 
 @login_required
-@for_htmx(use_block="content")
+@for_htmx(use_block_from_params="true")
 def release_list(request):
     stats = {}
     filter = ReleaseFilter(

@@ -61,8 +61,11 @@
             {%else%}
             <button name="update" type="submit" class="btn btn-primary">Update</button>
             {%endif%}
-            <button hx-get="/contact/customer/" hx-target="#content" hx-push-url="true"
-              hx-swap="innerHTML transition:true" hx-vals='{"use_block":"content"}'
+            <button hx-get="/contact/customer/" 
+                    hx-target="#content" 
+                    hx-push-url="true"
+                    hx-swap="innerHTML transition:true" 
+                    hx-vals='{"use_block":"content"}'
               class="btn btn-danger">Cancel</button>
           </div>
         </div>

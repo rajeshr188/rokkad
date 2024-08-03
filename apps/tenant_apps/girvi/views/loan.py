@@ -143,9 +143,8 @@ def get_interestrate(request):
 
 
 @login_required
-@for_htmx(use_block="content")
+@for_htmx(use_block_from_params=True)
 def loan_list(request):
-    stats = {}
     filter = LoanFilter(
         request.GET,
         request=request,
@@ -178,6 +177,7 @@ def loan_list(request):
     context = {
         "filter": filter,
         "table": table,
+        "export_formats": ["csv", "xls", "xlsx", "json", "html"],
         "total_loan_amount": filter.qs.total_loanamount(),
         "total_interest": filter.qs.aggregate(total=Sum("total_interest")),
     }
@@ -760,12 +760,28 @@ from django.utils.translation import gettext as _
 from slick_reporting.fields import ComputationField
 from slick_reporting.views import Chart, ListReportView, ReportView
 
+class LoanByCustomerReport(ReportView):
+    queryset = Loan.objects.unreleased()
+    form_class = LoanReportForm
+    group_by = "customer__name"
+    columns = [
+        "customer__name",
+        ComputationField.create(Sum, "loan_amount", verbose_name="total_loan_amount"),
+    ]
+    chart_settings = [
+        Chart(
+            "Customer Loan Report",
+            Chart.PIE,
+            data_source=["sum__loan_amount"],
+            title_source=["customer__name"],
+        ),
+    ]
 
 class LoanTimeSeriesReport(ReportView):
     queryset = Loan.unreleased.all()
     form_class = LoanReportForm
     group_by = "customer__name"
-    time_series_pattern = "monthly"
+    time_series_pattern = "annually"
     # options are: "daily", "weekly", "bi-weekly", "monthly", "quarterly", "semiannually", "annually" and "custom"
 
     time_series_selector = True
@@ -825,10 +841,11 @@ class SeriesReport(ReportView):
     ]
     chart_settings = [
         Chart(
-            "Loan Time Series",
+            "Series report",
             Chart.PIE,
             data_source=["sum__loan_amount"],
-            title_source=["__time_series__"],
+            title_source=["series__name"],
+
         ),
     ]
 
@@ -843,10 +860,10 @@ class LicenseReport(ReportView):
     ]
     chart_settings = [
         Chart(
-            "Loan Time Series",
+            "License report",
             Chart.PIE,
             data_source=["sum__loan_amount"],
-            title_source=["__time_series__"],
+            title_source=["series__license__name"],
         ),
     ]
 

@@ -103,6 +103,20 @@
               aria-labelledby="line-home-tab"
             > 
             <div class="row row-cols-1 row-cols-md-3 g-4">
+              <div class="col-md-4">
+                <div class="card card-secondary bg-secondary-gradient">
+                  <div class="card-body bubble-shadow">
+                    <h1>{{total_amount}}</h1>
+                    <h5 class="op-8">Pending Loans</h5>
+                    <div class="pull-right">
+                      <h3 class="fw-bold op-8">{{total_loans}}</h3>
+                    </div>
+                    <div class="pull-left">
+                      <h3 class="fw-bold op-8">{{worth}}</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="col">
                 <div class="card">
                   
@@ -211,6 +225,9 @@
                             class="badge bg-primary rounded-pill">{{customer.get_total_interest_due}}</span></li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">Average Release
                           time<span class="badge bg-primary rounded-pill">{{customer.get_release_average}}</span></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                          Worth : <span class="badge bg-primary rounded-pill">{{worth}}</span></li>
+                        </li>
                       </ul>
                     </div>
                   </div>

@@ -14,9 +14,7 @@
     <h1 class="h2">{% trans "Customers"%}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
       <div class="btn-group mr-2">
-        <a class="btn btn-primary mr-2" href="{% url 'import_data' %}" 
-          
-          role="button">
+        <a class="btn btn-primary mr-2" href="{% url 'import_data' %}" role="button">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload" viewBox="0 0 16 16">
             <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
             <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
@@ -25,17 +23,18 @@
         <a class="btn btn-success mr-2" 
             hx-get="{% url 'contact_customer_create' %}" 
             hx-push-url="true"
-            hx-target = "#customer-content"
             hx-swap="innerHTML transition:true"
             hx-trigger="click, keyup[shiftKey&&key=='N'] from:body"
-            role="button"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16">
+            role="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16">
               <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
               <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
               </svg></a>
         <a class="btn btn-info mr-2" 
             hx-get="{% url 'contact_customer_merge' %}" 
             hx-push-url="true"
-            role="button"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sign-merge-left" viewBox="0 0 16 16">
+            role="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sign-merge-left" viewBox="0 0 16 16">
               <path d="M7.25 6v1c-.14.301-.338.617-.588.95-.537.716-1.259 1.44-2.016 2.196l.708.708.015-.016c.652-.652 1.33-1.33 1.881-2.015V12h1.5V6h1.216a.25.25 0 0 0 .192-.41L8.192 3.23a.25.25 0 0 0-.384 0L5.842 5.59a.25.25 0 0 0 .192.41H7.25Z"/>
               <path d="M9.05.435c-.58-.58-1.52-.58-2.1 0L.436 6.95c-.58.58-.58 1.519 0 2.098l6.516 6.516c.58.58 1.519.58 2.098 0l6.516-6.516c.58-.58.58-1.519 0-2.098L9.05.435Zm-1.4.7a.495.495 0 0 1 .7 0l6.516 6.515a.495.495 0 0 1 0 .7L8.35 14.866a.495.495 0 0 1-.7 0L1.134 8.35a.495.495 0 0 1 0-.7L7.65 1.134Z"/>
             </svg></a>
@@ -50,41 +49,18 @@
     </div>
   </div>
   
-  <div class="row" id="main-content">
-    <div class="col-sm-2" id="filter">
-      <div class="position-relative h-20" id ="filter">
-        {% if filter %}
-        <div class="card text-center">
-            <div class="card-header">
-                {%trans "Filter"%}
-            </div>
-            <div class="card-body">
-              {{filter.form.media}}
-                <form hx-trigger="keyup,change,listChanged from:body delay:100ms" 
-                        hx-get="."
-                        hx-target = "#table"
-                        hx-vals='{"use_block": "table"}'
-                        hx-swap = "outerHTML"
-                        hx-push-url="true"     
-                        class = "form-inline">
-                    {%for field in filter.form%}
-                      <div class="form-floating mb-3">
-                        {%render_field field|add_class:"form-control"%}
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                      </div>
-                    {%endfor%}
-                </form> 
-            </div>
-        </div>
-        {% endif %}
-      </div>
+  <div class="row">
+    <div class="col-md-3" id="filter">
+      {% include "filter.html"%}
     </div>
-    {%block table%}
-    <div class="col table-responsive" id = "table"> 
+    
+    <div class="col-md table-responsive" id = "table"> 
+      {%block table%}
       {% render_table table %} 
       <p>Results :{{table.paginator.count}} </p>
+      {%endblock%}
     </div>
-    {%endblock%}
+    
   </div>
 </div>
 

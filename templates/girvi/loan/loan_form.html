@@ -2,7 +2,7 @@
 {%load static%}
 {% load crispy_forms_tags%} 
 {% block content %}
-<div  class="container col-md-8 mt-3 mb-3" id="loan-content" >
+<div class="container" id="form">
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     {% if object %}  
     <h1 class="h2">Update Loan</h1>
@@ -11,11 +11,19 @@
     {%endif%}
       <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group mr-2">
-          <a class="btn btn-primary" href="" hx-get="{% url 'girvi:girvi_loan_list' %}"
-            hx-push-url="true" hx-target="#content" hx-swap="innerHTML transition:true"
-          role="button"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
-          </svg></a>
+          <a class="btn btn-primary" 
+              href="" 
+              hx-get="{% url 'girvi:girvi_loan_list' %}"
+              hx-target="#content" 
+              hx-swap="innerHTML transition:true"
+              hx-push-url="true" 
+              hx-vals='{"use_block":"content"}'
+              
+              role="button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+              </svg>
+            </a>
           
         </div>
       </div>
@@ -25,7 +33,7 @@
       <div id="form" >
         {{form.media}}
         {{ form|as_crispy_errors }}
-        <form hx-post="." hx-target="#content">
+        <form hx-post="." hx-target="#form">
           {% csrf_token %}       
           <div class="row">
             <div class="col">{{form.loan_type|as_crispy_field}}</div>
@@ -66,9 +74,12 @@
                   hx-swap="innerHTML transition:true" hx-push-url="true">
             {% if object %} Update {%else%} Create {%endif%}
           </button>
-          <button hx-get="{%if not object %}{% url 'girvi:girvi_loan_list' %} {%else%} {% url 'girvi:girvi_loan_detail' object.id %}{%endif%}"
-                  {% if object %}hx-vals='{"use_block":"content"}'{% endif %} 
-                  hx-swap="innerHTML transition:true" hx-push-url="true" class="btn btn-danger">
+          <button hx-get="{%if not object %}{% url 'girvi:girvi_loan_list' %}{%else%}{% url 'girvi:girvi_loan_detail' object.id %}{%endif%}"
+                  hx-vals='{"use_block":"content"}'
+                  hx-target="#content"
+                  hx-swap="innerHTML transition:true"
+                  hx-push-url="true"
+                   class="btn btn-danger">
               Cancel</button>
     
           </form>
