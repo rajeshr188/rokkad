@@ -33,9 +33,13 @@ class LoanQuerySet(models.QuerySet):
         return self.filter(release__isnull=True)
 
     def with_cumsum(self):
-        return self.annotate(
-            cumsum = Window(Sum('loan_amount'), order_by=F('loan_date').asc())
-        ).values('loan_date', 'cumsum').order_by('loan_date')
+        return (
+            self.annotate(
+                cumsum=Window(Sum("loan_amount"), order_by=F("loan_date").asc())
+            )
+            .values("loan_date", "cumsum")
+            .order_by("loan_date")
+        )
 
     def with_total_interest(self):
         today = datetime.date.today()

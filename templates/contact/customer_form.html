@@ -53,13 +53,11 @@
           </div>
 
         </div>
-        <div class="card card-info">
-          <div class="card-body">
-            {% if not customer%}
+        {% if not customer%}
             <button name="add" type="submit" class="btn btn-primary">Add</button>
-            <button name="view" type="submit" class="btn btn-primary">Add & view</button>
+            <button name="view" type="submit" class="btn btn-success">Add & view</button>
             {%else%}
-            <button name="update" type="submit" class="btn btn-primary">Update</button>
+            <button name="update" type="submit" class="btn btn-success">Update</button>
             {%endif%}
             <button hx-get="/contact/customer/" 
                     hx-target="#content" 
@@ -67,8 +65,6 @@
                     hx-swap="innerHTML transition:true" 
                     hx-vals='{"use_block":"content"}'
               class="btn btn-danger">Cancel</button>
-          </div>
-        </div>
       </form>
     </div>
   </div>

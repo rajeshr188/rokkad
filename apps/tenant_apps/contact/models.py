@@ -64,7 +64,7 @@ class Customer(models.Model):
     pic = models.ImageField(
         upload_to="customer_pics/", null=True, blank=True, verbose_name=_("Picture")
     )
-
+    # needs to go
     Address = models.TextField(
         max_length=100, null=True, blank=True, verbose_name=_("Address")
     )
@@ -89,6 +89,7 @@ class Customer(models.Model):
     relatedto = models.CharField(
         max_length=30, blank=True, null=True, verbose_name=_("Related To")
     )
+    # also needs to go
     area = models.CharField(
         max_length=50, blank=True, null=True, verbose_name=_("Area")
     )
@@ -423,6 +424,7 @@ class Address(models.Model):
     last_updated = models.DateTimeField(auto_now=True, editable=False)
     street = models.TextField(max_length=100, verbose_name=_("Street"))
     city = models.CharField(max_length=30, default="Vellore", verbose_name=_("City"))
+    is_default = models.BooleanField(default=False, verbose_name=_("Default"))
     is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
 
     class Meta:
@@ -436,6 +438,14 @@ class Address(models.Model):
 
     def get_update_url(self):
         return reverse("Customer_Address_update", args=(self.pk,))
+
+    def verify(self):
+        self.is_verified = True
+        self.save()
+
+    def set_default(self):
+        self.is_default = True
+        self.save()
 
 
 class Contact(models.Model):
@@ -462,7 +472,8 @@ class Contact(models.Model):
         verbose_name=_("Contact Type"),
     )
     phone_number = PhoneNumberField(unique=True, verbose_name=_("Phone Number"))
-    # is_default = models.BooleanField(default = False)
+    is_default = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
     last_updated = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
@@ -476,6 +487,14 @@ class Contact(models.Model):
 
     def get_update_url(self):
         return reverse("Customer_Contact_update", args=(self.pk,))
+
+    def verify(self):
+        self.is_verified = True
+        self.save()
+
+    def set_default(self):
+        self.is_default = True
+        self.save()
 
 
 class Proof(models.Model):

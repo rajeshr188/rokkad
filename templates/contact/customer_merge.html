@@ -15,6 +15,12 @@
                     {% csrf_token %}
                     {{form|crispy}}
                     <input class="btn btn-success" type="submit" value="Merge">
+                    <button hx-get="/contact/customer/" 
+                    hx-target="#content" 
+                    hx-push-url="true"
+                    hx-swap="innerHTML transition:true" 
+                    hx-vals='{"use_block":"content"}'
+              class="btn btn-danger">Cancel</button>
                 </form>
                 
             </div>

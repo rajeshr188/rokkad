@@ -11,20 +11,21 @@
             {%trans "Filter"%}
         </div>
         <div class="card-body">
-            <form hx-trigger="keyup,change,listChanged from:body delay:100ms" 
+            <form hx-trigger="input,select,keyup,change,listChanged from:body delay:100ms" 
                     hx-get="."
                     hx-target = "#table"
                     hx-select = "#table"
                     hx-swap = "innerHTML"
                     hx-indicator=".progress"
                     hx-push-url="true"
-                    class = "form">
-                {%for field in filter.form%}
+                    class = "form-inline">
+                <!-- {%for field in filter.form%}
                 <div class="form-floating mb-1">
                     {%render_field field|add_class:"form-control"%}
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 </div>
-                {%endfor%}
+                {%endfor%} -->
+                {% crispy filter.form %}
             </form>
             
         </div>

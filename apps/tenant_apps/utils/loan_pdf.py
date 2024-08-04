@@ -671,18 +671,25 @@ def get_custom_jsk(loan):
         desired_height = 2.5 * cm
 
         # Calculate the position for the image
-        image_x = 2 * cm 
+        image_x = 2 * cm
         image_y = 16 * cm - desired_height
 
         # Draw the image on the canvas
-        customer_image = Image(customer_image_path, width=desired_width, height=desired_height)
+        customer_image = Image(
+            customer_image_path, width=desired_width, height=desired_height
+        )
         customer_image.drawOn(c, image_x, image_y)
 
         # Draw a border around the image
         border_padding = 2  # Padding around the image for the border
         c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
         c.setLineWidth(1)  # Set the border width
-        c.rect(image_x - border_padding, image_y - border_padding, desired_width + 2 * border_padding, desired_height + 2 * border_padding)
+        c.rect(
+            image_x - border_padding,
+            image_y - border_padding,
+            desired_width + 2 * border_padding,
+            desired_height + 2 * border_padding,
+        )
 
     address = f"{loan.customer.address.first()}"
     address_paragraph = Paragraph(address, styles["Normal"])
