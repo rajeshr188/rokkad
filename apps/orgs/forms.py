@@ -57,6 +57,12 @@ class CompanyInvitationForm(forms.ModelForm):
         widget=forms.TextInput(attrs={"type": "email", "size": "30"}),
         initial="",
     )
+    company = forms.ModelChoiceField(
+        label=_("Company"),
+        required=True,
+        queryset=Company.objects.all(),
+        widget=Select2Widget,
+    )
     role = forms.ModelChoiceField(
         label=_("Role"),
         required=True,

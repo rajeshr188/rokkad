@@ -1,4 +1,4 @@
-import datetime
+from datetime import date
 
 from actstream import action
 from actstream.models import Action, actor_stream, any_stream, user_stream
@@ -145,7 +145,7 @@ def company_dashboard(request):
     released = loan.released()
     unreleased = loan.unreleased()
     sunken = unreleased.filter(is_overdue="True")
-    today = datetime.date.today()
+    today = date.today()
     today_loan = LoanItem.objects.filter(loan__loan_date__gte=today).aggregate(
         amount=Sum("loanamount"), interest=Sum("interest")
     )
