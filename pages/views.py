@@ -1,3 +1,5 @@
+import datetime
+
 from actstream import action
 from actstream.models import Action, actor_stream, any_stream, user_stream
 from django.contrib.auth.decorators import login_required
@@ -15,7 +17,7 @@ from apps.tenant_apps.contact.services import (active_customers,
                                                get_customers_by_year)
 from apps.tenant_apps.girvi.models import Loan
 from apps.tenant_apps.girvi.services import *
-import datetime
+
 
 class HomePageView(TemplateView):
     def dispatch(self, request, *args, **kwargs):
@@ -144,8 +146,12 @@ def company_dashboard(request):
     unreleased = loan.unreleased()
     sunken = unreleased.filter(is_overdue="True")
     today = datetime.date.today()
-    today_loan = LoanItem.objects.filter(loan__loan_date__gte=today).aggregate(amount=Sum("loanamount"),interest = Sum("interest"))
-    today_release = Release.objects.filter(release_date__gte=today).aggregate(amount=Sum("loan__loan_amount"),interest = Sum("loan__interest"))
+    today_loan = LoanItem.objects.filter(loan__loan_date__gte=today).aggregate(
+        amount=Sum("loanamount"), interest=Sum("interest")
+    )
+    today_release = Release.objects.filter(release_date__gte=today).aggregate(
+        amount=Sum("loan__loan_amount"), interest=Sum("loan__interest")
+    )
     context["today_loan"] = today_loan
     context["loan_count"] = unreleased.count()
 
@@ -204,7 +210,7 @@ def company_dashboard(request):
         .order_by("-num_loans", "sum_loans", "tint")
     )
     context["interest_received"] = get_interest_paid()
-    context['loan_cumsum'] = list(get_loan_cumulative_amount())
+    context["loan_cumsum"] = list(get_loan_cumulative_amount())
     return render(request, "pages/company_dashboard.html", context)
 
 

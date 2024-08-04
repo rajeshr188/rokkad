@@ -760,6 +760,7 @@ from django.utils.translation import gettext as _
 from slick_reporting.fields import ComputationField
 from slick_reporting.views import Chart, ListReportView, ReportView
 
+
 class LoanByCustomerReport(ReportView):
     queryset = Loan.objects.unreleased()
     form_class = LoanReportForm
@@ -776,6 +777,7 @@ class LoanByCustomerReport(ReportView):
             title_source=["customer__name"],
         ),
     ]
+
 
 class LoanTimeSeriesReport(ReportView):
     queryset = Loan.unreleased.all()
@@ -845,7 +847,6 @@ class SeriesReport(ReportView):
             Chart.PIE,
             data_source=["sum__loan_amount"],
             title_source=["series__name"],
-
         ),
     ]
 

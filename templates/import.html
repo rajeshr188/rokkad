@@ -2,10 +2,20 @@
 {% load crispy_forms_tags %}
 {% block title %}Import{% endblock %}
 {% block content %}
-<h1>Import Data</h1>
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form|crispy }}
-    <button type="submit" class = "btn btn-success">Import</button>
-</form>
+<div class="container card col-6">
+    <h1>Import Data</h1>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class = "btn btn-success">Import</button>
+            <button hx-get="/contact/customer/" 
+                    hx-target="#content" 
+                    hx-push-url="true"
+                    hx-swap="innerHTML transition:true" 
+                    hx-vals='{"use_block":"content"}'
+              class="btn btn-danger">Cancel</button>
+        </form>
+    </div>
+</div>
 {% endblock %}
