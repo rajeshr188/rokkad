@@ -3,14 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy,reverse
 from django_tenants.utils import (get_public_schema_name, remove_www,
                                   schema_context)
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
 
-from .decorators import company_member_required, role_required
+from .decorators import company_member_required, role_required,roles_required
 from .forms import (CompanyForm, CompanyInvitationForm,
                     company_preference_form_builder)
 from .models import Company, CompanyInvitation, Domain, Membership, Role
@@ -96,7 +96,7 @@ def company_detail(request, company_id):
     return render(request, "company/company_detail.html", {"company": company})
 
 
-@role_required("Owner")
+# @roles_required(["Owner","Admin"])
 def company_update(request, company_id):
     company = Company.objects.get(id=company_id)
     if request.method == "POST":
@@ -111,7 +111,7 @@ def company_update(request, company_id):
     )
 
 
-# @role_required("Owner")
+# @roles_required(["Owner","Admin"])
 def company_delete(request, company_id):
     company = get_object_or_404(Company, id=company_id)
 
@@ -153,7 +153,7 @@ def create_invite(request):
             return redirect("invite-success-url")
     else:
         form = CompanyInvitationForm(inviter=request.user)
-    return render(request, "company/invitation_form.html", {"form": form})
+    return render(request, "company/invitation_form.html", {"form": form,'url':reverse('invite_to_company')})
 
 
 @login_required
@@ -202,26 +202,22 @@ class CompanyPreferenceBuilder(PreferenceFormView):
 
 
 @login_required
-def delete_membership(request, company_id):
+@role_required("Owner")
+def revoke_membership(request, company_id, user_id):
     company = get_object_or_404(Company, id=company_id)
-    membership = get_object_or_404(Membership, user=request.user, company=company)
-
-    # Check if the user has the permission to delete the membership
-    if membership.role.name != "Owner":
-        return redirect("error_page")  # Redirect to an error page
+    membership = get_object_or_404(Membership, user=user_id, company=company)
 
     membership.delete()
     return redirect("orgs_company_list")  # Redirect to the list of companies
 
 
 @login_required
+@role_required("Owner")
 def edit_membership(request, company_id, membership_id):
     company = get_object_or_404(Company, id=company_id)
     membership = get_object_or_404(Membership, id=membership_id, company=company)
 
-    # Check if the user has the permission to edit the membership
-    if membership.role.name != "Owner":
-        return redirect("error_page")  # Redirect to an error page
+    
 
     if request.method == "POST":
         form = MembershipForm(request.POST, instance=membership)
