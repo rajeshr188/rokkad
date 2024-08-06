@@ -872,14 +872,27 @@ class LicenseReport(ReportView):
 class LoanCrosstabReport(ReportView):
     report_title = "Cross tab Report"
     queryset = Loan.unreleased.all()
-    group_by = "customer__name"
+    group_by = "series__name"
     date_field = "loan_date"
     form_class = LoanReportForm
+    time_series_pattern = "annually"
+    time_series_columns = [
+        ComputationField.create(Sum, "loan_amount", verbose_name="Loan Sum")
+    ]
 
     columns = [
-        "customer__name",
-        "__crosstab__",
+        "series__name",
+        "__time_series__",
         ComputationField.create(Sum, "loan_amount", verbose_name="Loan Sum"),
+    ]
+
+    chart_settings = [
+        Chart(
+            "Loan Crosstab Report",
+            Chart.COLUMN,
+            data_source=["sum__loan_amount"],
+            title_source=["series__name"],
+        ),
     ]
 
 

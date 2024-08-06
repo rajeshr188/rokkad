@@ -92,7 +92,9 @@ class Loan(models.Model):
         verbose_name="Series",
     )
     tenure = models.PositiveIntegerField(default=0)
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    customer = models.ForeignKey(
+        Customer, on_delete=models.CASCADE, related_name="loan"
+    )
     journal_entries = GenericRelation(JournalEntry, related_query_name="loan_doc")
     # notifications = models.ManyToManyField(Notification)
     # Managers

@@ -82,11 +82,12 @@ class CompanyOwnership(models.Model):
     def __str__(self):
         return f"{self.user} owns {self.company} since {self.start_date}"
 
-
     # Transfer ownership of a company to a new user
     def transfer_ownership(company, new_owner):
         # End the current ownership
-        current_ownership = CompanyOwnership.objects.filter(company=company, end_date__isnull=True).first()
+        current_ownership = CompanyOwnership.objects.filter(
+            company=company, end_date__isnull=True
+        ).first()
         if current_ownership:
             current_ownership.end_date = timezone.now()
             current_ownership.save()

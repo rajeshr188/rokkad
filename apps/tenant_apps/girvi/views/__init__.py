@@ -1,3 +1,4 @@
+from .forms import *
 from .license import *
 from .loan import *
 from .loanpayment import *

@@ -11,7 +11,7 @@ from invitations.exceptions import (AlreadyAccepted, AlreadyInvited,
 from invitations.forms import CleanEmailMixin
 from invitations.utils import get_invitation_model
 
-from .models import Company, CompanyPreferenceModel, Role
+from .models import Company, CompanyPreferenceModel, Membership, Role
 from .registries import company_preference_registry
 
 Invitation = get_invitation_model()
@@ -196,6 +196,12 @@ class CompanySinglePreferenceForm(SinglePerInstancePreferenceForm):
     class Meta:
         model = CompanyPreferenceModel
         fields = SinglePerInstancePreferenceForm.Meta.fields
+
+
+class MembershipForm(forms.ModelForm):
+    class Meta:
+        model = Membership
+        fields = ("user", "company", "role")
 
 
 def company_preference_form_builder(instance, Preferences=[], **kwargs):
