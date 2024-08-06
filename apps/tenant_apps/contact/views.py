@@ -9,7 +9,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
@@ -145,7 +146,11 @@ def customer_list(request):
     context = {}
     f = CustomerFilter(
         request.GET,
-        queryset=Customer.objects.all().prefetch_related("contactno", "address"),
+        queryset=Customer.objects.all()
+        .prefetch_related("contactno", "address")
+        .annotate(
+            loans=Count("loan"), loanamount=Coalesce(Sum("loan__loan_amount"), 0)
+        ),
     )
     table = CustomerTable(f.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
@@ -473,3 +478,22 @@ def address_delete(request, pk):
     address.delete()
     messages.error(request, messages.ERROR, f"Address {address} deleted.")
     return HttpResponse("")
+
+
+from slick_reporting.fields import ComputationField
+from slick_reporting.views import ListReportView, ReportView
+
+
+class CustomerReport(ListReportView):
+    report_model = Customer
+    report_title = "Newly created Customers Report"
+    date_field = "created"
+    filters = ["relatedas", "relatedto", "name"]
+    columns = [
+        "name",
+        "relatedas",
+        "relatedto",
+        "created",
+    ]
+    limit_records = 10
+    default_order_by = "-created"

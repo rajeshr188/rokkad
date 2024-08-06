@@ -25,6 +25,11 @@ urlpatterns = [
         name="orgs_company_delete",
     ),
     path("membership/list/", views.membership_list, name="orgs_membership_list"),
+    path(
+        "membership/update/<int:company_id>/<int:membership_id>/",
+        views.membership_update,
+        name="orgs_membership_update",
+    ),
     path("profile/", views.profile, name="profile"),
     path(
         "company/invitations/",

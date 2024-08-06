@@ -30,7 +30,13 @@
     </div>
     <div class="row">
       <div class="col-sm-6 col-md-3">
-        <div class="card card-stats card-round">
+        <div class="card card-stats card-round" hx-get="{% url 'contact_customer_list' %}" 
+        hx-target="#content" 
+        hx-swap="innerHTML" 
+        hx-vals='{"use_block": "content"}'
+        hx-push-url ="true"
+        hx-trigger="click"
+        style="cursor:pointer;">
           <div class="card-body">
             <div class="row align-items-center">
               <div class="col-icon">
@@ -43,13 +49,7 @@
               <div class="col col-stats ms-3 ms-sm-0">
                 <div class="numbers">
                   <p class="card-category">
-                    <a href="" hx-get="{% url 'contact_customer_list' %}" 
-                            hx-target="#content" 
-                            hx-swap="innerHTML" 
-                            hx-vals='{"use_block": "content"}'
-                            hx-push-url ="true">
-                      <span class="sub-item">{% trans 'Customer'%}</span>
-                </a>
+                    <span class="sub-item">{% trans 'Customer'%}</span>
                   </p>
                   <h4 class="card-title">{{active_customers}}</h4>
                 </div>
@@ -59,7 +59,14 @@
         </div>
       </div>
       <div class="col-sm-6 col-md-3">
-        <div class="card card-stats card-round">
+        <div class="card card-stats card-round" href="" 
+        hx-get="{% url 'girvi:girvi_loan_list' %}"
+        hx-target="#content" 
+        hx-swap="innerHTML" 
+        hx-trigger="click"
+        style="cursor: pointer;"
+        hx-vals='{"use_block": "content"}'
+        hx-push-url ="true">
           <div class="card-body">
             <div class="row align-items-center">
               <div class="col-icon">
@@ -72,14 +79,7 @@
               <div class="col col-stats ms-3 ms-sm-0">
                 <div class="numbers">
                   <p class="card-category">
-                    <a href="" 
-                          hx-get="{% url 'girvi:girvi_loan_list' %}"
-                          hx-target="#content" 
-                          hx-swap="innerHTML" 
-                          hx-vals='{"use_block": "content"}'
-                          hx-push-url ="true" >
-                        <span class="sub-item">{% trans "Loans" %}</span>
-                      </a>
+                    <span class="sub-item">{% trans "Loans" %}</span>
                   </p>
                   <h4 class="card-title">{{loan_count}}</h4>
                 </div>

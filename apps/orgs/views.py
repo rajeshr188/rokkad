@@ -3,15 +3,15 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy,reverse
+from django.urls import reverse, reverse_lazy
 from django_tenants.utils import (get_public_schema_name, remove_www,
                                   schema_context)
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
 
-from .decorators import company_member_required, role_required,roles_required
-from .forms import (CompanyForm, CompanyInvitationForm,
+from .decorators import company_member_required, role_required, roles_required
+from .forms import (CompanyForm, CompanyInvitationForm, MembershipForm,
                     company_preference_form_builder)
 from .models import Company, CompanyInvitation, Domain, Membership, Role
 
@@ -81,8 +81,9 @@ def company_create(request):
 
 @login_required
 def company_list(request):
-    companies = request.user.owned_companies.annotate(num_members=Count("memberships"))
-
+    companies = request.user.owned_companies.exclude(name="public").annotate(
+        num_members=Count("memberships")
+    )
     form = CompanyForm()
     return render(
         request, "company/company_list.html", {"companies": companies, "form": form}
@@ -96,7 +97,7 @@ def company_detail(request, company_id):
     return render(request, "company/company_detail.html", {"company": company})
 
 
-# @roles_required(["Owner","Admin"])
+@roles_required(["Owner", "Admin"])
 def company_update(request, company_id):
     company = Company.objects.get(id=company_id)
     if request.method == "POST":
@@ -111,7 +112,7 @@ def company_update(request, company_id):
     )
 
 
-# @roles_required(["Owner","Admin"])
+@roles_required(["Owner", "Admin"])
 def company_delete(request, company_id):
     company = get_object_or_404(Company, id=company_id)
 
@@ -135,6 +136,7 @@ def company_delete(request, company_id):
 
 
 @login_required
+@company_member_required
 def companyinvitations_list(request):
     invitations = CompanyInvitation.objects.filter(inviter=request.user.id)
     return render(
@@ -153,7 +155,11 @@ def create_invite(request):
             return redirect("invite-success-url")
     else:
         form = CompanyInvitationForm(inviter=request.user)
-    return render(request, "company/invitation_form.html", {"form": form,'url':reverse('invite_to_company')})
+    return render(
+        request,
+        "company/invitation_form.html",
+        {"form": form, "url": reverse("invite_to_company")},
+    )
 
 
 @login_required
@@ -212,12 +218,10 @@ def revoke_membership(request, company_id, user_id):
 
 
 @login_required
-@role_required("Owner")
-def edit_membership(request, company_id, membership_id):
+@roles_required(["Owner", "Admin"])
+def membership_update(request, company_id, membership_id):
     company = get_object_or_404(Company, id=company_id)
     membership = get_object_or_404(Membership, id=membership_id, company=company)
-
-    
 
     if request.method == "POST":
         form = MembershipForm(request.POST, instance=membership)
@@ -233,9 +237,6 @@ def edit_membership(request, company_id, membership_id):
 def membership_list(request):
     memberships = request.user.memberships.all()
     return render(request, "company/membership_list.html", {"memberships": memberships})
-
-
-# view to delete a given invitation
 
 
 @login_required

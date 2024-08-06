@@ -44,7 +44,16 @@ def roles_required(allowed_roles):
         @login_required
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
-            company = request.user.workspace
+            workspace = request.user.workspace
+            print(
+                f"User: {user} workspace:{workspace} roles_required: {allowed_roles} {get_public_schema_name()}"
+            )
+            if workspace.name != get_public_schema_name():
+                print(f"in if company_id: {kwargs.get('company_id')}")
+                company = Company.objects.get(name=workspace)
+            else:
+                print(f"company_id: {kwargs.get('company_id')}")
+                company = Company.objects.get(id=kwargs.get("company_id"))
 
             print(f"User: {user} Company:{company} roles_required: {allowed_roles}")
             try:

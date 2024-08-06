@@ -31,6 +31,8 @@ class CustomerTable(tables.Table):
         verbose_name="Phone Number", orderable=False, empty_values=()
     )
     actions = tables.Column(orderable=False, empty_values=())
+    loans = tables.Column(verbose_name="Loans")
+    loanamount = tables.Column(verbose_name="Loan Amount")
 
     # add a method to get name relatedas related to address phonenumber in one column
     def render_name(self, record):
@@ -156,5 +158,4 @@ class CustomerTable(tables.Table):
             "class": "table table-sm table-bordered text-center table-hover table-striped-columns",
         }
         empty_text = "There are no customers matching the search criteria..."
-        # template_name='django_tables2/bootstrap5.html'
         template_name = "table_htmx.html"

@@ -135,6 +135,9 @@ urlpatterns += (
         name="loan_by_customer",
     ),
     path(
+        "girvi/loancrosstab/", views.LoanCrosstabReport.as_view(), name="loan_crosstab"
+    ),
+    path(
         "girvi/series-report/",
         views.SeriesReport.as_view(),
         name="series_report",
@@ -270,4 +273,8 @@ urlpatterns += (
         views.get_release_details,
         name="bulk_release_details",
     ),
+)
+# urls for forms
+urlpatterns += (
+    path("girvi/release/<int:pk>/form_h/", views.form_h, name="release_form_h"),
 )
