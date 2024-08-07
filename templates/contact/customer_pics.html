@@ -1,0 +1,32 @@
+{% extends 'tenant.html'%}
+{% load static%}
+{% block content%}
+    <h1>Pictures for {{ customer.name }}</h1>
+        <div class="row">
+        {% for pic in pics %}
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <img src="{{ pic.image.url }}" class="card-img-top" alt="Customer Pic" width="100">
+                    <div class="card-body">
+                        {% if pic.is_default %}
+                            <h5 class="card-title">Default Picture</h5>
+                        {% endif %}
+                        <div class="d-flex justify-content-between">
+                            <form method="post" action="">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                            {% if not pic.is_default %}
+                                <form method="post" action="">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary">Set as Default</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    <a href="{% url 'contact_customer_pic_add' customer.id %}" class="btn btn-success">Add Picture</a>
+{%endblock%}

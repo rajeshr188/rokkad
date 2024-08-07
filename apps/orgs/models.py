@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.sites.shortcuts import get_current_site
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -15,7 +15,7 @@ from invitations import signals
 from invitations.adapters import get_invitations_adapter
 from invitations.app_settings import app_settings
 from invitations.base_invitation import AbstractBaseInvitation
-from django.db import IntegrityError, transaction
+
 User = get_user_model()
 
 
@@ -171,7 +171,7 @@ class CompanyInvitation(AbstractBaseInvitation):
     created = models.DateTimeField(verbose_name=_("created"), default=timezone.now)
 
     class Meta:
-        unique_together = ('email', 'company')
+        unique_together = ("email", "company")
 
     @classmethod
     def create(cls, email, company, role, inviter=None, **kwargs):
@@ -179,7 +179,12 @@ class CompanyInvitation(AbstractBaseInvitation):
         try:
             with transaction.atomic():
                 instance = cls._default_manager.create(
-                    company=company, role=role, email=email, key=key, inviter=inviter, **kwargs
+                    company=company,
+                    role=role,
+                    email=email,
+                    key=key,
+                    inviter=inviter,
+                    **kwargs,
                 )
         except IntegrityError:
             return ValueError("This email address is already invited for this company.")

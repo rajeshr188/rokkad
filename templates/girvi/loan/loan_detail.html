@@ -122,9 +122,9 @@
                     </tr>
                     <tr>
                       <td>
-                        {% if loan.pic %}
+                        {% if loan.customer.get_default_pic %}
                         <div class="avatar avatar-lg">
-                          <img src="{{loan.pic.url}}" alt="..." class="avatar-img rounded-circle">
+                          <img src="{{loan.customer.get_default_pic.url}}" alt="..." class="avatar-img rounded-circle">
                         </div>
                         
                         {% else %}

@@ -106,23 +106,11 @@ class CustomerAdmin(ImportExportActionModelAdmin):
         "id",
         "created",
         "updated",
-        "Address",
-        "area",
         "customer_type",
         "relatedas",
         "relatedto",
     ]
-    # readonly_fields = [
-    #     "name",
-    #     "id",
-    #     "created",
-    #     "updated",
-    #     "Address",
-    #     "area",
-    #     "customer_type",
-    #     "relatedas",
-    #     "relatedto",
-    # ]
+    readonly_fields = ["created", "updated"]
 
 
 class AddressAdminForm(forms.ModelForm):

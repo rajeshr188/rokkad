@@ -7,9 +7,10 @@ from django.conf import settings
 from django.core.exceptions import NON_FIELD_ERRORS
 from django_select2 import forms as s2forms
 from import_export.formats import base_formats
+from slick_reporting.forms import BaseReportForm
 
-from .models import (Address, Contact, Customer, CustomerRelationship, Proof,
-                     RelationType)
+from .models import (Address, Contact, Customer, CustomerPic,
+                     CustomerRelationship, Proof, RelationType)
 
 
 class ExportForm(forms.Form):
@@ -51,9 +52,6 @@ class CustomerWidget(s2forms.ModelSelect2Widget):
         "relatedto__icontains",
         "contactno__phone_number__icontains",
     ]
-
-
-from slick_reporting.forms import BaseReportForm
 
 
 class CustomerReportForm(BaseReportForm, forms.ModelForm):
@@ -121,7 +119,7 @@ class CustomerForm(forms.ModelForm):
         fields = [
             "customer_type",
             "name",
-            "pic",
+            # "pic",
             "relatedas",
             "relatedto",
             # "pricing_tier",
@@ -136,6 +134,12 @@ class CustomerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # default_pricing_tier = PricingTier.objects.get(name="Default")
         # self.fields["pricing_tier"].initial = default_pricing_tier
+
+
+class CustomerPicForm(forms.ModelForm):
+    class Meta:
+        model = CustomerPic
+        fields = ["is_default"]
 
 
 class AddressForm(forms.ModelForm):

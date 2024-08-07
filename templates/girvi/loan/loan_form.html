@@ -52,27 +52,10 @@
                 </svg>
               </a>          
             </div>
-          </div> 
-          
-          <div class="row g-4 mb-3">
-            <input type="hidden" id="image-data" name="image_data">
-            <div class="col-md-4">
-              <div class="camera">
-                <video id="video">Video stream not available.</video>
-                <button id="startbutton">Take photo</button>
-              </div>
-              <canvas id="canvas"> </canvas> 
-            </div>
-            <div class="col-md-1"></div>
-            <div class="col-md-4">
-              <div class="output">
-                <img id="photo" alt="The screen capture will appear in this box." />
-              </div>
-            </div> 
-          </div>
+          </div>  
           <button name="add" type="submit" class="btn btn-success"       
                   hx-swap="innerHTML transition:true" hx-push-url="true">
-            {% if object %} Update {%else%} Create {%endif%}
+                  {% if object %} Update {%else%} Create {%endif%}
           </button>
           <button hx-get="{%if not object %}{% url 'girvi:girvi_loan_list' %}{%else%}{% url 'girvi:girvi_loan_detail' object.id %}{%endif%}"
                   hx-vals='{"use_block":"content"}'
@@ -80,7 +63,7 @@
                   hx-swap="innerHTML transition:true"
                   hx-push-url="true"
                    class="btn btn-danger">
-              Cancel</button>
+                  Cancel</button>
     
           </form>
       </div>

@@ -192,15 +192,6 @@ def create_loan(request, pk=None):
         if form.is_valid():
             l = form.save(commit=False)
             l.created_by = request.user
-
-            image_data = request.POST.get("image_data")
-            if image_data:
-                image_file = ContentFile(
-                    base64.b64decode(image_data.split(",")[1]),
-                    name=f"{l.loan_id}_{l.customer.name}_{l.id}.jpg",
-                )
-                l.pic = image_file
-
             l.save()
             messages.success(request, f"Created Loan : {l.loan_id}")
 
@@ -220,12 +211,6 @@ def create_loan(request, pk=None):
         )
         return response
 
-    # try:
-    #     series = Loan.objects.latest().series
-    #     lid = series.loan_set.last().lid + 1
-    # except Loan.DoesNotExist:
-    #     series = Series.objects.first()
-    #     lid = 1
     try:
         series = Loan.objects.latest().series
         last_loan = series.loan_set.last()
@@ -273,14 +258,6 @@ def loan_update(request, id=None):
     if form.is_valid():
         l = form.save(commit=False)
         l.created_by = request.user
-        image_data = request.POST.get("image_data")
-        if image_data:
-            image_file = ContentFile(
-                base64.b64decode(image_data.split(",")[1]),
-                name=f"{l.loan_id}_{l.customer.name}_{l.id}.jpg",
-            )
-            l.pic = image_file
-
         l.save()
         messages.success(request, messages.SUCCESS, f"updated Loan {l.loan_id}")
 

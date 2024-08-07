@@ -49,9 +49,9 @@ class Loan(models.Model):
     lid = models.IntegerField(blank=True, null=True)
     loan_id = models.CharField(max_length=255, unique=True, db_index=True)
     # has_collateral = models.BooleanField(default=False)
-    pic = models.ImageField(
-        upload_to="loan_pics/", null=True, blank=True, verbose_name=_("Image")
-    )
+    # pic = models.ImageField(
+    #     upload_to="loan_pics/", null=True, blank=True, verbose_name=_("Image")
+    # )
 
     class LoanType(models.TextChoices):
         TAKEN = "Taken", "Taken"
@@ -93,7 +93,8 @@ class Loan(models.Model):
     )
     tenure = models.PositiveIntegerField(default=0)
     customer = models.ForeignKey(
-        Customer, on_delete=models.CASCADE, related_name="loan"
+        Customer,
+        on_delete=models.CASCADE,
     )
     journal_entries = GenericRelation(JournalEntry, related_query_name="loan_doc")
     # notifications = models.ManyToManyField(Notification)

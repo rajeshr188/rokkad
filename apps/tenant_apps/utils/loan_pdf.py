@@ -223,7 +223,7 @@ def create_loan_header_table(loan, styles, spacer):
 
     shop_license = loan.series.license
     customer = loan.customer
-    # customer_pic = Image(customer.pic.url,50,50)
+    customer_pic = Image(customer.get_default_pic().path, 50, 50)
     header_data = [
         [
             Paragraph("Sec Rules 8", styles["Normal"]),
@@ -258,7 +258,7 @@ def create_loan_header_table(loan, styles, spacer):
         ],
         [Paragraph("Customer", styles["Heading3"])],
         [
-            logo,
+            customer_pic,
             [
                 Paragraph(
                     f"{customer.name} {customer.relatedas} {customer.relatedto}".title(),
@@ -659,7 +659,9 @@ def get_custom_jsk(loan):
     customer_paragraph.drawOn(c, 5 * cm, 16 * cm - height)
 
     # Load the customer image from the ImageField
-    customer_image_path = loan.pic.path  # Use .path to get the file system path
+    customer_image_path = (
+        loan.customer.get_default_pic().path
+    )  # Use .path to get the file system path
 
     # Debug: Check if the image path is correct
     if not os.path.exists(customer_image_path):

@@ -19,7 +19,11 @@ Invitation = get_invitation_model()
 
 class CustomCleanEmailMixin:
     def validate_invitation(self, email):
-        if Invitation.objects.all_valid().filter(email__iexact=email, accepted=False).exists():
+        if (
+            Invitation.objects.all_valid()
+            .filter(email__iexact=email, accepted=False)
+            .exists()
+        ):
             raise AlreadyInvited
         elif Invitation.objects.filter(email__iexact=email, accepted=True).exists():
             raise AlreadyAccepted
@@ -83,9 +87,11 @@ class CompanyInvitationForm(forms.ModelForm):
             self.fields["inviter"].widget = forms.HiddenInput()
 
     def validate_invitation(self, email, company):
-        if Invitation.objects.all_valid().filter(
-            email__iexact=email, company=company, accepted=False
-        ).exists():
+        if (
+            Invitation.objects.all_valid()
+            .filter(email__iexact=email, company=company, accepted=False)
+            .exists()
+        ):
             raise AlreadyInvited
         elif Invitation.objects.filter(
             email__iexact=email, company=company, accepted=True

@@ -28,43 +28,20 @@
           <div class="col-md-4 mb-3">
             {{form.customer_type|as_crispy_field}}
           </div>
-
-
         </div>
-        {% if form.instance.pic %}
-        <img src="{{ form.instance.pic.url }}" alt="Customer Image">
-        {% endif %}
-        {{form.pic|as_crispy_field}}
-
-        <div class="row g-3 mb-3">
-          <input type="hidden" id="image-data" name="image_data">
-          <div class="col-md-4">
-            <div class="camera">
-              <video id="video">Video stream not available.</video>
-              <button id="startbutton">Take photo</button>
-            </div>
-            <canvas id="canvas"> </canvas>
-          </div>
-          <div class="col-md-1"></div>
-          <div class="col-md-4">
-            <div class="output">
-              <img id="photo" alt="The screen capture will appear in this box." />
-            </div>
-          </div>
-
-        </div>
+      
         {% if not customer%}
             <button name="add" type="submit" class="btn btn-primary">Add</button>
             <button name="view" type="submit" class="btn btn-success">Add & view</button>
-            {%else%}
+        {%else%}
             <button name="update" type="submit" class="btn btn-success">Update</button>
-            {%endif%}
-            <button hx-get="/contact/customer/" 
-                    hx-target="#content" 
-                    hx-push-url="true"
-                    hx-swap="innerHTML transition:true" 
-                    hx-vals='{"use_block":"content"}'
-              class="btn btn-danger">Cancel</button>
+        {%endif%}
+        <button hx-get="/contact/customer/" 
+                hx-target="#content" 
+                hx-push-url="true"
+                hx-swap="innerHTML transition:true" 
+                hx-vals='{"use_block":"content"}'
+          class="btn btn-danger">Cancel</button>
       </form>
     </div>
   </div>
