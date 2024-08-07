@@ -15,7 +15,7 @@ class RateMiddleware(MiddlewareMixin):
             return
         # Check if the user's workspace is set to a tenant schema
         company = request.user.workspace
-        if not company or company.schema_name == get_public_schema_name():
+        if not company or company == '' or company.schema_name == get_public_schema_name():
             request.grate = None
             request.srate = None
             return

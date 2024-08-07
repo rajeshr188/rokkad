@@ -2,13 +2,14 @@
 {% load crispy_forms_tags%}
 {% block content %}
 
-<div class="container mt-5">
+<div class="container-fluid mt-5">
     {{form.media}}
     <h1>Send Invitation</h1>
     <form >
         {% csrf_token %}
         {{ form|crispy }}
-        <button hx-post="{{url}}" class="btn btn-success" type="submit">Send Invitation</button>
+        <button hx-post="{{url}}" hx-target="#form" hx-swap="innerHTML" 
+                class="btn btn-success" type="submit">Send Invitation</button>
     </form>
 </div>
 {% endblock %}

@@ -2,7 +2,7 @@
 {% load static %}
 {% load l10n %}
 {% block content %}
-<div class="container" hx-trigger="loanChanged from:body" hx-get="{% url 'girvi:girvi_loan_detail' loan.id %}"
+<div class="container-fluid" hx-trigger="loanChanged from:body" hx-get="{% url 'girvi:girvi_loan_detail' loan.id %}"
   hx-target="#content" hx-swap="innerHTML transition:true" hx-trigger="click" hx-vals='{"use_block":"content"}'>
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2">Loan Detail</h1>
@@ -123,7 +123,7 @@
                     <tr>
                       <td>
                         {% if loan.pic %}
-                        <div class="avatar avatar-sm">
+                        <div class="avatar avatar-lg">
                           <img src="{{loan.pic.url}}" alt="..." class="avatar-img rounded-circle">
                         </div>
                         
@@ -131,6 +131,13 @@
                         <img src="/media/customer_pics/profile-pic.jpg" alt="Default Profile Picture" width="200"
                           height="200" class="img-fluid px-3 px-sm-4 mt-3 mb-4" style="width: 15rem;">
                         {% endif %}
+                        <a href=""><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square"
+                          viewBox="0 0 16 16">
+                          <path
+                            d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                          <path fill-rule="evenodd"
+                            d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
+                        </svg></a>
                       </td>
                       <td>
                         {{object.customer}}
@@ -210,12 +217,8 @@
                     <tr>
                       <td>Amount:Value %</td>
                       <td>
-                        <div class="progress progress-sm mr-2">
-                          <div class="progress-bar bg-info" role="progressbar"
-                              style="width: {{lvratio}}%" aria-valuenow="{{loan_progress}}"
-                              aria-valuemin="0" aria-valuemax="100"></div>
-                      </div>
-                      <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{lvratio}}%</div>
+                        <meter value="{{lvratio}}" min="0" max="100" low="30" high="70" optimum="50"></meter>
+                        <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{lvratio}}%</div>
                       </td>
                     </tr>
                     <tr>
