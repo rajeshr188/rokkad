@@ -1,7 +1,7 @@
 {% extends "tenant.html" %}
 {% load static %}
 {% block content %}
-<div id="content" class="container mt-2">
+<div id="content" class="container-fluid mt-2">
 
   <div class="row">
     <div class="col-md-3">
@@ -13,13 +13,14 @@
         <div class="card-body">
           <p class="demo">
             <div class="avatar avatar-xxl">
-              <img src="{{customer.get_pic}}" alt="{{ customer.name }}'s Profile Picture" class="avatar-img rounded-circle">
-            </div>            
+              <img src="{{customer.get_default_pic.url}}" alt="{{ customer.name }}'s Profile Picture" class="avatar-img rounded-circle">
+            </div> 
+            <a href="" class="btn btn-primary btn-sm" hx-get="{% url 'contact_customer_pic_add' customer.id %}" hx-target="#content" hx-swap="innerHTML transition:true">Add Picture</a>
+           
             <div class="customer-info">
               <p class="ml-3">
                 <strong>{{customer.name|title}} {{customer.get_relatedas_display}} {{customer.relatedto|title}}
                 </strong>
-                
               </p>
               <p><strong>Worth:</strong>{{worth}}</p>
               <p><strong>Pricing Tier: </strong>{{customer.pricing_tier}}</p>

@@ -22,8 +22,10 @@ from apps.tenant_apps.girvi.services import *
 class HomePageView(TemplateView):
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-
-            if request.user.workspace is None or request.user.workspace.schema_name == "public":
+            if (
+                request.user.workspace is None
+                or request.user.workspace.schema_name == "public"
+            ):
                 return redirect("dashboard")
             else:
                 return redirect("company_dashboard")

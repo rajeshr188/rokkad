@@ -1,0 +1,35 @@
+{%load static%}
+{% load crispy_forms_tags%}
+{%block content%}
+    <div class="container">
+      <div class="card">
+        <div class="card-body">
+          <h1>Add Picture for {{ customer.name }}</h1>
+          <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              {{ form.as_p }}
+
+              <div class="row g-3 mb-3">
+                <input type="hidden" id="image-data" name="image_data">
+                <div class="col-md-4">
+                  <div class="camera">
+                    <video id="video">Video stream not available.</video>
+                    <button id="startbutton">Take photo</button>
+                  </div>
+                  <canvas id="canvas"> </canvas>
+                </div>
+                <div class="col-md-1"></div>
+                <div class="col-md-4">
+                  <div class="output">
+                    <img id="photo" alt="The screen capture will appear in this box." />
+                  </div>
+                </div>
+
+              </div>
+              <button hx-post="{{url}}" hx-target="#content"class="btn btn-success" type="submit">Upload</button>
+          </form>
+          <a href="{% url 'contact_customer_pics' customer.id %}">Back to Pictures</a>
+        </div>
+      </div>
+    </div>
+{%endblock%}

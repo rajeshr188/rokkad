@@ -1,4 +1,5 @@
 import decimal
+import uuid
 from itertools import chain, islice, tee
 
 from dateutil import relativedelta
@@ -60,14 +61,6 @@ class Customer(models.Model):
         ),
         default="Hindu",
     )
-    # pic needs its own model
-    pic = models.ImageField(
-        upload_to="customer_pics/", null=True, blank=True, verbose_name=_("Picture")
-    )
-    # needs to go
-    Address = models.TextField(
-        max_length=100, null=True, blank=True, verbose_name=_("Address")
-    )
 
     class CustomerType(models.TextChoices):
         Retail = "R", "Retail"
@@ -88,10 +81,6 @@ class Customer(models.Model):
     )
     relatedto = models.CharField(
         max_length=30, blank=True, null=True, verbose_name=_("Related To")
-    )
-    # also needs to go
-    area = models.CharField(
-        max_length=50, blank=True, null=True, verbose_name=_("Area")
     )
     active = models.BooleanField(blank=True, default=True, verbose_name=_("Active"))
     # pricing_tier = models.ForeignKey(
@@ -118,16 +107,13 @@ class Customer(models.Model):
     #     self.updated = timezone.now()
     #     super().save(*args, **kwargs)
 
-    def get_pic(self):
-        try:
-            # Assuming `self.pic` is the field storing the picture's path
-            if self.pic and default_storage.exists(self.pic.name):
-                return self.pic.url
-            else:
-                raise FileNotFoundError
-        except FileNotFoundError:
-            # Return the URL/path to a default picture
-            return settings.STATIC_URL + "images/falconx.png"
+    def get_default_pic(self):
+        default_pic = self.pics.filter(is_default=True).first()
+        if default_pic:
+            return default_pic.image
+        else:
+            # Return None or a default image
+            return None  # settings.STATIC_URL + "images/falconx.png"
 
     def merge(self, dup):
         # to merge one customer into another existing one
@@ -343,6 +329,26 @@ class Customer(models.Model):
     #                 item["metal_bal"] = item["total"]
 
     #     return txn_list
+
+
+def customer_pic_upload_to(instance, filename):
+    ext = filename.split(".")[-1]
+    return f"customer_pics/{uuid.uuid4()}.{ext}"
+
+
+class CustomerPic(models.Model):
+    customer = models.ForeignKey(
+        Customer, related_name="pics", on_delete=models.CASCADE
+    )
+    image = models.ImageField(upload_to=customer_pic_upload_to)
+    is_default = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            CustomerPic.objects.filter(customer=self.customer, is_default=True).update(
+                is_default=False
+            )
+        super().save(*args, **kwargs)
 
 
 class CustomerRelationship(models.Model):

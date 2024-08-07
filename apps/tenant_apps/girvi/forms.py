@@ -180,7 +180,7 @@ class LoanForm(forms.ModelForm):
             "loan_type",
             "series",
             "customer",
-            "pic",
+            # "pic",
             "lid",
             "loan_date",
         ]

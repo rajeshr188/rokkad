@@ -1,4 +1,5 @@
 import base64
+import uuid
 from datetime import datetime
 from importlib import import_module
 
@@ -14,7 +15,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_http_methods  # new
 from django_tables2.config import RequestConfig
 from django_tables2.export.export import TableExport
@@ -27,8 +28,8 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from .filters import CustomerFilter
 from .forms import (AddressForm, ContactForm, CustomerForm, CustomerMergeForm,
-                    CustomerRelationshipForm, CustomerReportForm, ExportForm,
-                    ImportForm)
+                    CustomerPicForm, CustomerRelationshipForm,
+                    CustomerReportForm, ExportForm, ImportForm)
 from .models import Address, Contact, Customer, CustomerRelationship, Proof
 from .tables import CustomerExportTable, CustomerTable
 
@@ -188,14 +189,14 @@ def customer_create(request):
         if form.is_valid():
             f = form.save(commit=False)
             f.created_by = request.user
-            image_data = request.POST.get("image_data")
+            # image_data = request.POST.get("image_data")
 
-            if image_data:
-                image_file = ContentFile(
-                    base64.b64decode(image_data.split(",")[1]),
-                    name=f"{f.name}_{f.relatedas.replace('/','-')}_{f.relatedto}_{f.id}.jpg",
-                )
-                f.pic = image_file
+            # if image_data:
+            #     image_file = ContentFile(
+            #         base64.b64decode(image_data.split(",")[1]),
+            #         name=f"{f.name}_{f.relatedas.replace('/','-')}_{f.relatedto}_{f.id}.jpg",
+            #     )
+            #     f.pic = image_file
             f.save()
             action.send(request.user, action_object=f, verb="created")
 
@@ -268,6 +269,92 @@ def customer_detail(request, pk=None):
 
 
 @login_required
+@for_htmx(use_block="content")
+def customer_edit(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    form = CustomerForm(request.POST or None, instance=customer)
+
+    if form.is_valid():
+        f = form.save(commit=False)
+        f.created_by = request.user
+        # image_data = request.POST.get("image_data")
+
+        # if image_data:
+        #     image_file = ContentFile(
+        #         base64.b64decode(image_data.split(",")[1]),
+        #         name=f"{f.name}_{f.relatedas.replace('/','-')}_{f.relatedto}_{f.id}.jpg",
+        #     )
+        #     f.pic = image_file
+
+        f.save()
+        action.send(request.user, action_object=customer, verb="updated")
+        messages.success(
+            request, messages.SUCCESS, f"Customer {customer.name} Info Updated"
+        )
+
+        response = TemplateResponse(
+            request,
+            "contact/customer_detail.html",
+            {"customer": customer, "object": customer},
+        )
+        response["HX-Push-Url"] = reverse(
+            "contact_customer_detail", kwargs={"pk": customer.id}
+        )
+        return response
+
+    return TemplateResponse(
+        request, "contact/customer_form.html", {"form": form, "customer": customer}
+    )
+
+
+@login_required
+def customer_pics(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    pics = customer.pics.all()
+    return render(
+        request, "contact/customer_pics.html", {"customer": customer, "pics": pics}
+    )
+
+
+@login_required
+def add_customer_pic(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    if request.method == "POST":
+        form = CustomerPicForm(request.POST, request.FILES)
+        if form.is_valid():
+            customer_pic = form.save(commit=False)
+            customer_pic.customer = customer
+            image_data = request.POST.get("image_data")
+
+            if image_data:
+                # Generate a unique identifier
+                unique_id = uuid.uuid4()
+
+                # Create the image file with the UUID as the name
+                image_file = ContentFile(
+                    base64.b64decode(image_data.split(",")[1]),
+                    name=f"{unique_id}.jpg",
+                )
+                customer_pic.image = image_file
+
+            customer_pic.save()
+            return redirect("contact_customer_detail", pk=customer.id)
+    else:
+        form = CustomerPicForm()
+    return render(
+        request,
+        "contact/add_customer_pic.html",
+        {
+            "form": form,
+            "customer": customer,
+            "url": reverse_lazy(
+                "contact_customer_pic_add", kwargs={"customer_id": customer.id}
+            ),
+        },
+    )
+
+
+@login_required
 def create_relationship(request, from_customer_id):
     from_customer = get_object_or_404(Customer, pk=from_customer_id)
 
@@ -296,59 +383,6 @@ def create_relationship(request, from_customer_id):
         "contact/create_relationship.html",
         {"form": form, "customer": from_customer},
     )
-
-
-@login_required
-@for_htmx(use_block="content")
-def customer_edit(request, pk):
-    customer = get_object_or_404(Customer, pk=pk)
-    form = CustomerForm(request.POST or None, instance=customer)
-
-    if form.is_valid():
-        f = form.save(commit=False)
-        f.created_by = request.user
-        image_data = request.POST.get("image_data")
-
-        if image_data:
-            image_file = ContentFile(
-                base64.b64decode(image_data.split(",")[1]),
-                name=f"{f.name}_{f.relatedas.replace('/','-')}_{f.relatedto}_{f.id}.jpg",
-            )
-            f.pic = image_file
-
-        f.save()
-        action.send(request.user, action_object=customer, verb="updated")
-        messages.success(
-            request, messages.SUCCESS, f"Customer {customer.name} Info Updated"
-        )
-
-        response = TemplateResponse(
-            request,
-            "contact/customer_detail.html",
-            {"customer": customer, "object": customer},
-        )
-        response["HX-Push-Url"] = reverse(
-            "contact_customer_detail", kwargs={"pk": customer.id}
-        )
-        return response
-
-    return TemplateResponse(
-        request, "contact/customer_form.html", {"form": form, "customer": customer}
-    )
-
-
-@login_required
-def reallot_receipts(request, pk):
-    customer = Customer.objects.get(pk=pk)
-    customer.reallot_receipts()
-    return redirect(customer.get_absolute_url())
-
-
-@login_required
-def reallot_payments(request, pk):
-    customer = Customer.objects.get(pk=pk)
-    customer.reallot_payments()
-    return redirect(customer.get_absolute_url())
 
 
 @login_required
@@ -383,17 +417,6 @@ def contact_list(request, pk: int = None):
 
 
 @login_required
-def address_list(request, pk: int = None):
-    customer = get_object_or_404(Customer, id=pk)
-    addresses = customer.address.all()
-    return render(
-        request,
-        "contact/address_list.html",
-        {"addresses": addresses, "customer_id": customer.id},
-    )
-
-
-@login_required
 def contact_detail(request, pk):
     contact = get_object_or_404(Contact, pk=pk)
     return render(request, "contact/contact_detail.html", context={"i": contact})
@@ -424,6 +447,17 @@ def contact_delete(request, pk):
     contact.delete()
     messages.error(request, messages.ERROR, f"Contact {contact} deleted.")
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
+
+
+@login_required
+def address_list(request, pk: int = None):
+    customer = get_object_or_404(Customer, id=pk)
+    addresses = customer.address.all()
+    return render(
+        request,
+        "contact/address_list.html",
+        {"addresses": addresses, "customer_id": customer.id},
+    )
 
 
 @login_required
@@ -478,6 +512,20 @@ def address_delete(request, pk):
     address.delete()
     messages.error(request, messages.ERROR, f"Address {address} deleted.")
     return HttpResponse("")
+
+
+@login_required
+def reallot_receipts(request, pk):
+    customer = Customer.objects.get(pk=pk)
+    customer.reallot_receipts()
+    return redirect(customer.get_absolute_url())
+
+
+@login_required
+def reallot_payments(request, pk):
+    customer = Customer.objects.get(pk=pk)
+    customer.reallot_payments()
+    return redirect(customer.get_absolute_url())
 
 
 from slick_reporting.fields import ComputationField

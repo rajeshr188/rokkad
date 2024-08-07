@@ -25,7 +25,6 @@ class CustomerTable(tables.Table):
     name = tables.Column(verbose_name="Name")
     relatedas = tables.Column(verbose_name="Related As")
     relatedto = tables.Column(verbose_name="Related To")
-    # pic = ImageColumn()
     address = tables.Column(verbose_name="Address", orderable=False, empty_values=())
     phonenumber = tables.Column(
         verbose_name="Phone Number", orderable=False, empty_values=()

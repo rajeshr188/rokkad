@@ -94,4 +94,14 @@ urlpatterns = (
         views.create_relationship,
         name="contact_create_relationship",
     ),
+    path(
+        "customer/<int:customer_id>/pics/",
+        views.customer_pics,
+        name="contact_customer_pics",
+    ),
+    path(
+        "customer/<int:customer_id>/add_pic/",
+        views.add_customer_pic,
+        name="contact_customer_pic_add",
+    ),
 )
