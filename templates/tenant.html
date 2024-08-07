@@ -98,7 +98,7 @@
                     <li><a  href="{% url 'switch_workspace' i.id%}"><span class="sub-item">{{i.name|capfirst}}</span></a></li>
                     {%endif%}
                     {%endfor%}
-                    {%if user.workspace and user.workspace.schema_name != 'public'%}
+                    {%if user.workspace is None or user.workspace and user.workspace.schema_name != 'public'%}
                     <li><a  href="{% url 'clear_workspace'%}"><span class="sub-item">{%trans "Rokkad"%}</span></a></li>
                     {%endif%}
                   </ul>
@@ -405,10 +405,11 @@
                   </form>
                 </ul>
               </li>
+              
               <li class="nav-item dropdown">
                 <h3>{{user.workspace}}</h3>        
               </li>
-              {%if request.user.workspace.schema_name != 'public'%}
+              {%if user.workspace and user.workspace.schema_name != 'public'%}
               <li class="nav-item dropdown">
                   <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                     {%trans "Rates"%}

@@ -19,9 +19,9 @@ Invitation = get_invitation_model()
 
 class CustomCleanEmailMixin:
     def validate_invitation(self, email):
-        if Invitation.objects.all_valid().filter(email__iexact=email, accepted=False):
+        if Invitation.objects.all_valid().filter(email__iexact=email, accepted=False).exists():
             raise AlreadyInvited
-        elif Invitation.objects.filter(email__iexact=email, accepted=True):
+        elif Invitation.objects.filter(email__iexact=email, accepted=True).exists():
             raise AlreadyAccepted
         # elif get_user_model().objects.filter(email__iexact=email):
         #     raise UserRegisteredEmail
@@ -85,11 +85,11 @@ class CompanyInvitationForm(forms.ModelForm):
     def validate_invitation(self, email, company):
         if Invitation.objects.all_valid().filter(
             email__iexact=email, company=company, accepted=False
-        ):
+        ).exists():
             raise AlreadyInvited
         elif Invitation.objects.filter(
             email__iexact=email, company=company, accepted=True
-        ):
+        ).exists():
             raise AlreadyAccepted
         # elif get_user_model().objects.filter(email__iexact=email):
         #     raise UserRegisteredEmail

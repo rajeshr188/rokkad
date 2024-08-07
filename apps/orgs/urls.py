@@ -11,6 +11,12 @@ urlpatterns = [
         views.CustomAcceptInvite.as_view(),
         name="accept-invite",
     ),
+    path(
+        "company/invitations/",
+        views.companyinvitations_list,
+        name="orgs_company_invitations_list",
+    ),
+    path("invitation/<int:invitation_id>/",views.invitation_delete,name="orgs_invite_delete"),
     path("company/create/", views.company_create, name="orgs_company_create"),
     path("company/list/", views.company_list, name="orgs_company_list"),
     path("company/<int:company_id>/", views.company_detail, name="orgs_company_detail"),
@@ -30,12 +36,13 @@ urlpatterns = [
         views.membership_update,
         name="orgs_membership_update",
     ),
-    path("profile/", views.profile, name="profile"),
     path(
-        "company/invitations/",
-        views.companyinvitations_list,
-        name="orgs_company_invitations_list",
+        "membership/revoke/<int:membership_id>/",
+        views.membership_revoke,
+        name="orgs_membership_revoke",
     ),
+    path("profile/", views.profile, name="profile"),
+    
     path(
         "company-preferences/",
         views.CompanyPreferenceBuilder.as_view(),

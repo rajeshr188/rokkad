@@ -138,7 +138,7 @@ def company_delete(request, company_id):
 @login_required
 @company_member_required
 def companyinvitations_list(request):
-    invitations = CompanyInvitation.objects.filter(inviter=request.user.id)
+    invitations = CompanyInvitation.objects.filter(email=request.user.email)
     return render(
         request, "company/company_invitations_list.html", {"invitations": invitations}
     )
@@ -209,8 +209,8 @@ class CompanyPreferenceBuilder(PreferenceFormView):
 
 @login_required
 @role_required("Owner")
-def revoke_membership(request, company_id, user_id):
-    company = get_object_or_404(Company, id=company_id)
+def membership_revoke(request, membership_id):
+    # company = get_object_or_404(Company, id=company_id)
     membership = get_object_or_404(Membership, user=user_id, company=company)
 
     membership.delete()
@@ -245,7 +245,7 @@ def profile(request):
 
 
 @login_required
-def delete_invitation(request, invitation_id):
+def invitation_delete(request, invitation_id):
     invitation = get_object_or_404(CompanyInvitation, id=invitation_id)
 
     # Check if the user has the permission to delete the invitation
@@ -254,6 +254,7 @@ def delete_invitation(request, invitation_id):
 
     invitation.delete()
 
-    return redirect(
-        "orgs_companyinvitations_list"
-    )  # Redirect to the list of invitations
+    # return redirect(
+    #     "orgs_companyinvitations_list"
+    # )  # Redirect to the list of invitations
+    return HttpResponse("Invitation deleted successfully")
