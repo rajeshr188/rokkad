@@ -30,7 +30,7 @@ from .filters import CustomerFilter
 from .forms import (AddressForm, ContactForm, CustomerForm, CustomerMergeForm,
                     CustomerPicForm, CustomerRelationshipForm,
                     CustomerReportForm, ExportForm, ImportForm)
-from .models import Address, Contact, Customer, CustomerRelationship, Proof
+from .models import Address, Contact, Customer,CustomerPic, CustomerRelationship, Proof
 from .tables import CustomerExportTable, CustomerTable
 
 
@@ -189,14 +189,6 @@ def customer_create(request):
         if form.is_valid():
             f = form.save(commit=False)
             f.created_by = request.user
-            # image_data = request.POST.get("image_data")
-
-            # if image_data:
-            #     image_file = ContentFile(
-            #         base64.b64decode(image_data.split(",")[1]),
-            #         name=f"{f.name}_{f.relatedas.replace('/','-')}_{f.relatedto}_{f.id}.jpg",
-            #     )
-            #     f.pic = image_file
             f.save()
             action.send(request.user, action_object=f, verb="created")
 
@@ -277,15 +269,6 @@ def customer_edit(request, pk):
     if form.is_valid():
         f = form.save(commit=False)
         f.created_by = request.user
-        # image_data = request.POST.get("image_data")
-
-        # if image_data:
-        #     image_file = ContentFile(
-        #         base64.b64decode(image_data.split(",")[1]),
-        #         name=f"{f.name}_{f.relatedas.replace('/','-')}_{f.relatedto}_{f.id}.jpg",
-        #     )
-        #     f.pic = image_file
-
         f.save()
         action.send(request.user, action_object=customer, verb="updated")
         messages.success(
@@ -308,10 +291,11 @@ def customer_edit(request, pk):
 
 
 @login_required
+@for_htmx(use_block="content")
 def customer_pics(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     pics = customer.pics.all()
-    return render(
+    return TemplateResponse(
         request, "contact/customer_pics.html", {"customer": customer, "pics": pics}
     )
 
@@ -352,6 +336,26 @@ def add_customer_pic(request, customer_id):
             ),
         },
     )
+
+@login_required
+@require_http_methods(["DELETE"])
+def customer_pic_delete(request,pk):
+    instance = get_object_or_404(CustomerPic,pk=pk)
+    instance.delete()
+    messages.error(request, messages.ERROR, f"Customer Pic {instance} deleted.")
+    return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
+
+@login_required
+@require_http_methods(["POST"])
+def customer_pic_set_default(request,pk):
+    instance = get_object_or_404(CustomerPic,pk=pk)
+    customer = instance.customer
+    # Update all related CustomerPic instances to set is_default to False
+    CustomerPic.objects.filter(customer=customer).update(is_default=False)
+    # Set the selected CustomerPic instance to be the default
+    instance.is_default = True
+    instance.save()
+    return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
 
 @login_required
