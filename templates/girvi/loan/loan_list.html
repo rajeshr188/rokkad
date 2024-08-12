@@ -108,7 +108,7 @@
 }
 
 </style>
-  <div id="loan-content" class="container" >
+  <div id="loan-content" class="container-fluid" >
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
       <h1 class="h2">{%trans "Loans" %}</h1>
       <div class="btn-toolbar mb-md-0">
@@ -167,18 +167,24 @@
         {% include "filter.html"%}
       </div>
       
-      <div class="col-md table-responsive" id="table" >  
+      <div class="col-md-9 " id="table" >  
         {%block table%}
         <div class="row">
-          <div class="col-md">
+          <div class="col">
             <div class="form-check"> 
               <input class="form-check-input" type="checkbox" value="selected" id="selectall" name="selectall" onclick="toggle(this)">
               <label class="form-check-label" for="flexCheckDefault">
                 Select All
               </label>
             </div>
+            
           </div>
-          <div class="col-md">
+          <div class="col">
+            <p >
+              Selected: <span id="text"></span> /{{table.paginator.count}}
+            </p>
+          </div>
+          <div class="col">
             <div hx-include="#checked-items" hx-target="#loan-content">
               <div class="btn-group" role="group">
                 <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
@@ -212,14 +218,25 @@
               </div>
             </div>
           </div>
-        </div>  
+        </div> 
+        <p class="d-inline-flex gap-1">
+          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+            stats
+          </button>
+        </p>
+        <div class="collapse" id="collapseExample">
+          <div class="card card-body">
+            <p>Total Loan Amount: {{total_loan_amount.total}} <br>
+              Total Interest :{{total_interest.total}} <br>
+              Results :{{table.paginator.count}}    </p>        
+          </div>
+        </div> 
         
         <p>
-          Total Loan Amount: {{total_loan_amount.total}} <br>
-          Total Interest :{{total_interest.total}} <br>
-          Results :{{table.paginator.count}}   Selected: <span id="text"></span> /{{table.paginator.count}} 
-        </p> 
-        {% render_table table %} 
+          </p> 
+        <div class="table-responsive">
+          {% render_table table %} 
+        </div>
         {%endblock%} 
       </div>
       

@@ -83,14 +83,6 @@ class LoanTable(tables.Table):
         return record.loan_date.date()
 
     # is_overdue = tables.Column(verbose_name="Overdue?")
-    # total_loan_amount = tables.Column(
-    #     verbose_name="Amount",
-    #     footer = lambda table: sum(x.loan_amount for x in table.data)
-    # )
-    # total_interest = tables.Column(
-    #     verbose_name="Interest",
-    #     # footer=lambda table: sum(x.total_interest for x in table.data)
-    # )
     total_due = tables.Column(verbose_name="Due")
 
     def render_months_since_created(self, record):
@@ -111,12 +103,11 @@ class LoanTable(tables.Table):
         model = Loan
         fields = (
             "selection",
-            # "id",
-            # "lid",
+            "id",
+            "lid",
             "loan_id",
             "loan_date",
             "customer",
-            # "pic",
             "item_desc",
             "total_weight",
             "loan_amount",

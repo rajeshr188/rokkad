@@ -367,7 +367,6 @@ class Loan(models.Model):
         # return combined_transactions
         return list(ledger_transactions)
 
-
 class LoanItem(models.Model):
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE, related_name="loanitems")
     item = models.ForeignKey(
@@ -556,6 +555,26 @@ class LoanItem(models.Model):
             old_instance, fields=["loanamount"]
         )
 
+class LoanItemPic(models.Model):
+    loan = models.ForeignKey(
+        'Loan', 
+        on_delete=models.CASCADE, 
+        related_name='loanitem_pics'
+    )
+    pic = models.ImageField(upload_to='loan_item_pics/', null=True, blank=True)
+    description = models.TextField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"Picture for {self.loan.loan_id}"
+
+    def get_absolute_url(self):
+        return reverse('loanitempic_detail', args=[str(self.id)])
+
+    def get_update_url(self):
+        return reverse('loanitempic_update', args=[str(self.id)])
+
+    def get_delete_url(self):
+        return reverse('loanitempic_delete', args=[str(self.id)])
 
 class LoanPayment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -724,7 +743,6 @@ class LoanPayment(models.Model):
             old_instance, fields=["payment_amount"]
         )
 
-
 class Statement(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -749,7 +767,6 @@ class Statement(models.Model):
     @property
     def previous(self):
         return Statement.objects.filter(id__lt=self.id).order_by("id").last()
-
 
 class StatementItem(models.Model):
     statement = models.ForeignKey(Statement, on_delete=models.CASCADE)
