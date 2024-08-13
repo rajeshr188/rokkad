@@ -12,457 +12,414 @@
         </div>
         <div class="card-body">
           <p class="demo">
-            <div class="avatar avatar-xxl">
-              {% if customer.get_default_pic %}
-              <img src="{{ customer.get_default_pic.url }}" alt="{{ customer.name }}'s Profile Picture" class="avatar-img rounded-circle">
-          {% else %}
-              <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture" class="avatar-img rounded-circle">
-          {% endif %}            </div> 
-          
-            <div class="customer-info">
-              <p class="ml-3">
-                <strong>{{customer.name|title}} {{customer.get_relatedas_display}} {{customer.relatedto|title}}
-                </strong>
-              </p>
-              <p><strong>Worth:</strong>{{worth}}</p>
-              <p><strong>Pricing Tier: </strong>{{customer.pricing_tier}}</p>
-              <p><strong>Type: </strong>{{customer.customer_type}}</p>
-              <p><strong>Created at: </strong>{{customer.created}}</p>
-              <p><strong>Updated at: </strong> {{customer.updated}}</p>
-              <p><strong>Created By: </strong> {{customer.created_by}}</p>
-              <div class="btn-toolbar" role="toolbar">
-                <div class="btn-group mr-2" role="group">
-                  <a class="btn btn-primary " hx-get="{% url 'contact_customer_update' object.id%}" hx-target="#content"
-                      hx-push-url="true" hx-swap="innerHTML transition:true"><svg xmlns="http://www.w3.org/2000/svg"
-                        width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                        <path
-                          d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                        <path fill-rule="evenodd"
-                          d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
-                      </svg></a>
-                </div>
+          <div class="avatar avatar-xxl">
+            {% if customer.get_default_pic %}
+            <img src="{{ customer.get_default_pic.url }}" alt="{{ customer.name }}'s Profile Picture"
+              class="avatar-img rounded-circle">
+            {% else %}
+            <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture"
+              class="avatar-img rounded-circle">
+            {% endif %}
+          </div>
+
+          <div class="customer-info">
+            <p class="ml-3">
+              <strong>{{customer.name|title}} {{customer.get_relatedas_display}} {{customer.relatedto|title}}
+              </strong>
+            </p>
+            <p><strong>Worth:</strong>{{worth}}</p>
+            <p><strong>Pricing Tier: </strong>{{customer.pricing_tier}}</p>
+            <p><strong>Type: </strong>{{customer.customer_type}}</p>
+            <p><strong>Created at: </strong>{{customer.created}}</p>
+            <p><strong>Updated at: </strong> {{customer.updated}}</p>
+            <p><strong>Created By: </strong> {{customer.created_by}}</p>
+            <div class="btn-toolbar" role="toolbar">
+              <div class="btn-group mr-2" role="group">
+                <a class="btn btn-primary " hx-get="{% url 'contact_customer_update' object.id%}" hx-target="#content"
+                  hx-push-url="true" hx-swap="innerHTML transition:true"><svg xmlns="http://www.w3.org/2000/svg"
+                    width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                    <path
+                      d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                    <path fill-rule="evenodd"
+                      d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
+                  </svg></a>
               </div>
             </div>
+          </div>
           </p>
-           
+
         </div>
       </div>
     </div>
     <div class="col-md-9">
       <div class="card">
         <div class="card-body">
-          <ul
-            class="nav nav-tabs nav-line nav-color-secondary"
-            id="line-tab"
-            role="tablist"
-          >
+          <ul class="nav nav-tabs nav-line nav-color-secondary" id="line-tab" role="tablist">
             <li class="nav-item">
-              <a
-                class="nav-link active"
-                id="line-home-tab"
-                data-bs-toggle="pill"
-                href="#line-home"
-                role="tab"
-                aria-controls="pills-home"
-                aria-selected="true"
-                >About</a
-              >
+              <a class="nav-link active" id="line-home-tab" data-bs-toggle="pill" href="#line-home" role="tab"
+                aria-controls="pills-home" aria-selected="true">About</a>
             </li>
             <li class="nav-item">
-              <a
-                class="nav-link"
-                id="line-profile-tab"
-                data-bs-toggle="pill"
-                href="#line-profile"
-                {% if object.account %}
-                hx-get="{% url 'dea_account_detail' object.account.id %}"
-                hx-target="#line-profile" hx-push-url="true"
-                hx-swap="innerHTML transition:true"
-                {% else %}
-                href=""
-                {% endif %}
-                role="tab"
-                aria-controls="pills-profile"
-                aria-selected="false"
-                >Account</a
-              >
+              <a class="nav-link" id="line-profile-tab" data-bs-toggle="pill" 
+              href="#line-profile" {% if object.account%} 
+                hx-get="{% url 'dea_account_detail' object.account.id %}" hx-target="#line-profile"
+                hx-push-url="true" hx-swap="innerHTML transition:true" {% else %} 
+                href="" 
+                {% endif %} role="tab"
+                aria-controls="pills-profile" aria-selected="false">Account</a>
             </li>
             <li class="nav-item">
-              <a
-                class="nav-link"
-                id="line-contact-tab"
-                data-bs-toggle="pill"
-                href="#line-contact"
-                role="tab"
-                aria-controls="pills-contact"
-                aria-selected="false"
-                >Vouchers</a
-              >
+              <a class="nav-link" id="line-contact-tab" data-bs-toggle="pill" href="#line-contact" role="tab"
+                aria-controls="pills-contact" aria-selected="false">Vouchers</a>
             </li>
             <li class="nav-item">
-              <a 
-                class="nav-link" 
-                id="#line-pics-tab"
-                data-bs-toggle="pill"
-                href="#line-pics"
-                role="tab"
-                aria-controls="pills-pics"
-                aria-selected="false"
-              >Pics</a>
+              <a class="nav-link" id="#line-pics-tab" data-bs-toggle="pill" href="#line-pics" role="tab"
+                aria-controls="pills-pics" aria-selected="false">Pics</a>
             </li>
           </ul>
           <div class="tab-content mt-3 mb-3" id="line-tabContent">
-            <div
-              class="tab-pane fade show active"
-              id="line-home"
-              role="tabpanel"
-              aria-labelledby="line-home-tab"
-            > 
-            <div class="row row-cols-1 row-cols-md-3 g-4">
-              <div class="col-md-4">
-                <div class="card card-secondary bg-secondary-gradient">
-                  <div class="card-body bubble-shadow">
-                    <h1>{{total_amount}}</h1>
-                    <h5 class="op-8">Pending Loans</h5>
-                    <div class="pull-right">
-                      <h3 class="fw-bold op-8">{{total_loans}}</h3>
+            <div class="tab-pane fade show active" id="line-home" role="tabpanel" aria-labelledby="line-home-tab">
+              <div class="row row-cols-1 row-cols-md-3 g-4">
+                <div class="col-md-4">
+                  <div class="card card-secondary bg-secondary-gradient">
+                    <div class="card-body bubble-shadow">
+                      <h1>{{total_amount}}</h1>
+                      <h5 class="op-8">Pending Loans</h5>
+                      <div class="pull-right">
+                        <h3 class="fw-bold op-8">{{total_loans}}</h3>
+                      </div>
+                      <div class="pull-left">
+                        <h3 class="fw-bold op-8">{{worth}}</h3>
+                      </div>
                     </div>
-                    <div class="pull-left">
-                      <h3 class="fw-bold op-8">{{worth}}</h3>
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="card">
+
+                    <div class="card-body">
+                      <h5 class="card-title">Address</h5>
+                      <div id="addresses-list" hx-trigger="load,revealed,listChanged from:body  delay:100ms"
+                        hx-get="{% url 'customer_address_list' customer.id%}" hx-target="#addresses-list"
+                        hx-swap="innerHTML">
+                      </div>
+                      <div class="card-footer text-body-secondary">
+                        <button class="btn btn-success" type="button"
+                          hx-get="{% url 'customer_address_form' customer.id%}" hx-target="#addresses-list"
+                          hx-swap="beforeend">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                            class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                            <path
+                              d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="card">
+
+                    <div class="card-body">
+                      <h5 class="card-title">Phone No</h5>
+                      <div id="contactno-list" hx-trigger="load,revealed,listChanged from:body  delay:100ms"
+                        hx-get="{% url 'customer_contactno_list' customer.id%}" hx-target="#contactno-list"
+                        hx-swap="innerHTML">
+                      </div>
+                      <div class="card-footer text-body-secondary">
+                        <button class="btn btn-success" type="button"
+                          hx-get="{% url 'customer_contact_form' customer.id%}" hx-target="#contactno-list"
+                          hx-swap="beforeend"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                            <path
+                              d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="card">
+
+                    <div class="card-body">
+                      <h5 class="card-title">Relations <span
+                          class="badge text-bg-secondary">{{customer.relationships.count}}</span></h5>
+                      <div id="relations-form"></div>
+                      <ul class="list-group">
+                        {%for i in customer.relationships.all %}
+                        <li class="list-group-item"><a href="{% url 'contact_customer_detail' i.id%}">{{i}}</a></li>
+                        {%endfor%}
+                      </ul>
+                    </div>
+                    <div class="card-footer text-body-secondary">
+                      <a class="btn btn-success" hx-get="{% url 'contact_create_relationship' customer.id%}"
+                        hx-target="#relations-form" hx-swap="innerHTML"><svg xmlns="http://www.w3.org/2000/svg"
+                          width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                          <path
+                            d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z" />
+                        </svg></a>
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="col">
-                <div class="card">
-                  
-                  <div class="card-body">
-                    <h5 class="card-title">Address</h5>
-                    <div id="addresses-list" hx-trigger="load,revealed,listChanged from:body  delay:100ms"
-                      hx-get="{% url 'customer_address_list' customer.id%}" hx-target="#addresses-list" hx-swap="innerHTML">
-                    </div>
-                    <div class="card-footer text-body-secondary">
-                      <button class = "btn btn-success" type="button" 
-                        hx-get="{% url 'customer_address_form' customer.id%}" 
-                        hx-target="#addresses-list"
-                        hx-swap="beforeend">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
-                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"/>
-                      </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col">
-                <div class="card">
-                  
-                  <div class="card-body">
-                    <h5 class="card-title">Phone No</h5>
-                    <div id="contactno-list" hx-trigger="load,revealed,listChanged from:body  delay:100ms"
-                      hx-get="{% url 'customer_contactno_list' customer.id%}" hx-target="#contactno-list" hx-swap="innerHTML">
-                    </div>
-                    <div class="card-footer text-body-secondary">
-                      <button class = "btn btn-success" type="button" 
-                        hx-get="{% url 'customer_contact_form' customer.id%}" 
-                        hx-target="#contactno-list"
-                        hx-swap="beforeend"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
-                          <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"/>
+
+            </div>
+
+            <div class="tab-pane fade" id="line-profile" role="tabpanel" aria-labelledby="line-profile-tab">
+            </div>
+            <div class="tab-pane fade" id="line-contact" role="tabpanel" aria-labelledby="line-contact-tab">
+              <div class="row">
+                <div class="col-sm-6 col-lg-4 mb-4">
+                  <div class="card border-info mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                      <h5 class="card-title mb-0">Loans</h5>
+                      <button class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' customer.id %}"
+                        hx-target="#content" hx-push-url="true" hx-trigger="click" hx-swap="innerHTML transition:true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                          class="bi bi-plus-circle" viewBox="0 0 16 16">
+                          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                          <path
+                            d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
                         </svg>
                       </button>
                     </div>
+                    <div class="card-body">
+                      <div class="col mb-4">
+                        <p class="card-text">
+
+                        </p>
+                        <ul class="list-group list-group-flush">
+                          <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Loans <span class="badge bg-primary rounded-pill">{{customer.get_loans_count}}</span></li>
+                          <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Amount <span class="badge bg-primary rounded-pill">{{customer.get_total_loanamount}}</span>
+                          </li>
+                          <li class="list-group-item d-flex justify-content-between align-items-center">Interestdue<span
+                              class="badge bg-primary rounded-pill">{{customer.get_total_interest_due}}</span></li>
+                          <li class="list-group-item d-flex justify-content-between align-items-center">Average Release
+                            time<span class="badge bg-primary rounded-pill">{{customer.get_release_average}}</span></li>
+                          <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Worth : <span class="badge bg-primary rounded-pill">{{worth}}</span></li>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="col">
-                <div class="card">
-                  
-                  <div class="card-body">
-                    <h5 class="card-title">Relations <span
-                      class="badge text-bg-secondary">{{customer.relationships.count}}</span></h5>
-                    <div id="relations-form"></div>
-                    <ul class="list-group">
-                      {%for i in customer.relationships.all %}
-                      <li class="list-group-item"><a href="{% url 'contact_customer_detail' i.id%}">{{i}}</a></li>
+                <div class="col-sm-6 col-lg-4  mb-4">
+                  <div class="card border-primary mb-3" style="max-height: 300px; overflow-y: auto;">
+                    <div class="card-header">
+                      <h5 class="card-title"> UnReleased Loans <span
+                          class="badge text-bg-secondary">{{customer.loan_set.unreleased.count}}</span></h5>
+                    </div>
+                    <ul class="list-group list-group-flush list-group-numbered">
+                      {%for i in customer.loan_set.unreleased%}
+                      <li class="list-group-item">
+                        <a href="" hx-get="{% url 'girvi:girvi_loan_detail' i.id %}" hx-target="#content"
+                          hx-swap="innerHTML transition:true" hx-trigger="click" hx-vals='{"use_block":"content"}'
+                          hx-push-url="true">{{i.loan_id}} {{i.loan_date.date}} {{i.loan_amount}}
+                        </a>
+                      </li>
+                      {%endfor%}
+                    </ul>
+
+                  </div>
+
+                </div>
+                <div class="col-sm-6 col-lg-4  mb-4">
+                  <div class="card border-success mb-3 " style="max-height: 400px; overflow-y: auto;">
+                    <div class="card-header">
+                      <h5 class="card-title">Released Loans <span
+                          class="badge text-bg-secondary">{{customer.loan_set.released.count}}</span></h5>
+                    </div>
+                    <ul class="list-group list-group-flush list-group-numbered">
+                      {%for i in customer.loan_set.released%}
+                      <li class="list-group-item">
+                        <a href="" hx-get="{% url 'girvi:girvi_loan_detail' i.id %}" hx-target="#content"
+                          hx-swap="innerHTML transition:true" hx-vals='{"use_block":"content"}'
+                          hx-push-url="true">{{i.loan_id}}
+                          {{i.loan_date.date}} {{i.loan_amount}}
+                        </a>
+                      </li>
                       {%endfor%}
                     </ul>
                   </div>
-                  <div class="card-footer text-body-secondary">
-                    <a class="btn btn-success" hx-get="{% url 'contact_create_relationship' customer.id%}"
-                      hx-target="#relations-form" hx-swap="innerHTML"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
-                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"/>
-                      </svg></a>
-                  </div>
                 </div>
-                </div>
-              </div>
-             
-            </div>
-             
-            <div
-              class="tab-pane fade"
-              id="line-profile"
-              role="tabpanel"
-              aria-labelledby="line-profile-tab"
-            >
-            </div>
-            <div
-              class="tab-pane fade"
-              id="line-contact"
-              role="tabpanel"
-              aria-labelledby="line-contact-tab"
-            >
-            <div class="row">
-              <div class="col-sm-6 col-lg-4 mb-4">
-                <div class="card border-info mb-3">
-                  <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Loans</h5>
-                    <button class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' customer.id %}"
-                      hx-target="#content" hx-push-url="true" hx-trigger="click" hx-swap="innerHTML transition:true">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                        class="bi bi-plus-circle" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-                        <path
-                          d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="card-body">
-                    <div class="col mb-4">
+                <div class="col-sm-6 col-lg-4  mb-4">
+                  <div class="card">
+                    <!-- <img src="..." class="card-img-top" alt="..."> -->
+                    <div class="card-body">
+                      <h5 class="card-title">Invoice Balance</h5>
                       <p class="card-text">
-    
-                      </p>
                       <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                          Loans <span class="badge bg-primary rounded-pill">{{customer.get_loans_count}}</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                          Amount <span class="badge bg-primary rounded-pill">{{customer.get_total_loanamount}}</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Interestdue<span
-                            class="badge bg-primary rounded-pill">{{customer.get_total_interest_due}}</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Average Release
-                          time<span class="badge bg-primary rounded-pill">{{customer.get_release_average}}</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                          Worth : <span class="badge bg-primary rounded-pill">{{worth}}</span></li>
-                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">Amount <span
+                            class="badge bg-primary rounded-pill"></span></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">Gold<span
+                            class="badge bg-primary rounded-pill"></span>
                       </ul>
+                      </p>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="col-sm-6 col-lg-4  mb-4">
-                <div class="card border-primary mb-3" style="max-height: 300px; overflow-y: auto;">
-                  <div class="card-header">
-                    <h5 class="card-title"> UnReleased Loans <span
-                        class="badge text-bg-secondary">{{customer.loan_set.unreleased.count}}</span></h5>
+                <div class="col-sm-6 col-lg-4  mb-4">
+                  <div class="card text-center">
+                    <div class="card-header">
+                      UnPaid Cash Balance :
+
+                    </div>
                   </div>
-                  <ul class="list-group list-group-flush list-group-numbered">
-                    {%for i in customer.loan_set.unreleased%}
-                    <li class="list-group-item">
-                      <a href="" hx-get="{% url 'girvi:girvi_loan_detail' i.id %}" hx-target="#content"
-                        hx-swap="innerHTML transition:true" hx-trigger="click" hx-vals='{"use_block":"content"}'
-                        hx-push-url="true">{{i.loan_id}} {{i.loan_date.date}} {{i.loan_amount}}
-                      </a>
-                    </li>
-                    {%endfor%}
-                  </ul>
-    
-                </div>
-    
-              </div>
-              <div class="col-sm-6 col-lg-4  mb-4">
-                <div class="card border-success mb-3 " style="max-height: 400px; overflow-y: auto;">
-                  <div class="card-header">
-                    <h5 class="card-title">Released Loans <span
-                        class="badge text-bg-secondary">{{customer.loan_set.released.count}}</span></h5>
-                  </div>
-                  <ul class="list-group list-group-flush list-group-numbered">
-                    {%for i in customer.loan_set.released%}
-                    <li class="list-group-item">
-                      <a href="" hx-get="{% url 'girvi:girvi_loan_detail' i.id %}" hx-target="#content"
-                        hx-swap="innerHTML transition:true" hx-vals='{"use_block":"content"}'
-                        hx-push-url="true">{{i.loan_id}}
-                        {{i.loan_date.date}} {{i.loan_amount}}
-                      </a>
-                    </li>
-                    {%endfor%}
-                  </ul>
-                </div>
-              </div>
-              <div class="col-sm-6 col-lg-4  mb-4">
-                <div class="card">
-                  <!-- <img src="..." class="card-img-top" alt="..."> -->
-                  <div class="card-body">
-                    <h5 class="card-title">Invoice Balance</h5>
-                    <p class="card-text">
-                    <ul class="list-group list-group-flush">
-                      <li class="list-group-item d-flex justify-content-between align-items-center">Amount <span
-                          class="badge bg-primary rounded-pill"></span></li>
-                      <li class="list-group-item d-flex justify-content-between align-items-center">Gold<span
-                          class="badge bg-primary rounded-pill"></span>
-                    </ul>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="col-sm-6 col-lg-4  mb-4">
-                <div class="card text-center">
-                  <div class="card-header">
-                    UnPaid Cash Balance :
-    
-                  </div>
-                </div>
-                <div class="card text-center">
-                  <div class="card-header">
-                    UnPaid Metal Balance :
-    
-                  </div>
-                </div>
-              </div>
-              <div class="col-sm-6 col-lg-4  mb-4">
-                <div class="card text-center">
-                  <div class="card-body">
-                    <h5 class="card-title">Unpaid Month-Wise</h5>
-                    <div class="table-responsive">
-                      <table class="table table-sm table-striped table-bordered">
-                        <thead>
-                          <tr>
-                            <th>Month</th>
-                            <th>Cash Bal</th>
-                            <th>Metal Bal</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {%for month in monthwise%}
-                          <tr>
-                            <td>{{month.month}}</td>
-                            <td>{{month.tc}}</td>
-                            <td>{{month.tm}}</td>
-                          </tr>
-                          {%endfor%}
-                        </tbody>
-                      </table>
+                  <div class="card text-center">
+                    <div class="card-header">
+                      UnPaid Metal Balance :
+
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="col-sm-6 col-lg-4  mb-4">
-                <div class="card text-center">
-                  <div class="card-body">
-                    <h5 class="card-title">Purchase Month-Wise</h5>
-                    <div class="table-responsive">
-                      <table class="table table-sm table-striped table-bordered">
-                        <thead>
-                          <tr>
-                            <th>Month</th>
-                            <th>Cash Bal</th>
-                            <th>Metal Bal</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {%for month in monthwiserev%}
-                          <tr>
-                            <td>{{month.month}}</td>
-                            <td>{{month.tc}}</td>
-                            <td>{{month.tm}}</td>
-                          </tr>
-                          {%endfor%}
-                        </tbody>
-                      </table>
-                      <ul></ul>
-                      {%for i in customer.journal_entries.all%}
-                      <a href="">{{i}}</a>
-                      {%endfor%}
+                <div class="col-sm-6 col-lg-4  mb-4">
+                  <div class="card text-center">
+                    <div class="card-body">
+                      <h5 class="card-title">Unpaid Month-Wise</h5>
+                      <div class="table-responsive">
+                        <table class="table table-sm table-striped table-bordered">
+                          <thead>
+                            <tr>
+                              <th>Month</th>
+                              <th>Cash Bal</th>
+                              <th>Metal Bal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {%for month in monthwise%}
+                            <tr>
+                              <td>{{month.month}}</td>
+                              <td>{{month.tc}}</td>
+                              <td>{{month.tm}}</td>
+                            </tr>
+                            {%endfor%}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-lg-4  mb-4">
+                  <div class="card text-center">
+                    <div class="card-body">
+                      <h5 class="card-title">Purchase Month-Wise</h5>
+                      <div class="table-responsive">
+                        <table class="table table-sm table-striped table-bordered">
+                          <thead>
+                            <tr>
+                              <th>Month</th>
+                              <th>Cash Bal</th>
+                              <th>Metal Bal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {%for month in monthwiserev%}
+                            <tr>
+                              <td>{{month.month}}</td>
+                              <td>{{month.tc}}</td>
+                              <td>{{month.tm}}</td>
+                            </tr>
+                            {%endfor%}
+                          </tbody>
+                        </table>
+                        <ul></ul>
+                        {%for i in customer.journal_entries.all%}
+                        <a href="">{{i}}</a>
+                        {%endfor%}
+                        </ul>
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-lg-4  mb-4">
+                  <div class="card text-center">
+                    <div class="card-body">
+                      <h5 class="card-title">Payment Expected</h5>
+                      <div class="table-responsive">
+                        <table class="table table-sm table-striped table-bordered">
+                          <thead>
+                            <tr>
+                              <th>days since</th>
+                              <th>Cash Bal</th>
+                              <th>Metal Bal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>last 30 days</td>
+                              <td>{{current.tc}}</td>
+                              <td>{{current.tm}}</td>
+                            </tr>
+                            <tr>
+                              <td>before 30 days</td>
+                              <td>{{past.tc}}</td>
+                              <td>{{past.tm}}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-lg-4  mb-4">
+                  <div class="card text-center">
+                    <div class="card-body">
+                      <h5 class="card-title">Notifications</h5>
+                      <p>
+                      <ul>
+                        {%for i in object.notification_set.all%}
+                        <li><a href="{% url 'notify_notification_detail' i.id%}">{{i}}</a></li>
+                        {%endfor%}
                       </ul>
-    
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="col-sm-6 col-lg-4  mb-4">
-                <div class="card text-center">
-                  <div class="card-body">
-                    <h5 class="card-title">Payment Expected</h5>
-                    <div class="table-responsive">
-                      <table class="table table-sm table-striped table-bordered">
-                        <thead>
-                          <tr>
-                            <th>days since</th>
-                            <th>Cash Bal</th>
-                            <th>Metal Bal</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>last 30 days</td>
-                            <td>{{current.tc}}</td>
-                            <td>{{current.tm}}</td>
-                          </tr>
-                          <tr>
-                            <td>before 30 days</td>
-                            <td>{{past.tc}}</td>
-                            <td>{{past.tm}}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+            </div>
+            <div class="tab-pane fade" id="line-pics" role="tabpanel" aria-labelledby="line-pics-tab">
+              <div class="row" hx-get="{% url 'contact_customer_pics' customer.id%}" hx-trigger="listChanged from:body"
+                hx-target="#line-pics">
+                <h1>Pictures for {{ customer.name }}</h1>
+                {% for pic in customer.pics.all %}
+                <div class="col-md-4">
+                  <div class="card mb-4">
+                    <img src="{{ pic.image.url }}" class="card-img-top" alt="Customer Pic" width="100">
+                    <div class="card-body">
+                      {% if pic.is_default %}
+                      <h5 class="card-title">Default Picture</h5>
+                      {% endif %}
+                      <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-danger" hx-delete="{% url 'contact_pic_delete' pic.id%}"
+                          hx-confirm="Are you sure to delete this pic?">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                            class="bi bi-trash3" viewBox="0 0 16 16">
+                            <path
+                              d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5" />
+                          </svg></button>
+
+                        {% if not pic.is_default %}
+                        <button type="submit" class="btn btn-primary"
+                          hx-post="{% url 'contact_pic_set_default' pic.id%}">Set as Default</button>
+                        {% endif %}
+                      </div>
                     </div>
                   </div>
                 </div>
+                {% endfor %}
               </div>
-              <div class="col-sm-6 col-lg-4  mb-4">
-                <div class="card text-center">
-                  <div class="card-body">
-                    <h5 class="card-title">Notifications</h5>
-                    <p>
-                    <ul>
-                      {%for i in object.notification_set.all%}
-                      <li><a href="{% url 'notify_notification_detail' i.id%}">{{i}}</a></li>
-                      {%endfor%}
-                    </ul>
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <a class="btn btn-success" hx-get="{% url 'contact_customer_pic_add' customer.id %}"
+                hx-target="#line-pics">Add Picture</a>
             </div>
-            </div>
-            <div class="tab-pane fade"
-            id="line-pics"
-            role="tabpanel"
-            aria-labelledby="line-pics-tab">
-              <div class="row" hx-get="{% url 'contact_customer_pics' customer.id%}" 
-                            hx-trigger="listChanged from:body"
-                            hx-target = "#line-pics">
-                            <h1>Pictures for {{ customer.name }}</h1>
-                            {% for pic in customer.pics.all %}
-                                <div class="col-md-4">
-                                    <div class="card mb-4">
-                                        <img src="{{ pic.image.url }}" class="card-img-top" alt="Customer Pic" width="100">
-                                        <div class="card-body">
-                                            {% if pic.is_default %}
-                                                <h5 class="card-title">Default Picture</h5>
-                                            {% endif %}
-                                            <div class="d-flex justify-content-between">
-                                                <button type="submit" class="btn btn-danger" hx-delete="{% url 'contact_pic_delete' pic.id%}" hx-confirm="Are you sure to delete this pic?">
-                                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
-                                                  <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/>
-                                                </svg></button>
-                                                
-                                                {% if not pic.is_default %}
-                                                <button type="submit" class="btn btn-primary" hx-post="{% url 'contact_pic_set_default' pic.id%}" >Set as Default</button>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                            </div>
-                        <a class="btn btn-success" 
-                            hx-get="{% url 'contact_customer_pic_add' customer.id %}"
-                            hx-target="#line-pics">Add Picture</a>
-            </div>
-          </div>
           </div>
         </div>
-    </div>      
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

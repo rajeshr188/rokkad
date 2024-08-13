@@ -30,7 +30,8 @@ from .filters import CustomerFilter
 from .forms import (AddressForm, ContactForm, CustomerForm, CustomerMergeForm,
                     CustomerPicForm, CustomerRelationshipForm,
                     CustomerReportForm, ExportForm, ImportForm)
-from .models import Address, Contact, Customer,CustomerPic, CustomerRelationship, Proof
+from .models import (Address, Contact, Customer, CustomerPic,
+                     CustomerRelationship, Proof)
 from .tables import CustomerExportTable, CustomerTable
 
 
@@ -337,18 +338,20 @@ def add_customer_pic(request, customer_id):
         },
     )
 
+
 @login_required
 @require_http_methods(["DELETE"])
-def customer_pic_delete(request,pk):
-    instance = get_object_or_404(CustomerPic,pk=pk)
+def customer_pic_delete(request, pk):
+    instance = get_object_or_404(CustomerPic, pk=pk)
     instance.delete()
     messages.error(request, messages.ERROR, f"Customer Pic {instance} deleted.")
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
+
 @login_required
 @require_http_methods(["POST"])
-def customer_pic_set_default(request,pk):
-    instance = get_object_or_404(CustomerPic,pk=pk)
+def customer_pic_set_default(request, pk):
+    instance = get_object_or_404(CustomerPic, pk=pk)
     customer = instance.customer
     # Update all related CustomerPic instances to set is_default to False
     CustomerPic.objects.filter(customer=customer).update(is_default=False)

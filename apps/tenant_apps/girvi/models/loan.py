@@ -48,10 +48,6 @@ class Loan(models.Model):
     loan_date = models.DateTimeField(default=timezone.now, verbose_name=_("Loan Date"))
     lid = models.IntegerField(blank=True, null=True)
     loan_id = models.CharField(max_length=255, unique=True, db_index=True)
-    # has_collateral = models.BooleanField(default=False)
-    # pic = models.ImageField(
-    #     upload_to="loan_pics/", null=True, blank=True, verbose_name=_("Image")
-    # )
 
     class LoanType(models.TextChoices):
         TAKEN = "Taken", "Taken"
@@ -367,6 +363,7 @@ class Loan(models.Model):
         # return combined_transactions
         return list(ledger_transactions)
 
+
 class LoanItem(models.Model):
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE, related_name="loanitems")
     item = models.ForeignKey(
@@ -401,8 +398,8 @@ class LoanItem(models.Model):
         return f"{self.itemdesc} - {self.quantity}"
 
     def get_absolute_url(self):
-        return self.loan.get_absolute_url()
-        # return reverse("girvi:girvi_loanitem_detail", args=(self.pk,))
+        # return self.loan.get_absolute_url()
+        return reverse("girvi:girvi_loanitem_detail", args=(self.pk,))
 
     def get_hx_edit_url(self):
         kwargs = {"parent_id": self.loan.id, "id": self.id}
@@ -555,26 +552,26 @@ class LoanItem(models.Model):
             old_instance, fields=["loanamount"]
         )
 
+
 class LoanItemPic(models.Model):
     loan = models.ForeignKey(
-        'Loan', 
-        on_delete=models.CASCADE, 
-        related_name='loanitem_pics'
+        "Loan", on_delete=models.CASCADE, related_name="loanitem_pics"
     )
-    pic = models.ImageField(upload_to='loan_item_pics/', null=True, blank=True)
+    pic = models.ImageField(upload_to="loan_item_pics/", null=True, blank=True)
     description = models.TextField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"Picture for {self.loan.loan_id}"
 
     def get_absolute_url(self):
-        return reverse('loanitempic_detail', args=[str(self.id)])
+        return reverse("loanitempic_detail", args=[str(self.id)])
 
     def get_update_url(self):
-        return reverse('loanitempic_update', args=[str(self.id)])
+        return reverse("loanitempic_update", args=[str(self.id)])
 
     def get_delete_url(self):
-        return reverse('loanitempic_delete', args=[str(self.id)])
+        return reverse("loanitempic_delete", args=[str(self.id)])
+
 
 class LoanPayment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -743,6 +740,7 @@ class LoanPayment(models.Model):
             old_instance, fields=["payment_amount"]
         )
 
+
 class Statement(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -767,6 +765,7 @@ class Statement(models.Model):
     @property
     def previous(self):
         return Statement.objects.filter(id__lt=self.id).order_by("id").last()
+
 
 class StatementItem(models.Model):
     statement = models.ForeignKey(Statement, on_delete=models.CASCADE)

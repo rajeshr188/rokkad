@@ -108,7 +108,7 @@
 }
 
 </style>
-  <div id="loan-content" class="container-fluid" >
+  <div id="loan-content" class="container" >
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
       <h1 class="h2">{%trans "Loans" %}</h1>
       <div class="btn-toolbar mb-md-0">
@@ -231,9 +231,6 @@
               Results :{{table.paginator.count}}    </p>        
           </div>
         </div> 
-        
-        <p>
-          </p> 
         <div class="table-responsive">
           {% render_table table %} 
         </div>

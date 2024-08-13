@@ -80,22 +80,7 @@ def Dashboard(request):
 @roles_required(["Owner", "Admin"])
 def company_dashboard(request):
     context = {}
-
-    # context['stream'] = user_stream(request.user, with_user_activity=True)
-    # context['any_stream'] = any_stream(request.user)
-    # context['actor_stream'] = actor_stream(request.user)
-    # context['action'] = Action.objects.all()
     company = request.user.workspace
-    # try:
-    #     membership = Membership.objects.select_related('role').get(user=request.user, company_id=company.id)
-    #     if membership.role.name in ["Owner", "Admin"]:
-    #         actions = Action.objects.all()[0:10]
-    #     else:
-    #         actions = user_stream(request.user, with_user_activity=True)[0:10]
-    # except Membership.DoesNotExist:
-    #     return HttpResponseForbidden()
-
-    # context["actions"] = actions
 
     # from purchase.models import Invoice as Pinv
     # from sales.models import Invoice as Sinv
@@ -139,7 +124,7 @@ def company_dashboard(request):
     #     context["p_map"] = 0.0
     # context['s_map'] = round(total_sbal_ratecut['bal']/total_sbal_ratecut['net_wt'],3)
 
-    context["new_customers"] = Customer.objects.all()[0:5]
+    context["new_customers"] = Customer.objects.only("id", "name", "customer_type")[:5]
     context["customer_count"] = Customer.objects.values("customer_type").annotate(
         count=Count("id")
     )
@@ -192,9 +177,7 @@ def company_dashboard(request):
     context["sunken"]["pure_weight"] = sunken.total_pure_weight()
 
     try:
-        context["loan_progress"] = round(
-            loan.released().count() / loan.count() * 100, 2
-        )
+        context["loan_progress"] = round(released.count() / loan.count() * 100, 2)
     except ZeroDivisionError:
         context["loan_progress"] = 0.0
     context["loan_data_by_year"] = get_loans_by_year()

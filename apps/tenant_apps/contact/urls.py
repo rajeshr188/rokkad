@@ -104,6 +104,14 @@ urlpatterns = (
         views.add_customer_pic,
         name="contact_customer_pic_add",
     ),
-    path("customer/pic/<int:pk>/delete/",views.customer_pic_delete, name = "contact_pic_delete"),
-    path("customer/pic/<int:pk>/set_default/", views.customer_pic_set_default, name = "contact_pic_set_default"),
+    path(
+        "customer/pic/<int:pk>/delete/",
+        views.customer_pic_delete,
+        name="contact_pic_delete",
+    ),
+    path(
+        "customer/pic/<int:pk>/set_default/",
+        views.customer_pic_set_default,
+        name="contact_pic_set_default",
+    ),
 )
