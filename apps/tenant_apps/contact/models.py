@@ -109,7 +109,7 @@ class Customer(models.Model):
 
     def get_default_pic(self):
         default_pic = self.pics.filter(is_default=True).first()
-        if default_pic:
+        if default_pic and default_pic.image:
             return default_pic.image
         else:
             # Return None or a default image
