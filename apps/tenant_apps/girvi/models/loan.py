@@ -637,7 +637,11 @@ class LoanPayment(models.Model):
         #     == 0
         # ):
         #     return None, None
-
+        try:
+            if self.loan.customer.account is None:
+                self.loan.customer.save()
+        except ObjectDoesNotExist:
+            self.loan.customer.save()
         amount = Money(self.payment_amount, "INR")
         interest = Money(self.interest_payment, "INR")
         principal = Money(self.principal_payment, "INR")

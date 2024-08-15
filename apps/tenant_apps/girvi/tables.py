@@ -138,7 +138,8 @@ class ReleaseTable(tables.Table):
         return format_html(
             """
             <a href ="" hx-get="/girvi/girvi/loan/detail/{}/"
-                        hx-target="#content" hx-swap="innerHTML transition:true"
+                        hx-target="#content" 
+                        hx-swap="innerHTML transition:true"
                         hx-vals='{{"use_block":"content"}}'
                         hx-push-url="true">{}</a>
             """,

@@ -1,0 +1,38 @@
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Released Loans</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-hover">
+                <thead>
+                <tr>
+                    <th>Release ID</th>
+                    <th>Loan ID</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Interest</th>
+                    <th>Release Total</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {%for release in instances%}
+                <tr>
+                    <td>{{release.id}}</td>
+                    <td>{{release.loan.loan_id}}</td>
+                    <td>{{release.loan.customer}}</td>
+                    <td>{{release.loan.loan_amount}}</td>
+                    <td>{{release.loan.interest}}</td>
+                    <td>{{release.loan.due}}</td>
+                    <td>
+                        <a href="{%url 'girvi:girvi_release_update' release.id%}" class="btn btn-warning btn-sm">Update</a>
+                        <a href="{%url 'girvi:girvi_release_delete' release.id%}" class="btn btn-danger btn-sm">Delete</a>
+                    </td>
+                </tr>
+                {%endfor%}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

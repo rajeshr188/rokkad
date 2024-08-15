@@ -273,8 +273,9 @@ urlpatterns += (
         views.get_release_details,
         name="bulk_release_details",
     ),
+    path('submit_release_formset/', views.submit_release_formset, name='submit_release_formset'),
+    path("girvi/release/<int:pk>/form_h/", views.form_h, name="release_form_h"),
+
+
 )
 # urls for forms
-urlpatterns += (
-    path("girvi/release/<int:pk>/form_h/", views.form_h, name="release_form_h"),
-)

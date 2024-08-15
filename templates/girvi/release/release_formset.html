@@ -1,0 +1,40 @@
+
+{% load crispy_forms_tags %}
+<div class="" id = "formset-container">
+  <div class="card">
+      <h3 class="card-header">Summary</h3>
+    <div class="card-body">
+      <p class="card-text">
+        Total Loans: {{ summary.total_loans }} Principal: {{ summary.total_principal }} Interest: {{ summary.total_interest }} Total: {{ summary.total_amount }}
+      </p>
+    </div>
+  </div>
+  <div class="card">
+      <div class="card-body" style="height: 400px; overflow-y: auto;">
+          <form method="post">
+              {% csrf_token %}
+              {{ formset.management_form }}
+              <div class="table-responsive" >
+                <table class="table table-sm">
+                  
+                  <tbody>
+                      {% for form in formset %}
+                          <tr>
+                              <td>{{ form.loan|as_crispy_field }}</td>
+                              <td>{{ form.release_date|as_crispy_field }}</td>
+                              <td>{{ form.released_by|as_crispy_field }}</td>
+                              <td>{{ form.release_amount|as_crispy_field }}</td>
+                          </tr>
+                      {% endfor %}
+                  </tbody>
+              </table>
+              </div>
+              
+              <button class="btn btn-success" type="submit"
+                  hx-post="{% url 'girvi:submit_release_formset' %}"
+                  hx-target="#formset-container"
+                  hx-swap="innerHTML">Submit All Forms</button>
+          </form>
+      </div>
+  </div>
+</div>
