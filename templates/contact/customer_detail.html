@@ -72,10 +72,6 @@
               <a class="nav-link" id="line-contact-tab" data-bs-toggle="pill" href="#line-contact" role="tab"
                 aria-controls="pills-contact" aria-selected="false">Vouchers</a>
             </li>
-            <li class="nav-item">
-              <a class="nav-link" id="#line-pics-tab" data-bs-toggle="pill" href="#line-pics" role="tab"
-                aria-controls="pills-pics" aria-selected="false">Pics</a>
-            </li>
           </ul>
           <div class="tab-content mt-3 mb-3" id="line-tabContent">
             <div class="tab-pane fade show active" id="line-home" role="tabpanel" aria-labelledby="line-home-tab">
@@ -161,6 +157,15 @@
                         </svg></a>
                     </div>
                   </div>
+                </div>
+                
+              </div>
+              <div class="card">
+                <div class="card-body">
+                  <div class="card-title">Pictures</div>
+                  {% include 'contact/customer_pics.html' with pics=customer.pics.all%}
+                  </div>
+                  
                 </div>
               </div>
 
@@ -382,40 +387,7 @@
                 </div>
               </div>
             </div>
-            <div class="tab-pane fade" id="line-pics" role="tabpanel" aria-labelledby="line-pics-tab">
-              <div class="row" hx-get="{% url 'contact_customer_pics' customer.id%}" hx-trigger="listChanged from:body"
-                hx-target="#line-pics">
-                <h1>Pictures for {{ customer.name }}</h1>
-                {% for pic in customer.pics.all %}
-                <div class="col-md-4">
-                  <div class="card mb-4">
-                    <img src="{{ pic.image.url }}" class="card-img-top" alt="Customer Pic" width="100">
-                    <div class="card-body">
-                      {% if pic.is_default %}
-                      <h5 class="card-title">Default Picture</h5>
-                      {% endif %}
-                      <div class="d-flex justify-content-between">
-                        <button type="submit" class="btn btn-danger" hx-delete="{% url 'contact_pic_delete' pic.id%}"
-                          hx-confirm="Are you sure to delete this pic?">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                            class="bi bi-trash3" viewBox="0 0 16 16">
-                            <path
-                              d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5" />
-                          </svg></button>
-
-                        {% if not pic.is_default %}
-                        <button type="submit" class="btn btn-primary"
-                          hx-post="{% url 'contact_pic_set_default' pic.id%}">Set as Default</button>
-                        {% endif %}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {% endfor %}
-              </div>
-              <a class="btn btn-success" hx-get="{% url 'contact_customer_pic_add' customer.id %}"
-                hx-target="#line-pics">Add Picture</a>
-            </div>
+            
           </div>
         </div>
       </div>

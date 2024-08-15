@@ -13,7 +13,7 @@
   <div class="card">
     <div class="card-body overflow-hidden">
       {{ form|as_crispy_errors }}
-      <form hx-post="." enctype="multipart/form-data" hx-target="#form">
+      <form hx-post="." enctype="multipart/form-data" hx-target="#content">
         {% csrf_token %}
         <div class="row container">
           <div class="col-md-4 mb-3">
