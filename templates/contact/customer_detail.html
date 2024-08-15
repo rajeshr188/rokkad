@@ -73,23 +73,10 @@
                 aria-controls="pills-contact" aria-selected="false">Vouchers</a>
             </li>
           </ul>
-          <div class="tab-content mt-3 mb-3" id="line-tabContent">
+          <div class="tab-content" id="line-tabContent">
             <div class="tab-pane fade show active" id="line-home" role="tabpanel" aria-labelledby="line-home-tab">
               <div class="row row-cols-1 row-cols-md-3 g-4">
-                <div class="col-md-4">
-                  <div class="card card-secondary bg-secondary-gradient">
-                    <div class="card-body bubble-shadow">
-                      <h1>{{total_amount}}</h1>
-                      <h5 class="op-8">Pending Loans</h5>
-                      <div class="pull-right">
-                        <h3 class="fw-bold op-8">{{total_loans}}</h3>
-                      </div>
-                      <div class="pull-left">
-                        <h3 class="fw-bold op-8">{{worth}}</h3>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                
                 <div class="col">
                   <div class="card">
 
@@ -167,228 +154,223 @@
                   </div>
                   
                 </div>
-              </div>
-
             </div>
-
             <div class="tab-pane fade" id="line-profile" role="tabpanel" aria-labelledby="line-profile-tab">
             </div>
             <div class="tab-pane fade" id="line-contact" role="tabpanel" aria-labelledby="line-contact-tab">
-              <div class="row">
-                <div class="col-sm-6 col-lg-4 mb-4">
-                  <div class="card border-info mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                      <h5 class="card-title mb-0">Loans</h5>
-                      <button class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' customer.id %}"
-                        hx-target="#content" hx-push-url="true" hx-trigger="click" hx-swap="innerHTML transition:true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                          class="bi bi-plus-circle" viewBox="0 0 16 16">
-                          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-                          <path
-                            d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
-                        </svg>
-                      </button>
+                <div class="row">
+                  <div class="col-sm-6 col-lg-4 mb-4">
+                    <div class="card border-info mb-3">
+                      <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Loans</h5>
+                        <button class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' customer.id %}"
+                          hx-target="#content" hx-push-url="true" hx-trigger="click" hx-swap="innerHTML transition:true">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                            class="bi bi-plus-circle" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                            <path
+                              d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="card-body">
+                        <div class="col mb-4">
+                          <p class="card-text">
+
+                          </p>
+                          <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                              Loans <span class="badge bg-primary rounded-pill">{{customer.get_loans_count}}</span></li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                              Amount <span class="badge bg-primary rounded-pill">{{customer.get_total_loanamount}}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">Interestdue<span
+                                class="badge bg-primary rounded-pill">{{customer.get_total_interest_due}}</span></li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">Average Release
+                              time<span class="badge bg-primary rounded-pill">{{customer.get_release_average}}</span></li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                              Worth : <span class="badge bg-primary rounded-pill">{{worth}}</span></li>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
                     </div>
-                    <div class="card-body">
-                      <div class="col mb-4">
+                  </div>
+                  <div class="col-sm-6 col-lg-4  mb-4">
+                    <div class="card border-primary mb-3" style="max-height: 300px; overflow-y: auto;">
+                      <div class="card-header">
+                        <h5 class="card-title"> UnReleased Loans <span
+                            class="badge text-bg-secondary">{{customer.loan_set.unreleased.count}}</span></h5>
+                      </div>
+                      <ul class="list-group list-group-flush list-group-numbered">
+                        {%for i in customer.loan_set.unreleased%}
+                        <li class="list-group-item">
+                          <a href="" hx-get="{% url 'girvi:girvi_loan_detail' i.id %}" hx-target="#content"
+                            hx-swap="innerHTML transition:true" hx-trigger="click" hx-vals='{"use_block":"content"}'
+                            hx-push-url="true">{{i.loan_id}} {{i.loan_date.date}} {{i.loan_amount}}
+                          </a>
+                        </li>
+                        {%endfor%}
+                      </ul>
+
+                    </div>
+
+                  </div>
+                  <div class="col-sm-6 col-lg-4  mb-4">
+                    <div class="card border-success mb-3 " style="max-height: 400px; overflow-y: auto;">
+                      <div class="card-header">
+                        <h5 class="card-title">Released Loans <span
+                            class="badge text-bg-secondary">{{customer.loan_set.released.count}}</span></h5>
+                      </div>
+                      <ul class="list-group list-group-flush list-group-numbered">
+                        {%for i in customer.loan_set.released%}
+                        <li class="list-group-item">
+                          <a href="" hx-get="{% url 'girvi:girvi_loan_detail' i.id %}" hx-target="#content"
+                            hx-swap="innerHTML transition:true" hx-vals='{"use_block":"content"}'
+                            hx-push-url="true">{{i.loan_id}}
+                            {{i.loan_date.date}} {{i.loan_amount}}
+                          </a>
+                        </li>
+                        {%endfor%}
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="col-sm-6 col-lg-4  mb-4">
+                    <div class="card">
+                      <!-- <img src="..." class="card-img-top" alt="..."> -->
+                      <div class="card-body">
+                        <h5 class="card-title">Invoice Balance</h5>
                         <p class="card-text">
-
-                        </p>
                         <ul class="list-group list-group-flush">
-                          <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Loans <span class="badge bg-primary rounded-pill">{{customer.get_loans_count}}</span></li>
-                          <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Amount <span class="badge bg-primary rounded-pill">{{customer.get_total_loanamount}}</span>
-                          </li>
-                          <li class="list-group-item d-flex justify-content-between align-items-center">Interestdue<span
-                              class="badge bg-primary rounded-pill">{{customer.get_total_interest_due}}</span></li>
-                          <li class="list-group-item d-flex justify-content-between align-items-center">Average Release
-                            time<span class="badge bg-primary rounded-pill">{{customer.get_release_average}}</span></li>
-                          <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Worth : <span class="badge bg-primary rounded-pill">{{worth}}</span></li>
-                          </li>
+                          <li class="list-group-item d-flex justify-content-between align-items-center">Amount <span
+                              class="badge bg-primary rounded-pill"></span></li>
+                          <li class="list-group-item d-flex justify-content-between align-items-center">Gold<span
+                              class="badge bg-primary rounded-pill"></span>
                         </ul>
+                        </p>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div class="col-sm-6 col-lg-4  mb-4">
-                  <div class="card border-primary mb-3" style="max-height: 300px; overflow-y: auto;">
-                    <div class="card-header">
-                      <h5 class="card-title"> UnReleased Loans <span
-                          class="badge text-bg-secondary">{{customer.loan_set.unreleased.count}}</span></h5>
-                    </div>
-                    <ul class="list-group list-group-flush list-group-numbered">
-                      {%for i in customer.loan_set.unreleased%}
-                      <li class="list-group-item">
-                        <a href="" hx-get="{% url 'girvi:girvi_loan_detail' i.id %}" hx-target="#content"
-                          hx-swap="innerHTML transition:true" hx-trigger="click" hx-vals='{"use_block":"content"}'
-                          hx-push-url="true">{{i.loan_id}} {{i.loan_date.date}} {{i.loan_amount}}
-                        </a>
-                      </li>
-                      {%endfor%}
-                    </ul>
+                  <div class="col-sm-6 col-lg-4  mb-4">
+                    <div class="card text-center">
+                      <div class="card-header">
+                        UnPaid Cash Balance :
 
-                  </div>
+                      </div>
+                    </div>
+                    <div class="card text-center">
+                      <div class="card-header">
+                        UnPaid Metal Balance :
 
-                </div>
-                <div class="col-sm-6 col-lg-4  mb-4">
-                  <div class="card border-success mb-3 " style="max-height: 400px; overflow-y: auto;">
-                    <div class="card-header">
-                      <h5 class="card-title">Released Loans <span
-                          class="badge text-bg-secondary">{{customer.loan_set.released.count}}</span></h5>
-                    </div>
-                    <ul class="list-group list-group-flush list-group-numbered">
-                      {%for i in customer.loan_set.released%}
-                      <li class="list-group-item">
-                        <a href="" hx-get="{% url 'girvi:girvi_loan_detail' i.id %}" hx-target="#content"
-                          hx-swap="innerHTML transition:true" hx-vals='{"use_block":"content"}'
-                          hx-push-url="true">{{i.loan_id}}
-                          {{i.loan_date.date}} {{i.loan_amount}}
-                        </a>
-                      </li>
-                      {%endfor%}
-                    </ul>
-                  </div>
-                </div>
-                <div class="col-sm-6 col-lg-4  mb-4">
-                  <div class="card">
-                    <!-- <img src="..." class="card-img-top" alt="..."> -->
-                    <div class="card-body">
-                      <h5 class="card-title">Invoice Balance</h5>
-                      <p class="card-text">
-                      <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Amount <span
-                            class="badge bg-primary rounded-pill"></span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Gold<span
-                            class="badge bg-primary rounded-pill"></span>
-                      </ul>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-sm-6 col-lg-4  mb-4">
-                  <div class="card text-center">
-                    <div class="card-header">
-                      UnPaid Cash Balance :
-
-                    </div>
-                  </div>
-                  <div class="card text-center">
-                    <div class="card-header">
-                      UnPaid Metal Balance :
-
-                    </div>
-                  </div>
-                </div>
-                <div class="col-sm-6 col-lg-4  mb-4">
-                  <div class="card text-center">
-                    <div class="card-body">
-                      <h5 class="card-title">Unpaid Month-Wise</h5>
-                      <div class="table-responsive">
-                        <table class="table table-sm table-striped table-bordered">
-                          <thead>
-                            <tr>
-                              <th>Month</th>
-                              <th>Cash Bal</th>
-                              <th>Metal Bal</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {%for month in monthwise%}
-                            <tr>
-                              <td>{{month.month}}</td>
-                              <td>{{month.tc}}</td>
-                              <td>{{month.tm}}</td>
-                            </tr>
-                            {%endfor%}
-                          </tbody>
-                        </table>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div class="col-sm-6 col-lg-4  mb-4">
-                  <div class="card text-center">
-                    <div class="card-body">
-                      <h5 class="card-title">Purchase Month-Wise</h5>
-                      <div class="table-responsive">
-                        <table class="table table-sm table-striped table-bordered">
-                          <thead>
-                            <tr>
-                              <th>Month</th>
-                              <th>Cash Bal</th>
-                              <th>Metal Bal</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {%for month in monthwiserev%}
-                            <tr>
-                              <td>{{month.month}}</td>
-                              <td>{{month.tc}}</td>
-                              <td>{{month.tm}}</td>
-                            </tr>
-                            {%endfor%}
-                          </tbody>
-                        </table>
-                        <ul></ul>
-                        {%for i in customer.journal_entries.all%}
-                        <a href="">{{i}}</a>
-                        {%endfor%}
+                  <div class="col-sm-6 col-lg-4  mb-4">
+                    <div class="card text-center">
+                      <div class="card-body">
+                        <h5 class="card-title">Unpaid Month-Wise</h5>
+                        <div class="table-responsive">
+                          <table class="table table-sm table-striped table-bordered">
+                            <thead>
+                              <tr>
+                                <th>Month</th>
+                                <th>Cash Bal</th>
+                                <th>Metal Bal</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {%for month in monthwise%}
+                              <tr>
+                                <td>{{month.month}}</td>
+                                <td>{{month.tc}}</td>
+                                <td>{{month.tm}}</td>
+                              </tr>
+                              {%endfor%}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-sm-6 col-lg-4  mb-4">
+                    <div class="card text-center">
+                      <div class="card-body">
+                        <h5 class="card-title">Purchase Month-Wise</h5>
+                        <div class="table-responsive">
+                          <table class="table table-sm table-striped table-bordered">
+                            <thead>
+                              <tr>
+                                <th>Month</th>
+                                <th>Cash Bal</th>
+                                <th>Metal Bal</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {%for month in monthwiserev%}
+                              <tr>
+                                <td>{{month.month}}</td>
+                                <td>{{month.tc}}</td>
+                                <td>{{month.tm}}</td>
+                              </tr>
+                              {%endfor%}
+                            </tbody>
+                          </table>
+                          <ul></ul>
+                          {%for i in customer.journal_entries.all%}
+                          <a href="">{{i}}</a>
+                          {%endfor%}
+                          </ul>
+
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-sm-6 col-lg-4  mb-4">
+                    <div class="card text-center">
+                      <div class="card-body">
+                        <h5 class="card-title">Payment Expected</h5>
+                        <div class="table-responsive">
+                          <table class="table table-sm table-striped table-bordered">
+                            <thead>
+                              <tr>
+                                <th>days since</th>
+                                <th>Cash Bal</th>
+                                <th>Metal Bal</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>last 30 days</td>
+                                <td>{{current.tc}}</td>
+                                <td>{{current.tm}}</td>
+                              </tr>
+                              <tr>
+                                <td>before 30 days</td>
+                                <td>{{past.tc}}</td>
+                                <td>{{past.tm}}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-sm-6 col-lg-4  mb-4">
+                    <div class="card text-center">
+                      <div class="card-body">
+                        <h5 class="card-title">Notifications</h5>
+                        <p>
+                        <ul>
+                          {%for i in object.notification_set.all%}
+                          <li><a href="{% url 'notify_notification_detail' i.id%}">{{i}}</a></li>
+                          {%endfor%}
                         </ul>
-
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div class="col-sm-6 col-lg-4  mb-4">
-                  <div class="card text-center">
-                    <div class="card-body">
-                      <h5 class="card-title">Payment Expected</h5>
-                      <div class="table-responsive">
-                        <table class="table table-sm table-striped table-bordered">
-                          <thead>
-                            <tr>
-                              <th>days since</th>
-                              <th>Cash Bal</th>
-                              <th>Metal Bal</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td>last 30 days</td>
-                              <td>{{current.tc}}</td>
-                              <td>{{current.tm}}</td>
-                            </tr>
-                            <tr>
-                              <td>before 30 days</td>
-                              <td>{{past.tc}}</td>
-                              <td>{{past.tm}}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-sm-6 col-lg-4  mb-4">
-                  <div class="card text-center">
-                    <div class="card-body">
-                      <h5 class="card-title">Notifications</h5>
-                      <p>
-                      <ul>
-                        {%for i in object.notification_set.all%}
-                        <li><a href="{% url 'notify_notification_detail' i.id%}">{{i}}</a></li>
-                        {%endfor%}
-                      </ul>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
-            
-          </div>
         </div>
       </div>
     </div>
