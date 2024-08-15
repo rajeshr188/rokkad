@@ -61,7 +61,7 @@ class Release(models.Model):
     def generate_release_id(self):
         last_release = Release.objects.all().order_by("id").last()
         if not last_release:
-            return "R0001"
+            return "R1"
         release_id = last_release.release_id
         release_int = int(release_id.split("R")[-1])
         new_release_int = release_int + 1
