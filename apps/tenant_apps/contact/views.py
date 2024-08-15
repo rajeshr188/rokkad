@@ -292,7 +292,6 @@ def customer_edit(request, pk):
 
 
 @login_required
-@for_htmx(use_block="content")
 def customer_pics(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     pics = customer.pics.all()
