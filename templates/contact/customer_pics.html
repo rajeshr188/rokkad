@@ -26,6 +26,9 @@
         </div>
     </div>
     {% endfor %}
-    <a class="btn btn-success" hx-get="{% url 'contact_customer_pic_add' customer.id %}" hx-target="#pics">Add
-        Picture</a>
+    <div class="col-md-4">
+        <a class="btn btn-success" hx-get="{% url 'contact_customer_pic_add' customer.id %}" hx-target="#pics">Add
+            Picture</a>
+    </div>
+    
 </div>
