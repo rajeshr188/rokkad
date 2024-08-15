@@ -96,15 +96,16 @@
       <div class="col-md-3">
         <div class="card border-primary mb-3" id="loan-details">
           <!-- <img src="..." class="img-fluid rounded-start" alt="..."> -->
-          <div class="avatar avatar-xxl">
+          
             {% if loan.customer.get_default_pic %}
-            <img src="{{ loan.customer.get_default_pic.url }}" alt="{{ loan.customer.name }}'s Profile Picture" class="avatar-img rounded-circle">
+            <img src="{{ loan.customer.get_default_pic.url }}" alt="{{ loan.customer.name }}'s Profile Picture" class="avatar-img  card-img-top">
             {% else %}
-            <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture" class="avatar-img rounded-circle">
+            <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture" class="avatar-img  card-img-top">
             {% endif %}            
-          </div> 
+         
           <div class="card-body">
-              <h5 class="card-title"> {{object.loan_id}} <a class="btn btn-sm btn-outline-primary"
+              <h5 class="card-title"> {{object.loan_id}} 
+                <a class="card-link btn btn-sm btn-outline-primary"
                   hx-get="{% url 'girvi:girvi_loan_update' object.id %}" hx-push-url="true" hx-target="#content"
                   hx-swap="innerHTML transition:true">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -115,12 +116,11 @@
                       d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
                   </svg>
                 </a></h5>
-              <p class="card-text">
-                {{object.customer}}
-
-              </p>
-              <div class="d-flex justify-content-start mb-2">
-                <button class="btn btn-sm btn-outline-primary mr-2"
+          </div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+              <p class="card-text">{{object.customer}}
+            <button class=" card-link btn btn-sm btn-outline-primary mr-2"
                   hx-get="{% url 'contact_customer_detail' object.customer.id %}" hx-target="#content"
                   hx-swap="innerHTML transition:true" hx-push-url="true" hx-trigger="click">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -129,7 +129,7 @@
                       d="M3 2.5A1.5 1.5 0 0 1 4.5 1h1A1.5 1.5 0 0 1 7 2.5V5h2V2.5A1.5 1.5 0 0 1 10.5 1h1A1.5 1.5 0 0 1 13 2.5v2.382a.5.5 0 0 0 .276.447l.895.447A1.5 1.5 0 0 1 15 7.118V14.5a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 14.5v-3a.5.5 0 0 1 .146-.354l.854-.853V9.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v.793l.854.853A.5.5 0 0 1 7 11.5v3A1.5 1.5 0 0 1 5.5 16h-3A1.5 1.5 0 0 1 1 14.5V7.118a1.5 1.5 0 0 1 .83-1.342l.894-.447A.5.5 0 0 0 3 4.882V2.5zM4.5 2a.5.5 0 0 0-.5.5V3h2v-.5a.5.5 0 0 0-.5-.5h-1zM6 4H4v.882a1.5 1.5 0 0 1-.83 1.342l-.894.447A.5.5 0 0 0 2 7.118V13h4v-1.293l-.854-.853A.5.5 0 0 1 5 10.5v-1A1.5 1.5 0 0 1 6.5 8h3A1.5 1.5 0 0 1 11 9.5v1a.5.5 0 0 1-.146.354l-.854.853V13h4V7.118a.5.5 0 0 0-.276-.447l-.895-.447A1.5 1.5 0 0 1 12 4.882V4h-2v1.5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5V4zm4-1h2v-.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V3zm4 11h-4v.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5V14zm-8 0H2v.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5V14z" />
                   </svg>
                 </button>
-                <button class="btn btn-sm btn-outline-secondary"
+                <button class="card-link btn btn-sm btn-outline-secondary"
                   hx-get="{% url 'contact_customer_update' object.customer.id %}" hx-target="#content"
                   hx-swap="innerHTML transition:true" hx-push-url="true" hx-trigger="click">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -139,43 +139,23 @@
                     <path fill-rule="evenodd"
                       d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
                   </svg>
-                </button>
-              </div>
+                </button></p>
+            </li>
+            <li class="list-group-item">
               <p class="card-text"><small class="text-body-secondary">{{object.loan_date}}</small></p>
+            </li>
+            <li class="list-group-item">
               <p class="card-text"><small class="text-body-secondary">{{object.created_by}}</small></p>
-          </div>
-
+            </li>
+          </ul>
         </div>
-        <div class="card border-primary mb-3">
-          <h5 class="card-header text-center">Loan Summary</h5>
-          <div class="card-body">
-            <div class="container">
-              <div class="row mb-2">
-                <div class="col-6 font-weight-bold">Amount</div>
-                <div class="col-6 table-warning">{{ object.get_loanamount_with_currency }}</div>
-              </div>
-              <div class="row mb-2">
-                <div class="col-6 font-weight-bold">Interest Due</div>
-                <div class="col-6 table-warning">{{object.interest}} * {{object.noofmonths}} = {{ object.interestdue }}
-                </div>
-              </div>
-              <div class="row mb-2">
-                <div class="col-6 font-weight-bold">Payments</div>
-                <div class="col-6 table-info">{{object.get_total_payments}}</div>
-              </div>
-              <div class="row mb-2">
-                <div class="col-6 font-weight-bold">Total Due</div>
-                <div class="col-6 table-success">{{object.due_with_currency}}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        
         {%if loan.release%}
         <div class="card border-primary mb-3">
           <h5 class="card-header text-center">
 
-            Release : <span class="badge text-bg-secondary"> {{object.release.release_date|date}}</span>
-            <a class="btn btn-dark" hx-disable href="{%url 'girvi:release_form_h' object.release.id%}">
+            Release : 
+            <a class="btn btn-outline-dark btn-sm" hx-disable href="{%url 'girvi:release_form_h' object.release.id%}">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer"
                 viewBox="0 0 16 16">
                 <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
@@ -183,7 +163,7 @@
                   d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
               </svg>
             </a>
-            <a class="btn btn-danger" href="{%url 'girvi:girvi_release_delete' object.release.id%}"><svg
+            <a class="btn btn-outline-danger btn-sm" href="{%url 'girvi:girvi_release_delete' object.release.id%}"><svg
                 xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3"
                 viewBox="0 0 16 16">
                 <path
@@ -195,7 +175,11 @@
             <table class="table table-sm table-striped-columns">
               <tbody>
                 <tr>
-                  <td>Release Id</td>
+                  <td>On</td>
+                  <td>{{object.release.release_date|date}}</td>
+                </tr>
+                <tr>
+                  <td>Id</td>
                   <td>
                     <a href="" hx-get="{% url 'girvi:girvi_release_detail' loan.release.id %}" hx-target="#content"
                       hx-swap="innerHTML transition:true">
@@ -204,7 +188,7 @@
                 </tr>
                 <tr>
                   <td>By</td>
-                  <td>{{loan.release.released_by}}</td>
+                  <td>{{loan.release.released_by.name}}</td>
                 </tr>
 
               </tbody>
@@ -285,9 +269,40 @@
                       height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
                       <path fill-rule="evenodd"
                         d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
-                    </svg> Loan Item</button>
+                    </svg> Item</button>
                 </p>
+                
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
                 <div class="card border-primary mb-3">
+                  <h5 class="card-header text-center">Loan Summary</h5>
+                  <div class="card-body">
+                    <div class="container">
+                      <div class="row mb-2">
+                        <div class="col-6 font-weight-bold">Amount</div>
+                        <div class="col-6 table-warning">{{ object.get_loanamount_with_currency }}</div>
+                      </div>
+                      <div class="row mb-2">
+                        <div class="col-6 font-weight-bold">Interest Due</div>
+                        <div class="col-6 table-warning">{{object.interest}} * {{object.noofmonths}} = {{ object.interestdue }}
+                        </div>
+                      </div>
+                      <div class="row mb-2">
+                        <div class="col-6 font-weight-bold">Payments</div>
+                        <div class="col-6 table-info">{{object.get_total_payments}}</div>
+                      </div>
+                      <div class="row mb-2">
+                        <div class="col-6 font-weight-bold">Total Due</div>
+                        <div class="col-6 table-success">{{object.due_with_currency}}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="card  border-primary mb-3" style="width: 28rem;">
                   <h5 class="card-header text-center">Item Summary</h5>
                   <div class="card-body">
                     <table class="table table-sm table-striped-columns">
@@ -310,7 +325,7 @@
                             {%endfor%}
                           </td>
                         </tr>
-
+    
                         <tr>
                           <td>Months Since</td>
                           <td>{{object.noofmonths}}</td>
@@ -340,6 +355,7 @@
                 </div>
               </div>
             </div>
+            
           </div>
           <div class="tab-pane fade" id="payment-tab-pane" role="tabpanel" aria-labelledby="payment-tab" tabindex="0">
             <div class="table-responsive">
