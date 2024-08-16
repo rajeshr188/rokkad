@@ -80,13 +80,14 @@
 
                     <div class="card-body">
                       <h5 class="card-title">Address</h5>
-                      <div id="addresses-list" hx-trigger="load,revealed,listChanged from:body  delay:100ms"
+                      <ul class="list-group" 
+                        id="addresses-list" hx-trigger="load,revealed,listChanged from:body  delay:100ms"
                         hx-get="{% url 'customer_address_list' customer.id%}" hx-target="#addresses-list"
                         hx-swap="innerHTML">
-                      </div>
+                    </ul>
                       <div class="card-footer text-body-secondary">
                         <button class="btn btn-success" type="button"
-                          hx-get="{% url 'customer_address_form' customer.id%}" hx-target="#addresses-list"
+                          hx-get="{% url 'customer_address_create' customer.id%}" hx-target="#addresses-list"
                           hx-swap="beforeend">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                             class="bi bi-plus-circle-fill" viewBox="0 0 16 16">

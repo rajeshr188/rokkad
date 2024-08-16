@@ -466,50 +466,78 @@ def address_list(request, pk: int = None):
     )
 
 
+# @login_required
+# def address_create(request, pk=None):
+#     customer = get_object_or_404(Customer, pk=pk)
+#     form = AddressForm(request.POST or None,customer_id = customer.id,)
+
+#     if request.method == "POST" and form.is_valid():
+#         address = form.save(commit=False)
+#         address.customer = customer
+
+#         address.save()
+#         messages.success(request, messages.SUCCESS, f"Address {address} created.")
+#         # return HttpResponse(headers={"HX-Trigger": "listChanged"})
+#         return render(request,"contact/address_detail.html",context={"i":address})
+
+#     return render(
+#         request,
+#         "partials/crispy_form.html",
+#         context={"form": form, "customer": customer},
+#     )
+
+# @login_required
+# def address_update(request, pk):
+#     address = get_object_or_404(Address, pk=pk)
+#     form = AddressForm(request.POST or None, instance=address)
+#     if request.method == "POST":
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, messages.SUCCESS, f"Address {address} updated.")
+#             return render(
+#                 request, "contact/address_detail.html", context={"i": address}
+#             )
+
+#     return render(
+#         request,
+#         "contact/partials/address_update_form.html",
+#         context={"form": form, "address": address},
+#     )
+
 @login_required
-def address_create(request, pk=None):
-    customer = get_object_or_404(Customer, pk=pk)
-    form = AddressForm(request.POST or None)
+def address_create_or_update(request, customer_pk=None, address_pk=None):
+    customer = get_object_or_404(Customer, pk=customer_pk)
+    address = None
+    if address_pk:
+        address = get_object_or_404(Address, pk=address_pk)
+        form = AddressForm(request.POST or None, instance=address, )
+    else:
+        form = AddressForm(request.POST or None, )
 
     if request.method == "POST" and form.is_valid():
         address = form.save(commit=False)
         address.customer = customer
-
         address.save()
-        messages.success(request, messages.SUCCESS, f"Address {address} created.")
-        return HttpResponse(headers={"HX-Trigger": "listChanged"})
+        if address_pk:
+            messages.success(request, messages.SUCCESS, f"Address {address} updated.")
+        else:
+            messages.success(request, messages.SUCCESS, f"Address {address} created.")
+        # return HttpResponse(headers={"HX-Trigger": "listChanged"})
+        return render(request, "contact/address_detail.html", context={"i": address})
 
-    return render(
-        request,
-        "contact/partials/address_form.html",
-        context={"form": form, "customer": customer},
+    template_name = (
+        "contact/partials/address_update_form.html" if address_pk else "contact/partials/address_form.html"
     )
+    context = {"form": form, "customer": customer}
+    if address:
+        context["address"] = address
 
+    return render(request, template_name, context)
 
 @login_required
 def address_detail(request, pk):
     address = get_object_or_404(Address, pk=pk)
     return render(request, "contact/address_detail.html", context={"i": address})
-
-
-@login_required
-def address_update(request, pk):
-    address = get_object_or_404(Address, pk=pk)
-    form = AddressForm(request.POST or None, instance=address)
-    if request.method == "POST":
-        if form.is_valid():
-            form.save()
-            messages.success(request, messages.SUCCESS, f"Address {address} updated.")
-            return render(
-                request, "contact/address_detail.html", context={"i": address}
-            )
-
-    return render(
-        request,
-        "contact/partials/address_update_form.html",
-        context={"form": form, "address": address},
-    )
-
 
 @login_required
 @require_http_methods(["DELETE"])

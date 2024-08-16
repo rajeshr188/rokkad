@@ -8,10 +8,11 @@ from django.core.exceptions import NON_FIELD_ERRORS
 from django_select2 import forms as s2forms
 from import_export.formats import base_formats
 from slick_reporting.forms import BaseReportForm
-
+from crispy_forms.helper import FormHelper 
+from crispy_forms.layout import Submit, Button
 from .models import (Address, Contact, Customer, CustomerPic,
                      CustomerRelationship, Proof, RelationType)
-
+from django.urls import reverse
 
 class ExportForm(forms.Form):
     model_name = forms.ChoiceField(
@@ -161,8 +162,34 @@ class AddressForm(forms.ModelForm):
         ]
 
     # def __init__(self, *args, **kwargs):
-    #     super(AddressForm, self).__init__(*args, **kwargs)
-    #     self.fields["Customer"].queryset = Customer.objects.all()
+    #     customer_id = kwargs.pop('customer_id',None)
+    #     address_id = kwargs.pop('address_id',None)
+    #     super().__init__(*args, **kwargs)
+    #     self.helper = FormHelper()
+    #     # self.helper.form_method = 'post'
+    #     self.helper.attrs = {
+    #         'hx-post': reverse('customer_address_update', args=[customer_id, address_id]) if address_id else reverse('customer_address_create', args=[customer_id]),
+    #         'hx-target': 'this',
+    #         'hx-swap': 'outerHTML',
+            
+    #     }
+    #     self.helper.add_input(Submit('submit', 'Save', css_class='btn btn-success'))
+    #     if address_id:
+    #         cancel_button = Button(
+    #             'cancel', 'Cancel', css_class='btn btn-danger', 
+    #             **{
+    #                 'hx-get': reverse('customer_address_detail', args=[address_id]),
+    #                 'hx-target': '#address-detail-container',  # Adjust the target as needed
+    #                 'hx-swap': 'innerHTML'
+    #             }
+    #         )
+    #     else:
+    #         cancel_button = Button(
+    #             'cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('li').remove()"
+    #         )
+
+    #     self.helper.add_input(cancel_button)
+    
 
 
 class ContactForm(forms.ModelForm):

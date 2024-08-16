@@ -68,20 +68,21 @@ urlpatterns = (
         name="customer_address_list",
     ),
     path(
-        "customer/<int:pk>/address/add/",
-        views.address_create,
-        name="customer_address_form",
+        "customer/<int:customer_pk>/address/add/",
+        views.address_create_or_update,
+        name="customer_address_create",
+    ),
+    path(
+        "customer/<int:customer_pk>/address/<int:address_pk>/edit/",
+        views.address_create_or_update,
+        name="customer_address_update",
     ),
     path(
         "customer/address/<int:pk>/detail/",
         views.address_detail,
         name="customer_address_detail",
     ),
-    path(
-        "customer/address/<int:pk>/edit/",
-        views.address_update,
-        name="customer_address_update",
-    ),
+    
     path(
         "customer/address/<int:pk>/delete/",
         views.address_delete,
