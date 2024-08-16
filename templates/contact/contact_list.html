@@ -1,9 +1,5 @@
-<ul class="list-group" >
-  {%for i in contacts%}
-  <li class="list-group-item" hx-target="this">
-    {% include 'contact/contact_detail.html'%}
-  </li>
-  {%endfor%}
-</ul>
+{%for i in contacts%}
 
+{% include 'contact/contact_detail.html'%}
 
+{%endfor%}

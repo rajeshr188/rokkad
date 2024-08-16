@@ -37,21 +37,14 @@ urlpatterns = (
         views.reallot_payments,
         name="contact_reallot_payments",
     ),
-    path(
-        "customer/<int:pk>/contactno/add/",
-        views.contact_create,
-        name="customer_contact_form",
-    ),
+    
     path(
         "customer/contactno/<int:pk>/detail/",
         views.contact_detail,
         name="customer_contact_detail",
     ),
-    path(
-        "customer/contactno/<int:pk>/edit/",
-        views.contact_update,
-        name="customer_contact_update",
-    ),
+    path('customer/<int:customer_pk>/contactno/add/', views.contact_save, name='contact_create'),
+    path('customer/<int:customer_pk>/contactno/<int:contact_pk>/update/', views.contact_save, name='contact_update'),
     path(
         "customer/contactno/<int:pk>/delete/",
         views.contact_delete,
