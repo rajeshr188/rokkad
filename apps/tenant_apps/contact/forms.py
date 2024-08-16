@@ -9,7 +9,7 @@ from django_select2 import forms as s2forms
 from import_export.formats import base_formats
 from slick_reporting.forms import BaseReportForm
 from crispy_forms.helper import FormHelper 
-from crispy_forms.layout import Submit, Button
+from crispy_forms.layout import Submit, Button,HTML
 from .models import (Address, Contact, Customer, CustomerPic,
                      CustomerRelationship, Proof, RelationType)
 from django.urls import reverse
@@ -161,34 +161,47 @@ class AddressForm(forms.ModelForm):
             "last_updated",
         ]
 
-    # def __init__(self, *args, **kwargs):
-    #     customer_id = kwargs.pop('customer_id',None)
-    #     address_id = kwargs.pop('address_id',None)
-    #     super().__init__(*args, **kwargs)
-    #     self.helper = FormHelper()
-    #     # self.helper.form_method = 'post'
-    #     self.helper.attrs = {
-    #         'hx-post': reverse('customer_address_update', args=[customer_id, address_id]) if address_id else reverse('customer_address_create', args=[customer_id]),
-    #         'hx-target': 'this',
-    #         'hx-swap': 'outerHTML',
-            
-    #     }
-    #     self.helper.add_input(Submit('submit', 'Save', css_class='btn btn-success'))
-    #     if address_id:
-    #         cancel_button = Button(
-    #             'cancel', 'Cancel', css_class='btn btn-danger', 
-    #             **{
-    #                 'hx-get': reverse('customer_address_detail', args=[address_id]),
-    #                 'hx-target': '#address-detail-container',  # Adjust the target as needed
-    #                 'hx-swap': 'innerHTML'
-    #             }
-    #         )
-    #     else:
-    #         cancel_button = Button(
-    #             'cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('li').remove()"
-    #         )
-
-    #     self.helper.add_input(cancel_button)
+    def __init__(self, *args, **kwargs):
+        customer_id = kwargs.pop('customer_id',None)
+        address_id = kwargs.pop('address_id',None)
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        # self.helper.form_method = 'post'
+        
+        if address_id:
+            self.helper.attrs = {
+            'hx-post': reverse('customer_address_update', args=[customer_id, address_id]) ,
+            'hx-target':"closest li",
+            'hx-swap': 'outerHTML',
+            }
+            cancel_url = reverse('customer_address_detail', args=[address_id])
+            cancel_button = Button(
+                'cancel',
+                'Cancel',
+                css_class='btn btn-danger',
+                **{
+                    'hx-get': cancel_url,
+                    'hx-target': 'closest li',
+                    'hx-swap': 'outerHTML'
+                }
+            )
+        else:
+            self.helper.attrs = {
+            'hx-post': reverse('customer_address_create', args=[customer_id]),
+            'hx-target': 'this',
+            'hx-swap': 'outerHTML',
+            }
+            cancel_button = Button(
+                'cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('form').remove()"
+            )
+            # cancel_button = Button(
+            #     'cancel', 'Cancel', css_class='btn btn-danger', 
+            #     **{
+            #         '_':'on click remove closest form',
+            #     }
+            # )
+        self.helper.add_input(Submit('submit', 'Save', css_class='btn btn-success'))
+        self.helper.add_input(cancel_button)
     
 
 
