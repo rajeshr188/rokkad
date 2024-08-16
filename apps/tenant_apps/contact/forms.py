@@ -219,6 +219,40 @@ class ContactForm(forms.ModelForm):
             "phone_number": forms.TextInput(attrs={"autofocus": True}),
         }
 
+    def __init__(self, *args, **kwargs):
+        customer_id = kwargs.pop('customer_id',None)
+        contact_id = kwargs.pop('contact_id',None)
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        if contact_id:
+            self.helper.attrs = {
+            'hx-post': reverse('contact_update', args=[customer_id, contact_id]),
+            'hx-target':"closest li",
+            'hx-swap': 'outerHTML',
+            }
+            cancel_url = reverse('customer_contact_detail', args=[contact_id])
+            cancel_button = Button(
+                'cancel',
+                'Cancel',
+                css_class='btn btn-danger',
+                **{
+                    'hx-get': cancel_url,
+                    'hx-target': 'closest li',
+                    'hx-swap': 'outerHTML'
+                }
+            )
+        else:
+            self.helper.attrs = {
+            'hx-post': reverse('contact_create', args=[customer_id]),
+            'hx-target': 'this',
+            'hx-swap': 'outerHTML',
+            }
+            cancel_button = Button(
+                'cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('form').remove()"
+            )
+        self.helper.add_input(Submit('submit', 'Save', css_class='btn btn-success'))
+        self.helper.add_input(cancel_button)
+
 
 class ProofForm(forms.ModelForm):
     class Meta:
