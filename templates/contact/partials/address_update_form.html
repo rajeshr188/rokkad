@@ -1,6 +1,0 @@
-{% load crispy_forms_tags %}
-<form hx-post="{% url 'customer_address_update' customer_pk=address.customer.id address_pk=address.id%}" hx-target ="closest li" hx-swap="outerHTML">
-    {{form|crispy}}
-    <button type="submit" class="btn btn-success">Update</button>
-    <button hx-target ="closest li" hx-swap="outerHTML" hx-get="{% url 'customer_address_detail' address.id%}" type="submit" class="btn btn-danger">Cancel</button>
-</form>

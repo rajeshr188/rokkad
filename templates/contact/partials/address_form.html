@@ -1,6 +1,0 @@
-{% load crispy_forms_tags %}
-<form hx-target="this" hx-swap="outerHTML">
-    {{form|crispy}}
-    <button type="submit" class="btn btn-success" hx-post="{% url 'customer_address_create' customer.id%}">Save</button>
-    <button type="button" _="on click remove closest form" class="btn btn-danger">Cancel</button>
-</form>
