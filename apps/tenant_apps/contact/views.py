@@ -149,10 +149,7 @@ def customer_list(request):
     f = CustomerFilter(
         request.GET,
         queryset=Customer.objects.all()
-        .prefetch_related("contactno", "address")
-        .annotate(
-            loans=Count("loan"), loanamount=Coalesce(Sum("loan__loan_amount"), 0)
-        ),
+        .prefetch_related("contactno", "address"),
     )
     table = CustomerTable(f.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
@@ -172,79 +169,6 @@ def customer_list(request):
 
     return TemplateResponse(request, "contact/customer_list.html", context)
 
-
-@require_http_methods(["DELETE"])
-def customer_delete(request, pk):
-    customer = get_object_or_404(Customer, pk=pk)
-    customer.delete()
-    messages.error(request, messages.DEBUG, f"Deleted customer {customer.name}")
-    return HttpResponse("")
-
-
-@login_required
-@for_htmx(use_block="content")
-def customer_create(request):
-    if request.method == "POST":
-        form = CustomerForm(request.POST or None, request.FILES)
-
-        if form.is_valid():
-            f = form.save(commit=False)
-            f.created_by = request.user
-            f.save()
-            action.send(request.user, action_object=f, verb="created")
-
-            messages.success(request, messages.SUCCESS, f"Customer {f.name} created.")
-            if "add" in request.POST:
-                response = TemplateResponse(
-                    request, "contact/customer_form.html", {"form": CustomerForm()}
-                )
-                response["HX-Push-Url"] = reverse("contact_customer_create")
-                return response
-
-            else:
-                response = TemplateResponse(
-                    request,
-                    "contact/customer_detail.html",
-                    {"customer": f, "object": f},
-                )
-                response["HX-Push-Url"] = reverse(
-                    "contact_customer_detail", kwargs={"pk": f.id}
-                )
-                return response
-        else:
-            messages.error(request, f"Error creating customer")
-            return TemplateResponse(
-                request, "contact/customer_form.html", {"form": form}
-            )
-
-    else:
-        form = CustomerForm()
-        return TemplateResponse(request, "contact/customer_form.html", {"form": form})
-
-
-@login_required
-@for_htmx(use_block="content")
-def customer_merge(request):
-    form = CustomerMergeForm(request.POST or None)
-    if request.method == "POST":
-        if form.is_valid():
-            # merge logic
-            original = form.cleaned_data["original"]
-            duplicate = form.cleaned_data["duplicate"]
-            duplicate_name = duplicate.name
-            original.merge(duplicate)
-            messages.success(
-                request,
-                messages.SUCCESS,
-                f"merged customer {duplicate_name} into {original}",
-            )
-            return redirect("contact_customer_list")
-
-    return TemplateResponse(
-        request, "contact/customer_merge.html", context={"form": form}
-    )
-
-
 @for_htmx(use_block="content")
 @login_required
 def customer_detail(request, pk=None):
@@ -260,36 +184,80 @@ def customer_detail(request, pk=None):
     context["worth"] = sum(worth)
     return TemplateResponse(request, "contact/customer_detail.html", context)
 
-
 @login_required
-@for_htmx(use_block="content")
-def customer_edit(request, pk):
-    customer = get_object_or_404(Customer, pk=pk)
-    form = CustomerForm(request.POST or None, instance=customer)
+def customer_save(request, pk=None):
 
-    if form.is_valid():
-        f = form.save(commit=False)
-        f.created_by = request.user
-        f.save()
-        action.send(request.user, action_object=customer, verb="updated")
-        messages.success(
-            request, messages.SUCCESS, f"Customer {customer.name} Info Updated"
-        )
+    if pk:
+        customer = get_object_or_404(Customer, pk=pk)
+        form = CustomerForm(request.POST or None, instance=customer,customer_id = customer.id)
+        verb = "updated"
+        success_message = f"Customer {customer.name} Info Updated"
+    else:
+        customer = None
+        form = CustomerForm(request.POST or None, instance=customer)
+        verb = "created"
+        success_message = "Customer created"
 
-        response = TemplateResponse(
-            request,
-            "contact/customer_detail.html",
-            {"customer": customer, "object": customer},
-        )
-        response["HX-Push-Url"] = reverse(
-            "contact_customer_detail", kwargs={"pk": customer.id}
-        )
-        return response
+    if request.method == "POST":
+        if form.is_valid():
+            f = form.save(commit=False)
+            f.created_by = request.user
+            f.save()
+            action.send(request.user, action_object=f, verb=verb)
 
+            messages.success(request, messages.SUCCESS, success_message)
+            if 'add' in request.POST:
+                response = TemplateResponse(
+                    request,
+                    "contact/customer_detail.html",
+                    {"customer": f, "object": f},
+                )
+                response["HX-Trigger"] = "listChanged"  # Trigger client-side event
+                return response
+            else:
+                response = HttpResponse()
+                response['HX-Trigger'] = 'listChanged'
+                return response
+                # return redirect(reverse("contact_customer_detail", kwargs={"pk": f.id}))
+        else:
+            messages.error(request, f"Error saving customer")
+    
     return TemplateResponse(
-        request, "contact/customer_form.html", {"form": form, "customer": customer}
+        request, "partials/crispy_form.html", {"form": form, "customer": customer}
     )
 
+@require_http_methods(["DELETE"])
+def customer_delete(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    customer.delete()
+    messages.error(request, messages.DEBUG, f"Deleted customer {customer.name}")
+    return HttpResponse("")
+
+
+@login_required
+def customer_merge(request):
+    form = CustomerMergeForm(request.POST or None)
+    if request.method == "POST":
+        if form.is_valid():
+            # merge logic
+            original = form.cleaned_data["original"]
+            duplicate = form.cleaned_data["duplicate"]
+            duplicate_name = duplicate.name
+            original.merge(duplicate)
+            messages.success(
+                request,
+                messages.SUCCESS,
+                f"merged customer {duplicate_name} into {original}",
+            )
+            response = HttpResponse()
+            response['HX-redirect'] = reverse("contact_customer_list")
+            return response
+        else:
+            messages.error(request, messages.ERROR, "Error merging customers")
+
+    return TemplateResponse(
+        request, "partials/crispy_form.html", context={"form": form}
+    )
 
 @login_required
 def customer_pics(request, customer_id):
@@ -298,7 +266,6 @@ def customer_pics(request, customer_id):
     return TemplateResponse(
         request, "contact/customer_pics.html", {"customer": customer, "pics": pics}
     )
-
 
 @login_required
 def add_customer_pic(request, customer_id):
@@ -337,7 +304,6 @@ def add_customer_pic(request, customer_id):
         },
     )
 
-
 @login_required
 @require_http_methods(["DELETE"])
 def customer_pic_delete(request, pk):
@@ -345,7 +311,6 @@ def customer_pic_delete(request, pk):
     instance.delete()
     messages.error(request, messages.ERROR, f"Customer Pic {instance} deleted.")
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
-
 
 @login_required
 @require_http_methods(["POST"])
@@ -360,72 +325,76 @@ def customer_pic_set_default(request, pk):
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
 
+# @login_required
+# def create_relationship(request, from_customer_id):
+#     from_customer = get_object_or_404(Customer, pk=from_customer_id)
+
+#     if request.method == "POST":
+#         form = CustomerRelationshipForm(request.POST, customer_id=from_customer)
+#         if form.is_valid():
+#             related_customer = form.cleaned_data["related_customer"]
+#             relationship = form.cleaned_data["relationship"]
+
+#             # Create a new CustomerRelationship instance
+#             CustomerRelationship.objects.create(
+#                 customer=from_customer,
+#                 relationship=relationship,
+#                 related_customer=related_customer,
+#             )
+
+#             return redirect("contact_customer_detail", pk=from_customer_id)
+
+#     else:
+#         form = CustomerRelationshipForm(customer_id=from_customer)
+
+#     return render(
+#         request,
+#         "contact/create_relationship.html",
+#         {"form": form, "customer": from_customer},
+#     )
+
 @login_required
-def create_relationship(request, from_customer_id):
+def relationship_save(request, from_customer_id, relationship_id=None):
     from_customer = get_object_or_404(Customer, pk=from_customer_id)
+    form = CustomerRelationshipForm(request.POST or None, customer_id=from_customer.id)
 
-    if request.method == "POST":
-        form = CustomerRelationshipForm(request.POST, customer_id=from_customer)
+    if relationship_id:
+        relationship_instance = get_object_or_404(CustomerRelationship, pk=relationship_id)
+        form = CustomerRelationshipForm(request.POST, instance=relationship_instance, customer_id=from_customer.id)
+
+    if request.method == "POST":      
         if form.is_valid():
-            print(form.cleaned_data)
-            print(form.errors)
-            related_customer = form.cleaned_data["related_customer"]
-            relationship = form.cleaned_data["relationship"]
-
-            # Create a new CustomerRelationship instance
-            CustomerRelationship.objects.create(
-                customer=from_customer,
-                relationship=relationship,
-                related_customer=related_customer,
-            )
-
-            return redirect("contact_customer_detail", pk=from_customer_id)
-
-    else:
-        form = CustomerRelationshipForm(customer_id=from_customer)
+            relationship_instance = form.save(commit=False)
+            relationship_instance.customer = from_customer
+            relationship_instance.save()
+            print("form valid sacing")
+            response = HttpResponse()
+            response['HX-Trigger'] = 'listChanged'
+            return response
 
     return render(
         request,
-        "contact/create_relationship.html",
+        "partials/crispy_form.html",
         {"form": form, "customer": from_customer},
     )
 
+def relationship_delete(request, relationship_id):
+    relationship = get_object_or_404(CustomerRelationship, pk=relationship_id)
+    relationship.delete()
+    return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
-# @login_required
-# def contact_create(request, pk=None):
-#     customer = get_object_or_404(Customer, pk=pk)
-#     form = ContactForm(request.POST or None, initial={"customer": customer})
+def relationship_detail(request, relationship_id):
+    relationship = get_object_or_404(CustomerRelationship, pk=relationship_id)
+    return render(request, "contact/relationship_detail.html", context={"i": relationship})
 
-#     if request.method == "POST" and form.is_valid():
-#         f = form.save(commit=False)
-#         f.customer = customer
-#         f.save()
-#         messages.success(request, messages.SUCCESS, f"Contact {f} created.")
-#         return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
-#         # return HttpResponse(status=204, headers={"HX-Redirect": reverse("contact_customer_list")})
-
-#     return render(
-#         request,
-#         "contact/partials/contact_form.html",
-#         context={"form": form, "customer": customer},
-#     )
-
-# @login_required
-# def contact_update(request, pk):
-#     contact = get_object_or_404(Contact, pk=pk)
-#     form = ContactForm(request.POST or None, instance=contact)
-#     if request.method == "POST":
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, messages.SUCCESS, f"Contact {contact} updated.")
-#             return render(
-#                 request, "contact/contact_detail.html", context={"i": contact}
-#             )
-#     return render(
-#         request,
-#         "contact/partials/contact_update_form.html",
-#         context={"form": form, "contact": contact},
-#     )
+def relationship_list(request, from_customer_id):
+    from_customer = get_object_or_404(Customer, pk=from_customer_id)
+    relationships = from_customer.relationships.all()
+    return render(
+        request,
+        "contact/relationship_list.html",
+        {"relationships": relationships,},
+    )
 
 @login_required
 def contact_save(request, customer_pk=None, contact_pk=None):
@@ -442,8 +411,7 @@ def contact_save(request, customer_pk=None, contact_pk=None):
         f.customer = customer
         f.save()
         if contact:
-            messages.success(request, messages.SUCCESS, f"Contact {f} updated.")
-            
+            messages.success(request, messages.SUCCESS, f"Contact {f} updated.")   
         else:
             messages.success(request, messages.SUCCESS, f"Contact {f} created.")
         return render(

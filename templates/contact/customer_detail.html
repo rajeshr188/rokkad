@@ -1,15 +1,22 @@
 {% extends "tenant.html" %}
 {% load static %}
 {% block content %}
-<div id="content" class="container-fluid mt-2">
-
+<div class="container-fluid mt-2">
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Customer Detail</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <div class="btn-group me-2">
+        <a hx-get="{% url 'contact_customer_list' %}" 
+        hx-target="#content"
+        hx-vals='{"use_block":"content"}'
+        hx-push-url="true" hx-swap="innerHTML transition:true"
+             class="btn btn-sm btn-outline-secondary">Back</a>
+      </div>
+    </div>
+  </div>
   <div class="row">
     <div class="col-md-3">
       <div class="card">
-        <div class="card-header">
-          <h4 class="card-title">Customer</h4>
-
-        </div>
         <div class="card-body">
           <p class="demo">
           <div class="avatar avatar-xxl">
@@ -128,16 +135,17 @@
                     <div class="card-body">
                       <h5 class="card-title">Relations <span
                           class="badge text-bg-secondary">{{customer.relationships.count}}</span></h5>
-                      <div id="relations-form"></div>
-                      <ul class="list-group">
-                        {%for i in customer.relationships.all %}
-                        <li class="list-group-item"><a href="{% url 'contact_customer_detail' i.id%}">{{i}}</a></li>
-                        {%endfor%}
+                      
+                      <ul class="list-group" id="relations" hx-get = "{% url 'relationship_list' customer.id %} "
+                        hx-target = "#relations" hx-swap="innerHTML" hx-trigger = "load,revealed,listChanged from:body  delay:100ms"
+                        hx-swap="innerHTML">
+                        
                       </ul>
                     </div>
                     <div class="card-footer text-body-secondary">
-                      <a class="btn btn-success" hx-get="{% url 'contact_create_relationship' customer.id%}"
-                        hx-target="#relations-form" hx-swap="innerHTML"><svg xmlns="http://www.w3.org/2000/svg"
+                      <a class="btn btn-success" href="" hx-get="{% url 'create_relationship' from_customer_id=customer.id%}"
+                        hx-target="#relations" hx-swap="beforeend">
+                        <svg xmlns="http://www.w3.org/2000/svg"
                           width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
                           <path
                             d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z" />
@@ -375,5 +383,6 @@
       </div>
     </div>
   </div>
+</div>
 </div>
 {% endblock %}
