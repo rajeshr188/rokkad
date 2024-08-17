@@ -216,14 +216,14 @@ def customer_save(request, pk=None):
                 return response
             else:
                 response = HttpResponse()
-                response['HX-Trigger'] = 'listChanged'
+                response['HX-Redirect'] = reverse("contact_customer_detail", kwargs={"pk": f.id})
                 return response
                 # return redirect(reverse("contact_customer_detail", kwargs={"pk": f.id}))
         else:
             messages.error(request, f"Error saving customer")
     
     return TemplateResponse(
-        request, "partials/crispy_form.html", {"form": form, "customer": customer}
+        request, "contact/customer_form.html", {"form": form, "customer": customer}
     )
 
 @require_http_methods(["DELETE"])

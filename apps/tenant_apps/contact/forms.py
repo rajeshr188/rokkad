@@ -147,23 +147,30 @@ class CustomerForm(forms.ModelForm):
                 css_class='btn btn-danger',
                 **{
                     'hx-get': cancel_url,
-                    'hx-target': 'closest li',
-                    'hx-swap': 'outerHTML'
+                    'hx-target': '#content',
                 }
             )
 
         else:
             self.helper.attrs = {
                 'hx-post': reverse('contact_customer_create'),
-                'hx-target': '#form',
+                'hx-target': '#content',
                 
             }
+            cancel_url = reverse('contact_customer_list')
             cancel_button = Button(
-                'cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('form').remove()"
+                'cancel',
+                'Cancel',
+                css_class='btn btn-danger',
+                **{
+                    'hx-get': cancel_url,
+                    'hx-target': '#content',
+                    'hx-vals':'{"use_block":"content"}',
+                }
             )
 
         self.helper.add_input(Submit('submit', 'Save', css_class='btn btn-success'))
-        self.helper.add_input(Button('cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('form').remove()"))
+        self.helper.add_input(cancel_button)
 
 
 class CustomerPicForm(forms.ModelForm):
