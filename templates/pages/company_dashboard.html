@@ -734,11 +734,13 @@
               {% for customer in new_customers %}
               <div class="item-list">
                 <div class="avatar">
-                  <img
-                    src="{{customer.get_default_pic}}"
-                    alt="..."
-                    class="avatar-img rounded-circle"
-                  />
+                  {% if customer.get_default_pic %}
+            <img src="{{ customer.get_default_pic.url }}" alt="{{ customer.name }}'s Profile Picture"
+              class="avatar-img rounded-circle">
+            {% else %}
+            <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture"
+              class="avatar-img rounded-circle">
+            {% endif %}
                 </div>
                 <div class="info-user ms-3">
                   <div class="username">{{customer.name}}</div>
