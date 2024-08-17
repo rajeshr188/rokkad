@@ -12,7 +12,7 @@ urlpatterns = (
     ),
     path("import/", views.import_data, name="import_data"),
     path("customer/", views.customer_list, name="contact_customer_list"),
-    path("customer/create/", views.customer_create, name="contact_customer_create"),
+    path("customer/create/", views.customer_save, name="contact_customer_create"),
     path(
         "customer/detail/<int:pk>/",
         views.customer_detail,
@@ -20,7 +20,7 @@ urlpatterns = (
     ),
     path("report/", views.CustomerReport.as_view(), name="customer_report"),
     path(
-        "customer/update/<int:pk>/", views.customer_edit, name="contact_customer_update"
+        "customer/update/<int:pk>/", views.customer_save, name="contact_customer_update"
     ),
     path(
         "customer/<int:pk>/delete/",
@@ -83,11 +83,11 @@ urlpatterns = (
     ),
     path("customer/merge/", views.customer_merge, name="contact_customer_merge"),
     # path to create_relationship view
-    path(
-        "customer/<int:from_customer_id>/create_relationship/",
-        views.create_relationship,
-        name="contact_create_relationship",
-    ),
+    path('customer/<int:from_customer_id>/relationship/add/', views.relationship_save, name='create_relationship'),
+    path('customer/<int:from_customer_id>/relationship/<int:relationship_id>/edit', views.relationship_save, name='update_relationship'),
+    path('customer/relationship/<int:relationship_id>/delete/', views.relationship_delete, name='delete_relationship'),
+    path('customer/<int:from_customer_id>/relationship/<int:relationship_id>/detail/', views.relationship_detail, name='relationship_detail'),
+    path('customer/<int:from_customer_id>/relationship/', views.relationship_list, name='relationship_list'),
     path(
         "customer/<int:customer_id>/pics/",
         views.customer_pics,

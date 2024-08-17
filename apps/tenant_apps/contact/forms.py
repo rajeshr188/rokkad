@@ -120,7 +120,6 @@ class CustomerForm(forms.ModelForm):
         fields = [
             "customer_type",
             "name",
-            # "pic",
             "relatedas",
             "relatedto",
             # "pricing_tier",
@@ -132,9 +131,39 @@ class CustomerForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        customer_id = kwargs.pop('customer_id',None)
         super().__init__(*args, **kwargs)
         # default_pricing_tier = PricingTier.objects.get(name="Default")
         # self.fields["pricing_tier"].initial = default_pricing_tier
+        self.helper = FormHelper()
+        if customer_id:
+            self.helper.attrs = {
+                'hx-post': reverse('contact_customer_update', args=[customer_id]),
+            }
+            cancel_url = reverse('contact_customer_detail', args=[customer_id])
+            cancel_button = Button(
+                'cancel',
+                'Cancel',
+                css_class='btn btn-danger',
+                **{
+                    'hx-get': cancel_url,
+                    'hx-target': 'closest li',
+                    'hx-swap': 'outerHTML'
+                }
+            )
+
+        else:
+            self.helper.attrs = {
+                'hx-post': reverse('contact_customer_create'),
+                'hx-target': '#form',
+                
+            }
+            cancel_button = Button(
+                'cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('form').remove()"
+            )
+
+        self.helper.add_input(Submit('submit', 'Save', css_class='btn btn-success'))
+        self.helper.add_input(Button('cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('form').remove()"))
 
 
 class CustomerPicForm(forms.ModelForm):
@@ -203,7 +232,6 @@ class AddressForm(forms.ModelForm):
         self.helper.add_input(Submit('submit', 'Save', css_class='btn btn-success'))
         self.helper.add_input(cancel_button)
     
-
 
 class ContactForm(forms.ModelForm):
     # phone_number = PhoneNumberField(region="IN")
@@ -286,9 +314,18 @@ class CustomerMergeForm(forms.Form):
             }
         ),
     )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.attrs = {
+            'hx-post': reverse('contact_customer_merge'),
+            'hx-target': '#form',
+        }
+        self.helper.add_input(Submit('submit', 'Merge', css_class='btn btn-success'))
+        self.helper.add_input(Button('cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('form').remove()"))
+        
 
-
-class CustomerRelationshipForm(forms.Form):
+class CustomerRelationshipForm(forms.ModelForm):
     relationship = forms.ChoiceField(choices=RelationType.choices)
     related_customer = forms.ModelChoiceField(
         queryset=Customer.objects.all(),
@@ -298,18 +335,36 @@ class CustomerRelationshipForm(forms.Form):
             }
         ),
     )
-
     class Meta:
         model = CustomerRelationship
-        fields = [
-            "relationship",
-            "related_customer",
-        ]
+        fields = ["relationship","related_customer",]
 
-    def __init__(self, *args, customer_id=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        customer_id = kwargs.pop('customer_id', None)
+        instance = kwargs.pop('instance', None)
         super().__init__(*args, **kwargs)
+
+        # Debugging: Print customer_id and instance
+        print(f"customer_id: {customer_id}")
+        print(f"instance: {instance}")
+
         # If from_customer_id is provided, exclude it from the queryset
         if customer_id:
             self.fields["related_customer"].queryset = Customer.objects.exclude(
-                pk=customer_id.id
+                pk=customer_id
             )
+        self.helper = FormHelper()
+        if instance:
+            self.helper.attrs = {
+            'hx-post': reverse('update_relationship', args=[customer_id, instance.id]),
+            'hx-target': 'this',
+            
+        }
+        else:
+            self.helper.attrs = {
+            'hx-post': reverse('create_relationship', args=[customer_id]),
+            'hx-target': '#relations',
+            'hx-swap': 'afterbegin',
+        }
+        self.helper.add_input(Submit('submit', 'Save', css_class='btn btn-success'))
+        self.helper.add_input(Button('cancel', 'Cancel', css_class='btn btn-danger', onclick="this.closest('form').remove()"))

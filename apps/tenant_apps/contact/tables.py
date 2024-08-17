@@ -22,12 +22,12 @@ class CustomerExportTable(tables.Table):
 
 
 class CustomerTable(tables.Table):
-    selection = tables.CheckBoxColumn(
-        accessor="pk",
-        attrs={"th__input": {"onclick": "toggle(this)"}},
-        orderable=False,
-        exclude_from_export=True,
-    )
+    # selection = tables.CheckBoxColumn(
+    #     accessor="pk",
+    #     attrs={"th__input": {"onclick": "toggle(this)"}},
+    #     orderable=False,
+    #     exclude_from_export=True,
+    # )
     name = tables.Column(verbose_name="Name")
     relatedas = tables.Column(verbose_name="Related As")
     relatedto = tables.Column(verbose_name="Related To")
@@ -95,8 +95,8 @@ class CustomerTable(tables.Table):
             <div class="btn-group">
                 <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
-  <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
-</svg>
+                        <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
+                        </svg>
                 </button>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" hx-target="#content" hx-get="/girvi/girvi/loan/create/{}"
@@ -105,7 +105,7 @@ class CustomerTable(tables.Table):
     #                 <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
     #                 </svg> Loan</a></li>
                     <li><a class="dropdown-item" hx-get="/contact/customer/update/{}"
-    #                     hx-push-url="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+    #                     hx-target="#form"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
     #                 <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
     #                 <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
     #                 </svg> Customer</a></li>
@@ -123,7 +123,7 @@ class CustomerTable(tables.Table):
 
     class Meta:
         model = Customer
-        fields = ("selection", "id", "name","customer_type","active")
+        fields = ( "id", "name",)
         attrs = {
             "class": "table table-sm table-bordered text-center table-hover table-striped-columns",
         }

@@ -126,10 +126,10 @@ class Customer(models.Model):
             dup.contactno.all().update(customer=self)
 
             # Transfer duplicate customer's addresses to original customer
-            dup.address.all().update(Customer=self)
+            dup.address.all().update(customer=self)
 
             # Transfer duplicate customer's proofs to original customer
-            dup.proofs.all().update(Customer=self)
+            dup.proofs.all().update(customer=self)
 
             # Transfer duplicate customer's relationships to original customer
             dup.relationships.all().update(customer=self)
