@@ -1,0 +1,15 @@
+<div class="container col-md-10 mt-3 mb-2" id="form">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+      {% if customer%}
+      <h1 class="h2">Update Customer</h1>
+      {%else%}
+      <h1 class="h2">Create Customer</h1>
+      {%endif%}
+    </div>
+    <div class="card">
+      <div class="card-body overflow-hidden">
+        {% include 'partials/crispy_form.html' with form=form%}
+      </div>
+    </div>
+  
+  </div>
