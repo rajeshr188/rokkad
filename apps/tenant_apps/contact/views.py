@@ -34,7 +34,7 @@ from .models import (Address, Contact, Customer, CustomerPic,
                      CustomerRelationship, Proof)
 from .tables import CustomerExportTable, CustomerTable
 
-
+# -----------------------this is to be extracted to tenant/company settings
 @login_required
 def export_form(request):
     if request.method == "POST":
@@ -123,8 +123,25 @@ def import_data(request):
 
         if model is None:
             raise ValueError(f"No model named '{model_name}' found in TENANT_APPS")
+        
+        # Check if the model has a ModelResource defined in the resource module
+        model_resource = None
+        try:
+            resource_module = importlib.import_module(f"{model._meta.app_label}.resources")
+            for attr_name in dir(resource_module):
+                attr = getattr(resource_module, attr_name)
+                if isinstance(attr, type) and issubclass(attr, resources.ModelResource):
+                    if attr._meta.model == model:
+                        model_resource = attr()
+                        break
+        except ImportError:
+            pass
 
-        model_resource = resources.modelresource_factory(model=model)()
+        # Fallback to modelresource_factory if no ModelResource is found
+        if model_resource is None:
+            model_resource = resources.modelresource_factory(model=model)()
+
+        
         dataset = Dataset().load(import_file.read().decode())
         with transaction.atomic():
             result = model_resource.import_data(dataset, raise_errors=True)
@@ -141,6 +158,7 @@ def import_data(request):
 
     return render(request, "import.html", {"form": form})
 
+# -----------------------this is to be extracted to tenant/company settings
 
 @login_required
 @for_htmx(use_block_from_params=True)

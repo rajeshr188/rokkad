@@ -345,6 +345,11 @@ def loan_detail(request, pk):
         lvratio = round(loan.loan_amount / value, 2) * 100
     except ZeroDivisionError:
         lvratio = 0
+
+    try:
+        dvratio = round(loan.due() / value, 2) * 100
+    except ZeroDivisionError:
+        dvratio = 0
     context = {
         "object": loan,
         "sunken": loan.total() < value,
@@ -357,6 +362,7 @@ def loan_detail(request, pk):
         "value": Money(value, "INR"),
         "worth": value - loan.due(),
         "lvratio": lvratio,
+        "dvratio": dvratio,
         "new_item_url": reverse(
             "girvi:girvi_loanitem_create", kwargs={"parent_id": loan.id}
         ),
