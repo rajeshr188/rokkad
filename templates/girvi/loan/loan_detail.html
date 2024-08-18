@@ -149,6 +149,9 @@
             <li class="list-group-item">
               <p class="card-text"><small class="text-body-secondary">{{object.created_by}}</small></p>
             </li>
+            <div class="list-group-item">
+              <p class="card-text"><meter value="{{dvratio}}" min="0" max="100" low="30" high={{loan.due}} optimum="50"></meter>{{dvratio}} %</p>
+            </div>
           </ul>
         </div>
         
@@ -249,7 +252,6 @@
                 <table class="table table-sm caption-top table-striped">
                   <thead>
                     <th>Item</th>
-                    <th>Type</th>
                     <th>Qty</th>
                     <th>Wt</th>
                     <th>Purity</th>

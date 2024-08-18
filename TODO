@@ -5,7 +5,7 @@ newapps:
     savings_scheme:
     loyality program:
     chitfund
-
+member-specific landing page in tenant
 move postgres to managed gcloud postgres or neon postgres
 using django5 with psycopg2(only hurdle is psycopg composite register and adapt for version3)
 archived views of dea on/as dashboard

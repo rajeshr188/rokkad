@@ -8,9 +8,8 @@
                 {% endif %}
                 <br>
                 {% if object.item%}{{object.item}}{%endif%}
-                {{object.itemdesc}}
+                {{object.itemtype}} : {{object.itemdesc}}
         </td>
-        <td>{{object.itemtype}}</td>
         <td>{{object.quantity}}</td>
         <td>{{object.weight}}</td>
         <td>{{object.purity}}</td>
