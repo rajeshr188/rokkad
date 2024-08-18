@@ -2,7 +2,9 @@
 {% load static %}
 {% load l10n %}
 {% block content %}
-<div class="container" >
+<div class="container" 
+      hx-trigger="loanChanged from:body" hx-get="{% url 'girvi:girvi_loan_detail' loan.id %}"
+      hx-target="#content" hx-swap="innerHTML transition:true" hx-trigger="click" hx-vals='{"use_block":"content"}'>
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2">Loan Detail</h1>
     
