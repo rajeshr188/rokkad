@@ -552,6 +552,8 @@ class LoanItem(models.Model):
             old_instance, fields=["loanamount"]
         )
 
+    def get_item_pic(self):
+        return self.pic.url if self.pic and self.pic else None
 
 class LoanItemPic(models.Model):
     loan = models.ForeignKey(

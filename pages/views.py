@@ -9,7 +9,7 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
-from apps.orgs.decorators import roles_required, workspace_required
+from apps.orgs.decorators import roles_required, workspace_required,company_member_required
 from apps.orgs.models import Membership
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.contact.services import (active_customers,
@@ -76,11 +76,13 @@ def Dashboard(request):
 
 
 @login_required
-@workspace_required
-@roles_required(["Owner", "Admin"])
+# @workspace_required
+# @roles_required(["Owner", "Admin","Member"])
+@company_member_required
 def company_dashboard(request):
     context = {}
     company = request.user.workspace
+    context["can_view"] = request.user.memberships.filter(company = company,role__name__in=["Owner","Admin",]).exists()
 
     # from purchase.models import Invoice as Pinv
     # from sales.models import Invoice as Sinv
