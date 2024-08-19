@@ -13,8 +13,8 @@
         <button class="btn btn-default" 
                 hx-get="{% url 'girvi:girvi_loan_list' %}" 
                 hx-trigger="click" 
-                hx-select="#content"
-                hx-target="#content"
+                hx-vals='{"use_block":"content"}'
+                hx-target="#content" hx-swap="innerHTML transition:true"
                 hx-push-url="true">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list"
             viewBox="0 0 16 16">

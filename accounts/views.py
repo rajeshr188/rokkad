@@ -6,6 +6,18 @@ from django_tenants.utils import get_public_schema_name
 from apps.orgs.decorators import company_member_required
 from apps.orgs.models import Company
 
+from .forms import ProfilePictureForm
+
+@login_required
+def upload_profile_picture(request):
+    if request.method == 'POST':
+        form = ProfilePictureForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('home')  # Redirect to a profile page or any other page
+    else:
+        form = ProfilePictureForm(instance=request.user)
+    return render(request, 'upload_profile_picture.html', {'form': form})
 
 @company_member_required
 def switch_workspace(request, workspace_id):

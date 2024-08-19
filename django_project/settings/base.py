@@ -209,13 +209,19 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # https://whitenoise.readthedocs.io/en/latest/django.html
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND":"django_tenants.files.storage.TenantFileSystemStorage",
+        # "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
-
+STATICFILES_FINDERS = [
+    "django_tenants.staticfiles.finders.TenantFileSystemFinder",  # Must be first
+    # "django.contrib.staticfiles.finders.FileSystemFinder",
+    # "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    # "compressor.finders.CompressorFinder",
+]
 # django-crispy-forms
 # https://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
 CRISPY_TEMPLATE_PACK = "bootstrap5"
@@ -318,3 +324,22 @@ SLICK_REPORTING_SETTINGS = {
 
 CURRENCIES = ("USD", "INR", "AUD")
 DEFAULT_CURRENCY = "INR"
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'FETCH_USERINFO' : True
+    }
+}
+
+MULTITENANT_RELATIVE_MEDIA_ROOT = "%s/"
+MULTITENANT_STATICFILES_DIRS = [
+    os.path.join( BASE_DIR, "tenants/%s/static" ),
+]  

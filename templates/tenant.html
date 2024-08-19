@@ -421,24 +421,19 @@
               </li>
               {%endif%}
               <li>
-                  <form class="d-flex" action="{% url 'set_language' %}" method="post">
-                    {% csrf_token %}
-                    <select name="language" class="form-control me-2">
-                      {% get_current_language as LANGUAGE_CODE %}
-                      {% get_available_languages as LANGUAGES %}
+                <form class="d-flex" method="post" action="{% url 'set_language' %}">
+                  {% csrf_token %}
+                  {% get_available_languages as LANGUAGES %}
+                  {% get_current_language as LANGUAGE_CODE %}
+                  <select name="language" onchange="this.form.submit()">
                       {% get_language_info_list for LANGUAGES as languages %}
-                      {% for language in languages %}
-                      <option value="{{ language.code }}" {% if language.code == LANGUAGE_CODE %} selected{% endif %}>
-                        {{ language.name_local }} ({{ language.code }})
-                      </option>
+                      {% for lang in languages %}
+                          <option {% if lang.code == LANGUAGE_CODE %}selected{% endif %}
+                                  value="{{ lang.code }}">{{ lang.name_local }}</option>
                       {% endfor %}
-                    </select>
-                    <input class="btn btn-sm btn-outline-success" type="submit" value="{% trans 'Change' %}">
-                  </form>
-              </li>
-              
-              
-              
+                  </select>
+              </form>
+              </li>   
               <li class="nav-item topbar-user dropdown hidden-caret">
                 <a
                   class="dropdown-toggle profile-pic"
@@ -447,11 +442,19 @@
                   aria-expanded="false"
                 >
                   <div class="avatar-sm">
+                    {% if request.user.profile_picture %}
                     <img
-                      src="{% static 'theme/assets/img/profile.jpg'%}"
-                      alt="..."
-                      class="avatar-img rounded-circle"
+                        src="{{ request.user.profile_picture.url }}"
+                        alt="Profile Picture"
+                        class="avatar-img rounded-circle"
                     />
+                {% else %}
+                    <img
+                        src="{% static 'theme/assets/img/profile.jpg' %}"
+                        alt="Default Profile Picture"
+                        class="avatar-img rounded-circle"
+                    />
+                {% endif %}           
                   </div>
                   <span class="profile-username">
                     <span class="op-7">Hi,</span>
