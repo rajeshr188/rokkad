@@ -5,14 +5,13 @@ from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.files.base import ContentFile
-from django.db.models import (F,Sum)
+from django.db.models import F, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods  # new
-
 from django_tables2.config import RequestConfig
 from django_tables2.export.export import TableExport
 from dynamic_preferences.registries import global_preferences_registry
@@ -20,13 +19,11 @@ from moneyed import Money
 from num2words import num2words
 from openpyxl import load_workbook
 
-
 from apps.orgs.registries import company_preference_registry
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.notify.models import NoticeGroup, Notification
 from apps.tenant_apps.rates.models import Rate
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-
 
 from ..filters import LoanFilter
 from ..forms import (LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm,
@@ -450,6 +447,7 @@ def loanitem_delete(request, parent_id, id):
 def loanitem_detail(request, pk):
     item = get_object_or_404(LoanItem, pk=pk)
     return render(request, "girvi/partials/item-inline.html", {"object": item})
+
 
 @login_required
 def notice(request):

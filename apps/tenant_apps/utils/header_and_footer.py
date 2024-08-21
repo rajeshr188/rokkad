@@ -17,12 +17,14 @@ class PageNumCanvas(canvas.Canvas):
 
     def draw_header_footer(self, page_count):
         self.setFont("Helvetica", 10)
-        self.drawRightString(200 * mm, 20 * mm, "Page %d of %d" % (self._pageNumber, page_count))
+        self.drawRightString(
+            200 * mm, 20 * mm, "Page %d of %d" % (self._pageNumber, page_count)
+        )
 
         # Draw header
         self.saveState()
         styles = getSampleStyleSheet()
-        header = Paragraph("Loan Report", styles['Heading1'])
+        header = Paragraph("Loan Report", styles["Heading1"])
         w, h = header.wrap(self._pagesize[0] - 2 * inch, self._pagesize[1])
         header.drawOn(self, inch, self._pagesize[1] - inch - h)
         self.restoreState()

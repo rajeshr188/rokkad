@@ -34,6 +34,7 @@ from .models import (Address, Contact, Customer, CustomerPic,
                      CustomerRelationship, Proof)
 from .tables import CustomerExportTable, CustomerTable
 
+
 # -----------------------this is to be extracted to tenant/company settings
 @login_required
 def export_form(request):
@@ -123,11 +124,13 @@ def import_data(request):
 
         if model is None:
             raise ValueError(f"No model named '{model_name}' found in TENANT_APPS")
-        
+
         # Check if the model has a ModelResource defined in the resource module
         model_resource = None
         try:
-            resource_module = importlib.import_module(f"{model._meta.app_label}.resources")
+            resource_module = importlib.import_module(
+                f"{model._meta.app_label}.resources"
+            )
             for attr_name in dir(resource_module):
                 attr = getattr(resource_module, attr_name)
                 if isinstance(attr, type) and issubclass(attr, resources.ModelResource):
@@ -141,7 +144,6 @@ def import_data(request):
         if model_resource is None:
             model_resource = resources.modelresource_factory(model=model)()
 
-        
         dataset = Dataset().load(import_file.read().decode())
         with transaction.atomic():
             result = model_resource.import_data(dataset, raise_errors=True)
@@ -158,7 +160,9 @@ def import_data(request):
 
     return render(request, "import.html", {"form": form})
 
+
 # -----------------------this is to be extracted to tenant/company settings
+
 
 @login_required
 @for_htmx(use_block_from_params=True)
@@ -166,8 +170,7 @@ def customer_list(request):
     context = {}
     f = CustomerFilter(
         request.GET,
-        queryset=Customer.objects.all()
-        .prefetch_related("contactno", "address"),
+        queryset=Customer.objects.all().prefetch_related("contactno", "address"),
     )
     table = CustomerTable(f.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
@@ -187,6 +190,7 @@ def customer_list(request):
 
     return TemplateResponse(request, "contact/customer_list.html", context)
 
+
 @for_htmx(use_block="content")
 @login_required
 def customer_detail(request, pk=None):
@@ -202,12 +206,14 @@ def customer_detail(request, pk=None):
     context["worth"] = sum(worth)
     return TemplateResponse(request, "contact/customer_detail.html", context)
 
+
 @login_required
 def customer_save(request, pk=None):
-
     if pk:
         customer = get_object_or_404(Customer, pk=pk)
-        form = CustomerForm(request.POST or None, instance=customer,customer_id = customer.id)
+        form = CustomerForm(
+            request.POST or None, instance=customer, customer_id=customer.id
+        )
         verb = "updated"
         success_message = f"Customer {customer.name} Info Updated"
     else:
@@ -224,7 +230,7 @@ def customer_save(request, pk=None):
             action.send(request.user, action_object=f, verb=verb)
 
             messages.success(request, messages.SUCCESS, success_message)
-            if 'add' in request.POST:
+            if "add" in request.POST:
                 response = TemplateResponse(
                     request,
                     "contact/customer_detail.html",
@@ -234,15 +240,18 @@ def customer_save(request, pk=None):
                 return response
             else:
                 response = HttpResponse()
-                response['HX-Redirect'] = reverse("contact_customer_detail", kwargs={"pk": f.id})
+                response["HX-Redirect"] = reverse(
+                    "contact_customer_detail", kwargs={"pk": f.id}
+                )
                 return response
                 # return redirect(reverse("contact_customer_detail", kwargs={"pk": f.id}))
         else:
             messages.error(request, f"Error saving customer")
-    
+
     return TemplateResponse(
         request, "contact/customer_form.html", {"form": form, "customer": customer}
     )
+
 
 @require_http_methods(["DELETE"])
 def customer_delete(request, pk):
@@ -268,7 +277,7 @@ def customer_merge(request):
                 f"merged customer {duplicate_name} into {original}",
             )
             response = HttpResponse()
-            response['HX-redirect'] = reverse("contact_customer_list")
+            response["HX-redirect"] = reverse("contact_customer_list")
             return response
         else:
             messages.error(request, messages.ERROR, "Error merging customers")
@@ -277,6 +286,7 @@ def customer_merge(request):
         request, "partials/crispy_form.html", context={"form": form}
     )
 
+
 @login_required
 def customer_pics(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
@@ -284,6 +294,7 @@ def customer_pics(request, customer_id):
     return TemplateResponse(
         request, "contact/customer_pics.html", {"customer": customer, "pics": pics}
     )
+
 
 @login_required
 def add_customer_pic(request, customer_id):
@@ -322,6 +333,7 @@ def add_customer_pic(request, customer_id):
         },
     )
 
+
 @login_required
 @require_http_methods(["DELETE"])
 def customer_pic_delete(request, pk):
@@ -329,6 +341,7 @@ def customer_pic_delete(request, pk):
     instance.delete()
     messages.error(request, messages.ERROR, f"Customer Pic {instance} deleted.")
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
+
 
 @login_required
 @require_http_methods(["POST"])
@@ -371,23 +384,28 @@ def customer_pic_set_default(request, pk):
 #         {"form": form, "customer": from_customer},
 #     )
 
+
 @login_required
 def relationship_save(request, from_customer_id, relationship_id=None):
     from_customer = get_object_or_404(Customer, pk=from_customer_id)
     form = CustomerRelationshipForm(request.POST or None, customer_id=from_customer.id)
 
     if relationship_id:
-        relationship_instance = get_object_or_404(CustomerRelationship, pk=relationship_id)
-        form = CustomerRelationshipForm(request.POST, instance=relationship_instance, customer_id=from_customer.id)
+        relationship_instance = get_object_or_404(
+            CustomerRelationship, pk=relationship_id
+        )
+        form = CustomerRelationshipForm(
+            request.POST, instance=relationship_instance, customer_id=from_customer.id
+        )
 
-    if request.method == "POST":      
+    if request.method == "POST":
         if form.is_valid():
             relationship_instance = form.save(commit=False)
             relationship_instance.customer = from_customer
             relationship_instance.save()
             print("form valid sacing")
             response = HttpResponse()
-            response['HX-Trigger'] = 'listChanged'
+            response["HX-Trigger"] = "listChanged"
             return response
 
     return render(
@@ -396,14 +414,19 @@ def relationship_save(request, from_customer_id, relationship_id=None):
         {"form": form, "customer": from_customer},
     )
 
+
 def relationship_delete(request, relationship_id):
     relationship = get_object_or_404(CustomerRelationship, pk=relationship_id)
     relationship.delete()
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
+
 def relationship_detail(request, relationship_id):
     relationship = get_object_or_404(CustomerRelationship, pk=relationship_id)
-    return render(request, "contact/relationship_detail.html", context={"i": relationship})
+    return render(
+        request, "contact/relationship_detail.html", context={"i": relationship}
+    )
+
 
 def relationship_list(request, from_customer_id):
     from_customer = get_object_or_404(Customer, pk=from_customer_id)
@@ -411,8 +434,11 @@ def relationship_list(request, from_customer_id):
     return render(
         request,
         "contact/relationship_list.html",
-        {"relationships": relationships,},
+        {
+            "relationships": relationships,
+        },
     )
+
 
 @login_required
 def contact_save(request, customer_pk=None, contact_pk=None):
@@ -420,25 +446,32 @@ def contact_save(request, customer_pk=None, contact_pk=None):
     contact = None
     if contact_pk:
         contact = get_object_or_404(Contact, pk=contact_pk)
-        form = ContactForm(request.POST or None, instance=contact,customer_id= customer.id,contact_id = contact.id)
+        form = ContactForm(
+            request.POST or None,
+            instance=contact,
+            customer_id=customer.id,
+            contact_id=contact.id,
+        )
     else:
-        form = ContactForm(request.POST or None, initial={"customer": customer},customer_id= customer.id)
+        form = ContactForm(
+            request.POST or None,
+            initial={"customer": customer},
+            customer_id=customer.id,
+        )
 
     if request.method == "POST" and form.is_valid():
         f = form.save(commit=False)
         f.customer = customer
         f.save()
         if contact:
-            messages.success(request, messages.SUCCESS, f"Contact {f} updated.")   
+            messages.success(request, messages.SUCCESS, f"Contact {f} updated.")
         else:
             messages.success(request, messages.SUCCESS, f"Contact {f} created.")
-        return render(
-                request, "contact/contact_detail.html", context={"i": f}
-            )
+        return render(request, "contact/contact_detail.html", context={"i": f})
 
     return render(
         request,
-        'partials/crispy_form.html',
+        "partials/crispy_form.html",
         context={"form": form, "customer": customer, "contact": contact},
     )
 
@@ -458,6 +491,7 @@ def contact_list(request, pk: int = None):
 def contact_detail(request, pk):
     contact = get_object_or_404(Contact, pk=pk)
     return render(request, "contact/contact_detail.html", context={"i": contact})
+
 
 @login_required
 @require_http_methods(["DELETE"])
@@ -485,9 +519,14 @@ def address_create_or_update(request, customer_pk=None, address_pk=None):
     address = None
     if address_pk:
         address = get_object_or_404(Address, pk=address_pk)
-        form = AddressForm(request.POST or None, instance=address, customer_id = customer.id,address_id = address.id)
+        form = AddressForm(
+            request.POST or None,
+            instance=address,
+            customer_id=customer.id,
+            address_id=address.id,
+        )
     else:
-        form = AddressForm(request.POST or None, customer_id = customer.id)
+        form = AddressForm(request.POST or None, customer_id=customer.id)
 
     if request.method == "POST" and form.is_valid():
         address = form.save(commit=False)
@@ -507,12 +546,14 @@ def address_create_or_update(request, customer_pk=None, address_pk=None):
     if address:
         context["address"] = address
 
-    return render(request, 'partials/crispy_form.html', context)
+    return render(request, "partials/crispy_form.html", context)
+
 
 @login_required
 def address_detail(request, pk):
     address = get_object_or_404(Address, pk=pk)
     return render(request, "contact/address_detail.html", context={"i": address})
+
 
 @login_required
 @require_http_methods(["DELETE"])

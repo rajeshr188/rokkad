@@ -1,9 +1,11 @@
+from django.db.models import Count, F, Q, Sum
 from django.utils.translation import gettext as _
 from slick_reporting.fields import ComputationField
 from slick_reporting.views import Chart, ListReportView, ReportView
-from ..models import Loan, LoanPayment, Statement,Release
+
 from ..forms import LoanReportForm
-from django.db.models import (Count, F, Q,Sum)
+from ..models import Loan, LoanPayment, Release, Statement
+
 
 class LoanByCustomerReport(ReportView):
     queryset = Loan.objects.unreleased()

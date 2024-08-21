@@ -331,14 +331,14 @@ class ReleaseForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
-                Column('loan', css_class='form-group col-md-3 mb-0'),
-                Column('release_date', css_class='form-group col-md-3 mb-0'),
-                Column('released_by', css_class='form-group col-md-3 mb-0'),
-                Column('release_amount', css_class='form-group col-md-3 mb-0'),
-                css_class='form-row'
+                Column("loan", css_class="form-group col-md-3 mb-0"),
+                Column("release_date", css_class="form-group col-md-3 mb-0"),
+                Column("released_by", css_class="form-group col-md-3 mb-0"),
+                Column("release_amount", css_class="form-group col-md-3 mb-0"),
+                css_class="form-row",
             )
         )
-        
+
     def clean_loan(self):
         loan = self.cleaned_data["loan"]
         # if loan.due() > 0:
@@ -395,7 +395,9 @@ class ReleaseForm(forms.ModelForm):
             instance.save()
         return instance
 
+
 ReleaseFormSet = forms.modelformset_factory(Release, form=ReleaseForm, extra=1)
+
 
 class BulkReleaseForm(forms.Form):
     date = forms.DateTimeField(
@@ -408,12 +410,11 @@ class BulkReleaseForm(forms.Form):
                 "autofocus": True,
             }
         ),
-        initial=timezone.now()
+        initial=timezone.now(),
     )
     loans = forms.ModelMultipleChoiceField(
         widget=MultipleLoansWidget, queryset=Loan.unreleased.all()
     )
-    
 
 
 class StatementItemForm(forms.ModelForm):

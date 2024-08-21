@@ -21,12 +21,11 @@ class CustomUserChangeForm(UserChangeForm):
             "username",
         )
 
+
 class ProfilePictureForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = (
-            "profile_picture",
-        )
+        fields = ("profile_picture",)
         labels = {
             "profile_picture": "Profile Picture",
         }
@@ -38,4 +37,3 @@ class ProfilePictureForm(forms.ModelForm):
                 "invalid": "Image files only",
             }
         }
-        

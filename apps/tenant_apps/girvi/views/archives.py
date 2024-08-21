@@ -1,8 +1,10 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.dates import (DayArchiveView, MonthArchiveView,
                                         TodayArchiveView, WeekArchiveView,
                                         YearArchiveView)
-from django.contrib.auth.mixins import LoginRequiredMixin
+
 from ..models import Loan
+
 
 class LoanYearArchiveView(LoginRequiredMixin, YearArchiveView):
     queryset = Loan.objects.all()
