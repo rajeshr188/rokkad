@@ -214,9 +214,13 @@ class Loan(models.Model):
         return round(self.interest * self.noofmonths(date))
 
     def current_value(self):
-        total_current_value = sum(
-            loan_item.current_value() for loan_item in self.loanitems.all()
-        )
+        try:
+            total_current_value = sum(
+                loan_item.current_value() for loan_item in self.loanitems.all()
+            )
+        except Exception as e:
+            return 0
+        
         return total_current_value
 
     def total(self):
@@ -362,7 +366,6 @@ class Loan(models.Model):
 
         # return combined_transactions
         return list(ledger_transactions)
-
 
 class LoanItem(models.Model):
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE, related_name="loanitems")
@@ -574,7 +577,6 @@ class LoanItemPic(models.Model):
     def get_delete_url(self):
         return reverse("loanitempic_delete", args=[str(self.id)])
 
-
 class LoanPayment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -746,7 +748,6 @@ class LoanPayment(models.Model):
             old_instance, fields=["payment_amount"]
         )
 
-
 class Statement(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -771,7 +772,6 @@ class Statement(models.Model):
     @property
     def previous(self):
         return Statement.objects.filter(id__lt=self.id).order_by("id").last()
-
 
 class StatementItem(models.Model):
     statement = models.ForeignKey(Statement, on_delete=models.CASCADE)

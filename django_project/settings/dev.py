@@ -19,11 +19,6 @@ DATABASES = {
     }
 }
 
-# INSTALLED_APPS += [
-#     # 'slick_reporting',
-#     # 'crispy_bootsrap4',
-# ]
-
 MIDDLEWARE += [
     "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]

@@ -59,20 +59,23 @@ def has_role(user, tenant, role_name):
 def company_create(request):
     if request.method == "POST":
         form = CompanyForm(request.POST)
+        # TODO: set schema to public schema and then create the company
         if form.is_valid():
-            company = form.save(commit=False)
-            company.schema_name = company.name.lower().replace(" ", "_")
-            company.creator = request.user
-            company.owner = request.user
-            company.save()
-            domain = remove_www(request.get_host().split(":")[0]).lower()
-            company_domain = f"{company.schema_name}.{domain}"
-            Domain.objects.create(
-                tenant=company, domain=company_domain, is_primary=True
-            )
-            Membership.objects.create(
-                user=request.user, company=company, role=Role.objects.get(name="Owner")
-            )
+            with schema_context(get_public_schema_name()):
+                company = form.save(commit=False)
+                company.schema_name = company.name.lower().replace(" ", "_")
+                company.creator = request.user
+                company.owner = request.user
+                company.save()
+                domain = remove_www(request.get_host().split(":")[0]).lower()
+                company_domain = f"{company.schema_name}.{domain}"
+                Domain.objects.create(
+                    tenant=company, domain=company_domain, is_primary=True
+                )
+                Membership.objects.create(
+                    user=request.user, company=company, role=Role.objects.get(name="Owner")
+                )
+                request.user.set_workspace(company)
             return redirect("orgs_company_list")
     else:
         form = CompanyForm()
@@ -130,7 +133,7 @@ def company_delete(request, company_id):
             company.delete()
 
             # Reset the user's workspace to the public schema
-            request.user.workspace = None
+            request.user.workspace = get_public_schema_name()
             request.user.save()
         return redirect("orgs_company_list")
 
