@@ -1,18 +1,23 @@
-from reportlab.lib.pagesizes import letter,A4,landscape
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, LongTable,TableStyle, Paragraph, PageBreak, Spacer
-from reportlab.platypus.tableofcontents import TableOfContents
-from reportlab.lib.units import inch,cm,mm
-from reportlab.pdfgen import canvas
-from reportlab.lib.enums import TA_CENTER
-from reportlab.platypus import PageTemplate, Frame
-from reportlab.lib.styles import getSampleStyleSheet,ParagraphStyle
-from ..models import Loan
-from apps.tenant_apps.utils.htmx_utils import for_htmx
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4, landscape, letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm, inch, mm
+from reportlab.pdfgen import canvas
+from reportlab.platypus import (Frame, LongTable, PageBreak, PageTemplate,
+                                Paragraph, SimpleDocTemplate, Spacer, Table,
+                                TableStyle)
+from reportlab.platypus.tableofcontents import TableOfContents
+
+from apps.tenant_apps.utils.htmx_utils import for_htmx
 from apps.tenant_apps.utils.loan_pdf import (get_custom_jsk, get_loan_template,
                                              get_notice_pdf, print_labels_pdf)
-from django.http import HttpResponse
+
+from ..models import Loan
+
+
 def print_labels(request):
     # check if user wanted all rows to be selected
     all = request.POST.get("selectall")
@@ -142,6 +147,7 @@ def print_loan(request, pk=None):
     response["Content-Disposition"] = f"inline; filename='{loan.lid}.pdf'"
     return response
 
+
 class PageNumCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         canvas.Canvas.__init__(self, *args, **kwargs)
@@ -161,12 +167,14 @@ class PageNumCanvas(canvas.Canvas):
 
     def draw_header_footer(self, page_count):
         self.setFont("Helvetica", 10)
-        self.drawRightString(200 * mm, 20 * mm, "Page %d of %d" % (self._pageNumber, page_count))
+        self.drawRightString(
+            200 * mm, 20 * mm, "Page %d of %d" % (self._pageNumber, page_count)
+        )
 
         # Draw header
         self.saveState()
         styles = getSampleStyleSheet()
-        header = Paragraph("Loan Report", styles['Heading1'])
+        header = Paragraph("Loan Report", styles["Heading1"])
         w, h = header.wrap(self._pagesize[0] - 1 * inch, self._pagesize[1])
         header.drawOn(self, inch, self._pagesize[1] - inch - h + 20)
         self.restoreState()
@@ -174,17 +182,16 @@ class PageNumCanvas(canvas.Canvas):
 
 @login_required
 def generate_loans_ledger_pdf(response):
-
     # add annotation,bookmarks,table of contents,pagination,header and footer
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="loan_report.pdf"'
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="loan_report.pdf"'
 
     doc = SimpleDocTemplate(response, pagesize=landscape(A4))
     elements = []
 
     styles = getSampleStyleSheet()
-    cover_title = Paragraph("Loan Report", styles['Title'])
-    cover_subtitle = Paragraph("Generated on: [Date]", styles['Heading2'])
+    cover_title = Paragraph("Loan Report", styles["Title"])
+    cover_subtitle = Paragraph("Generated on: [Date]", styles["Heading2"])
     elements.append(Spacer(1, 2 * inch))
     elements.append(cover_title)
     elements.append(Spacer(1, 0.5 * inch))
@@ -194,57 +201,88 @@ def generate_loans_ledger_pdf(response):
     # Add Table of Contents
     toc = TableOfContents()
     toc.levelStyles = [
-        ParagraphStyle(fontSize=14, name='Heading1', leading=16),
-        ParagraphStyle(fontSize=12, name='Heading2', leading=14),
-        ParagraphStyle(fontSize=10, name='Heading3', leading=12),
+        ParagraphStyle(fontSize=14, name="Heading1", leading=16),
+        ParagraphStyle(fontSize=12, name="Heading2", leading=14),
+        ParagraphStyle(fontSize=10, name="Heading3", leading=12),
     ]
-    elements.append(Paragraph("Table of Contents", getSampleStyleSheet()['Heading1']))
+    elements.append(Paragraph("Table of Contents", getSampleStyleSheet()["Heading1"]))
     elements.append(toc)
     elements.append(PageBreak())
 
-
     # Add Table
-    data = [["Loan ID", "Loan Date", "Customer", "Loan Amount", "Weight", "Present Value", "Item Description", "Release Date", "Released By"]]
+    data = [
+        [
+            "Loan ID",
+            "Loan Date",
+            "Customer",
+            "Loan Amount",
+            "Weight",
+            "Present Value",
+            "Item Description",
+            "Release Date",
+            "Released By",
+        ]
+    ]
     loans = Loan.objects.all().select_related("customer", "release")
     for loan in loans.iterator(chunk_size=1000):
-        data.append([
-            loan.loan_id,
-            loan.loan_date.date(),
-            loan.customer.name,
-            loan.loan_amount,
-            loan.formatted_weight(),
-            loan.current_value(),
-            loan.item_desc,
-            loan.release.release_date.date() if loan.is_released else "",
-            loan.release.released_by if loan.is_released else ""
-        ])
+        data.append(
+            [
+                loan.loan_id,
+                loan.loan_date.date(),
+                loan.customer.name,
+                loan.loan_amount,
+                loan.formatted_weight(),
+                loan.current_value(),
+                loan.item_desc,
+                loan.release.release_date.date() if loan.is_released else "",
+                loan.release.released_by if loan.is_released else "",
+            ]
+        )
     # Define column widths
-    col_widths = [0.5 * inch, 1 * inch, 1 * inch, 1 * inch, 1 * inch, 1 * inch, 2.5 * inch, 1 * inch, 1 * inch]
-    table = LongTable(data, colWidths=col_widths,repeatRows=1,splitByRow=1)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-
-   
+    col_widths = [
+        0.5 * inch,
+        1 * inch,
+        1 * inch,
+        1 * inch,
+        1 * inch,
+        1 * inch,
+        2.5 * inch,
+        1 * inch,
+        1 * inch,
+    ]
+    table = LongTable(data, colWidths=col_widths, repeatRows=1, splitByRow=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
 
     elements.append(table)
 
     # Define a frame for the content
-    frame = Frame(inch, inch, landscape(A4)[0] - 2 * inch, landscape(A4)[1] - 2 * inch, id='normal')
+    frame = Frame(
+        inch,
+        inch,
+        landscape(A4)[0] - 2 * inch,
+        landscape(A4)[1] - 2 * inch,
+        id="normal",
+    )
 
     # Create a PageTemplate with the frame
-    template = PageTemplate(id='test', frames=frame, onPage=PageNumCanvas)
+    template = PageTemplate(id="test", frames=frame, onPage=PageNumCanvas)
 
     # Build PDF with the template
     doc.addPageTemplates([template])
     # Build PDF
-    doc.multiBuild(elements,canvasmaker=PageNumCanvas)
+    doc.multiBuild(elements, canvasmaker=PageNumCanvas)
 
     return response
 
@@ -252,7 +290,7 @@ def generate_loans_ledger_pdf(response):
 @login_required
 def generate_unreleased_pdf(request):
     # Sample list of numbers
-    numbers = Loan.objects.unreleased().values_list('loan_id', flat=True)
+    numbers = Loan.objects.unreleased().values_list("loan_id", flat=True)
 
     # Number of columns
     num_columns = 10
@@ -272,8 +310,8 @@ def generate_unreleased_pdf(request):
     total_pages = (total_rows + num_rows_per_page - 1) // num_rows_per_page
 
     # Create the HTTP response object
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="numbers_report.pdf"'
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="numbers_report.pdf"'
 
     # Create the PDF document
     doc = SimpleDocTemplate(response, pagesize=A4)
@@ -281,7 +319,7 @@ def generate_unreleased_pdf(request):
 
     # Add title
     styles = getSampleStyleSheet()
-    title = Paragraph("Numbers Report", styles['Title'])
+    title = Paragraph("Numbers Report", styles["Title"])
     elements.append(title)
     elements.append(Spacer(1, 0.5 * inch))
 
@@ -289,7 +327,7 @@ def generate_unreleased_pdf(request):
     for page in range(total_pages):
         start_row = page * num_rows_per_page
         end_row = start_row + num_rows_per_page
-        page_data = numbers[start_row * num_columns:end_row * num_columns]
+        page_data = numbers[start_row * num_columns : end_row * num_columns]
 
         # Transpose the data for column-wise printing
         table_data = [[] for _ in range(num_rows_per_page)]
@@ -300,20 +338,24 @@ def generate_unreleased_pdf(request):
         # Add gaps between columns
         for row in table_data:
             while len(row) < num_columns:
-                row.append('')
+                row.append("")
 
         # Create the table with column widths
         col_widths = [usable_width / num_columns] * num_columns
         table = Table(table_data, colWidths=col_widths)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ]))
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ]
+            )
+        )
 
         # Add the table to the elements
         elements.append(table)

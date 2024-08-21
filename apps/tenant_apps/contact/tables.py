@@ -123,7 +123,10 @@ class CustomerTable(tables.Table):
 
     class Meta:
         model = Customer
-        fields = ( "id", "name",)
+        fields = (
+            "id",
+            "name",
+        )
         attrs = {
             "class": "table table-sm table-bordered text-center table-hover table-striped-columns",
         }

@@ -154,7 +154,7 @@ urlpatterns += (
         "girvi/loan-listreport/", views.LoanListReport.as_view(), name="Loan_list_repot"
     ),
     path("girvi/ledger/", views.generate_loans_ledger_pdf, name="girvi_ledger"),
-    path("girvi/unreleased/",views.generate_unreleased_pdf, name="girvi_unreleased"),
+    path("girvi/unreleased/", views.generate_unreleased_pdf, name="girvi_unreleased"),
 )
 
 # urls for loanitem
@@ -275,9 +275,11 @@ urlpatterns += (
         views.get_release_details,
         name="bulk_release_details",
     ),
-    path('submit_release_formset/', views.submit_release_formset, name='submit_release_formset'),
+    path(
+        "submit_release_formset/",
+        views.submit_release_formset,
+        name="submit_release_formset",
+    ),
     path("girvi/release/<int:pk>/form_h/", views.form_h, name="release_form_h"),
-
-
 )
 # urls for forms

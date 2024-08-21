@@ -73,7 +73,9 @@ def company_create(request):
                     tenant=company, domain=company_domain, is_primary=True
                 )
                 Membership.objects.create(
-                    user=request.user, company=company, role=Role.objects.get(name="Owner")
+                    user=request.user,
+                    company=company,
+                    role=Role.objects.get(name="Owner"),
                 )
                 request.user.set_workspace(company)
             return redirect("orgs_company_list")

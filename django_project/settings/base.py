@@ -209,7 +209,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # https://whitenoise.readthedocs.io/en/latest/django.html
 STORAGES = {
     "default": {
-        "BACKEND":"django_tenants.files.storage.TenantFileSystemStorage",
+        "BACKEND": "django_tenants.files.storage.TenantFileSystemStorage",
         # "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
@@ -265,7 +265,7 @@ ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
-SOCIALACCOUNT_LOGIN_ON_GET=True
+SOCIALACCOUNT_LOGIN_ON_GET = True
 
 INVITATIONS_INVITATION_MODEL = "orgs.CompanyInvitation"
 # INVITATIONS_INVITE_FORM = "apps.orgs.forms.InviteForm"
@@ -327,20 +327,20 @@ CURRENCIES = ("USD", "INR", "AUD")
 DEFAULT_CURRENCY = "INR"
 
 SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'SCOPE': [
-            'profile',
-            'email',
+    "google": {
+        "SCOPE": [
+            "profile",
+            "email",
         ],
-        'AUTH_PARAMS': {
-            'access_type': 'online',
+        "AUTH_PARAMS": {
+            "access_type": "online",
         },
-        'OAUTH_PKCE_ENABLED': True,
-        'FETCH_USERINFO' : True
+        "OAUTH_PKCE_ENABLED": True,
+        "FETCH_USERINFO": True,
     }
 }
 
 MULTITENANT_RELATIVE_MEDIA_ROOT = "%s/"
 MULTITENANT_STATICFILES_DIRS = [
-    os.path.join( BASE_DIR, "tenants/%s/static" ),
-]  
+    os.path.join(BASE_DIR, "tenants/%s/static"),
+]

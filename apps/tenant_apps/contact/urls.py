@@ -37,14 +37,21 @@ urlpatterns = (
         views.reallot_payments,
         name="contact_reallot_payments",
     ),
-    
     path(
         "customer/contactno/<int:pk>/detail/",
         views.contact_detail,
         name="customer_contact_detail",
     ),
-    path('customer/<int:customer_pk>/contactno/add/', views.contact_save, name='contact_create'),
-    path('customer/<int:customer_pk>/contactno/<int:contact_pk>/update/', views.contact_save, name='contact_update'),
+    path(
+        "customer/<int:customer_pk>/contactno/add/",
+        views.contact_save,
+        name="contact_create",
+    ),
+    path(
+        "customer/<int:customer_pk>/contactno/<int:contact_pk>/update/",
+        views.contact_save,
+        name="contact_update",
+    ),
     path(
         "customer/contactno/<int:pk>/delete/",
         views.contact_delete,
@@ -75,7 +82,6 @@ urlpatterns = (
         views.address_detail,
         name="customer_address_detail",
     ),
-    
     path(
         "customer/address/<int:pk>/delete/",
         views.address_delete,
@@ -83,11 +89,31 @@ urlpatterns = (
     ),
     path("customer/merge/", views.customer_merge, name="contact_customer_merge"),
     # path to create_relationship view
-    path('customer/<int:from_customer_id>/relationship/add/', views.relationship_save, name='create_relationship'),
-    path('customer/<int:from_customer_id>/relationship/<int:relationship_id>/edit', views.relationship_save, name='update_relationship'),
-    path('customer/relationship/<int:relationship_id>/delete/', views.relationship_delete, name='delete_relationship'),
-    path('customer/<int:from_customer_id>/relationship/<int:relationship_id>/detail/', views.relationship_detail, name='relationship_detail'),
-    path('customer/<int:from_customer_id>/relationship/', views.relationship_list, name='relationship_list'),
+    path(
+        "customer/<int:from_customer_id>/relationship/add/",
+        views.relationship_save,
+        name="create_relationship",
+    ),
+    path(
+        "customer/<int:from_customer_id>/relationship/<int:relationship_id>/edit",
+        views.relationship_save,
+        name="update_relationship",
+    ),
+    path(
+        "customer/relationship/<int:relationship_id>/delete/",
+        views.relationship_delete,
+        name="delete_relationship",
+    ),
+    path(
+        "customer/<int:from_customer_id>/relationship/<int:relationship_id>/detail/",
+        views.relationship_detail,
+        name="relationship_detail",
+    ),
+    path(
+        "customer/<int:from_customer_id>/relationship/",
+        views.relationship_list,
+        name="relationship_list",
+    ),
     path(
         "customer/<int:customer_id>/pics/",
         views.customer_pics,

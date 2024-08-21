@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List
+
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,7 +20,7 @@ from django_tables2.views import SingleTableMixin
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import ReleaseFilter
-from ..forms import BulkReleaseForm, ReleaseForm,ReleaseFormSet
+from ..forms import BulkReleaseForm, ReleaseForm, ReleaseFormSet
 from ..models import Loan, Release
 from ..tables import ReleaseTable
 
@@ -116,7 +117,6 @@ class ReleaseDeleteView(LoginRequiredMixin, DeleteView):
 
 from django.db import IntegrityError
 
-
 # @for_htmx(use_block="content")
 # def bulk_release(request):
 #     # if this is a POST request we need to process the form data
@@ -167,6 +167,7 @@ from django.db import IntegrityError
 #         form_g = SearchLoanForm()
 #     return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form, "form_g": form_g})
 
+
 @for_htmx(use_block="content")
 def bulk_release(request):
     # if this is a POST request we need to process the form data
@@ -180,54 +181,63 @@ def bulk_release(request):
 
             if not date:
                 date = timezone.now().date()
-            
+
             formset_initial_data = [
                 {
-                    'loan': loan,
-                    'release_date': date,
-                    'released_by': request.user,
-                    'release_amount': loan.due()
+                    "loan": loan,
+                    "release_date": date,
+                    "released_by": request.user,
+                    "release_amount": loan.due(),
                 }
                 for loan in loans
             ]
-            ReleaseFormSet = forms.modelformset_factory(Release, form=ReleaseForm, extra=len(formset_initial_data))
-            formset = ReleaseFormSet(queryset=Release.objects.none(), initial=formset_initial_data)
+            ReleaseFormSet = forms.modelformset_factory(
+                Release, form=ReleaseForm, extra=len(formset_initial_data)
+            )
+            formset = ReleaseFormSet(
+                queryset=Release.objects.none(), initial=formset_initial_data
+            )
 
             total_principal = sum(loan.loan_amount for loan in loans)
             total_interest = sum(loan.interestdue() for loan in loans)
             total_amount = sum(loan.due() for loan in loans)
             summary = {
-                'total_loans': len(loans),
-                'total_principal': total_principal,
-                'total_interest': total_interest,
-                'total_amount': total_amount
+                "total_loans": len(loans),
+                "total_principal": total_principal,
+                "total_interest": total_interest,
+                "total_amount": total_amount,
             }
-            return TemplateResponse(request, "girvi/release/bulk_release.html", {
-                'formset': formset,
-                'summary': summary,
-                'form': BulkReleaseForm()
-                
-            })
+            return TemplateResponse(
+                request,
+                "girvi/release/bulk_release.html",
+                {"formset": formset, "summary": summary, "form": BulkReleaseForm()},
+            )
         else:
             # If the form is invalid, return the form with errors
-            return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form})
+            return TemplateResponse(
+                request, "girvi/release/bulk_release.html", {"form": form}
+            )
     # if a GET (or any other method) we'll create a blank form
     else:
         selected_loans = request.GET.getlist("selection", "")
         qs = Loan.unreleased.filter(id__in=selected_loans).values_list("id", flat=True)
         form = BulkReleaseForm(initial={"loans": qs})
-        
+
     return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form})
 
 
 def submit_release_formset(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         formset = ReleaseFormSet(request.POST)
         if formset.is_valid():
             instances = formset.save()
-            return render(request, 'girvi/release/release_success.html', {'instances': instances})
-        return render(request, 'girvi/release/release_formset.html', {'formset': formset})
-    return HttpResponseNotAllowed(['POST'])
+            return render(
+                request, "girvi/release/release_success.html", {"instances": instances}
+            )
+        return render(
+            request, "girvi/release/release_formset.html", {"formset": formset}
+        )
+    return HttpResponseNotAllowed(["POST"])
 
 
 @require_POST

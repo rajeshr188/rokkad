@@ -12,8 +12,10 @@ class CustomUser(AbstractUser):
         default=None,
         verbose_name=_("Workspace"),
     )
-    profile_picture = models.ImageField(upload_to="profile_pictures/", null=True, blank=True)   
-    social_profile_picture = models.URLField(max_length=200,null=True, blank=True)
+    profile_picture = models.ImageField(
+        upload_to="profile_pictures/", null=True, blank=True
+    )
+    social_profile_picture = models.URLField(max_length=200, null=True, blank=True)
 
     def __str__(self):
         return self.email

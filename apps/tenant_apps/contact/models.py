@@ -419,9 +419,7 @@ class Address(models.Model):
     )
 
     # Fields
-    area = models.CharField(
-        max_length=30, verbose_name=_("Area")
-    )
+    area = models.CharField(max_length=30, verbose_name=_("Area"))
     created = models.DateTimeField(auto_now_add=True, editable=False)
     doorno = models.CharField(max_length=30, verbose_name=_("Door No"))
     zipcode = models.CharField(
