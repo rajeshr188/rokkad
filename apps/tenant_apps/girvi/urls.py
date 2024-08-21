@@ -153,6 +153,8 @@ urlpatterns += (
     path(
         "girvi/loan-listreport/", views.LoanListReport.as_view(), name="Loan_list_repot"
     ),
+    path("girvi/ledger/", views.generate_loans_ledger_pdf, name="girvi_ledger"),
+    path("girvi/unreleased/",views.generate_unreleased_pdf, name="girvi_unreleased"),
 )
 
 # urls for loanitem

@@ -4,3 +4,6 @@ from .loan import *
 from .loanpayment import *
 from .release import *
 from .series import *
+from .reports import *
+from .archives import *
+from .prints import *

@@ -18,6 +18,10 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.email
 
+    def set_workspace(self, workspace):
+        self.workspace = workspace
+        self.save()
+
     def delete(self, *args, **kwargs):
         for tenant in self.memberships.all():
             with tenant_context(tenant.company.schema_name):
