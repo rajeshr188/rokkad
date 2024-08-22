@@ -180,7 +180,7 @@
       {% include "filter.html"%}
     </div>
 
-    <div class="col-md-9 " id="table">
+    <div class="col-md-9 table-responsive" id="table">
       {%block table%}
       <div class="row">
         <div class="col">
@@ -265,15 +265,13 @@
         </button>
       </p>
       <div class="collapse" id="collapseExample">
-        <div class="card card-body">
+        <div class="card card-body ">
           <p>Total Loan Amount: {{total_loan_amount.total}} <br>
             Total Interest :{{total_interest.total}} <br>
             Results :{{table.paginator.count}} </p>
         </div>
       </div>
-      <div class="table-responsive">
-        {% render_table table %}
-      </div>
+      {% render_table table %}
       {%endblock%}
     </div>
 

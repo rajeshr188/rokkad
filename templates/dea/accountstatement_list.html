@@ -3,7 +3,8 @@
 {% block title %}Account Statement {% endblock %}
 
 {% block content %}
-<h1>Account Statement</h1>
+<div class="container table-responsive">
+    <h1>Account Statement</h1>
 <table class="table">
     <tbody>
         {% for i in object_list %}
@@ -16,4 +17,5 @@
         {%endfor%}
     </tbody>
 </table>
+</div>
 {% endblock %}
