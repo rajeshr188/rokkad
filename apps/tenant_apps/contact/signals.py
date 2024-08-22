@@ -38,29 +38,3 @@ def add_account(sender, instance, created, **kwargs):
         account, created = Account.objects.update_or_create(
             contact=instance, entity=entity_t, defaults={"AccountType_Ext": acct_c}
         )
-
-
-# @receiver(post_save, sender=Customer)
-# def add_account(sender, instance, created, **kwargs):
-#     acct_c = AccountType_Ext.objects.get(description="Creditor")
-#     acct_d = AccountType_Ext.objects.get(description="Debtor")
-#     try:
-#         acc = instance.account
-#     except Account.DoesNotExist:
-#         acc = None
-#     if created or acc is None:
-#         entity_t = EntityType.objects.get(name="Person")
-#         if instance.customer_type == "W" or instance.customer_type == "R":
-#             Account.objects.create(
-#                 contact=instance, entity=entity_t, AccountType_Ext=acct_d
-#             )
-#         else:
-#             Account.objects.create(
-#                 contact=instance, entity=entity_t, AccountType_Ext=acct_c
-#             )
-#     else:
-#         if instance.customer_type == "W" or instance.customer_type == "R":
-#             instance.account.AccountType_Ext = acct_d
-#         else:
-#             instance.account.AccountType_Ext = acct_c
-#         instance.account.save(update_fields=["AccountType_Ext"])

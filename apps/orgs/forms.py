@@ -2,12 +2,13 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django_select2.forms import Select2Widget
-from dynamic_preferences.forms import (PreferenceForm,
-                                       SinglePerInstancePreferenceForm,
-                                       preference_form_builder)
+from dynamic_preferences.forms import (
+    PreferenceForm,
+    SinglePerInstancePreferenceForm,
+    preference_form_builder,
+)
 from invitations.adapters import get_invitations_adapter
-from invitations.exceptions import (AlreadyAccepted, AlreadyInvited,
-                                    UserRegisteredEmail)
+from invitations.exceptions import AlreadyAccepted, AlreadyInvited, UserRegisteredEmail
 from invitations.forms import CleanEmailMixin
 from invitations.utils import get_invitation_model
 

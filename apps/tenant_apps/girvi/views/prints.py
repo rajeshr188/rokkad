@@ -6,14 +6,26 @@ from reportlab.lib.pagesizes import A4, landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, inch, mm
 from reportlab.pdfgen import canvas
-from reportlab.platypus import (Frame, LongTable, PageBreak, PageTemplate,
-                                Paragraph, SimpleDocTemplate, Spacer, Table,
-                                TableStyle)
+from reportlab.platypus import (
+    Frame,
+    LongTable,
+    PageBreak,
+    PageTemplate,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from reportlab.platypus.tableofcontents import TableOfContents
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-from apps.tenant_apps.utils.loan_pdf import (get_custom_jsk, get_loan_template,
-                                             get_notice_pdf, print_labels_pdf)
+from apps.tenant_apps.utils.loan_pdf import (
+    get_custom_jsk,
+    get_loan_template,
+    get_notice_pdf,
+    print_labels_pdf,
+)
 
 from ..models import Loan
 
@@ -283,64 +295,49 @@ def generate_loans_ledger_pdf(response):
     doc.addPageTemplates([template])
     # Build PDF
     doc.multiBuild(elements, canvasmaker=PageNumCanvas)
-
+    response.write(buffer.getvalue())
+    buffer.close()
     return response
 
 
 @login_required
 def generate_unreleased_pdf(request):
-    # Sample list of numbers
     numbers = Loan.objects.unreleased().values_list("loan_id", flat=True)
-
-    # Number of columns
     num_columns = 10
-
-    # Page size and margins
     page_width, page_height = A4
     margin = inch
     usable_width = page_width - 2 * margin
     usable_height = page_height - 2 * margin
-
-    # Calculate the number of rows that fit on a single page
-    row_height = 0.25 * inch  # Adjust based on your font size and padding
+    row_height = 0.25 * inch
     num_rows_per_page = 30
-
-    # Calculate the number of pages needed
     total_rows = (len(numbers) + num_columns - 1) // num_columns
     total_pages = (total_rows + num_rows_per_page - 1) // num_rows_per_page
 
-    # Create the HTTP response object
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = 'attachment; filename="numbers_report.pdf"'
 
-    # Create the PDF document
     doc = SimpleDocTemplate(response, pagesize=A4)
     elements = []
 
-    # Add title
     styles = getSampleStyleSheet()
     title = Paragraph("Numbers Report", styles["Title"])
     elements.append(title)
     elements.append(Spacer(1, 0.5 * inch))
 
-    # Paginate and create tables
     for page in range(total_pages):
         start_row = page * num_rows_per_page
         end_row = start_row + num_rows_per_page
         page_data = numbers[start_row * num_columns : end_row * num_columns]
 
-        # Transpose the data for column-wise printing
         table_data = [[] for _ in range(num_rows_per_page)]
         for i, number in enumerate(page_data):
             row = i % num_rows_per_page
             table_data[row].append(number)
 
-        # Add gaps between columns
         for row in table_data:
             while len(row) < num_columns:
                 row.append("")
 
-        # Create the table with column widths
         col_widths = [usable_width / num_columns] * num_columns
         table = Table(table_data, colWidths=col_widths)
         table.setStyle(
@@ -357,12 +354,9 @@ def generate_unreleased_pdf(request):
             )
         )
 
-        # Add the table to the elements
         elements.append(table)
         if page < total_pages - 1:
             elements.append(PageBreak())
 
-    # Build the PDF
     doc.build(elements)
-
     return response

@@ -2,6 +2,7 @@ from django.db import connection, models
 from django.db.backends.signals import connection_created
 from django.dispatch import receiver
 from moneyed import Money
+
 # old way of registering adapter
 from psycopg2.extensions import AsIs, adapt, register_adapter
 from psycopg2.extras import register_composite

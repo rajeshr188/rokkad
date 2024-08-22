@@ -1,6 +1,7 @@
 import math
 from datetime import datetime
 from decimal import Decimal
+
 # from qrcode.image.pure import PyImagingImage
 from io import BytesIO
 
@@ -12,10 +13,19 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
-from django.db.models import (BooleanField, Case, DecimalField,
-                              ExpressionWrapper, F, Func, Q, Sum, Value, When)
-from django.db.models.functions import (Coalesce, Concat, ExtractMonth,
-                                        ExtractYear)
+from django.db.models import (
+    BooleanField,
+    Case,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    Func,
+    Q,
+    Sum,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce, Concat, ExtractMonth, ExtractYear
 from django.forms.models import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
@@ -23,13 +33,15 @@ from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (AccountTransaction, JournalEntry,
-                                         LedgerTransaction)
+from apps.tenant_apps.dea.models import (
+    AccountTransaction,
+    JournalEntry,
+    LedgerTransaction,
+)
 from apps.tenant_apps.rates.models import Rate
 
 # from ..models import Release
-from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
-                        UnReleasedManager)
+from ..managers import LoanManager, LoanQuerySet, ReleasedManager, UnReleasedManager
 
 
 class Loan(models.Model):
@@ -754,7 +766,7 @@ class LoanPayment(models.Model):
 
 class Statement(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    completed = models.DateTimeField(null=True,blank=True)
+    completed = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
         "accounts.CustomUser",
         on_delete=models.DO_NOTHING,
@@ -762,7 +774,6 @@ class Statement(models.Model):
         blank=True,
         related_name="loan_statements_created",
     )
- 
 
     def __str__(self):
         return f"{self.created}"
@@ -780,7 +791,10 @@ class Statement(models.Model):
 
 
 class StatementItem(models.Model):
-    statement = models.ForeignKey(Statement, on_delete=models.CASCADE,)
+    statement = models.ForeignKey(
+        Statement,
+        on_delete=models.CASCADE,
+    )
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
     verified_at = models.DateTimeField(default=timezone.now)
     descrepancy_found = models.BooleanField(default=False)
@@ -788,9 +802,10 @@ class StatementItem(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['statement', 'loan'], name='unique_loan_per_statement')
+            models.UniqueConstraint(
+                fields=["statement", "loan"], name="unique_loan_per_statement"
+            )
         ]
 
     def __str__(self):
         return f"{self.loan.loan_id} - {self.statement.created} - {self.verified_at} - {self.descrepancy_found} - {self.descrepancy_note}"
-
