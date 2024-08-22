@@ -754,6 +754,7 @@ class LoanPayment(models.Model):
 
 class Statement(models.Model):
     created = models.DateTimeField(auto_now_add=True)
+    completed = models.DateTimeField(null=True,blank=True)
     created_by = models.ForeignKey(
         "accounts.CustomUser",
         on_delete=models.DO_NOTHING,
@@ -761,13 +762,13 @@ class Statement(models.Model):
         blank=True,
         related_name="loan_statements_created",
     )
-    # loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
+ 
 
     def __str__(self):
         return f"{self.created}"
 
     def get_absolute_url(self):
-        return reverse("girvi:girvi_loanstatement_detail", args=(self.pk,))
+        return reverse("girvi:statement_detail", args=(self.pk,))
 
     @property
     def next(self):
@@ -779,8 +780,17 @@ class Statement(models.Model):
 
 
 class StatementItem(models.Model):
-    statement = models.ForeignKey(Statement, on_delete=models.CASCADE)
+    statement = models.ForeignKey(Statement, on_delete=models.CASCADE,)
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
+    verified_at = models.DateTimeField(default=timezone.now)
+    descrepancy_found = models.BooleanField(default=False)
+    descrepancy_note = models.TextField(blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['statement', 'loan'], name='unique_loan_per_statement')
+        ]
 
     def __str__(self):
-        return f"{self.loan.loanid}"
+        return f"{self.loan.loan_id} - {self.statement.created} - {self.verified_at} - {self.descrepancy_found} - {self.descrepancy_note}"
+

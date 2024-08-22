@@ -1,0 +1,18 @@
+{% extends 'tenant.html' %}
+
+{% block content %}
+    <h1>Statement List</h1>
+
+    <ul>
+        {% for session in sessions %}
+            <li>
+                {{ session.id }} - {{ session.created }} - {{ session.completed }} - {{ session.created_by }}
+                <a href="{% url 'girvi:statement_delete' session.id %}">Delete</a>
+                <a href="{% url 'girvi:statement_complete' session.id %}">Complete</a>
+                <a href="{% url 'girvi:statement_detail' session.id %}">View</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a href="{% url 'girvi:statement_create' %}" class="btn btn-primary">Create</a>
+{% endblock %}

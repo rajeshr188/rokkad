@@ -1,0 +1,136 @@
+{% extends 'tenant.html' %}
+
+{% block content %}
+
+    <a href="{% url 'girvi:statement_list' %}" class="btn btn-primary">Back</a>
+    <div class="card">
+        <div class="card-body">
+            <h2>Statement Details</h2>
+            <p><strong>ID:</strong> <span id="statement-id">{{statement.id}}</span></p>
+            <p><strong>created:</strong> <span id="statement-date">{{statement.created}}</span></p>
+            <p><strong>Completed:</strong> <span id="statement-amount">{{statement.completed}}</span></p>
+            <p><strong>created_by</strong> <span id="statement-interest-rate">{{statement.created_by}}</span></p>
+
+            {% if statement.completed %}
+    <div class="card">
+        <div class="card-header">
+            <h3>Statement Summary</h3>
+        </div>
+        <div class="card-body">
+            <p class="card-text">This statement is completed</p>
+            <div class="accordion" id="accordionExample">
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        Total unreleased loan records: {{summary.unreleased.count}}
+                    </button>
+                  </h2>
+                  <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <ul class="list-group list-group">
+                            {%for i in summary.unreleased%}
+                            <li class="list-group-item">{{i.loan_id}}</li>
+                            {%endfor%}
+                          </ul> 
+                    </div>
+                  </div>
+                </div>
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Total verification records: {{items.count}}
+                    </button>
+                  </h2>
+                  <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <ul class="list-group list-group">
+                            {%for i in items%}
+                            <li class="list-group-item">{{i}}</li>
+                            {%endfor%}
+                          </ul> 
+                      </div>
+                  </div>
+                </div>
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        Total descrepancy records: {{summary.descrepancy_loans.discrepancy}}
+                    </button>
+                  </h2>
+                  <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <ul class="list-group list-group">
+                            {%for i in summary.dc%}
+                            <li class="list-group-item">{{i}}</li>
+                            {%endfor%}
+                          </ul> 
+                    </div>
+                  </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                            Total Missing Records: {{summary.missing_loans.count}}
+                        </button>
+                    </h2>
+                    <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                            <ul class="list-group list-group">
+                                {%for i in summary.missing_loans%}
+                                <li class="list-group-item">{{i}}</li>
+                                {%endfor%}
+                              </ul> 
+                        </div>
+                    </div>
+                </div>
+                
+              </div>
+
+
+        </div>
+    </div>
+    {% else %}
+    <h3>Add Statement Item</h3>
+        <input class="form-control" hx-post="{% url 'girvi:statement_item_create' statement.id %}" 
+            hx-trigger="change from:#loan-id-input delay:500ms" 
+            hx-swap="beforeend " 
+            hx-target="#statement-items"
+            _="on htmx:afterRequest reset #loan-id-input then focus #loan-id-input"
+            type="text" id="loan-id-input" name="loan_id" placeholder="Loan ID" required>
+        <a href="{% url 'girvi:statement_complete' statement.id %}" class="btn btn-primary">Complete</a>
+    {% endif %}
+        </div>
+        
+    </div>
+    
+    
+    <!-- Display statement details here -->
+
+    <div class="card">
+        <div class="card-body">
+            <h2>Statement Items</h2>
+            <ul class="list-group" id="statement-items">
+                <!-- Display existing statement items here -->
+                {% for item in items %}
+                <li class="list-group-item d-flex justify-content-between align-items-center" hx-target="this" hx-swap="outerHTML">
+                    {{item.loan.loan_id}}
+                    {% if item.descrepancy_found%}{{item.descrepancy_note}}{%endif%}
+                    <a class="btn btn-sm btn-danger" href="" hx-post="{% url 'girvi:statement_item_delete' item.id %}">Delete</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    
+    
+
+   
+    
+
+    
+
+    
+
+    
+{% endblock %}

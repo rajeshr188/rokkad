@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.files.base import ContentFile
-from django.db.models import F, Sum
+from django.db.models import F, Sum,Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
@@ -18,6 +18,7 @@ from dynamic_preferences.registries import global_preferences_registry
 from moneyed import Money
 from num2words import num2words
 from openpyxl import load_workbook
+from django.db.models import OuterRef, Subquery
 
 from apps.orgs.registries import company_preference_registry
 from apps.tenant_apps.contact.models import Customer
@@ -555,3 +556,120 @@ def check_girvi(request, pk=None):
             "missing_records": missing_records,
         },
     )
+
+def verification_session_list(request):
+    sessions = Statement.objects.all()
+    return render(
+        request,
+        "girvi/statement/statement_list.html",
+        context={"sessions": sessions},
+    )
+
+def verification_session_create(request):
+    v_session = Statement.objects.create(created_by=request.user)
+    return redirect(v_session.get_absolute_url())
+
+def verification_session_detail(request, pk):
+    statement = get_object_or_404(Statement, pk=pk)
+    statement_items = statement.statementitem_set.select_related('loan').all()
+
+    summary = {}
+    if statement.completed:
+        summary["dc"] = statement_items.filter(descrepancy_found=True)
+        summary["descrepancy_loans"] = statement.statementitem_set.aggregate(
+            total=Count("pk"),
+            discrepancy=Count("pk", filter=F("descrepancy_found")),
+        )
+        summary["missing_loans"] = Loan.objects.unreleased().exclude(
+            loan_id__in=statement_items.values_list("loan__loan_id", flat=True)
+        )
+        summary['unreleased']=Loan.objects.unreleased()
+    
+    return render(
+        request,
+        "girvi/statement/statement_detail.html",
+        context={"statement": statement,"summary":summary,"items": statement_items,'summary':summary},
+    )
+
+def complete_verification_session(request,pk):
+    statement = get_object_or_404(Statement, pk=pk)
+
+    # Subquery to check if a loan is in the statement items
+    statement_item_subquery = StatementItem.objects.filter(
+        statement=statement, loan_id=OuterRef('pk')
+    ).values('pk')
+
+    # # Get loans that are not in the statement items
+    # loans = Loan.objects.unreleased().exclude(
+    #     pk__in=Subquery(statement_item_subquery)
+    # )
+    # print(loans.count())
+    # # Prepare StatementItem objects for bulk creation
+    # statement_items = [
+    #     StatementItem(
+    #         statement=statement,
+    #         loan=loan,
+    #         descrepancy_found=True,
+    #         descrepancy_note="Loan not found in verification session"
+    #     )
+    #     for loan in loans
+    # ]
+    
+    # # Bulk create StatementItem objects
+    # StatementItem.objects.bulk_create(statement_items)
+    
+    # Update statement completion time
+    statement.completed = timezone.now()
+    statement.save()
+    messages.success(request, f"Verification Session {statement} Completed")
+    return redirect(statement.get_absolute_url())
+
+def statement_delete(request, pk):
+    statement = get_object_or_404(Statement, pk=pk)
+    statement.delete()
+    messages.error(request, f"Verification Session {statement} Deleted")
+    return redirect("girvi:statement_list")
+
+def statement_item_add(request, pk):
+    statement = get_object_or_404(Statement, pk=pk)
+    if request.method == "POST":
+        loan_id = request.POST.get("loan_id")
+        try:
+            loan = Loan.objects.get(loan_id=loan_id)
+        except Loan.DoesNotExist:
+            # Handle the error, e.g., log it, return a custom response, etc.
+            loan = None
+        
+        if loan:
+            if not loan.is_released:
+                item = StatementItem.objects.create(statement=statement, loan=loan)
+                messages.success(request, f"Added {loan} to {statement}")
+                
+            else:
+                item  = StatementItem.objects.create(statement=statement, loan=loan,descrepancy_found=True,descrepancy_note="Loan already released")
+                messages.error(request, f"Loan {loan_id} already released.")
+                print(item)
+        # Construct the HTML snippet using the item attributes
+            item_html = f"""
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                {item.loan.loan_id} 
+                {'(Discrepancy: ' + item.descrepancy_note + ')' if item.descrepancy_found else ''}
+            </li>
+            """
+            return HttpResponse(item_html)
+        else:
+            item_html = f"""
+            <li>
+                {loan_id}
+                Not found
+            </li>
+            """
+            return HttpResponse(item_html)
+    return HttpResponse("")
+
+def statement_item_delete(request, pk):
+    item = get_object_or_404(StatementItem, pk=pk)
+    item.delete()
+    messages.error(request, f"Item {item} Deleted")
+    return HttpResponse('')
+
