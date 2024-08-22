@@ -283,3 +283,33 @@ urlpatterns += (
     path("girvi/release/<int:pk>/form_h/", views.form_h, name="release_form_h"),
 )
 # urls for forms
+urlpatterns += (
+    path("statements/", views.verification_session_list, name="statement_list"),
+    path(
+        "statement/create/",
+        views.verification_session_create,
+        name="statement_create",
+    ),
+    path(
+        "statement/detail/<int:pk>/",
+        views.verification_session_detail,
+        name="statement_detail",
+    ),
+    path(
+        "statement/complete/<int:pk>/",
+        views.complete_verification_session,
+        name="statement_complete",
+        ),
+    path(
+        "statement/<int:pk>/delete/",
+        views.statement_delete,
+        name="statement_delete",
+    ),
+    path("statement/<int:pk>/statement_item/create/", views.statement_item_add, name="statement_item_create"),
+    path(
+        "statement_item/<int:pk>/delete/",
+        views.statement_item_delete,
+        name="statement_item_delete",
+    ),
+)
+
