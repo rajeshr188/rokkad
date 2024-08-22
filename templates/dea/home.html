@@ -22,30 +22,32 @@
                         <a  class="btn btn-outline-info" href="{% url 'dea_ledger_audit' %}">Audit</a>
                     </div>
                   
-                    <table class = "table table-sm table-hover mt-3">
-                        <thead>
-                            <th>Account Type</th>
-                            <th>Ledger</th>
-                            <th> statement Date</th>
-                            <th> Prev Balance</th>
-                            <th> Debit </th>
-                            <th> Credit </th>
-                            <th> Curr Bal </th>
-                        </thead>
-                        <tbody>
-                            {%for i in data.ledger%}
-                            <tr>
-                                <td>{{i.ledgerno.AccountType}}</td>
-                                <td><a href="{% url 'dea_ledger_detail' i.ledgerno_id %}">{{ i.ledgerno.name }}</a></td>
-                                <td>{{i.ls_created}}</td>
-                                <td>{{i.get_cb}}</td>
-                                <td>{{i.get_dr}}</td>
-                                <td>{{i.get_cr}}</td>
-                                <td>{{i.get_currbal}}</td>
-                            </tr>
-                            {%endfor%}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class = "table table-sm table-hover mt-3">
+                            <thead>
+                                <th>Account Type</th>
+                                <th>Ledger</th>
+                                <th> statement Date</th>
+                                <th> Prev Balance</th>
+                                <th> Debit </th>
+                                <th> Credit </th>
+                                <th> Curr Bal </th>
+                            </thead>
+                            <tbody>
+                                {%for i in data.ledger%}
+                                <tr>
+                                    <td>{{i.ledgerno.AccountType}}</td>
+                                    <td><a href="{% url 'dea_ledger_detail' i.ledgerno_id %}">{{ i.ledgerno.name }}</a></td>
+                                    <td>{{i.ls_created}}</td>
+                                    <td>{{i.get_cb}}</td>
+                                    <td>{{i.get_dr}}</td>
+                                    <td>{{i.get_cr}}</td>
+                                    <td>{{i.get_currbal}}</td>
+                                </tr>
+                                {%endfor%}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab" tabindex="0">
                     <div class="row">
