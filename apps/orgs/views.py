@@ -4,15 +4,18 @@ from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django_tenants.utils import (get_public_schema_name, remove_www,
-                                  schema_context)
+from django_tenants.utils import get_public_schema_name, remove_www, schema_context
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
 
 from .decorators import company_member_required, role_required, roles_required
-from .forms import (CompanyForm, CompanyInvitationForm, MembershipForm,
-                    company_preference_form_builder)
+from .forms import (
+    CompanyForm,
+    CompanyInvitationForm,
+    MembershipForm,
+    company_preference_form_builder,
+)
 from .models import Company, CompanyInvitation, Domain, Membership, Role
 
 # Create your views here.

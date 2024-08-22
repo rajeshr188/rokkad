@@ -13,7 +13,7 @@ urlpatterns = [
     path("profile/", include("accounts.urls")),
     path("accounts/", include("allauth.urls")),
     path("accounts/", include("allauth.socialaccount.urls")),
-    path("activity/", include("actstream.urls")),
+    # path("activity/", include("actstream.urls")),
     path("dynamic_preferences/", include("dynamic_preferences.urls")),
     path("contact/", include("apps.tenant_apps.contact.urls")),
     path("girvi/", include("apps.tenant_apps.girvi.urls")),

@@ -299,17 +299,20 @@ urlpatterns += (
         "statement/complete/<int:pk>/",
         views.complete_verification_session,
         name="statement_complete",
-        ),
+    ),
     path(
         "statement/<int:pk>/delete/",
         views.statement_delete,
         name="statement_delete",
     ),
-    path("statement/<int:pk>/statement_item/create/", views.statement_item_add, name="statement_item_create"),
+    path(
+        "statement/<int:pk>/statement_item/create/",
+        views.statement_item_add,
+        name="statement_item_create",
+    ),
     path(
         "statement_item/<int:pk>/delete/",
         views.statement_item_delete,
         name="statement_item_delete",
     ),
 )
-

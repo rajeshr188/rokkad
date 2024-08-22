@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from importlib import import_module
 
-from actstream import action
+# from actstream import action
 from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
@@ -27,11 +27,18 @@ from tablib import Dataset
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from .filters import CustomerFilter
-from .forms import (AddressForm, ContactForm, CustomerForm, CustomerMergeForm,
-                    CustomerPicForm, CustomerRelationshipForm,
-                    CustomerReportForm, ExportForm, ImportForm)
-from .models import (Address, Contact, Customer, CustomerPic,
-                     CustomerRelationship, Proof)
+from .forms import (
+    AddressForm,
+    ContactForm,
+    CustomerForm,
+    CustomerMergeForm,
+    CustomerPicForm,
+    CustomerRelationshipForm,
+    CustomerReportForm,
+    ExportForm,
+    ImportForm,
+)
+from .models import Address, Contact, Customer, CustomerPic, CustomerRelationship, Proof
 from .tables import CustomerExportTable, CustomerTable
 
 
@@ -227,7 +234,7 @@ def customer_save(request, pk=None):
             f = form.save(commit=False)
             f.created_by = request.user
             f.save()
-            action.send(request.user, action_object=f, verb=verb)
+            # action.send(request.user, action_object=f, verb=verb)
 
             messages.success(request, messages.SUCCESS, success_message)
             if "add" in request.POST:

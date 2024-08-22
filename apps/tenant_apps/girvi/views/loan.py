@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.files.base import ContentFile
-from django.db.models import F, Sum,Count
+from django.db.models import Count, F, OuterRef, Subquery, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
@@ -18,7 +18,6 @@ from dynamic_preferences.registries import global_preferences_registry
 from moneyed import Money
 from num2words import num2words
 from openpyxl import load_workbook
-from django.db.models import OuterRef, Subquery
 
 from apps.orgs.registries import company_preference_registry
 from apps.tenant_apps.contact.models import Customer
@@ -27,8 +26,13 @@ from apps.tenant_apps.rates.models import Rate
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import LoanFilter
-from ..forms import (LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm,
-                     LoanSelectionForm)
+from ..forms import (
+    LoanForm,
+    LoanItemForm,
+    LoanRenewForm,
+    LoanReportForm,
+    LoanSelectionForm,
+)
 from ..models import *
 from ..tables import LoanTable
 
@@ -557,6 +561,7 @@ def check_girvi(request, pk=None):
         },
     )
 
+
 def verification_session_list(request):
     sessions = Statement.objects.all()
     return render(
@@ -565,13 +570,15 @@ def verification_session_list(request):
         context={"sessions": sessions},
     )
 
+
 def verification_session_create(request):
     v_session = Statement.objects.create(created_by=request.user)
     return redirect(v_session.get_absolute_url())
 
+
 def verification_session_detail(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
-    statement_items = statement.statementitem_set.select_related('loan').all()
+    statement_items = statement.statementitem_set.select_related("loan").all()
 
     summary = {}
     if statement.completed:
@@ -583,21 +590,27 @@ def verification_session_detail(request, pk):
         summary["missing_loans"] = Loan.objects.unreleased().exclude(
             loan_id__in=statement_items.values_list("loan__loan_id", flat=True)
         )
-        summary['unreleased']=Loan.objects.unreleased()
-    
+        summary["unreleased"] = Loan.objects.unreleased()
+
     return render(
         request,
         "girvi/statement/statement_detail.html",
-        context={"statement": statement,"summary":summary,"items": statement_items,'summary':summary},
+        context={
+            "statement": statement,
+            "summary": summary,
+            "items": statement_items,
+            "summary": summary,
+        },
     )
 
-def complete_verification_session(request,pk):
+
+def complete_verification_session(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
 
     # Subquery to check if a loan is in the statement items
     statement_item_subquery = StatementItem.objects.filter(
-        statement=statement, loan_id=OuterRef('pk')
-    ).values('pk')
+        statement=statement, loan_id=OuterRef("pk")
+    ).values("pk")
 
     # # Get loans that are not in the statement items
     # loans = Loan.objects.unreleased().exclude(
@@ -614,21 +627,23 @@ def complete_verification_session(request,pk):
     #     )
     #     for loan in loans
     # ]
-    
+
     # # Bulk create StatementItem objects
     # StatementItem.objects.bulk_create(statement_items)
-    
+
     # Update statement completion time
     statement.completed = timezone.now()
     statement.save()
     messages.success(request, f"Verification Session {statement} Completed")
     return redirect(statement.get_absolute_url())
 
+
 def statement_delete(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
     statement.delete()
     messages.error(request, f"Verification Session {statement} Deleted")
     return redirect("girvi:statement_list")
+
 
 def statement_item_add(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
@@ -639,17 +654,22 @@ def statement_item_add(request, pk):
         except Loan.DoesNotExist:
             # Handle the error, e.g., log it, return a custom response, etc.
             loan = None
-        
+
         if loan:
             if not loan.is_released:
                 item = StatementItem.objects.create(statement=statement, loan=loan)
                 messages.success(request, f"Added {loan} to {statement}")
-                
+
             else:
-                item  = StatementItem.objects.create(statement=statement, loan=loan,descrepancy_found=True,descrepancy_note="Loan already released")
+                item = StatementItem.objects.create(
+                    statement=statement,
+                    loan=loan,
+                    descrepancy_found=True,
+                    descrepancy_note="Loan already released",
+                )
                 messages.error(request, f"Loan {loan_id} already released.")
                 print(item)
-        # Construct the HTML snippet using the item attributes
+            # Construct the HTML snippet using the item attributes
             item_html = f"""
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 {item.loan.loan_id} 
@@ -667,9 +687,9 @@ def statement_item_add(request, pk):
             return HttpResponse(item_html)
     return HttpResponse("")
 
+
 def statement_item_delete(request, pk):
     item = get_object_or_404(StatementItem, pk=pk)
     item.delete()
     messages.error(request, f"Item {item} Deleted")
-    return HttpResponse('')
-
+    return HttpResponse("")

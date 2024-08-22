@@ -56,7 +56,6 @@ SHARED_APPS = [
     "django_tables2",
     "django_filters",
     "djmoney",
-    "actstream",
     "widget_tweaks",
     "dynamic_preferences",
     "django_htmx",

@@ -13,7 +13,7 @@ urlpatterns = [
     path(env("SECRET_ADMIN_URL") + "/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("accounts/", include("allauth.socialaccount.urls")),
-    path("activity/", include("actstream.urls")),
+    # path("activity/", include("actstream.urls")),
     path("dynamic_preferences/", include("dynamic_preferences.urls")),
     path("select2/", include("django_select2.urls")),
     path("", include("pages.urls")),

@@ -12,12 +12,15 @@ from djmoney.models.fields import MoneyField
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (AccountStatement,  # , JournalTypes
-                                         JournalEntry)
+from apps.tenant_apps.dea.models import AccountStatement, JournalEntry  # , JournalTypes
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.attributes import get_product_attributes_data
-from apps.tenant_apps.product.models import (Attribute, ProductVariant, Stock,
-                                             StockTransaction)
+from apps.tenant_apps.product.models import (
+    Attribute,
+    ProductVariant,
+    Stock,
+    StockTransaction,
+)
 from apps.tenant_apps.terms.models import PaymentTerm
 
 from .purchase import Purchase

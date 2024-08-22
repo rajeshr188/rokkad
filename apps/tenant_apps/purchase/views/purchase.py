@@ -10,9 +10,11 @@ from num2words import num2words
 from render_block import render_block_to_string
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.product.models import (PricingTier,
-                                             PricingTierProductPrice,
-                                             ProductVariant)
+from apps.tenant_apps.product.models import (
+    PricingTier,
+    PricingTierProductPrice,
+    ProductVariant,
+)
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import PurchaseFilter

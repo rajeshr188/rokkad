@@ -1,8 +1,20 @@
 from collections import Counter
 from datetime import datetime
 
-from django.db.models import (Avg, Case, Count, F, IntegerField, OuterRef, Q,
-                              Subquery, Sum, Value, When, Window)
+from django.db.models import (
+    Avg,
+    Case,
+    Count,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+    When,
+    Window,
+)
 from django.db.models.functions import ExtractYear, TruncDate
 
 from .models import Customer, Loan, LoanItem, LoanPayment, Release
