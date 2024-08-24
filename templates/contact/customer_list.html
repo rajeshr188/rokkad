@@ -136,7 +136,7 @@
               <path d="M7.25 6v1c-.14.301-.338.617-.588.95-.537.716-1.259 1.44-2.016 2.196l.708.708.015-.016c.652-.652 1.33-1.33 1.881-2.015V12h1.5V6h1.216a.25.25 0 0 0 .192-.41L8.192 3.23a.25.25 0 0 0-.384 0L5.842 5.59a.25.25 0 0 0 .192.41H7.25Z"/>
               <path d="M9.05.435c-.58-.58-1.52-.58-2.1 0L.436 6.95c-.58.58-.58 1.519 0 2.098l6.516 6.516c.58.58 1.519.58 2.098 0l6.516-6.516c.58-.58.58-1.519 0-2.098L9.05.435Zm-1.4.7a.495.495 0 0 1 .7 0l6.516 6.515a.495.495 0 0 1 0 .7L8.35 14.866a.495.495 0 0 1-.7 0L1.134 8.35a.495.495 0 0 1 0-.7L7.65 1.134Z"/>
             </svg></a>
-        <a class="btn btn-primary mr-2" hx-disable href="{% export_url 'ods' %}" role="button" >  
+        <a class="btn btn-primary mr-2" hx-disable href="{% export_url 'xls' %}" role="button" >  
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
               <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
               <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
@@ -154,11 +154,14 @@
       {% include "filter.html"%}
     </div>
     
-    <div class="col-md-9 table-responsive" id="table"> 
+    <div class="col-md-9 " id="table"> 
       {%block table%}
-      {% render_table table %} 
-      <p>Results :{{table.paginator.count}} </p>
-      {%endblock%}
+      <div class="table-responsive">
+        {% render_table table %} 
+        <p>Results :{{table.paginator.count}} </p>
+        {%endblock%}
+      </div>
+     
     </div>
     
   </div>

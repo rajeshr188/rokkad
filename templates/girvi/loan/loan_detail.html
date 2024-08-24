@@ -22,7 +22,7 @@
               d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z" />
           </svg></button>
         <button class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}"
-          hx-trigger="click, keyup[shiftKey&&key=='N'] from:body" hx-push-url="true"
+          hx-trigger="click, keyup[shiftKey&&key=='N'] from:body" 
           hx-target="#content"><svg
             xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle"
             viewBox="0 0 16 16">
@@ -108,7 +108,7 @@
           <div class="card-body">
               <h5 class="card-title"> {{object.loan_id}} 
                 <a class="card-link btn btn-sm btn-outline-primary"
-                  hx-get="{% url 'girvi:girvi_loan_update' object.id %}" hx-push-url="true" hx-target="#content"
+                  hx-get="{% url 'girvi:girvi_loan_update' object.id %}" hx-target="#content"
                   hx-swap="innerHTML transition:true">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                     class="bi bi-pencil-square" viewBox="0 0 16 16">

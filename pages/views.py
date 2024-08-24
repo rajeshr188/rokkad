@@ -1,8 +1,4 @@
 from datetime import date
-
-from actstream import action
-
-# from actstream.models import Action, actor_stream, any_stream, user_stream
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, FloatField, Sum
 from django.db.models.functions import Cast, Coalesce
@@ -139,11 +135,11 @@ def company_dashboard(request):
     #     context["p_map"] = 0.0
     # context['s_map'] = round(total_sbal_ratecut['bal']/total_sbal_ratecut['net_wt'],3)
 
-    context["new_customers"] = Customer.objects.only("id", "name", "customer_type")[:5]
+    context["new_customers"] = Customer.objects.only("id", "name", "customer_type")[:5].select_related()
     context["customer_count"] = Customer.objects.values("customer_type").annotate(
         count=Count("id")
     )
-    context["grouped_loan_counts"] = get_loan_counts_grouped()
+    
     loan = Loan.objects.with_details(grate=request.grate, srate=request.srate)
     released = loan.released()
     unreleased = loan.unreleased()
@@ -210,7 +206,6 @@ def company_dashboard(request):
         .values("name", "num_loans", "sum_loans", "tint")
         .order_by("-num_loans", "sum_loans", "tint")
     )
-    context["interest_received"] = get_interest_paid()
     context["loan_cumsum"] = list(get_loan_cumulative_amount())
     return render(request, "pages/company_dashboard.html", context)
 

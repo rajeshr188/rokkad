@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -60,6 +61,7 @@ def print_labels(request):
     if selected_loans:
         form = LoanSelectionForm(initial={"loans": selected_loans})
         from render_block import render_block_to_string
+
 
         response = render_block_to_string(
             "girvi/loan/print_labels.html", "content", {"form": form}, request

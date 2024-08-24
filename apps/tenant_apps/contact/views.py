@@ -135,7 +135,7 @@ def import_data(request):
         # Check if the model has a ModelResource defined in the resource module
         model_resource = None
         try:
-            resource_module = importlib.import_module(
+            resource_module = import_module(
                 f"{model._meta.app_label}.resources"
             )
             for attr_name in dir(resource_module):
