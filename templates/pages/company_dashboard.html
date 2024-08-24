@@ -317,11 +317,7 @@
   </div>
 </div>
 <div class="row">
-  <div class="col-md-6">
-    <div class="div-holderl">
-      {% get_widget_from_url url_name="girvi:loan_report" display_table=False extra_params="time_series_pattern=monthly"%}
-    </div>
-  </div>
+  
   <div class="col-md-6">
     <div class="div-holderl">
       {% get_widget_from_url url_name="girvi:loan_by_customer" display_table=False extra_params="time_series_pattern=monthly"%}
@@ -343,112 +339,7 @@
 
 </div>
 <div class="row">
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Grouped Loans Chart</div>
-      </div>
-      <div class="card-body">
-        <canvas id="cglChart" width="400" height="200"></canvas>
-
-        <script>
-          // Your JavaScript code to generate the chart
-          document.addEventListener('DOMContentLoaded', function () {
-            var ctx2 = document.getElementById('cglChart').getContext('2d');
-
-            // Fetch data from the Django view
-            var data2 = {
-              labels: [{% for entry in grouped_loan_counts %}"{{ entry.0 }}", {% endfor %}],
-            datasets: [{
-              label: 'Customer Count',
-              data: [{% for entry in grouped_loan_counts %}{{ entry.1 }}, {% endfor %}],
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1
-                                }]
-                            };
-
-          var cglChart = new Chart(ctx2, {
-            type: 'line',
-            data: data2,
-            options: {
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Customer Count'
-                  }
-                },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Time Period'
-                  }
-                }
-              }
-            }
-          });
-                        });
-        </script>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Interest Received Chart</div>
-      </div>
-      <div class="card-body">
-        <canvas id="interestPaidChart"></canvas>
-
-        <script>
-          document.addEventListener('DOMContentLoaded', function () {
-            var ctx = document.getElementById('interestPaidChart').getContext('2d');
-
-            // Fetch data from the Django view
-            var labels = [{% for entry in interest_received %}"{{ entry.year }}", {% endfor %}];
-          var interestPaid = [{% for entry in interest_received %}"{{ entry.total_interest }}", {% endfor %}];
-
-          var data = {
-            labels: labels,
-            datasets: [{
-              label: 'Interest Paid Over the Years',
-              data: interestPaid,
-              borderColor: 'rgba(75, 192, 192, 1)',
-              borderWidth: 1,
-              fill: false
-            }]
-          };
-
-          var options = {
-            scales: {
-              x: {
-                title: {
-                  display: true,
-                  text: 'Year',
-                },
-              },
-              y: {
-                beginAtZero: true,
-                title: {
-                  display: true,
-                  text: 'Interest Received',
-                },
-              }
-            }
-          };
-
-          var myLineChart = new Chart(ctx, {
-            type: 'line',
-            data: data,
-            options: options
-          });
-                });
-        </script>
-      </div>
-    </div>
-  </div>
+  
   <div class="col-md-4">
     <div class="card">
       <div class="card-header">

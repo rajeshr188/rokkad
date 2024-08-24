@@ -234,7 +234,11 @@ def create_loan_header_table(loan, styles, spacer):
 
     shop_license = loan.series.license
     customer = loan.customer
-    customer_pic = Image(customer.get_default_pic().path, 50, 50)
+    customer_pic = None
+    default_pic = customer.get_default_pic()
+    if default_pic:
+        customer_pic = Image(default_pic.path, 50, 50)
+    
     header_data = [
         [
             Paragraph("Sec Rules 8", styles["Normal"]),

@@ -14,9 +14,9 @@ urlpatterns = (
         name="girvi_loan_notice",
     ),
     path("deletemultiple/", views.deleteLoan, name="girvi_loan_deletemultiple"),
-    path("girvi/check/", views.check_girvi, name="check_girvi"),
-    path("girvi/check/<int:pk>/", views.check_girvi, name="check_girvi_statement"),
-    path("girvi/statement/add/", views.statement_create, name="statement_add"),
+    # path("girvi/check/", views.check_girvi, name="check_girvi"),
+    # path("girvi/check/<int:pk>/", views.check_girvi, name="check_girvi_statement"),
+    # path("girvi/statement/add/", views.statement_create, name="statement_add"),
     path(
         "girvi/loan/get-interestrate/",
         views.get_interestrate,
@@ -106,17 +106,17 @@ urlpatterns += (
 urlpatterns += (
     path("girvi/loan/", views.loan_list, name="girvi_loan_list"),
     path("girvi/loan/renew/<int:pk>/", views.loan_renew, name="girvi_loan_renew"),
-    path("girvi/loan/create/", views.create_loan, name="girvi_loan_create"),
+    path("girvi/loan/create/", views.loan_save, name="girvi_loan_create"),
     path(
         "girvi/loan/create/<int:pk>",
-        views.create_loan,
+        views.loan_save,
         name="girvi_loan_create",
     ),
     path("girvi/loan/detail/<int:pk>/", views.loan_detail, name="girvi_loan_detail"),
     path("girvi/loan/detail/<int:pk>/pdf", views.print_loan, name="loan_pdf"),
     path(
         "girvi/loan/update/<int:id>/",
-        views.loan_update,
+        views.loan_save,
         name="girvi_loan_update",
     ),
     path(

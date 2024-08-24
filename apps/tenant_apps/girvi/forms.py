@@ -3,12 +3,12 @@ from decimal import Decimal
 
 from crispy_bootstrap5.bootstrap5 import FloatingField
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Column, Layout, Row, Submit
+from crispy_forms.layout import Column, Layout, Row, Submit,Button,HTML
 from django import forms
 from django.contrib import admin
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.core.exceptions import ValidationError
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy,reverse
 from django.utils import timezone
 from django_select2 import forms as s2forms
 from django_select2.forms import (
@@ -161,7 +161,7 @@ class LoanForm(forms.ModelForm):
     # )
 
     series = forms.ModelChoiceField(
-        queryset=Series.objects.exclude(is_active=False),
+        queryset=Series.objects.filter(is_active=True),
         widget=forms.Select(
             attrs={
                 "hx-get": reverse_lazy("girvi:girvi_series_next_loanid"),
@@ -196,6 +196,64 @@ class LoanForm(forms.ModelForm):
             "lid",
             "loan_date",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # if customer_id:
+        #     self.fields["customer"].initial = customer_id
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Row(
+                Column("loan_type", css_class="form-group")
+            ),
+            Row(
+                Column("series", css_class="form-group col-md-6 mb-0"),
+                Column("lid", css_class="form-group col-md-6 mb-0"),
+                css_class="form-row",
+            ),
+            Row(
+                Column("customer", css_class="form-group col-md-6 mb-0"),
+                Column("loan_date", css_class="form-group col-md-6 mb-0"),
+                css_class="form-row",
+            ),
+        )
+        if self.instance and self.instance.id:
+            self.helper.attrs = {
+                "hx-post": reverse("girvi:girvi_loan_update", kwargs={"id": self.instance.id}),
+                            }
+            cancel_url = reverse("girvi:girvi_loan_detail", kwargs={"pk": self.instance.id})
+            cancel_button = Button(
+                "cancel",
+                "Cancel",
+                css_class="btn btn-danger",
+                **{
+                    "hx-get": cancel_url,
+                    "hx-target": "#content",
+                    "hx-vals": '{"use_block":"content"}',
+                },
+            )
+        else:
+            self.helper.attrs = {
+                "hx-post": reverse("girvi:girvi_loan_create"),
+                "hx-target": "#content",
+                "hx-swap":"innerHTML",
+            }
+            cancel_url = reverse("girvi:girvi_loan_list")
+            cancel_button = Button(
+                "cancel",
+                "Cancel",
+                css_class="btn btn-danger",
+                **{
+                    "hx-get": cancel_url,
+                    "hx-target": "#content",
+                    "hx-vals": '{"use_block":"content"}',
+                },
+            )
+        self.helper.add_input(Submit("submit", "Save"))
+        self.helper.add_input(cancel_button)
+
+        
+        
 
     def clean_created(self):
         cleaned_data = super().clean()
