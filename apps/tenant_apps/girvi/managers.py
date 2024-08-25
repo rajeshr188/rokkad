@@ -64,74 +64,69 @@ class LoanQuerySet(models.QuerySet):
             loan_interest=F("interest") * F("no_of_months"),
         ).annotate(Sum("loan_interest"))
 
-    def with_details(self, grate=None, srate=None):
-        current_time = timezone.now()
+    def _get_rates(self):
         grate = cache.get("gold_rate")
         srate = cache.get("silver_rate")
 
-        # If the rates are not in the cache, fetch them from the database
         if not (grate and srate):
             latest_rate = Rate.objects.filter(
                 metal__in=[Rate.Metal.GOLD, Rate.Metal.SILVER]
             ).order_by("-timestamp")
             grate = grate or latest_rate.filter(metal=Rate.Metal.GOLD).first()
             srate = srate or latest_rate.filter(metal=Rate.Metal.SILVER).first()
-
-            # Store the rates in the cache for 5 minutes
             cache.set("gold_rate", grate, 300)
             cache.set("silver_rate", srate, 300)
 
+        return grate, srate
+
+    def months_since_or_to_release(self):
+        now = timezone.now()
         return self.annotate(
-            months_since_created=ExpressionWrapper(
-                # Func(
-                #     (ExtractYear(current_time) - ExtractYear(F("loan_date"))) * 12
-                #     + (ExtractMonth(current_time) - ExtractMonth(F("loan_date")))
-                #     + (current_time.day - F("loan_date__day")) / 30,
-                #     function="ROUND",
-                #     output_field=models.DecimalField(max_digits=10, decimal_places=2),
-                # ),
-                # output_field=models.DecimalField(max_digits=10, decimal_places=2),
+            months_since=ExpressionWrapper(
                 Case(
                     When(
-                        Q(release__isnull=True),
+                        release__release_date__isnull=False,
                         then=Func(
-                            (ExtractYear(current_time) - ExtractYear(F("loan_date")))
-                            * 12
-                            + (
-                                ExtractMonth(current_time)
-                                - ExtractMonth(F("loan_date"))
-                            )
-                            + (current_time.day - F("loan_date__day")) / 30,
-                            function="ROUND",
-                            output_field=models.DecimalField(
-                                max_digits=10, decimal_places=2
-                            ),
+                            F("release__release_date") - F("loan_date"),
+                            function="EXTRACT",
+                            template="EXTRACT(MONTH FROM %(expressions)s)",
+                            output_field=DecimalField(),
                         ),
                     ),
-                    When(
-                        Q(release__isnull=False),
-                        then=Func(
-                            (
-                                ExtractYear(F("release__release_date"))
-                                - ExtractYear(F("loan_date"))
-                            )
-                            * 12
-                            + (
-                                ExtractMonth(F("release__release_date"))
-                                - ExtractMonth(F("loan_date"))
-                            )
-                            + (F("release__release_date__day") - F("loan_date__day"))
-                            / 30,
-                            function="ROUND",
-                            output_field=models.DecimalField(
-                                max_digits=10, decimal_places=2
-                            ),
-                        ),
+                    default=Func(
+                        now - F("loan_date"),
+                        function="EXTRACT",
+                        template="EXTRACT(MONTH FROM %(expressions)s)",
+                        output_field=DecimalField(),
                     ),
-                    default=Value(0),
-                    output_field=models.DecimalField(max_digits=10, decimal_places=2),
                 ),
-                output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                output_field=DecimalField(),
+            )
+        )
+    def with_details(self, grate=None, srate=None):
+        current_time = timezone.now()
+        grate,srate = self._get_rates()
+        now = timezone.now()
+        return self.annotate(
+            months_since_created=ExpressionWrapper(
+                Case(
+                    When(
+                        release__release_date__isnull=False,
+                        then=Func(
+                            F("release__release_date") - F("loan_date"),
+                            function="EXTRACT",
+                            template="EXTRACT(MONTH FROM %(expressions)s)",
+                            output_field=DecimalField(),
+                        ),
+                    ),
+                    default=Func(
+                        now - F("loan_date"),
+                        function="EXTRACT",
+                        template="EXTRACT(MONTH FROM %(expressions)s)",
+                        output_field=DecimalField(),
+                    ),
+                ),
+                output_field=DecimalField(),
             ),
             total_interest=ExpressionWrapper(
                 Func(
@@ -268,15 +263,12 @@ class LoanQuerySet(models.QuerySet):
         )
 
     def itemwise_value(self):
-        latest_gold_rate = (
-            Rate.objects.filter(metal=Rate.Metal.GOLD).order_by("-timestamp").first()
-        )
-        latest_silver_rate = (
-            Rate.objects.filter(metal=Rate.Metal.SILVER).order_by("-timestamp").first()
-        )
+        current_time = timezone.now()
+        grate, srate = self._get_rates()
+        
         return self.aggregate(
-            gold=Round(Sum("pure_gold_weight") * latest_gold_rate.buying_rate, 2),
-            silver=Round(Sum("pure_silver_weight") * latest_silver_rate.buying_rate, 2),
+            gold=Round(Sum("pure_gold_weight") * grate.buying_rate, 2),
+            silver=Round(Sum("pure_silver_weight") * srate.buying_rate, 2),
         )
 
     def total_loanamount(self):
@@ -309,6 +301,12 @@ class LoanManager(models.Manager):
 
     def total_loanamount(self):
         return self.get_queryset().aggregate(total=Sum("loan_amount"))
+    
+    def total_interest(self):
+        return self.get_queryset().aggregate(total=Sum("total_interest"))
+
+    def total_due(self):
+        return self.get_queryset().aggregate(total=Sum("total_due"))
 
     def total_weight(self):
         return self.get_queryset().total_weight()

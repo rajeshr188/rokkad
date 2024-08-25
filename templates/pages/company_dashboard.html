@@ -41,7 +41,7 @@
               <p class="card-category">
                 <span class="sub-item">{% trans 'Customer'%}</span>
               </p>
-              <h4 class="card-title">{{active_customers}}</h4>
+              <h4 class="card-title">{{total_customers}}</h4>
             </div>
           </div>
         </div>
@@ -152,14 +152,12 @@
   <div class="col-sm-6 col-md-3">
     <div class="card card-round">
       <div class="card-body pb-0">
-        <div class="h1 fw-bold float-end text-primary">+5%</div>
+        <div class="h1 fw-bold float-end text-primary">{{loan_progress}}%</div>
         <label for="loan-progress">Loan Progress</label>
         <meter id="loan-progress" value="{{loan_progress}}" min="0" max="100" low="30" high="70" optimum="80">
           {{loan_progress}}%
         </meter>
-        <div class="pull-in sparkline-fix">
-          <div id="lineChart"></div>
-        </div>
+      
       </div>
     </div>
   </div>
@@ -572,13 +570,10 @@
           {% for customer in new_customers %}
           <div class="item-list">
             <div class="avatar">
-              {% if customer.get_default_pic %}
-              <img src="{{ customer.get_default_pic.url }}" alt="{{ customer.name }}'s Profile Picture"
-                class="avatar-img rounded-circle">
-              {% else %}
+              
               <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture"
                 class="avatar-img rounded-circle">
-              {% endif %}
+              
             </div>
             <div class="info-user ms-3">
               <div class="username">{{customer.name}}</div>
