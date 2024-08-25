@@ -134,11 +134,14 @@ def company_dashboard(request):
     # except ZeroDivisionError:
     #     context["p_map"] = 0.0
     # context['s_map'] = round(total_sbal_ratecut['bal']/total_sbal_ratecut['net_wt'],3)
-
-    context["new_customers"] = Customer.objects.only("id", "name", "customer_type")[:5].select_related()
-    context["customer_count"] = Customer.objects.values("customer_type").annotate(
-        count=Count("id")
-    )
+    customers = Customer.objects.all()
+    context["total_customers"] = customers.filter(active=True).count()
+    
+    # Optimize the query for new customers
+    context["new_customers"] = customers.only("id", "name", "customer_type").prefetch_related('address')[:5]
+    
+    # Optimize the query for customer count
+    context["customer_count"] = customers.values("customer_type").annotate(count=Count("id"))
     
     loan = Loan.objects.with_details(grate=request.grate, srate=request.srate)
     released = loan.released()
@@ -208,6 +211,7 @@ def company_dashboard(request):
     )
     context["loan_cumsum"] = list(get_loan_cumulative_amount())
     return render(request, "pages/company_dashboard.html", context)
+
 
 
 from django.apps import apps
