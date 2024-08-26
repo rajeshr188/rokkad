@@ -220,6 +220,7 @@ class LoanForm(forms.ModelForm):
         if self.instance and self.instance.id:
             self.helper.attrs = {
                 "hx-post": reverse("girvi:girvi_loan_update", kwargs={"id": self.instance.id}),
+                "hx-target": "#content",
                             }
             cancel_url = reverse("girvi:girvi_loan_detail", kwargs={"pk": self.instance.id})
             cancel_button = Button(

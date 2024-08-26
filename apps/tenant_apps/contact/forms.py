@@ -183,10 +183,10 @@ class CustomerForm(forms.ModelForm):
 
 
 class CustomerPicForm(forms.ModelForm):
+    image = forms.ImageField(required=False)
     class Meta:
         model = CustomerPic
-        fields = ["is_default"]
-
+        fields = ['image']
 
 class AddressForm(forms.ModelForm):
     class Meta:

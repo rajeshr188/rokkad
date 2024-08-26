@@ -10,7 +10,7 @@
   </div>
   <div class="ms-md-auto py-2 py-md-0">
     <a href="#" class="btn btn-label-info btn-round me-2">Manage</a>
-    <a href="#" class="btn btn-primary btn-round">Add Customer</a>
+    <a hx-get="{% url 'contact_customer_create'%}" hx-target="#content" class="btn btn-primary btn-round">Add Customer</a>
     <a class="btn btn-success btn-round" hx-get="{% url 'contact_customer_create' %}" hx-push-url="true"
       hx-target="#content" hx-swap="innerHTML transition:true" hx-trigger="click, keyup[shiftKey&&key=='N'] from:body"
       role="button">
@@ -282,37 +282,7 @@
       </div>
     </div>
   </div>
-  <div class="col-md-4">
-    <div class="card card-primary card-round">
-      <div class="card-header">
-        <div class="card-head-row">
-          <div class="card-title">Daily Sales</div>
-          <div class="card-tools">
-            <div class="dropdown">
-              <button class="btn btn-sm btn-label-light dropdown-toggle" type="button" id="dropdownMenuButton"
-                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Export
-              </button>
-              <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                <a class="dropdown-item" href="#">Action</a>
-                <a class="dropdown-item" href="#">Another action</a>
-                <a class="dropdown-item" href="#">Something else here</a>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="card-category">March 25 - April 02</div>
-      </div>
-      <div class="card-body pb-0">
-        <div class="mb-4 mt-2">
-          <h1>$4,578.58</h1>
-        </div>
-        <div class="pull-in">
-          <canvas id="dailySalesChart"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
+  
 </div>
 <div class="row">
   

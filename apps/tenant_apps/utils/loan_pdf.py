@@ -674,16 +674,15 @@ def get_custom_jsk(loan):
     customer_paragraph.drawOn(c, 5 * cm, 16 * cm - height)
 
     # Load the customer image from the ImageField
-    customer_image_path = (
-        loan.customer.get_default_pic().path
-    )  # Use .path to get the file system path
+    # customer_image_path = (
+    #     loan.customer.get_default_pic().path
+    # )  # Use .path to get the file system path
+    customer_pic = None
+    default_pic = loan.customer.get_default_pic()
+    if default_pic:
+        customer_pic = Image(default_pic.path, 50, 50)
 
-    # Debug: Check if the image path is correct
-    if not os.path.exists(customer_image_path):
-        print(f"Image not found at path: {customer_image_path}")
-    else:
-        print(f"Image found at path: {customer_image_path}")
-
+    
         # Set the desired dimensions for the image (e.g., 5x5 cm)
         desired_width = 2.5 * cm
         desired_height = 2.5 * cm
@@ -694,7 +693,7 @@ def get_custom_jsk(loan):
 
         # Draw the image on the canvas
         customer_image = Image(
-            customer_image_path, width=desired_width, height=desired_height
+            default_pic, width=desired_width, height=desired_height
         )
         customer_image.drawOn(c, image_x, image_y)
 
