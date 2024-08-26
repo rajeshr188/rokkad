@@ -263,7 +263,7 @@
                     <th>Action</th>
                   </thead>
                   <tbody id="items" hx-target="closest tr" hx-swap="outerHTML">
-                    {%for i in items%}
+                    {%for i in loan.loanitems.all%}
                     {% include 'girvi/partials/item-inline.html' with object=i %}
                     {%endfor%}
                   </tbody>

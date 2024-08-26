@@ -262,7 +262,6 @@ def loan_detail(request, pk):
         "sunken": loan.total() < value,
         "statements": loan.statementitem_set.all(),
         "loan": loan,
-        "items": loan.loanitems.all(),
         "weight": weight,
         "pure": result,
         "value": Money(value, "INR"),
