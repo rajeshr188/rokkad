@@ -297,8 +297,7 @@ def generate_loans_ledger_pdf(response):
     doc.addPageTemplates([template])
     # Build PDF
     doc.multiBuild(elements, canvasmaker=PageNumCanvas)
-    response.write(buffer.getvalue())
-    buffer.close()
+    
     return response
 
 
