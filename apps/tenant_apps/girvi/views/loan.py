@@ -17,7 +17,6 @@ from django_tables2.export.export import TableExport
 from moneyed import Money
 from num2words import num2words
 from openpyxl import load_workbook
-
 from apps.orgs.registries import company_preference_registry
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.notify.models import NoticeGroup, Notification
@@ -145,8 +144,14 @@ def loan_save(request, id=None, pk=None):
             loan.save()
             messages.success(request, f"{'Updated' if obj else 'Created'} Loan: {loan.loan_id}")
 
-            response = HttpResponse()
-            response["HX-Redirect"] = reverse("girvi:girvi_loan_detail", kwargs={"pk": loan.id})
+            response = TemplateResponse(
+                request,
+                "girvi/loan/loan_detail.html",
+                {"loan": loan, "object": loan},
+            )
+            response["Hx-Push-Url"] = reverse(
+                "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
+            )
             return response
         else:
             messages.warning(request, "Please correct the error below.")
@@ -255,19 +260,15 @@ def loan_detail(request, pk):
     context = {
         "object": loan,
         "sunken": loan.total() < value,
-        # "items": loan.loanitems.all(),
         "statements": loan.statementitem_set.all(),
         "loan": loan,
+        "items": loan.loanitems.all(),
         "weight": weight,
         "pure": result,
-        # "customer_pic_url":f"{l.loan_id}_{l.customer.name}_{l.id}.jpg",
         "value": Money(value, "INR"),
         "worth": value - loan.due(),
         "lvratio": lvratio,
         "dvratio": dvratio,
-        "new_item_url": reverse(
-            "girvi:girvi_loanitem_create", kwargs={"parent_id": loan.id}
-        ),
     }
 
     return TemplateResponse(request, "girvi/loan/loan_detail.html", context)

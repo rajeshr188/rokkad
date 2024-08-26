@@ -182,11 +182,10 @@ class ProductVariantForm(forms.ModelForm, AttributesMixin):
     class Meta:
         model = ProductVariant
         fields = [
-            "sku",
-            "product_code",
+           "name",
         ]
         labels = {
-            "sku": pgettext_lazy("SKU", "SKU"),
+           
             "quantity": pgettext_lazy("Integer number", "Number in stock"),
             "cost_price": pgettext_lazy("Currency amount", "Cost price"),
         }

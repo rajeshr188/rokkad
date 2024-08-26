@@ -341,7 +341,7 @@ class CustomerPic(models.Model):
         Customer, related_name="pics", on_delete=models.CASCADE
     )
     image = models.ImageField(upload_to=customer_pic_upload_to)
-    is_default = models.BooleanField(default=False)
+    is_default = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         if self.is_default:

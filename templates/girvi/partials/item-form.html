@@ -63,7 +63,7 @@
                     <div class="col-auto">
                         <div class="form-group">
                             <button class="btn btn-success btn" hx-post="{% if url %}{{ url }}{% else %}.{% endif%}"
-                                hx-include="closest tr">Save Item</button>
+                                hx-include="closest tr">Save</button>
                             <button class="btn btn-danger btn" {%if object%} hx-get="{{object.get_absolute_url}}"
                                 {%else%}_="on click transition opacity to 0 then remove #row" {%endif%}>Cancel</button>
                         </div>
