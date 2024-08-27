@@ -17,8 +17,10 @@ class LoanFilter(django_filters.FilterSet):
         widget=CustomerWidget(),
     )
     loan_date = django_filters.DateFromToRangeFilter(
+        field_name="loan_date",
         help_text="dd/mm/yy", label="Loan Date"
     )
+    date = django_filters.DateRangeFilter(field_name="loan_date", label="Loan Date")
 
     # notice = django_filters.CharFilter(
     #     field_name="notifications__notice_type", lookup_expr="icontains"
