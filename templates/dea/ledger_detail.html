@@ -25,6 +25,10 @@
                     {% for i in dtxns%}
                     <li class="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
                     {%endfor%}
+                    {% for i in dr_aleg_txns%}
+                    <li class="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
+                    {%endfor%}
+
                 </ul>
                 
                 <a href="#" class="btn btn-primary">Add</a>
@@ -40,6 +44,9 @@
                 <ul class="list-group list-group-flush">
                     {% for i in ctxns%}
                     <li class ="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
+                    {%endfor%}
+                    {% for i in cr_aleg_txns%}
+                    <li class="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
                     {%endfor%}
                 </ul>
                 <a href="#" class="btn btn-primary">Add</a>

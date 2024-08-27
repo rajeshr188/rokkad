@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render,redirect
 
 from ..forms import LedgerForm, LedgerStatementForm, LedgerTransactionForm
 from ..models import JournalEntry, Ledger, LedgerStatement, LedgerTransaction
@@ -48,10 +48,12 @@ def ledger_detail(request, pk):
     )
     dtxns = ledger.dtxns(since=ls_created).select_related("journal_entry__content_type")
     ctxns = ledger.ctxns(since=ls_created).select_related("journal_entry__content_type")
+    cr_aleg_txns = ledger.aleg_txns(xacttypcode='Cr',since=ls_created)
+    dr_aleg_txns = ledger.aleg_txns(xacttypcode='Dr',since=ls_created)
     return render(
         request,
         "dea/ledger_detail.html",
-        {"object": ledger, "dtxns": dtxns, "ctxns": ctxns},
+        {"object": ledger, "dtxns": dtxns, "ctxns": ctxns, "cr_aleg_txns": cr_aleg_txns, "dr_aleg_txns": dr_aleg_txns},
     )
 
 
@@ -88,15 +90,15 @@ def ledger_statement_list(request):
     ledger_statements = LedgerStatement.objects.all()
     return render(
         request,
-        "dea/ledger_statement_list.html",
-        {"ledger_statements": ledger_statements},
+        "dea/ledgerstatement_list.html",
+        {"object_list": ledger_statements},
     )
 
 
 def ledger_statement_detail(request, ledger_statement_id):
     ledger_statement = get_object_or_404(LedgerStatement, id=ledger_statement_id)
     return render(
-        request, "ledger_statement_detail.html", {"ledger_statement": ledger_statement}
+        request, "ledgerstatement_detail.html", {"ledger_statement": ledger_statement}
     )
 
 

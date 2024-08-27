@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container mt-3">
-    <div class="card">
+    <div class="card ">
         <div class="card-header"><h1>Ledger</h1></div>
         <div class="card-body">
             <div class="btn-group" role="group" aria-label="Basic outlined example">
@@ -13,7 +13,7 @@
                 <a type="button" class="btn btn-outline-info" href="{% url 'dea_ledger_audit' %}">Audit</a>
             </div>
             <div class="row">
-                <div class="col">
+                <div class="col table-responsive">
                     {% full_tree_for_model dea.Ledger as node %}
                     <ul class="list-group list-group-flush p-3 root">
                         {% recursetree node %}
