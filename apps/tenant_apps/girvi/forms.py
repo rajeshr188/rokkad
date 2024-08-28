@@ -252,9 +252,7 @@ class LoanForm(forms.ModelForm):
             )
         self.helper.add_input(Submit("submit", "Save"))
         self.helper.add_input(cancel_button)
-
-        
-        
+      
 
     def clean_created(self):
         cleaned_data = super().clean()
@@ -489,14 +487,56 @@ class BulkReleaseForm(forms.Form):
 
 
 class StatementItemForm(forms.ModelForm):
-    loan = forms.ModelMultipleChoiceField(
-        widget=MultipleLoansWidget,
-        queryset=Loan.objects.unreleased().filter(series__is_active=True),
+    loan = forms.ModelChoiceField(
+        widget=LoansWidget,
+        queryset=Loan.objects.filter(series__is_active=True),
     )
 
     class Meta:
         model = StatementItem
-        fields = "__all__"
+        fields = ["loan",]
+
+    def __init__(self, *args, **kwargs):
+        statement = kwargs.pop("statement")
+        super().__init__(*args, **kwargs)
+
+        # Filter loans that are not already in the statement
+        self.fields['loan'].queryset = Loan.objects.filter(series__is_active=True).exclude(
+            id__in=statement.statementitem_set.values_list('loan_id', flat=True)
+        )
+        self.fields['loan'].widget.attrs = {
+            
+            "hx-post": reverse_lazy("girvi:statement_item_create", kwargs={"pk": statement.id}),
+            "hx-target": "#statement-items",
+            "hx-swap":"afterbegin",
+            "hx-trigger": "changed",
+        }
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Row(
+                Column("loan", css_class="form-group col-md-12 mb-0",),
+                css_class="form-row",
+            )
+        )
+        self.helper.attrs = {
+            "id": "my-form",
+            "hx-trigger": "submit",
+            "hx-post": reverse("girvi:statement_item_create", kwargs={"pk": statement.id}),
+            "hx-target": "#statement-items",
+            "hx-swap":"afterbegin",
+        }
+       
+        cancel_button = Button(
+            "cancel",
+            "Cancel",
+            css_class="btn btn-danger",
+            **{
+                "hx-on": "click: resetForm(this)"
+            }
+            )
+        
+        self.helper.add_input(Submit("submit", "Save"))
+        self.helper.add_input(cancel_button)
 
 
 class LoanPaymentForm(forms.ModelForm):

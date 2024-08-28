@@ -43,9 +43,7 @@
     {% block extra_js %}
     <script src="{% static 'theme/assets/js/core/jquery-3.7.1.min.js'%}"></script>
    {% endblock%}
-   {% block extrajs %}
-   {% include 'slick_reporting/js_resources.html' %} 
-   {% endblock %}
+  
   </head>
   <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div class="wrapper sidebar-style-2">

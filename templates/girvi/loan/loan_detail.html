@@ -234,7 +234,7 @@
           <li class="nav-item" role="presentation">
             <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane"
               type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">
-              Statement
+              Statement <span class="badge text-bg-secondary">{{object.statementitem_set.count}}
             </button>
           </li>
           <li class="nav-item" role="presentation">
@@ -480,9 +480,9 @@
           </div>
           <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
             {%if statements%}
-            <ul>
+            <ul class="list-group">
               {%for i in loan.statementitem_set.all%}
-              <li><a href="{% url 'girvi:check_girvi_statement' i.statement.id%}">{{i.statement.created}}</a></li>
+              <li class="list-group-item">verified:{{i.verified_at}} Statement:<a href="{% url 'girvi:statement_detail' i.statement.id%}">{{i.statement.id}} Descrepancy:{{i.descrepancy_found}} {{i.descrepancy_note}}</a></li>
               {%endfor%}
             </ul>
             {%endif%}
