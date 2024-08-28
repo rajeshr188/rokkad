@@ -29,7 +29,7 @@ from ..forms import (
     LoanItemForm,
     LoanRenewForm,
     LoanReportForm,
-    LoanSelectionForm,
+    LoanSelectionForm,StatementItemForm
 )
 from ..models import *
 from ..tables import LoanTable
@@ -527,6 +527,8 @@ def verification_session_create(request):
 
 def verification_session_detail(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
+    # form = StatementItemForm(statement=statement)
+
     statement_items = statement.statementitem_set.select_related("loan").all()
 
     summary = {}
@@ -546,9 +548,9 @@ def verification_session_detail(request, pk):
         "girvi/statement/statement_detail.html",
         context={
             "statement": statement,
-            "summary": summary,
             "items": statement_items,
             "summary": summary,
+            # "form": form,
         },
     )
 
@@ -621,14 +623,14 @@ def statement_item_add(request, pk):
             # Construct the HTML snippet using the item attributes
             item_html = f"""
             <li class="list-group-item d-flex justify-content-between align-items-center">
-                {item.loan.loan_id} 
+                {item.loan} 
                 {'(Discrepancy: ' + item.descrepancy_note + ')' if item.descrepancy_found else ''}
             </li>
             """
             return HttpResponse(item_html)
         else:
             item_html = f"""
-            <li>
+            <li class="list-group-item">
                 {loan_id}
                 Not found
             </li>

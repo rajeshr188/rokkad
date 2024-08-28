@@ -238,11 +238,17 @@ class AddressForm(forms.ModelForm):
                 "hx-target": "this",
                 "hx-swap": "outerHTML",
             }
+            # cancel_button = Button(
+            #     "cancel",
+            #     "Cancel",
+            #     css_class="btn btn-danger",
+            #     onclick="this.closest('form').remove()",
+            # )
             cancel_button = Button(
-                "cancel",
-                "Cancel",
-                css_class="btn btn-danger",
-                onclick="this.closest('form').remove()",
+                'cancel', 'Cancel', css_class='btn btn-danger',
+                **{
+                    'hx-on':'click: this.closest("form").remove()',
+                }
             )
             # cancel_button = Button(
             #     'cancel', 'Cancel', css_class='btn btn-danger',
