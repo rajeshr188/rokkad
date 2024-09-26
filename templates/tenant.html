@@ -388,8 +388,8 @@
                 <a class="dropdown-toggle profile-pic" data-bs-toggle="dropdown" href="#" aria-expanded="false">
                   <div class="avatar-sm">
                     {% if request.user.social_profile_picture %}
-                    <img src="{{ request.user.social_profile_picture.url }}"
-                      alt="{{ request.user.social_profile_picture.url }}Profile Picture" class="avatar-img rounded-circle" />
+                    <img src="{{ request.user.social_profile_picture }}"
+                      alt="{{ request.user.social_profile_picture }}Profile Picture" class="avatar-img rounded-circle" />
                     {% else %}
                     <img src="{% static 'theme/assets/img/profile.jpg' %}" alt="Default Profile Picture"
                       class="avatar-img rounded-circle" />
