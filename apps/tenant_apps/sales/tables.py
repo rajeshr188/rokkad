@@ -19,7 +19,7 @@ class InvoiceTable(tables.Table):
     remove = tables.LinkColumn(
         "sales:sales_invoice_delete",
         args=[A("id")],
-        attrs={"a": {"class": "btn btn-outline-danger", "role": "button"}},
+        attrs={"a": {"class": "btn btn-outline-danger btn-sm", "role": "button"}},
         orderable=False,
         empty_values=(),
     )

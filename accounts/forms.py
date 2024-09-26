@@ -37,3 +37,7 @@ class ProfilePictureForm(forms.ModelForm):
                 "invalid": "Image files only",
             }
         }
+
+
+class SwitchWorkspaceForm(forms.Form):
+    workspace_id = forms.IntegerField(label="Workspace ID", required=True)

@@ -11,6 +11,7 @@ urlpatterns = (
         name="export_data",
     ),
     path("import/", views.import_data, name="import_data"),
+    path("get_model_fields/", views.get_model_fields, name="get_model_fields"),
     path("customer/", views.customer_list, name="contact_customer_list"),
     path("customer/create/", views.customer_save, name="contact_customer_create"),
     path(

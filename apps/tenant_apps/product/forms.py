@@ -182,10 +182,9 @@ class ProductVariantForm(forms.ModelForm, AttributesMixin):
     class Meta:
         model = ProductVariant
         fields = [
-           "name",
+            "name",
         ]
         labels = {
-           
             "quantity": pgettext_lazy("Integer number", "Number in stock"),
             "cost_price": pgettext_lazy("Currency amount", "Cost price"),
         }
@@ -277,16 +276,17 @@ class PricingTierProductPriceForm(forms.ModelForm):
         fields = "__all__"
 
 
-from django.forms import HiddenInput
-
-
 class StockInForm(forms.ModelForm):
+    # journal_entry = forms.ModelChoiceField(queryset=JournalEntry.objects.all(), widget=forms.HiddenInput())
     variant = forms.ModelChoiceField(
         queryset=ProductVariant.objects.all(), widget=Select2Widget
     )
+    rate = forms.DecimalField(max_digits=10, decimal_places=3)
     touch = forms.DecimalField(max_digits=10, decimal_places=3)
     description = forms.CharField(widget=forms.Textarea(attrs={"rows": 2, "cols": 15}))
-    stock = forms.ModelChoiceField(queryset=Stock.objects.all(), required=False)
+    stock = forms.ModelChoiceField(
+        queryset=Stock.objects.all(), widget=StockWidget, required=False
+    )
 
     class Meta:
         model = StockTransaction
@@ -295,26 +295,35 @@ class StockInForm(forms.ModelForm):
             "quantity",
             "weight",
             "touch",
+            "rate",
             "description",
             "stock",
             "movement_type",
+            # "journal_entry",
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["movement_type"].widget = HiddenInput()
-        self.fields["movement_type"].initial = Movement.objects.get(name="IN")
-        self.fields["stock"].widget = HiddenInput()
+        # self.fields["movement_type"].widget = HiddenInput()
+        # self.fields["movement_type"].initial = Movement.objects.get(name="In")
+        # self.fields["stock"].widget = HiddenInput()
 
     def clean(self):
         cleaned_data = super().clean()
         stock = cleaned_data.get("stock")
+        variant = cleaned_data.get("variant")
+
+        # Ensure either variant or stock is provided
+        if not stock and not variant:
+            raise ValidationError("Either variant or stock must be provided.")
+
         if not stock:
             variant = cleaned_data.get("variant")
             sku = cleaned_data.get("sku")
             quantity = cleaned_data.get("quantity")
             weight = cleaned_data.get("weight")
             touch = cleaned_data.get("touch")
+            rate = cleaned_data.get("rate")
             stock = Stock.objects.create(
                 weight=weight,
                 quantity=quantity,
@@ -328,12 +337,16 @@ class StockInForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        instance.movement_type = Movement.objects.get(name="IN")
+        # instance.movement_type = Movement.objects.get(name="In")
+
         if commit:
             instance.save()
+
+        instance.stock.update_status()
         return instance
 
 
+#  not relevant
 class StockOutForm(forms.ModelForm):
     description = forms.CharField(widget=forms.Textarea(attrs={"rows": 2, "cols": 15}))
 
@@ -343,12 +356,39 @@ class StockOutForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["movement_type"].initial = Movement.objects.get(name="OUT")
+        self.fields["movement_type"].initial = Movement.objects.get(name="Out")
         self.fields["movement_type"].widget = HiddenInput()
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        instance.movement_type = Movement.objects.get(name="OUT")
+        instance.movement_type = Movement.objects.get(name="Out")
         if commit:
             instance.save()
+
+        instance.stock.update()
         return instance
+
+
+class AttributeValueSelectionForm(forms.Form):
+    product_attributes = forms.ModelMultipleChoiceField(
+        queryset=AttributeValue.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
+    variant_attributes = forms.ModelMultipleChoiceField(
+        queryset=AttributeValue.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        product_type = kwargs.pop("product_type", None)
+        super().__init__(*args, **kwargs)
+
+        if product_type:
+            self.fields["product_attributes"].queryset = AttributeValue.objects.filter(
+                attribute__in=product_type.product_attributes.all()
+            )
+            self.fields["variant_attributes"].queryset = AttributeValue.objects.filter(
+                attribute__in=product_type.variant_attributes.all()
+            )

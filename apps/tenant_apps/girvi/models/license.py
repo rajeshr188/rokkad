@@ -40,11 +40,11 @@ class Series(models.Model):
         max_length=30,
         default="",
         blank=True,
-        verbose_name=_("Series Name"),
+        verbose_name=_("Series Name/prefix"),
     )
     created = models.DateTimeField(auto_now_add=True, editable=False)
     last_updated = models.DateTimeField(auto_now=True)
-
+    max_limit = models.PositiveIntegerField(default=5, verbose_name=_("Max Limit"))
     license = models.ForeignKey(
         License, on_delete=models.CASCADE, verbose_name=_("License")
     )

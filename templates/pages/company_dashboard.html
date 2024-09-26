@@ -27,7 +27,7 @@
 <div class="row">
   <div class="col-sm-6 col-md-3">
     <div class="card card-stats card-round" hx-get="{% url 'contact_customer_list' %}" hx-target="#content"
-      hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-push-url="true" hx-trigger="click"
+      hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-trigger="click"
       style="cursor:pointer;">
       <div class="card-body">
         <div class="row align-items-center">
@@ -369,28 +369,7 @@
     </div>
   </div>
 </div>
-<div class="row">
-  <div class="col">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Jama</div>
-        <div class="card-body">
-          <p>loan : {{today_loan.amount}} interest : {{today_loan.interest}}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Nave</div>
-        <div class="card-body">
-          <p>loan : {{today_release.amount}}</p> interest : {{today_release.interest}}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
 <div class="row">
   <div class="col-md-6">
     <div class="card card-round">

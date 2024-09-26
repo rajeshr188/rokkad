@@ -1,0 +1,5 @@
+{% for storage_box in storage_boxes %}
+    <div id="storagebox-{{ storage_box.pk }}">
+        {% include 'girvi/storagebox/storagebox_item.html' %}
+    </div>
+{% endfor %}

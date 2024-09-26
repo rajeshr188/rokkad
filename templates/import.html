@@ -16,6 +16,14 @@
                     hx-vals='{"use_block":"content"}'
               class="btn btn-danger">Cancel</button>
         </form>
+        <div id="model-fields" class="alert alert-primary" role="alert"
+            hx-get="{% url 'get_model_fields' %}" 
+            hx-trigger="change from:select[name='model_name']" 
+            hx-target="#model-fields" 
+            hx-include="[name='model_name']"
+            hx-swap="innerHTML"></div>
+           
+
     </div>
 </div>
 {% endblock %}

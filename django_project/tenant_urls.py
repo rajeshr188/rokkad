@@ -24,6 +24,7 @@ urlpatterns = [
     path("purchase/", include("apps.tenant_apps.purchase.urls")),
     path("sales/", include("apps.tenant_apps.sales.urls")),
     path("approval/", include("apps.tenant_apps.approval.urls")),
+    path("invitations/", include("invitations.urls")),
 ]
 
 if settings.DEBUG:

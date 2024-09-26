@@ -1,0 +1,7 @@
+{% load crispy_forms_tags%}
+<h1>{% if form.instance.pk %}Update{% else %}Add{% endif %} Storage Box</h1>
+    <form method="post" hx-post="{% if form.instance.pk %}{% url 'girvi:update_storage_box' form.instance.pk %}{% else %}{% url 'girvi:add_storage_box' %}{% endif %}" hx-target="#storagebox-list" hx-swap="outerHTML">
+        {% csrf_token %}
+        {{form|crispy}}
+        <input type="submit" class="btn btn-success" value="Save">
+    </form>

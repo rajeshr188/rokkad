@@ -3,7 +3,10 @@ from .forms import *
 from .license import *
 from .loan import *
 from .loanpayment import *
+from .notice import *
 from .prints import *
 from .release import *
 from .reports import *
 from .series import *
+from .statement import *
+from .storagebox import *

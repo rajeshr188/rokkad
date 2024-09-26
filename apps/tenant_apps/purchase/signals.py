@@ -44,6 +44,7 @@ def create_journal_entry(sender, instance, created, **kwargs):
 
 @receiver(pre_save, sender=PurchaseItem)
 def reverse_stock_entry(sender, instance, **kwargs):
+    print(" in pre_save:reverse stock entry")
     #     # Access model and subclass:
     if instance.pk:  # If journal is being updated
         # Retrieve the old data from the database
@@ -76,6 +77,7 @@ def reverse_stock_entry(sender, instance, **kwargs):
 
 @receiver(post_save, sender=PurchaseItem)
 def create_stock_entry(sender, instance, created, **kwargs):
+    print(" in post_save:create stock entry")
     if created:
         instance.post()
 

@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models, transaction
@@ -58,17 +60,29 @@ class Release(models.Model):
     def get_update_url(self):
         return reverse("girvi:girvi_release_update", args=(self.pk,))
 
-    def generate_release_id(self):
-        last_release = Release.objects.all().order_by("id").last()
-        if not last_release:
-            return "R1"
-        release_id = last_release.release_id
-        release_int = int(release_id.split("R")[-1])
-        new_release_int = release_int + 1
-        new_release_id = "R" + str(new_release_int).zfill(4)
-        return new_release_id
+    def generate_release_id(self, series):
+        with transaction.atomic():
+            last_release = (
+                Release.objects.filter(release_id__startswith=series.name)
+                .order_by("-release_id")
+                .select_for_update()
+                .first()
+            )
+            if last_release:
+                release_id = last_release.release_id
+                # Extract the sequence number
+                match = re.match(rf"^{re.escape(series.name)}(\d+)$", release_id)
+                if match:
+                    sequence_number = int(match.group(1)) + 1
+                else:
+                    sequence_number = 1
+            else:
+                sequence_number = 1
+
+            new_release_id = f"{series.name}{sequence_number:0{series.max_limit}d}"
+            return new_release_id
 
     def save(self, *args, **kwargs):
         if not self.release_id:
-            self.release_id = self.generate_release_id()
+            self.release_id = self.generate_release_id(self.loan.series)
         super().save(*args, **kwargs)

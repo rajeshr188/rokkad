@@ -25,16 +25,6 @@ from ..models import Loan, Release
 from ..tables import ReleaseTable
 
 
-def increlid():
-    try:
-        last = Release.objects.latest("id")
-        return str(int(last.release_id) + 1)
-    except Release.DoesNotExist:
-        return "1"
-    except (ValueError, TypeError):
-        return "1"
-
-
 @login_required
 @for_htmx(use_block_from_params="true")
 def release_list(request):
@@ -76,18 +66,17 @@ def release_create(request, pk=None):
             loan = get_object_or_404(Loan, pk=pk)
             form = ReleaseForm(
                 initial={
-                    "release_id": increlid,
+                    # "release_id": increlid,
                     "loan": loan,
-                    "release_date": datetime.now(),
+                    "release_date": timezone.now(),
                     "released_by": loan.customer,
                 }
             )
         else:
             form = ReleaseForm(
                 initial={
-                    "release_id": increlid,
+                    # "release_id": increlid,
                     "release_date": datetime.now(),
-                    # "released_by": loan.customer,
                 }
             )
     return TemplateResponse(
@@ -186,7 +175,7 @@ def bulk_release(request):
                 {
                     "loan": loan,
                     "release_date": date,
-                    "released_by": request.user,
+                    "released_by": loan.customer,
                     "release_amount": loan.due(),
                 }
                 for loan in loans

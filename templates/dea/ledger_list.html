@@ -3,37 +3,60 @@
 {% block title %}Ledger List{% endblock %}
 
 {% block content %}
-<div class="container mt-3">
+<div class="container mt-3" hx-get ="{% url 'dea_ledger_list'%}" hx-trigger="listChanged from:body" hx-target="this" hx-swap="innerHTML">
+    <div id="form"></div>
     <div class="card ">
-        <div class="card-header"><h1>Ledger</h1></div>
+        <div class="card-header">
+            <h1>Ledgers (Chart of Accounts)</h1>
+        </div>
         <div class="card-body">
             <div class="btn-group" role="group" aria-label="Basic outlined example">
-                <a type="button" class="btn btn-outline-success" href="{% url 'dea_ledger_create' %}">Add Ledger</a>
+                <a type="button" class="btn btn-outline-success" href="" hx-get="{% url 'dea_ledger_create' %}"
+                    hx-target="#form">Add Ledger</a>
                 <a type="button" class="btn btn-outline-primary" href="">Add txn</a>
                 <a type="button" class="btn btn-outline-info" href="{% url 'dea_ledger_audit' %}">Audit</a>
             </div>
-            <div class="row">
-                <div class="col table-responsive">
-                    {% full_tree_for_model dea.Ledger as node %}
-                    <ul class="list-group list-group-flush p-3 root">
-                        {% recursetree node %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{node.AccountType}}
-                            <a href="{% url 'dea_ledger_detail' node.id%}">
-                                {{ node.name }}
-                            </a>
-                            {{node.current_balance_wrt_descendants}}
+       
+            <ul class="list-group ">
+                {% recursetree ledgers %}
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold"><a data-bs-toggle="collapse" href="#collapse{{ node.pk }}" role="button" aria-expanded="false"
+                            aria-controls="collapse{{ node.pk }}">
+                            {{ node.name }}
+                        </a></div>
+                        <a href="{% url 'dea_ledger_detail' node.id%}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                class="bi bi-info-square" viewBox="0 0 16 16">
+                                <path
+                                    d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z" />
+                                <path
+                                    d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0" />
+                            </svg>
+                        </a>
+                        <a href="" hx-get="{% url 'dea_ledger_update' node.id%}" hx-target="#form"><svg
+                                xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                <path
+                                    d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                                <path fill-rule="evenodd"
+                                    d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z" />
+                            </svg></a>
                             {% if not node.is_leaf_node %}
-                            <ul class="children">
-                                {{ children }}
-                            </ul>
-                            {% endif %}
-                        </li>
-                        {% endrecursetree %}
-                    </ul>
-                </div>
-                
-            </div>
+                        <ul class="collapse" id="collapse{{ node.pk }}">
+                            {{ children }}
+                        </ul>
+                        {% endif %}
+                      </div>
+                      <span class="badge text-bg-primary rounded-pill">{{node.current_balance_wrt_descendants}}</span>
+                    
+                    
+                    
+                    
+                </li>
+                {% endrecursetree %}
+            </ol>
+
         </div>
     </div>
 </div>

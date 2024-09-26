@@ -1,0 +1,66 @@
+<div class="table-responsive">
+    {%if object.atxns.exists%}
+    <table class="table table-sm table-hover caption-top">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Debit Acc</th>
+          <th>Credit Acc</th>
+        </tr>
+      </thead>
+      <caption>Account Transactions</caption>
+      <tbody class="table-group-divider">
+        {%for i in object.atxns.all%}
+        {% include 'dea/accounttransaction_detail.html' with i=i %}
+        {%endfor%}
+      </tbody>
+    </table>
+    {%endif%}
+    {%if object.ltxns.exists%}
+    <table class="table table-sm table-hover caption-top">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Debit Acc</th>
+          <th>Credit Acc</th>
+        </tr>
+      </thead>
+      <caption>Ledger Transactions</caption>
+      <tbody class="table-group-divider">
+
+        {%for i in object.ltxns.all%}
+        {%include 'dea/ledgertransaction_detail.html' with i=i%}
+        {%endfor%}
+      </tbody>
+    </table>
+    {%endif%}
+    {%if object.stxns.exists%}
+    <table class="table table-sm table-hover caption-top">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Stock</th>
+          <th>Debit</th>
+          <th>Credit</th>
+        </tr>
+      </thead>
+      <caption>Stock Transactions</caption>
+      <tbody class="table-group-divider">
+        {%for i in object.stxns.all%}
+        <tr class="table-warning">
+          <td>{{i.id}}</td>
+          <td>{{i.created|date}}</td>
+          <td><a href="{% url 'product_stock_detail' i.stock.id%}">{{i.stock}} {{i.lot.barcode}}</a></td>
+          <td>{%if i.movement_type.direction == '+'%}+{{i.quantity}} nos +{{i.weight}} gms{%endif%}</td>
+          <td>{%if i.movement_type.direction == '-'%}-{{i.quantity}} nos -{{i.weight}} gms{%endif%}</td>
+        </tr>
+        {%endfor%}
+      </tbody>
+    </table>
+    {%endif%}
+  </div>

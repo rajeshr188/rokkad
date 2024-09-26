@@ -15,7 +15,8 @@ from moneyed import Money
 
 from apps.tenant_apps.approval.models import ReturnItem
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import AccountStatement, JournalEntry  # , JournalTypes
+from apps.tenant_apps.dea.models import (AccountStatement,  # , JournalTypes
+                                         JournalEntry)
 from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.models import Stock, StockTransaction
@@ -398,7 +399,7 @@ class Invoice(models.Model):
                 {
                     "ledgerno": "Sales",
                     "XactTypeCode": "Cr",
-                    "XactTypeCode_ext": "CRSL",
+                    "XactTypeCode_Ext": "CRSL",
                     "Account": self.customer.account,
                     "amount": cash_balance,
                 }
@@ -415,7 +416,7 @@ class Invoice(models.Model):
                     {
                         "ledgerno": "Sales",
                         "XactTypeCode": "Cr",
-                        "XactTypeCode_ext": "CRSL",
+                        "XactTypeCode_Ext": "CRSL",
                         "Account": self.customer.account,
                         "amount": tax,
                     }
@@ -434,7 +435,7 @@ class Invoice(models.Model):
                 {
                     "ledgerno": "Sales",
                     "XactTypeCode": "Cr",
-                    "XactTypeCode_ext": "CRSL",
+                    "XactTypeCode_Ext": "CRSL",
                     "Account": self.customer.account,
                     "amount": gold_balance,
                 }
@@ -453,7 +454,7 @@ class Invoice(models.Model):
                 {
                     "ledgerno": "Sales",
                     "XactTypeCode": "Cr",
-                    "XactTypeCode_ext": "CRSL",
+                    "XactTypeCode_Ext": "CRSL",
                     "Account": self.customer.account,
                     "amount": silver_balance,
                 }
@@ -471,6 +472,14 @@ class Invoice(models.Model):
     def delete_journal_entry(self):
         for entry in self.journal_entries.all():
             entry.delete()
+
+    def delete_txns(self):
+        je = self.get_journal_entry()
+        at = je.atxns.all()
+        lt = je.ltxns.all()
+
+        at.delete()
+        lt.delete()
 
     def create_transactions(self):
         print("Creating transactions")
@@ -493,7 +502,8 @@ class Invoice(models.Model):
             if lt and at:
                 journal_entry.untransact(lt, at)
         else:
-            self.delete_journal_entry()
+            # self.delete_journal_entry()
+            self.delete_txns()
 
     def is_changed(self, old_instance):
         # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
@@ -596,30 +606,52 @@ class InvoiceItem(models.Model):
             self, fields=["product", "quantity", "weight"]
         ) != model_to_dict(old_instance, fields=["product", "quantity", "weight"])
 
+    def get_journal_entry(self, desc=None):
+        if self.invoice.journal_entries.exists():
+            return self.invoice.journal_entries.latest()
+        else:
+            return JournalEntry.objects.create(
+                content_object=self.invoice,
+                desc=self.invoice.__class__.__name__,
+            )
+
     @transaction.atomic()
     def post(self):
+        je = self.get_journal_entry()
+        print(f"je:{je}")
         if not self.is_return:
+            print("not return")
             if self.approval_line:
                 # unpost the approval line to return the stocklot from approvalline
                 stock_journal_entry = self.approval_line.get_journal_entry()
                 self.approval_line.unpost(stock_journal)
                 self.approval_line.update_status()
             # post the invoice item to deduct the stock from stocklot
-            self.product.transact(self.weight, self.quantity, "S")
+            x = self.product.transact(self.weight, self.quantity, "S", journal_entry=je)
+            print(f"posting:{x}")
         else:
-            self.product.transact(self.weight, self.quantity, "SR")
+            print("return")
+            x = self.product.transact(
+                self.weight, self.quantity, "SR", journal_entry=je
+            )
+            print(f"posting:{x}")
 
     @transaction.atomic()
     def unpost(self):
+        je = self.get_journal_entry()
+        print(f"je:{je}")
         if self.is_return:
-            self.product.transact(self.weight, self.quantity, "S")
+            self.product.transact(self.weight, self.quantity, "S", journal_entry=je)
         else:
             if self.approval_line:
                 # post the approval line to deduct the stock from invoiceitem
                 stock_journal_entry = self.approval_line.get_journal()
                 self.approval_line.post(stock_journal_entry)
                 self.approval_line.update_status()
-            self.product.transact(self.weight, self.quantity, "SR")
+            x = self.product.transact(
+                self.weight, self.quantity, "SR", journal_entry=je
+            )
+            print(f"unposting:{x}")
 
 
 class SaleBalance(models.Model):

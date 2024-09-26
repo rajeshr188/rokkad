@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
-from django.db.models import Case, CharField, F, Q, Sum, Value, When
+from django.db.models import CharField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.forms import model_to_dict
 from django.urls import reverse
@@ -15,16 +15,12 @@ from djmoney.models.fields import MoneyField
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import AccountStatement, JournalEntry  # , JournalTypes
+from apps.tenant_apps.dea.models import (AccountStatement,  # , JournalTypes
+                                         JournalEntry)
 from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.attributes import get_product_attributes_data
-from apps.tenant_apps.product.models import (
-    Attribute,
-    ProductVariant,
-    Stock,
-    StockTransaction,
-)
+from apps.tenant_apps.product.models import ProductVariant, Stock
 from apps.tenant_apps.terms.models import PaymentTerm
 
 from ..managers import PurchaseQueryset
@@ -383,6 +379,14 @@ class Purchase(models.Model):
         for entry in self.journal_entries.all():
             entry.delete()
 
+    def delete_txns(self):
+        je = self.get_journal_entry()
+        at = je.atxns.all()
+        lt = je.ltxns.all()
+
+        at.delete()
+        lt.delete()
+
     def create_transactions(self):
         # if no je or je older than statement create je and txns else update txns
         # if not self.journal_entries.exists() or self.journal_entries.latest().created < self.supplier.account.accountstatements.latest('created').created:
@@ -410,7 +414,7 @@ class Purchase(models.Model):
             if lt and at:
                 journal_entry.untransact(lt, at)
         else:
-            self.delete_journal_entry()
+            self.delete_txns()
 
     def is_changed(self, old_instance):
         # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
@@ -499,8 +503,18 @@ class PurchaseItem(models.Model):
             self, fields=["product", "quantity", "weight"]
         ) != model_to_dict(old_instance, fields=["product", "quantity", "weight"])
 
+    def get_journal_entry(self, desc=None):
+        if self.invoice.journal_entries.exists():
+            return self.invoice.journal_entries.latest()
+        else:
+            return JournalEntry.objects.create(
+                content_object=self.invoice,
+                desc=self.invoice.__class__.__name__,
+            )
+
     @transaction.atomic()
     def post(self):
+        print("Posting the purchase item")
         stock, created = Stock.objects.get_or_create(
             purchase_item=self,
             variant=self.product,
@@ -512,10 +526,13 @@ class PurchaseItem(models.Model):
             else self.invoice.silver_rate,
             huid=self.huid,
         )
+        je = self.get_journal_entry()
+        print(f"je:{je}")
         stock.transact(
             weight=self.weight,
             quantity=self.quantity,
             movement_type="P",
+            journal_entry=je,
         )
 
     @transaction.atomic()
@@ -523,15 +540,19 @@ class PurchaseItem(models.Model):
         """
         add lot back to stock lot if item is_return,
         remove lot from stocklot if item is not return item"""
+        print("Unposting the purchase item")
+        je = self.get_journal_entry()
+        print(f"je:{je}")
         try:
             # self.stock_item.delete()
             lot = self.stock_item
-            lot.transact(
-                # journal_entry=journal_entry,
+            x = lot.transact(
+                journal_entry=je,
                 weight=lot.weight,
                 quantity=lot.quantity,
                 movement_type="PR",
             )
+            print(x)
 
         except Stock.DoesNotExist:
             print("Oops!while Unposting there was no said stock.  Try again...")

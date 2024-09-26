@@ -4,33 +4,37 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Button, Submit
 from django import forms
 from django.apps import apps
-
 # from product.models import PricingTier
 from django.conf import settings
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.urls import reverse
 from django_select2 import forms as s2forms
+from django_select2.forms import (ModelSelect2MultipleWidget,
+                                  ModelSelect2Widget, Select2MultipleWidget,
+                                  Select2Widget)
 from import_export.formats import base_formats
 from slick_reporting.forms import BaseReportForm
 
-from .models import (
-    Address,
-    Contact,
-    Customer,
-    CustomerPic,
-    CustomerRelationship,
-    Proof,
-    RelationType,
-)
+from .models import (Address, Contact, Customer, CustomerPic,
+                     CustomerRelationship, Proof, RelationType)
 
 
 class ExportForm(forms.Form):
-    model_name = forms.ChoiceField(
+    # model_name = forms.ChoiceField(
+    #     choices=[
+    #         (model.__name__, model.__name__)
+    #         for app in settings.TENANT_APPS
+    #         for model in apps.get_app_config(app.split(".")[-1]).models.values()
+    #     ]
+    # )
+    model_names = forms.MultipleChoiceField(
         choices=[
             (model.__name__, model.__name__)
             for app in settings.TENANT_APPS
             for model in apps.get_app_config(app.split(".")[-1]).models.values()
-        ]
+        ],
+        widget=forms.CheckboxSelectMultiple,
+        label="Select Models to Export",
     )
     export_format = forms.ChoiceField(
         choices=[
@@ -184,11 +188,17 @@ class CustomerForm(forms.ModelForm):
 
 class CustomerPicForm(forms.ModelForm):
     image = forms.ImageField(required=False)
+
     class Meta:
         model = CustomerPic
-        fields = ['image']
+        fields = ["image"]
+
 
 class AddressForm(forms.ModelForm):
+    doorno = forms.CharField(required=False)
+    area = forms.CharField(required=False)
+    zipcode = forms.CharField(required=False)
+
     class Meta:
         model = Address
         fields = [
@@ -245,10 +255,12 @@ class AddressForm(forms.ModelForm):
             #     onclick="this.closest('form').remove()",
             # )
             cancel_button = Button(
-                'cancel', 'Cancel', css_class='btn btn-danger',
+                "cancel",
+                "Cancel",
+                css_class="btn btn-danger",
                 **{
-                    'hx-on':'click: this.closest("form").remove()',
-                }
+                    "hx-on": 'click: this.closest("form").remove()',
+                },
             )
             # cancel_button = Button(
             #     'cancel', 'Cancel', css_class='btn btn-danger',

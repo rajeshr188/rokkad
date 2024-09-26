@@ -1,0 +1,54 @@
+{% extends 'tenant.html'%}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Storage Box List</h4>
+                    <button class="btn btn-success" hx-get="{% url 'girvi:add_storage_box' %}" hx-target="#form" hx-trigger="click">Add Storage Box</button>
+                </div>
+                <div class="card-body">
+                    <!-- <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Id</th>
+                                    <th>Storage Box Name</th>
+                                    <th>Storage Box Description</th>
+                                    <th>Storage Box Status</th>
+                                    <th>Storage Box Created At</th>
+                                    <th>Storage Box Updated At</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for storagebox in storageboxs %}
+                                <tr>
+                                    <td>{{ storagebox.id }}</td>
+                                    <td>{{ storagebox.storagebox_name }}</td>
+                                    <td>{{ storagebox.storagebox_description }}</td>
+                                    <td>{{ storagebox.storagebox_status }}</td>
+                                    <td>{{ storagebox.created_at }}</td>
+                                    <td>{{ storagebox.updated_at }}</td>
+                                    <td>
+                                        <a href="{% url 'girvi:storagebox_edit' storagebox.id %}" class="btn btn-primary">Edit</a>
+                                        <a href="{% url 'girvi:storagebox_delete' storagebox.id %}" class="btn btn-danger">Delete</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div> -->
+                   
+                    
+                    <div id="storagebox-list">
+                        {% include 'girvi/storagebox/storagebox_list_partial.html' %}
+                    </div>
+                    <div id="form"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,11 +1,13 @@
 {% load crispy_forms_tags %}
-{{form.media}}
+
 <form hx-post="{{ request.path }}" class="modal-content">
+
     {% csrf_token %}
     <div class="modal-header">
         <h1 class="modal-title fs-5" id="exampleModalLabel">Add</h1>
     </div>
     <div class="modal-body">
+      {{form.media}}
       {{ form|crispy }}
     </div>
     <div class="modal-footer">

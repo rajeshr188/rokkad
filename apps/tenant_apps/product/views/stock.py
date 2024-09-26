@@ -6,17 +6,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_http_methods  # new
-from django.views.generic import (
-    CreateView,
-    DeleteView,
-    DetailView,
-    ListView,
-    UpdateView,
-)
+from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
+                                  UpdateView)
 from django.views.generic.base import TemplateView
 from django_tables2.config import RequestConfig
 
-# from dea.models import JournalEntry  # , JournalTypes
+from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import StockFilter
@@ -41,6 +36,7 @@ def split_lot(request, pk):
             try:
                 stock.split(wt=weight, qty=quantity, is_unique=is_unique)
             except Exception as e:
+                print(e)
                 messages.error(request, f"Error: {e}")
             return HttpResponseRedirect(reverse("product_stock_list"))
 
@@ -132,10 +128,24 @@ def stock_select(request, q):
 
 
 def stockin_journalentry(request):
+    # Check if journal_entry_id is provided in the request
+    journal_entry_id = request.GET.get("journal_entry_id", None)
+    # Initialize the form with the journal_entry_id
     form = StockInForm(request.POST or None)
-    if form.is_valid():
-        form.save()
-        return redirect("product_stock_list")
+    if request.method == "POST":
+        if journal_entry_id:
+            # Fetch the existing JournalEntry
+            journal_entry = get_object_or_404(JournalEntry, id=journal_entry_id)
+        else:
+            # Create a new JournalEntry
+            journal_entry = JournalEntry.objects.create(desc="Stock In Entry")
+            journal_entry_id = journal_entry.id
+        if form.is_valid():
+            stock_transaction = form.save(commit=False)
+            stock_transaction.journal_entry = journal_entry
+            stock_transaction.save()
+            return redirect("product_stock_list")
+
     return render(
         request, "product/stock/stock_journalentry.html", context={"form": form}
     )

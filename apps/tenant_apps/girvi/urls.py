@@ -90,16 +90,6 @@ urlpatterns += (
         views.LicenseDeleteView.as_view(),
         name="girvi_license_delete",
     ),
-    path(
-        "license/series/create/",
-        views.SeriesCreateView.as_view(),
-        name="girvi_series_create",
-    ),
-    path(
-        "license/series/detail/<int:id>/",
-        views.SeriesDetailView.as_view(),
-        name="girvi_series_detail",
-    ),
 )
 
 # urls for Loan
@@ -153,7 +143,7 @@ urlpatterns += (
     path(
         "girvi/loan-listreport/", views.LoanListReport.as_view(), name="Loan_list_repot"
     ),
-    path("girvi/ledger/", views.generate_loans_ledger_pdf, name="girvi_ledger"),
+    path("girvi/ledger/", views.export_loans_to_excel, name="girvi_ledger"),
     path("girvi/unreleased/", views.generate_unreleased_pdf, name="girvi_unreleased"),
 )
 
@@ -314,5 +304,21 @@ urlpatterns += (
         "statement_item/<int:pk>/delete/",
         views.statement_item_delete,
         name="statement_item_delete",
+    ),
+)
+
+# urls for storagebox
+urlpatterns += (
+    path("storage_boxes/", views.list_storage_boxes, name="storage_boxes"),
+    path("storage_boxes/add/", views.add_storage_box, name="add_storage_box"),
+    path(
+        "storage_boxes/update/<int:pk>/",
+        views.update_storage_box,
+        name="update_storage_box",
+    ),
+    path(
+        "storage_boxes/delete/<int:pk>/",
+        views.delete_storage_box,
+        name="delete_storage_box",
     ),
 )

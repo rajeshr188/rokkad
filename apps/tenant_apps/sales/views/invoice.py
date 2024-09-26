@@ -13,19 +13,15 @@ from openpyxl import load_workbook
 from render_block import render_block_to_string
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.product.models import (
-    PricingTier,
-    PricingTierProductPrice,
-    ProductVariant,
-    Stock,
-)
+from apps.tenant_apps.product.models import (PricingTier,
+                                             PricingTierProductPrice,
+                                             ProductVariant, Stock)
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 # from ..admin import InvoiceResource, ReceiptResource
 from ..filters import InvoiceFilter
 from ..forms import InvoiceForm, InvoiceItemForm
 from ..models import Invoice, InvoiceItem
-
 # from ..render import Render
 from ..tables import InvoiceTable
 
@@ -125,6 +121,7 @@ def sales_detail_hx_view(request, pk=None):
         "previous": obj.get_previous(),
         "next": obj.get_next(),
         "new_item_url": new_item_url,
+        "je": obj.journal_entries.first(),
     }
     return render(request, "sales/partials/detail.html", context)
 

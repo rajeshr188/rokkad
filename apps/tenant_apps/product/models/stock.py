@@ -6,7 +6,8 @@ from django.db.models import OuterRef, Subquery, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import reverse
 
-# from dea.models import JournalEntry
+from apps.tenant_apps.dea.models import JournalEntry
+
 from ...utils.friendlyid import encode
 from ..managers import StockManager
 
@@ -205,18 +206,20 @@ class Stock(models.Model):
         """
         return (self.created - self.updated_on).days
 
-    def transact(self, weight, quantity, movement_type):
+    def transact(self, weight, quantity, movement_type, journal_entry):
         """
         Modifies weight and quantity associated with the stock based on movement type
         Returns none
         """
-        StockTransaction.objects.create(
+        t = StockTransaction.objects.create(
             stock=self,
             weight=weight,
             quantity=quantity,
             movement_type_id=movement_type,
+            journal_entry=journal_entry,
         )
         self.update_status()
+        return t
 
     # @classmethod
     # def with_balance(cls):
@@ -320,17 +323,23 @@ class Movement(models.Model):
     name = models.CharField(max_length=30)
     direction = models.CharField(max_length=1, default="+")
 
+    def __str__(self):
+        return self.name
+
 
 class StockTransaction(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     quantity = models.IntegerField(default=0, blank=True)
     weight = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     description = models.TextField(null=True, blank=True)
-
-    # relational Fields
-    # user = models.ForeignKey(CustomUser)
     movement_type = models.ForeignKey(Movement, on_delete=models.CASCADE, default="P")
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
+    journal_entry = models.ForeignKey(
+        JournalEntry, on_delete=models.CASCADE, related_name="stxns"
+    )
+
+    def __str__(self):
+        return f"{self.stock} {self.movement_type} {self.quantity} {self.weight}"
 
     def get_update_url(self):
         return reverse("product_stocktransaction_update", args=(self.pk,))

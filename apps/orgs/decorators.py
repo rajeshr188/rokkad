@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseForbidden
+from django.shortcuts import redirect
 from django_tenants.utils import get_public_schema_name
 
 from apps.orgs.models import Company, Membership
@@ -79,8 +80,11 @@ def roles_required(allowed_roles):
 def company_member_required(view_func):
     @login_required
     def _wrapped_view(request, *args, **kwargs):
-        company = request.user.workspace
-        # company_id = kwargs.get('company_id')  # Assuming company_id is passed as a keyword argument to the view
+        # company = request.user.workspace
+        company_id = kwargs.get(
+            "company_id"
+        )  # Assuming company_id is passed as a keyword argument to the view
+        company = Company.objects.get(id=company_id)
         if company and company.schema_name != get_public_schema_name():
             try:
                 membership = Membership.objects.get(
@@ -91,6 +95,28 @@ def company_member_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
+
+
+# def company_member_required(view_func):
+#     @login_required
+#     def _wrapped_view(request, *args, **kwargs):
+#         company = request.user.workspace
+#         # Check if the company exists
+#         if company:
+#             # Restrict access if the company schema is public
+#             if company.schema_name == get_public_schema_name():
+#                 return redirect("home")
+#             try:
+#                 # Try to get the membership for the user and company
+#                 membership = Membership.objects.get(
+#                     user=request.user, company_id=company.id
+#                 )
+#             except Membership.DoesNotExist:
+#                 # If membership does not exist, return forbidden response
+#                 return HttpResponseForbidden()
+#         return view_func(request, *args, **kwargs)
+
+#     return _wrapped_view
 
 
 def membership_required(role_name):
@@ -123,7 +149,11 @@ from django.core.exceptions import PermissionDenied
 def workspace_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        if request.user.is_authenticated and request.user.workspace.name != "Public":
+        if (
+            request.user.is_authenticated
+            and request.user.workspace
+            and request.user.workspace.name != get_public_schema_name()
+        ):
             return view_func(request, *args, **kwargs)
         else:
             raise PermissionDenied

@@ -1,0 +1,11 @@
+<!-- model_fields.html -->
+{% if fields %}
+    <p>The following fields are required in the file to be uploaded:</p>
+    <ul>
+        {% for field in fields %}
+            <li>{{ field }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No fields found for the selected model.</p>
+{% endif %}

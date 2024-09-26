@@ -1,6 +1,9 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.response import TemplateResponse
 from django_tables2 import RequestConfig
+
+from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import JournalEntryFilter
 from ..forms import JournalEntryForm
@@ -24,12 +27,12 @@ def journal_entry_list(request):
     return render(request, "dea/journal_entry_list.html", context)
 
 
+@for_htmx(use_block="content")
 def journal_entry_detail(request, pk):
     # Get the journal entry with the given ID
     journal_entry = JournalEntry.objects.get(id=pk)
-
     context = {"object": journal_entry}
-    return render(request, "dea/journalentry_detail.html", context)
+    return TemplateResponse(request, "dea/journalentry_detail.html", context)
 
 
 def journal_entry_delete(request, pk):
@@ -51,8 +54,8 @@ def create_journal_entry(request):
     if request.method == "POST":
         form = JournalEntryForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect("dea_journal_entries_list")
+            je = form.save()
+            return redirect(je)
     else:
         form = JournalEntryForm()
     return render(request, "dea/journal_entry_form.html", {"form": form})

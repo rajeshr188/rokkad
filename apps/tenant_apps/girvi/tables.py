@@ -1,7 +1,10 @@
+from datetime import datetime, timedelta
 from math import floor
 
 import django_tables2 as tables
+import pytz
 from django.utils.html import format_html
+from django.utils.timesince import timesince
 from django_tables2.utils import A
 
 from .models import Loan, Release
@@ -56,10 +59,42 @@ class LoanTable(tables.Table):
         return record.customer.name
 
     def render_total_weight(self, record):
-        return f"G:{record.total_gold_weight} gms  S:{record.total_silver_weight} gms"
+        gold_weight = (
+            f"G:{record.total_gold_weight} gms" if record.total_gold_weight > 0 else ""
+        )
+        silver_weight = (
+            f"S:{record.total_silver_weight} gms"
+            if record.total_silver_weight > 0
+            else ""
+        )
+        bronze_weight = (
+            f"B:{record.total_bronze_weight} gms"
+            if record.total_bronze_weight > 0
+            else ""
+        )
+
+        # Combine the weights, ensuring there are no extra spaces
+        weight = " ".join(filter(None, [gold_weight, silver_weight, bronze_weight]))
+        return f"{weight}"
 
     def value_total_weight(self, record):
-        return f"G:{record.total_gold_weight} gms  S:{record.total_silver_weight} gms"
+        gold_weight = (
+            f"G:{record.total_gold_weight} gms" if record.total_gold_weight > 0 else ""
+        )
+        silver_weight = (
+            f"S:{record.total_silver_weight} gms"
+            if record.total_silver_weight > 0
+            else ""
+        )
+        bronze_weight = (
+            f"B:{record.total_bronze_weight} gms"
+            if record.total_bronze_weight > 0
+            else ""
+        )
+
+        # Combine the weights, ensuring there are no extra spaces
+        weight = " ".join(filter(None, [gold_weight, silver_weight, bronze_weight]))
+        return f"{weight}"
 
     def render_loan_id(self, record):
         return format_html(
@@ -86,13 +121,20 @@ class LoanTable(tables.Table):
     total_due = tables.Column(verbose_name="Due")
 
     def render_months_since_created(self, record):
-        return record.noofmonths()
+        now = datetime.now()
+        timezone = pytz.timezone("Asia/Kolkata")
+        now = timezone.localize(now)
+
+        return f"{record.months_since_created}/({timesince(record.loan_date, now)})"
 
     def render_total_interest(self, record):
         return record.interestdue()
 
-    def value_total_due(self, record):
-        return record.total_due
+    # def render_total_due(self, record):
+    #     return record.total_interest + record.loan_amount
+
+    # def value_total_due(self, record):
+    #     return record.total_due
 
     current_value = tables.Column(verbose_name="Value")
 
@@ -103,8 +145,8 @@ class LoanTable(tables.Table):
         model = Loan
         fields = (
             "selection",
-            "id",
-            "lid",
+            # "id",
+            # "lid",
             "loan_id",
             "loan_date",
             "customer",

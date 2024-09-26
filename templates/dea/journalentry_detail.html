@@ -2,123 +2,35 @@
 {% block title %}Acount detail{% endblock %}
 
 {% block content %}
-<div class="container mt-3">
+<div class="container mt-3" hx-get="{% url 'dea_journal_entry_detail' object.id%}" hx-trigger="listChanged from:body" hx-target="#content">
     <div class="row">
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
-                    <h3 class="card-title">JournalEntry {{object.id}}</h3>
-                    <p>
+                    <h3 class="card-title">JournalEntry #{{object.id}}</h3>
+                    <p class ="card-text">
                         
-                        <a href="{% url 'dea_journal_entry_delete' object.id %}" class="btn btn-danger">Delete</a>
+                        <a href="{% url 'dea_journal_entry_delete' object.id %}" class="btn btn-danger btn-sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                          </svg></a>
+                        
                     </p>
-                    <table class="table">
-                        <tbody class="table-group-divider">
-                        <tr><td>Created</td><td>{{object.created|date}}</td></tr>
-                        <tr><td>Desc</td><td>{{object.desc}}</td></tr>
-                        <tr>
-                            <td>Doc</td>
-                            <td> 
-                                <a href="{{object.get_voucher_url}}">
-                                {{object.content_type}}:{{content_object}}</a>
-                            </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>     
+                  
+                </div> 
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">{{object.created|date}}</li>
+                    <li class="list-group-item">{{object.desc}}</li>
+                    <li class="list-group-item">{% if object.content_object%}
+                        <a href="{{object.get_voucher_url}}">{{object.content_type}}: #{{object.content_object}} </a>
+                        {%endif%}</li>
+                  </ul>    
             </div>
         </div>
         <div class="col-md-9">
-            <div class="card">
-                <div class="card-body">
-                    <h3 class="card-title">Transactions</h3>
-                    
-                    <div class="table-responsive">
-                        <table class="table table-hover caption-top">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Date</th>
-                                    <th>Amount</th>
-                                    <th>Debit Acc</th>
-                                    <th>Credit Acc</th>
-                                </tr>
-                            </thead>
-                            <caption>Account Transactions</caption>
-                            <p>
-                                <a href="{% url 'dea_accounttransaction_create' object.id %}" class="btn btn-primary">Add Transaction</a>
-                            <tbody class="table-group-divider">
-                                {%for i in object.atxns.all%}
-                                <tr class="table-light">
-                                    <td>{{i.id}}</td>
-                                    <td>{{i.created|date}}</td>
-                                    <td>{{i.amount}}</td>
-                                    {% if i.XactTypeCode.XactTypeCode == 'Dr'%}
-                                    <td>{{i.ledgerno}}</td>
-                                    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.Account.contact.name}}</a></td>
-                                    {%else%}
-                                    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.Account.contact.name}}</a></td>
-                                    <td>{{i.ledgerno}}</td>
-                                    {%endif%}
-                                </tr>
-                                {%endfor%}
-                            </tbody>
-                        </table>
-                        <table class="table table-hover caption-top">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Date</th>
-                                    <th>Amount</th>
-                                    <th>Debit Acc</th>
-                                    <th>Credit Acc</th>
-                                </tr>
-                            </thead>
-                            <caption>Ledger Transactions</caption>
-                            <p>
-                                <a href="{% url 'dea_ledgertransaction_create' object.id %}" class="btn btn-primary">Add Transaction</a>
-                            <tbody class="table-group-divider">
-                                
-                                {%for i in object.ltxns.all%}
-                                <tr class="table-info">
-                                    <td>{{i.id}}</td>
-                                    <td>{{i.created|date}}</td>
-                                    <td>{{i.amount}}</td>
-                                    <td>{{i.ledgerno_dr}}</td>
-                                    <td>{{i.ledgerno}}</td>
-                                </tr>
-                                {%endfor%}
-                            </tbody>
-                        </table>
-                        <table class="table table-hover caption-top">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Date</th>
-                                    <th>Stock</th>
-                                    <th>Debit</th>
-                                    <th>Credit</th>
-                                </tr>
-                            </thead>
-                            <caption>Stock Transactions</caption>
-                            <tbody class="table-group-divider">
-                                {%for i in object.stxns.all%}
-                                <tr class="table-dark">
-                                    <td>{{i.id}}</td>
-                                    <td>{{i.created|date}}</td>
-                                    <td>{{i.stock}} {{i.lot.barcode}}</td>
-                                    <td>{%if i.movement_type.direction == '+'%}+{{i.quantity}} nos +{{i.weight}} gms{%endif%}</td>
-                                    <td>{%if i.movement_type.direction == '-'%}-{{i.quantity}} nos -{{i.weight}} gms{%endif%}</td>
-                                </tr>
-                                {%endfor%}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                    
-                </div>
-            </div>
+           {% include 'dea/txns.html' with object=object %}
         </div>
     </div>
 </div>
+
 {%endblock%}

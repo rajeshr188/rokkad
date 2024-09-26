@@ -40,19 +40,24 @@ urlpatterns += (
         name="product_producttype_create",
     ),
     path(
-        "producttype/detail/<int:pk>/",
+        "producttype/<int:pk>/detail/",
         views.producttype_detail,
         name="product_producttype_detail",
     ),
     path(
-        "producttype/update/<int:pk>/",
+        "producttype/<int:pk>/update//",
         views.producttype_update,
         name="product_producttype_update",
     ),
     path(
-        "producttype/delete/<int:pk>/",
+        "producttype/<int:pk>/delete/",
         views.producttype_delete,
         name="product_producttype_delete",
+    ),
+    path(
+        "producttype/<int:product_type_id>/generate/",
+        views.generate_products_and_variants,
+        name="generate_products",
     ),
 )
 
@@ -60,18 +65,18 @@ urlpatterns += (
     # urls for Product
     path("product/", views.product_list, name="product_product_list"),
     path(
-        "product/create/<int:type_pk>/",
+        "producttype/<int:type_pk>/product/create",
         views.product_create,
         name="product_product_create",
     ),
     path(
-        "product/detail/<int:pk>/",
+        "product/<int:pk>/detail/",
         views.product_detail,
         name="product_product_detail",
     ),
-    path("product/update/<int:pk>/", views.product_edit, name="product_product_update"),
+    path("product/<int:pk>/update/", views.product_edit, name="product_product_update"),
     path(
-        "product/delete/<int:pk>/",
+        "product/<int:pk>/delete/",
         views.ProductDeleteView.as_view(),
         name="product_product_delete",
     ),
@@ -85,22 +90,22 @@ urlpatterns += (
         name="product_productvariant_list",
     ),
     path(
-        "productvariant/create/<int:pk>",
+        "product/<int:pk>/variant/create/",
         views.variant_create,
         name="product_productvariant_create",
     ),
     path(
-        "productvariant/detail/<int:pk>/",
+        "productvariant/<int:pk>/detail/",
         views.productvariant_detail,
         name="product_productvariant_detail",
     ),
     path(
-        "productvariant/update/<int:pk>/",
+        "productvariant/<int:pk>/update/",
         views.productvariant_update,
         name="product_productvariant_update",
     ),
     path(
-        "productvariant/delete/<int:pk>/",
+        "productvariant/<int:pk>/delete/",
         views.ProductVariantDeleteView.as_view(),
         name="product_productvariant_delete",
     ),
@@ -117,12 +122,12 @@ urlpatterns += (
         name="product_attribute_create",
     ),
     path(
-        "attribute/detail/<slug:slug>/",
+        "attribute/<slug:slug>/detail/",
         views.AttributeDetailView.as_view(),
         name="product_attribute_detail",
     ),
     path(
-        "attribute/update/<slug:slug>/",
+        "attribute/<slug:slug>/update/",
         views.AttributeUpdateView.as_view(),
         name="product_attribute_update",
     ),
@@ -141,12 +146,12 @@ urlpatterns += (
         name="product_attributevalue_create",
     ),
     path(
-        "attributevalue/detail/<slug:slug>/",
+        "attributevalue/<slug:slug>/detail/",
         views.AttributeValueDetailView.as_view(),
         name="product_attributevalue_detail",
     ),
     path(
-        "attributevalue/update/<slug:slug>/",
+        "attributevalue/<slug:slug>/update/",
         views.AttributeValueUpdateView.as_view(),
         name="product_attributevalue_update",
     ),

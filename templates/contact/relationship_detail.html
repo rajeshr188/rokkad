@@ -1,8 +1,9 @@
 <li class="list-group-item" hx-target="this">
     <div class="d-flex gap-2 w-100 justify-content-between">
         <div>
-            <h6 class="mb-0">{{i.relationship}}</h6>
-            <p class="mb-0 opacity-75">{{i.related_customer}}</p>
+            <h6 class="mb-0">{{i.get_relationship_display}}</h6>
+            <p class="mb-0 opacity-75">
+                <a href="{% url 'contact_customer_detail' i.related_customer.id%}">{{i.related_customer}}</a></p>
         </div>
         <small class="text-nowrap">
             <a hx-get="{%url 'update_relationship' from_customer_id=i.customer.id relationship_id=i.id%}"  class="btn btn-sm btn-secondary">

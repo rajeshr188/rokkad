@@ -1,38 +1,25 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from crispy_bootstrap5.bootstrap5 import FloatingField
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Column, Layout, Row, Submit,Button,HTML
+from crispy_forms.layout import HTML, Button, Column, Layout, Row, Submit
 from django import forms
 from django.contrib import admin
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.core.exceptions import ValidationError
-from django.urls import reverse_lazy,reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django_select2 import forms as s2forms
-from django_select2.forms import (
-    ModelSelect2Widget,
-    Select2Mixin,
-    Select2MultipleWidget,
-    Select2Widget,
-)
+from django_select2.forms import (ModelSelect2Widget, Select2MultipleWidget,
+                                  Select2Widget)
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.rates.models import Rate
 
-from .models import (
-    License,
-    Loan,
-    LoanItem,
-    LoanPayment,
-    Release,
-    Series,
-    Statement,
-    StatementItem,
-)
+from .models import (License, Loan, LoanItem, LoanItemStorageBox, LoanPayment,
+                     Release, Series, Statement, StatementItem)
 
 
 class LoansWidget(s2forms.ModelSelect2Widget):
@@ -65,6 +52,39 @@ class SeriesForm(forms.ModelForm):
     class Meta:
         model = Series
         fields = ["name", "license", "is_active"]
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.helper = FormHelper()
+    #     self.helper.layout = Layout(
+    #         Row(
+    #             Column("name", css_class="form-group col-md-6 mb-0"),
+    #             Column("license", css_class="form-group col-md-6 mb-0"),
+    #             css_class="form-row",
+    #         ),
+    #         Row(
+    #             Column("is_active", css_class="form-group col-md-6 mb-0"),
+    #             css_class="form-row",
+    #         ),
+    #     )
+    #     self.helper.attrs = {
+    #         "hx-post": reverse("girvi:girvi_series_create"),
+    #         "hx-target": "#content",
+    #         "hx-swap":"innerHTML",
+    #     }
+    #     self.helper.add_input(Submit("submit", "Save"))
+    #     self.helper.add_input(
+    #         Button(
+    #             "cancel",
+    #             "Cancel",
+    #             css_class="btn btn-danger",
+    #             **{
+    #                 "hx-get": reverse("girvi:girvi_license_list"),
+    #                 "hx-target": "#content",
+    #                 "hx-vals": '{"use_block":"content"}',
+    #             },
+    #         )
+    #     )
 
 
 class LoanReportForm(forms.Form):
@@ -150,6 +170,7 @@ class LoanForm(forms.ModelForm):
         widget=CustomerWidget(
             attrs={
                 "autofocus": True,
+                "name": "customer",
             }
         ),
     )
@@ -165,7 +186,7 @@ class LoanForm(forms.ModelForm):
         widget=forms.Select(
             attrs={
                 "hx-get": reverse_lazy("girvi:girvi_series_next_loanid"),
-                "hx-target": "#div_id_lid",
+                "hx-target": "#div_id_loan_id",
                 "hx-trigger": "change",
                 "hx-swap": "innerHTML",
                 "autofocus": True,
@@ -191,9 +212,8 @@ class LoanForm(forms.ModelForm):
         fields = [
             "loan_type",
             "series",
+            "loan_id",
             "customer",
-            # "pic",
-            "lid",
             "loan_date",
         ]
 
@@ -204,11 +224,11 @@ class LoanForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
-                Column("loan_type", css_class="form-group")
+                Column("loan_type", css_class="form-group col-md-6 mb-0"),
             ),
             Row(
                 Column("series", css_class="form-group col-md-6 mb-0"),
-                Column("lid", css_class="form-group col-md-6 mb-0"),
+                Column("loan_id", css_class="form-group col-md-6 mb-0"),
                 css_class="form-row",
             ),
             Row(
@@ -216,13 +236,21 @@ class LoanForm(forms.ModelForm):
                 Column("loan_date", css_class="form-group col-md-6 mb-0"),
                 css_class="form-row",
             ),
+            HTML(
+                '<div ><a href="" hx-get="{% url \'contact_customer_create\'%}">Add Customer</a></div>'
+            ),
+            HTML("<br/>"),
         )
         if self.instance and self.instance.id:
             self.helper.attrs = {
-                "hx-post": reverse("girvi:girvi_loan_update", kwargs={"id": self.instance.id}),
+                "hx-post": reverse(
+                    "girvi:girvi_loan_update", kwargs={"id": self.instance.id}
+                ),
                 "hx-target": "#content",
-                            }
-            cancel_url = reverse("girvi:girvi_loan_detail", kwargs={"pk": self.instance.id})
+            }
+            cancel_url = reverse(
+                "girvi:girvi_loan_detail", kwargs={"pk": self.instance.id}
+            )
             cancel_button = Button(
                 "cancel",
                 "Cancel",
@@ -237,7 +265,7 @@ class LoanForm(forms.ModelForm):
             self.helper.attrs = {
                 "hx-post": reverse("girvi:girvi_loan_create"),
                 "hx-target": "#content",
-                "hx-swap":"innerHTML",
+                "hx-swap": "innerHTML",
             }
             cancel_url = reverse("girvi:girvi_loan_list")
             cancel_button = Button(
@@ -250,9 +278,9 @@ class LoanForm(forms.ModelForm):
                     "hx-vals": '{"use_block":"content"}',
                 },
             )
+
         self.helper.add_input(Submit("submit", "Save"))
         self.helper.add_input(cancel_button)
-      
 
     def clean_created(self):
         cleaned_data = super().clean()
@@ -263,28 +291,39 @@ class LoanForm(forms.ModelForm):
 
         return my_date
 
+    def clean_loan_id(self):
+        cleaned_data = super().clean()
+        loan_id = cleaned_data.get("loan_id", None)
+        if (
+            loan_id
+            and Loan.objects.filter(loan_id=loan_id)
+            .exclude(pk=self.instance.pk)
+            .exists()
+        ):
+            raise forms.ValidationError("A loan with this LoanID already exists.")
+        return loan_id
+
     def clean(self):
         cleaned_data = super().clean()
 
         if not self.cleaned_data["series"].is_active:
-            self.add_error(
-                "series", f"Series {self.cleaned_data['series'].name}Inactive"
-            )
-            # raise forms.ValidationError(
-            #     f"Series {self.cleaned_data['series'].name}Inactive"
-            # )
+            # Using self.add_error to add an error to the 'series' field
+            self.add_error("series", f"Series {series} is Inactive")
 
-        # generate loan id when created
-        loan_id = Series.objects.get(id=self.cleaned_data["series"].id).name + str(
-            self.cleaned_data["lid"]
-        )
-        # # in update mode, check if loanid is changed
-        if self.instance.loan_id and self.instance.loan_id == loan_id:
-            return cleaned_data
+            # Alternatively, using raise forms.ValidationError to stop processing
+            # raise forms.ValidationError(f"Series {series} is Inactive")
+
+        # # generate loan id when created
+        # loan_id = Series.objects.get(id=self.cleaned_data["series"].id).name + str(
+        #     self.cleaned_data["lid"]
+        # )
+        # # # in update mode, check if loanid is changed
+        # if self.instance.loan_id and self.instance.loan_id == loan_id:
+        #     return cleaned_data
         # when created, check if loanid already exists
-        if Loan.objects.filter(loan_id=loan_id).exists():
-            self.add_error("lid", "A loan with this LoanID already exists.")
-            # raise forms.ValidationError("A loan with this LoanID already exists.")
+        # if Loan.objects.filter(loan_id=cleaned_data['loan_id']).exists():
+        #     self.add_error("loan_id", "A loan with this LoanID already exists.")
+        # raise forms.ValidationError("A loan with this LoanID already exists.")
 
 
 class LoanRenewForm(forms.Form):
@@ -343,11 +382,12 @@ class LoanItemForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         loanamount = cleaned_data.get("loanamount")
+        itemtype = self.cleaned_data["itemtype"]
         if loanamount is None:
             return cleaned_data
         weight = self.cleaned_data["weight"]
         purity = self.cleaned_data["purity"]
-        itemtype = self.cleaned_data["itemtype"]
+
         rate = (
             Rate.objects.filter(metal=itemtype).latest("timestamp").buying_rate
             if Rate.objects.filter(metal=itemtype).exists()
@@ -494,47 +534,53 @@ class StatementItemForm(forms.ModelForm):
 
     class Meta:
         model = StatementItem
-        fields = ["loan",]
+        fields = [
+            "loan",
+        ]
 
     def __init__(self, *args, **kwargs):
         statement = kwargs.pop("statement")
         super().__init__(*args, **kwargs)
 
         # Filter loans that are not already in the statement
-        self.fields['loan'].queryset = Loan.objects.filter(series__is_active=True).exclude(
-            id__in=statement.statementitem_set.values_list('loan_id', flat=True)
-        )
-        self.fields['loan'].widget.attrs = {
-            
-            "hx-post": reverse_lazy("girvi:statement_item_create", kwargs={"pk": statement.id}),
+        self.fields["loan"].queryset = Loan.objects.filter(
+            series__is_active=True
+        ).exclude(id__in=statement.statementitem_set.values_list("loan_id", flat=True))
+        self.fields["loan"].widget.attrs = {
+            "hx-post": reverse_lazy(
+                "girvi:statement_item_create", kwargs={"pk": statement.id}
+            ),
             "hx-target": "#statement-items",
-            "hx-swap":"afterbegin",
+            "hx-swap": "afterbegin",
             "hx-trigger": "changed",
         }
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
-                Column("loan", css_class="form-group col-md-12 mb-0",),
+                Column(
+                    "loan",
+                    css_class="form-group col-md-12 mb-0",
+                ),
                 css_class="form-row",
             )
         )
         self.helper.attrs = {
             "id": "my-form",
             "hx-trigger": "submit",
-            "hx-post": reverse("girvi:statement_item_create", kwargs={"pk": statement.id}),
+            "hx-post": reverse(
+                "girvi:statement_item_create", kwargs={"pk": statement.id}
+            ),
             "hx-target": "#statement-items",
-            "hx-swap":"afterbegin",
+            "hx-swap": "afterbegin",
         }
-       
+
         cancel_button = Button(
             "cancel",
             "Cancel",
             css_class="btn btn-danger",
-            **{
-                "hx-on": "click: resetForm(this)"
-            }
-            )
-        
+            **{"hx-on": "click: resetForm(this)"},
+        )
+
         self.helper.add_input(Submit("submit", "Save"))
         self.helper.add_input(cancel_button)
 
@@ -592,3 +638,9 @@ class LoanPaymentForm(forms.ModelForm):
             # raise ValidationError(f"Payment amount {payment_amount} cannot be > due amount {loan.due()}.")
 
         return self.cleaned_data
+
+
+class LoanItemStorageBoxForm(forms.ModelForm):
+    class Meta:
+        model = LoanItemStorageBox
+        fields = ["name", "location", "item_type", "start_item_id", "end_item_id"]

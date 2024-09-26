@@ -1,41 +1,32 @@
 {%extends 'tenant.html'%}
+{%load static%}
+{%block title%}Rate Detail{%endblock%}
+
 {%block content%}
 <div class="container">
     <h1>Rate Detail</h1>
-    <table class="table table-sm">
-        <tr>
-            <th>id</th>
-            <td>{{rate.id}}</td>
-        </tr>
-        <tr>
-            <th>Created</th>
-            <td>{{rate.timestamp}}</td>
-        </tr>
-        <tr>
-            <th>buying</th>
-            <td>{{rate.buying_rate}}</td>
-        </tr>
-        <tr>
-            <th>selling</th>
-            <td>{{rate.selling_rate}}</td>
-        </tr>
-        <tr>
-            <th>ratesource</th>
-            <td>{{rate.rate_source}}</td>
-        </tr>
-        <tr>
-            <th>metal</th>
-            <td>{{rate.metal}}</td>
-        </tr>
-        <tr>
-            <th>currency</th>
-            <td>{{rate.currency}}</td>
-        </tr>
-        <tr>
-            <th>purity</th>
-            <td>{{rate.purity}}</td>
-        </tr>
-    </table>
-    <a href="{% url 'rate_list'%}">Back to list</a>
+    <div class="card">
+        <!-- Card Image -->
+         {% if rate.metal == "Gold"%}
+            <img src="{% static 'images/gold.png'%}" class="card-img-top" alt="Rate Image" style="width: 100px; height: 100px; ;">
+        {% else%}
+            <img src="{% static 'images/silver.png'%}" class="card-img-top" alt="Rate Image" style="width: 100px; height: 100px; ;">
+        {%endif%}
+        <div class="card-body">
+            <h5 class="card-title">Rate ID: {{ rate.id }}</h5>
+            <p class="card-text"><strong>Created:</strong> {{ rate.timestamp }}</p>
+            <hr>
+            <h6 class="card-subtitle mb-2 text-muted">Rate Information</h6>
+            <p class="card-text"><strong>Buying Rate:</strong> {{ rate.buying_rate }}</p>
+            <p class="card-text"><strong>Selling Rate:</strong> {{ rate.selling_rate }}</p>
+            <p class="card-text"><strong>Rate Source:</strong> {{ rate.rate_source }}</p>
+            <hr>
+            <h6 class="card-subtitle mb-2 text-muted">Metal Details</h6>
+            <p class="card-text"><strong>Metal:</strong> {{ rate.metal }}</p>
+            <p class="card-text"><strong>Currency:</strong> {{ rate.currency }}</p>
+            <p class="card-text"><strong>Purity:</strong> {{ rate.purity }}</p>
+            <a href="{% url 'rate_list' %}" class="btn btn-primary mt-3">Back to list</a>
+        </div>
+    </div>
 </div>
 {%endblock%}

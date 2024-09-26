@@ -34,6 +34,8 @@ class PurchaseForm(forms.ModelForm):
             "supplier",
             "term",
             "status",
+            "gold_rate",
+            "silver_rate",
         ]
 
 
