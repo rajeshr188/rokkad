@@ -2,349 +2,320 @@
 {% load i18n %}
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Rokkad Dashboard</title>
-    <meta
-      content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
-      name="viewport"
-    />
-    <link
-      rel="icon"
-      href="{% static 'theme/assets/img/kaiadmin/favicon.ico'%}"
-      type="image/x-icon"
-    />
 
-    <!-- Fonts and icons -->
-    <script src="{% static 'theme/assets/js/plugin/webfont/webfont.min.js'%}"></script>
-    <script>
-      WebFont.load({
-        google: { families: ["Public Sans:300,400,500,600,700"] },
-        custom: {
-          families: [
-            "Font Awesome 5 Solid",
-            "Font Awesome 5 Regular",
-            "Font Awesome 5 Brands",
-            "simple-line-icons",
-          ],
-          urls: ["{% static 'theme/assets/css/fonts.min.css'%}"],
-        },
-        active: function () {
-          sessionStorage.fonts = true;
-        },
-      });
-    </script>
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Rokkad Dashboard</title>
+  <meta content="width=device-width, initial-scale=1.0, shrink-to-fit=no" name="viewport" />
+  <link rel="icon" href="{% static 'theme/assets/img/kaiadmin/favicon.ico'%}" type="image/x-icon" />
 
-    <!-- CSS Files -->
-    <link rel="stylesheet" href="{% static 'theme/assets/css/bootstrap.min.css'%}" />
-    <link rel="stylesheet" href="{% static 'theme/assets/css/plugins.min.css'%}" />
-    <link rel="stylesheet" href="{% static 'theme/assets/css/kaiadmin.min.css'%}" />
-    <link rel="stylesheet" href="{% static 'css/camera.css' %}" type="text/css" media="all">
-    {% block extra_js %}
-    <script src="{% static 'theme/assets/js/core/jquery-3.7.1.min.js'%}"></script>
-   {% endblock%}
-  
-  </head>
-  <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <div class="wrapper sidebar-style-2">
-      <!-- Sidebar -->
-      <div class="sidebar" data-background-color="dark">
-        <div class="sidebar-logo">
-          <!-- Logo Header -->
-          <div class="logo-header" data-background-color="dark">
-            <a href="{% url 'home' %}" class="logo">
-              <img
-                src="{% static 'theme/assets/img/4.png'%}"
-                alt="navbar brand"
-                class="navbar-brand"
-                height="20"
-              />
-            </a>           
-            <div class="nav-toggle">
-              <button class="btn btn-toggle toggle-sidebar">
-                <i class="gg-menu-right"></i>
-              </button>
-              <button class="btn btn-toggle sidenav-toggler">
-                <i class="gg-menu-left"></i>
-              </button>
-            </div>
-            <button class="topbar-toggler more">
-              <i class="gg-more-vertical-alt"></i>
+  <!-- Fonts and icons -->
+  <script src="{% static 'theme/assets/js/plugin/webfont/webfont.min.js'%}"></script>
+  <script>
+    WebFont.load({
+      google: { families: ["Public Sans:300,400,500,600,700"] },
+      custom: {
+        families: [
+          "Font Awesome 5 Solid",
+          "Font Awesome 5 Regular",
+          "Font Awesome 5 Brands",
+          "simple-line-icons",
+        ],
+        urls: ["{% static 'theme/assets/css/fonts.min.css'%}"],
+      },
+      active: function () {
+        sessionStorage.fonts = true;
+      },
+    });
+  </script>
+
+  <!-- CSS Files -->
+  <link rel="stylesheet" href="{% static 'theme/assets/css/bootstrap.min.css'%}" />
+  <link rel="stylesheet" href="{% static 'theme/assets/css/plugins.min.css'%}" />
+  <link rel="stylesheet" href="{% static 'theme/assets/css/kaiadmin.min.css'%}" />
+  <link rel="stylesheet" href="{% static 'css/camera.css' %}" type="text/css" media="all">
+  {% block extra_js %}
+  <script src="{% static 'theme/assets/js/core/jquery-3.7.1.min.js'%}"></script>
+  {% endblock%}
+
+</head>
+
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <div class="wrapper sidebar-style-2">
+    <!-- Sidebar -->
+    <div class="sidebar" data-background-color="dark">
+      <div class="sidebar-logo">
+        <!-- Logo Header -->
+        <div class="logo-header" data-background-color="dark">
+          <a href="{% url 'home' %}" class="logo">
+            <img src="{% static 'theme/assets/img/4.png'%}" alt="navbar brand" class="navbar-brand" height="20" />
+          </a>
+          <div class="nav-toggle">
+            <button class="btn btn-toggle toggle-sidebar">
+              <i class="gg-menu-right"></i>
+            </button>
+            <button class="btn btn-toggle sidenav-toggler">
+              <i class="gg-menu-left"></i>
             </button>
           </div>
-          
-          <!-- End Logo Header -->
+          <button class="topbar-toggler more">
+            <i class="gg-more-vertical-alt"></i>
+          </button>
         </div>
-        <div class="sidebar-wrapper scrollbar scrollbar-inner">
-          <div class="sidebar-content">
-            <ul class="nav nav-secondary">
-              <li class="nav-item">
-                <a
-                  data-bs-toggle="collapse"
-                  href="#dashboard"
-                  class="collapsed"
-                  aria-expanded="false"
-                >
-                  <i class="fas fa-home"></i>
-                  <p>{% if user.workspace %}{{user.workspace.name|capfirst}}{%else%}{%trans "Workspace"%}{%endif%}</p>
-                  <span class="caret"></span>
-                </a>
-                <div class="collapse" id="dashboard">
-                  <ul class="nav nav-collapse">
-                    {%for i in user.company_set.all%}
-                    {%if not i == request.user.workspace%}
-                    <li><a  href="{% url 'switch_workspace' i.id%}"><span class="sub-item">{{i.name|capfirst}}</span></a></li>
-                    {%endif%}
-                    {%endfor%}
-                    {%if user.workspace is None or user.workspace and user.workspace.schema_name != 'public'%}
-                    <li><a  href="{% url 'clear_workspace'%}"><span class="sub-item">{%trans "Rokkad"%}</span></a></li>
-                    {%endif%}
-                  </ul>
-                </div>
-              </li>
-              <li class="nav-section">
-                <span class="sidebar-mini-icon">
-                  <i class="fa fa-ellipsis-h"></i>
-                </span>
-                <h4 class="text-section">Menu</h4>
-              </li>
-              {% if user.workspace and user.workspace.schema_name != 'public'%}
-              <li class="nav-item">
-                <a href="" hx-get="{% url 'contact_customer_list' %}" 
-                            hx-target="#content" 
-                            hx-swap="innerHTML" 
-                            hx-vals='{"use_block": "content"}'
-                            hx-push-url ="true">
-                  <i class="fas fa-layer-group"></i>
-                  <p>Customer</p>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#sidebarLayouts">
-                  <i class="fas fa-th-list"></i>
-                  <p>Girvi</p>
-                  <span class="caret"></span>
-                </a>
-                <div class="collapse " id="sidebarLayouts">
-                  <ul class="nav nav-collapse">
-                    <li>
-                      <a href="" 
-                          hx-get="{% url 'girvi:girvi_loan_list' %}"
-                          hx-target="#content" 
-                          hx-swap="innerHTML" 
-                          hx-vals='{"use_block": "content"}'
-                          hx-push-url ="true" >
-                        <span class="sub-item">{% trans "Loans" %}</span>
-                      </a>
-                    </li>
-                    <li class="active">
-                      <a href="{% url 'girvi:girvi_release_list' %}">
-                        <span class="sub-item">{% trans "Release" %}</span>
-                      </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'girvi:girvi_license_list' %}" >
-                          <span class="sub-item">{% trans "License" %}</span>
-                        </a>
-                      </li>
-                      <li class="active">
-                        <a href="{% url 'notify_noticegroup_list' %}">
-                          <span class="sub-item">{% trans "Notice" %}</span>
-                        </a>
-                      </li>
-                  </ul>
-                </div>
-              </li>
-              <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#forms">
-                  <i class="fas fa-pen-square"></i>
-                  <p>Product</p>
-                  <span class="caret"></span>
-                </a>
-                <div class="collapse" id="forms">
-                  <ul class="nav nav-collapse">
-                    <li><a href="" hx-get="{% url 'product_category_list'%}" hx-target="#content"
+
+        <!-- End Logo Header -->
+      </div>
+      <div class="sidebar-wrapper scrollbar scrollbar-inner">
+        <div class="sidebar-content">
+          <ul class="nav nav-secondary">
+            <li class="nav-item">
+              <a data-bs-toggle="collapse" href="#dashboard" class="collapsed" aria-expanded="false">
+                <i class="fas fa-home"></i>
+                <p>{% if user.workspace %}{{user.workspace.name|capfirst}}{%else%}{%trans "Workspace"%}{%endif%}</p>
+                <span class="caret"></span>
+              </a>
+
+              <div class="collapse" id="dashboard">
+                <ul class="nav nav-collapse">
+                  {%for i in user.company_set.all%}
+                  {%if i != request.user.workspace%}
+                  <li><a href="{% url 'switch_workspace' i.id%}"><span class="sub-item">{{i.name|capfirst}}</span></a>
+                  </li>
+                  {%endif%}
+                  {%endfor%}
+                  {%if user.workspace and user.workspace.schema_name != 'public'%}
+                  <li><a href="{% url 'clear_workspace'%}"><span class="sub-item">{%trans "Rokkad"%}</span></a></li>
+                  {%endif%}
+                </ul>
+              </div>
+            </li>
+            <li class="nav-section">
+              <span class="sidebar-mini-icon">
+                <i class="fa fa-ellipsis-h"></i>
+              </span>
+              <h4 class="text-section">Menu</h4>
+            </li>
+            {% if user.workspace and user.workspace.schema_name != 'public'%}
+            <li class="nav-item">
+              <a href="" hx-get="{% url 'contact_customer_list' %}" hx-target="#content" hx-swap="innerHTML"
+                hx-vals='{"use_block": "content"}' hx-push-url="true">
+                <i class="fas fa-layer-group"></i>
+                <p>Customer</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a data-bs-toggle="collapse" href="#sidebarLayouts">
+                <i class="fas fa-th-list"></i>
+                <p>Girvi</p>
+                <span class="caret"></span>
+              </a>
+              <div class="collapse " id="sidebarLayouts">
+                <ul class="nav nav-collapse">
+                  <li>
+                    <a href="" hx-get="{% url 'girvi:girvi_loan_list' %}" hx-target="#content" hx-swap="innerHTML"
+                      hx-vals='{"use_block": "content"}' hx-push-url="true">
+                      <span class="sub-item">{% trans "Loans" %}</span>
+                    </a>
+                  </li>
+                  <li class="active">
+                    <a href="{% url 'girvi:girvi_release_list' %}">
+                      <span class="sub-item">{% trans "Release" %}</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'girvi:girvi_license_list' %}">
+                      <span class="sub-item">{% trans "License" %}</span>
+                    </a>
+                  </li>
+                  <li class="active">
+                    <a href="{% url 'notify_noticegroup_list' %}">
+                      <span class="sub-item">{% trans "Notice" %}</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li class="nav-item">
+              <a data-bs-toggle="collapse" href="#forms">
+                <i class="fas fa-pen-square"></i>
+                <p>Product</p>
+                <span class="caret"></span>
+              </a>
+              <div class="collapse" id="forms">
+                <ul class="nav nav-collapse">
+                  <li><a href="" hx-get="{% url 'product_category_list'%}" hx-target="#content"
                       hx-swap="innerHTML transition:true" hx-push-url="true"><span class="sub-item">Category</span></a>
-                    </li>
-                    
-                    <li><a href="" hx-get="{% url 'product_producttype_list'%}" hx-target="#content"
-                      hx-swap="innerHTML" hx-push-url="true"><span class="sub-item">Product Type</span></a>
-                    </li>
-                    <li><a href="" hx-get="{% url 'product_product_list'%}" hx-target="#content"
-                      hx-swap="innerHTML" hx-push-url="true"><span class="sub-item">Product</span></a></li>
-                    <li><a href="" hx-get="{% url 'product_productvariant_list'%}" hx-target="#content"
+                  </li>
+
+                  <li><a href="" hx-get="{% url 'product_producttype_list'%}" hx-target="#content" hx-swap="innerHTML"
+                      hx-push-url="true"><span class="sub-item">Product Type</span></a>
+                  </li>
+                  <li><a href="" hx-get="{% url 'product_product_list'%}" hx-target="#content" hx-swap="innerHTML"
+                      hx-push-url="true"><span class="sub-item">Product</span></a></li>
+                  <li><a href="" hx-get="{% url 'product_productvariant_list'%}" hx-target="#content"
                       hx-swap="innerHTML" hx-push-url="true"><span class="sub-item">Product Variant</span></a></li>
-                  
-                    <li><a href="" hx-get="{%url 'product_stock_list' %}" hx-target="#content"
-                      hx-swap="innerHTML" hx-push-url="true"><span class="sub-item">Stock</span></a></li>
-                  
-                    <li><a href="" hx-get="{%url 'product_stockstatement_list' %}" hx-target="#content"
+
+                  <li><a href="" hx-get="{%url 'product_stock_list' %}" hx-target="#content" hx-swap="innerHTML"
+                      hx-push-url="true"><span class="sub-item">Stock</span></a></li>
+
+                  <li><a href="" hx-get="{%url 'product_stockstatement_list' %}" hx-target="#content"
                       hx-swap="innerHTML" hx-push-url="true"><span class="sub-item">Stock Statement</span></a></li>
-                  
-                    <li><a href="" hx-get="{%url 'product_pricingtier_list' %}" hx-target="#content"
-                      hx-swap="innerHTML" hx-push-url="true"><span class="sub-item">Pricing Tier</span></a></li>
-                  </ul>
-                </div>
-              </li>
-              <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#tables">
-                  <i class="fas fa-table"></i>
-                  <p>Sales</p>
-                  <span class="caret"></span>
-                </a>
-                <div class="collapse" id="tables">
-                  <ul class="nav nav-collapse">
-                    <li><a  href="{% url 'sales:sales_invoice_list'%}"><span class="sub-item">Sales</span></a></li>
-                    <li><a  href="{% url 'sales:sales_receipt_list'%}"><span class="sub-item">Receipt</span></a></li>
-                  </ul>
-                </div>
-              </li>
-              <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#maps">
-                  <i class="fas fa-map-marker-alt"></i>
-                  <p>Purchase</p>
-                  <span class="caret"></span>
-                </a>
-                <div class="collapse" id="maps">
-                  <ul class="nav nav-collapse">
-                    <li><a  href="" hx-get="{% url 'purchase:purchase_invoice_list'%}"
-                      hx-target="#content" hx-swap="innerHTML" hx-push-url="true">Purchase</a></li>
-                  
-                    <li><a  href="" hx-get="{% url 'purchase:purchase_payment_list'%}"
-                      hx-target="#content" hx-swap="innerHTML" hx-push-url="true">Payment</a></li>
-                  </ul>
-                </div>
-              </li>
-              <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#charts">
-                  <i class="far fa-chart-bar"></i>
-                  <p>DEA</p>
-                  <span class="caret"></span>
-                </a>
-                <div class="collapse" id="charts">
-                  <ul class="nav nav-collapse">
-                    <li><a  href=" {% url 'dea_home' %}">Home</a></li>
-                    <li><a  href="{% url 'dea_ledger_list' %}">Ledgers</a></li>
-                    <li><a  href="{% url 'dea_account_list' %}">Accounts</a></li>
-                    <li><a  href="{% url 'dea_general_ledger' %}">General Ledger</a></li>
-                    <li><a  href="{% url 'dea_ledgerstatement_list'%}">Ledger statement</a></li>
-                    <li><a  href="{% url 'dea_journal_entries_list' %}">Journals</a></li>
-                    <li><a  href="{% url 'dea_daybook' %}">Daybook</a></li>
-                  </ul>
-                </div>
-              </li>
-              <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#submenu">
-                  <i class="fas fa-bars"></i>
-                  <p>Approvals</p>
-                  <span class="caret"></span>
-                </a>
-                <div class="collapse" id="submenu">
-                  <ul class="nav nav-collapse">
-                    <li>
-                      <a data-bs-toggle="collapse" href="#subnav1">
-                        <span class="sub-item">Level 1</span>
-                        <span class="caret"></span>
-                      </a>
-                      <div class="collapse" id="subnav1">
-                        <ul class="nav nav-collapse subnav">
-                          <li>
-                            <a href="#">
-                              <span class="sub-item">Level 2</span>
-                            </a>
-                          </li>
-                          <li>
-                            <a href="#">
-                              <span class="sub-item">Level 2</span>
-                            </a>
-                          </li>
-                        </ul>
-                      </div>
-                    </li>
-                    <li>
-                      <a data-bs-toggle="collapse" href="#subnav2">
-                        <span class="sub-item">Level 1</span>
-                        <span class="caret"></span>
-                      </a>
-                      <div class="collapse" id="subnav2">
-                        <ul class="nav nav-collapse subnav">
-                          <li>
-                            <a href="#">
-                              <span class="sub-item">Level 2</span>
-                            </a>
-                          </li>
-                        </ul>
-                      </div>
-                    </li>
-                    <li>
-                      <a href="#">
-                        <span class="sub-item">Level 1</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </li>
-              {%else%}
-              <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#sidebarLayouts">
-                  <i class="fas fa-th-list"></i>
-                  <p>Manage</p>
-                  <span class="caret"></span>
-                </a>
-                <div class="collapse show" id="sidebarLayouts">
-                  <ul class="nav nav-collapse">
-                    <li >
-                        <a  href="{% url 'orgs_company_list' %}"><span class="sub-item">{%trans "Company" %}</span></a>
-                    </li>
-                    <li >
-                        <a  href="{% url 'orgs_membership_list'%}"><span class="sub-item">{%trans "Membership"%}</span></a>
-                    </li>
-                    <li >
-                        <a  href="{% url 'orgs_company_invitations_list'%}"><span class="sub-item">{%trans "Invitations"%}</span></a>
-                    </li>
-                    <li >
-                        <a  href="#">
-                            <span class="sub-item">Payments</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <span class="sub-item">Subscription</span>
-                        </a>
-                    </li>
-                    </ul>
-                </div>
-                </li>
-            
-              {%endif%}
-              
-            </ul>
-          </div>
+
+                  <li><a href="" hx-get="{%url 'product_pricingtier_list' %}" hx-target="#content" hx-swap="innerHTML"
+                      hx-push-url="true"><span class="sub-item">Pricing Tier</span></a></li>
+                </ul>
+              </div>
+            </li>
+            <li class="nav-item">
+              <a data-bs-toggle="collapse" href="#tables">
+                <i class="fas fa-table"></i>
+                <p>Sales</p>
+                <span class="caret"></span>
+              </a>
+              <div class="collapse" id="tables">
+                <ul class="nav nav-collapse">
+                  <li><a href="{% url 'sales:sales_invoice_list'%}"><span class="sub-item">Sales</span></a></li>
+                  <li><a href="{% url 'sales:sales_receipt_list'%}"><span class="sub-item">Receipt</span></a></li>
+                </ul>
+              </div>
+            </li>
+            <li class="nav-item">
+              <a data-bs-toggle="collapse" href="#maps">
+                <i class="fas fa-map-marker-alt"></i>
+                <p>Purchase</p>
+                <span class="caret"></span>
+              </a>
+              <div class="collapse" id="maps">
+                <ul class="nav nav-collapse">
+                  <li><a href="" hx-get="{% url 'purchase:purchase_invoice_list'%}" hx-target="#content"
+                      hx-swap="innerHTML" hx-push-url="true"><span class="sub-item">Purchase</span></a></li>
+
+                  <li><a href="" hx-get="{% url 'purchase:purchase_payment_list'%}" hx-target="#content"
+                      hx-swap="innerHTML" hx-push-url="true"><span class="sub-item">Payment</span></a></li>
+                </ul>
+              </div>
+            </li>
+            <li class="nav-item">
+              <a data-bs-toggle="collapse" href="#charts">
+                <i class="far fa-chart-bar"></i>
+                <p>DEA</p>
+                <span class="caret"></span>
+              </a>
+              <div class="collapse" id="charts">
+                <ul class="nav nav-collapse">
+                  <li><a href=" {% url 'dea_home' %}"><span class="sub-item">Home</span></a></li>
+                  <li><a href="{% url 'dea_ledger_list' %}"><span class="sub-item">Ledgers</span></a></li>
+                  <li><a href="{% url 'dea_account_list' %}"><span class="sub-item">Accounts</span></a></li>
+                  <li><a href="{% url 'dea_general_ledger' %}"><span class="sub-item">General Ledger</span></a></li>
+                  <li><a href="{% url 'dea_ledgerstatement_list'%}"><span class="sub-item">Ledger statement</span></a>
+                  </li>
+                  <li><a href="{% url 'dea_journal_entries_list' %}"><span class="sub-item">JournalEntries</span></a>
+                  </li>
+                  <li><a href="{% url 'dea_daybook' %}"><span class="sub-item">Daybook</span></a></li>
+                </ul>
+              </div>
+            </li>
+            <li class="nav-item">
+              <a data-bs-toggle="collapse" href="#submenu">
+                <i class="fas fa-bars"></i>
+                <p>Approvals</p>
+                <span class="caret"></span>
+              </a>
+              <div class="collapse" id="submenu">
+                <ul class="nav nav-collapse">
+                  <li>
+                    <a data-bs-toggle="collapse" href="#subnav1">
+                      <span class="sub-item">Level 1</span>
+                      <span class="caret"></span>
+                    </a>
+                    <div class="collapse" id="subnav1">
+                      <ul class="nav nav-collapse subnav">
+                        <li>
+                          <a href="#">
+                            <span class="sub-item">Level 2</span>
+                          </a>
+                        </li>
+                        <li>
+                          <a href="#">
+                            <span class="sub-item">Level 2</span>
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </li>
+                  <li>
+                    <a data-bs-toggle="collapse" href="#subnav2">
+                      <span class="sub-item">Level 1</span>
+                      <span class="caret"></span>
+                    </a>
+                    <div class="collapse" id="subnav2">
+                      <ul class="nav nav-collapse subnav">
+                        <li>
+                          <a href="#">
+                            <span class="sub-item">Level 2</span>
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </li>
+                  <li>
+                    <a href="#">
+                      <span class="sub-item">Level 1</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            {%else%}
+            <li class="nav-item">
+              <a data-bs-toggle="collapse" href="#sidebarLayouts">
+                <i class="fas fa-th-list"></i>
+                <p>Manage</p>
+                <span class="caret"></span>
+              </a>
+              <div class="collapse show" id="sidebarLayouts">
+                <ul class="nav nav-collapse">
+                  <li>
+                    <a href="{% url 'orgs_company_list' %}"><span class="sub-item">{%trans "Company" %}</span></a>
+                  </li>
+                  <li>
+                    <a href="{% url 'orgs_membership_list'%}"><span class="sub-item">{%trans "Membership"%}</span></a>
+                  </li>
+                  <li>
+                    <a href="{% url 'orgs_company_invitations_list'%}"><span class="sub-item">{%trans "Invitations"%}</span></a>
+                  </li>
+                  <li>
+                    <a href="#">
+                      <span class="sub-item">Payments</span>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="#">
+                      <span class="sub-item">Subscription</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </li>
+
+            {%endif%}
+
+          </ul>
         </div>
       </div>
-      <!-- End Sidebar -->
-    
+    </div>
+    <!-- End Sidebar -->
+
     <div class="main-panel">
       <div class="main-header">
         <div class="main-header-logo">
           <!-- Logo Header -->
           <div class="logo-header" data-background-color="dark">
             <a href="index.html" class="logo">
-              <img
-                src="{% static 'theme/assets/img/4.png'%}"
-                alt="navbar brand"
-                class="navbar-brand"
-                height="20"
-              />
+              <img src="{% static 'theme/assets/img/4.png'%}" alt="navbar brand" class="navbar-brand" height="20" />
             </a>
-            <button
-              class="navbar-toggler sidenav-toggler ms-auto"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="collapse"
-              aria-expanded="false"
-              aria-label="Toggle navigation"
-            >
+            <button class="navbar-toggler sidenav-toggler ms-auto" type="button" data-bs-toggle="collapse"
+              data-bs-target="collapse" aria-expanded="false" aria-label="Toggle navigation">
               <span class="navbar-toggler-icon">
                 <i class="gg-menu-left"></i>
               </span>
@@ -356,66 +327,47 @@
           <!-- End Logo Header -->
         </div>
         <!-- Navbar Header -->
-        <nav
-          class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom"
-        >
+        <nav class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom">
           <div class="container-fluid">
-            <nav
-              class="navbar navbar-header-left navbar-expand-lg navbar-form nav-search p-0 d-none d-lg-flex"
-            >
+            <nav class="navbar navbar-header-left navbar-expand-lg navbar-form nav-search p-0 d-none d-lg-flex">
               <div class="input-group">
                 <div class="input-group-prepend">
                   <button type="submit" class="btn btn-search pe-1">
                     <i class="fa fa-search search-icon"></i>
                   </button>
                 </div>
-                <input 
-                  type="text"
-                  placeholder="Search ..."
-                  class="form-control"
-                />
+                <input type="text" placeholder="Search ..." class="form-control" />
               </div>
             </nav>
-    
+
             <ul class="navbar-nav topbar-nav ms-md-auto align-items-center">
-              <li
-                class="nav-item topbar-icon dropdown hidden-caret d-flex d-lg-none"
-              >
-                <a
-                  class="nav-link dropdown-toggle"
-                  data-bs-toggle="dropdown"
-                  href="#"
-                  role="button"
-                  aria-expanded="false"
-                  aria-haspopup="true"
-                >
+              <li class="nav-item topbar-icon dropdown hidden-caret d-flex d-lg-none">
+                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button"
+                  aria-expanded="false" aria-haspopup="true">
                   <i class="fa fa-search"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-search animated fadeIn">
                   <form class="navbar-left navbar-form nav-search">
                     <div class="input-group">
-                      <input
-                        type="text"
-                        placeholder="Search ..."
-                        class="form-control"
-                      />
+                      <input type="text" placeholder="Search ..." class="form-control" />
                     </div>
                   </form>
                 </ul>
               </li>
-              
+
               <li class="nav-item dropdown">
-                <h3>{{user.workspace}}</h3>        
+                <h3>{{user.workspace}}</h3>
               </li>
               {%if user.workspace and user.workspace.schema_name != 'public'%}
               <li class="nav-item dropdown">
-                  <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                    {%trans "Rates"%}
-                  </a>
-                  <ul class="dropdown-menu">
-                    <li class="dropdown-item"><a href="{% url 'rate_detail' request.grate.id%}">{{request.grate}}</a></li>
-                    <li class="dropdown-item"><a href="{% url 'rate_detail' request.srate.id%}">{{request.srate}}</a></li>
-                  </ul>
+                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                  {%trans "Rates"%}
+                </a>
+                <ul class="dropdown-menu">
+                  <li class="dropdown-item"><a href="{% url 'rate_detail' request.grate.id%}">{{request.grate}}</a></li>
+                  <li class="dropdown-item"><a href="{% url 'rate_detail' request.srate.id%}">{{request.srate}}</a></li>
+                  <li class="dropdown-item"><a href="{% url 'rate_detail' request.brate.id%}">{{request.brate}}</a></li>
+                </ul>
               </li>
               {%endif%}
               <li>
@@ -424,35 +376,24 @@
                   {% get_available_languages as LANGUAGES %}
                   {% get_current_language as LANGUAGE_CODE %}
                   <select name="language" onchange="this.form.submit()">
-                      {% get_language_info_list for LANGUAGES as languages %}
-                      {% for lang in languages %}
-                          <option {% if lang.code == LANGUAGE_CODE %}selected{% endif %}
-                                  value="{{ lang.code }}">{{ lang.name_local }}</option>
-                      {% endfor %}
+                    {% get_language_info_list for LANGUAGES as languages %}
+                    {% for lang in languages %}
+                    <option {% if lang.code == LANGUAGE_CODE %}selected{% endif %} value="{{ lang.code }}">
+                      {{lang.name_local }}</option>
+                    {% endfor %}
                   </select>
-              </form>
-              </li>   
+                </form>
+              </li>
               <li class="nav-item topbar-user dropdown hidden-caret">
-                <a
-                  class="dropdown-toggle profile-pic"
-                  data-bs-toggle="dropdown"
-                  href="#"
-                  aria-expanded="false"
-                >
+                <a class="dropdown-toggle profile-pic" data-bs-toggle="dropdown" href="#" aria-expanded="false">
                   <div class="avatar-sm">
-                    {% if request.user.profile_picture %}
-                    <img
-                        src="{{ request.user.profile_picture.url }}"
-                        alt="Profile Picture"
-                        class="avatar-img rounded-circle"
-                    />
-                {% else %}
-                    <img
-                        src="{% static 'theme/assets/img/profile.jpg' %}"
-                        alt="Default Profile Picture"
-                        class="avatar-img rounded-circle"
-                    />
-                {% endif %}           
+                    {% if request.user.social_profile_picture %}
+                    <img src="{{ request.user.social_profile_picture.url }}"
+                      alt="{{ request.user.social_profile_picture.url }}Profile Picture" class="avatar-img rounded-circle" />
+                    {% else %}
+                    <img src="{% static 'theme/assets/img/profile.jpg' %}" alt="Default Profile Picture"
+                      class="avatar-img rounded-circle" />
+                    {% endif %}
                   </div>
                   <span class="profile-username">
                     <span class="op-7">Hi,</span>
@@ -464,28 +405,32 @@
                     <li>
                       <div class="user-box">
                         <div class="avatar-lg">
-                          <img
-                            src="{% static 'theme/assets/img/profile.jpg'%}"
-                            alt="image profile"
-                            class="avatar-img rounded"
-                          />
+                          {% if request.user.social_profile_picture %}
+                          <img src="{{ request.user.social_profile_picture }}"
+                            alt="{{ request.user.social_profile_picture }}Profile Picture" class="avatar-img rounded-circle" />
+                          {% else %}
+                          <img src="{% static 'theme/assets/img/profile.jpg' %}" alt="Default Profile Picture"
+                            class="avatar-img rounded-circle" />
+                          {% endif %}
                         </div>
                         <div class="u-text">
                           <h4>{{request.user.username}}</h4>
                           <p class="text-muted">{{request.user}}</p>
-                         
+
                         </div>
                       </div>
                     </li>
                     <li>
                       <div class="dropdown-divider"></div>
-                      
-                      <a class="dropdown-item" href="" hx-swap="innerHTML" hx-push-url="true" hx-get="{% url 'company-preferences' %}" hx-target="#content">{%trans "Preferences"%}</a>
-                      
+
+                      <a class="dropdown-item" href="" hx-swap="innerHTML" hx-push-url="true"
+                        hx-get="{% url 'company-preferences' %}" hx-target="#content">{%trans "Preferences"%}</a>
+
                       <div class="dropdown-divider"></div>
-                      
-                      <a class="dropdown-item" href="{% url 'account_change_password' %}">{%trans "Change password"%}</a>
-                      <a class="dropdown-item" href="" hx-get="{% url 'account_logout' %}" hx-swap="innerHTML" hx-target="#content">Logout</a>
+
+                      <a class="dropdown-item" href="{% url 'account_change_password' %}">{%trans "Changepassword"%}</a>
+                      <a class="dropdown-item" href="" hx-get="{% url 'account_logout' %}" hx-swap="innerHTML"
+                        hx-target="#content">Logout</a>
                     </li>
                   </div>
                 </ul>
@@ -497,61 +442,63 @@
       </div>
 
       <div class="container">
-          
-        <div class="page-inner" id = 'content'>
+
+        <div class="page-inner" id='content'>
           {%block content%}
           {% include "toasts.html" %}
           {%endblock%}
         </div>
-        
+
       </div>
 
       <footer class="footer">
         <div class="container-fluid d-flex justify-content-between">
-          
+
           <div class="copyright">
             2024, made with <i class="fa fa-heart heart text-danger"></i> by
             <a href="">H rajeshrathodh</a>
           </div>
-          
+
         </div>
       </footer>
+      
     </div>
-    </div>
-
-    <!--   Core JS Files   -->
-    <!-- <script src="{% static 'theme/assets/js/core/jquery-3.7.1.min.js'%}" defer></script> -->
-    <script src="{% static 'theme/assets/js/core/popper.min.js'%}"></script>
-    <script src="{% static 'theme/assets/js/core/bootstrap.min.js'%}"></script>
-
-    <!-- jQuery Scrollbar -->
-    <script src="{% static 'theme/assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js'%}"></script>
-
-    <!-- Chart JS -->
-    <script src="{% static 'theme/assets/js/plugin/chart.js/chart.min.js'%}"></script>
-
-    <!-- jQuery Sparkline -->
-    <!-- <script src="{% static 'theme/assets/js/plugin/jquery.sparkline/jquery.sparkline.min.js'%}"></script> -->
-
-    <!-- Chart Circle -->
-    <!-- <script src="{% static 'theme/assets/js/plugin/chart-circle/circles.min.js'%}"></script> -->
-
-    <!-- Datatables -->
-    <!-- <script src="{% static 'theme/assets/js/plugin/datatables/datatables.min.js'%}"></script> -->
-
-    <!-- Bootstrap Notify -->
-    <script src="{% static 'theme/assets/js/plugin/bootstrap-notify/bootstrap-notify.min.js'%}"></script>
-
+  </div>
   
-    <!-- Sweet Alert -->
-    <!-- <script src="{% static 'theme/assets/js/plugin/sweetalert/sweetalert.min.js'%}"></script> -->
+  {% include "toasts.html" %}
+  <!--   Core JS Files   -->
+  <!-- <script src="{% static 'theme/assets/js/core/jquery-3.7.1.min.js'%}" defer></script> -->
+  <script src="{% static 'theme/assets/js/core/popper.min.js'%}"></script>
+  <script src="{% static 'theme/assets/js/core/bootstrap.min.js'%}"></script>
 
-    <!-- Kaiadmin JS -->
-    <script src="{% static 'theme/assets/js/kaiadmin.min.js'%}"></script>
-    <script src="https://unpkg.com/hyperscript.org@0.9.9"></script>
+  <!-- jQuery Scrollbar -->
+  <script src="{% static 'theme/assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js'%}"></script>
+
+  <!-- Chart JS -->
+  <script src="{% static 'theme/assets/js/plugin/chart.js/chart.min.js'%}"></script>
+
+  <!-- jQuery Sparkline -->
+  <!-- <script src="{% static 'theme/assets/js/plugin/jquery.sparkline/jquery.sparkline.min.js'%}"></script> -->
+
+  <!-- Chart Circle -->
+  <!-- <script src="{% static 'theme/assets/js/plugin/chart-circle/circles.min.js'%}"></script> -->
+
+  <!-- Datatables -->
+  <!-- <script src="{% static 'theme/assets/js/plugin/datatables/datatables.min.js'%}"></script> -->
+
+  <!-- Bootstrap Notify -->
+  <script src="{% static 'theme/assets/js/plugin/bootstrap-notify/bootstrap-notify.min.js'%}"></script>
+
+
+  <!-- Sweet Alert -->
+  <!-- <script src="{% static 'theme/assets/js/plugin/sweetalert/sweetalert.min.js'%}"></script> -->
+
+  <!-- Kaiadmin JS -->
+  <script src="{% static 'theme/assets/js/kaiadmin.min.js'%}"></script>
+  <script src="https://unpkg.com/hyperscript.org@0.9.9"></script>
   <script src="{% static 'js/htmx.min.js'%}"></script>
-  <!-- <script src="{% static 'js/base.js' %}"></script> -->
+  <script src="{% static 'js/modals.js' %}"></script>
   <script src="{% static 'js/toasts.js' %}"></script>
-    
-  </body>
+</body>
+
 </html>

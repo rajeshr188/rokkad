@@ -113,10 +113,24 @@ class JournalEntry(models.Model):
     desc = models.TextField(blank=True, null=True)
     # Below the mandatory fields for generic relation
     content_type = models.ForeignKey(
-        ContentType, on_delete=models.CASCADE, null=True, blank=True
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="item_entries",
     )
     object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = GenericForeignKey("content_type", "object_id")
+
+    parent_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="parent_entries",
+    )
+    parent_object_id = models.PositiveIntegerField(null=True, blank=True)
+    parent_object = GenericForeignKey("parent_content_type", "parent_object_id")
 
     class Meta:
         get_latest_by = "id"
@@ -125,15 +139,21 @@ class JournalEntry(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.content_type}# {self.object_id}"
+        return f"#{self.id} - {self.content_type}# {self.object_id}"
 
     def get_absolute_url(self):
         return reverse("dea_journal_entry_detail", kwargs={"pk": self.pk})
 
     def get_voucher_url(self):
-        voucher = self.content_object
-        if voucher is not None:
-            return voucher.get_absolute_url()
+        # voucher = self.content_object
+        # if voucher is not None:
+        #     return voucher.get_absolute_url()
+        # else:
+        #     return None
+        if self.parent_object is not None:
+            return self.parent_object.get_absolute_url()
+        elif self.content_object is not None:
+            return self.content_object.get_absolute_url()
         else:
             return None
 
@@ -224,3 +244,9 @@ class JournalEntry(models.Model):
                 i["Account"],
                 i["amount"],
             )
+
+    def get_next(self):
+        return JournalEntry.objects.order_by("id").first()
+
+    def get_previous(self):
+        return JournalEntry.objects.order_by("id").last()

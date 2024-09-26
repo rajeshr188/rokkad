@@ -1,5 +1,6 @@
 from operator import attrgetter
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Case, F, IntegerField, Sum, Value, When, Window
@@ -14,14 +15,8 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import AccountFilter
 from ..forms import AccountForm, AccountStatementForm, AccountTransactionForm
-from ..models import (
-    Account,
-    Accountbalance,
-    AccountStatement,
-    AccountTransaction,
-    JournalEntry,
-    MoneyField,
-)
+from ..models import (Account, Accountbalance, AccountStatement,
+                      AccountTransaction, JournalEntry, MoneyField)
 from ..tables import AccountTable
 
 
@@ -79,6 +74,21 @@ def account_list(request):
     context["filter"] = f
     context["table"] = table
     return render(request, "dea/account_list.html", context)
+
+
+@login_required
+def get_customer_balance(request):
+    customer = request.GET.get("customer")
+    acc = get_object_or_404(Account, contact__pk=customer)
+    # Construct the HTML for the Bootstrap 5 alert
+    alert_html = f"""
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Customer Balance</h4>
+        
+        <p>Balance: {acc.current_balance()}</p>
+    </div>
+    """
+    return HttpResponse(alert_html)
 
 
 @login_required
@@ -186,11 +196,16 @@ def accounttransaction_create(request, pk=None):
             request.POST, initial={"journal_entry": journal_entry}
         )
         if form.is_valid():
-            accounttransaction = form.save()
-            return HttpResponseRedirect("/accounttransactions/")
+            accounttransaction = form.save(commit=False)
+            accounttransaction.journal_entry = journal_entry
+            accounttransaction.save()
+            messages.success(request, "Account Transaction created successfully!")
+            return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
     else:
-        form = AccountTransactionForm(initial={"journal_entry": journal_entry})
-    return render(request, "dea/accounttransaction_form.html", {"form": form})
+        form = AccountTransactionForm(
+            initial={"journal_entry": journal_entry}, journalentry_id=journal_entry.id
+        )
+    return render(request, "partials/crispy_form.html", {"form": form})
 
 
 def accounttransaction_update(request, pk):
@@ -198,20 +213,19 @@ def accounttransaction_update(request, pk):
     if request.method == "POST":
         form = AccountTransactionForm(request.POST, instance=accounttransaction)
         if form.is_valid():
-            accounttransaction = form.save()
-            return HttpResponseRedirect("/accounttransactions/")
+            accounttransaction = form.save(commit=False)
+            accounttransaction.journal_entry = journal_entry
+            accounttransaction.save()
+            messages.success(request, "Account Transaction updated successfully!")
+            return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
     else:
         form = AccountTransactionForm(instance=accounttransaction)
-    return render(request, "accounttransaction_form.html", {"form": form})
+    return render(request, "partials/crispy_form.html", {"form": form})
 
 
 def accounttransaction_delete(request, pk):
     accounttransaction = get_object_or_404(AccountTransaction, pk=pk)
     if request.method == "POST":
         accounttransaction.delete()
-        return HttpResponseRedirect("/accounttransactions/")
-    return render(
-        request,
-        "accounttransaction_confirm_delete.html",
-        {"accounttransaction": accounttransaction},
-    )
+        messages.success(request, "Account Transaction deleted successfully!")
+        return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})

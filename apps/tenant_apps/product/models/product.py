@@ -123,12 +123,12 @@ class Product(models.Model):
 
 
 class ProductVariant(models.Model):
-    sku = models.CharField(max_length=32, unique=True)
+    sku = models.CharField(max_length=100, unique=True)
     name = models.CharField(max_length=255, unique=True)
     product = models.ForeignKey(
         Product, related_name="variants", on_delete=models.CASCADE
     )
-    product_code = models.CharField(max_length=32, unique=True)
+    product_code = models.CharField(max_length=100, unique=True)
     attributes = HStoreField(default=dict, blank=True)
     jattributes = models.JSONField(default=dict)
     images = models.ManyToManyField("ProductImage", through="VariantImage")

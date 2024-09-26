@@ -5,8 +5,8 @@ from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.files.base import ContentFile
-from django.db.models import Count, F, OuterRef, Subquery, Sum
-from django.http import HttpResponse
+from django.db.models import F, Sum
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -17,56 +17,29 @@ from django_tables2.export.export import TableExport
 from moneyed import Money
 from num2words import num2words
 from openpyxl import load_workbook
+
 from apps.orgs.registries import company_preference_registry
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.notify.models import NoticeGroup, Notification
 from apps.tenant_apps.rates.models import Rate
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import LoanFilter
-from ..forms import (
-    LoanForm,
-    LoanItemForm,
-    LoanRenewForm,
-    LoanReportForm,
-    LoanSelectionForm,StatementItemForm
-)
+from ..forms import LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm
 from ..models import *
+from ..services import generate_loan_id
 from ..tables import LoanTable
-
-
-def create_loan_notification(request, pk=None):
-    # get loan instance
-    loan = get_object_or_404(Loan, pk=pk)
-    # create a noticegroup
-    import random
-    import string
-
-    # Generate a random string of 3 letters
-    random_string = "".join(random.choice(string.ascii_letters) for _ in range(3))
-    ng = NoticeGroup.objects.create(
-        name=f"{loan.loan_id}-{random_string}-{datetime.now().date()}"
-    )
-    notification = Notification.objects.create(
-        group=ng,
-        customer=loan.customer,
-    )
-    # add the loan to the notification
-    notification.loans.add(loan)
-    notification.save()
-    return redirect(notification.get_absolute_url())
 
 
 def ld(request):
     # TODO get last date by series
-    
+
     default_date = request.user.workspace.preferences["Loan__Default_Date"]
     if default_date == "N":
-        return datetime.now()
+        return timezone.now()
     else:
         last = Loan.objects.order_by("id").last()
         if not last:
-            return datetime.now()
+            return timezone.now()
         return last.loan_date
 
 
@@ -74,13 +47,10 @@ def get_interestrate(request):
     metal = request.GET["itemtype"]
     interest = 0
     if metal == "Gold":
-        
         interest = request.user.workspace.preferences["Interest_Rate__gold"]
     elif metal == "Silver":
-       
         interest = request.user.workspace.preferences["Interest_Rate__silver"]
     else:
-       
         interest = request.user.workspace.preferences["Interest_Rate__other"]
     form = LoanItemForm(initial={"interestrate": interest})
     context = {
@@ -96,7 +66,7 @@ def loan_list(request):
         request.GET,
         request=request,
         queryset=Loan.objects.order_by("-id")
-        .with_details(request.grate, request.srate)
+        .with_details(request.grate, request.srate, request.brate)
         .select_related("customer", "release", "created_by")
         .prefetch_related("notifications", "loanitems"),
     )
@@ -142,44 +112,61 @@ def loan_save(request, id=None, pk=None):
             loan = form.save(commit=False)
             loan.created_by = request.user
             loan.save()
-            messages.success(request, f"{'Updated' if obj else 'Created'} Loan: {loan.loan_id}")
+            messages.success(
+                request, f"{'Updated' if obj else 'Created'} Loan: {loan.loan_id}"
+            )
+            return loan_detail(request, loan.id)
+            # response = TemplateResponse(
+            #     request,
+            #     "girvi/loan/loan_detail.html",
+            #     {"loan": loan, "object": loan, "customer": loan.customer},
+            # )
+            # response["Hx-Push-Url"] = reverse(
+            #     "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
+            # )
+            # return response
 
-            response = TemplateResponse(
-                request,
-                "girvi/loan/loan_detail.html",
-                {"loan": loan, "object": loan},
-            )
-            response["Hx-Push-Url"] = reverse(
-                "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
-            )
-            return response
         else:
             messages.warning(request, "Please correct the error below.")
             print(form.errors)
 
     if not obj:
         initial = {}
-        try:
-            series = Loan.objects.latest().series
-            last_loan = series.loan_set.last()
-            lid = 1 if last_loan is None else last_loan.lid + 1
-        except (Loan.DoesNotExist, Series.DoesNotExist):
-            series = Series.objects.first()
-            lid = 1
-            if series is None:
-                messages.error(request, "No Series objects in database.")
-                return TemplateResponse(request, "girvi/loan/loan_form.html", {"form": form, "loan": None, "object": None})
 
-        initial = {
-            "loan_date": ld(request),
-            "series": series,
-            "lid": lid,
-        }
+        try:
+            latest_loan = Loan.objects.latest("id")
+            series = latest_loan.series.id
+        except Loan.DoesNotExist:
+            print("No loans exist yet.")
+            series = None
+        try:
+            loan_id = generate_loan_id(series_id=series)
+            initial["loan_id"] = loan_id
+            initial["loan_date"] = ld(request)
+            initial["series"] = series
+            print(f"Generated loan ID: {loan_id}")
+        except License.DoesNotExist as e:
+            print(f"License does not exist: {e}")
+            messages.error(request, "No License objects in database.")
+            response = HttpResponse()
+            response["HX-Redirect"] = reverse("girvi:girvi_license_list")
+            return response
+            # Handle the case where no license exists, e.g., log the error, notify the user, etc.
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            messages.error(request, "Unexpected error: {e}")
+            response = HttpResponse()
+            response["HX-Redirect"] = reverse("girvi:girvi_license_list")
+            return response
+
         if pk:
             initial["customer"] = get_object_or_404(Customer, pk=pk)
         form = LoanForm(initial=initial)
 
-    return TemplateResponse(request, "girvi/loan/loan_form.html", {"form": form, "loan": obj, "object": obj})
+    return TemplateResponse(
+        request, "girvi/loan/loan_form.html", {"form": form, "loan": obj, "object": obj}
+    )
+
 
 @require_http_methods(["DELETE"])
 @login_required
@@ -188,86 +175,101 @@ def loan_delete(request, pk=None):
     obj.delete()
     messages.error(request, f" Loan {obj} Deleted")
     return HttpResponse(
-        status=204, headers={"Hx-Redirect": reverse("girvi:girvi_loan_list")}
+        status=204,
+        headers={
+            # "Hx-Redirect": reverse("girvi:girvi_loan_list")
+            "hx-Trigger": "loanDeleted"
+        },
     )
-
-
-@login_required
-def next_loanid(request):
-    try:
-        series = request.GET.get("series")
-        s = get_object_or_404(Series, pk=series)
-
-        last_loan = s.loan_set.last()
-        if last_loan:
-            lid = last_loan.lid + 1
-        else:
-            lid = 1
-
-        form = LoanForm(initial={"lid": lid})
-        context = {
-            "field": form["lid"],
-        }
-        return render(request, "girvi/partials/field.html", context)
-    except (Series.DoesNotExist, Exception) as e:
-        # Handle exceptions here, you can log the error or return an error response
-        # For simplicity, here we are returning a basic error message
-        return render(
-            request,
-            "error.html",
-            {"error_message": "An error occurred in next_loanid."},
-        )
 
 
 @login_required
 @for_htmx(use_block_from_params=True)
 def loan_detail(request, pk):
     loan = get_object_or_404(
-        Loan.objects.select_related(
-            "customer", "series", "release", "created_by"
-        ).prefetch_related("loan_payments", "loanitems"),
+        Loan.objects.select_related("customer", "created_by", "series")
+        .prefetch_related("release", "loanitems", "loan_payments", "statementitem_set")
+        .with_details(request.grate, request.srate),
         pk=pk,
     )
+    gold_weight = (
+        f"G:{loan.total_gold_weight} gms" if loan.total_gold_weight > 0 else ""
+    )
+    silver_weight = (
+        f"S:{loan.total_silver_weight} gms" if loan.total_silver_weight > 0 else ""
+    )
+    bronze_weight = (
+        f"B:{loan.total_bronze_weight} gms" if loan.total_bronze_weight > 0 else ""
+    )
 
-    # Use values() and annotate() to perform calculations in the database
-    weights = loan.get_weight
-    result = [f"{item['itemtype']}:{round(item['total_weight'],3)}" for item in weights]
-    weight = " ".join(result)
+    # Combine the weights, ensuring there are no extra spaces
+    weight = " ".join(filter(None, [gold_weight, silver_weight, bronze_weight]))
 
-    pures = loan.get_pure
-    result = {item["itemtype"]: round(item["pure_weight"], 3) for item in pures}
+    gold_pure = (
+        f"G:{round(loan.pure_gold_weight,3)} gms" if loan.pure_gold_weight > 0 else ""
+    )
+    silver_pure = (
+        f"S:{round(loan.pure_silver_weight,3)} gms"
+        if loan.pure_silver_weight > 0
+        else ""
+    )
+    bronze_pure = (
+        f"B:{round(loan.pure_bronze_weight,3)} gms"
+        if loan.pure_bronze_weight > 0
+        else ""
+    )
 
-    rate_dict = {
-        "Gold": request.grate.buying_rate,
-        "Silver": request.srate.buying_rate,
-    }
+    # Combine the weights, ensuring there are no extra spaces
+    pure = " ".join(filter(None, [gold_pure, silver_pure, bronze_pure]))
+    # # Use values() and annotate() to perform calculations in the database
+    # weights = loan.get_weight
+    # result = [f"{item['itemtype']}:{round(item['total_weight'],3)}" for item in weights]
+    # weight = " ".join(result)
 
-    # Calculate the total value
-    result_dict = {
-        itemtype: rate_dict.get(itemtype, 0) * weight
-        for itemtype, weight in result.items()
-    }
-    value = round(sum(result_dict.values()))
+    # pures = loan.get_pure
+    # result = {item["itemtype"]: round(item["pure_weight"], 3) for item in pures}
+
+    # rate_dict = {
+    #     "Gold": request.grate.buying_rate,
+    #     "Silver": request.srate.buying_rate,
+    # }
+
+    # # Calculate the total value
+    # result_dict = {
+    #     itemtype: rate_dict.get(itemtype, 0) * weight
+    #     for itemtype, weight in result.items()
+    # }
+    value = round(loan.get_current_value(), 2)
+    print(f"Value: {value}")
+
     try:
         lvratio = round(loan.loan_amount / value, 2) * 100
     except ZeroDivisionError:
         lvratio = 0
 
+    print(f"Due: {loan.total_due}")
+    print(f"Due: {loan.due()}")
+    due = loan.due()
+    # due = loan.total_due
+
     try:
-        dvratio = round(loan.due() / value, 2) * 100
+        dvratio = round(due / value, 2) * 100
     except ZeroDivisionError:
         dvratio = 0
     context = {
         "object": loan,
-        "sunken": loan.total() < value,
-        "statements": loan.statementitem_set.all(),
         "loan": loan,
-        "weight": weight,
-        "pure": result,
+        "customer": loan.customer,
+        "items": loan.loanitems.all(),
+        "payments": loan.loan_payments.all(),
         "value": Money(value, "INR"),
-        "worth": value - loan.due(),
+        "worth": value - due,
         "lvratio": lvratio,
         "dvratio": dvratio,
+        "weight": weight,
+        "pure": pure,
+        "je": loan.journal_entries.first(),
+        "expires": loan.calculate_months_to_exceed_value(value, due),
     }
 
     return TemplateResponse(request, "girvi/loan/loan_detail.html", context)
@@ -401,246 +403,3 @@ def loanitem_delete(request, parent_id, id):
 def loanitem_detail(request, pk):
     item = get_object_or_404(LoanItem, pk=pk)
     return render(request, "girvi/partials/item-inline.html", {"object": item})
-
-
-@login_required
-def notice(request):
-    qyr = request.GET.get("qyr", 0)
-
-    a_yr_ago = timezone.now() - relativedelta(years=int(qyr))
-
-    # get all loans with selected ids
-    selected_loans = (
-        Loan.objects.unreleased()
-        .filter(loan_date__lt=a_yr_ago)
-        .order_by("customer")
-        .select_related("customer")
-    )
-
-    # get a list of unique customers for the selected loans
-    # customers = selected_loans.values('customer').distinct().count()
-    customers = (
-        Customer.objects.filter(loan__in=selected_loans)
-        .distinct()
-        .prefetch_related("loan_set", "address", "contactno")
-    )
-
-    data = {}
-    data["loans"] = selected_loans
-    data["loancount"] = selected_loans.count()
-    data["total"] = selected_loans.total_loanamount()
-    data["interest"] = selected_loans.with_total_interest()
-    data["cust"] = customers
-
-    return render(request, "girvi/loan/notice.html", context={"data": data})
-
-
-# @user_passes_test(lambda user: user.is_superuser)
-# def statement_create(request):
-#     if request.method == "POST":
-#         try:
-#             myfile = request.FILES["myfile"]
-#             wb = load_workbook(myfile, read_only=True)
-#             sheet = wb.active
-#         except KeyError:
-#             return JsonResponse(
-#                 {"error": "file field is missing in the request."}, status=400
-#             )
-#         except Exception as e:
-#             return JsonResponse({"error": str(e)}, status=400)
-
-#         with transaction.atomic():
-#             statement = Statement.objects.create(created_by=request.user)
-#             statement_items = []
-
-#             for row in sheet.iter_rows(min_row=0):
-#                 loan_id = row[0].value
-#                 loan = Loan.objects.filter(loanid=loan_id).first()
-
-#                 if loan:
-#                     statement_items.append(
-#                         StatementItem(statement=statement, loan=loan)
-#                     )
-
-#             StatementItem.objects.bulk_create(statement_items)
-
-#         return JsonResponse(
-#             {
-#                 "message": f"Statement {statement} with {len(statement_items)} items created."
-#             },
-#             status=201,
-#         )
-
-#     return JsonResponse(
-#         {"error": "This endpoint only accepts POST requests."}, status=405
-#     )
-
-
-# @login_required
-# def check_girvi(request, pk=None):
-#     if pk:
-#         statement = get_object_or_404(Statement, pk=pk)
-#     else:
-#         statement = Statement.objects.last()
-
-#     unreleased = list(Loan.objects.unreleased().values_list("loan_id", flat=True))
-#     unreleased_set = set(unreleased)
-#     physical = list(
-#         StatementItem.objects.filter(statement=statement).values_list(
-#             "loan__loan_id", flat=True
-#         )
-#     )
-#     statement_set = set(physical)
-#     data = {}
-#     data["records"] = len(unreleased_set)
-#     data["items"] = len(statement_set)
-
-#     data["missing_records"] = list(statement_set - unreleased_set)
-#     data["missing_items"] = list(unreleased_set - statement_set)
-#     missing_records = Loan.objects.filter(loan_id__in=data["missing_records"])
-#     missing_items = Loan.objects.filter(loan_id__in=data["missing_items"])
-#     return render(
-#         request,
-#         "girvi/loan/girvi_upload.html",
-#         context={
-#             "data": data,
-#             "statement": statement,
-#             "missing_items": missing_items,
-#             "missing_records": missing_records,
-#         },
-#     )
-
-
-def verification_session_list(request):
-    sessions = Statement.objects.all()
-    return render(
-        request,
-        "girvi/statement/statement_list.html",
-        context={"sessions": sessions},
-    )
-
-
-def verification_session_create(request):
-    v_session = Statement.objects.create(created_by=request.user)
-    return redirect(v_session.get_absolute_url())
-
-
-def verification_session_detail(request, pk):
-    statement = get_object_or_404(Statement, pk=pk)
-    # form = StatementItemForm(statement=statement)
-
-    statement_items = statement.statementitem_set.select_related("loan").all()
-
-    summary = {}
-    if statement.completed:
-        summary["dc"] = statement_items.filter(descrepancy_found=True)
-        summary["descrepancy_loans"] = statement.statementitem_set.aggregate(
-            total=Count("pk"),
-            discrepancy=Count("pk", filter=F("descrepancy_found")),
-        )
-        summary["missing_loans"] = Loan.objects.unreleased().exclude(
-            loan_id__in=statement_items.values_list("loan__loan_id", flat=True)
-        )
-        summary["unreleased"] = Loan.objects.unreleased()
-
-    return render(
-        request,
-        "girvi/statement/statement_detail.html",
-        context={
-            "statement": statement,
-            "items": statement_items,
-            "summary": summary,
-            # "form": form,
-        },
-    )
-
-
-def complete_verification_session(request, pk):
-    statement = get_object_or_404(Statement, pk=pk)
-
-    # Subquery to check if a loan is in the statement items
-    statement_item_subquery = StatementItem.objects.filter(
-        statement=statement, loan_id=OuterRef("pk")
-    ).values("pk")
-
-    # # Get loans that are not in the statement items
-    # loans = Loan.objects.unreleased().exclude(
-    #     pk__in=Subquery(statement_item_subquery)
-    # )
-    # print(loans.count())
-    # # Prepare StatementItem objects for bulk creation
-    # statement_items = [
-    #     StatementItem(
-    #         statement=statement,
-    #         loan=loan,
-    #         descrepancy_found=True,
-    #         descrepancy_note="Loan not found in verification session"
-    #     )
-    #     for loan in loans
-    # ]
-
-    # # Bulk create StatementItem objects
-    # StatementItem.objects.bulk_create(statement_items)
-
-    # Update statement completion time
-    statement.completed = timezone.now()
-    statement.save()
-    messages.success(request, f"Verification Session {statement} Completed")
-    return redirect(statement.get_absolute_url())
-
-
-def statement_delete(request, pk):
-    statement = get_object_or_404(Statement, pk=pk)
-    statement.delete()
-    messages.error(request, f"Verification Session {statement} Deleted")
-    return redirect("girvi:statement_list")
-
-
-def statement_item_add(request, pk):
-    statement = get_object_or_404(Statement, pk=pk)
-    if request.method == "POST":
-        loan_id = request.POST.get("loan_id")
-        try:
-            loan = Loan.objects.get(loan_id=loan_id)
-        except Loan.DoesNotExist:
-            # Handle the error, e.g., log it, return a custom response, etc.
-            loan = None
-
-        if loan:
-            if not loan.is_released:
-                item = StatementItem.objects.create(statement=statement, loan=loan)
-                messages.success(request, f"Added {loan} to {statement}")
-
-            else:
-                item = StatementItem.objects.create(
-                    statement=statement,
-                    loan=loan,
-                    descrepancy_found=True,
-                    descrepancy_note="Loan already released",
-                )
-                messages.error(request, f"Loan {loan_id} already released.")
-                print(item)
-            # Construct the HTML snippet using the item attributes
-            item_html = f"""
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                {item.loan} 
-                {'(Discrepancy: ' + item.descrepancy_note + ')' if item.descrepancy_found else ''}
-            </li>
-            """
-            return HttpResponse(item_html)
-        else:
-            item_html = f"""
-            <li class="list-group-item">
-                {loan_id}
-                Not found
-            </li>
-            """
-            return HttpResponse(item_html)
-    return HttpResponse("")
-
-
-def statement_item_delete(request, pk):
-    item = get_object_or_404(StatementItem, pk=pk)
-    item.delete()
-    messages.error(request, f"Item {item} Deleted")
-    return HttpResponse("")

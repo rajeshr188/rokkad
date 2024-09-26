@@ -225,7 +225,7 @@ class CompanyInvitation(AbstractBaseInvitation):
         )
 
     def __str__(self):
-        return f"Invited: {self.email} Accepted: {self.accepted} "
+        return f"Invited: {self.email} Status: {self.accepted} "
 
 
 from dynamic_preferences.models import PerInstancePreferenceModel

@@ -2,13 +2,12 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django_select2.forms import Select2Widget
-from dynamic_preferences.forms import (
-    PreferenceForm,
-    SinglePerInstancePreferenceForm,
-    preference_form_builder,
-)
+from dynamic_preferences.forms import (PreferenceForm,
+                                       SinglePerInstancePreferenceForm,
+                                       preference_form_builder)
 from invitations.adapters import get_invitations_adapter
-from invitations.exceptions import AlreadyAccepted, AlreadyInvited, UserRegisteredEmail
+from invitations.exceptions import (AlreadyAccepted, AlreadyInvited,
+                                    UserRegisteredEmail)
 from invitations.forms import CleanEmailMixin
 from invitations.utils import get_invitation_model
 
@@ -62,12 +61,12 @@ class CompanyInvitationForm(forms.ModelForm):
         widget=forms.TextInput(attrs={"type": "email", "size": "30"}),
         initial="",
     )
-    company = forms.ModelChoiceField(
-        label=_("Company"),
-        required=True,
-        queryset=Company.objects.all(),
-        widget=Select2Widget,
-    )
+    # company = forms.ModelChoiceField(
+    #     label=_("Company"),
+    #     required=True,
+    #     queryset=Company.objects.all(),
+    #     widget=Select2Widget,
+    # )
     role = forms.ModelChoiceField(
         label=_("Role"),
         required=True,
@@ -77,15 +76,27 @@ class CompanyInvitationForm(forms.ModelForm):
 
     class Meta:
         model = Invitation
-        fields = ("email", "company", "role", "inviter")
+        fields = (
+            "email",
+            # "company",
+            "role",
+            "inviter",
+        )
 
     def __init__(self, *args, **kwargs):
         self.inviter = kwargs.pop("inviter", None)
         self.request = kwargs.pop("request", None)
+        self.company = kwargs.pop("company", None)
         super(CompanyInvitationForm, self).__init__(*args, **kwargs)
         if self.inviter:
-            self.fields["company"].queryset = Company.objects.filter(owner=self.inviter)
+            # self.fields["company"].queryset = Company.objects.filter(owner=self.inviter)
             self.fields["inviter"].widget = forms.HiddenInput()
+        if self.company:
+            self.fields["company"] = forms.ModelChoiceField(
+                queryset=Company.objects.filter(id=self.company.id),
+                initial=self.company,
+                widget=forms.HiddenInput(),
+            )
 
     def validate_invitation(self, email, company):
         if (
@@ -106,8 +117,7 @@ class CompanyInvitationForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         email = cleaned_data.get("email")
-        company = cleaned_data.get("company")
-
+        company = self.company
         errors = {
             "already_invited": _(
                 f"This e-mail address has already been invited for this company."
@@ -128,8 +138,9 @@ class CompanyInvitationForm(forms.ModelForm):
 
     def save(self, *args, **kwargs):
         email = self.cleaned_data.get("email")
-        company = self.cleaned_data.get("company")
+        # company = self.cleaned_data.get("company")
         role = self.cleaned_data.get("role")
+        company = self.company
         params = {
             "email": email,
             "company": company,

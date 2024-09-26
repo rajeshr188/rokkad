@@ -13,6 +13,12 @@ class CustomerFilter(django_filters.FilterSet):
     # contactno = django_filters.CharFilter(
     #     field_name="contactno__phone_number", lookup_expr="icontains"
     # )
+    active = django_filters.ChoiceFilter(
+        choices=[(True, "Active"), (False, "Inactive")],
+        widget=RadioSelect,
+        empty_label=None,
+        label="",
+    )
 
     class Meta:
         model = Customer
@@ -34,4 +40,4 @@ class CustomerFilter(django_filters.FilterSet):
             Q(name__icontains=value)
             | Q(id__icontains=value)
             | Q(contactno__phone_number__icontains=value)
-        )
+        ).distinct()

@@ -1,10 +1,12 @@
-from django.db.models import Sum
+from django.db.models import Prefetch, Q, Sum
+from django.http import HttpResponse
 from django.shortcuts import render
 from django_tables2 import RequestConfig
 from django_tables2.export.export import TableExport
 
 from ..filters import LedgerTransactionFilter
-from ..models import AccountType, Balance, Ledger, Ledgerbalance, LedgerTransaction
+from ..models import (AccountTransaction, AccountType, Balance, Ledger,
+                      Ledgerbalance, LedgerTransaction)
 from ..tables import JournalEntriesTable, LedgerTransactionTable
 
 
@@ -65,6 +67,21 @@ def generalledger(request):
             "ledgerno", "ledgerno_dr", "journal_entry"
         ).order_by("-created"),
     )
+    ac_txns = AccountTransaction.objects.all()
+    grouped_transactions = {}
+
+    for transaction in f.qs:
+        ledger_credit = transaction.ledgerno
+        ledger_debit = transaction.ledgerno_dr
+
+        if ledger_credit not in grouped_transactions:
+            grouped_transactions[ledger_credit] = {"debit": [], "credit": []}
+        if ledger_debit not in grouped_transactions:
+            grouped_transactions[ledger_debit] = {"debit": [], "credit": []}
+
+        grouped_transactions[ledger_credit]["credit"].append(transaction)
+        grouped_transactions[ledger_debit]["debit"].append(transaction)
+    context["grouped_transactions"] = grouped_transactions
     table = LedgerTransactionTable(f.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
     export_format = request.GET.get("_export", None)
@@ -74,8 +91,31 @@ def generalledger(request):
 
 
 def daybook(request):
-    try:
-        latest_stmt = LedgerStatement.objects.latest()
-    except:
-        print("no ledger statements")
-    return HttpResponse(status=404)
+    ledgers = Ledger.objects.filter(
+        Q(debit_txns__isnull=False)
+        | Q(credit_txns__isnull=False)
+        | Q(aleg__isnull=False)
+    ).distinct()
+    grouped_transactions = {}
+
+    for ledger in ledgers:
+        # Initialize the dictionary for each ledger
+        grouped_transactions[ledger] = {"debit": [], "credit": []}
+
+        # Add dtxns and ctxns to the grouped transactions
+        grouped_transactions[ledger]["debit"].extend(ledger.dtxns())
+        grouped_transactions[ledger]["credit"].extend(ledger.ctxns())
+
+        # Add aleg_txns to the grouped transactions based on xacttypecode
+        for txn in ledger.aleg_txns(xacttypecode="Dr"):
+            grouped_transactions[ledger]["debit"].append(txn)
+        for txn in ledger.aleg_txns(xacttypecode="Cr"):
+            grouped_transactions[ledger]["credit"].append(txn)
+
+    return render(
+        request,
+        "dea/daybook.html",
+        {
+            "grouped_transactions": grouped_transactions,
+        },
+    )

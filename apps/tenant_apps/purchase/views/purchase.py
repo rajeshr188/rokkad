@@ -10,11 +10,9 @@ from num2words import num2words
 from render_block import render_block_to_string
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.product.models import (
-    PricingTier,
-    PricingTierProductPrice,
-    ProductVariant,
-)
+from apps.tenant_apps.product.models import (PricingTier,
+                                             PricingTierProductPrice,
+                                             ProductVariant)
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import PurchaseFilter
@@ -86,6 +84,7 @@ def purchase_detail_view(request, pk=None):
         "object": obj,
         "previous": obj.get_previous(),
         "next": obj.get_next(),
+        "je": obj.journal_entries.first(),
     }
     if request.htmx:
         return render("purchase/partials/detail.html", context)

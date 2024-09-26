@@ -1,4 +1,5 @@
 from datetime import date
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, FloatField, Sum
 from django.db.models.functions import Cast, Coalesce
@@ -6,18 +7,13 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
-from apps.orgs.decorators import (
-    company_member_required,
-    roles_required,
-    workspace_required,
-)
+from apps.orgs.decorators import (company_member_required, roles_required,
+                                  workspace_required)
 from apps.orgs.models import Membership
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.contact.services import (
-    active_customers,
-    get_customers_by_type,
-    get_customers_by_year,
-)
+from apps.tenant_apps.contact.services import (active_customers,
+                                               get_customers_by_type,
+                                               get_customers_by_year)
 from apps.tenant_apps.girvi.models import Loan
 from apps.tenant_apps.girvi.services import *
 
@@ -78,10 +74,8 @@ def Dashboard(request):
     return render(request, "pages/dashboard.html", context)
 
 
-@login_required
-# @workspace_required
-# @roles_required(["Owner", "Admin","Member"])
-@company_member_required
+@roles_required(["Owner", "Admin", "Member"])
+@workspace_required
 def company_dashboard(request):
     context = {}
     company = request.user.workspace
@@ -136,14 +130,20 @@ def company_dashboard(request):
     # context['s_map'] = round(total_sbal_ratecut['bal']/total_sbal_ratecut['net_wt'],3)
     customers = Customer.objects.all()
     context["total_customers"] = customers.filter(active=True).count()
-    
+
     # Optimize the query for new customers
-    context["new_customers"] = customers.only("id", "name", "customer_type").prefetch_related('address')[:5]
-    
+    context["new_customers"] = customers.only(
+        "id", "name", "customer_type"
+    ).prefetch_related("address")[:5]
+
     # Optimize the query for customer count
-    context["customer_count"] = customers.values("customer_type").annotate(count=Count("id"))
-    
-    loan = Loan.objects.with_details(grate=request.grate, srate=request.srate)
+    context["customer_count"] = customers.values("customer_type").annotate(
+        count=Count("id")
+    )
+
+    loan = Loan.objects.with_details(
+        grate=request.grate, srate=request.srate, brate=request.brate
+    )
     released = loan.released()
     unreleased = loan.unreleased()
     sunken = unreleased.filter(is_overdue="True")
@@ -213,22 +213,16 @@ def company_dashboard(request):
     return render(request, "pages/company_dashboard.html", context)
 
 
-
 from django.apps import apps
 from django.db import transaction
 from moneyed import Money
 from openpyxl import load_workbook
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (
-    AccountStatement,
-    AccountTransaction,
-    JournalEntry,
-    Ledger,
-    LedgerTransaction,
-    TransactionType_DE,
-    TransactionType_Ext,
-)
+from apps.tenant_apps.dea.models import (AccountStatement, AccountTransaction,
+                                         JournalEntry, Ledger,
+                                         LedgerTransaction, TransactionType_DE,
+                                         TransactionType_Ext)
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.purchase.models import Payment, Purchase
 from apps.tenant_apps.sales.models import Invoice, Receipt

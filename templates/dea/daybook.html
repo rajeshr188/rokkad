@@ -1,0 +1,52 @@
+{% extends 'tenant.html' %}
+{% block title %}Daybook{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Ledger Transactions</h1>
+    <div class="accordion" id="ledgerAccordion">
+        {% for ledger, transactions in grouped_transactions.items %}
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="true" aria-controls="collapse{{ forloop.counter }}">
+                    {{ ledger.name }} -   Balance: {{ ledger.get_balance }}
+                </button>
+            </h2>
+            <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#ledgerAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title text-center">Debit: {{ledger.get_debit_bal}}</h5>
+                                </div>
+                                    <ul class="list-group">
+                                        {% for transaction in transactions.debit %}
+                                        <li class="list-group-item">{{ transaction.amount }} : {{ transaction.journal_entry.desc }}</li>
+                                        {% endfor %}
+                                    </ul>
+                            </div>                            
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title text-center">Credit: {{ledger.get_credit_bal}}</h5>
+                                </div>
+                                    <ul class="list-group">
+                                        {% for transaction in transactions.credit %}
+                                        <li class="list-group-item">{{ transaction.amount }} : {{ transaction.journal_entry.desc }}</li>
+                                        {% endfor %}
+                                    </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+<!-- Include Bootstrap 5 JS and dependencies at the end of the body -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>

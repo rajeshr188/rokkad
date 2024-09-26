@@ -16,10 +16,10 @@ class LoanFilter(django_filters.FilterSet):
         queryset=Customer.objects.all(),
         widget=CustomerWidget(),
     )
-    loan_date = django_filters.DateFromToRangeFilter(
-        field_name="loan_date",
-        help_text="dd/mm/yy", label="Loan Date"
-    )
+    # loan_date = django_filters.DateFromToRangeFilter(
+    #     field_name="loan_date",
+    #     help_text="dd/mm/yy", label="Loan Date"
+    # )
     date = django_filters.DateRangeFilter(field_name="loan_date", label="Loan Date")
 
     # notice = django_filters.CharFilter(
@@ -79,7 +79,7 @@ class LoanFilter(django_filters.FilterSet):
             )
 
         return (
-            Loan.objects.with_details(None, None)
+            Loan.objects.with_details(None, None, None)
             .prefetch_related("notifications", "loanitems")
             .filter(
                 Q(id__icontains=value)

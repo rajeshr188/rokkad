@@ -2,23 +2,10 @@
 from django import forms
 from django.contrib import admin
 
-from .models import (
-    Attribute,
-    AttributeValue,
-    Category,
-    Movement,
-    Price,
-    PricingTier,
-    PricingTierProductPrice,
-    Product,
-    ProductImage,
-    ProductType,
-    ProductVariant,
-    Stock,
-    StockStatement,
-    StockTransaction,
-    VariantImage,
-)
+from .models import (Attribute, AttributeValue, Category, Movement, Price,
+                     PricingTier, PricingTierProductPrice, Product,
+                     ProductImage, ProductType, ProductVariant, Stock,
+                     StockStatement, StockTransaction, VariantImage)
 
 
 class PriceAdminForm(forms.ModelForm):

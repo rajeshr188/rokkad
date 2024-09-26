@@ -2,10 +2,9 @@
 {% load crispy_forms_tags %}
 {% block title %}Export{% endblock %}
 {% block content %}
-    <div class="container">
-        <div class="row">
-            <div class="col-md-12">
-                <h1>Export</h1>
+    <div class="container card col-6">
+        <h1>Export Data</h1>
+        <div class="card-body">
                 <p>Export your data to a CSV,Excel file.</p>
                 <form method="post">
                     {% csrf_token %}

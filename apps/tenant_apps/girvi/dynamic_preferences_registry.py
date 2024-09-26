@@ -3,12 +3,8 @@ from decimal import Decimal
 
 from dynamic_preferences.preferences import Section
 from dynamic_preferences.registries import global_preferences_registry
-from dynamic_preferences.types import (
-    BooleanPreference,
-    ChoicePreference,
-    DatePreference,
-    DecimalPreference,
-)
+from dynamic_preferences.types import (BooleanPreference, ChoicePreference,
+                                       DatePreference, DecimalPreference)
 
 from apps.orgs.registries import company_preference_registry
 
@@ -23,6 +19,7 @@ class LoanTemplate(ChoicePreference):
     choices = [
         ("d", "Default"),
         ("c", "Custom_JSK"),
+        ("j", "Custom_JCL"),
     ]
     required = True
 

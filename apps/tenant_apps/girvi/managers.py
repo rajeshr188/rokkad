@@ -2,20 +2,10 @@ import datetime
 
 from django.core.cache import cache
 from django.db import models
-from django.db.models import (
-    Case,
-    DecimalField,
-    ExpressionWrapper,
-    F,
-    Func,
-    OuterRef,
-    Q,
-    Subquery,
-    Sum,
-    Value,
-    When,
-)
-from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear, Round
+from django.db.models import (Case, DecimalField, ExpressionWrapper, F, Func,
+                              OuterRef, Q, Subquery, Sum, Value, When)
+from django.db.models.functions import (Cast, Ceil, Coalesce, ExtractDay,
+                                        ExtractMonth, ExtractYear, Round)
 from django.utils import timezone
 
 from apps.tenant_apps.rates.models import Rate
@@ -67,17 +57,20 @@ class LoanQuerySet(models.QuerySet):
     def _get_rates(self):
         grate = cache.get("gold_rate")
         srate = cache.get("silver_rate")
+        brate = cache.get("bronze_rate")
 
-        if not (grate and srate):
+        if not (grate and srate and brate):
             latest_rate = Rate.objects.filter(
-                metal__in=[Rate.Metal.GOLD, Rate.Metal.SILVER]
+                metal__in=[Rate.Metal.GOLD, Rate.Metal.SILVER, Rate.Metal.BRONZE]
             ).order_by("-timestamp")
             grate = grate or latest_rate.filter(metal=Rate.Metal.GOLD).first()
             srate = srate or latest_rate.filter(metal=Rate.Metal.SILVER).first()
+            brate = brate or latest_rate.filter(metal=Rate.Metal.BRONZE).first()
             cache.set("gold_rate", grate, 300)
             cache.set("silver_rate", srate, 300)
+            cache.set("bronze_rate", brate, 300)
 
-        return grate, srate
+        return grate, srate, brate
 
     def months_since_or_to_release(self):
         now = timezone.now()
@@ -103,34 +96,31 @@ class LoanQuerySet(models.QuerySet):
                 output_field=DecimalField(),
             )
         )
-    def with_details(self, grate=None, srate=None):
+
+    def with_details(self, grate=None, srate=None, brate=None):
         current_time = timezone.now()
-        grate,srate = self._get_rates()
+        grate, srate, brate = self._get_rates()
         now = timezone.now()
         return self.annotate(
-            months_since_created=ExpressionWrapper(
+            days_since_created=ExpressionWrapper(
                 Case(
                     When(
                         release__release_date__isnull=False,
-                        then=Func(
-                            F("release__release_date") - F("loan_date"),
-                            function="EXTRACT",
-                            template="EXTRACT(MONTH FROM %(expressions)s)",
-                            output_field=DecimalField(),
-                        ),
+                        then=ExtractDay(F("release__release_date") - F("loan_date")),
                     ),
-                    default=Func(
-                        now - F("loan_date"),
-                        function="EXTRACT",
-                        template="EXTRACT(MONTH FROM %(expressions)s)",
-                        output_field=DecimalField(),
-                    ),
+                    default=ExtractDay(now - F("loan_date")),
                 ),
                 output_field=DecimalField(),
             ),
+            months_since_created=Ceil(
+                ExpressionWrapper(
+                    F("days_since_created") / Value(30.44),
+                    output_field=DecimalField(),
+                )
+            ),
             total_interest=ExpressionWrapper(
                 Func(
-                    (F("interest") * F("months_since_created")),
+                    (F("interest") * (F("months_since_created") - 1)),
                     function="ROUND",
                     output_field=models.DecimalField(max_digits=10, decimal_places=2),
                 ),
@@ -197,7 +187,8 @@ class LoanQuerySet(models.QuerySet):
             current_value=Round(
                 ExpressionWrapper(
                     (F("pure_gold_weight") * grate.buying_rate)
-                    + (F("pure_silver_weight") * srate.buying_rate),
+                    + (F("pure_silver_weight") * srate.buying_rate)
+                    + (F("pure_bronze_weight") * brate.buying_rate),
                     output_field=DecimalField(max_digits=10, decimal_places=2),
                 )
             ),
@@ -264,11 +255,12 @@ class LoanQuerySet(models.QuerySet):
 
     def itemwise_value(self):
         current_time = timezone.now()
-        grate, srate = self._get_rates()
-        
+        grate, srate, brate = self._get_rates()
+
         return self.aggregate(
             gold=Round(Sum("pure_gold_weight") * grate.buying_rate, 2),
             silver=Round(Sum("pure_silver_weight") * srate.buying_rate, 2),
+            bronze=Round(Sum("pure_bronze_weight") * brate.buying_rate, 2),
         )
 
     def total_loanamount(self):
@@ -287,8 +279,8 @@ class LoanManager(models.Manager):
     def unreleased(self):
         return self.get_queryset().unreleased()
 
-    def with_details(self, grate, srate):
-        return self.get_queryset().with_details(grate, srate)
+    def with_details(self, grate, srate, brate):
+        return self.get_queryset().with_details(grate, srate, brate)
 
     def with_itemwise_loanamount(self):
         return self.get_queryset().with_itemwise_loanamount()
@@ -301,7 +293,7 @@ class LoanManager(models.Manager):
 
     def total_loanamount(self):
         return self.get_queryset().aggregate(total=Sum("loan_amount"))
-    
+
     def total_interest(self):
         return self.get_queryset().aggregate(total=Sum("total_interest"))
 

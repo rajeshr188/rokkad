@@ -1,6 +1,7 @@
 {% extends "tenant.html" %}
 {%load crispy_forms_tags%}
 {% block content %}
+{{form.media}}
 <p><a class="btn btn-secondary" href="{% url 'dea_home' %}">Ledger Listing</a></p>
 <form method="post">
     {% csrf_token %}

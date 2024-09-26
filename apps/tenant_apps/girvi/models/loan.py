@@ -1,7 +1,7 @@
 import math
+import re
 from datetime import datetime
 from decimal import Decimal
-
 # from qrcode.image.pure import PyImagingImage
 from io import BytesIO
 
@@ -13,19 +13,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
-from django.db.models import (
-    BooleanField,
-    Case,
-    DecimalField,
-    ExpressionWrapper,
-    F,
-    Func,
-    Q,
-    Sum,
-    Value,
-    When,
-)
-from django.db.models.functions import Coalesce, Concat, ExtractMonth, ExtractYear
+from django.db.models import (BooleanField, DecimalField, ExpressionWrapper, F,
+                              Func, Max, Q, Sum)
+from django.db.models.functions import Coalesce, Concat, Substr
 from django.forms.models import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
@@ -33,23 +23,19 @@ from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (
-    AccountTransaction,
-    JournalEntry,
-    LedgerTransaction,
-)
+from apps.tenant_apps.dea.models import (AccountTransaction, JournalEntry,
+                                         LedgerTransaction)
 from apps.tenant_apps.rates.models import Rate
 
 # from ..models import Release
-from ..managers import LoanManager, LoanQuerySet, ReleasedManager, UnReleasedManager
+from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
+                        UnReleasedManager)
 
 
 class Loan(models.Model):
     # Fields
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-    voucher_date = models.DateTimeField(default=timezone.now)
-    voucher_no = models.CharField(max_length=50, null=True, blank=True)
     created_by = models.ForeignKey(
         "accounts.CustomUser",
         on_delete=models.DO_NOTHING,
@@ -73,6 +59,7 @@ class Loan(models.Model):
         blank=True,
     )
     # ----------redundant fields
+    weight = models.CharField(max_length=50, null=True, blank=True)
     item_desc = models.TextField(
         max_length=100,
         verbose_name="Item",
@@ -85,6 +72,7 @@ class Loan(models.Model):
     interest = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, null=True, blank=True
     )
+    value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     # -----------------------------------
     class InterestType(models.TextChoices):
@@ -99,7 +87,7 @@ class Loan(models.Model):
         on_delete=models.CASCADE,
         verbose_name="Series",
     )
-    tenure = models.PositiveIntegerField(default=0)
+    tenure = models.PositiveIntegerField(default=3)
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
@@ -169,7 +157,7 @@ class Loan(models.Model):
         )
 
     def formatted_pure(self, joiner=", "):
-        return ", ".join(
+        return joiner.join(
             [f" {item['itemtype']} {item['pure_weight']}" for item in self.get_pure]
         )
 
@@ -225,7 +213,7 @@ class Loan(models.Model):
             date = timezone.now()
         return round(self.interest * self.noofmonths(date))
 
-    def current_value(self):
+    def get_current_value(self):
         try:
             total_current_value = sum(
                 loan_item.current_value() for loan_item in self.loanitems.all()
@@ -246,15 +234,17 @@ class Loan(models.Model):
         return Money(self.due(), "INR")
 
     def is_worth(self):
-        return self.current_value() < self.due()
+        return self.get_current_value() < self.due()
 
     def get_worth(self):
-        return self.current_value() - self.due()
+        return self.geT_current_value() - self.due()
 
-    def calculate_months_to_exceed_value(self):
+    def calculate_months_to_exceed_value(self, current_value=None, due=None):
+        value = current_value or self.get_current_value()
+        due = due or self.due()
         try:
             if not self.is_released and self.loanitems.exists():
-                return round((self.current_value() - self.due()) / self.interest, 1)
+                return round((value - due) / self.interest, 1)
         except Exception as e:
             return 0
         return 0
@@ -276,20 +266,27 @@ class Loan(models.Model):
 
     def get_next(self):
         return (
-            Loan.objects.filter(series=self.series, lid__gt=self.lid)
-            .order_by("lid")
+            Loan.objects.filter(series=self.series, loan_id__gt=self.loan_id)
+            .order_by("loan_id")
             .first()
         )
 
     def get_previous(self):
         return (
-            Loan.objects.filter(series=self.series, lid__lt=self.lid)
-            .order_by("lid")
+            Loan.objects.filter(series=self.series, loan_id__lt=self.loan_id)
+            .order_by("loan_id")
             .last()
         )
 
+    def is_valid_loan_id(loan_id):
+        return bool(re.match(r"^[A-Z]*\d{5}$", loan_id))
+
     def save(self, *args, **kwargs):
-        self.loan_id = self.series.name + str(self.lid)
+        if not self.loan_id:
+            self.loan_id = self.generate_loan_id()
+        elif not Loan.is_valid_loan_id(self.loan_id):
+            raise ValidationError(f"Invalid loan_id format: {self.loan_id}")
+
         super(Loan, self).save(*args, **kwargs)
 
     def update(self):
@@ -311,6 +308,8 @@ class Loan(models.Model):
                 self.loan_amount = loan_amount
                 self.interest = interest
                 self.item_desc = item_desc
+                self.weight = self.formatted_weight()
+                self.value = self.get_current_value()
                 self.save()
                 # )
 
@@ -327,24 +326,28 @@ class Loan(models.Model):
         notification.save()
         return notification
 
-    def get_atxns(self):
-        # Retrieve all LoanItems and LoanPayments for the loan
-        loan_items = self.loanitems.all()
-        loan_payments = self.loan_payments.all()
-        # Get the ContentType for LoanItem and LoanPayment
-        loan_item_content_type = ContentType.objects.get_for_model(LoanItem)
-        loan_payment_content_type = ContentType.objects.get_for_model(LoanPayment)
+    # def delete(self, *args, **kwargs):
+    #     try:
+    #         with transaction.atomic():
+    #             # Reverse transactions before deletion
+    #             self.reverse_transactions()
 
-        # Retrieve JournalEntries related to LoanItems and LoanPayments
-        journal_entries = JournalEntry.objects.filter(
-            Q(content_type=loan_item_content_type, object_id__in=loan_items)
-            | Q(content_type=loan_payment_content_type, object_id__in=loan_payments)
-        )
+    #             # Delete journal entries
+    #             self.delete_journal_entry()
+
+    #             # Call the superclass delete method
+    #             super(Loan, self).delete(*args, **kwargs)
+    #     except Exception as e:
+    #         logger.error(f"An error occurred while deleting the loan: {e}")
+    #         raise
+
+    def get_atxns(self):
+        journal_entries = self.journal_entries.all()
 
         # Retrieve all AccountTransactions and LedgerTransactions for the filtered JournalEntries
         account_transactions = AccountTransaction.objects.filter(
             journal_entry__in=journal_entries
-        )
+        ).select_related("Account", "ledgerno")
         # ledger_transactions = LedgerTransaction.objects.filter(journal_entry__in=journal_entries)
 
         # Combine the transactions into a single list
@@ -354,30 +357,138 @@ class Loan(models.Model):
         return list(account_transactions)
 
     def get_ltxns(self):
-        # Retrieve all LoanItems and LoanPayments for the loan
-        loan_items = self.loanitems.all()
-        loan_payments = self.loan_payments.all()
-        # Get the ContentType for LoanItem and LoanPayment
-        loan_item_content_type = ContentType.objects.get_for_model(LoanItem)
-        loan_payment_content_type = ContentType.objects.get_for_model(LoanPayment)
-
-        # Retrieve JournalEntries related to LoanItems and LoanPayments
-        journal_entries = JournalEntry.objects.filter(
-            Q(content_type=loan_item_content_type, object_id__in=loan_items)
-            | Q(content_type=loan_payment_content_type, object_id__in=loan_payments)
-        )
-
+        journal_entries = self.journal_entries.all()
         # Retrieve all AccountTransactions and LedgerTransactions for the filtered JournalEntries
         # account_transactions = AccountTransaction.objects.filter(journal_entry__in=journal_entries)
         ledger_transactions = LedgerTransaction.objects.filter(
             journal_entry__in=journal_entries
-        )
+        ).select_related("ledgerno", "ledgerno_dr")
 
         # Combine the transactions into a single list
         # combined_transactions = list(account_transactions) + list(ledger_transactions)
 
         # return combined_transactions
         return list(ledger_transactions)
+
+    def get_transactions(self):
+        if not hasattr(self.customer, "account"):
+            self.customer.save()
+        if all([self.loan_amount, self.interest]) == 0:
+            return None, None
+        amount = Money(self.loan_amount, "INR")
+        interest = Money(self.interest, "INR")
+        if self.loan_type == self.LoanType.TAKEN:
+            lt = [
+                # {"ledgerno": "Loans", "ledgerno_dr": "Cash", "amount": amount},
+                # {
+                #     "ledgerno": "Cash",
+                #     "ledgerno_dr": "Interest Paid",
+                #     "amount": interest,
+                # },
+            ]
+            at = [
+                {
+                    "ledgerno": "Loans",
+                    "xacttypecode": "Dr",
+                    "xacttypecode_ext": "LT",
+                    "account": self.customer.account,
+                    "amount": amount,
+                },
+                # {
+                #     "ledgerno": "Interest Payable",
+                #     "xacttypecode": "Cr",
+                #     "xacttypecode_ext": "IP",
+                #     "account": self.loan.customer.account,
+                #     "amount": interest,
+                # },
+            ]
+        else:
+            lt = [
+                # {
+                #     "ledgerno": "Cash",
+                #     "ledgerno_dr": "Loans & Advances",
+                #     "amount": amount,
+                # },
+                # {
+                #     "ledgerno": "Interest Received",
+                #     "ledgerno_dr": "Cash",
+                #     "amount": interest,
+                # },
+            ]
+            at = [
+                {
+                    "ledgerno": "Cash",
+                    "XactTypeCode": "Cr",
+                    "XactTypeCode_Ext": "LG",
+                    "Account": self.customer.account,
+                    "amount": amount,
+                },
+                # {
+                #     "ledgerno": "Cash",
+                #     "XactTypeCode": "Dr",
+                #     "XactTypeCode_Ext": "IR",
+                #     "Account": self.loan.customer.account,
+                #     "amount": interest,
+                # },
+            ]
+        return lt, at
+
+    def get_journal_entry(self, desc=None):
+        if self.journal_entries.exists():
+            return self.journal_entries.latest()
+        else:
+            return JournalEntry.objects.create(
+                desc=self.__class__.__name__, content_object=self
+            )
+
+    def delete_journal_entry(self):
+        for entry in self.journal_entries.all():
+            entry.delete()
+
+    def delete_txns(self):
+        je = self.get_journal_entry()
+        at = ledger_transactions = AccountTransaction.objects.filter(
+            journal_entry=je
+        ).delete()
+        lt = ledger_transactions = LedgerTransaction.objects.filter(
+            journal_entry=je
+        ).delete()
+
+    def create_transactions(self):
+        # print("Creating transactions")
+        lt, at = self.get_transactions()
+        if lt or at:
+            journal_entry = self.get_journal_entry()
+            journal_entry.transact(lt, at)
+
+    def reverse_transactions(self):
+        # i.e if je is older than the latest statement then reverse the transactions else do nothing
+        # print("Reversing transactions")
+        try:
+            statement = self.customer.account.accountstatements.latest("created")
+        except ObjectDoesNotExist:
+            statement = None
+        journal_entry = self.get_journal_entry()
+        if journal_entry and statement and journal_entry.created < statement.created:
+            lt, at = self.get_transactions()
+            if lt or at:
+                journal_entry.untransact(lt, at)
+        else:
+            self.delete_txns()
+
+    def is_changed(self, old_instance):
+        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
+        # TODO efficient way to compare old and new instances
+        # Implement logic to compare old and new instances
+        # Compare all fields using dictionaries
+        return model_to_dict(
+            self, fields=["customer", "loan_amount", "interest"]
+        ) != model_to_dict(old_instance, fields=["customer", "loan_amount", "interest"])
+
+    def get_storage_box(self):
+        return LoanItemStorageBox.objects.filter(
+            start_item_id__lte=self.id, end_item_id__gte=self.id
+        ).first()
 
 
 class LoanItem(models.Model):
@@ -461,112 +572,115 @@ class LoanItem(models.Model):
             raise ValidationError(
                 "Cannot delete LoanItem because related Loan has a Release."
             )
+        # loan = self.loan
         super().delete(*args, **kwargs)
+        # loan.update()
 
-    def get_transactions(self):
-        if not hasattr(self.loan.customer, "account"):
-            self.loan.customer.save()
-        if all([self.loanamount, self.interest]) == 0:
-            return None, None
-        amount = Money(self.loanamount, "INR")
-        interest = Money(self.interest, "INR")
-        if self.loan.loan_type == self.loan.LoanType.TAKEN:
-            lt = [
-                # {"ledgerno": "Loans", "ledgerno_dr": "Cash", "amount": amount},
-                # {
-                #     "ledgerno": "Cash",
-                #     "ledgerno_dr": "Interest Paid",
-                #     "amount": interest,
-                # },
-            ]
-            at = [
-                {
-                    "ledgerno": "Loans",
-                    "xacttypecode": "Dr",
-                    "xacttypecode_ext": "LT",
-                    "account": self.loan.customer.account,
-                    "amount": amount,
-                },
-                # {
-                #     "ledgerno": "Interest Payable",
-                #     "xacttypecode": "Cr",
-                #     "xacttypecode_ext": "IP",
-                #     "account": self.loan.customer.account,
-                #     "amount": interest,
-                # },
-            ]
-        else:
-            lt = [
-                # {
-                #     "ledgerno": "Cash",
-                #     "ledgerno_dr": "Loans & Advances",
-                #     "amount": amount,
-                # },
-                # {
-                #     "ledgerno": "Interest Received",
-                #     "ledgerno_dr": "Cash",
-                #     "amount": interest,
-                # },
-            ]
-            at = [
-                {
-                    "ledgerno": "Cash",
-                    "XactTypeCode": "Cr",
-                    "XactTypeCode_Ext": "LG",
-                    "Account": self.loan.customer.account,
-                    "amount": amount,
-                },
-                # {
-                #     "ledgerno": "Cash",
-                #     "XactTypeCode": "Dr",
-                #     "XactTypeCode_Ext": "IR",
-                #     "Account": self.loan.customer.account,
-                #     "amount": interest,
-                # },
-            ]
-        return lt, at
+    # def get_transactions(self):
+    #     if not hasattr(self.loan.customer, "account"):
+    #         self.loan.customer.save()
+    #     if all([self.loanamount, self.interest]) == 0:
+    #         return None, None
+    #     amount = Money(self.loanamount, "INR")
+    #     interest = Money(self.interest, "INR")
+    #     if self.loan.loan_type == self.loan.LoanType.TAKEN:
+    #         lt = [
+    #             # {"ledgerno": "Loans", "ledgerno_dr": "Cash", "amount": amount},
+    #             # {
+    #             #     "ledgerno": "Cash",
+    #             #     "ledgerno_dr": "Interest Paid",
+    #             #     "amount": interest,
+    #             # },
+    #         ]
+    #         at = [
+    #             {
+    #                 "ledgerno": "Loans",
+    #                 "xacttypecode": "Dr",
+    #                 "xacttypecode_ext": "LT",
+    #                 "account": self.loan.customer.account,
+    #                 "amount": amount,
+    #             },
+    #             # {
+    #             #     "ledgerno": "Interest Payable",
+    #             #     "xacttypecode": "Cr",
+    #             #     "xacttypecode_ext": "IP",
+    #             #     "account": self.loan.customer.account,
+    #             #     "amount": interest,
+    #             # },
+    #         ]
+    #     else:
+    #         lt = [
+    #             # {
+    #             #     "ledgerno": "Cash",
+    #             #     "ledgerno_dr": "Loans & Advances",
+    #             #     "amount": amount,
+    #             # },
+    #             # {
+    #             #     "ledgerno": "Interest Received",
+    #             #     "ledgerno_dr": "Cash",
+    #             #     "amount": interest,
+    #             # },
+    #         ]
+    #         at = [
+    #             {
+    #                 "ledgerno": "Cash",
+    #                 "XactTypeCode": "Cr",
+    #                 "XactTypeCode_Ext": "LG",
+    #                 "Account": self.loan.customer.account,
+    #                 "amount": amount,
+    #             },
+    #             # {
+    #             #     "ledgerno": "Cash",
+    #             #     "XactTypeCode": "Dr",
+    #             #     "XactTypeCode_Ext": "IR",
+    #             #     "Account": self.loan.customer.account,
+    #             #     "amount": interest,
+    #             # },
+    #         ]
+    #     return lt, at
 
-    def get_journal_entry(self, desc=None):
-        if self.journal_entries.exists():
-            return self.journal_entries.latest()
-        else:
-            return JournalEntry.objects.create(
-                content_object=self, desc=self.__class__.__name__
-            )
+    # def get_journal_entry(self, desc=None):
+    #     if self.journal_entries.exists():
+    #         return self.journal_entries.latest()
+    #     else:
+    #         return JournalEntry.objects.create(
+    #             content_object=self, desc=self.__class__.__name__,parent_object=self.loan
+    #         )
 
-    def delete_journal_entry(self):
-        for entry in self.journal_entries.all():
-            entry.delete()
+    # def delete_journal_entry(self):
+    #     for entry in self.journal_entries.all():
+    #         entry.delete()
 
-    def create_transactions(self):
-        # print("Creating transactions")
-        lt, at = self.get_transactions()
-        journal_entry = self.get_journal_entry()
-        journal_entry.transact(lt, at)
+    # def create_transactions(self):
+    #     # print("Creating transactions")
+    #     lt, at = self.get_transactions()
+    #     if lt or at:
+    #         journal_entry = self.get_journal_entry()
+    #         journal_entry.transact(lt, at)
 
-    def reverse_transactions(self):
-        # i.e if je is older than the latest statement then reverse the transactions else do nothing
-        # print("Reversing transactions")
-        try:
-            statement = self.loan.customer.account.accountstatements.latest("created")
-        except ObjectDoesNotExist:
-            statement = None
-        journal_entry = self.get_journal_entry()
+    # def reverse_transactions(self):
+    #     # i.e if je is older than the latest statement then reverse the transactions else do nothing
+    #     # print("Reversing transactions")
+    #     try:
+    #         statement = self.loan.customer.account.accountstatements.latest("created")
+    #     except ObjectDoesNotExist:
+    #         statement = None
+    #     journal_entry = self.get_journal_entry()
 
-        if journal_entry and statement and journal_entry.created < statement.created:
-            lt, at = self.get_transactions()
-            journal_entry.untransact(lt, at)
-        else:
-            self.delete_journal_entry()
+    #     if journal_entry and statement and journal_entry.created < statement.created:
+    #         lt, at = self.get_transactions()
+    #         journal_entry.untransact(lt, at)
+    #     else:
+    #         self.delete_journal_entry()
 
-    def is_changed(self, old_instance):
-        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
-        # TODO efficient way to compare old and new instances
-        # Implement logic to compare old and new instances
-        # Compare all fields using dictionaries
-        return model_to_dict(self, fields=["loanamount"]) != model_to_dict(
-            old_instance, fields=["loanamount"]
-        )
+    # def is_changed(self, old_instance):
+    #     # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
+    #     # TODO efficient way to compare old and new instances
+    #     # Implement logic to compare old and new instances
+    #     # Compare all fields using dictionaries
+    #     return model_to_dict(self, fields=["loanamount"]) != model_to_dict(
+    #         old_instance, fields=["loanamount"]
+    #     )
 
     def get_item_pic(self):
         return self.pic.url if self.pic and self.pic else None
@@ -721,16 +835,25 @@ class LoanPayment(models.Model):
         return lt, at
 
     def get_journal_entry(self, desc=None):
-        if self.journal_entries.exists():
-            return self.journal_entries.latest()
+        if self.loan.journal_entries.exists():
+            return self.loan.journal_entries.latest()
         else:
             return JournalEntry.objects.create(
-                content_object=self, desc=self.__class__.__name__
+                content_object=self,
+                desc=self.__class__.__name__,
+                parent_object=self.loan,
             )
 
     def delete_journal_entry(self):
         for entry in self.journal_entries.all():
             entry.delete()
+
+    def delete_txns(self):
+        je = self.get_journal_entry()
+        at = ledger_transactions = AccountTransaction.objects.filter(journal_entry=je)
+        lt = ledger_transactions = LedgerTransaction.objects.filter(journal_entry=je)
+        at.delete()
+        lt.delete()
 
     def create_transactions(self):
         lt, at = self.get_transactions()
@@ -749,10 +872,11 @@ class LoanPayment(models.Model):
 
         if journal_entry and statement and journal_entry.created < statement.created:
             lt, at = self.get_transactions()
-            if lt and at:
+            if lt or at:
                 journal_entry.untransact(lt, at)
         else:
-            self.delete_journal_entry()
+            # self.delete_journal_entry()
+            self.delete_txns()
 
     def is_changed(self, old_instance):
         # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
@@ -809,3 +933,61 @@ class StatementItem(models.Model):
 
     def __str__(self):
         return f"{self.loan.loan_id} - {self.statement.created} - {self.verified_at} - {self.descrepancy_found} - {self.descrepancy_note}"
+
+
+class ItemType(models.TextChoices):
+    GOLD = "gold", "Gold"
+    SILVER = "silver", "Silver"
+    BRONZE = "bronze", "Bronze"
+
+
+class LoanItemStorageBox(models.Model):
+    name = models.CharField(max_length=50)
+    location = models.CharField(max_length=50)
+    start_item_id = models.PositiveIntegerField()
+    end_item_id = models.PositiveIntegerField()
+    item_type = models.CharField(
+        max_length=6, choices=ItemType.choices, default=ItemType.GOLD
+    )
+
+    def __str__(self):
+        return f"{self.name} at {self.location} (Items {Loan.objects.get(id = self.start_item_id).loanid} to {Loan.objects.get(id =self.end_item_id).loanid})"
+
+    def clean(self):
+        # Check for overlapping ranges
+        overlapping_boxes = LoanItemStorageBox.objects.filter(
+            item_type=self.item_type,
+            start_item_id__lte=self.end_item_id,
+            end_item_id__gte=self.start_item_id,
+        ).exclude(pk=self.pk)
+
+        if overlapping_boxes.exists():
+            raise ValidationError(
+                "The item ID range overlaps with another storage box."
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()  # Call the clean method to perform validation
+        super().save(*args, **kwargs)
+
+    def position_for_item(self, item_id):
+        # naive approach
+        # if item_id < self.start_item_id or item_id > self.end_item_id:
+        #     return None
+        # return item_id - self.start_item_id + 1
+        items_in_box = self.items().order_by("id")
+        item_ids = list(items_in_box.values_list("id", flat=True))
+        try:
+            position = item_ids.index(item_id) + 1
+        except ValueError:
+            position = None
+        return position
+
+    def items(self):
+        return Loan.objects.filter(id__gte=self.start_item_id, id__lte=self.end_item_id)
+
+    def items_count(self):
+        return self.end_item_id - self.start_item_id + 1
+
+    def get_absolute_url(self):
+        return reverse("girvi:storagebox_detail", args=(self.pk,))

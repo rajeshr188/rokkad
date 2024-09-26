@@ -15,6 +15,14 @@
     <div class="card-body overflow-hidden">
       {% include 'partials/crispy_form.html' with form=form%}
     </div>
+    <div 
+        hx-get="{% url 'get_customer_balance' %}" 
+        hx-trigger="change from:select[name='customer']"
+        hx-target="this"
+        hx-swap="innerHTML"
+        hx-include="[name='customer']">
+
+    </div>
   </div>
 </div>
 <script>
@@ -24,6 +32,14 @@
       $('#id_series').on('select2:select', function () {
           this.dispatchEvent(new Event('change', { bubbles: true }));
       });
+  });
+</script>
+<script>
+  // Ensure the HTMX request is triggered when the django-select2 widget changes
+  $(document).ready(function() {
+    $('select[name="customer"]').on('change', function() {
+      this.dispatchEvent(new Event('change', { bubbles: true }));
+    });
   });
 </script>
 {% endblock %}

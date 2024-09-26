@@ -8,11 +8,12 @@
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2">Loan Detail</h1>
     
-    <div class="btn-toolbar mb-2 mb-md-0">
-      <div class="btn-group ">
-        <button class="btn btn-default" 
+      <div class="btn-toolbar mb-2 mb-md-0">
+      <div class="btn-group">
+        <!-- List Button -->
+        <button class="btn btn-outline-primary" 
                 hx-get="{% url 'girvi:girvi_loan_list' %}" 
-                hx-trigger="click" 
+                hx-trigger="click,loanDeleted from:body" 
                 hx-vals='{"use_block":"content"}'
                 hx-target="#content" hx-swap="innerHTML transition:true"
                 hx-push-url="true">
@@ -20,500 +21,486 @@
             viewBox="0 0 16 16">
             <path fill-rule="evenodd"
               d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z" />
-          </svg></button>
-        <button class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}"
-          hx-trigger="click, keyup[shiftKey&&key=='N'] from:body" 
-          hx-target="#content"><svg
-            xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle"
+          </svg>
+          <span class="ml-1">List</span>
+        </button>
+    
+        <!-- Create Button -->
+        <button class="btn btn-outline-success" 
+                hx-get="{% url 'girvi:girvi_loan_create' %}" 
+                hx-trigger="click, keyup[shiftKey&&key=='N'] from:body" 
+                hx-target="#content">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle"
             viewBox="0 0 16 16">
             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
             <path
               d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
-          </svg></button>
+          </svg>
+          <span class="ml-1">Create</span>
+        </button>
       </div>
     </div>
   </div>
   {% block loaninfo%}
   <div class="container-fluid" hx-target="this">
-    <div class="btn-group flex-wrap justify-content-between mb-3" role="group" aria-label="Basic example">
-      {%if loan.get_previous%}
-      <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_previous.pk %}" hx-push-url="true"
-        hx-swap="outerHTML transition:true" hx-vals='{"use_block": "loaninfo"}' type="button"
-        class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-          class="bi bi-arrow-left-circle" viewBox="0 0 16 16">
-          <path fill-rule="evenodd"
-            d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5z" />
-        </svg>
-        {{loan.get_previous.loanid}}</a>
-      {%endif%}
-      {%if loan.get_next %}
-      <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_next.id %}" hx-push-url="true"
-        hx-swap="outerHTML transition:true" hx-vals='{"use_block": "loaninfo"}' type="button"
-        class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-          class="bi bi-arrow-right-circle" viewBox="0 0 16 16">
-          <path fill-rule="evenodd"
-            d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5z" />
-        </svg> {{loan.get_next.loanid}}</a>
-      {%endif%}
-      <a class="btn btn-dark" hx-disable href="{%url 'girvi:loan_pdf' loan.id%}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer"
-          viewBox="0 0 16 16">
-          <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
-          <path
-            d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
-        </svg>
-      </a>
-
-      {% if not object.is_released%}
-      <a class="btn btn-success" hx-get="{% url 'girvi:girvi_release_create' object.id %}" hx-target="#content"
-        hx-push-url="true" hx-swap="innerHTML transition:true">Release
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right"
-          viewBox="0 0 16 16">
-          <path fill-rule="evenodd"
-            d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z" />
-          <path fill-rule="evenodd"
-            d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
-        </svg>
-      </a>
-      <a class="btn btn-primary" hx-get="{% url 'girvi:girvi_loan_renew' object.id %}">Renew <svg
-          xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise"
-          viewBox="0 0 16 16">
-          <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
-          <path
-            d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
-        </svg></a>
-      {%endif%}
-      <a class="btn btn-info"
-                  hx-get="{% url 'girvi:girvi_loan_update' object.id %}" hx-target="#content"
-                  hx-swap="innerHTML transition:true">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                    class="bi bi-pencil-square" viewBox="0 0 16 16">
-                    <path
-                      d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                    <path fill-rule="evenodd"
-                      d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
-                  </svg>
-                </a>
-      <a class="btn btn-danger" hx-confirm="Are You sure to delete this Loan?"
-        hx-delete="{% url 'girvi:girvi_loan_delete' object.id %}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash"
-          viewBox="0 0 16 16">
-          <path
-            d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z" />
-          <path
-            d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z" />
-        </svg>
-      </a>
+        <div class="btn-toolbar mb-3" role="toolbar" aria-label="Loan Actions">
+      <div class="btn-group mr-2" role="group" aria-label="Navigation">
+        {% if loan.get_previous %}
+        <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_previous.pk %}" hx-push-url="true"
+          hx-swap="outerHTML transition:true" hx-vals='{"use_block": "loaninfo"}' type="button"
+          class="btn btn-outline-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle"
+            viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+              d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5z" />
+          </svg>
+          Previous {{loan.get_previous.loanid}}
+        </a>
+        {% endif %}
+        {% if loan.get_next %}
+        <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_next.id %}" hx-push-url="true"
+          hx-swap="outerHTML transition:true" hx-vals='{"use_block": "loaninfo"}' type="button"
+          class="btn btn-outline-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right-circle"
+            viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+              d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5z" />
+          </svg>
+          Next {{loan.get_next.loanid}}
+        </a>
+        {% endif %}
+      </div>
+    
+      <div class="btn-group mr-2" role="group" aria-label="Actions">
+        <a class="btn btn-outline-dark" href="{% url 'girvi:loan_pdf' loan.id %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer"
+            viewBox="0 0 16 16">
+            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+            <path
+              d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+          </svg>
+          Print
+        </a>
+    
+        {% if not object.is_released %}
+        <a class="btn btn-outline-success" hx-get="{% url 'girvi:girvi_release_create' object.id %}" hx-target="#content"
+          hx-push-url="true" hx-swap="innerHTML transition:true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right"
+            viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+              d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z" />
+            <path fill-rule="evenodd"
+              d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
+          </svg>
+          Release
+        </a>
+        <a class="btn btn-outline-primary" hx-get="{% url 'girvi:girvi_loan_renew' object.id %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise"
+            viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+            <path
+              d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+          </svg>
+          Renew
+        </a>
+        {% endif %}
+      </div>
+    
+      <div class="btn-group" role="group" aria-label="Edit and Delete">
+        <a class="btn btn-outline-info" hx-get="{% url 'girvi:girvi_loan_update' object.id %}" hx-target="#content"
+          hx-swap="innerHTML transition:true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square"
+            viewBox="0 0 16 16">
+            <path
+              d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+            <path fill-rule="evenodd"
+              d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
+          </svg>
+          Edit
+        </a>
+        <a class="btn btn-outline-danger" hx-confirm="Are you sure you want to delete this loan?"
+          hx-delete="{% url 'girvi:girvi_loan_delete' object.id %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash"
+            viewBox="0 0 16 16">
+            <path
+              d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z" />
+            <path
+              d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z" />
+          </svg>
+          Delete
+        </a>
+      </div>
     </div>
     <div class="row">
       <div class="col-md-3">
         <div class="card border-primary mb-3" id="loan-details">
-
-            {% if loan.customer.get_default_pic %}
-            <img src="{{ loan.customer.get_default_pic.url }}" alt="{{ loan.customer.name }}'s Profile Picture" class="avatar-img  card-img-top">
-            {% else %}
-            <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture" class="avatar-img  card-img-top">
-            {% endif %}            
-         
-          <div class="card-body">
-              <h5 class="card-title"> {{object.loan_id}} 
-                </h5>
+          <!-- Profile Picture -->
+          {% if loan.customer.get_default_pic %}
+          <img src="{{ loan.customer.get_default_pic.url }}" alt="{{ loan.customer.name }}'s Profile Picture" class="avatar-img card-img-top">
+          {% else %}
+          <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture" class="avatar-img card-img-top">
+          {% endif %}
+        
+          <!-- Card Body -->
+          <div class="card-body  ">
+            <h5 class="card-title {% if object.is_released %}bg-success{% endif %}">Loan ID: {{object.loan_id}}</h5>
+            <p class="card-text">
+              {{customer.name}} {{customer.get_relatedas_display}} {{customer.relatedto}} <br/>
+              <a class="card-link" hx-get="{% url 'contact_customer_detail' customer.id %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true" hx-trigger="click">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-binoculars" viewBox="0 0 16 16">
+                  <path d="M3 2.5A1.5 1.5 0 0 1 4.5 1h1A1.5 1.5 0 0 1 7 2.5V5h2V2.5A1.5 1.5 0 0 1 10.5 1h1A1.5 1.5 0 0 1 13 2.5v2.382a.5.5 0 0 0 .276.447l.895.447A1.5 1.5 0 0 1 15 7.118V14.5a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 14.5v-3a.5.5 0 0 1 .146-.354l.854-.853V9.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v.793l.854.853A.5.5 0 0 1 7 11.5v3A1.5 1.5 0 0 1 5.5 16h-3A1.5 1.5 0 0 1 1 14.5V7.118a1.5 1.5 0 0 1 .83-1.342l.894-.447A.5.5 0 0 0 3 4.882V2.5zM4.5 2a.5.5 0 0 0-.5.5V3h2v-.5a.5.5 0 0 0-.5-.5h-1zM6 4H4v.882a1.5 1.5 0 0 1-.83 1.342l-.894.447A.5.5 0 0 0 2 7.118V13h4v-1.293l-.854-.853A.5.5 0 0 1 5 10.5v-1A1.5 1.5 0 0 1 6.5 8h3A1.5 1.5 0 0 1 11 9.5v1a.5.5 0 0 1-.146.354l-.854.853V13h4V7.118a.5.5 0 0 0-.276-.447l-.895-.447A1.5 1.5 0 0 1 12 4.882V4h-2v1.5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5V4zm4-1h2v-.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V3zm4 11h-4v.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5V14zm-8 0H2v.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5V14z"/>
+                </svg>
+              </a>
+              <a class="card-link" hx-get="{% url 'contact_customer_update' customer.id %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true" hx-trigger="click">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                </svg>
+              </a>
+            </p>
+            
+          
+            <p class="card-text"></p>
+              <strong>Address:</strong> {{customer.address.first}}
+          </p>
+          <p class="card-text">
+              <strong>Phone:</strong> {{customer.contactno.first}}
+          </p>
+            
           </div>
+          
+          <!-- List Group -->
           <ul class="list-group list-group-flush">
+            
             <li class="list-group-item">
-              <p class="card-text">{{object.customer}}
-            <a class=" card-link "
-                  hx-get="{% url 'contact_customer_detail' object.customer.id %}" hx-target="#content"
-                  hx-swap="innerHTML transition:true" hx-push-url="true" hx-trigger="click">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                    class="bi bi-binoculars" viewBox="0 0 16 16">
-                    <path
-                      d="M3 2.5A1.5 1.5 0 0 1 4.5 1h1A1.5 1.5 0 0 1 7 2.5V5h2V2.5A1.5 1.5 0 0 1 10.5 1h1A1.5 1.5 0 0 1 13 2.5v2.382a.5.5 0 0 0 .276.447l.895.447A1.5 1.5 0 0 1 15 7.118V14.5a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 14.5v-3a.5.5 0 0 1 .146-.354l.854-.853V9.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v.793l.854.853A.5.5 0 0 1 7 11.5v3A1.5 1.5 0 0 1 5.5 16h-3A1.5 1.5 0 0 1 1 14.5V7.118a1.5 1.5 0 0 1 .83-1.342l.894-.447A.5.5 0 0 0 3 4.882V2.5zM4.5 2a.5.5 0 0 0-.5.5V3h2v-.5a.5.5 0 0 0-.5-.5h-1zM6 4H4v.882a1.5 1.5 0 0 1-.83 1.342l-.894.447A.5.5 0 0 0 2 7.118V13h4v-1.293l-.854-.853A.5.5 0 0 1 5 10.5v-1A1.5 1.5 0 0 1 6.5 8h3A1.5 1.5 0 0 1 11 9.5v1a.5.5 0 0 1-.146.354l-.854.853V13h4V7.118a.5.5 0 0 0-.276-.447l-.895-.447A1.5 1.5 0 0 1 12 4.882V4h-2v1.5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5V4zm4-1h2v-.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V3zm4 11h-4v.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5V14zm-8 0H2v.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5V14z" />
-                  </svg>
-                </a>
-                <a class="card-link "
-                  hx-get="{% url 'contact_customer_update' object.customer.id %}" hx-target="#content"
-                  hx-swap="innerHTML transition:true" hx-push-url="true" hx-trigger="click">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                    class="bi bi-pencil-square" viewBox="0 0 16 16">
-                    <path
-                      d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                    <path fill-rule="evenodd"
-                      d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z" />
-                  </svg>
-                </a></p>
+              <strong>Date:</strong> <span>{{ object.loan_date|date:"F j, Y" }}</span>
             </li>
             <li class="list-group-item">
-              <p class="card-text"><small class="text-body-secondary">{{object.loan_date}}</small></p>
+              <strong>Created By:</strong> <span>{{object.created_by}}</span>
             </li>
             <li class="list-group-item">
-              <p class="card-text"><small class="text-body-secondary">{{object.created_by}}</small></p>
+              <strong>Due Ratio:</strong>
+              <meter value="{{dvratio}}" min="0" max="100" low="30" high="{{loan.due}}" optimum="50"></meter> {{dvratio}} %
             </li>
-            <div class="list-group-item">
-              <p class="card-text"><meter value="{{dvratio}}" min="0" max="100" low="30" high={{loan.due}} optimum="50"></meter>{{dvratio}} %</p>
-            </div>
+            <li class="list-group-item">
+              <span class="font-weight-bold">Months Since:</span>
+              <span class ="badge bg-info">{{object.noofmonths}} ({{object.loan_date|timesince}})</span>
+          </li>          
+          <li class="list-group-item">
+            <span class="font-weight-bold">Expires:</span>
+            {% if worth%}
+                <span class="badge bg-danger">{{object.calculate_months_to_exceed_value}} Months</span>
+            {% else %}
+                <span class="badge bg-danger">Expired</span>
+            {% endif %}
+        </li>
           </ul>
         </div>
         
-        {%if loan.release%}
-        <div class="card border-primary mb-3">
-          <h5 class="card-header text-center">
-
-            Release : 
-            <a class="btn btn-outline-dark btn-sm" hx-disable href="{%url 'girvi:release_form_h' object.release.id%}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer"
-                viewBox="0 0 16 16">
-                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
-                <path
-                  d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
-              </svg>
-            </a>
-            <a class="btn btn-outline-danger btn-sm" href="{%url 'girvi:girvi_release_delete' object.release.id%}"><svg
-                xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3"
-                viewBox="0 0 16 16">
-                <path
-                  d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
-              </svg></a>
-          </h5>
-          <div class="card-body table-responsive" id="release">
-
-            <table class="table table-sm table-striped-columns">
-              <tbody>
-                <tr>
-                  <td>On</td>
-                  <td>{{object.release.release_date|date}}</td>
-                </tr>
-                <tr>
-                  <td>Id</td>
-                  <td>
-                    <a href="" hx-get="{% url 'girvi:girvi_release_detail' loan.release.id %}" hx-target="#content"
-                      hx-swap="innerHTML transition:true">
-                      {{loan.release.release_id}}</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td>By</td>
-                  <td>{{loan.release.released_by.name}}</td>
-                </tr>
-
-              </tbody>
-            </table>
-
-          </div>
-        </div>
-        {%endif%}
+        
       </div>
 
       <div class="col-md-9">
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane"
-              type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">
-              Items <span class="badge text-bg-secondary">{{object.loanitems.count}}</span>
-            </button>
-          </li>
-          <!-- <li class="nav-item" role="presentation">
-          <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-tab-pane"
-            type="button" role="tab" aria-controls="profile-tab-pane" aria-selected="false">
-            Journal Entries :<span class="badge text-bg-secondary">{{loan.journal_entries.count}}</span>
-          </button>
-        </li> -->
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="payment-tab" data-bs-toggle="tab" data-bs-target="#payment-tab-pane"
-              type="button" role="tab" aria-controls="payment-tab-pane" aria-selected="false">
-              Payment :<span class="badge text-bg-secondary">{{object.loan_payments.count}}</span>
-            </button>
-          </li>
-          <!-- add another tab here -->
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="txns-tab" data-bs-toggle="tab" data-bs-target="#txns-tab-pane" type="button"
-              role="tab" aria-controls="txns-tab-pane" aria-selected="false">
-              Transactions
-            </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane"
-              type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">
-              Statement <span class="badge text-bg-secondary">{{object.statementitem_set.count}}
-            </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="notice-tab" data-bs-toggle="tab" data-bs-target="#notice-tab-pane"
-              type="button" role="tab" aria-controls="notice-tab-pane" aria-selected="false">
-              Notice:<span class="badge text-bg-secondary">{{loan.notifications.count}}</span>
-            </button>
-          </li>
-        </ul>
-        <div class="tab-content" id="myTabContent">
-          <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab"
-            tabindex="0">
-            <div class="card">
-              <div class="card-body table-responsive">
-                <table class="table table-sm caption-top table-striped">
-                  <thead>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Wt</th>
-                    <th>Purity</th>
-                    <th>Amount</th>
-                    <th>Value</th>
-                    <th>ROI</th>
-                    <th>Interest</th>
-                    <th>Action</th>
-                  </thead>
-                  <tbody id="items" hx-target="closest tr" hx-swap="outerHTML">
-                    {%for i in loan.loanitems.all%}
-                    {% include 'girvi/partials/item-inline.html' with object=i %}
-                    {%endfor%}
-                  </tbody>
-                </table>
-                {%if not loan.is_released%}
-                <p class="align-items-right">
-                  <button class="btn btn-success" hx-get="{% url 'girvi:girvi_loanitem_create' loan.id%}"
-                    hx-target="#items" hx-swap="afterbegin"><svg xmlns="http://www.w3.org/2000/svg" width="16"
-                      height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
-                      <path fill-rule="evenodd"
-                        d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
-                    </svg> Item</button>
-                </p>
-                {%endif%}
+        <div class="container mt-4">
+          <!-- Tabs Navigation -->
+          <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">
+                Items <span class="badge bg-secondary">{{object.loanitems.count}}</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="payment-tab" data-bs-toggle="tab" data-bs-target="#payment-tab-pane" type="button" role="tab" aria-controls="payment-tab-pane" aria-selected="false">
+                Payment <span class="badge bg-secondary">{{object.loan_payments.count}}</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="txns-tab" data-bs-toggle="tab" data-bs-target="#txns-tab-pane" type="button" role="tab" aria-controls="txns-tab-pane" aria-selected="false">
+                Transactions
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">
+                Statement <span class="badge bg-secondary">{{object.statementitem_set.count}}</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="notice-tab" data-bs-toggle="tab" data-bs-target="#notice-tab-pane" type="button" role="tab" aria-controls="notice-tab-pane" aria-selected="false">
+                Notice <span class="badge bg-secondary">{{loan.notifications.count}}</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="release-tab" data-bs-toggle="tab" data-bs-target="#release-tab-pane" type="button" role="tab" aria-controls="release-tab-pane" aria-selected="false">
+                Release
+              </button>
+            </li>
+          </ul>
+        
+          <!-- Tabs Content -->
+          <div class="tab-content" id="myTabContent">
+            <!-- Items Tab -->
+            <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+              <div class="card mt-3">
+                <div class="card-body ">
+                  <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                      <thead>
+                        <tr>
+                          <th>Item</th>
+                          <th>Qty</th>
+                          <th>Wt</th>
+                          <th>Purity</th>
+                          <th>Amount</th>
+                          <th>Value</th>
+                          <th>ROI</th>
+                          <th>Interest</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="items" hx-target="closest tr" hx-swap="outerHTML">
+                        {% for i in items%}
+                        {% include 'girvi/partials/item-inline.html' with object=i %}
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {% if not loan.is_released %}
+                  <div class="text-end">
+                    <button class="btn btn-success" hx-get="{% url 'girvi:girvi_loanitem_create' loan.id %}" hx-target="#items" hx-swap="afterbegin">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
+                      </svg> Add Item
+                    </button>
+                  </div>
+                  {% endif %}
+                </div>
               </div>
-            </div>
-            <div class="row">
-              <div class="col">
-                <div class="card border-primary mb-3">
-                  <h5 class="card-header text-center">Loan Summary</h5>
-                  <div class="card-body">
-                    <div class="container">
-                      <div class="row mb-2">
-                        <div class="col-6 font-weight-bold">Amount</div>
-                        <div class="col-6 table-warning">{{ object.get_loanamount_with_currency }}</div>
+                <div class="container mt-4">
+                <div class="row">
+                  <!-- Loan Summary Card -->
+                  <div class="col-md-6 mb-4">
+                    <div class="card border-primary">
+                      <div class="card-header bg-info text-white text-center">
+                        <h5 class="mb-0">Loan Summary</h5>
                       </div>
-                      <div class="row mb-2">
-                        <div class="col-6 font-weight-bold">Interest Due</div>
-                        <div class="col-6 table-warning">{{object.interest}} * {{object.noofmonths}} = {{ object.interestdue }}
+                      <div class="card-body">
+                        <div class="row mb-2">
+                          <div class="col-6 font-weight-bold">Amount</div>
+                          <div class="col-6 text-right table-warning">{{ object.get_loanamount_with_currency }}</div>
+                        </div>
+                        <div class="row mb-2">
+                          <div class="col-6 font-weight-bold">Interest Due</div>
+                          <div class="col-6 text-right table-warning">{{object.interest}} * {{object.noofmonths}} = {{ object.interestdue }}</div>
+                        </div>
+                        <div class="row mb-2">
+                          <div class="col-6 font-weight-bold">Payments</div>
+                          <div class="col-6 text-right table-info">{{object.get_total_payments}}</div>
+                        </div>
+                        <div class="row mb-2 border-top border-translucent border-dashed">
+                          <div class="col-6 font-weight-bold">Total Due</div>
+                          <div class="col-6 text-right table-success">{{object.due_with_currency}}</div>
                         </div>
                       </div>
-                      <div class="row mb-2">
-                        <div class="col-6 font-weight-bold">Payments</div>
-                        <div class="col-6 table-info">{{object.get_total_payments}}</div>
+                    </div>
+                  </div>
+              
+                  <!-- Item Summary Card -->
+                  <div class="col-md-6 mb-4">
+                    <div class="card border-primary">
+                      <div class="card-header bg-info text-white text-center">
+                        <h5 class="mb-0">Item Summary</h5>
                       </div>
-                      <div class="row mb-2">
-                        <div class="col-6 font-weight-bold">Total Due</div>
-                        <div class="col-6 table-success">{{object.due_with_currency}}</div>
+                      <div class="card-body table-responsive">
+                        <table class="table table-sm table-striped">
+                          <tbody>
+                            <tr>
+                              <td class="font-weight-bold">Item</td>
+                              <td>{{object.item}} - {{ object.item_desc }}</td>
+                            </tr>
+                            <tr>
+                              <td class="font-weight-bold">Weight</td>
+                              <td>{{weight}} </td>
+                            </tr>
+                            <tr>
+                              <td class="font-weight-bold">Pure</td>
+                              <td>
+                                <!-- {% for k, v in pure.items %}
+                                {{k}}: {{v}} gms
+                                {% endfor %} -->
+                                <!-- / "G:{{loan.pure_gold_weight|floatformat:3}} gms  S:{{loan.pure_silver_weight}} gms" -->
+                                 {{pure}}
+                              </td>
+                            </tr>
+                                                        <tr>
+                                <td class="font-weight-bold">Value:</td>
+                                <td>{{value}}/{{loan.current_value}}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold">Amount:Value %:</td>
+                                <td>
+                                    <meter value="{{lvratio}}" min="0" max="100" low="30" high="70" optimum="50"></meter>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{lvratio|floatformat:2}}%</div>
+                                </td>
+                            </tr>
+                            
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="col">
-                <div class="card  border-primary mb-3" style="width: 28rem;">
-                  <h5 class="card-header text-center">Item Summary</h5>
-                  <div class="card-body">
-                    <table class="table table-sm table-striped-columns">
-                      <tbody>
-                        <tr>
-                          <td>Item</td>
-                          <td>{{object.item}}-{{ object.item_desc }}</td>
-                        </tr>
-                        <tr>
-                          <td>Weight</td>
-                          <td>
-                            {{weight}}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Pure</td>
-                          <td>
-                            {%for k,v in pure.items%}
-                            {{k}}:{{v}} gms
-                            {%endfor%}
-                          </td>
-                        </tr>
-    
-                        <tr>
-                          <td>Months Since</td>
-                          <td>{{object.noofmonths}}</td>
-                        </tr>
-                        <tr>
-                          <td>Value</td>
-                          <td>{{value}}</td>
-                        </tr>
-                        <tr>
-                          <td>Amount:Value %</td>
-                          <td>
-                            <meter value="{{lvratio}}" min="0" max="100" low="30" high="70" optimum="50"></meter>
-                            <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{lvratio}}%</div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>OverDue?</td>
-                          <td>{{object.is_worth|localize}}</td>
-                        </tr>
-                        <tr>
-                          <td>Expires In</td>
-                          <td>{{object.calculate_months_to_exceed_value}} Months</td>
-                        </tr>
-                      </tbody>
-                    </table>
+            </div>
+        
+            <!-- Payment Tab -->
+            <div class="tab-pane fade" id="payment-tab-pane" role="tabpanel" aria-labelledby="payment-tab" tabindex="0">
+              <div class="card mt-3">
+                <div class="card-body table-responsive">
+                  <table class="table table-sm table-striped">
+                    <thead>
+                      <tr>
+                        <th>Id</th>
+                        <th>Created</th>
+                        <th>JE</th>
+                        <th>Amount</th>
+                        <th>Principal</th>
+                        <th>Interest</th>
+                        <th>With Release</th>
+                      </tr>
+                    </thead>
+                    <tbody id="payment-items">
+                      {% for i in payments %}
+                      {% include 'girvi/loanpayment/payment-inline.html' with object=i %}
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                  <div class="text-end">
+                    <a class="btn btn-success" href="{% url 'girvi:girvi_loanpayment_create' object.id %}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
+                      </svg> Add Payment
+                    </a>
                   </div>
                 </div>
               </div>
             </div>
-            
-          </div>
-          <div class="tab-pane fade" id="payment-tab-pane" role="tabpanel" aria-labelledby="payment-tab" tabindex="0">
-            <div class="table-responsive">
-              <table class="table table-sm table-striped">
-                <thead>
-                  <th>Id</th>
-                  <th>Created</th>
-                  <th>JE</th>
-                  <th>Amount</th>
-                  <th>Principal</th>
-                  <th>Interest</th>
-                  <th>with_release</th>
-                </thead>
-                <tbody id="payment-items">
-                  {%for i in object.loan_payments.all%}
-                  {% include 'girvi/loanpayment/payment-inline.html' with object=i %}
-                  {%endfor%}
-                </tbody>
-              </table>
-              <p class="align-items-right">
-                <a class="btn btn-success" href="{% url 'girvi:girvi_loanpayment_create' object.id%}"><svg
-                    xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg"
-                    viewBox="0 0 16 16">
-                    <path fill-rule="evenodd"
-                      d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
-                  </svg> Payment</a>
-              </p>
+        
+            <!-- Transactions Tab -->
+            <div class="tab-pane fade" id="txns-tab-pane" role="tabpanel" aria-labelledby="txns-tab" tabindex="0">
+              <div class="card mt-3">
+                <div class="card-body">
+                  <h3 class="card-title">Transactions</h3>
+                  {% include 'dea/txns.html' with object=je %}
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="tab-pane fade" id="txns-tab-pane" role="tabpanel" aria-labelledby="txns-tab" tabindex="0">
-            <div class="card">
-              <div class="card-body">
-                <h3 class="card-title">Transactions</h3>
-                <div class="table-responsive">
-                  <table class="table table-hover caption-top">
+        
+            <!-- Statement Tab -->
+            <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+              {% if statements %}
+              <ul class="list-group mt-3">
+                {% for i in loan.statementitem_set.all %}
+                <li class="list-group-item">
+                  Verified: {{i.verified_at}} Statement: <a href="{% url 'girvi:statement_detail' i.statement.id %}">{{i.statement.id}}</a> Discrepancy: {{i.descrepancy_found}} {{i.descrepancy_note}}
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </div>
+        
+            <!-- Notice Tab -->
+            <div class="tab-pane fade" id="notice-tab-pane" role="tabpanel" aria-labelledby="notice-tab" tabindex="0">
+              <div class="card mt-3">
+                <div class="card-body">
+                  <table class="table table-sm">
                     <thead>
                       <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Amount</th>
-                        <th>Debit Acc</th>
-                        <th>Credit Acc</th>
+                        <th>Id</th>
+                        <th>Created</th>
+                        <th>Group</th>
+                        <th>Medium</th>
+                        <th>Notification Type</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
-                    <caption>Account Transactions</caption>
-                    <tbody class="table-group-divider">
-                      {%for i in loan.get_atxns%}
-                      <tr class="table-light">
-                        <td>{{i.id}}</td>
-                        <td>{{i.created|date}}</td>
-                        <td>{{i.amount}}</td>
-                        {% if i.XactTypeCode.XactTypeCode == 'Dr'%}
-                        <td>{{i.ledgerno}}</td>
-                        <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.Account.contact.name}}</a></td>
-                        {%else%}
-                        <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.Account.contact.name}}</a></td>
-                        <td>{{i.ledgerno}}</td>
-                        {%endif%}
+                    <tbody>
+                      {% for i in loan.notifications.all %}
+                      <tr>
+                        <td><a href="{% url 'notify_notification_detail' i.id %}">{{i.id}}</a></td>
+                        <td>{{i.created}}</td>
+                        <td>{{i.group.id}}</td>
+                        <td>{{i.get_medium_type_display}}</td>
+                        <td>{{i.get_notice_type_display}}</td>
+                        <td>{{i.get_status_display}}</td>
                       </tr>
-                      {%endfor%}
+                      {% endfor %}
                     </tbody>
                   </table>
-                  {%if object.get_ltxns%}
-                  <table class="table table-hover caption-top">
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Amount</th>
-                        <th>Debit Acc</th>
-                        <th>Credit Acc</th>
-                      </tr>
-                    </thead>
-                    <caption>Ledger Transactions</caption>
-                    <tbody class="table-group-divider">
+                  <div class="text-end">
+                    <a class="btn btn-success" href="{% url 'girvi:girvi_loan_notice' loan.id %}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
+                      </svg> Add Notice
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                      {%for i in object.get_ltxns%}
-                      <tr class="table-info">
-                        <td>{{i.id}}</td>
-                        <td>{{i.created|date}}</td>
-                        <td>{{i.amount}}</td>
-                        <td>{{i.ledgerno_dr}}</td>
-                        <td>{{i.ledgerno}}</td>
-                      </tr>
-                      {%endfor%}
-                    </tbody>
-                  </table>
-                  {%endif%}
-                  {%if object.stxns.exists%}
-                  <table class="table table-hover caption-top">
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Stock</th>
-                        <th>Debit</th>
-                        <th>Credit</th>
-                      </tr>
-                    </thead>
-                    <caption>Stock Transactions</caption>
-                    <tbody class="table-group-divider">
-                      {%for i in object.stxns.all%}
-                      <tr class="table-dark">
-                        <td>{{i.id}}</td>
-                        <td>{{i.created|date}}</td>
-                        <td>{{i.stock}} {{i.lot.barcode}}</td>
-                        <td>{%if i.movement_type.direction == '+'%}+{{i.quantity}} nos +{{i.weight}} gms{%endif%}</td>
-                        <td>{%if i.movement_type.direction == '-'%}-{{i.quantity}} nos -{{i.weight}} gms{%endif%}</td>
-                      </tr>
-                      {%endfor%}
-                    </tbody>
-                  </table>
-                  {%endif%}
+            <!-- Release Tab -->
+            <div class="tab-pane fade" id="release-tab-pane" role="tabpanel" aria-labelledby="release-tab" tabindex="0">
+              <div class="card mt-3">
+                                <div class="card-body">
+                  <h3 class="card-title">Release Information</h3>
+                  {% if loan.release %}
+                  <div class="card border-primary mb-3">
+                    <div class="card-header text-center bg-primary text-white">
+                      <h5 class="mb-0">Release Details</h5>
+                    </div>
+                    <div class="card-body table-responsive" id="release">
+                      <table class="table table-sm table-striped">
+                        <tbody>
+                          <tr>
+                            <td><strong>Release Date:</strong></td>
+                            <td>{{ loan.release.release_date|date }}</td>
+                          </tr>
+                          <tr>
+                            <td><strong>Release ID:</strong></td>
+                            <td>
+                              <a href="" hx-get="{% url 'girvi:girvi_release_detail' loan.release.id %}" hx-target="#content" hx-swap="innerHTML transition:true">
+                                {{ loan.release.release_id }}
+                              </a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><strong>Released By:</strong></td>
+                            <td>{{ loan.release.released_by.name }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div class="text-center mt-3">
+                        <a class="btn btn-outline-dark btn-sm" href="{% url 'girvi:release_form_h' loan.release.id %}">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+                          </svg> Print
+                        </a>
+                        <a class="btn btn-outline-danger btn-sm" href="{% url 'girvi:girvi_release_delete' loan.release.id %}">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+                            <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z" />
+                          </svg> Delete
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                  {% else %}
+                  <p>Yet to be released</p>
+                  {% endif %}
                 </div>
               </div>
             </div>
           </div>
-          <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
-            {%if statements%}
-            <ul class="list-group">
-              {%for i in loan.statementitem_set.all%}
-              <li class="list-group-item">verified:{{i.verified_at}} Statement:<a href="{% url 'girvi:statement_detail' i.statement.id%}">{{i.statement.id}} Descrepancy:{{i.descrepancy_found}} {{i.descrepancy_note}}</a></li>
-              {%endfor%}
-            </ul>
-            {%endif%}
-          </div>
-          <div class="tab-pane fade" id="notice-tab-pane" role="tabpanel" aria-labelledby="notice-tab" tabindex="0">
-            <table class="table table-sm">
-              <thead>
-                <th>Id</th>
-                <th>Created</th>
-                <th>Group</th>
-                <th>Medium</th>
-                <th>Notification Type</th>
-                <th>Status</th>
-              </thead>
-              <tbody>
-                {%for i in loan.notifications.all%}
-                <tr>
-                  <td><a href="{% url 'notify_notification_detail' i.id%}">{{i.id}}</a></td>
-                  <td>{{i.created}}</td>
-                  <td>{{i.group.id}}</td>
-                  <td>{{i.get_medium_type_display}}</td>
-                  <td>{{i.get_notice_type_display}}</td>
-                  <td>{{i.get_status_display}}</td>
-
-                </tr>
-                {%endfor%}
-              </tbody>
-            </table>
-            <a class="btn btn-success" href="{% url 'girvi:girvi_loan_notice' loan.id%}">Create Notice</a>
-          </div>
-
         </div>
       </div>
 

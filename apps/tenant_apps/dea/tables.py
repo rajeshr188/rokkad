@@ -1,13 +1,7 @@
 import django_tables2 as tables
 
-from .models import (
-    Account,
-    AccountStatement,
-    JournalEntry,
-    Ledger,
-    LedgerStatement,
-    LedgerTransaction,
-)
+from .models import (Account, AccountStatement, JournalEntry, Ledger,
+                     LedgerStatement, LedgerTransaction)
 
 # Import the required modules
 
@@ -102,8 +96,12 @@ class AccountStatementTable(tables.Table):
 
 class JournalEntriesTable(tables.Table):
     id = tables.Column(verbose_name="ID", linkify=True)
+    desc = tables.Column(
+        verbose_name="Description", linkify=lambda record: record.get_voucher_url()
+    )
     content_object = tables.Column(
-        linkify=True, verbose_name="Voucher", accessor="get_voucher_url"
+        linkify=lambda record: record.get_voucher_url(),
+        verbose_name="Voucher",
     )
 
     class Meta:

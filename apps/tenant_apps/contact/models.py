@@ -143,6 +143,12 @@ class Customer(models.Model):
     def get_contact(self):
         return list(self.contactno.values_list("national_number", flat=True))
 
+    def get_next(self):
+        return Customer.objects.filter(id__gt=self.id).order_by("id").first()
+
+    def get_previous(self):
+        return Customer.objects.filter(id__lt=self.id).order_by("-id").first()
+
     @property
     def get_loans(self):
         return self.loan_set.unreleased()
@@ -386,8 +392,10 @@ class CustomerRelationship(models.Model):
             "f": "s",  # Father of -> Son of
             "d": "f",  # Daughter of -> Father of
             "c": "p",  # Child of -> Parent of
+            "p": "c",  # Parent of -> Child of
             "w": "h",  # Wife of -> Husband of
             "h": "w",  # Husband of -> Wife of
+            "o": "o",  # Other -> Other
         }
 
         # Get the reverse relationship

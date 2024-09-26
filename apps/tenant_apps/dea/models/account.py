@@ -200,7 +200,7 @@ class TransactionType_Ext(models.Model):
     description = models.CharField(max_length=100)
 
     def __str__(self):
-        return self.XactTypeCode_ext
+        return f"{self.XactTypeCode_ext} | {self.description}"
 
 
 class AccountTransactionManager(models.Manager):
@@ -260,8 +260,9 @@ class AccountTransaction(models.Model):
         return f"{self.XactTypeCode_ext}"
 
     def get_voucher_url(self):
-        voucher = self.journal_entry.content_object
-        return voucher.get_absolute_url()
+        # voucher = self.journal_entry.content_object
+        # return voucher.get_absolute_url()
+        return self.journal_entry.get_voucher_url()
 
 
 class Accountbalance(models.Model):

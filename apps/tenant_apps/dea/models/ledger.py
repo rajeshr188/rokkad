@@ -31,7 +31,7 @@ class Ledger(MPTTModel):
     parent = TreeForeignKey(
         "self", null=True, blank=True, on_delete=models.CASCADE, related_name="children"
     )
-    objects = LedgerManager()
+    # objects = LedgerManager()
 
     class MPTTMeta:
         order_insertion_by = ["name"]
@@ -79,11 +79,11 @@ class Ledger(MPTTModel):
         else:
             return self.debit_txns.all()
 
-    def aleg_txns(self, since=None, xacttypcode=None):
+    def aleg_txns(self, since=None, xacttypecode=None):
         if since is not None:
-            return self.aleg.filter(created__gte=since, XactTypeCode=xacttypcode)
+            return self.aleg.filter(created__gte=since, XactTypeCode=xacttypecode)
         else:
-            return self.aleg.filter(XactTypeCode=xacttypcode)
+            return self.aleg.filter(XactTypeCode=xacttypecode)
 
     def audit(self):
         # this statement will serve as opening balance for this acc
@@ -98,23 +98,7 @@ class Ledger(MPTTModel):
         bal = sum(descendants, self.get_balance())
         return bal
 
-    def current_balance(self):
-        # decendants = self.get_descendants(include_self = True)
-
-        # bal = [Balance([Money(r["total"], r["amount_currency"])
-        #                 for r in acc.debit_txns.values("amount_currency").annotate(total = Sum("amount"))])
-        #         -
-        #        Balance([Money(r["total"], r["amount_currency"])
-        #                 for r in acc.credit_txns.values("amount_currency").annotate(total = Sum("amount"))])
-        #         for acc in decendants
-        #         ]
-        ls = self.get_latest_stmt()
-        if ls is None:
-            cb = Balance()
-            since = None
-        else:
-            cb = ls.get_cb()
-            since = ls.created
+    def get_credit_bal(self, since=None):
         c_bal = (
             Balance(
                 [
@@ -127,6 +111,17 @@ class Ledger(MPTTModel):
             if self.ctxns(since=since)
             else Balance()
         )
+        aleg_cr = Balance(
+            [
+                Money(r["total"], r["amount_currency"])
+                for r in self.aleg_txns(since, "Cr")
+                .values("amount_currency")
+                .annotate(total=Sum("amount"))
+            ]
+        )
+        return c_bal + aleg_cr
+
+    def get_debit_bal(self, since=None):
         d_bal = (
             Balance(
                 [
@@ -139,14 +134,6 @@ class Ledger(MPTTModel):
             if self.dtxns(since=since)
             else Balance()
         )
-        aleg_cr = Balance(
-            [
-                Money(r["total"], r["amount_currency"])
-                for r in self.aleg_txns(since, "Cr")
-                .values("amount_currency")
-                .annotate(total=Sum("amount"))
-            ]
-        )
         aleg_dr = Balance(
             [
                 Money(r["total"], r["amount_currency"])
@@ -155,9 +142,83 @@ class Ledger(MPTTModel):
                 .annotate(total=Sum("amount"))
             ]
         )
+        return d_bal + aleg_dr
 
-        bal = cb + (d_bal - c_bal) + (aleg_cr - aleg_dr)
+    def current_balance(self):
+        ls = self.get_latest_stmt()
+        if ls is None:
+            cb = Balance()
+            since = None
+        else:
+            cb = ls.get_cb()
+            since = ls.created
+
+        credit_balance = self.get_credit_bal(since)
+        debit_balance = self.get_debit_bal(since)
+
+        bal = cb + (debit_balance - credit_balance)
         return bal
+
+    # def current_balance(self):
+    #     # decendants = self.get_descendants(include_self = True)
+
+    #     # bal = [Balance([Money(r["total"], r["amount_currency"])
+    #     #                 for r in acc.debit_txns.values("amount_currency").annotate(total = Sum("amount"))])
+    #     #         -
+    #     #        Balance([Money(r["total"], r["amount_currency"])
+    #     #                 for r in acc.credit_txns.values("amount_currency").annotate(total = Sum("amount"))])
+    #     #         for acc in decendants
+    #     #         ]
+    #     ls = self.get_latest_stmt()
+    #     if ls is None:
+    #         cb = Balance()
+    #         since = None
+    #     else:
+    #         cb = ls.get_cb()
+    #         since = ls.created
+    #     c_bal = (
+    #         Balance(
+    #             [
+    #                 Money(r["total"], r["amount_currency"])
+    #                 for r in self.ctxns(since)
+    #                 .values("amount_currency")
+    #                 .annotate(total=Sum("amount"))
+    #             ]
+    #         )
+    #         if self.ctxns(since=since)
+    #         else Balance()
+    #     )
+    #     d_bal = (
+    #         Balance(
+    #             [
+    #                 Money(r["total"], r["amount_currency"])
+    #                 for r in self.dtxns(since)
+    #                 .values("amount_currency")
+    #                 .annotate(total=Sum("amount"))
+    #             ]
+    #         )
+    #         if self.dtxns(since=since)
+    #         else Balance()
+    #     )
+    #     aleg_cr = Balance(
+    #         [
+    #             Money(r["total"], r["amount_currency"])
+    #             for r in self.aleg_txns(since, "Cr")
+    #             .values("amount_currency")
+    #             .annotate(total=Sum("amount"))
+    #         ]
+    #     )
+    #     aleg_dr = Balance(
+    #         [
+    #             Money(r["total"], r["amount_currency"])
+    #             for r in self.aleg_txns(since, "Dr")
+    #             .values("amount_currency")
+    #             .annotate(total=Sum("amount"))
+    #         ]
+    #     )
+
+    #     bal = cb + (d_bal - c_bal) + (aleg_cr - aleg_dr)
+    #     return bal
 
     def get_balance(self):
         return self.ledgerbalance.get_currbal()

@@ -4,7 +4,9 @@ from . import views
 
 urlpatterns = [
     # other urls...
-    path("invite/", views.create_invite, name="invite_to_company"),
+    path(
+        "company/<int:company_id>/invite", views.create_invite, name="invite_to_company"
+    ),
     path("invite/success/", views.invite_success, name="invite-success-url"),
     path(
         "invitations/accept-invite/<str:key>/",
@@ -41,7 +43,7 @@ urlpatterns = [
         name="orgs_membership_update",
     ),
     path(
-        "membership/revoke/<int:membership_id>/",
+        "company/<int:company_id>/membership/<int:membership_id>/revoke",
         views.membership_revoke,
         name="orgs_membership_revoke",
     ),

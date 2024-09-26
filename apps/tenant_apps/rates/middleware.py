@@ -22,13 +22,17 @@ class RateMiddleware(MiddlewareMixin):
         ):
             request.grate = None
             request.srate = None
+            request.brate = None
             return
         grate = cache.get("gold_rate")
         srate = cache.get("silver_rate")
+        brate = cache.get("bronze_rate")
 
-        if not (grate and srate):
+        if not (grate and srate and brate):
             latest_rates = (
-                Rate.objects.filter(metal__in=[Rate.Metal.GOLD, Rate.Metal.SILVER])
+                Rate.objects.filter(
+                    metal__in=[Rate.Metal.GOLD, Rate.Metal.SILVER, Rate.Metal.BRONZE]
+                )
                 .values("metal")
                 .annotate(latest_timestamp=Max("timestamp"))
             )
@@ -44,6 +48,11 @@ class RateMiddleware(MiddlewareMixin):
                         metal=Rate.Metal.SILVER, timestamp=rate["latest_timestamp"]
                     )
                     cache.set("silver_rate", srate)
+                elif rate["metal"] == Rate.Metal.BRONZE and not brate:
+                    brate = Rate.objects.get(
+                        metal=Rate.Metal.BRONZE, timestamp=rate["latest_timestamp"]
+                    )
 
         request.grate = grate
         request.srate = srate
+        request.brate = brate

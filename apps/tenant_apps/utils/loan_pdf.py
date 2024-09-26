@@ -7,6 +7,9 @@ import reportlab.rl_config
 
 reportlab.rl_config.warnOnMissingFontGlyphs = 1
 
+import time
+import unicodedata
+
 from django.http import HttpResponse
 from num2words import num2words
 from reportlab.graphics import renderPDF
@@ -18,23 +21,14 @@ from reportlab.lib.pagesizes import A4, landscape, letter, mm
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, inch, mm
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import (
-    Flowable,
-    Frame,
-    FrameBreak,
-    Image,
-    KeepTogether,
-    ListFlowable,
-    ListItem,
-    PageBreak,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import (Flowable, Frame, FrameBreak, Image,
+                                KeepTogether, ListFlowable, ListItem,
+                                PageBreak, Paragraph, Preformatted,
+                                SimpleDocTemplate, Spacer, Table, TableStyle)
 from reportlab.platypus.doctemplate import PageTemplate
 
 from apps.tenant_apps.contact.models import Customer
@@ -113,7 +107,14 @@ def generate_loan_items_table(loan, styles):
         "Bold", parent=styles["Normal"], fontName="Helvetica-Bold"
     )
     # Initialize table data with headers
-    li_data = [["Item Description", "Weight", "Amount", "Value"]]
+    li_data = [
+        [
+            "Item",
+            "Weight",
+            "Amount",
+            # "Value"
+        ]
+    ]
 
     # Populate table data with loan items
     for i, item in enumerate(loan.loanitems.all(), start=1):
@@ -123,7 +124,7 @@ def generate_loan_items_table(loan, styles):
                 f"{i}.{item.itemdesc}-{item.itemtype}",
                 item.weight,
                 item.loanamount,
-                item.current_value(),
+                # item.current_value(),
             ]
         )
 
@@ -133,7 +134,7 @@ def generate_loan_items_table(loan, styles):
             "Total",
             loan.formatted_weight(joiner=","),
             Paragraph(f"{loan.loan_amount}", boldStyle),
-            loan.current_value(),
+            # loan.current_value(),
         ]
     )
 
@@ -145,13 +146,18 @@ def generate_loan_items_table(loan, styles):
                 styles["Normal"],
             ),
             "",
-            "",
-            "",
+            Paragraph(f"Value : {loan.current_value()}", boldStyle),
         ]
     )
 
     # Create the table
     loanitems_table = Table(li_data)
+    # Define column widths and row heights
+    # col_widths = [150, 50, 50, 50]  # Adjust these values as needed
+    # row_heights = [None] * len(li_data)  # Use None for auto height, or specify fixed heights
+
+    # # Create the table with fixed column widths and row heights
+    # loanitems_table = Table(li_data, colWidths=col_widths, rowHeights=row_heights)
 
     # Set table style
     loanitems_table.setStyle(
@@ -163,8 +169,13 @@ def generate_loan_items_table(loan, styles):
                 (
                     "SPAN",
                     (0, -1),
-                    (-1, -1),
-                ),  # Span the first cell of the last row across all columns
+                    (1, -1),
+                ),
+                # (
+                #     "SPAN",
+                #     (0, -1),
+                #     (-1, -1),
+                # ),  # Span the first cell of the last row across all columns
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]
         )
@@ -224,12 +235,6 @@ def create_loan_header_table(loan, styles, spacer):
     d = Drawing(50, 50, transform=[50.0 / width, 0, 0, 50.0 / height, 0, 0])
     d.add(qr_code)
 
-    # # Convert the QR code to an image
-    # buffer = io.BytesIO()
-    # renderPDF.drawToFile(d, buffer)
-    # buffer.seek(0)
-    # qr_code_image = Image(buffer, width=50, height=50)
-
     logo = Image("static/images/falconx.png", 50, 50)
 
     shop_license = loan.series.license
@@ -238,21 +243,33 @@ def create_loan_header_table(loan, styles, spacer):
     default_pic = customer.get_default_pic()
     if default_pic:
         customer_pic = Image(default_pic.path, 50, 50)
-    
+    # Create new styles with center alignment
+    centeredHeading2 = ParagraphStyle(
+        name="CenteredHeading2",
+        parent=styles["Heading2"],
+        alignment=TA_CENTER,
+    )
+
+    centeredHeading3 = ParagraphStyle(
+        name="CenteredHeading3",
+        parent=styles["Heading3"],
+        alignment=TA_CENTER,
+    )
     header_data = [
         [
             Paragraph("Sec Rules 8", styles["Normal"]),
             Paragraph(
-                f"Pawn Ticket <font name='NotoSansTamil-VariableFont_wdth,wght'>அடகு சீட்டு </font>",
+                f"Pawn Ticket <font face='NotoSansTamil-Regular'>அடகு சீட்டு </font>",
                 styles["Heading3"],
             ),
-            Paragraph(""),
-            Paragraph(f"{loan.series.license.name}", styles["Normal"]),
+            Paragraph(f"", styles["Normal"]),
+            Paragraph(f"P.B.L No:{loan.series.license.name}", styles["Normal"]),
         ],
         [
             logo,
             [
                 Paragraph(shop_license.shopname, styles["Heading3"]),
+                Paragraph("Pawn Brokers", styles["Heading3"]),
                 Paragraph(
                     f"<font size=12>{shop_license.address}</font>", styles["Normal"]
                 ),
@@ -265,13 +282,13 @@ def create_loan_header_table(loan, styles, spacer):
             d,
         ],
         [
-            Paragraph(f"LoanId : <b>{loan.loan_id}</b>", styles["Normal"]),
+            Paragraph(f"Loan Id : <b>{loan.loan_id}</b>", styles["Normal"]),
             Paragraph(""),
             Paragraph(
                 f"Date : <b>{loan.loan_date.strftime('%d-%m-%Y')}</b>", styles["Normal"]
             ),
         ],
-        [Paragraph("Customer", styles["Heading3"])],
+        [Paragraph("Customer", styles["Heading5"])],
         [
             customer_pic,
             [
@@ -285,7 +302,7 @@ def create_loan_header_table(loan, styles, spacer):
                 ),
             ],
         ],
-        [Paragraph("Following article/s are pawned with me:", styles["Heading4"])],
+        [Paragraph("Following article/s are pawned with me:", styles["Heading5"])],
     ]
 
     header = Table(header_data)
@@ -337,12 +354,13 @@ def get_label(loan, styles):
     normal = styles["Normal"]
     normal.fontName = "Helvetica"
     normal.fontSize = 10
+    normal.alignment = TA_LEFT
     label = Table(
         [
             [
                 Paragraph(
-                    f"""<b>{loan.loan_id} {loan.loan_date.date()}</b><br/>
-                    <b>{loan.loan_amount} {loan.customer.name}</b><br/>
+                    f"""<b>{loan.loan_id}  {loan.loan_date.date()}</b><br/>
+                    <b>{loan.loan_amount}  {loan.customer.name}</b><br/>
                     <b>{loan.formatted_weight()}</b>""",
                     styles["Normal"],
                 ),
@@ -430,6 +448,7 @@ def create_signature_flowable(styles, simple_tblstyle):
     signature = Table(
         [
             ["", ""],
+            ["", ""],
             [
                 Paragraph(
                     "<font size=8>Signature/Thumb Impression of the pawner</font>",
@@ -441,8 +460,16 @@ def create_signature_flowable(styles, simple_tblstyle):
             ],
         ]
     )
-    signature.setStyle(simple_tblstyle)
-
+    signature.setStyle(
+        TableStyle(
+            [
+                ("LINEBEFORE", (0, 0), (-1, -1), 0, colors.white),
+                ("LINEAFTER", (0, 0), (-1, -1), 0, colors.white),
+                ("LINEABOVE", (0, 0), (-1, -1), 0, colors.white),
+                ("LINEBELOW", (0, 0), (-1, -1), 0, colors.white),
+            ]
+        )
+    )
     return signature
 
 
@@ -470,45 +497,85 @@ def page3(styles):
         Paragraph("Terms & Conditions", centeredHeading2),
         ListFlowable(
             [
-                Paragraph(
-                    "The rate of interest on any pledged articles shall not exceed 24% per annum.",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        "The rate of interest on any pledged articles shall not exceed 24% per annum.",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    "Every Pledge shall be redeemable within a period of one year or such longer period as may be provided in the contract between the parties from the day of pawning and shall further continue to be redeemable during seven days of grace following the said period. A pledge shall further continue to be redeemable until it is disposed of as provided in the act although the period of redemption and of grace have expired.",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        "Every Pledge shall be redeemable within a period of one year or such longer period as may be provided in the contract between the parties from the day of pawning and shall further continue to be redeemable during seven days of grace following the said period. A pledge shall further continue to be redeemable until it is disposed of as provided in the act although the period of redemption and of grace have expired.",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    "Rate of Interest charged 12% per annum. The time agreed upon for redemption of the article in months only.",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        "Rate of Interest charged 12% per annum. The time agreed upon for redemption of the article in months only.",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    f"<font name='NotoSansTamil-VariableFont_wdth,wght'>3 மதத்திற்கு ஒரு முறை  தவறாமல் வட்டி செலுத்தவேண்டும்</font>",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        f"<font name='NotoSansTamil-Regular'>3 மதத்திற்கு ஒரு முறை  தவறாமல் வட்டி செலுத்தவேண்டும்</font>",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    f"<font name='NotoSansTamil-VariableFont_wdth,wght'>இந்த ரசித்து கொண்டுவந்ததால் தன பொருள் (அ ) நகை கொடுக்கப்படும் </font>",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        f"<font name='NotoSansTamil-Regular'>இந்த ரசித்து கொண்டுவந்ததால் தன பொருள் (அ ) நகை கொடுக்கப்படும் </font>",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    f"<font name='NotoSansTamil-VariableFont_wdth,wght'>வியாபாரம் நேரம் :காலை  9:00 முதல் பகல் 1:00 மணி வரை ,பகல் 2:00 மணி முதல் மலை 7:00 மணி வரை  ஞாயுறு விடுமுறை .</font>",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        f"<font name='NotoSansTamil-Regular'>வியாபாரம் நேரம் :காலை  9:00 முதல் பகல் 1:00 மணி வரை ,பகல் 2:00 மணி முதல் மலை 7:00 மணி வரை  ஞாயுறு விடுமுறை .</font>",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    f"<font name='NotoSansTamil-VariableFont_wdth,wght'>இந்த ரசித்து பிறர் வசம்  கொடுக்கக்கூடாது</font>",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        f"<font name='NotoSansTamil-Regular'>இந்த ரசித்து பிறர் வசம்  கொடுக்கக்கூடாது</font>",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    f"<font name='NotoSansTamil-VariableFont_wdth,wght'>ஒரு வருடம் 7 நாட்களுக்குமேல் தாங்கள் அடகு வாய்த்த பொருட்கள் ஏல்லத்தில் விட படும்</font>",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        f"<font name='NotoSansTamil-Regular'>ஒரு வருடம் 7 நாட்களுக்குமேல் தாங்கள் அடகு வாய்த்த பொருட்கள் ஏல்லத்தில் விட படும்</font>",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    f"<font name='NotoSansTamil-VariableFont_wdth,wght'>குறிப்பு: மதத்திற்கு அவ்வளவு நாட்கள் குறையினும் முழு மாத வட்டி செலுத்தவேண்டும் .நீங்கள் வரு இடம் போகும் பட்சத்தில் விலாசம் தெரிவிக்க வேண்டும்.</font>",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        f"<font name='NotoSansTamil-Regular'>குறிப்பு: மதத்திற்கு அவ்வளவு நாட்கள் குறையினும் முழு மாத வட்டி செலுத்தவேண்டும் .நீங்கள் வரு இடம் போகும் பட்சத்தில் விலாசம் தெரிவிக்க வேண்டும்.</font>",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
-                Paragraph(
-                    f"<font name='NotoSansTamil-VariableFont_wdth,wght'>இதில் கண்ட நகைகள் சரிபாத்து பெற்றுக்கொண்டேன் .</font>",
-                    normal,
+                ListItem(
+                    Paragraph(
+                        f"<font name='NotoSansTamil-Regular'>இதில் கண்ட நகைகள் சரிபாத்து பெற்றுக்கொண்டேன் .</font>",
+                        normal,
+                    ),
+                    spaceBefore=10,
+                    spaceAfter=10,
                 ),
             ],
             bulletType="bullet",
@@ -519,44 +586,81 @@ def page3(styles):
 
 
 def page4(styles):
-    normal = styles[
-        "Normal"
-    ]  # Assuming 'Normal' style is defined in the styles dictionary
+    # Register the font
+    pdfmetrics.registerFont(
+        TTFont("NotoSansTamil", "static/fonts/NotoSansTamil-Regular.ttf")
+    )
+    normal = ParagraphStyle(
+        name="Normal",
+        parent=styles["Normal"],
+        alignment=TA_CENTER,
+        fontName="NotoSansTamil",
+    )  # Assuming 'Normal' style is defined in the styles dictionary
+    centeredHeading1 = ParagraphStyle(
+        name="CenteredHeading1",
+        parent=styles["Heading1"],
+        alignment=TA_CENTER,
+        fontName="NotoSansTamil",
+    )
     centeredHeading2 = ParagraphStyle(
         name="CenteredHeading2",
-        parent=styles["Heading2"],
+        parent=styles["Heading3"],
         alignment=TA_CENTER,
+        fontName="NotoSansTamil",
     )
-    d3 = """<font name='NotoSansTamil-VariableFont_wdth,wght'>
-        (8(6) பிரிவையும்  6(1) விதியையும் பார்க்கவும் )<br/>
-        அடகு சீட்டு தொலைந்து விட்டது அல்லது அழிந்து விட்டது என்று அடகு வைத்தவரால் கொடுக்கப்படும் உறுதிமொழி <br/>
-
-        பெயர் .............................................................................................................................
-        தந்தை /கணவர் ..................................................................................................................
-        ஊர் ................................................................தாலுகா ......................................................
-        நாலிட்ட .............................................................என்னுள்ள (தெரிந்தால் ) அடகு சீட்டை பெற்றுக்கொண்டேன் என்றும் அது இப்போது தொலைந்துவிட்டது /அழிந்துவிட்டது என்றும் எனக்கு நன்றாக தெரிந்திருந்து நான் அவ்வாறு நம்புகின்ற அளவில் இந்த அடகு வாய்த்த சீட்டு என்னால் எவருக்கும் விற்கப்படவில்லை ஒப்படிக்க படவில்லை 
-        அல்லது மாற்றப்படவில்லை என்றும் தமிழ்நாடு 1943-ஆம் ஆண்டு அடகுக்கடைக்காரர் சட்டம் (23,1943)8-வது பிரிவை சேர்ந்த (6)உட்பிரிவின்படி உளமாரவும் உண்மையாகவும் உறுதிமொழி கூறுகின்றேன் .<br/>
-
-            மேலே குறிப்பிட்டுள்ள பொருள் /பொருள்கள் பின்வரும் விவரம் :<br/>
-        உள்ளதாகும் /உள்ளவையாகும் :<br/><br/>
-            அடகு வைத்தவரின் கையொப்பம் :<br/>
-            தொழில் :<br/>
-            முகவரி:<br/>
-            நாள் :<br/><br/>
-        மேற்படி உறுதிமொழி கொடுத்தவர் ......................................................<br/>
-        என்பவர் எனக்கு தெரியும் என்று ......................சேர்ந்த .......................................நன் என்னும் மேற்படி சட்டத்தின் 8-வது பிரிவை சேர்ந்த (6) உட்பிரிவின்படி உண்மையாகவும் உறுதிமொழி கூறுகின்றேன் <br/><br/>
-            அடையாளம் கொடுப்பவரின் கையொப்பம் :<br/>
-            தொழில் :<br/>
-            முகவரி :<br/>
-            நாள் :<br/>
-        </font>"""
 
     right_flowables_page2 = [
         Paragraph(
-            f"D3 <font name='NotoSansTamil-VariableFont_wdth,wght'> படிவம்</font>",
+            f"D3  படிவம்",
             centeredHeading2,
         ),
-        Paragraph(f"{d3}", styles["Normal"]),
+        Preformatted(
+            """
+        (8(6) பிரிவையும்  6(1) விதியையும் பார்க்கவும் )
+        அடகு சீட்டு தொலைந்து விட்டது அல்லது அழிந்து 
+        விட்டது என்று அடகு வைத்தவரால் கொடுக்கப்படும் 
+        உறுதிமொழி சீட்டு""",
+            centeredHeading2,
+        ),
+        Preformatted(
+            """
+        பெயர் ................................................................................................................
+        தந்தை /கணவர் .................................................................................................
+        ஊர் ..........................தாலுகா ...............................................................................
+        நாலிட்ட ..............................என்னுள்ள (தெரிந்தால் ) அடகு 
+        சீட்டை பெற்றுக்கொண்டேன் என்றும் அது இப்போது தொலைந்து 
+        விட்டது/அழிந்து விட்டது என்றும் எனக்கு நன்றாக தெரிந்திருந்து 
+        நான் அவ்வாறு நம்புகின்ற அளவில் இந்த அடகு வாய்த்த சீட்டு 
+        என்னால் எவருக்கும் விற்கப்படவில்லை ஒப்படிக்க படவில்லை 
+        அல்லது மாற்றப்படவில்லை என்றும் தமிழ்நாடு 1943-ஆம் ஆண்டு 
+        அடகுக்கடைக்காரர் சட்டம் (23,1943)8-வது பிரிவை சேர்ந்த 
+        (6)உட்பிரிவின்படி உளமாரவும் உண்மையாகவும் உறுதிமொழி 
+        கூறுகின்றேன் .
+
+        மேலே குறிப்பிட்டுள்ள பொருள் /பொருள்கள் பின்வரும் விவரம் :
+        உள்ளதாகும் /உள்ளவையாகும் :
+
+            அடகு வைத்தவரின் கையொப்பம் :
+
+            தொழில் :
+            முகவரி :
+            நாள் :
+
+        மேற்படி உறுதிமொழி கொடுத்தவர் ..................................
+        என்பவர் எனக்கு தெரியும் என்று .....................................
+        சேர்ந்த ..................நன் என்னும் மேற்படி சட்டத்தின் 8-வது பிரிவை 
+        சேர்ந்த (6) உட்பிரிவின்படி உண்மையாகவும் உறுதிமொழி 
+        கூறுகின்றேன்
+
+            அடையாளம் கொடுப்பவரின் கையொப்பம் :
+            தொழில் :
+            முகவரி :
+            நாள் :
+
+
+        """,
+            normal,
+        ),
     ]
 
     return right_flowables_page2
@@ -565,10 +669,11 @@ def page4(styles):
 def get_loan_template(loan):
     pdfmetrics.registerFont(
         TTFont(
-            "NotoSansTamil-VariableFont_wdth,wght",
-            "static/fonts/NotoSansTamil-VariableFont_wdth,wght.ttf",
+            "NotoSansTamil-Regular",
+            "static/fonts/NotoSansTamil-Regular.ttf",
         ),
     )
+
     # Create a file-like buffer to receive PDF data.
     buffer = io.BytesIO()
     my_canvas = Canvas(buffer, pagesize=landscape(A4))
@@ -614,17 +719,26 @@ def get_loan_template(loan):
         ]
     )
     release_para.setStyle(simple_tblstyle)
-
+    # Define the headings
+    header_style = styles["Heading4"]
+    original_heading = Paragraph("Original", header_style)
+    duplicate_heading = Paragraph("Duplicate", header_style)
     flowables = [header, loanitems_table, spacer, sign]
-    left_flowables = [*flowables, terms]
-    right_flowables = [*flowables, release_para]
+    left_flowables = [
+        original_heading,
+        *flowables,
+        spacer,
+        Paragraph("Terms & Conditions", normal),
+        terms,
+    ]
+    right_flowables = [duplicate_heading, *flowables, spacer, release_para]
 
     left_frame, right_frame = create_frames(w, h, margin=10, separation=10)
     left_frame.addFromList(left_flowables, my_canvas)
     right_frame.addFromList(right_flowables, my_canvas)
     draw_center_dotted_line(my_canvas)
     label = get_label(loan, styles)
-    label_height = 20  # Assuming the height of the label, adjust as needed
+    label_height = 25  # Assuming the height of the label, adjust as needed
     bottom_margin = 5 * mm  # Adjust based on your document's bottom margin
 
     # Calculate the y position for the label to be at the bottom of the frame
@@ -636,13 +750,13 @@ def get_loan_template(loan):
 
     my_canvas.showPage()
 
-    # Recreate the frames for the second page
-    left_frame, right_frame = create_frames(w, h, margin=10, separation=10)
-    page3_flowables = page3(styles)
-    page4_flowables = page4(styles)
-    left_frame.addFromList(page3_flowables, my_canvas)
-    right_frame.addFromList(page4_flowables, my_canvas)
-    draw_center_dotted_line(my_canvas)
+    # # Recreate the frames for the second page
+    # left_frame, right_frame = create_frames(w, h, margin=10, separation=10)
+    # page3_flowables = page3(styles)
+    # page4_flowables = page4(styles)
+    # left_frame.addFromList(page3_flowables, my_canvas)
+    # right_frame.addFromList(page4_flowables, my_canvas)
+    # draw_center_dotted_line(my_canvas)
 
     my_canvas.save()
     pdf = buffer.getvalue()
@@ -682,7 +796,6 @@ def get_custom_jsk(loan):
     if default_pic:
         customer_pic = Image(default_pic.path, 50, 50)
 
-    
         # Set the desired dimensions for the image (e.g., 5x5 cm)
         desired_width = 2.5 * cm
         desired_height = 2.5 * cm
@@ -692,9 +805,7 @@ def get_custom_jsk(loan):
         image_y = 16 * cm - desired_height
 
         # Draw the image on the canvas
-        customer_image = Image(
-            default_pic, width=desired_width, height=desired_height
-        )
+        customer_image = Image(default_pic, width=desired_width, height=desired_height)
         customer_image.drawOn(c, image_x, image_y)
 
         # Draw a border around the image
@@ -799,15 +910,135 @@ def get_custom_jsk(loan):
     return pdf
 
 
+def get_custom_jcl(loan):
+    page_width, page_height = landscape(A4)
+    a5_width = page_width / 2
+    a5_height = page_height
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+
+    styles = getSampleStyleSheet()
+
+    def draw_frame(x_offset, y_offset):
+        c.setFillColorRGB(0, 0, 0)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(
+            x_offset + 11 * cm,
+            y_offset + 15.2 * cm,
+            f"{loan.loan_date.strftime('%d-%m-%Y')}",
+        )
+        c.drawString(x_offset + 11 * cm, y_offset + 14.7 * cm, f"{loan.lid}")
+
+        customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
+        customer_paragraph = Paragraph(customer, styles["Heading3"])
+        width, height = customer_paragraph.wrap(a5_width, a5_height)
+        customer_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 15.2 * cm - height)
+
+        default_pic = loan.customer.get_default_pic()
+        if default_pic:
+            desired_width = 2 * cm
+            desired_height = 2 * cm
+            image_x = x_offset + 1.5 * cm
+            image_y = y_offset + 15.5 * cm - desired_height
+            customer_image = Image(
+                default_pic.path, width=desired_width, height=desired_height
+            )
+            customer_image.drawOn(c, image_x, image_y)
+            border_padding = 2
+            c.setStrokeColorRGB(0, 0, 0)
+            c.setLineWidth(1)
+            c.rect(
+                image_x - border_padding,
+                image_y - border_padding,
+                desired_width + 2 * border_padding,
+                desired_height + 2 * border_padding,
+            )
+
+        address = loan.customer.address.first()
+        address_paragraph = Paragraph(
+            f" {address.doorno},{address.street}<br/>{address.area},{address.city}",
+            styles["Normal"],
+        )
+        width, height = address_paragraph.wrap(a5_width, a5_height)
+        c.setFont("Helvetica-Bold", 10)
+        address_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 14.7 * cm - height)
+
+        c.drawString(
+            x_offset + 4 * cm,
+            y_offset + 13.5 * cm,
+            f"Ph: {loan.customer.contactno.first()}",
+        )
+
+        c.setFont("Helvetica-Bold", 14)
+        data = [["Description"]]
+        for i, item in enumerate(loan.loanitems.all(), start=1):
+            itemdesc = Paragraph(item.itemdesc, styles["Normal"])
+            data.append([f"{i}, {item.itemdesc}"])
+
+        table = Table(data)
+        table.setStyle(
+            TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black)])
+        )
+        table.wrapOn(c, a5_width / 2, a5_height)
+        table.drawOn(c, x_offset + 1.5 * cm, y_offset + 11.5 * cm)
+
+        c.setFont("Helvetica", 12)
+        c.drawString(
+            x_offset + 3 * cm, y_offset + 8.8 * cm, loan.formatted_weight(joiner="gms,")
+        )
+        c.drawString(
+            x_offset + 11.5 * cm, y_offset + 8.8 * cm, f"{loan.current_value()}"
+        )
+
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(x_offset + 3 * cm, y_offset + 7.5 * cm, f"{loan.loan_amount}")
+        amt_fig = num2words(loan.loan_amount, lang="en_IN")
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(x_offset + 5.8 * cm, y_offset + 7.5 * cm, f"{amt_fig} rupees only")
+
+    # Draw the first frame (left side)
+    draw_frame(0, 0)
+
+    # Draw the second frame (right side)
+    draw_frame(a5_width, 0)
+
+    c.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
+
+
+def generate_grid_template():
+    page_width, page_height = landscape(A4)
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+
+    # Draw grid for the entire A4 landscape page
+    c.setFont("Helvetica", 8)
+    c.setStrokeColorRGB(0.8, 0.8, 0.8)  # Light gray for grid lines
+
+    # Draw vertical lines
+    for x in range(0, int(page_width), int(1 * cm)):
+        c.line(x, 0, x, page_height)
+        c.drawString(x + 2, 2, f"{x // cm}cm")
+
+    # Draw horizontal lines
+    for y in range(0, int(page_height), int(1 * cm)):
+        c.line(0, y, page_width, y)
+        c.drawString(2, y + 2, f"{y // cm}cm")
+
+    # Draw a thicker line to separate the two A5 frames
+    c.setStrokeColorRGB(0, 0, 0)  # Black for the separator line
+    c.setLineWidth(2)
+    c.line(page_width / 2, 0, page_width / 2, page_height)
+
+    c.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
+
+
 # form_letter.py
-
-import time
-
-from reportlab.lib.enums import TA_JUSTIFY
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer
 
 
 def form_letter():
@@ -1579,31 +1810,445 @@ def print_noticegroup(selection=None):
     return response
 
 
-def print_labels_pdf(loans):
+# def print_labels_pdf(loans, page_width_inch=3):
+#     # Convert inches to points (1 inch = 72 points)
+#     page_width = page_width_inch * 72
+#     page_height = 2 * 72  # Fixed height of 2 inches
+
+#     # Create a file-like buffer to receive PDF data.
+#     buffer = io.BytesIO()
+#     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+
+#     for i, loan in enumerate(loans):
+#         # Calculate the position for each label
+#         x_offset = 10
+#         y_offset = page_height - 10  # Start from the top of the page
+
+#         # Draw loan details in the first column
+#         c.setFont("Helvetica", 8)
+#         c.drawString(x_offset, y_offset, f"Loan ID: {loan.loan_id}")
+#         c.drawString(x_offset, y_offset - 10, f"Loan Date: {loan.loan_date.date()}")
+#         c.drawString(x_offset, y_offset - 20, f"Loan Amount: {loan.loan_amount}")
+#         c.drawString(x_offset, y_offset - 30, f"Weight: {loan.formatted_weight(joiner=', ')}")
+#         c.drawString(x_offset, y_offset - 40, f"Customer: {loan.customer.name}")
+#         c.drawString(x_offset, y_offset - 50, f"Item Description: {loan.item_desc}")
+
+#         # Draw QR code in the second column
+#         qr_code = qr.QrCodeWidget(loan.loan_id)
+#         bounds = qr_code.getBounds()
+#         qr_width = bounds[2] - bounds[0]
+#         qr_height = bounds[3] - bounds[1]
+#         d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
+#         d.add(qr_code)
+#         renderPDF.draw(d, c, page_width - 55, y_offset - 45)  # Adjust x_offset for QR code
+
+#         # Start a new page after each label
+#         c.showPage()
+
+#     c.save()
+
+#     # Create a new HTTP response with PDF data.
+#     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+#     response["Content-Disposition"] = "inline; filename=labels.pdf"
+#     return response
+
+
+def print_labels_pdf(loans, labels_per_row=3, labels_per_column=10):
+    # Page size for A4
+    page_width, page_height = A4
+    label_width = page_width / labels_per_row
+    label_height = page_height / labels_per_column
+
     # Create a file-like buffer to receive PDF data.
     buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
 
-    width, height = 288, 144  # Page size for 4-inch wide, 2-inch high label
-    c = canvas.Canvas(buffer, pagesize=(width, height))
+    # Draw dotted lines for cutting
+    c.setDash(1, 2)  # Set dash pattern: 1 point on, 2 points off
+    for row in range(labels_per_column):
+        y = (
+            page_height - row * label_height - 10
+        )  # Move the horizontal lines a little lower
+        c.line(0, y, page_width, y)  # Horizontal lines
+
+    for col in range(labels_per_row):
+        x = col * label_width
+        c.line(x, 0, x, page_height)  # Vertical lines
+
+    c.setDash()  # Reset to solid lines
 
     for i, loan in enumerate(loans):
-        c.setFont("Helvetica", 12)
-        c.drawString(30, height - 15, f"Loan ID: {loan.loan_id}")
-        c.drawString(30, height - 30, f"Loan Date: {loan.loan_date.date()}")
-        c.drawString(30, height - 45, f"Loan Amount: {loan.loan_amount}")
-        c.drawString(30, height - 60, f"Weight: {loan.get_weight}")
-        c.drawString(30, height - 75, f"Customer: {loan.customer.name}")
-        c.drawString(30, height - 90, f"Item Description: {loan.item_desc}")
+        # Calculate the position for each label
+        row = i // labels_per_row
+        col = i % labels_per_row
+        x_offset = col * label_width
+        y_offset = (
+            page_height - (row + 1) * label_height + 60
+        )  # Adjust y_offset to reduce space between rows
 
-        # draw a QR code
+        # Draw loan details in the first column of the label
+        details_x_offset = x_offset + 10
+        details_y_offset = y_offset - 10
+        c.setFont("Helvetica", 10)  # Increase font size to 10
+        c.drawString(details_x_offset, details_y_offset, f"Loan ID: {loan.loan_id}")
+        c.drawString(
+            details_x_offset, details_y_offset - 10, f"Date: {loan.loan_date.date()}"
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 20, f"Amount: {loan.loan_amount}"
+        )
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 30,
+            f"Weight: {loan.formatted_weight(joiner=', ')}",
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 40, f"Customer: {loan.customer.name}"
+        )
+        c.drawString(details_x_offset, details_y_offset - 50, f"Item: {loan.item_desc}")
+
+        # Draw QR code in the second column of the label
         qr_code = qr.QrCodeWidget(loan.loan_id)
         bounds = qr_code.getBounds()
-        width = bounds[2] - bounds[0]
-        height = bounds[3] - bounds[1]
-        d = Drawing(45, 45, transform=[45.0 / width, 0, 0, 45.0 / height, 0, 0])
+        qr_width = bounds[2] - bounds[0]
+        qr_height = bounds[3] - bounds[1]
+        d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
         d.add(qr_code)
-        renderPDF.draw(d, c, 15, height - 105)
-        c.showPage()  # Start a new page after each label
+        qr_x_offset = x_offset + label_width - 55
+        qr_y_offset = y_offset - 55
+        renderPDF.draw(d, c, qr_x_offset, qr_y_offset)
+
+        # Start a new page if the current page is full
+        if (i + 1) % (labels_per_row * labels_per_column) == 0:
+            c.showPage()
+
+    c.save()
+
+    # Create a new HTTP response with PDF data.
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = "inline; filename=labels.pdf"
+    return response
+    # Page size for A4
+    page_width, page_height = A4
+    label_width = page_width / labels_per_row
+    label_height = page_height / labels_per_column
+
+    # Create a file-like buffer to receive PDF data.
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+
+    # Draw dotted lines for cutting
+    c.setDash(1, 2)  # Set dash pattern: 1 point on, 2 points off
+    for row in range(labels_per_column):
+        y = page_height - row * label_height - 5
+        c.line(0, y, page_width, y)  # Horizontal lines
+
+    for col in range(labels_per_row):
+        x = col * label_width
+        c.line(x, 0, x, page_height)  # Vertical lines
+
+    c.setDash()  # Reset to solid lines
+
+    for i, loan in enumerate(loans):
+        # Calculate the position for each label
+        row = i // labels_per_row
+        col = i % labels_per_row
+        x_offset = col * label_width
+        y_offset = (
+            page_height - (row + 1) * label_height + 60
+        )  # Adjust y_offset to reduce space between rows
+
+        # Draw loan details in the first column of the label
+        details_x_offset = x_offset + 10
+        details_y_offset = y_offset - 10
+        c.setFont("Helvetica", 10)  # Increase font size to 10
+        c.drawString(details_x_offset, details_y_offset, f"Loan ID: {loan.loan_id}")
+        c.drawString(
+            details_x_offset, details_y_offset - 10, f"Date: {loan.loan_date.date()}"
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 20, f"Amount: {loan.loan_amount}"
+        )
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 30,
+            f"Weight: {loan.formatted_weight(joiner=', ')}",
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 40, f"Customer: {loan.customer.name}"
+        )
+        c.drawString(details_x_offset, details_y_offset - 50, f"Item: {loan.item_desc}")
+
+        # Draw QR code in the second column of the label
+        qr_code = qr.QrCodeWidget(loan.loan_id)
+        bounds = qr_code.getBounds()
+        qr_width = bounds[2] - bounds[0]
+        qr_height = bounds[3] - bounds[1]
+        d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
+        d.add(qr_code)
+        qr_x_offset = x_offset + label_width - 55
+        qr_y_offset = y_offset - 55
+        renderPDF.draw(d, c, qr_x_offset, qr_y_offset)
+
+        # Start a new page if the current page is full
+        if (i + 1) % (labels_per_row * labels_per_column) == 0:
+            c.showPage()
+
+    c.save()
+
+    # Create a new HTTP response with PDF data.
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = "inline; filename=labels.pdf"
+    return response
+    # Page size for A4
+    page_width, page_height = A4
+    label_width = page_width / labels_per_row
+    label_height = page_height / labels_per_column
+
+    # Create a file-like buffer to receive PDF data.
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+
+    # Draw dotted lines for cutting
+    c.setDash(1, 2)  # Set dash pattern: 1 point on, 2 points off
+    for row in range(labels_per_column):
+        y = page_height - row * label_height
+        c.line(0, y, page_width, y)  # Horizontal lines
+
+    for col in range(labels_per_row):
+        x = col * label_width
+        c.line(x, 0, x, page_height)  # Vertical lines
+
+    c.setDash()  # Reset to solid lines
+
+    for i, loan in enumerate(loans):
+        # Calculate the position for each label
+        row = i // labels_per_row
+        col = i % labels_per_row
+        x_offset = col * label_width
+        y_offset = (
+            page_height - (row + 1) * label_height + 60
+        )  # Adjust y_offset to reduce space between rows
+
+        # Draw loan details in the first column of the label
+        details_x_offset = x_offset + 10
+        details_y_offset = y_offset - 10
+        c.setFont("Helvetica", 10)
+        c.drawString(details_x_offset, details_y_offset, f"Loan ID: {loan.loan_id}")
+        c.drawString(
+            details_x_offset, details_y_offset - 8, f"Date: {loan.loan_date.date()}"
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 16, f"Amount: {loan.loan_amount}"
+        )
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 24,
+            f"Weight: {loan.formatted_weight(joiner=', ')}",
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 32, f"Customer: {loan.customer.name}"
+        )
+        c.drawString(details_x_offset, details_y_offset - 40, f"Item: {loan.item_desc}")
+
+        # Draw QR code in the second column of the label
+        qr_code = qr.QrCodeWidget(loan.loan_id)
+        bounds = qr_code.getBounds()
+        qr_width = bounds[2] - bounds[0]
+        qr_height = bounds[3] - bounds[1]
+        d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
+        d.add(qr_code)
+        qr_x_offset = x_offset + label_width - 55
+        qr_y_offset = y_offset - 55
+        renderPDF.draw(d, c, qr_x_offset, qr_y_offset)
+
+        # Start a new page if the current page is full
+        if (i + 1) % (labels_per_row * labels_per_column) == 0:
+            c.showPage()
+
+    c.save()
+
+    # Create a new HTTP response with PDF data.
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = "inline; filename=labels.pdf"
+    return response
+    # Page size for A4
+    page_width, page_height = A4
+    label_width = page_width / labels_per_row
+    label_height = page_height / labels_per_column
+
+    # Create a file-like buffer to receive PDF data.
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+
+    for i, loan in enumerate(loans):
+        # Calculate the position for each label
+        row = i // labels_per_row
+        col = i % labels_per_row
+        x_offset = col * label_width
+        y_offset = (
+            page_height - (row + 1) * label_height + 60
+        )  # Adjust y_offset to reduce space between rows
+
+        # Draw loan details in the first column of the label
+        details_x_offset = x_offset + 10
+        details_y_offset = y_offset - 10
+        c.setFont("Helvetica", 8)
+        c.drawString(details_x_offset, details_y_offset, f"Loan ID: {loan.loan_id}")
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 10,
+            f"Loan Date: {loan.loan_date.date()}",
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 20, f"Loan Amount: {loan.loan_amount}"
+        )
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 30,
+            f"Weight: {loan.formatted_weight(joiner=', ')}",
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 40, f"Customer: {loan.customer.name}"
+        )
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 50,
+            f"Item Description: {loan.item_desc}",
+        )
+
+        # Draw QR code in the second column of the label
+        qr_code = qr.QrCodeWidget(loan.loan_id)
+        bounds = qr_code.getBounds()
+        qr_width = bounds[2] - bounds[0]
+        qr_height = bounds[3] - bounds[1]
+        d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
+        d.add(qr_code)
+        qr_x_offset = x_offset + label_width - 55
+        qr_y_offset = y_offset - 55
+        renderPDF.draw(d, c, qr_x_offset, qr_y_offset)
+
+        # Start a new page if the current page is full
+        if (i + 1) % (labels_per_row * labels_per_column) == 0:
+            c.showPage()
+
+    c.save()
+
+    # Create a new HTTP response with PDF data.
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = "inline; filename=labels.pdf"
+    return response
+    # Page size for A4
+    page_width, page_height = A4
+    label_width = page_width / labels_per_row
+    label_height = page_height / labels_per_column
+
+    # Create a file-like buffer to receive PDF data.
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+
+    for i, loan in enumerate(loans):
+        # Calculate the position for each label
+        row = i // labels_per_row
+        col = i % labels_per_row
+        x_offset = col * label_width
+        y_offset = page_height - (row + 1) * label_height + 200
+
+        # Draw loan details in the first column of the label
+        details_x_offset = x_offset + 10
+        details_y_offset = y_offset - 10
+        c.setFont("Helvetica", 8)
+        c.drawString(details_x_offset, details_y_offset, f"Loan ID: {loan.loan_id}")
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 10,
+            f"Loan Date: {loan.loan_date.date()}",
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 20, f"Loan Amount: {loan.loan_amount}"
+        )
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 30,
+            f"Weight: {loan.formatted_weight(joiner=', ')}",
+        )
+        c.drawString(
+            details_x_offset, details_y_offset - 40, f"Customer: {loan.customer.name}"
+        )
+        c.drawString(
+            details_x_offset,
+            details_y_offset - 50,
+            f"Item Description: {loan.item_desc}",
+        )
+
+        # Draw QR code in the second column of the label
+        qr_code = qr.QrCodeWidget(loan.loan_id)
+        bounds = qr_code.getBounds()
+        qr_width = bounds[2] - bounds[0]
+        qr_height = bounds[3] - bounds[1]
+        d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
+        d.add(qr_code)
+        qr_x_offset = x_offset + label_width - 55
+        qr_y_offset = y_offset - 55
+        renderPDF.draw(d, c, qr_x_offset, qr_y_offset)
+
+        # Start a new page if the current page is full
+        if (i + 1) % (labels_per_row * labels_per_column) == 0:
+            c.showPage()
+
+    c.save()
+
+    # Create a new HTTP response with PDF data.
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = "inline; filename=labels.pdf"
+    return response
+    # Page size for A4
+    page_width, page_height = A4
+    label_width = page_width / labels_per_row
+    label_height = page_height / labels_per_column
+
+    # Create a file-like buffer to receive PDF data.
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+
+    for i, loan in enumerate(loans):
+        # Calculate the position for each label
+        row = i // labels_per_row
+        col = i % labels_per_row
+        x_offset = col * label_width
+        y_offset = page_height - (row + 1) * label_height
+
+        # Draw loan details in the first column
+        c.setFont("Helvetica", 8)
+        c.drawString(x_offset + 10, y_offset - 10, f"Loan ID: {loan.loan_id}")
+        c.drawString(
+            x_offset + 10, y_offset - 20, f"Loan Date: {loan.loan_date.date()}"
+        )
+        c.drawString(x_offset + 10, y_offset - 30, f"Loan Amount: {loan.loan_amount}")
+        c.drawString(
+            x_offset + 10,
+            y_offset - 40,
+            f"Weight: {loan.formatted_weight(joiner=', ')}",
+        )
+        c.drawString(x_offset + 10, y_offset - 50, f"Customer: {loan.customer.name}")
+        c.drawString(
+            x_offset + 10, y_offset - 60, f"Item Description: {loan.item_desc}"
+        )
+
+        # Draw QR code in the second column
+        qr_code = qr.QrCodeWidget(loan.loan_id)
+        bounds = qr_code.getBounds()
+        qr_width = bounds[2] - bounds[0]
+        qr_height = bounds[3] - bounds[1]
+        d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
+        d.add(qr_code)
+        renderPDF.draw(
+            d, c, x_offset + label_width - 55, y_offset - 55
+        )  # Adjust x_offset for QR code
+
+        # Start a new page if the current page is full
+        if (i + 1) % (labels_per_row * labels_per_column) == 0:
+            c.showPage()
 
     c.save()
 

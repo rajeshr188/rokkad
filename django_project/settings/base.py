@@ -1,13 +1,13 @@
 import os
+from pathlib import Path
 
 import environ
+from django.contrib import messages
 
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False)
 )
-
-from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -65,6 +65,7 @@ SHARED_APPS = [
     "pages",
     "invitations",
     "slick_reporting",
+    "django_cleanup.apps.CleanupConfig",
 ]
 
 TENANT_APPS = [
@@ -221,6 +222,7 @@ STATICFILES_FINDERS = [
     # "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     # "compressor.finders.CompressorFinder",
 ]
+
 # django-crispy-forms
 # https://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
 CRISPY_TEMPLATE_PACK = "bootstrap5"
@@ -343,3 +345,47 @@ MULTITENANT_RELATIVE_MEDIA_ROOT = "%s/"
 MULTITENANT_STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "tenants/%s/static"),
 ]
+
+# Sets the minimum message level that will be recorded by the messages framework
+# https://docs.djangoproject.com/en/4.1/ref/settings/#message-level
+MESSAGE_LEVEL = messages.DEBUG
+
+# This sets the mapping of message level to message tag, which is typically rendered as a CSS class in HTML.
+# https://docs.djangoproject.com/en/4.1/ref/settings/#message-tags
+MESSAGE_TAGS = {
+    messages.DEBUG: "bg-light",
+    messages.INFO: "text-white bg-primary",
+    messages.SUCCESS: "text-white bg-success",
+    messages.WARNING: "text-dark bg-warning",
+    messages.ERROR: "text-white bg-danger",
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(name)s %(message)s"
+        },
+        "simple": {
+            "format": "%(levelname)s %(asctime)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+            "filters": [],
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+    },
+}
+
+# USE_THOUSAND_SEPARATOR = True

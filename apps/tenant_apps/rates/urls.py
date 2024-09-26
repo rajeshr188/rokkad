@@ -1,18 +1,9 @@
 from django.urls import path
 
-from .views import (
-    get_latest_rate,
-    rate_create,
-    rate_delete,
-    rate_detail,
-    rate_list,
-    rate_update,
-    ratesource_create,
-    ratesource_delete,
-    ratesource_detail,
-    ratesource_list,
-    ratesource_update,
-)
+from .views import (get_latest_rate, rate_create, rate_delete, rate_detail,
+                    rate_list, rate_update, ratesource_create,
+                    ratesource_delete, ratesource_detail, ratesource_list,
+                    ratesource_update)
 
 urlpatterns = [
     path(

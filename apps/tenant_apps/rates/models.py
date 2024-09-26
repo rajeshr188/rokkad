@@ -15,6 +15,7 @@ class Rate(models.Model):
     class Metal(models.TextChoices):
         GOLD = "Gold", "Gold"
         SILVER = "Silver", "Silver"
+        BRONZE = "Bronze", "Bronze"
 
     class Currency(models.TextChoices):
         INR = "INR", "INR"

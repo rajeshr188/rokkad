@@ -9,6 +9,7 @@
 <tr><td>Variant Attributes</td><td>{% for b in object.variant_attributes.all%} {{b}}, {%endfor%}</td></tr>
 </table>
 <a class="btn btn-primary" href="{{object.get_update_url}}">Edit ProductType</a>
+<a class="btn btn-primary" href="{% url 'generate_products' product_type_id=object.id%}">Generate Products</a>
 <a class="btn btn-primary" href="{% url 'product_product_create' type_pk=object.pk  %}">create product of this type</a>
 
 {% endblock %}

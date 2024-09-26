@@ -1,23 +1,63 @@
+import re
 from collections import Counter
 from datetime import datetime
 
-from django.db.models import (
-    Avg,
-    Case,
-    Count,
-    F,
-    IntegerField,
-    OuterRef,
-    Q,
-    Subquery,
-    Sum,
-    Value,
-    When,
-    Window,
-)
+from django.db import transaction
+from django.db.models import (Avg, Case, Count, F, IntegerField, Max, OuterRef,
+                              Q, Subquery, Sum, Value, When, Window)
 from django.db.models.functions import ExtractYear, TruncDate
 
-from .models import Customer, Loan, LoanItem, LoanPayment, Release
+from .models import (Customer, License, Loan, LoanItem, LoanPayment, Release,
+                     Series)
+
+
+def generate_loan_id(series_id: int = None) -> str:
+    # TODO: handle concurrency issues
+    try:
+        series = get_or_create_series(series_id)
+        series_title = series.name
+        print(f"Series title: {series_title}")
+
+        with transaction.atomic():
+            last_loan = Loan.objects.filter(series=series).order_by("-loan_id").first()
+            sequence_number = get_next_sequence_number(last_loan, series_title)
+            print(f"Sequence number: {sequence_number}")
+
+            num_length = series.max_limit  # Adjust the padding length as needed
+            new_loan_id = f"{series_title}{sequence_number:0{num_length}d}"
+            print(f"New loan ID: {new_loan_id}")
+            return new_loan_id
+
+    except (Series.DoesNotExist, License.DoesNotExist) as e:
+        print(f"Error: {e}")
+        raise
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        raise
+
+
+def get_or_create_series(series_id: int = None) -> Series:
+    if series_id:
+        return Series.objects.get(id=series_id)
+    try:
+        return Series.objects.latest("id")
+    except Series.DoesNotExist:
+        license = License.objects.first()
+        if not license:
+            raise License.DoesNotExist("No license found.")
+        series = Series.objects.create(name="A", license=license, is_active=True)
+        print(f"Series 'A' created with license '{license}'.")
+        return series
+
+
+def get_next_sequence_number(last_loan: Loan, series_title: str) -> int:
+    if last_loan:
+        last_id = last_loan.loan_id
+        print(f"Last loan ID: {last_id}")
+        match = re.match(rf"^{re.escape(series_title)}(\d+)$", last_id)
+        if match:
+            return int(match.group(1)) + 1
+    return 1  # Start with 1 if no previous loan exists or no match found
 
 
 def get_loan_cumulative_amount():

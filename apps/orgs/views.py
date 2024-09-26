@@ -1,25 +1,26 @@
+import logging
+
+from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django_tenants.utils import get_public_schema_name, remove_www, schema_context
+from django_tenants.utils import (get_public_schema_name, remove_www,
+                                  schema_context)
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
 
-from .decorators import company_member_required, role_required, roles_required
-from .forms import (
-    CompanyForm,
-    CompanyInvitationForm,
-    MembershipForm,
-    company_preference_form_builder,
-)
+from .decorators import (company_member_required, membership_required,
+                         role_required, roles_required, workspace_required)
+from .forms import (CompanyForm, CompanyInvitationForm, MembershipForm,
+                    company_preference_form_builder)
 from .models import Company, CompanyInvitation, Domain, Membership, Role
 
 # Create your views here.
-
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -98,11 +99,13 @@ def company_list(request):
     )
 
 
-@login_required
 @company_member_required
 def company_detail(request, company_id):
     company = Company.objects.get(id=company_id)
-    return render(request, "company/company_detail.html", {"company": company})
+    roles = Role.objects.all()
+    return render(
+        request, "company/company_detail.html", {"company": company, "roles": roles}
+    )
 
 
 @roles_required(["Owner", "Admin"])
@@ -144,7 +147,6 @@ def company_delete(request, company_id):
 
 
 @login_required
-@company_member_required
 def companyinvitations_list(request):
     invitations = CompanyInvitation.objects.filter(email=request.user.email)
     return render(
@@ -153,20 +155,27 @@ def companyinvitations_list(request):
 
 
 # @role_required('Owner')
-def create_invite(request):
+def create_invite(request, company_id):
+    company = Company.objects.get(id=company_id)
     if request.method == "POST":
         form = CompanyInvitationForm(
-            request.POST, inviter=request.user, request=request
+            request.POST, inviter=request.user, request=request, company=company
         )
         if form.is_valid():
             form.save()
+            messages.success(request, "Invitation sent successfully")
             return redirect("invite-success-url")
+        else:
+            messages.error(request, "correct the errors")
     else:
-        form = CompanyInvitationForm(inviter=request.user)
+        form = CompanyInvitationForm(inviter=request.user, company=company)
     return render(
         request,
         "company/invitation_form.html",
-        {"form": form, "url": reverse("invite_to_company")},
+        {
+            "form": form,
+            "url": reverse("invite_to_company", kwargs={"company_id": company_id}),
+        },
     )
 
 
@@ -177,6 +186,7 @@ def invite_success(request):
 
 class CustomAcceptInvite(AcceptInvite):
     def get(self, *args, **kwargs):
+        logger.info("CustomAcceptInvite get")
         invite = self.get_object()
         email = invite.email
         user = User.objects.filter(email=email).first()
@@ -184,6 +194,7 @@ class CustomAcceptInvite(AcceptInvite):
         if user:
             # If the user is already registered, create a Membership instance
             print(f"role: {invite.role}")
+
             Membership.objects.create(
                 user=user, company=invite.company, role=invite.role
             )
@@ -217,12 +228,28 @@ class CompanyPreferenceBuilder(PreferenceFormView):
 
 @login_required
 @role_required("Owner")
-def membership_revoke(request, membership_id):
-    # company = get_object_or_404(Company, id=company_id)
-    membership = get_object_or_404(Membership, user=user_id, company=company)
+def membership_revoke(request, company_id, membership_id):
+    company = get_object_or_404(Company, id=company_id)
+    membership = get_object_or_404(Membership, id=membership_id, company=company)
 
     membership.delete()
     return redirect("orgs_company_list")  # Redirect to the list of companies
+
+
+# @login_required
+# @roles_required(["Owner", "Admin"])
+# def membership_update(request, company_id, membership_id):
+#     company = get_object_or_404(Company, id=company_id)
+#     membership = get_object_or_404(Membership, id=membership_id, company=company)
+
+#     if request.method == "POST":
+#         form = MembershipForm(request.POST, instance=membership)
+#         if form.is_valid():
+#             form.save()
+#             return redirect("orgs_company_detail", company_id=company_id)
+#     else:
+#         form = MembershipForm(instance=membership)
+#     return render(request, "partials/crispy_form.html", {"form": form})
 
 
 @login_required
@@ -230,15 +257,23 @@ def membership_revoke(request, membership_id):
 def membership_update(request, company_id, membership_id):
     company = get_object_or_404(Company, id=company_id)
     membership = get_object_or_404(Membership, id=membership_id, company=company)
+    roles = Role.objects.all()
 
-    if request.method == "POST":
-        form = MembershipForm(request.POST, instance=membership)
-        if form.is_valid():
-            form.save()
-            return redirect("orgs_company_detail", company_id=company_id)
+    if request.method in ["POST", "PATCH"]:
+        role_id = request.POST.get("role")
+        role = get_object_or_404(Role, id=role_id)
+        membership.role = role
+        membership.save()
+        if request.htmx:
+            return JsonResponse({"success": True, "role": role.name})
+        return redirect("orgs_company_detail", company_id=company_id)
     else:
         form = MembershipForm(instance=membership)
-    return render(request, "company/edit_membership.html", {"form": form})
+    return render(
+        request,
+        "company/partials/role_form.html",
+        {"form": form, "membership": membership, "company": company, "roles": roles},
+    )
 
 
 @login_required
