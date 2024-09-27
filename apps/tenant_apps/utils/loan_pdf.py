@@ -146,7 +146,7 @@ def generate_loan_items_table(loan, styles):
                 styles["Normal"],
             ),
             "",
-            Paragraph(f"Value : {loan.current_value()}", boldStyle),
+            Paragraph(f"Value : {loan.get_current_value()}", boldStyle),
         ]
     )
 
@@ -832,7 +832,7 @@ def get_custom_jsk(loan):
     c.drawString(10 * cm, 11.8 * cm, f"{weight}gms ")
     pure = loan.formatted_pure(joiner=",")
     c.drawString(10 * cm, 9.8 * cm, f"{pure} gms ")
-    c.drawString(10 * cm, 8 * cm, f"{loan.current_value()}")
+    c.drawString(10 * cm, 8 * cm, f"{loan.get_current_value()}")
 
     c.setFont("Helvetica-Bold", 14)
 
@@ -895,7 +895,7 @@ def get_custom_jsk(loan):
     c.drawString(3 * cm, 7 * cm, f"{weight}gms")
     c.drawString(7 * cm, 7 * cm, f"{pure}")
 
-    c.drawString(12 * cm, 7 * cm, f"{loan.current_value()}")
+    c.drawString(12 * cm, 7 * cm, f"{loan.get_current_value()}")
     c.setFont("Helvetica-Bold", 12)
     c.drawString(1 * cm, 3.5 * cm, f"{loan.lid}")
     c.drawString(1 * cm, 3 * cm, f"{loan.loan_date.strftime('%d/%m/%y')}")
@@ -987,7 +987,7 @@ def get_custom_jcl(loan):
             x_offset + 3 * cm, y_offset + 8.8 * cm, loan.formatted_weight(joiner="gms,")
         )
         c.drawString(
-            x_offset + 11.5 * cm, y_offset + 8.8 * cm, f"{loan.current_value()}"
+            x_offset + 11.5 * cm, y_offset + 8.8 * cm, f"{loan.get_current_value()}"
         )
 
         c.setFont("Helvetica-Bold", 12)
