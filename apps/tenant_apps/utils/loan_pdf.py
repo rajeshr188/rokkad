@@ -774,7 +774,7 @@ def get_custom_jsk(loan):
 
     c.setFillColorRGB(0, 0, 0)
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(12 * cm, 18.5 * cm, f"{loan.lid}")
+    c.drawString(12 * cm, 18.5 * cm, f"{loan.loan_id}")
     c.drawString(11.5 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
 
     styles = getSampleStyleSheet()
@@ -871,7 +871,7 @@ def get_custom_jsk(loan):
     # Grid spacing
     grid_spacing = 1 * cm  # Adjust this value based on your preference
 
-    c.drawString(3 * cm, 17.5 * cm, f"{loan.lid}")
+    c.drawString(3 * cm, 17.5 * cm, f"{loan.loan_id}")
     c.drawString(11 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
     c.drawString(5 * cm, 17 * cm, f"{loan.customer.name}")
     c.drawString(
@@ -897,7 +897,7 @@ def get_custom_jsk(loan):
 
     c.drawString(12 * cm, 7 * cm, f"{loan.get_current_value()}")
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(1 * cm, 3.5 * cm, f"{loan.lid}")
+    c.drawString(1 * cm, 3.5 * cm, f"{loan.loan_id}")
     c.drawString(1 * cm, 3 * cm, f"{loan.loan_date.strftime('%d/%m/%y')}")
     c.drawString(1 * cm, 2.5 * cm, f"{loan.loan_amount}   {weight}")
     c.drawString(1 * cm, 2 * cm, f"{loan.customer.name}")
@@ -927,7 +927,7 @@ def get_custom_jcl(loan):
             y_offset + 15.2 * cm,
             f"{loan.loan_date.strftime('%d-%m-%Y')}",
         )
-        c.drawString(x_offset + 11 * cm, y_offset + 14.7 * cm, f"{loan.lid}")
+        c.drawString(x_offset + 11 * cm, y_offset + 14.7 * cm, f"{loan.loan_id}")
 
         customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
         customer_paragraph = Paragraph(customer, styles["Heading3"])
