@@ -42,6 +42,7 @@ SHARED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",
     "django.contrib.postgres",
+    "django.contrib.humanize",
     # Third-party
     "django_select2",
     "allauth",
@@ -387,5 +388,6 @@ LOGGING = {
         },
     },
 }
-
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 # USE_THOUSAND_SEPARATOR = True

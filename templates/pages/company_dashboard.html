@@ -1,6 +1,7 @@
 {% extends 'tenant.html' %}
 {% load static slick_reporting_tags %}
 {% load i18n %}
+{% load humanize %}
 {% block title %}Home page{% endblock title %}
 
 {% block content %}
@@ -41,7 +42,7 @@
               <p class="card-category">
                 <span class="sub-item">{% trans 'Customer'%}</span>
               </p>
-              <h4 class="card-title">{{total_customers}}</h4>
+              <h4 class="card-title">{{total_customers|intcomma}}</h4>
             </div>
           </div>
         </div>
@@ -64,7 +65,7 @@
               <p class="card-category">
                 <span class="sub-item">{% trans "Loans" %}</span>
               </p>
-              <h4 class="card-title">{{loan_count}}</h4>
+              <h4 class="card-title">{{loan_count|intcomma}}</h4>
             </div>
           </div>
         </div>
@@ -83,7 +84,7 @@
           <div class="col col-stats ms-3 ms-sm-0">
             <div class="numbers">
               <p class="card-category">Assets</p>
-              <h4 class="card-title">₹ {{current_value.total}}</h4>
+              <h4 class="card-title">₹ {{current_value.total|intcomma}}</h4>
             </div>
           </div>
         </div>
@@ -123,7 +124,7 @@
           <div class="col col-stats ms-3 ms-sm-0">
             <div class="numbers">
               <p class="card-category">Interest Due</p>
-              <h4 class="card-title">₹ {{total_interest}}</h4>
+              <h4 class="card-title">₹ {{total_interest|intcomma}}</h4>
             </div>
           </div>
         </div>
@@ -142,7 +143,7 @@
           <div class="col col-stats ms-3 ms-sm-0">
             <div class="numbers">
               <p class="card-category">Loan Due</p>
-              <h4 class="card-title">₹ {{total_loan_amount}}</h4>
+              <h4 class="card-title">₹ {{total_loan_amount|intcomma}}</h4>
             </div>
           </div>
         </div>
@@ -390,31 +391,31 @@
             <tbody>
               <tr>
                 <td>Weight</td>
-                <td>{{weight.gold}}</td>
-                <td>{{weight.silver}}</td>
-                <td>{{weight.bronze}}</td>
+                <td>{{weight.gold|intcomma}}</td>
+                <td>{{weight.silver|intcomma}}</td>
+                <td>{{weight.bronze|intcomma}}</td>
                 <td></td>
               </tr>
               <tr>
                 <td>Pure</td>
-                <td>{{pure_weight.gold}}</td>
-                <td>{{pure_weight.silver}}</td>
-                <td>{{pure_weight.bronze}}</td>
+                <td>{{pure_weight.gold|intcomma}}</td>
+                <td>{{pure_weight.silver|intcomma}}</td>
+                <td>{{pure_weight.bronze|intcomma}}</td>
                 <td></td>
               </tr>
               <tr>
                 <td>Loan Amt</td>
-                <td>{{assets.gold_loanamount}}</td>
-                <td>{{assets.silver_loanamount}}</td>
-                <td>{{assets.bronze_loanamount}}</td>
-                <td>{{total_loan_amount}}</td>
+                <td>{{assets.gold_loanamount|intcomma}}</td>
+                <td>{{assets.silver_loanamount|intcomma}}</td>
+                <td>{{assets.bronze_loanamount|intcomma}}</td>
+                <td>{{total_loan_amount|intcomma}}</td>
               </tr>
               <tr>
                 <td>Value</td>
-                <td>{{itemwise_value.gold}}</td>
-                <td>{{itemwise_value.silver}}</td>
+                <td>{{itemwise_value.gold|intcomma}}</td>
+                <td>{{itemwise_value.silver|intcomma}}</td>
                 <td></td>
-                <td>{{current_value.total}}</td>
+                <td>{{current_value.total|intcomma}}</td>
               </tr>
             </tbody>
             <tbody>
@@ -445,31 +446,31 @@
             <tbody>
               <tr>
                 <td>Weight</td>
-                <td>{{sunken.weight.gold}}</td>
-                <td>{{sunken.weight.silver}}</td>
-                <td>{{sunken.weight.bronze}}</td>
+                <td>{{sunken.weight.gold|intcomma}}</td>
+                <td>{{sunken.weight.silver|intcomma}}</td>
+                <td>{{sunken.weight.bronze|intcomma}}</td>
                 <td></td>
               </tr>
               <tr>
                 <td>Pure</td>
-                <td>{{sunken.pure_weight.gold}}</td>
-                <td>{{sunken.pure_weight.silver}}</td>
-                <td>{{sunken.pure_weight.bronze}}</td>
+                <td>{{sunken.pure_weight.gold|intcomma}}</td>
+                <td>{{sunken.pure_weight.silver|intcomma}}</td>
+                <td>{{sunken.pure_weight.bronze|intcomma}}</td>
                 <td></td>
               </tr>
               <tr>
                 <td>Loan Amt</td>
-                <td>{{sunken.assets.gold_loanamount}}</td>
-                <td>{{sunken.assets.silver_loanamount}}</td>
-                <td>{{sunken.assets.bronze_loanamount}}</td>
-                <td>{{sunken.total_loan_amount.total}}</td>
+                <td>{{sunken.assets.gold_loanamount|intcomma}}</td>
+                <td>{{sunken.assets.silver_loanamount|intcomma}}</td>
+                <td>{{sunken.assets.bronze_loanamount|intcomma}}</td>
+                <td>{{sunken.total_loan_amount.total|intcomma}}</td>
               </tr>
               <tr>
                 <td>Value</td>
-                <td>{{sunken.itemwise_value.gold}}</td>
-                <td>{{sunken.itemwise_value.silver}}</td>
+                <td>{{sunken.itemwise_value.gold|intcomma}}</td>
+                <td>{{sunken.itemwise_value.silver|intcomma}}</td>
                 <td></td>
-                <td>{{sunken.current_value.total}}</td>
+                <td>{{sunken.current_value.total|intcomma}}</td>
               </tr>
             </tbody>
             <tbody>

@@ -3,8 +3,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import CustomUser
+from .models import CustomUser,UserProfile
 
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = "User Profile"
+    # fk_name = "user"
 
 class CustomUserAdmin(UserAdmin):
     add_form = CustomUserCreationForm
@@ -14,6 +19,9 @@ class CustomUserAdmin(UserAdmin):
         "email",
         "username",
     ]
+    inlines = [UserProfileInline]
 
 
 admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(UserProfile)
+
