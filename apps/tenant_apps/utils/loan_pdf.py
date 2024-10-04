@@ -932,7 +932,7 @@ def get_custom_jcl(loan):
             loan.loan_id,
             c,
             x_offset + 11 * cm,
-            y_offset + 15 * cm,
+            y_offset + 14.9 * cm,
             label_width=1.8 * cm,
         )
 
@@ -1000,7 +1000,7 @@ def get_custom_jcl(loan):
         )
 
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(x_offset + 3 * cm, y_offset + 7.5 * cm, f"{loan.loan_amount}")
+        c.drawString(x_offset + 3 * cm, y_offset + 7.8 * cm, f"{loan.loan_amount}")
         amt_fig = Paragraph(
             f"{num2words(loan.loan_amount, lang='en_IN')} rupees only", styles["Normal"]
         )
@@ -1010,7 +1010,7 @@ def get_custom_jcl(loan):
         # c.setFont("Helvetica-Bold", 10)
         # c.drawString(x_offset + 6.2 * cm, y_offset + 7.8 * cm, f"{amt_fig} rupees only")
         # Draw the paragraph on the canvas
-        amt_fig.drawOn(c, x_offset + 6.2 * cm, y_offset + 7.8 * cm - height)
+        amt_fig.drawOn(c, x_offset + 6.5 * cm, y_offset + 8 * cm - height)
 
     # Draw the first frame (left side)
     draw_frame(0, 0)

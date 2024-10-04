@@ -47,6 +47,7 @@ def insertData(apps, schema_editor):
             transactiontype_ext(XactTypeCode_ext="LP", description="Loan Paid"),
             transactiontype_ext(XactTypeCode_ext="PYT", description="Payment"),
             transactiontype_ext(XactTypeCode_ext="RCT", description="Receipt"),
+            transactiontype_ext(XactTypeCode_ext="DC", description="Document Charge"),
             transactiontype_ext(
                 XactTypeCode_ext="CXC", description="Currency Exchange"
             ),
