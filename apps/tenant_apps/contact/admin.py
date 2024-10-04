@@ -8,7 +8,7 @@ from import_export.admin import ImportExportActionModelAdmin
 from import_export.fields import Field
 from import_export.widgets import DateTimeWidget
 
-from .models import Address, Contact, Customer, Proof
+from .models import Address, Contact, Customer, Proof,CustomerPic
 from .resources import (AddressResource, ContactResource, CustomerResource,
                         ProofResource)
 
@@ -110,7 +110,17 @@ class ProofAdmin(admin.ModelAdmin):
         "last_updated",
     ]
 
+class CustomerPicForm(forms.ModelForm):
+    class Meta:
+        model = CustomerPic
+        fields = "__all__"
 
+class CustomerPicAdmin(admin.ModelAdmin):
+    form = CustomerPicForm
+    search_fields = ['customer']    
+    list_display = ['customer', 'pic', 'created', 'updated']
+
+admin.site.register(CustomerPic, CustomerPicAdmin)    
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Address, AddressAdmin)
 admin.site.register(Contact, ContactAdmin)
