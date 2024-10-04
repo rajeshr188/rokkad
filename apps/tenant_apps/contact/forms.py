@@ -394,39 +394,73 @@ class CustomerRelationshipForm(forms.ModelForm):
         ]
 
     def __init__(self, *args, **kwargs):
-        customer_id = kwargs.pop("customer_id", None)
-        instance = kwargs.pop("instance", None)
+        customer = kwargs.pop("customer", None)
         super().__init__(*args, **kwargs)
 
-        # Debugging: Print customer_id and instance
-        print(f"customer_id: {customer_id}")
-        print(f"instance: {instance}")
-
         # If from_customer_id is provided, exclude it from the queryset
-        if customer_id:
-            self.fields["related_customer"].queryset = Customer.objects.exclude(
-                pk=customer_id
-            )
+
         self.helper = FormHelper()
-        if instance:
+        if self.instance.pk:
+            if customer:
+                self.fields["related_customer"].queryset = Customer.objects.exclude(
+                    pk=customer.pk
+                )
+                self.instance.customer = customer
+                self.fields[
+                    "related_customer"
+                ].initial = self.instance.related_customer.id
             self.helper.attrs = {
                 "hx-post": reverse(
-                    "update_relationship", args=[customer_id, instance.id]
+                    "update_relationship", args=[customer.id, self.instance.id]
                 ),
-                "hx-target": "this",
+                "hx-target": "closest li",
+                "hx-swap": "outerHTML",
             }
+            cancel_url = reverse("relationship_detail", args=[self.instance.id])
+            cancel_button = Button(
+                "cancel",
+                "Cancel",
+                css_class="btn btn-danger",
+                **{
+                    "hx-get": cancel_url,
+                    "hx-target": "closest li",
+                    "hx-swap": "outerHTML",
+                },
+            )
         else:
             self.helper.attrs = {
-                "hx-post": reverse("create_relationship", args=[customer_id]),
-                "hx-target": "#relations",
-                "hx-swap": "afterbegin",
+                "hx-post": reverse("create_relationship", args=[customer.id]),
+                "hx-target": "this",
+                "hx-swap": "outerHTML",
             }
-        self.helper.add_input(Submit("submit", "Save", css_class="btn btn-success"))
-        self.helper.add_input(
-            Button(
+            cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
                 onclick="this.closest('form').remove()",
             )
-        )
+        self.helper.add_input(Submit("submit", "Save", css_class="btn btn-success"))
+        self.helper.add_input(cancel_button)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        relationship = cleaned_data.get("relationship")
+        related_customer = cleaned_data.get("related_customer")
+        # Check if the instance has a customer
+        if self.instance and hasattr(self.instance, "customer"):
+            customer = self.instance.customer
+        else:
+            customer = None
+
+        if (
+            CustomerRelationship.objects.filter(
+                relationship=relationship,
+                related_customer=related_customer,
+                customer=customer,
+            )
+            .exclude(pk=self.instance.pk)
+            .exists()
+        ):
+            raise forms.ValidationError("This relationship already exists.")
+
+        return cleaned_data

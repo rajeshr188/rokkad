@@ -70,13 +70,13 @@ class LoanFilter(django_filters.FilterSet):
         ]
 
     def universal_search(self, queryset, name, value):
-        if value.replace(".", "", 1).isdigit():
-            value = Decimal(value)
-            return (
-                Loan.objects.with_details(None, None)
-                .prefetch_related("notifications", "loanitems")
-                .filter(Q(id=value) | Q(lid=value) | Q(loan_amount=value))
-            )
+        # if value.replace(".", "", 1).isdigit():
+        #     value = Decimal(value)
+        #     return (
+        #         Loan.objects.with_details(None, None,None)
+        #         .prefetch_related("notifications", "loanitems")
+        #         .filter(Q(id=value) | Q(loan_amount=value))
+        #     )
 
         return (
             Loan.objects.with_details(None, None, None)
@@ -84,7 +84,6 @@ class LoanFilter(django_filters.FilterSet):
             .filter(
                 Q(id__icontains=value)
                 | Q(customer__name__icontains=value)
-                | Q(lid__icontains=value)
                 | Q(loan_id__icontains=value)
                 | Q(item_desc__icontains=value)
                 | Q(loan_amount__icontains=value)

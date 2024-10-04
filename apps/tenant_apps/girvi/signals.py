@@ -27,7 +27,6 @@ def reverse_journal_entry(sender, instance, **kwargs):
             return
         # Compare the old and new instances
         if old_instance.is_changed(instance):
-            print("change of balances in instances")
             old_instance.reverse_transactions()
             instance.create_transactions()
 
@@ -44,18 +43,17 @@ def create_journal_entry(sender, instance, created, **kwargs):
 def update_loan(sender, instance, **kwargs):
     try:
         logger.info(f"Signal received for LoanItem with id {instance.id}")
-        print("signal received for loan item")
         loan = instance.loan
         if loan is None:
             logger.error("Loan instance is None")
             return
-        logger.info(f"Updating Loan with id {loan.id}")
+        logger.warning(f"Updating Loan with id {loan.id}")
 
         loan.update()
-        logger.info(f"Loan with id {loan.id} updated")
+        logger.warning(f"Loan with id {loan.id} updated")
     except Exception as e:
-        logger.error(f"Error: {e}")
-        print(f"Error while updating laon: {e}")
+        logger.warning(f"Error: {e}")
+        # print(f"Error while updating laon: {e}")
     # loan.loan_amount = LoanItem.objects.filter(loan=loan).aggregate(total_loanamount=Sum('loanamount'))['total_loanamount']
     # loan.item_desc = ", ".join([item.itemdesc for item in LoanItem.objects.filter(loan=loan)])
     # loan.interest = LoanItem.objects.filter(loan=loan).aggregate(total_interest=Sum('interest'))['total_interest'] or 0

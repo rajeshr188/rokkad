@@ -7,27 +7,37 @@ var photo = null;
 var startbutton = null;
 var imageDataInput = null;
 var mediaStream = null;
+var videoSelect = null;
 
-function initializeCamera() {
+function initializeCamera(deviceId) {
   video = document.getElementById('video');
   canvas = document.getElementById('canvas');
   photo = document.getElementById('photo');
   startbutton = document.getElementById('startbutton');
   imageDataInput = document.getElementById('image-data');
-  if (!video || !canvas || !photo || !startbutton || !imageDataInput) {
-    // console.error("One or more required HTML elements are missing.");
+  videoSelect = document.getElementById('videoSource');
+  if (!video || !canvas || !photo || !startbutton || !imageDataInput || !videoSelect) {
+    console.error("One or more required HTML elements are missing.");
     return;
   }
+
   const constraints = {
-    video: true,
-    facingMode: { ideal: 'environment' }, // Rear camera preference
+    video: { deviceId: deviceId ? { exact: deviceId } : undefined },
     audio: false
   };
+
   navigator.mediaDevices.getUserMedia(constraints)
     .then(function(stream) {
+      if (mediaStream) {
+        stopCamera(); // Stop the previous stream if it exists
+      }
       mediaStream = stream;
       video.srcObject = stream;
-      video.play();
+      video.onloadedmetadata = function() {
+        video.play().catch(function(err) {
+          console.log("An error occurred while trying to play the video: " + err);
+        });
+      };
     })
     .catch(function(err) {
       console.log("An error occurred: " + err);
@@ -35,9 +45,9 @@ function initializeCamera() {
 
   video.addEventListener('canplay', function(ev){
     if (!streaming) {
-      height = video.videoHeight / (video.videoWidth/width);
+      height = video.videoHeight / (video.videoWidth / width);
       if (isNaN(height)) {
-        height = width / (4/3);
+        height = width / (4 / 3);
       }
       video.setAttribute('width', width);
       video.setAttribute('height', height);
@@ -83,7 +93,27 @@ function takepicture() {
 function startup() {
   // Initialize camera and other stuff
   initializeCamera();
+  // List available video input devices
+  navigator.mediaDevices.enumerateDevices()
+    .then(function(devices) {
+      devices.forEach(function(device) {
+        if (device.kind === 'videoinput') {
+          var option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `Camera ${videoSelect.length + 1}`;
+          videoSelect.appendChild(option);
+        }
+      });
+    })
+    .catch(function(err) {
+      console.log("An error occurred: " + err);
+    });
+
+  videoSelect.onchange = function() {
+    initializeCamera(videoSelect.value);
+  };
 }
+
 // Function to stop the camera stream and release resources
 function stopCamera() {
   if (mediaStream) {
@@ -93,10 +123,20 @@ function stopCamera() {
   }
 }
 
+// document.addEventListener('DOMContentLoaded', function() {
+//   // On initial page load and htmx load
+//   document.addEventListener('htmx:load', startup);
+//   // On htmx page transition
+//   document.addEventListener('htmx:afterSwap', stopCamera);
+// });
+// Ensure the DOM is fully loaded before running the script
+document.addEventListener('DOMContentLoaded', function() {
+  // On initial page load
+  document.addEventListener('htmx:load', startup);
+  // On htmx page transition
+  document.addEventListener('htmx:afterSwap', function() {
+    stopCamera();
+    startup();
+  });
+});
 
-// On initial page load and htmx load
-// window.addEventListener('load', startup, false);
-document.addEventListener('htmx:load', startup);
-// On htmx page transition
-document.addEventListener('htmx:afterSwap', stopCamera);
-// window.addEventListener('beforeunload', stopCamera);

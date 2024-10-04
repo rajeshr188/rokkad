@@ -91,12 +91,12 @@ urlpatterns = (
     path("customer/merge/", views.customer_merge, name="contact_customer_merge"),
     # path to create_relationship view
     path(
-        "customer/<int:from_customer_id>/relationship/add/",
+        "customer/<int:customer_id>/relationship/add/",
         views.relationship_save,
         name="create_relationship",
     ),
     path(
-        "customer/<int:from_customer_id>/relationship/<int:relationship_id>/edit",
+        "customer/<int:customer_id>/relationship/<int:relationship_id>/edit",
         views.relationship_save,
         name="update_relationship",
     ),
@@ -106,7 +106,7 @@ urlpatterns = (
         name="delete_relationship",
     ),
     path(
-        "customer/<int:from_customer_id>/relationship/<int:relationship_id>/detail/",
+        "customer/relationship/<int:relationship_id>/detail/",
         views.relationship_detail,
         name="relationship_detail",
     ),

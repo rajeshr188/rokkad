@@ -1,9 +1,5 @@
-import math
 import re
-from datetime import datetime
 from decimal import Decimal
-# from qrcode.image.pure import PyImagingImage
-from io import BytesIO
 
 # import qrcode
 # import qrcode.image.svg
@@ -15,7 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.db.models import (BooleanField, DecimalField, ExpressionWrapper, F,
                               Func, Max, Q, Sum)
-from django.db.models.functions import Coalesce, Concat, Substr
+from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
@@ -31,8 +27,18 @@ from apps.tenant_apps.rates.models import Rate
 from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
                         UnReleasedManager)
 
+# from qrcode.image.pure import PyImagingImage
+# from io import BytesIO
+
+
+
+
 
 class Loan(models.Model):
+    """
+    Model representing a loan.
+    """
+
     # Fields
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -102,7 +108,7 @@ class Loan(models.Model):
     lqs = LoanQuerySet.as_manager()
 
     class Meta:
-        ordering = ("series", "lid")
+        ordering = ("series", "loan_id")
         get_latest_by = "id"
 
     def __str__(self):
@@ -216,7 +222,8 @@ class Loan(models.Model):
     def get_current_value(self):
         try:
             total_current_value = sum(
-                loan_item.current_value() for loan_item in self.loanitems.all()
+                loan_item.current_value()
+                for loan_item in self.loanitems.select_related("item").all()
             )
         except Exception as e:
             return 0
@@ -281,13 +288,13 @@ class Loan(models.Model):
     def is_valid_loan_id(loan_id):
         return bool(re.match(r"^[A-Z]*\d{5}$", loan_id))
 
-    def save(self, *args, **kwargs):
-        if not self.loan_id:
-            self.loan_id = self.generate_loan_id()
-        elif not Loan.is_valid_loan_id(self.loan_id):
-            raise ValidationError(f"Invalid loan_id format: {self.loan_id}")
+    # def save(self, *args, **kwargs):
+    #     if not self.loan_id:
+    #         self.loan_id = self.generate_loan_id()
+    #     # elif not Loan.is_valid_loan_id(self.loan_id):
+    #     #     raise ValidationError(f"Invalid loan_id format: {self.loan_id}")
 
-        super(Loan, self).save(*args, **kwargs)
+    #     super(Loan, self).save(*args, **kwargs)
 
     def update(self):
         item_desc = ", ".join(
@@ -315,7 +322,8 @@ class Loan(models.Model):
 
         except Exception as e:
             # Handle or log the error as needed
-            print(f"An error occurred while updating the loan: {e}")
+            print(f"update():An error occurred while updating the loan: {e}")
+            raise
 
     def notify(self, notice_type, medium_type):
         from notify.models import Notification
@@ -345,9 +353,11 @@ class Loan(models.Model):
         journal_entries = self.journal_entries.all()
 
         # Retrieve all AccountTransactions and LedgerTransactions for the filtered JournalEntries
-        account_transactions = AccountTransaction.objects.filter(
-            journal_entry__in=journal_entries
-        ).select_related("Account", "ledgerno")
+        account_transactions = (
+            AccountTransaction.objects.filter(journal_entry__in=journal_entries)
+            .select_related("Account", "ledgerno")
+            .order_by("id")
+        )
         # ledger_transactions = LedgerTransaction.objects.filter(journal_entry__in=journal_entries)
 
         # Combine the transactions into a single list
@@ -377,6 +387,7 @@ class Loan(models.Model):
             return None, None
         amount = Money(self.loan_amount, "INR")
         interest = Money(self.interest, "INR")
+        document_charge = Money(10, "INR")
         if self.loan_type == self.LoanType.TAKEN:
             lt = [
                 # {"ledgerno": "Loans", "ledgerno_dr": "Cash", "amount": amount},
@@ -423,13 +434,20 @@ class Loan(models.Model):
                     "Account": self.customer.account,
                     "amount": amount,
                 },
-                # {
-                #     "ledgerno": "Cash",
-                #     "XactTypeCode": "Dr",
-                #     "XactTypeCode_Ext": "IR",
-                #     "Account": self.loan.customer.account,
-                #     "amount": interest,
-                # },
+                {
+                    "ledgerno": "Cash",
+                    "XactTypeCode": "Dr",
+                    "XactTypeCode_Ext": "IR",
+                    "Account": self.customer.account,
+                    "amount": interest,
+                },
+                {
+                    "ledgerno": "Cash",
+                    "XactTypeCode": "Dr",
+                    "XactTypeCode_Ext": "DC",
+                    "Account": self.customer.account,
+                    "amount": document_charge,
+                },
             ]
         return lt, at
 
@@ -486,9 +504,16 @@ class Loan(models.Model):
         ) != model_to_dict(old_instance, fields=["customer", "loan_amount", "interest"])
 
     def get_storage_box(self):
-        return LoanItemStorageBox.objects.filter(
-            start_item_id__lte=self.id, end_item_id__gte=self.id
-        ).first()
+        try:
+            return LoanItemStorageBox.objects.filter(
+                start_item_id__lte=self.id, end_item_id__gte=self.id
+            ).first()
+        except LoanItemStorageBox.DoesNotExist:
+            return None
+        except Exception as e:
+            # Log the exception if needed
+            # print(f"An error occurred: {e}")
+            return None
 
 
 class LoanItem(models.Model):
@@ -820,7 +845,7 @@ class LoanPayment(models.Model):
                 {
                     "ledgerno": "Cash",
                     "XactTypeCode": "Dr",
-                    "XactTypeCode_Ext": "LR",
+                    "XactTypeCode_Ext": "PYT",
                     "Account": self.loan.customer.account,
                     "amount": principal,
                 },
@@ -835,8 +860,10 @@ class LoanPayment(models.Model):
         return lt, at
 
     def get_journal_entry(self, desc=None):
-        if self.loan.journal_entries.exists():
-            return self.loan.journal_entries.latest()
+        if self.loan.journal_entries.filter(desc=self.__class__.__name__).exists():
+            return self.loan.journal_entries.filter(
+                desc=self.__class__.__name__
+            ).latest()
         else:
             return JournalEntry.objects.create(
                 content_object=self,
@@ -863,7 +890,7 @@ class LoanPayment(models.Model):
 
     def reverse_transactions(self):
         # i.e if je is older than the latest statement then reverse the transactions else do nothing
-        print("Reversing transactions")
+
         try:
             statement = self.customer.account.accountstatements.latest("created")
         except AccountStatement.DoesNotExist:
@@ -951,10 +978,18 @@ class LoanItemStorageBox(models.Model):
     )
 
     def __str__(self):
-        return f"{self.name} at {self.location} (Items {Loan.objects.get(id = self.start_item_id).loanid} to {Loan.objects.get(id =self.end_item_id).loanid})"
+        return f"{self.name} at {self.location} (Items {Loan.objects.get(id = self.start_item_id).loan_id} to {Loan.objects.get(id =self.end_item_id).loan_id})"
+
+    def get_start_item_loan_id(self):
+        return Loan.objects.get(id=self.start_item_id).loan_id
+
+    def get_end_item_loan_id(self):
+        return Loan.objects.get(id=self.end_item_id).loan_id
 
     def clean(self):
         # Check for overlapping ranges
+        print("Checking for overlapping ranges")
+        print(self.start_item_id, self.end_item_id)
         overlapping_boxes = LoanItemStorageBox.objects.filter(
             item_type=self.item_type,
             start_item_id__lte=self.end_item_id,
@@ -965,10 +1000,6 @@ class LoanItemStorageBox(models.Model):
             raise ValidationError(
                 "The item ID range overlaps with another storage box."
             )
-
-    def save(self, *args, **kwargs):
-        self.clean()  # Call the clean method to perform validation
-        super().save(*args, **kwargs)
 
     def position_for_item(self, item_id):
         # naive approach

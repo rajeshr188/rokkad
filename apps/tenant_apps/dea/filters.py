@@ -11,10 +11,10 @@ from .models import Account, AccountType_Ext, Ledger
 class LedgerTransactionFilter(django_filters.FilterSet):
     created = django_filters.DateFromToRangeFilter()
     ledgerno = django_filters.ModelChoiceFilter(
-        queryset=Ledger.objects.all(), label="Credit"
+        queryset=Ledger.objects.all().select_related("AccountType"), label="Credit"
     )
     ledgerno_dr = django_filters.ModelChoiceFilter(
-        queryset=Ledger.objects.all(), label="Debit"
+        queryset=Ledger.objects.all().select_related("AccountType"), label="Debit"
     )
 
     class Meta:

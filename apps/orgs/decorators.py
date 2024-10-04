@@ -20,9 +20,9 @@ def role_required(role_name):
             company = Company.objects.get(id=company_id)
             try:
                 membership = Membership.objects.get(user=user, company=company)
-                print(
-                    f"Membership {membership} Role: {membership.role.name} {membership.role.name == role_name}"
-                )
+                # print(
+                #     f"Membership {membership} Role: {membership.role.name} {membership.role.name == role_name}"
+                # )
                 if membership.role.name != role_name:
                     raise Http404(
                         "Need to be A Company Owner to proceed with this action."
@@ -46,22 +46,22 @@ def roles_required(allowed_roles):
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
             workspace = request.user.workspace or None
-            print(
-                f"User: {user} workspace:{workspace} roles_required: {allowed_roles} {get_public_schema_name()}"
-            )
+            # print(
+            #     f"User: {user} workspace:{workspace} roles_required: {allowed_roles} {get_public_schema_name()}"
+            # )
             if workspace and workspace.name != get_public_schema_name():
-                print(f"in if company_id: {kwargs.get('company_id')}")
+                # print(f"in if company_id: {kwargs.get('company_id')}")
                 company = Company.objects.get(name=workspace)
             else:
-                print(f"company_id: {kwargs.get('company_id')}")
+                # print(f"company_id: {kwargs.get('company_id')}")
                 company = Company.objects.get(id=kwargs.get("company_id"))
 
-            print(f"User: {user} Company:{company} roles_required: {allowed_roles}")
+            # print(f"User: {user} Company:{company} roles_required: {allowed_roles}")
             try:
                 membership = Membership.objects.get(user=user, company=company)
-                print(
-                    f"Membership {membership} Role: {membership.role.name} {membership.role.name in allowed_roles}"
-                )
+                # print(
+                #     f"Membership {membership} Role: {membership.role.name} {membership.role.name in allowed_roles}"
+                # )
                 if membership.role.name not in allowed_roles:
                     raise Http404(
                         "You do not have the required role to proceed with this action."

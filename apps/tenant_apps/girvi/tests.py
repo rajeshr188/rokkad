@@ -8,6 +8,33 @@ from useres.models import CustomUser
 
 from .models import License, Loan, Release
 
+
+class LoanModelTest(TestCase):
+    def setUp(self):
+        # Set up initial data for tests
+        pass
+
+    def test_loan_creation(self):
+        # Test loan creation
+        pass
+
+    def test_loan_update(self):
+        # Test loan update
+        pass
+
+    def test_loan_deletion(self):
+        # Test loan deletion
+        pass
+
+    def test_interest_calculation(self):
+        # Test interest calculation
+        pass
+
+    def test_get_current_value(self):
+        # Test get_current_value method
+        pass
+
+
 # def create_django_contrib_auth_models_user(**kwargs):
 #     defaults = {}
 #     defaults["username"] = "username"

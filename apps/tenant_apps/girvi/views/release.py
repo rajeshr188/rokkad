@@ -210,7 +210,9 @@ def bulk_release(request):
     else:
         selected_loans = request.GET.getlist("selection", "")
         qs = Loan.unreleased.filter(id__in=selected_loans).values_list("id", flat=True)
-        form = BulkReleaseForm(initial={"loans": qs})
+        form = BulkReleaseForm(
+            initial={"loans": qs, "date": timezone.now().strftime("%Y-%m-%dT%H:%M")}
+        )
 
     return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form})
 
@@ -234,7 +236,6 @@ def get_release_details(request):
     # get the loans from request
     loan_ids = request.POST.getlist("loans")  # list of loan ids
     date = request.POST.get("date")
-    print(date)
 
     loans = Loan.objects.filter(id__in=loan_ids).with_details(None, None)
     return render(request, "girvi/release/bulk_release_details.html", {"loans": loans})

@@ -35,11 +35,11 @@ def ld(request):
 
     default_date = request.user.workspace.preferences["Loan__Default_Date"]
     if default_date == "N":
-        return timezone.now()
+        return timezone.now().strftime("%Y-%m-%dT%H:%M")
     else:
-        last = Loan.objects.order_by("id").last()
+        last = Loan.objects.order_by("-id").first()
         if not last:
-            return timezone.now()
+            return timezone.now().strftime("%Y-%m-%dT%H:%M")
         return last.loan_date
 
 
@@ -221,34 +221,13 @@ def loan_detail(request, pk):
 
     # Combine the weights, ensuring there are no extra spaces
     pure = " ".join(filter(None, [gold_pure, silver_pure, bronze_pure]))
-    # # Use values() and annotate() to perform calculations in the database
-    # weights = loan.get_weight
-    # result = [f"{item['itemtype']}:{round(item['total_weight'],3)}" for item in weights]
-    # weight = " ".join(result)
-
-    # pures = loan.get_pure
-    # result = {item["itemtype"]: round(item["pure_weight"], 3) for item in pures}
-
-    # rate_dict = {
-    #     "Gold": request.grate.buying_rate,
-    #     "Silver": request.srate.buying_rate,
-    # }
-
-    # # Calculate the total value
-    # result_dict = {
-    #     itemtype: rate_dict.get(itemtype, 0) * weight
-    #     for itemtype, weight in result.items()
-    # }
     value = round(loan.get_current_value(), 2)
-    print(f"Value: {value}")
 
     try:
         lvratio = round(loan.loan_amount / value, 2) * 100
     except ZeroDivisionError:
         lvratio = 0
 
-    print(f"Due: {loan.total_due}")
-    print(f"Due: {loan.due()}")
     due = loan.due()
     # due = loan.total_due
 
@@ -256,6 +235,11 @@ def loan_detail(request, pk):
         dvratio = round(due / value, 2) * 100
     except ZeroDivisionError:
         dvratio = 0
+    location = loan.get_storage_box()
+    if location:
+        position = location.position_for_item(loan.id)
+    else:
+        position = None
     context = {
         "object": loan,
         "loan": loan,
@@ -268,7 +252,15 @@ def loan_detail(request, pk):
         "dvratio": dvratio,
         "weight": weight,
         "pure": pure,
-        "je": loan.journal_entries.first(),
+        "je": JournalEntry.objects.filter(
+            Q(content_type=ContentType.objects.get_for_model(loan), object_id=loan.id)
+            | Q(
+                parent_content_type=ContentType.objects.get_for_model(loan),
+                parent_object_id=loan.id,
+            )
+        ),
+        "location": location,
+        "position": position,
         "expires": loan.calculate_months_to_exceed_value(value, due),
     }
 
@@ -402,4 +394,4 @@ def loanitem_delete(request, parent_id, id):
 @login_required
 def loanitem_detail(request, pk):
     item = get_object_or_404(LoanItem, pk=pk)
-    return render(request, "girvi/partials/item-inline.html", {"object": item})
+    return render(request, "girvi/partials/item-inline-new.html", {"object": item})

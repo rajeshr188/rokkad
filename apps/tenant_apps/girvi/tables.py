@@ -27,7 +27,7 @@ class CheckBoxColumnWithName(tables.CheckBoxColumn):
 
 class LoanTable(tables.Table):
     loan_id = tables.Column(verbose_name="Loan ID")
-    loan_date = tables.Column(verbose_name="Loan Date")
+    loan_date = tables.Column(verbose_name="Loan Date", localize=True)
     # pic = ImageColumn()
     # https://stackoverflow.com/questions/12939548/select-all-rows-in-django-tables2/12944647#12944647
     selection = tables.CheckBoxColumn(
@@ -37,7 +37,7 @@ class LoanTable(tables.Table):
         exclude_from_export=True,
     )
     # notified = tables.Column(accessor="last_notified", exclude_from_export=True)
-    total_interest = tables.Column(verbose_name="Interest")
+    total_interest = tables.Column(verbose_name="Interest", localize=True)
     months_since_created = tables.Column(
         verbose_name="Months", exclude_from_export=True
     )
@@ -118,7 +118,7 @@ class LoanTable(tables.Table):
         return record.loan_date.date()
 
     # is_overdue = tables.Column(verbose_name="Overdue?")
-    total_due = tables.Column(verbose_name="Due")
+    total_due = tables.Column(verbose_name="Due", localize=True)
 
     def render_months_since_created(self, record):
         now = datetime.now()
@@ -163,7 +163,7 @@ class LoanTable(tables.Table):
         row_attrs = {
             "class": lambda record: "table-success"
             if record.is_released
-            else ("table-danger" if record.is_overdue else "table-secondary")
+            else ("table-danger" if record.is_overdue else "")
         }
         attrs = {
             "class": "table table-sm table-bordered table-striped-columns table-hover"

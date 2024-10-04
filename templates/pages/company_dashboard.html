@@ -27,7 +27,7 @@
 <div class="row">
   <div class="col-sm-6 col-md-3">
     <div class="card card-stats card-round" hx-get="{% url 'contact_customer_list' %}" hx-target="#content"
-      hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-trigger="click"
+      hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-trigger="click" hx-push-url="true"
       style="cursor:pointer;">
       <div class="card-body">
         <div class="row align-items-center">
@@ -282,32 +282,6 @@
       </div>
     </div>
   </div>
-  
-</div>
-<div class="row">
-  
-  <div class="col-md-6">
-    <div class="div-holderl">
-      {% get_widget_from_url url_name="girvi:loan_by_customer" display_table=False extra_params="time_series_pattern=monthly"%}
-    </div>
-  </div>
-</div>
-<div class="row">
-
-  <div class="col-md-6">
-    <div class="div-holderl">
-      {% get_widget_from_url url_name="girvi:series_report" display_table=False extra_params="time_series_pattern=monthly"%}
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="div-holderl">
-      {% get_widget_from_url url_name="girvi:license_report" display_table=False extra_params="time_series_pattern=monthly"%}
-    </div>
-  </div>
-
-</div>
-<div class="row">
-  
   <div class="col-md-4">
     <div class="card">
       <div class="card-header">
@@ -369,7 +343,20 @@
     </div>
   </div>
 </div>
+<div class="row">
 
+  <div class="col-md-6">
+    <div class="div-holderl">
+      {% get_widget_from_url url_name="girvi:series_report" display_table=False extra_params="time_series_pattern=monthly"%}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="div-holderl">
+      {% get_widget_from_url url_name="girvi:license_report" display_table=False extra_params="time_series_pattern=monthly"%}
+    </div>
+  </div>
+
+</div>
 <div class="row">
   <div class="col-md-6">
     <div class="card card-round">
@@ -495,53 +482,7 @@
 
   </div>
 </div>
-<div class="row">
-  <div class="col-md-4">
-    <div class="card card-round">
-      <div class="card-body">
-        <div class="card-head-row card-tools-still-right">
-          <div class="card-title">New Customers</div>
-          <div class="card-tools">
-            <div class="dropdown">
-              <button class="btn btn-icon btn-clean me-0" type="button" id="dropdownMenuButton"
-                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <i class="fas fa-ellipsis-h"></i>
-              </button>
-              <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                <a class="dropdown-item" href="#">Action</a>
-                <a class="dropdown-item" href="#">Another action</a>
-                <a class="dropdown-item" href="#">Something else here</a>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="card-list py-4">
-          {% for customer in new_customers %}
-          <div class="item-list">
-            <div class="avatar">
-              
-              <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture"
-                class="avatar-img rounded-circle">
-              
-            </div>
-            <div class="info-user ms-3">
-              <div class="username">{{customer.name}}</div>
-              <div class="status">{{customer.address.first}}</div>
-            </div>
-            <button class="btn btn-icon btn-link op-8 me-1">
-              <i class="far fa-envelope"></i>
-            </button>
-            <button class="btn btn-icon btn-link btn-danger op-8">
-              <i class="fas fa-ban"></i>
-            </button>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
 
-</div>
 {% else %}
 <div class="alert alert-danger" role="alert">
   <h4 class="alert-heading">Hello {{request.user.name}}.Your Role is a member of this company {{request.user.workspace}}.Hence,Permission Denied</h4>

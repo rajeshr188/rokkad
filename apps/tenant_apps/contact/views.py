@@ -484,33 +484,67 @@ def customer_pic_set_default(request, pk):
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
 
-@login_required
-def relationship_save(request, from_customer_id, relationship_id=None):
-    from_customer = get_object_or_404(Customer, pk=from_customer_id)
-    form = CustomerRelationshipForm(request.POST or None, customer_id=from_customer.id)
+# @login_required
+# def relationship_save(request, from_customer_id, relationship_id=None):
+#     from_customer = get_object_or_404(Customer, pk=from_customer_id)
+#     form = CustomerRelationshipForm(request.POST or None, customer_id=from_customer.id)
 
+#     if relationship_id:
+#         relationship_instance = get_object_or_404(
+#             CustomerRelationship, pk=relationship_id
+#         )
+#         form = CustomerRelationshipForm(
+#             request.POST or None, instance=relationship_instance, customer_id=from_customer.id
+#         )
+
+#     if request.method == "POST":
+#         if form.is_valid():
+#             relationship_instance = form.save(commit=False)
+#             relationship_instance.customer = from_customer
+#             relationship_instance.save()
+#             messages.success(request, f"Relationship {relationship_instance} updated.")
+#             response = HttpResponse()
+#             response["HX-Trigger"] = "listChanged"
+#             return response
+
+#     return render(
+#         request,
+#         "partials/crispy_form.html",
+#         {"form": form, "customer": from_customer},
+#     )
+
+
+@login_required
+def relationship_save(request, customer_id, relationship_id=None):
+    customer = get_object_or_404(Customer, pk=customer_id)
+
+    relationship_instance = None
     if relationship_id:
         relationship_instance = get_object_or_404(
             CustomerRelationship, pk=relationship_id
         )
-        form = CustomerRelationshipForm(
-            request.POST, instance=relationship_instance, customer_id=from_customer.id
-        )
 
     if request.method == "POST":
+        form = CustomerRelationshipForm(
+            request.POST, instance=relationship_instance, customer=customer
+        )
         if form.is_valid():
             relationship_instance = form.save(commit=False)
-            relationship_instance.customer = from_customer
+            relationship_instance.customer = customer
             relationship_instance.save()
-            messages.success(request, f"Relationship {relationship_instance} updated.")
-            response = HttpResponse()
-            response["HX-Trigger"] = "listChanged"
-            return response
+        messages.success(request, f"Relationship {relationship_instance} updated.")
+        response = HttpResponse()
+        response["HX-Trigger"] = "listChanged"
+        return response
+    else:
+        form = CustomerRelationshipForm(
+            instance=relationship_instance, customer=customer
+        )
 
     return render(
         request,
         "partials/crispy_form.html",
-        {"form": form, "customer": from_customer},
+        {"form": form, "customer": customer},
     )
 
 

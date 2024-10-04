@@ -65,3 +65,12 @@ def delete_storage_box(request, pk):
         "girvi/storagebox/storagebox_confirm_delete.html",
         {"storage_box": storage_box},
     )
+
+
+def storage_box_detail(request, pk):
+    storage_box = get_object_or_404(LoanItemStorageBox, pk=pk)
+    return render(
+        request,
+        "girvi/storagebox/storagebox_detail.html",
+        {"storage_box": storage_box},
+    )
