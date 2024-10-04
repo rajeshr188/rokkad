@@ -100,18 +100,21 @@ def daybook(request):
 
     for ledger in ledgers:
         # Initialize the dictionary for each ledger
-        ls = ledger.ledgerstatements.latest("created")
-        print(ls.created)
+        try:
+            ls = ledger.ledgerstatements.latest("created")
+            created = ls.created
+        except:
+            created = None
         grouped_transactions[ledger] = {"debit": [], "credit": []}
 
         # Add dtxns and ctxns to the grouped transactions
-        grouped_transactions[ledger]["debit"].extend(ledger.dtxns(since=ls.created))
-        grouped_transactions[ledger]["credit"].extend(ledger.ctxns(since=ls.created))
+        grouped_transactions[ledger]["debit"].extend(ledger.dtxns(since=created))
+        grouped_transactions[ledger]["credit"].extend(ledger.ctxns(since=created))
 
         # Add aleg_txns to the grouped transactions based on xacttypecode
-        for txn in ledger.aleg_txns(xacttypecode="Dr", since=ls.created):
+        for txn in ledger.aleg_txns(xacttypecode="Dr", since=created):
             grouped_transactions[ledger]["debit"].append(txn)
-        for txn in ledger.aleg_txns(xacttypecode="Cr", since=ls.created):
+        for txn in ledger.aleg_txns(xacttypecode="Cr", since=created):
             grouped_transactions[ledger]["credit"].append(txn)
 
     return render(
