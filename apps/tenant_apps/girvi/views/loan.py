@@ -28,19 +28,26 @@ from ..forms import LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm
 from ..models import *
 from ..services import generate_loan_id
 from ..tables import LoanTable
-
+import pytz
 
 def ld(request):
     # TODO get last date by series
 
     default_date = request.user.workspace.preferences["Loan__Default_Date"]
+    user_timezone = "Asia/Kolkata"
+    user_tz = pytz.timezone(user_timezone)
     if default_date == "N":
-        return timezone.now().strftime("%Y-%m-%dT%H:%M")
+        now = timezone.now()
+        user_time = now.astimezone(user_tz)
+        return user_time.strftime("%Y-%m-%dT%H:%M")
     else:
         last = Loan.objects.order_by("-id").first()
         if not last:
-            return timezone.now().strftime("%Y-%m-%dT%H:%M")
-        return last.loan_date
+            now = timezone.now()
+            user_time = now.astimezone(user_tz)
+            return user_time.strftime("%Y-%m-%dT%H:%M")
+        loan_time = last.loan_date.astimezone(user_tz)
+        return loan_time.strftime("%Y-%m-%dT%H:%M")
 
 
 def get_interestrate(request):
