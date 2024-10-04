@@ -144,7 +144,7 @@ def loan_save(request, id=None, pk=None):
             initial["loan_id"] = loan_id
             initial["loan_date"] = ld(request)
             initial["series"] = series
-            print(f"Generated loan ID: {loan_id}")
+            # print(f"Generated loan ID: {loan_id}")
         except License.DoesNotExist as e:
             print(f"License does not exist: {e}")
             messages.error(request, "No License objects in database.")
