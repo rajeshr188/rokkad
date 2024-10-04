@@ -24,7 +24,7 @@ DATABASES = {
 
 STATIC_ROOT = "/var/www/rokkad/static"
 MEDIA_ROOT = "/var/www/rokkad/media"
-STATICFILES_DIRS = []
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # SECURE_SSL_REDIRECT = True
 
