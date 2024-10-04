@@ -140,4 +140,3 @@ document.addEventListener('DOMContentLoaded', function() {
     startup();
   });
 });
-
