@@ -118,7 +118,7 @@ class CustomerPicForm(forms.ModelForm):
 class CustomerPicAdmin(admin.ModelAdmin):
     form = CustomerPicForm
     search_fields = ['customer']    
-    list_display = ['customer', 'image', 'created','is_default']
+    list_display = ['customer', 'image', 'is_default']
 
 admin.site.register(CustomerPic, CustomerPicAdmin)    
 admin.site.register(Customer, CustomerAdmin)

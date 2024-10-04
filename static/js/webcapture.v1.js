@@ -110,7 +110,8 @@ function startup() {
     });
 
   videoSelect.onchange = function() {
-    initializeCamera(videoSelect.value);
+    stopCamera(); // Stop the previous stream before switching to a new one
+    initializeCamera(videoSelect.value);// Initialize the new camera stream
   };
 }
 
