@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -13,6 +15,8 @@ from ..managers import AccountManager
 from ..utils.currency import Balance
 from .ledger import Ledger
 from .moneyvalue import MoneyValueField
+
+logger = logging.getLogger(__name__)
 
 
 # cr credit,dr debit
@@ -113,6 +117,7 @@ class Account(models.Model):
                 "ledgerno",
             )
             .prefetch_related("journal_entry__content_object")
+            # .order_by("id") breaks current_balance
         )
         if since:
             txns = txns.filter(created__gte=since)
@@ -120,7 +125,7 @@ class Account(models.Model):
 
     def total_credit(self, since=None):
         txns = self.txns(since=since)
-        return Balance(
+        bal = Balance(
             [
                 Money(r["total"], r["amount_currency"])
                 for r in txns.filter(
@@ -131,6 +136,8 @@ class Account(models.Model):
                 .annotate(total=Sum("amount"))
             ]
         )
+        logger.info(f"total_credit:{bal}")
+        return bal
 
     def total_debit(self, since=None):
         txns = self.txns(since=since)
@@ -160,11 +167,13 @@ class Account(models.Model):
             cr_bal = self.total_credit(since=ls.created)
             dr_bal = self.total_debit(since=ls.created)
 
+        logger.info(f"cr_bal:{cr_bal} dr_bal:{dr_bal}")
         if self.AccountType_Ext.XactTypeCode_id == "Dr":
             bal = cb + (dr_bal - cr_bal)
         else:
             bal = cb + (cr_bal - dr_bal)
 
+        logger.info(f"bal:{bal}")
         return bal
 
     def get_balance(self):
@@ -248,6 +257,7 @@ class AccountTransaction(models.Model):
     objects = AccountTransactionManager()
 
     class Meta:
+        ordering = ("created",)
         indexes = [
             models.Index(
                 fields=[

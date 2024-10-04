@@ -67,7 +67,7 @@ def generalledger(request):
             "ledgerno", "ledgerno_dr", "journal_entry"
         ).order_by("-created"),
     )
-    ac_txns = AccountTransaction.objects.all()
+    # ac_txns = AccountTransaction.objects.all().select_related("Account","ledgerno","XactTypeCode","journal_entry","XactTypeCode_ext")
     grouped_transactions = {}
 
     for transaction in f.qs:
@@ -100,16 +100,18 @@ def daybook(request):
 
     for ledger in ledgers:
         # Initialize the dictionary for each ledger
+        ls = ledger.ledgerstatements.latest("created")
+        print(ls.created)
         grouped_transactions[ledger] = {"debit": [], "credit": []}
 
         # Add dtxns and ctxns to the grouped transactions
-        grouped_transactions[ledger]["debit"].extend(ledger.dtxns())
-        grouped_transactions[ledger]["credit"].extend(ledger.ctxns())
+        grouped_transactions[ledger]["debit"].extend(ledger.dtxns(since=ls.created))
+        grouped_transactions[ledger]["credit"].extend(ledger.ctxns(since=ls.created))
 
         # Add aleg_txns to the grouped transactions based on xacttypecode
-        for txn in ledger.aleg_txns(xacttypecode="Dr"):
+        for txn in ledger.aleg_txns(xacttypecode="Dr", since=ls.created):
             grouped_transactions[ledger]["debit"].append(txn)
-        for txn in ledger.aleg_txns(xacttypecode="Cr"):
+        for txn in ledger.aleg_txns(xacttypecode="Cr", since=ls.created):
             grouped_transactions[ledger]["credit"].append(txn)
 
     return render(

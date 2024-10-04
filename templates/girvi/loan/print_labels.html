@@ -2,16 +2,18 @@
 {%load crispy_forms_tags%}
 {% block content %}
 
-<div class="container">
+<div class="container-fluid">
   <div class="row">
-    <div class="col-md-12">
+    <div class="col" >
         <h1>Print Labels</h1>
-        <form method="post" action="{% url 'girvi:print_label' %}">
-            {% csrf_token %}
-            {{form.media}}
-            {{ form|crispy }}
-            <button class="btn btn-info" type="submit">Print Labels</button>
-        </form>
+        <div class="card" data-bs-theme="light">
+            <form method="post" action="{% url 'girvi:print_label' %}">
+                {% csrf_token %}
+                {{form.media}}
+                {{ form|crispy }}
+                <button class="btn btn-info" type="submit">Print Labels</button>
+            </form>
+        </div>
     </div>
     </div>
 </div>

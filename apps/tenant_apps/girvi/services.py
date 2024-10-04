@@ -16,23 +16,18 @@ def generate_loan_id(series_id: int = None) -> str:
     try:
         series = get_or_create_series(series_id)
         series_title = series.name
-        print(f"Series title: {series_title}")
 
         with transaction.atomic():
             last_loan = Loan.objects.filter(series=series).order_by("-loan_id").first()
             sequence_number = get_next_sequence_number(last_loan, series_title)
-            print(f"Sequence number: {sequence_number}")
 
             num_length = series.max_limit  # Adjust the padding length as needed
             new_loan_id = f"{series_title}{sequence_number:0{num_length}d}"
-            print(f"New loan ID: {new_loan_id}")
             return new_loan_id
 
     except (Series.DoesNotExist, License.DoesNotExist) as e:
-        print(f"Error: {e}")
         raise
     except Exception as e:
-        print(f"Unexpected error: {e}")
         raise
 
 
@@ -73,11 +68,15 @@ def get_loan_cumulative_amount():
 
 def get_average_loan_instance_per_day():
     # Get the total number of distinct Loan instances
-    total_loans = Loan.objects.count()
+    total_loans = Loan.objects.filter(series__is_active=True).count()
 
     # Get the earliest and latest Loan instance
-    earliest_loan = Loan.objects.order_by("loan_date").first()
-    latest_loan = Loan.objects.order_by("-loan_date").first()
+    earliest_loan = (
+        Loan.objects.filter(series__is_active=True).order_by("loan_date").first()
+    )
+    latest_loan = (
+        Loan.objects.filter(series__is_active=True).order_by("-loan_date").first()
+    )
 
     # If there are no Loan instances, return 0
     if earliest_loan is None or latest_loan is None:

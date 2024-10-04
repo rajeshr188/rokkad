@@ -195,15 +195,16 @@ class LoanForm(forms.ModelForm):
     )
 
     loan_date = forms.DateTimeField(
-        input_formats=["%d-%m-%Y %H:%M:%S", "%d-%m-%Y %H:%M"],
+        input_formats=["%d-%m-%Y %H:%M", "%Y-%m-%dT%H:%M"],
         widget=forms.DateTimeInput(
             attrs={
                 # "type":"text",
                 "type": "datetime-local",
                 "data-date-format": "DD MMMM YYYY",
-                "max": datetime.now(),
+                # "max": timezone.now().strftime("%Y-%m-%dT%H:%M"),
             },
-            # format="%d-%m-%Y %H:%M:%S",
+            # format="%d-%m-%Y %H:%M",
+            format="%Y-%m-%dT%H:%M",
         ),
     )
 
@@ -415,7 +416,7 @@ class ReleaseForm(forms.ModelForm):
         widget=forms.DateTimeInput(
             attrs={
                 "type": "datetime",
-                "max": datetime.now(),
+                "max": timezone.now(),
             },
             format="%d-%m-%Y %H:%M:%S",
         ),
@@ -515,15 +516,32 @@ class BulkReleaseForm(forms.Form):
             attrs={
                 "type": "datetime-local",
                 "data-date-format": "DD MMMM YYYY",
-                "max": datetime.now().strftime("%Y-%m-%d"),
+                "default": timezone.now().strftime("%Y-%m-%dT%H:%M"),
+                # "max": timezone.now().strftime("%Y-%m-%dT%H:%M"),
                 "autofocus": True,
-            }
+            },
+            format="%d/%m/%Y %H:%M",
         ),
         initial=timezone.now(),
     )
     loans = forms.ModelMultipleChoiceField(
-        widget=MultipleLoansWidget, queryset=Loan.unreleased.all()
+        widget=MultipleLoansWidget,
+        queryset=Loan.unreleased.all(),
     )
+    # def __init__(self,*args,**kwargs):
+    #     super().__init__(*args,**kwargs)
+    #     self.helper = FormHelper()
+    #     self.helper.layout = Layout(
+    #         Row(
+    #             Column("date", css_class="form-control col-md-4 mb-0"),
+
+    #             css_class="form-row",
+    #         ),
+    #         Row(
+    #             Column("loans", css_class="form-control col-md-4 mb-0"),
+    #             css_class="form-row",
+    #         )
+    #     )
 
 
 class StatementItemForm(forms.ModelForm):
@@ -641,6 +659,43 @@ class LoanPaymentForm(forms.ModelForm):
 
 
 class LoanItemStorageBoxForm(forms.ModelForm):
+    start_item_id = forms.ModelChoiceField(
+        queryset=Loan.objects.all(),
+        to_field_name="id",
+        label="Start Loan ID",
+        # widget=forms.Select(attrs={"class": "form-control"})
+        widget=LoansWidget(),
+    )
+    end_item_id = forms.ModelChoiceField(
+        queryset=Loan.objects.all(),
+        to_field_name="id",
+        label="End Loan ID",
+        # widget=forms.Select(attrs={"class": "form-control"})
+        widget=LoansWidget(),
+    )
+
     class Meta:
         model = LoanItemStorageBox
-        fields = ["name", "location", "item_type", "start_item_id", "end_item_id"]
+        fields = ["name", "location", "start_item_id", "end_item_id", "item_type"]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_item_id = cleaned_data.get("start_item_id")
+        end_item_id = cleaned_data.get("end_item_id")
+        if start_item_id and end_item_id and start_item_id.id > end_item_id.id:
+            raise forms.ValidationError("Start Loan ID must be less than End Loan ID.")
+        if start_item_id is not None:
+            cleaned_data["start_item_id"] = start_item_id.id
+        if end_item_id is not None:
+            cleaned_data["end_item_id"] = end_item_id.id
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        instance.start_item_id = self.cleaned_data["start_item_id"]
+        instance.end_item_id = self.cleaned_data["end_item_id"]
+        if commit:
+            instance.save()
+        return instance

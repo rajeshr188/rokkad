@@ -921,18 +921,27 @@ def get_custom_jcl(loan):
 
     def draw_frame(x_offset, y_offset):
         c.setFillColorRGB(0, 0, 0)
-        c.setFont("Helvetica-Bold", 12)
+        c.setFont("Helvetica-Bold", 11)
         c.drawString(
             x_offset + 11 * cm,
             y_offset + 15.2 * cm,
             f"{loan.loan_date.strftime('%d-%m-%Y')}",
         )
         c.drawString(x_offset + 11 * cm, y_offset + 14.7 * cm, f"{loan.loan_id}")
+        draw_qr_code(
+            loan.loan_id,
+            c,
+            x_offset + 11 * cm,
+            y_offset + 15 * cm,
+            label_width=1.8 * cm,
+        )
 
+        # Define the maximum width for the paragraph
+        max_width = a5_width - 8 * cm  # Adjust the width as needed
         customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
         customer_paragraph = Paragraph(customer, styles["Heading3"])
-        width, height = customer_paragraph.wrap(a5_width, a5_height)
-        customer_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 15.2 * cm - height)
+        width, height = customer_paragraph.wrap(max_width, a5_height)
+        customer_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 15.5 * cm - height)
 
         default_pic = loan.customer.get_default_pic()
         if default_pic:
@@ -961,11 +970,11 @@ def get_custom_jcl(loan):
         )
         width, height = address_paragraph.wrap(a5_width, a5_height)
         c.setFont("Helvetica-Bold", 10)
-        address_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 14.7 * cm - height)
+        address_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 14.5 * cm - height)
 
         c.drawString(
             x_offset + 4 * cm,
-            y_offset + 13.5 * cm,
+            y_offset + 13.4 * cm,
             f"Ph: {loan.customer.contactno.first()}",
         )
 
@@ -992,9 +1001,16 @@ def get_custom_jcl(loan):
 
         c.setFont("Helvetica-Bold", 12)
         c.drawString(x_offset + 3 * cm, y_offset + 7.5 * cm, f"{loan.loan_amount}")
-        amt_fig = num2words(loan.loan_amount, lang="en_IN")
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(x_offset + 5.8 * cm, y_offset + 7.5 * cm, f"{amt_fig} rupees only")
+        amt_fig = Paragraph(
+            f"{num2words(loan.loan_amount, lang='en_IN')} rupees only", styles["Normal"]
+        )
+        max_width = 8 * cm
+        # Wrap the paragraph within the specified max_width
+        width, height = amt_fig.wrap(max_width, a5_height)
+        # c.setFont("Helvetica-Bold", 10)
+        # c.drawString(x_offset + 6.2 * cm, y_offset + 7.8 * cm, f"{amt_fig} rupees only")
+        # Draw the paragraph on the canvas
+        amt_fig.drawOn(c, x_offset + 6.2 * cm, y_offset + 7.8 * cm - height)
 
     # Draw the first frame (left side)
     draw_frame(0, 0)
@@ -1852,6 +1868,39 @@ def print_noticegroup(selection=None):
 #     response["Content-Disposition"] = "inline; filename=labels.pdf"
 #     return response
 
+from reportlab.graphics import renderPDF
+from reportlab.graphics.barcode import qr
+from reportlab.graphics.shapes import Drawing
+
+
+def draw_qr_code(loan_id, canvas, x_offset, y_offset, label_width):
+    """
+    Generates a QR code for the given loan_id and draws it on the provided canvas.
+
+    Parameters:
+    - loan_id: The ID of the loan to generate the QR code for.
+    - canvas: The ReportLab canvas to draw the QR code on.
+    - x_offset: The x-coordinate offset for positioning the QR code.
+    - y_offset: The y-coordinate offset for positioning the QR code.
+    - label_width: The width of the label to help position the QR code.
+    """
+    # Create QR code widget
+    qr_code = qr.QrCodeWidget(loan_id)
+    bounds = qr_code.getBounds()
+    qr_width = bounds[2] - bounds[0]
+    qr_height = bounds[3] - bounds[1]
+
+    # Create a drawing object with the QR code
+    d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
+    d.add(qr_code)
+
+    # Calculate QR code position
+    qr_x_offset = x_offset + label_width - 55
+    qr_y_offset = y_offset - 55
+
+    # Draw the QR code on the canvas
+    renderPDF.draw(d, canvas, qr_x_offset, qr_y_offset)
+
 
 def print_labels_pdf(loans, labels_per_row=3, labels_per_column=10):
     # Page size for A4
@@ -1889,7 +1938,7 @@ def print_labels_pdf(loans, labels_per_row=3, labels_per_column=10):
         # Draw loan details in the first column of the label
         details_x_offset = x_offset + 10
         details_y_offset = y_offset - 10
-        c.setFont("Helvetica", 10)  # Increase font size to 10
+        c.setFont("Helvetica-Bold", 10)  # Increase font size to 10
         c.drawString(details_x_offset, details_y_offset, f"Loan ID: {loan.loan_id}")
         c.drawString(
             details_x_offset, details_y_offset - 10, f"Date: {loan.loan_date.date()}"
@@ -1908,15 +1957,17 @@ def print_labels_pdf(loans, labels_per_row=3, labels_per_column=10):
         c.drawString(details_x_offset, details_y_offset - 50, f"Item: {loan.item_desc}")
 
         # Draw QR code in the second column of the label
-        qr_code = qr.QrCodeWidget(loan.loan_id)
-        bounds = qr_code.getBounds()
-        qr_width = bounds[2] - bounds[0]
-        qr_height = bounds[3] - bounds[1]
-        d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
-        d.add(qr_code)
-        qr_x_offset = x_offset + label_width - 55
-        qr_y_offset = y_offset - 55
-        renderPDF.draw(d, c, qr_x_offset, qr_y_offset)
+        # qr_code = qr.QrCodeWidget(loan.loan_id)
+        # bounds = qr_code.getBounds()
+        # qr_width = bounds[2] - bounds[0]
+        # qr_height = bounds[3] - bounds[1]
+        # d = Drawing(45, 45, transform=[45.0 / qr_width, 0, 0, 45.0 / qr_height, 0, 0])
+        # d.add(qr_code)
+        # qr_x_offset = x_offset + label_width - 55
+        # qr_y_offset = y_offset - 55
+        # renderPDF.draw(d, c, qr_x_offset, qr_y_offset)
+        label_width = page_width / labels_per_row
+        draw_qr_code(loan.loan_id, c, x_offset, y_offset, label_width)
 
         # Start a new page if the current page is full
         if (i + 1) % (labels_per_row * labels_per_column) == 0:

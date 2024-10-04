@@ -84,5 +84,5 @@ class Release(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.release_id:
-            self.release_id = self.generate_release_id(self.loan.series)
+            self.release_id = self.generate_release_id(series=self.loan.series)
         super().save(*args, **kwargs)

@@ -209,7 +209,7 @@
                 </button>
                 <ul class="dropdown-menu">
                   <li>
-                    <a class="dropdown-item" hx-post="{% url 'girvi:print_labels'%}?{{request.GET.urlencode}}"
+                    <a class="dropdown-item link-info" hx-post="{% url 'girvi:print_labels'%}?{{request.GET.urlencode}}"
                       hx-include="[name='selection'],[name='selectall']">Print Labels <svg
                         xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-tags"
                         viewBox="0 0 16 16">
@@ -220,7 +220,7 @@
                       </svg></a>
                   </li>
                   <li>
-                    <a class="dropdown-item" hx-get="{% url 'girvi:bulk_release'%}" hx-include="[name='selection']"
+                    <a class="dropdown-item link-success" hx-get="{% url 'girvi:bulk_release'%}" hx-include="[name='selection']"
                       hx-push-url="true">
                       {%trans "Release"%}
                     </a>
@@ -240,7 +240,7 @@
                     <hr class="dropdown-divider">
                   </li>
                   <li>
-                    <a class="dropdown-item dropdown-item-danger" hx-post="{% url 'girvi:girvi_loan_deletemultiple'%}"
+                    <a class="dropdown-item dropdown-item-danger link-danger" hx-post="{% url 'girvi:girvi_loan_deletemultiple'%}"
                       hx-include="[name='selection']" hx-target="#table" hx-vals='{"use_block":"table"}'
                       hx-confirm="Are you sure to delete selected items?">
                       {%trans "Delete"%}

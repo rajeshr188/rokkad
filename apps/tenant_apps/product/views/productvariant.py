@@ -16,7 +16,7 @@ from ..models import Product, ProductVariant
 @login_required
 @for_htmx(use_block="content")
 def productvariant_list(request):
-    variants = ProductVariant.objects.all()
+    variants = ProductVariant.objects.all().select_related("product")
     filter = ProductVariantFilter(request.GET, queryset=variants)
     return TemplateResponse(
         request, "product/productvariant_list.html", {"filter": filter}

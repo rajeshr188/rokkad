@@ -4,8 +4,9 @@ from django.db import models
 class LedgerManager(models.Manager):
     def get_queryset(self, *args, **kwargs):
         return (
-            super().get_queryset(*args, **kwargs)
-            # .select_related('accounttype','ledgertransactions')
+            super()
+            .get_queryset(*args, **kwargs)
+            .select_related("AccountType", "ledgertransactions")
             .prefetch_related("ledgerstatements", "credit_txns", "debit_txns")
         )
 

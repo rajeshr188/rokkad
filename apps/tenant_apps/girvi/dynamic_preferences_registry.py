@@ -62,14 +62,13 @@ class OtherInterestRate(DecimalPreference):
 # @global_preferences_registry.register
 @company_preference_registry.register
 class Loandate(ChoicePreference):
-    choices = (
-        ("N", "Now"),
-        ("L", "Last Object Created"),
-    )
-    default = "C"
     section = "Loan"
     name = "Default_Date"
     default = "N"
+    choices = [
+        ("N", "Now"),
+        ("L", "Last Object Created"),
+    ]
 
 
 # @global_preferences_registry.register

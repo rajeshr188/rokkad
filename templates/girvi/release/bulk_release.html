@@ -5,7 +5,7 @@
  {{form.media}}
 
 <div class="container">
-  <div class="card"> 
+  <div class="card">
     <div class="card-body">
       <div class="alert alert-info" role="alert">
         <h4 class="alert-heading">Bulk Release</h4>
@@ -15,7 +15,7 @@
       <form id="bulk-release-form" hx-post="{% url 'girvi:bulk_release' %}" hx-target="#content" hx-swap="innerHTML"
         _="on htmx:afterRequest reset() me">
         {% csrf_token %}
-        {{form|crispy}}
+        {% crispy form%}
         <button class="btn btn-info" type="submit">Generate Release Forms</button>
         <button class="btn btn-danger" type="reset" onclick="resetForm(this)">Cancel</button>
       </form>
@@ -32,7 +32,7 @@
       </div>
     </div>
     
-    <div class="card">
+    <div class="card" >
       <div class="card-header">Release Forms</div>
       <div class="card-body" style="height: 400px; overflow-y: auto;">
         <form method="post">

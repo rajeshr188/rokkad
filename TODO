@@ -55,4 +55,14 @@ add custom_user profile
 products:public
 stock:private
 
-verifycustomerrelationship form edit
+better organize loan templates
+    let users upload loan templates and then use them to create loan
+        for each loan templates generate a overlay with coords for fields
+            merge both overlay and templates then print directly using cups or win32print
+                or generate pdf and print using cups or win32print
+simpler ui overall
+
+s3 for files storage
+pg schema clone 
+
+

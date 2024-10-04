@@ -69,21 +69,29 @@ class Ledger(MPTTModel):
 
     def ctxns(self, since=None):
         if since is not None:
-            return self.credit_txns.filter(created__gte=since)
+            return self.credit_txns.filter(created__gte=since).select_related(
+                "journal_entry"
+            )
         else:
-            return self.credit_txns.all()
+            return self.credit_txns.all().select_related("journal_entry")
 
     def dtxns(self, since=None):
         if since is not None:
-            return self.debit_txns.filter(created__gte=since)
+            return self.debit_txns.filter(created__gte=since).select_related(
+                "journal_entry"
+            )
         else:
-            return self.debit_txns.all()
+            return self.debit_txns.all().select_related("journal_entry")
 
     def aleg_txns(self, since=None, xacttypecode=None):
         if since is not None:
-            return self.aleg.filter(created__gte=since, XactTypeCode=xacttypecode)
+            return self.aleg.filter(
+                created__gte=since, XactTypeCode=xacttypecode
+            ).select_related("journal_entry")
         else:
-            return self.aleg.filter(XactTypeCode=xacttypecode)
+            return self.aleg.filter(XactTypeCode=xacttypecode).select_related(
+                "journal_entry"
+            )
 
     def audit(self):
         # this statement will serve as opening balance for this acc

@@ -3,6 +3,7 @@
 {% load crispy_forms_tags%} 
 
 {% block content %}
+{{form.media}}
 <div class="container" id="form">
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     {% if loan%}
@@ -13,6 +14,7 @@
   </div>
   <div class="card">
     <div class="card-body overflow-hidden">
+      {{form.errors}}
       {% include 'partials/crispy_form.html' with form=form%}
     </div>
     <div 
