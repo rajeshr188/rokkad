@@ -96,6 +96,7 @@ def release_detail(request, pk):
 class ReleaseUpdateView(LoginRequiredMixin, UpdateView):
     model = Release
     form_class = ReleaseForm
+    template_name = "girvi/release/release_form.html"
 
 
 class ReleaseDeleteView(LoginRequiredMixin, DeleteView):

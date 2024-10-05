@@ -65,4 +65,6 @@ better organize loan templates
 s3 for files storage
 pg schema clone 
 
+release update need to be fixed
+before print alert user if loanvalue is zero
 
