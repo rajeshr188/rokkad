@@ -198,8 +198,8 @@ def bulk_release(request):
             }
             return TemplateResponse(
                 request,
-                "girvi/release/bulk_release.html",
-                {"formset": formset, "summary": summary, "form": BulkReleaseForm()},
+                "girvi/release/release_formset.html",
+                {"formset": formset, "summary": summary},
             )
         else:
             # If the form is invalid, return the form with errors

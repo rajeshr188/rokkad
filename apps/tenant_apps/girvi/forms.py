@@ -511,7 +511,7 @@ ReleaseFormSet = forms.modelformset_factory(Release, form=ReleaseForm, extra=1)
 
 class BulkReleaseForm(forms.Form):
     date = forms.DateTimeField(
-        input_formats=["%d/%m/%Y %H:%M"],
+        input_formats=["%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M"],
         widget=forms.DateTimeInput(
             attrs={
                 "type": "datetime-local",
@@ -520,9 +520,10 @@ class BulkReleaseForm(forms.Form):
                 # "max": timezone.now().strftime("%Y-%m-%dT%H:%M"),
                 "autofocus": True,
             },
-            format="%d/%m/%Y %H:%M",
+            # format="%d/%m/%Y %H:%M",
+            format="%Y-%m-%dT%H:%M",
         ),
-        initial=timezone.now(),
+        # initial=timezone.now(),
     )
     loans = forms.ModelMultipleChoiceField(
         widget=MultipleLoansWidget,
