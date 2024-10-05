@@ -1,5 +1,5 @@
 {% load static %}
-<div class="card mb-3" id="item-{{i.id}}" hx-target="this" hx-swap="innerHTML">
+<li class="list-group-item" id="item-{{i.id}}" >
     <div class="row g-0 align-items-center">
         <div class="col-3 col-md-2">
             {% if object.pic %}
@@ -15,7 +15,7 @@
                         <h5 class="card-title mb-1">Item: {{ i.itemdesc }}</h5>
                         <p class="card-text mb-1">
                             <small><strong>Qty:</strong> {{ i.quantity }}</small><br>
-                            <small><strong>Wt:</strong> {{ i.wt }}</small><br>
+                            <small><strong>Wt:</strong> {{ i.weight }}</small><br>
                             <small><strong>Purity:</strong> {{ i.purity }}</small>
                         </p>
                     </div>
@@ -47,4 +47,7 @@
             </div>
         </div>
     </div>
-</div>
+</li>
+
+    
+

@@ -1,104 +1,100 @@
 {% load static %}
 {%load crispy_forms_tags%}
-<script src="{% static 'js/webcapture.v1.js' %}"></script>
-<script>
-    document.addEventListener('htmx:afterSwap', function () {
-        stopCamera();
-        startup();
-    });
-</script>
-<form id="form">
-    <div class="card">
-        <div class="card-title">
-            <h1>Add Item</h1>
-        </div>
-        <div class="card-body">
-            {{form.media}}
-        {{ form|as_crispy_errors }}
-        <div class="container-fluid">
-            
-            <div class="row">
-                <div class="col-12 col-sm-3 col-lg-3">
-                    <div class="form-group">
-                        {{form.item|as_crispy_field}}
-                        {{form.item.errors}}
-                    </div>
-                </div>
-                <div class="col-12 col-sm-3 col-lg-3">
-                    <div class="form-group">
-                        {{form.itemdesc|as_crispy_field}}
-                        {{form.itemdesc.errors}}
-                    </div>
-                </div>
-                <div class="col-12 col-sm-3 col-lg-3">
-                    <div class="form-group">
-                        {{form.itemtype|as_crispy_field}}
-                        {{form.itemtype.errors}}
-                    </div>
-                </div>
-                <div class="col-12 col-sm-3 col-lg-3">
-                    <div class="form-group">
-                        {{form.interestrate|as_crispy_field}}
-                        {{form.interestrate.errors}}
-                    </div>
-                </div>
+<li class="list-group-item" id="form">
+    <form>
+        <script src="{% static 'js/webcapture.v1.js' %}"></script>
+        <script>
+            document.addEventListener('htmx:afterSwap', function () {
+                stopCamera();
+                startup();
+            });
+        </script>
+        <h1>Add Item</h1>
+        {{form.media}}
+                {{ form|as_crispy_errors }}
+                <div class="container-fluid">
 
-            </div>
-            <div class="row">
-                <div class="col-12 col-sm-3 col-lg-3">
-                    <div class="form-group">
-                        {{form.quantity|as_crispy_field}}
-                        {{form.quantity.errors}}
-                    </div>
-                </div>
-                <div class="col-12 col-sm-3 col-lg-3">
-                    <div class="form-group">
-                        {{form.weight|as_crispy_field}}
-                        {{form.weight.errors}}
-                    </div>
-                </div>
-                <div class="col-12 col-sm-3 col-lg-3">
-                    <div class="form-group">
-                        {{form.purity|as_crispy_field}}
-                        {{form.purity.errors}}
-                    </div>
-                </div>
-                <div class="col-12 col-sm-3 col-lg-3">
-                    <div class="form-group">
-                        {{form.loanamount|as_crispy_field}}
-                        {{form.loanamount.errors}}
-                    </div>
-                </div>
-            </div>
-            <div class="row justify-content-center">
-                <div class="col-auto">
-                    <div class="form-group">
-                        <button class="btn btn-success btn" hx-post="{% if url %}{{ url }}{% else %}.{% endif%}"
-                            hx-include="closest form">Save</button>
-                        <button class="btn btn-danger btn" {%if object%} hx-get="{{object.get_absolute_url}}"
-                            hx-target="#item-{{object.id}}"
-                            {%else%}_="on click transition opacity to 0 then remove #form" {%endif%}>Cancel</button>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <input type="hidden" id="image-data" name="image_data">
-                <select id="videoSource"></select>
-                <div class="col-12 col-lg-6">
+                    <div class="row">
+                        <div class="col-12 col-sm-3 col-lg-3">
+                            <div class="form-group">
+                                {{form.item|as_crispy_field}}
+                                {{form.item.errors}}
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-3 col-lg-3">
+                            <div class="form-group">
+                                {{form.itemdesc|as_crispy_field}}
+                                {{form.itemdesc.errors}}
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-3 col-lg-3">
+                            <div class="form-group">
+                                {{form.itemtype|as_crispy_field}}
+                                {{form.itemtype.errors}}
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-3 col-lg-3">
+                            <div class="form-group">
+                                {{form.interestrate|as_crispy_field}}
+                                {{form.interestrate.errors}}
+                            </div>
+                        </div>
 
-                    <div class="camera">
-                        <video id="video">Video stream not available.</video>
-                        <button id="startbutton">Take photo</button>
                     </div>
-                    <canvas id="canvas"></canvas>
-                </div>
-                <div class="col-12  col-lg-6">
-                    <div class="output">
-                        <img id="photo" alt="The screen capture will appear in this box." />
+                    <div class="row">
+                        <div class="col-12 col-sm-3 col-lg-3">
+                            <div class="form-group">
+                                {{form.quantity|as_crispy_field}}
+                                {{form.quantity.errors}}
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-3 col-lg-3">
+                            <div class="form-group">
+                                {{form.weight|as_crispy_field}}
+                                {{form.weight.errors}}
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-3 col-lg-3">
+                            <div class="form-group">
+                                {{form.purity|as_crispy_field}}
+                                {{form.purity.errors}}
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-3 col-lg-3">
+                            <div class="form-group">
+                                {{form.loanamount|as_crispy_field}}
+                                {{form.loanamount.errors}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row justify-content-center">
+                        <div class="col-auto">
+                            <div class="form-group">
+                                <button class="btn btn-success btn" hx-post="{% if url %}{{ url }}{% else %}.{% endif%}"
+                                    hx-include="closest form">Save</button>
+                                <button class="btn btn-danger btn" {%if object%} hx-get="{{object.get_absolute_url}}"
+                                    {%else%}_="on click transition opacity to 0 then remove #form"
+                                    {%endif%}>Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <input type="hidden" id="image-data" name="image_data">
+                        <select id="videoSource"></select>
+                        <div class="col-12 col-lg-6">
+
+                            <div class="camera">
+                                <video id="video">Video stream not available.</video>
+                                <button id="startbutton">Take photo</button>
+                            </div>
+                            <canvas id="canvas"></canvas>
+                        </div>
+                        <div class="col-12  col-lg-6">
+                            <div class="output">
+                                <img id="photo" alt="The screen capture will appear in this box." />
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        </div>
-    </div>
-</form>
+    </form>
+</li>
