@@ -64,6 +64,7 @@
   </div>
 </div>
 <script>
+  $('.django-select2').djangoSelect2();
   function resetForm(button) {
       const form = button.closest('form');
       form.reset();
@@ -77,10 +78,11 @@
   }
 
   document.body.addEventListener('htmx:afterOnLoad', function(evt) {
-      if (evt.detail.target.id === 'formset-container') {
-          // Reset the select2 field after form submission
-          $('#choices').val(null).trigger('change');
-      }
+      // if (evt.detail.target.id === 'formset-container') {
+      //     // Reset the select2 field after form submission
+      //     $('#choices').val(null).trigger('change');
+      // }
+      resetForm(document.querySelector('button[type="reset"]'));
   });
 </script>
 {% endblock %}

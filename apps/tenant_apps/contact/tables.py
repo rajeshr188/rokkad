@@ -75,7 +75,7 @@ class CustomerTable(tables.Table):
             ]
             for address in record.address.all()
         ]
-        return mark_safe(format_html_join("<br />", "{} {} {} {} {}", addresses))
+        return mark_safe(format_html_join(",", "{} {} {} {} {}", addresses))
 
     def value_address(self, record):
         addresses = [
