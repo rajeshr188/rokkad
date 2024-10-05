@@ -982,7 +982,7 @@ def get_custom_jcl(loan):
         data = [["Description"]]
         for i, item in enumerate(loan.loanitems.all(), start=1):
             itemdesc = Paragraph(item.itemdesc, styles["Normal"])
-            data.append([f"{i}, {item.itemdesc}"])
+            data.append([f"{i}) {item.itemdesc}, Qty:{item.quantity}"])
 
         table = Table(data)
         table.setStyle(
@@ -1010,7 +1010,7 @@ def get_custom_jcl(loan):
         # c.setFont("Helvetica-Bold", 10)
         # c.drawString(x_offset + 6.2 * cm, y_offset + 7.8 * cm, f"{amt_fig} rupees only")
         # Draw the paragraph on the canvas
-        amt_fig.drawOn(c, x_offset + 6.5 * cm, y_offset + 8 * cm - height)
+        amt_fig.drawOn(c, x_offset + 6 * cm, y_offset + 8 * cm - height)
 
     # Draw the first frame (left side)
     draw_frame(0, 0)
