@@ -1,5 +1,7 @@
 
 {% load crispy_forms_tags %}
+{%block content%}
+ {{form.media}}
 <div class="" id = "formset-container">
   <div class="card">
       <h3 class="card-header">Summary</h3>
@@ -38,3 +40,4 @@
       </div>
   </div>
 </div>
+{%endblock%}

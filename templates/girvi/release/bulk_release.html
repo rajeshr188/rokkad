@@ -12,12 +12,13 @@
         <p>Release multiple loans at once</p>
       </div>
      
-      <form id="bulk-release-form" hx-post="{% url 'girvi:bulk_release' %}" hx-target="#content" hx-swap="innerHTML"
-        _="on htmx:afterRequest reset() me">
+      <form id="bulk-release-form" 
+          hx-post="{% url 'girvi:bulk_release' %}" hx-target="#formset-container" hx-swap="innerHTML"
+          _="on htmx:afterRequest reset() me">
         {% csrf_token %}
-        {% crispy form%}
+        {{form|crispy}}
         <button class="btn btn-info" type="submit">Generate Release Forms</button>
-        <button class="btn btn-danger" type="reset" onclick="resetForm(this)">Cancel</button>
+        <button class="btn btn-danger" type="reset" onclick="resetForm(this)">Clear</button>
       </form>
     </div>
   </div>
@@ -63,10 +64,7 @@
   </div>
 </div>
 <script>
-
-  
   function resetForm(button) {
-      // Reset the form
       const form = button.closest('form');
       form.reset();
 
@@ -76,6 +74,13 @@
               $(this).val(null).trigger('change');
           }
       });
+  }
+
+  document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+      if (evt.detail.target.id === 'formset-container') {
+          // Reset the select2 field after form submission
+          $('#choices').val(null).trigger('change');
       }
+  });
 </script>
 {% endblock %}
