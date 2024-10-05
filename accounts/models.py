@@ -1,9 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.db.models.signals import post_save  # new
-from django.dispatch import receiver  # new
 from django.utils.translation import gettext_lazy as _
-
+from django_tenants.utils import get_public_schema_name
 
 class CustomUser(AbstractUser):
     workspace = models.ForeignKey(
@@ -11,7 +9,7 @@ class CustomUser(AbstractUser):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        default=None,
+        default=get_public_schema_name(),
         verbose_name=_("Workspace"),
     )
     profile_picture = models.ImageField(
@@ -43,6 +41,19 @@ class CustomUser(AbstractUser):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    # timezone = models.CharField(max_length=63, null=True, blank=True,default = 'Asia/Kolkata')
+    # workspace = models.ForeignKey(
+    #     "orgs.Company",
+    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     blank=True,
+    #     default=get_public_schema_name(),
+    #     verbose_name=_("Workspace"),
+    # )
+    # profile_picture = models.ImageField(
+    #     upload_to="profile_pictures/", null=True, blank=True
+    # )
+    # social_profile_picture = models.URLField(max_length=200, null=True, blank=True)
     phone_number = models.CharField(max_length=15, null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
 
@@ -52,8 +63,3 @@ class UserProfile(models.Model):
     # def delete(self, *args, **kwargs):
     #     self.user.delete()
     #     super().delete(*args, **kwargs)
-@receiver(post_save, sender=CustomUser)  # new
-def create_or_update_user_profile(sender, instance, created, **kwargs):
-    if created:
-        UserProfile.objects.create(user=instance)
-    instance.userprofile.save()

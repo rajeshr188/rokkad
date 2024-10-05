@@ -135,7 +135,6 @@ def loan_save(request, id=None, pk=None):
 
         else:
             messages.warning(request, "Please correct the error below.")
-            print(form.errors)
 
     if not obj:
         initial = {}
@@ -368,11 +367,11 @@ def loan_item_update_hx_view(request, parent_id=None, id=None):
                 new_obj.pic = image_file
             new_obj.save()
             messages.success(request, f"Created Item : {new_obj.id}")
-            context = {"object": new_obj}
+            context = {"object": new_obj,"i":new_obj}
 
             if request.htmx:
                 return HttpResponse(status=204, headers={"HX-Trigger": "loanChanged"})
-            return render(request, "girvi/partials/item-inline.html", context)
+            return render(request, "girvi/partials/item-inline-new.html", context)
         # else:
         #     context = {"url": url, "form": form, "object": instance}
         #     return render(request, "girvi/partials/item-form.html", context)
