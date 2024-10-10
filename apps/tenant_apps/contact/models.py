@@ -93,7 +93,7 @@ class Customer(models.Model):
 
     def __str__(self):
         return f"""{self.name} {self.get_relatedas_display()} {self.relatedto} {self.get_customer_type_display()} \n 
-                {self.address.first() } {self.contactno.first() }"""
+                {self.address.filter(is_default=True).first()} {self.contactno.filter(is_default=True).first() }"""
 
     def get_absolute_url(self):
         return reverse("contact_customer_detail", args=(self.pk,))
@@ -459,6 +459,13 @@ class Address(models.Model):
         self.is_default = True
         self.save()
 
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            Address.objects.filter(customer=self.customer, is_default=True).update(
+                is_default=False
+            )
+        super().save(*args, **kwargs)
+
 
 class Contact(models.Model):
     # Relationships
@@ -507,6 +514,13 @@ class Contact(models.Model):
     def set_default(self):
         self.is_default = True
         self.save()
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            Contact.objects.filter(customer=self.customer, is_default=True).update(
+                is_default=False
+            )
+        super().save(*args, **kwargs)
 
 
 class Proof(models.Model):

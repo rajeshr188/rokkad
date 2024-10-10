@@ -7,15 +7,30 @@ from reportlab.lib.pagesizes import A4, landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, inch, mm
 from reportlab.pdfgen import canvas
-from reportlab.platypus import (BalancedColumns, Frame, ListFlowable, ListItem,
-                                LongTable, PageBreak, PageTemplate, Paragraph,
-                                SimpleDocTemplate, Spacer, Table, TableStyle)
+from reportlab.platypus import (
+    BalancedColumns,
+    Frame,
+    ListFlowable,
+    ListItem,
+    LongTable,
+    PageBreak,
+    PageTemplate,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from reportlab.platypus.tableofcontents import TableOfContents
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-from apps.tenant_apps.utils.loan_pdf import (get_custom_jcl, get_custom_jsk,
-                                             get_loan_template, get_notice_pdf,
-                                             print_labels_pdf)
+from apps.tenant_apps.utils.loan_pdf import (
+    get_custom_jcl,
+    get_custom_jsk,
+    get_loan_template,
+    get_notice_pdf,
+    print_labels_pdf,
+)
 
 from ..forms import LoanSelectionForm
 from ..models import Loan
@@ -149,7 +164,8 @@ def print_loan(request, pk=None):
     # Create a response object
     response = HttpResponse(pdf, content_type="application/pdf")
     # response["Content-Disposition"] = 'attachment; filename="pledge.pdf"'
-    response["Content-Disposition"] = f"inline; filename='{loan.lid}.pdf'"
+    response["Content-Disposition"] = f"inline; filename='{loan.loan_id}.pdf'"
+    response["Content-Transfer-Encoding"] = "binary"
     return response
 
 

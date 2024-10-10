@@ -4,19 +4,30 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Button, Submit
 from django import forms
 from django.apps import apps
+
 # from product.models import PricingTier
 from django.conf import settings
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.urls import reverse
 from django_select2 import forms as s2forms
-from django_select2.forms import (ModelSelect2MultipleWidget,
-                                  ModelSelect2Widget, Select2MultipleWidget,
-                                  Select2Widget)
+from django_select2.forms import (
+    ModelSelect2MultipleWidget,
+    ModelSelect2Widget,
+    Select2MultipleWidget,
+    Select2Widget,
+)
 from import_export.formats import base_formats
 from slick_reporting.forms import BaseReportForm
 
-from .models import (Address, Contact, Customer, CustomerPic,
-                     CustomerRelationship, Proof, RelationType)
+from .models import (
+    Address,
+    Contact,
+    Customer,
+    CustomerPic,
+    CustomerRelationship,
+    Proof,
+    RelationType,
+)
 
 
 class ExportForm(forms.Form):
@@ -195,13 +206,16 @@ class CustomerPicForm(forms.ModelForm):
 
 
 class AddressForm(forms.ModelForm):
-    doorno = forms.CharField(required=False)
+    doorno = forms.CharField(
+        required=False, widget=forms.TextInput(attrs={"autofocus": True})
+    )
     area = forms.CharField(required=False)
     zipcode = forms.CharField(required=False)
 
     class Meta:
         model = Address
         fields = [
+            "is_default",
             "doorno",
             "street",
             "area",
@@ -278,6 +292,7 @@ class ContactForm(forms.ModelForm):
     class Meta:
         model = Contact
         fields = [
+            "is_default",
             "contact_type",
             "phone_number",
             # "customer",

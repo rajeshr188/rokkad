@@ -367,5 +367,10 @@
 </div>
 </div>
 <script src="{% static 'js/webcapture.v1.js' %}"></script>
-
+<script>
+  document.addEventListener('htmx:afterSwap', function () {
+    stopCamera();
+    startup();
+  });
+</script>
 {% endblock %}

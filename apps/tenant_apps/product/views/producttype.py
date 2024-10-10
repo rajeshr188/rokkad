@@ -60,6 +60,7 @@ def producttype_delete(request, pk):
 
 
 import uuid  # Import the uuid module
+
 # views.py
 from itertools import product
 

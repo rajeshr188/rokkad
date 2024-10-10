@@ -46,7 +46,8 @@ def update_storage_box(request, pk):
                 {
                     "success": True,
                     "html": render_to_string(
-                        "storagebox_item.html", {"storage_box": storage_box}
+                        "girvi/storagebox/storagebox_item.html",
+                        {"storage_box": storage_box},
                     ),
                 }
             )

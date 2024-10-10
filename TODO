@@ -27,6 +27,7 @@ using django5 with psycopg2(only hurdle is psycopg composite register and adapt 
 archived views of dea on/as dashboard
 
 django-waffle
+django-wagtail
 
 improve stock merge if possible venture out django-mptt in stock and django-taggit
 
@@ -61,10 +62,18 @@ better organize loan templates
             merge both overlay and templates then print directly using cups or win32print
                 or generate pdf and print using cups or win32print
 
-
-s3 for files storage
 pg schema clone 
+LOANAMOUNT ON LOAN FORM.ADAPT LOANAMOUNT ON LOANITEMS BASED ON LOANAMOUNT ON LOANMODEL
+improve company creation and tenant setting 
+search for .doc creation in django
+from .doc to .pdf with loan values
+standardize loan template by overlaying a template form with values overwritten at coordinates or any simpler idea
+admin:  
+    public:
+            superuser can manage tenants and membership
+    tenants:
+            only members,admin,owner can access tenant specific models
 
-release update need to be fixed
-before print alert user if loanvalue is zero
+backup of database is a task handled by celery
 
+when storage backend is r2 cloudflare image.path will break so use image.url

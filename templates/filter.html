@@ -1,10 +1,9 @@
 {%load crispy_forms_tags%}
-{%load crispy_forms_filters%}
 {% load i18n%}
 {% load widget_tweaks %}
-{{filter.form.media}}
 
 <div class="position-relative h-20 " id ="filter">
+    {{filter.form.media}}
     {% if filter %}
     <div class="card  text-center">
         <div class="card-header">
@@ -19,12 +18,7 @@
                     hx-indicator=".progress"
                     hx-push-url="true"
                     class = "form-inline">
-                <!-- {%for field in filter.form%}
-                <div class="form-floating mb-1">
-                    {%render_field field|add_class:"form-control"%}
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                </div>
-                {%endfor%} -->
+               
                 {% crispy filter.form %}
             </form>
             

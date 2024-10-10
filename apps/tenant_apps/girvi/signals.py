@@ -3,8 +3,7 @@ import logging
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import F, Sum
-from django.db.models.signals import (post_delete, post_save, pre_delete,
-                                      pre_save)
+from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 
 from .models import Loan, LoanItem, LoanPayment

@@ -1,7 +1,5 @@
 {% extends 'tenant.html' %}
-{% load static slick_reporting_tags %}
-{% load i18n %}
-{% load humanize %}
+{% load static slick_reporting_tags i18n humanize%}
 {% block title %}Home page{% endblock title %}
 
 {% block content %}
@@ -169,20 +167,7 @@
       <div class="card-header">
         <div class="card-head-row">
           <div class="card-title">Customer Registrations</div>
-          <div class="card-tools">
-            <a href="#" class="btn btn-label-success btn-round btn-sm me-2">
-              <span class="btn-label">
-                <i class="fa fa-pencil"></i>
-              </span>
-              Export
-            </a>
-            <a href="#" class="btn btn-label-info btn-round btn-sm">
-              <span class="btn-label">
-                <i class="fa fa-print"></i>
-              </span>
-              Print
-            </a>
-          </div>
+          
         </div>
       </div>
       <div class="card-body">

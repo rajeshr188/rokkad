@@ -7,16 +7,24 @@ from django.db.models import Count
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django_tenants.utils import (get_public_schema_name, remove_www,
-                                  schema_context)
+from django_tenants.utils import get_public_schema_name, remove_www, schema_context
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
 
-from .decorators import (company_member_required, membership_required,
-                         role_required, roles_required, workspace_required)
-from .forms import (CompanyForm, CompanyInvitationForm, MembershipForm,
-                    company_preference_form_builder)
+from .decorators import (
+    company_member_required,
+    membership_required,
+    role_required,
+    roles_required,
+    workspace_required,
+)
+from .forms import (
+    CompanyForm,
+    CompanyInvitationForm,
+    MembershipForm,
+    company_preference_form_builder,
+)
 from .models import Company, CompanyInvitation, Domain, Membership, Role
 
 # Create your views here.
@@ -139,10 +147,12 @@ def company_delete(request, company_id):
         # Switch to the public schema before deleting the company
         with schema_context(get_public_schema_name()):
             company.delete()
-
+            print(f"public_schema: {get_public_schema_name()}")
             # Reset the user's workspace to the public schema
-            request.user.workspace = get_public_schema_name()
+            print(f"request.user.workspace: {request.user.workspace}")
+            request.user.workspace = Company.objects.get(name=get_public_schema_name())
             request.user.save()
+            print(f"request.user.workspace: {request.user.workspace}")
         return redirect("orgs_company_list")
 
 
@@ -301,3 +311,39 @@ def invitation_delete(request, invitation_id):
     #     "orgs_companyinvitations_list"
     # )  # Redirect to the list of invitations
     return HttpResponse("Invitation deleted successfully")
+
+
+from io import StringIO
+
+from django.core.management import call_command
+from django.http import JsonResponse
+from django.views import View
+
+
+class BackupSchemaView(View):
+    def get(self, request, *args, **kwargs):
+        schema_name = request.GET.get("schema_name")
+        if not schema_name:
+            return JsonResponse(
+                {"status": "error", "message": "schema_name parameter is required"},
+                status=400,
+            )
+
+        out = StringIO()
+        try:
+            call_command("backup", schema_name, stdout=out)
+            response = {"status": "success", "message": out.getvalue()}
+        except Exception as e:
+            response = {"status": "error", "message": str(e)}
+        return JsonResponse(response)
+
+
+class BackupDatabaseView(View):
+    def get(self, request, *args, **kwargs):
+        out = StringIO()
+        try:
+            call_command("backup", stdout=out)
+            response = {"status": "success", "message": out.getvalue()}
+        except Exception as e:
+            response = {"status": "error", "message": str(e)}
+        return JsonResponse(response)
