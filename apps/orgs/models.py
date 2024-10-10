@@ -1,6 +1,7 @@
 # Create your models here.
 import datetime
 
+from colorfield.fields import ColorField
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -21,6 +22,8 @@ User = get_user_model()
 
 class Company(TenantMixin):
     name = models.CharField(_("Name"), max_length=200, unique=True)
+    theme = ColorField(default="#FF0000")
+    logo = models.ImageField(upload_to="company_logos/", null=True, blank=True)
     members = models.ManyToManyField(
         User,
         through="Membership",

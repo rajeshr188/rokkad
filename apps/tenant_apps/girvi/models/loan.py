@@ -9,8 +9,16 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
-from django.db.models import (BooleanField, DecimalField, ExpressionWrapper, F,
-                              Func, Max, Q, Sum)
+from django.db.models import (
+    BooleanField,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    Func,
+    Max,
+    Q,
+    Sum,
+)
 from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
 from django.urls import reverse
@@ -19,19 +27,18 @@ from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (AccountTransaction, JournalEntry,
-                                         LedgerTransaction)
+from apps.tenant_apps.dea.models import (
+    AccountTransaction,
+    JournalEntry,
+    LedgerTransaction,
+)
 from apps.tenant_apps.rates.models import Rate
 
 # from ..models import Release
-from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
-                        UnReleasedManager)
+from ..managers import LoanManager, LoanQuerySet, ReleasedManager, UnReleasedManager
 
 # from qrcode.image.pure import PyImagingImage
 # from io import BytesIO
-
-
-
 
 
 class Loan(models.Model):
@@ -963,28 +970,23 @@ class StatementItem(models.Model):
 
 
 class ItemType(models.TextChoices):
-    GOLD = "gold", "Gold"
+    GOLD = "Gold", "Gold"
     SILVER = "silver", "Silver"
     BRONZE = "bronze", "Bronze"
 
 
 class LoanItemStorageBox(models.Model):
+    # TODO change start_item_id and end_item_id to ForeignKey to LoanItem
     name = models.CharField(max_length=50)
     location = models.CharField(max_length=50)
-    start_item_id = models.PositiveIntegerField()
-    end_item_id = models.PositiveIntegerField()
+    start_item_id = models.CharField(max_length=50)
+    end_item_id = models.CharField(max_length=50)
     item_type = models.CharField(
         max_length=6, choices=ItemType.choices, default=ItemType.GOLD
     )
 
     def __str__(self):
-        return f"{self.name} at {self.location} (Items {Loan.objects.get(id = self.start_item_id).loan_id} to {Loan.objects.get(id =self.end_item_id).loan_id})"
-
-    def get_start_item_loan_id(self):
-        return Loan.objects.get(id=self.start_item_id).loan_id
-
-    def get_end_item_loan_id(self):
-        return Loan.objects.get(id=self.end_item_id).loan_id
+        return f"{self.name} at {self.location} (Items {self.start_item_id} to {self.end_item_id})"
 
     def clean(self):
         # Check for overlapping ranges
@@ -1002,12 +1004,8 @@ class LoanItemStorageBox(models.Model):
             )
 
     def position_for_item(self, item_id):
-        # naive approach
-        # if item_id < self.start_item_id or item_id > self.end_item_id:
-        #     return None
-        # return item_id - self.start_item_id + 1
-        items_in_box = self.items().order_by("id")
-        item_ids = list(items_in_box.values_list("id", flat=True))
+        items_in_box = self.items().order_by("loan_id")
+        item_ids = list(items_in_box.values_list("loan_id", flat=True))
         try:
             position = item_ids.index(item_id) + 1
         except ValueError:
@@ -1015,10 +1013,14 @@ class LoanItemStorageBox(models.Model):
         return position
 
     def items(self):
-        return Loan.objects.filter(id__gte=self.start_item_id, id__lte=self.end_item_id)
+        return Loan.unreleased.filter(
+            loan_id__gte=self.start_item_id,
+            loan_id__lte=self.end_item_id,
+            loanitems__itemtype=self.item_type,
+        )
 
     def items_count(self):
-        return self.end_item_id - self.start_item_id + 1
+        return self.items().count()
 
     def get_absolute_url(self):
         return reverse("girvi:storagebox_detail", args=(self.pk,))

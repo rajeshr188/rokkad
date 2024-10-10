@@ -93,10 +93,22 @@ def release_detail(request, pk):
     )
 
 
-class ReleaseUpdateView(LoginRequiredMixin, UpdateView):
-    model = Release
-    form_class = ReleaseForm
-    template_name = "girvi/release/release_form.html"
+@login_required
+def release_update_view(request, pk):
+    release = get_object_or_404(Release, pk=pk)
+    print("Release:", release)  # Debugging statement
+    if request.method == "POST":
+        form = ReleaseForm(request.POST or None, instance=release)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse_lazy("girvi:girvi_release_list"))
+    else:
+        form = ReleaseForm(instance=release)
+        # form.fields['loan'].initial = release.loan.id  # Explicitly set the initial value
+        print("Form:", form)  # Debugging statement
+        print("Form instance:", form.instance)  # Debugging statement
+        print("Form loan field:", form["loan"].value())  # Debugging statement
+    return render(request, "girvi/release/release_form.html", {"form": form})
 
 
 class ReleaseDeleteView(LoginRequiredMixin, DeleteView):

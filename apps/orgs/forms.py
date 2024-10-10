@@ -2,12 +2,13 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django_select2.forms import Select2Widget
-from dynamic_preferences.forms import (PreferenceForm,
-                                       SinglePerInstancePreferenceForm,
-                                       preference_form_builder)
+from dynamic_preferences.forms import (
+    PreferenceForm,
+    SinglePerInstancePreferenceForm,
+    preference_form_builder,
+)
 from invitations.adapters import get_invitations_adapter
-from invitations.exceptions import (AlreadyAccepted, AlreadyInvited,
-                                    UserRegisteredEmail)
+from invitations.exceptions import AlreadyAccepted, AlreadyInvited, UserRegisteredEmail
 from invitations.forms import CleanEmailMixin
 from invitations.utils import get_invitation_model
 
@@ -198,15 +199,41 @@ class InvitationAdminChangeForm(forms.ModelForm):
         fields = "__all__"
 
 
+from colorfield.widgets import ColorWidget
+
+
+class ColorInput(forms.TextInput):
+    input_type = "color"
+
+
 class CompanyForm(forms.ModelForm):
+    name = forms.CharField(label=_("Business Name"), required=True)
+    logo = forms.ImageField(label=_("Logo"), required=False)
+    theme = forms.CharField(label=_("Theme"), required=False, widget=ColorInput)
+
     class Meta:
         model = Company
-        fields = ("name",)
+        fields = ("name", "logo", "theme")
+        # widgets = {
+        #     "theme": ColorWidget,
+        # }
 
     def clean_name(self):
         name = self.cleaned_data.get("name")
-        if Company.objects.filter(name=name).exists():
-            raise ValidationError("Company with this name already exists.")
+        if name:
+            # Check if the form is updating an existing instance
+            if self.instance.pk:
+                # Allow the current instance's name
+                if (
+                    Company.objects.filter(name=name)
+                    .exclude(pk=self.instance.pk)
+                    .exists()
+                ):
+                    raise ValidationError("Company with this name already exists.")
+            else:
+                # Check for new instances
+                if Company.objects.filter(name=name).exists():
+                    raise ValidationError("Company with this name already exists.")
         return name
 
 

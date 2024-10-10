@@ -1,6 +1,8 @@
 import base64
 import datetime
+import decimal
 
+import pytz
 from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -28,7 +30,7 @@ from ..forms import LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm
 from ..models import *
 from ..services import generate_loan_id
 from ..tables import LoanTable
-import pytz
+
 
 def ld(request):
     # TODO get last date by series
@@ -236,11 +238,12 @@ def loan_detail(request, pk):
 
     due = loan.due()
     # due = loan.total_due
-
-    try:
-        dvratio = round(due / value, 2) * 100
-    except ZeroDivisionError:
-        dvratio = 0
+    dvratio = 0
+    if due > 0 and value > 0:
+        try:
+            dvratio = round(due / value, 2) * 100
+        except (decimal.DivisionUndefined, ZeroDivisionError):
+            dvratio = 0
     location = loan.get_storage_box()
     if location:
         position = location.position_for_item(loan.id)
@@ -367,7 +370,7 @@ def loan_item_update_hx_view(request, parent_id=None, id=None):
                 new_obj.pic = image_file
             new_obj.save()
             messages.success(request, f"Created Item : {new_obj.id}")
-            context = {"object": new_obj,"i":new_obj}
+            context = {"object": new_obj, "i": new_obj}
 
             if request.htmx:
                 return HttpResponse(status=204, headers={"HX-Trigger": "loanChanged"})

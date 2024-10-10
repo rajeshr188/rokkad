@@ -15,8 +15,14 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import AccountFilter
 from ..forms import AccountForm, AccountStatementForm, AccountTransactionForm
-from ..models import (Account, Accountbalance, AccountStatement,
-                      AccountTransaction, JournalEntry, MoneyField)
+from ..models import (
+    Account,
+    Accountbalance,
+    AccountStatement,
+    AccountTransaction,
+    JournalEntry,
+    MoneyField,
+)
 from ..tables import AccountTable
 
 

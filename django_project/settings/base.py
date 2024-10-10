@@ -61,6 +61,7 @@ SHARED_APPS = [
     "dynamic_preferences",
     "django_htmx",
     "import_export",
+    "colorfield",
     # Local
     "accounts",
     "pages",
@@ -131,6 +132,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.orgs.context_processors.theme_processor",
             ],
         },
     },
@@ -236,6 +238,22 @@ EMAIL_PORT = env("EMAIL_PORT")
 EMAIL_USE_TLS = env("EMAIL_USE_TLS")
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+# ADMINS = [('Admin', 'admin@example.com')]
+
+
+# Function to parse ADMINS from environment variable
+def parse_admins(admins_str):
+    admins = []
+    for admin in admins_str.split(","):
+        name, email = admin.strip().split("<")
+        email = email.strip(">")
+        admins.append((name.strip(), email.strip()))
+    return admins
+
+
+# Parse ADMINS from environment variable
+ADMINS = parse_admins(env("ADMINS"))
 
 # django-debug-toolbar
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html
@@ -364,12 +382,17 @@ MESSAGE_TAGS = {
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "tenant_context": {
+            "()": "django_tenants.log.TenantContextFilter",
+        },
+    },
     "formatters": {
         "verbose": {
-            "format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(name)s %(message)s"
+            "format": "[%(schema_name)s] %(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(name)s %(message)s"
         },
         "simple": {
-            "format": "%(levelname)s %(asctime)s %(message)s",
+            "format": "[%(schema_name)s] %(levelname)s %(asctime)s %(message)s",
         },
     },
     "handlers": {
@@ -377,7 +400,13 @@ LOGGING = {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "simple",
-            "filters": [],
+            "filters": ["tenant_context"],
+        },
+        "mail_admins": {
+            "level": "ERROR",
+            "class": "django.utils.log.AdminEmailHandler",
+            "filters": ["tenant_context"],
+            "formatter": "verbose",
         },
     },
     "loggers": {
@@ -391,3 +420,4 @@ LOGGING = {
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 # USE_THOUSAND_SEPARATOR = True
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

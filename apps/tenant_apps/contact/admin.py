@@ -8,9 +8,85 @@ from import_export.admin import ImportExportActionModelAdmin
 from import_export.fields import Field
 from import_export.widgets import DateTimeWidget
 
-from .models import Address, Contact, Customer, Proof,CustomerPic
-from .resources import (AddressResource, ContactResource, CustomerResource,
-                        ProofResource)
+from .models import Address, Contact, Customer, CustomerPic, Proof
+from .resources import AddressResource, ContactResource, CustomerResource, ProofResource
+
+
+class AddressAdminForm(forms.ModelForm):
+    class Meta:
+        model = Address
+        fields = "__all__"
+
+
+class AddressAdmin(admin.TabularInline):
+    resource_class = AddressResource
+    form = AddressAdminForm
+    list_display = [
+        "area",
+        "created",
+        "doorno",
+        "zipcode",
+        "last_updated",
+        "street",
+    ]
+
+    model = Address
+
+
+class ContactAdminForm(forms.ModelForm):
+    class Meta:
+        model = Contact
+        fields = "__all__"
+
+
+class ContactAdmin(admin.TabularInline):
+    resource_class = ContactResource
+    form = ContactAdminForm
+    list_display = [
+        "created",
+        "contact_type",
+        "phone_number",
+        "last_updated",
+    ]
+    readonly_fields = [
+        "last_updated",
+    ]
+    model = Contact
+
+
+class ProofAdminForm(forms.ModelForm):
+    class Meta:
+        model = Proof
+        fields = "__all__"
+
+
+class ProofAdmin(admin.TabularInline):
+    resource_class = ProofResource
+    form = ProofAdminForm
+    list_display = [
+        "proof_type",
+        "created",
+        "proof_no",
+        "doc",
+        "last_updated",
+    ]
+    readonly_fields = [
+        "last_updated",
+    ]
+    model = Proof
+
+
+class CustomerPicForm(forms.ModelForm):
+    class Meta:
+        model = CustomerPic
+        fields = "__all__"
+
+
+class CustomerPicAdmin(admin.TabularInline):
+    form = CustomerPicForm
+    search_fields = ["customer"]
+    list_display = ["customer", "image", "is_default"]
+    model = CustomerPic
 
 
 class CustomerAdminForm(forms.ModelForm):
@@ -23,6 +99,7 @@ class CustomerAdmin(ImportExportActionModelAdmin):
     # class CustomerAdmin(admin.ModelAdmin):
     form = CustomerAdminForm
     resource_class = CustomerResource
+    inlines = [AddressAdmin, ContactAdmin, ProofAdmin, CustomerPicAdmin]
     search_fields = ["id", "name", "relatedto", "Address"]
     list_display = [
         "name",
@@ -34,94 +111,9 @@ class CustomerAdmin(ImportExportActionModelAdmin):
         "relatedto",
     ]
     readonly_fields = ["created", "updated"]
+    list_filter = ["customer_type", "relatedas"]
+
+    model = Customer
 
 
-class AddressAdminForm(forms.ModelForm):
-    class Meta:
-        model = Address
-        fields = "__all__"
-
-
-class AddressAdmin(admin.ModelAdmin):
-    resource_class = AddressResource
-    form = AddressAdminForm
-    list_display = [
-        "area",
-        "created",
-        "doorno",
-        "zipcode",
-        "last_updated",
-        "street",
-    ]
-    readonly_fields = [
-        "area",
-        "created",
-        "doorno",
-        "zipcode",
-        "last_updated",
-        "street",
-    ]
-
-
-class ContactAdminForm(forms.ModelForm):
-    class Meta:
-        model = Contact
-        fields = "__all__"
-
-
-class ContactAdmin(admin.ModelAdmin):
-    resource_class = ContactResource
-    form = ContactAdminForm
-    list_display = [
-        "created",
-        "contact_type",
-        "phone_number",
-        "last_updated",
-    ]
-    readonly_fields = [
-        "created",
-        "contact_type",
-        "phone_number",
-        "last_updated",
-    ]
-
-
-class ProofAdminForm(forms.ModelForm):
-    class Meta:
-        model = Proof
-        fields = "__all__"
-
-
-class ProofAdmin(admin.ModelAdmin):
-    resource_class = ProofResource
-    form = ProofAdminForm
-    list_display = [
-        "proof_type",
-        "created",
-        "proof_no",
-        "doc",
-        "last_updated",
-    ]
-    readonly_fields = [
-        "proof_type",
-        "created",
-        "proof_no",
-        "doc",
-        "last_updated",
-    ]
-
-class CustomerPicForm(forms.ModelForm):
-    class Meta:
-        model = CustomerPic
-        fields = "__all__"
-
-class CustomerPicAdmin(admin.ModelAdmin):
-    form = CustomerPicForm
-    search_fields = ['customer']    
-    list_display = ['customer', 'image', 'is_default']
-
-admin.site.register(CustomerPic, CustomerPicAdmin)    
 admin.site.register(Customer, CustomerAdmin)
-admin.site.register(Address, AddressAdmin)
-admin.site.register(Contact, ContactAdmin)
-admin.site.register(Proof, ProofAdmin)

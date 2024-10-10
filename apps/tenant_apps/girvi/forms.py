@@ -10,16 +10,28 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django_select2 import forms as s2forms
-from django_select2.forms import (ModelSelect2Widget, Select2MultipleWidget,
-                                  Select2Widget)
+from django_select2.forms import (
+    ModelSelect2Widget,
+    Select2MultipleWidget,
+    Select2Widget,
+)
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.rates.models import Rate
 
-from .models import (License, Loan, LoanItem, LoanItemStorageBox, LoanPayment,
-                     Release, Series, Statement, StatementItem)
+from .models import (
+    License,
+    Loan,
+    LoanItem,
+    LoanItemStorageBox,
+    LoanPayment,
+    Release,
+    Series,
+    Statement,
+    StatementItem,
+)
 
 
 class LoansWidget(s2forms.ModelSelect2Widget):
@@ -425,7 +437,7 @@ class ReleaseForm(forms.ModelForm):
     released_by = forms.ModelChoiceField(
         required=False,
         queryset=Customer.objects.all(),
-        widget=CustomerWidget(),
+        widget=CustomerWidget,
     )
     release_amount = forms.DecimalField(required=False)
 
@@ -438,6 +450,11 @@ class ReleaseForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["loan"].queryset = Loan.unreleased.all() | Loan.objects.filter(
+                pk=self.instance.loan.pk
+            )
+            self.fields["loan"].initial = self.instance.loan
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
@@ -454,7 +471,9 @@ class ReleaseForm(forms.ModelForm):
         # if loan.due() > 0:
         #     self.add_error("loan", "Loan is not fully paid")
         # raise forms.ValidationError("Loan is not fully paid")
-
+        if self.instance and self.instance.pk:
+            # Skip validation if updating an existing release
+            return loan
         if loan.is_released:
             self.add_error("loan", "Loan already has a release.")
             # raise forms.ValidationError("Loan already has a release."
@@ -661,17 +680,15 @@ class LoanPaymentForm(forms.ModelForm):
 
 class LoanItemStorageBoxForm(forms.ModelForm):
     start_item_id = forms.ModelChoiceField(
-        queryset=Loan.objects.all(),
+        queryset=Loan.unreleased.all(),
         to_field_name="id",
         label="Start Loan ID",
-        # widget=forms.Select(attrs={"class": "form-control"})
         widget=LoansWidget(),
     )
     end_item_id = forms.ModelChoiceField(
-        queryset=Loan.objects.all(),
+        queryset=Loan.unreleased.all(),
         to_field_name="id",
         label="End Loan ID",
-        # widget=forms.Select(attrs={"class": "form-control"})
         widget=LoansWidget(),
     )
 
@@ -679,16 +696,40 @@ class LoanItemStorageBoxForm(forms.ModelForm):
         model = LoanItemStorageBox
         fields = ["name", "location", "start_item_id", "end_item_id", "item_type"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            print(self.instance.start_item_id)
+            print(self.instance.end_item_id)
+            self.initial["start_item_id"] = Loan.objects.get(
+                loan_id=self.instance.start_item_id
+            ).id
+            self.initial["end_item_id"] = Loan.objects.get(
+                loan_id=self.instance.end_item_id
+            ).id
+
     def clean(self):
         cleaned_data = super().clean()
-        start_item_id = cleaned_data.get("start_item_id")
-        end_item_id = cleaned_data.get("end_item_id")
-        if start_item_id and end_item_id and start_item_id.id > end_item_id.id:
-            raise forms.ValidationError("Start Loan ID must be less than End Loan ID.")
-        if start_item_id is not None:
-            cleaned_data["start_item_id"] = start_item_id.id
-        if end_item_id is not None:
-            cleaned_data["end_item_id"] = end_item_id.id
+        # start_item_id = cleaned_data.get("start_item_id")
+        # end_item_id = cleaned_data.get("end_item_id")
+        # if start_item_id and end_item_id and start_item_id > end_item_id:
+        #     raise forms.ValidationError("Start Loan ID must be less than End Loan ID.")
+
+        # return cleaned_data
+        start_loan = cleaned_data.get("start_item_id")
+        end_loan = cleaned_data.get("end_item_id")
+
+        if start_loan and end_loan:
+            start_loan_id = start_loan.loan_id
+            end_loan_id = end_loan.loan_id
+
+            if start_loan_id > end_loan_id:
+                raise forms.ValidationError(
+                    "Start Loan ID must be less than End Loan ID."
+                )
+
+            cleaned_data["start_item_id"] = start_loan_id
+            cleaned_data["end_item_id"] = end_loan_id
 
         return cleaned_data
 

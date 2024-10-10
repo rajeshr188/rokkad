@@ -26,8 +26,8 @@ class CheckBoxColumnWithName(tables.CheckBoxColumn):
 
 
 class LoanTable(tables.Table):
-    loan_id = tables.Column(verbose_name="Loan ID")
-    loan_date = tables.Column(verbose_name="Loan Date", localize=True)
+    loan_id = tables.Column(verbose_name="LoanID")
+    loan_date = tables.Column(verbose_name="Date", localize=True)
     # pic = ImageColumn()
     # https://stackoverflow.com/questions/12939548/select-all-rows-in-django-tables2/12944647#12944647
     selection = tables.CheckBoxColumn(

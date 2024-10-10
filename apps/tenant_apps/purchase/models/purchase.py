@@ -15,8 +15,7 @@ from djmoney.models.fields import MoneyField
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (AccountStatement,  # , JournalTypes
-                                         JournalEntry)
+from apps.tenant_apps.dea.models import AccountStatement, JournalEntry  # , JournalTypes
 from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.attributes import get_product_attributes_data
@@ -35,7 +34,7 @@ class Purchase(models.Model):
     due_date = models.DateField(null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,  # cant be null
         blank=True,  # cant be blank
         related_name="purchases_created",

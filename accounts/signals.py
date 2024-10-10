@@ -1,8 +1,8 @@
-from allauth.socialaccount.signals import (social_account_added,
-                                           social_account_updated)
-from django.dispatch import receiver
+from allauth.socialaccount.signals import social_account_added, social_account_updated
 from django.db.models.signals import post_save
-from .models import CustomUser,UserProfile
+from django.dispatch import receiver
+
+from .models import CustomUser, UserProfile
 
 
 @receiver(social_account_added)
@@ -13,8 +13,9 @@ def save_profile_picture(request, sociallogin, **kwargs):
         extra_data = sociallogin.account.extra_data
         picture_url = extra_data.get("picture")
         if picture_url:
-            user.social_profile_picture = picture_url
-            user.save()
+            user.profile.social_profile_picture = picture_url
+            user.profile.save()
+
 
 @receiver(post_save, sender=CustomUser)
 def create_or_update_user_profile(sender, instance, created, **kwargs):

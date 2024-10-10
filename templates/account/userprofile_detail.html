@@ -1,0 +1,12 @@
+{% extends '_base.html'%}
+{% load static%}
+{% block content%}
+<h1>{{ userprofile.user.email }}</h1>
+<p>Workspace: {{ userprofile.workspace }}</p>
+<p>Timezone: {{ userprofile.timezone }}</p>
+<p>Phone Number: {{ userprofile.phone_number }}</p>
+<p>Address: {{ userprofile.address }}</p>
+{% if userprofile.profile_picture %}<img src="{{ userprofile.profile_picture.url }}" alt="Profile Picture">{%endif%}
+<img src="{{ userprofile.social_profile_picture }}" alt="Social Profile Picture">
+<a href="{% url 'userprofile_update' userprofile.pk %}">Edit Profile</a>
+{%endblock%}

@@ -45,7 +45,7 @@ def roles_required(allowed_roles):
         @login_required
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
-            workspace = request.user.workspace or None
+            workspace = request.user.profile.workspace or None
             # print(
             #     f"User: {user} workspace:{workspace} roles_required: {allowed_roles} {get_public_schema_name()}"
             # )
@@ -124,7 +124,7 @@ def membership_required(role_name):
         @functools.wraps(view_func)
         @login_required
         def _wrapped_view(request, *args, **kwargs):
-            company = request.user.workspace
+            company = request.user.profile.workspace
             if company and company.schema_name != get_public_schema_name():
                 try:
                     membership = Membership.objects.get(
@@ -151,8 +151,8 @@ def workspace_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if (
             request.user.is_authenticated
-            and request.user.workspace
-            and request.user.workspace.name != get_public_schema_name()
+            and request.user.profile.workspace
+            and request.user.profile.workspace.name != get_public_schema_name()
         ):
             return view_func(request, *args, **kwargs)
         else:

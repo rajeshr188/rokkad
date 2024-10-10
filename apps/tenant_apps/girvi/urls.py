@@ -251,7 +251,7 @@ urlpatterns += (
     ),
     path(
         "girvi/release/update/<int:pk>/",
-        views.ReleaseUpdateView.as_view(),
+        views.release_update_view,
         name="girvi_release_update",
     ),
     path(

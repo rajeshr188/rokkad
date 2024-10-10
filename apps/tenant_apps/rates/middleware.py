@@ -14,7 +14,7 @@ class RateMiddleware(MiddlewareMixin):
         if not request.user.is_authenticated:
             return
         # Check if the user's workspace is set to a tenant schema
-        company = request.user.workspace
+        company = request.user.profile.workspace
         if (
             not company
             or company == ""

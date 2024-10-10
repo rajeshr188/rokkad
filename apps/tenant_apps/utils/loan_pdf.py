@@ -25,10 +25,22 @@ from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import (Flowable, Frame, FrameBreak, Image,
-                                KeepTogether, ListFlowable, ListItem,
-                                PageBreak, Paragraph, Preformatted,
-                                SimpleDocTemplate, Spacer, Table, TableStyle)
+from reportlab.platypus import (
+    Flowable,
+    Frame,
+    FrameBreak,
+    Image,
+    KeepTogether,
+    ListFlowable,
+    ListItem,
+    PageBreak,
+    Paragraph,
+    Preformatted,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from reportlab.platypus.doctemplate import PageTemplate
 
 from apps.tenant_apps.contact.models import Customer
@@ -922,17 +934,17 @@ def get_custom_jcl(loan):
     def draw_frame(x_offset, y_offset):
         c.setFillColorRGB(0, 0, 0)
         c.setFont("Helvetica-Bold", 11)
+        c.drawString(x_offset + 11 * cm, y_offset + 15.7 * cm, f"{loan.loan_id}")
         c.drawString(
             x_offset + 11 * cm,
             y_offset + 15.2 * cm,
             f"{loan.loan_date.strftime('%d-%m-%Y')}",
         )
-        c.drawString(x_offset + 11 * cm, y_offset + 14.7 * cm, f"{loan.loan_id}")
         draw_qr_code(
             loan.loan_id,
             c,
             x_offset + 11 * cm,
-            y_offset + 14.9 * cm,
+            y_offset + 15.2 * cm,
             label_width=1.8 * cm,
         )
 
@@ -950,7 +962,7 @@ def get_custom_jcl(loan):
             image_x = x_offset + 1.5 * cm
             image_y = y_offset + 15.5 * cm - desired_height
             customer_image = Image(
-                default_pic.path, width=desired_width, height=desired_height
+                default_pic.url, width=desired_width, height=desired_height
             )
             customer_image.drawOn(c, image_x, image_y)
             border_padding = 2

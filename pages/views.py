@@ -7,13 +7,18 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
-from apps.orgs.decorators import (company_member_required, roles_required,
-                                  workspace_required)
+from apps.orgs.decorators import (
+    company_member_required,
+    roles_required,
+    workspace_required,
+)
 from apps.orgs.models import Membership
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.contact.services import (active_customers,
-                                               get_customers_by_type,
-                                               get_customers_by_year)
+from apps.tenant_apps.contact.services import (
+    active_customers,
+    get_customers_by_type,
+    get_customers_by_year,
+)
 from apps.tenant_apps.girvi.models import Loan
 from apps.tenant_apps.girvi.services import *
 
@@ -22,8 +27,8 @@ class HomePageView(TemplateView):
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             if (
-                request.user.workspace is None
-                or request.user.workspace.schema_name == "public"
+                request.user.profile.workspace is None
+                or request.user.profile.workspace.schema_name == "public"
             ):
                 return redirect("dashboard")
             else:
@@ -78,7 +83,7 @@ def Dashboard(request):
 @workspace_required
 def company_dashboard(request):
     context = {}
-    company = request.user.workspace
+    company = request.user.profile.workspace
     context["can_view"] = request.user.memberships.filter(
         company=company,
         role__name__in=[
@@ -219,10 +224,15 @@ from moneyed import Money
 from openpyxl import load_workbook
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (AccountStatement, AccountTransaction,
-                                         JournalEntry, Ledger,
-                                         LedgerTransaction, TransactionType_DE,
-                                         TransactionType_Ext)
+from apps.tenant_apps.dea.models import (
+    AccountStatement,
+    AccountTransaction,
+    JournalEntry,
+    Ledger,
+    LedgerTransaction,
+    TransactionType_DE,
+    TransactionType_Ext,
+)
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.purchase.models import Payment, Purchase
 from apps.tenant_apps.sales.models import Invoice, Receipt
