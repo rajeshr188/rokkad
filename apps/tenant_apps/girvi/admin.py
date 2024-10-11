@@ -7,22 +7,10 @@ from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 
 from .forms import LoanForm, LoanItemStorageBoxForm
-from .models import (
-    License,
-    Loan,
-    LoanItem,
-    LoanItemStorageBox,
-    LoanPayment,
-    Release,
-    Series,
-)
-from .resources import (
-    LicenseResource,
-    LoanItemResource,
-    LoanPaymentResource,
-    LoanResource,
-    ReleaseResource,
-)
+from .models import (License, Loan, LoanItem, LoanItemStorageBox, LoanPayment,
+                     Release, Series)
+from .resources import (LicenseResource, LoanItemResource, LoanPaymentResource,
+                        LoanResource, ReleaseResource)
 
 
 class SeriesAdminForm(forms.ModelForm):

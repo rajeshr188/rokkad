@@ -5,14 +5,8 @@ from django_tables2 import RequestConfig
 from django_tables2.export.export import TableExport
 
 from ..filters import LedgerTransactionFilter
-from ..models import (
-    AccountTransaction,
-    AccountType,
-    Balance,
-    Ledger,
-    Ledgerbalance,
-    LedgerTransaction,
-)
+from ..models import (AccountTransaction, AccountType, Balance, Ledger,
+                      Ledgerbalance, LedgerTransaction)
 from ..tables import JournalEntriesTable, LedgerTransactionTable
 
 

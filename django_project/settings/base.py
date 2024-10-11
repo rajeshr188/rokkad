@@ -89,6 +89,7 @@ TENANT_MODEL = "orgs.Company"  # app.Model
 
 TENANT_DOMAIN_MODEL = "orgs.Domain"  # app.Model
 
+SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
 # in case using domain to set tenants us this to persist sessions.for localhost search for workaround hint:edit hosts file
 # SESSION_COOKIE_DOMAIN = '.rokkad.com'
 # CSRF_COOKIE_DOMAIN = '.rokkad.com'

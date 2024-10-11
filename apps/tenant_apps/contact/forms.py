@@ -4,30 +4,19 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Button, Submit
 from django import forms
 from django.apps import apps
-
 # from product.models import PricingTier
 from django.conf import settings
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.urls import reverse
 from django_select2 import forms as s2forms
-from django_select2.forms import (
-    ModelSelect2MultipleWidget,
-    ModelSelect2Widget,
-    Select2MultipleWidget,
-    Select2Widget,
-)
+from django_select2.forms import (ModelSelect2MultipleWidget,
+                                  ModelSelect2Widget, Select2MultipleWidget,
+                                  Select2Widget)
 from import_export.formats import base_formats
 from slick_reporting.forms import BaseReportForm
 
-from .models import (
-    Address,
-    Contact,
-    Customer,
-    CustomerPic,
-    CustomerRelationship,
-    Proof,
-    RelationType,
-)
+from .models import (Address, Contact, Customer, CustomerPic,
+                     CustomerRelationship, Proof, RelationType)
 
 
 class ExportForm(forms.Form):

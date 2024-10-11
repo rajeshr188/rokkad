@@ -15,7 +15,8 @@ from moneyed import Money
 
 from apps.tenant_apps.approval.models import ReturnItem
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import AccountStatement, JournalEntry  # , JournalTypes
+from apps.tenant_apps.dea.models import (AccountStatement,  # , JournalTypes
+                                         JournalEntry)
 from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.models import Stock, StockTransaction
