@@ -5,9 +5,8 @@ from django.core.management.base import BaseCommand
 from django_tenants.utils import tenant_context
 
 from apps.orgs.models import Company
-from apps.tenant_apps.girvi.models import (
-    Loan,
-)  # Replace 'your_app_name' with the actual app name
+from apps.tenant_apps.girvi.models import \
+    Loan  # Replace 'your_app_name' with the actual app name
 
 
 class Command(BaseCommand):

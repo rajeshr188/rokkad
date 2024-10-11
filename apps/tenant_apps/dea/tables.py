@@ -1,13 +1,7 @@
 import django_tables2 as tables
 
-from .models import (
-    Account,
-    AccountStatement,
-    JournalEntry,
-    Ledger,
-    LedgerStatement,
-    LedgerTransaction,
-)
+from .models import (Account, AccountStatement, JournalEntry, Ledger,
+                     LedgerStatement, LedgerTransaction)
 
 # Import the required modules
 

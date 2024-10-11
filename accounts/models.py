@@ -46,7 +46,7 @@ class UserProfile(models.Model):
     )
     workspace = models.ForeignKey(
         "orgs.Company",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,

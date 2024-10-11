@@ -25,22 +25,10 @@ from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import (
-    Flowable,
-    Frame,
-    FrameBreak,
-    Image,
-    KeepTogether,
-    ListFlowable,
-    ListItem,
-    PageBreak,
-    Paragraph,
-    Preformatted,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import (Flowable, Frame, FrameBreak, Image,
+                                KeepTogether, ListFlowable, ListItem,
+                                PageBreak, Paragraph, Preformatted,
+                                SimpleDocTemplate, Spacer, Table, TableStyle)
 from reportlab.platypus.doctemplate import PageTemplate
 
 from apps.tenant_apps.contact.models import Customer

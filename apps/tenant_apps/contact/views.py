@@ -28,18 +28,11 @@ from tablib import Dataset
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from .filters import CustomerFilter
-from .forms import (
-    AddressForm,
-    ContactForm,
-    CustomerForm,
-    CustomerMergeForm,
-    CustomerPicForm,
-    CustomerRelationshipForm,
-    CustomerReportForm,
-    ExportForm,
-    ImportForm,
-)
-from .models import Address, Contact, Customer, CustomerPic, CustomerRelationship, Proof
+from .forms import (AddressForm, ContactForm, CustomerForm, CustomerMergeForm,
+                    CustomerPicForm, CustomerRelationshipForm,
+                    CustomerReportForm, ExportForm, ImportForm)
+from .models import (Address, Contact, Customer, CustomerPic,
+                     CustomerRelationship, Proof)
 from .tables import CustomerExportTable, CustomerTable
 
 logger = logging.getLogger(__name__)

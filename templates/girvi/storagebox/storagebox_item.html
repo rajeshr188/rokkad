@@ -4,5 +4,5 @@
     <p>Items: {{ storage_box.start_item_id }} to {{ storage_box.end_item_id }}</p>
     <p>Count: {{storage_box.items_count}}</p>
     <button hx-get="{% url 'girvi:update_storage_box' storage_box.pk %}" hx-target="#storage_box-{{storage_box.id}}" hx-trigger="click" hx-swap="innerHTML">Edit</button>
-    <button hx-get="{% url 'girvi:delete_storage_box' storage_box.pk %}" hx-target="##storage_box-{{storage_box.id}}" hx-trigger="click">Delete</button>
+    <button hx-post="{% url 'girvi:delete_storage_box' storage_box.pk %}" hx-target="#storage_box-{{storage_box.id}}" hx-trigger="click">Delete</button>
 </div>

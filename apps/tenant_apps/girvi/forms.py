@@ -10,28 +10,16 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django_select2 import forms as s2forms
-from django_select2.forms import (
-    ModelSelect2Widget,
-    Select2MultipleWidget,
-    Select2Widget,
-)
+from django_select2.forms import (ModelSelect2Widget, Select2MultipleWidget,
+                                  Select2Widget)
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.rates.models import Rate
 
-from .models import (
-    License,
-    Loan,
-    LoanItem,
-    LoanItemStorageBox,
-    LoanPayment,
-    Release,
-    Series,
-    Statement,
-    StatementItem,
-)
+from .models import (License, Loan, LoanItem, LoanItemStorageBox, LoanPayment,
+                     Release, Series, Statement, StatementItem)
 
 
 class LoansWidget(s2forms.ModelSelect2Widget):

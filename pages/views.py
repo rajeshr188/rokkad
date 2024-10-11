@@ -7,18 +7,13 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
-from apps.orgs.decorators import (
-    company_member_required,
-    roles_required,
-    workspace_required,
-)
+from apps.orgs.decorators import (company_member_required, roles_required,
+                                  workspace_required)
 from apps.orgs.models import Membership
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.contact.services import (
-    active_customers,
-    get_customers_by_type,
-    get_customers_by_year,
-)
+from apps.tenant_apps.contact.services import (active_customers,
+                                               get_customers_by_type,
+                                               get_customers_by_year)
 from apps.tenant_apps.girvi.models import Loan
 from apps.tenant_apps.girvi.services import *
 
@@ -224,15 +219,10 @@ from moneyed import Money
 from openpyxl import load_workbook
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (
-    AccountStatement,
-    AccountTransaction,
-    JournalEntry,
-    Ledger,
-    LedgerTransaction,
-    TransactionType_DE,
-    TransactionType_Ext,
-)
+from apps.tenant_apps.dea.models import (AccountStatement, AccountTransaction,
+                                         JournalEntry, Ledger,
+                                         LedgerTransaction, TransactionType_DE,
+                                         TransactionType_Ext)
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.purchase.models import Payment, Purchase
 from apps.tenant_apps.sales.models import Invoice, Receipt
