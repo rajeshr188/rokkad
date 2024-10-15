@@ -153,29 +153,62 @@ class Account(models.Model):
             ]
         )
 
+    # def current_balance(self):
+    #     # return self.total_credit(since =) - self.total_debit(since =)
+    #     ls = self.latest_stmt()
+    #     if ls is None:
+    #         cb = Balance()
+    #         ac_txn = self.txns()
+    #         cr_bal = self.total_credit()
+    #         dr_bal = self.total_debit()
+    #     else:
+    #         cb = ls.get_cb()
+    #         ac_txn = self.txns(since=ls.created)
+    #         cr_bal = self.total_credit(since=ls.created)
+    #         dr_bal = self.total_debit(since=ls.created)
+
+    #     logger.info(f"cr_bal:{cr_bal} dr_bal:{dr_bal}")
+    #     if self.AccountType_Ext.XactTypeCode_id == "Dr":
+    #         bal = cb + (dr_bal - cr_bal)
+    #     else:
+    #         bal = cb + (cr_bal - dr_bal)
+
+    #     logger.info(f"bal:{bal}")
+    #     return bal
+
     def current_balance(self):
-        # return self.total_credit(since =) - self.total_debit(since =)
-        ls = self.latest_stmt()
-        if ls is None:
-            cb = Balance()
-            ac_txn = self.txns()
-            cr_bal = self.total_credit()
-            dr_bal = self.total_debit()
+        # Retrieve the latest statement
+        latest_statement = self.latest_stmt()
+        
+        # Initialize balances
+        if latest_statement is None:
+            closing_balance = Balance()
+            transactions = self.txns()
         else:
-            cb = ls.get_cb()
-            ac_txn = self.txns(since=ls.created)
-            cr_bal = self.total_credit(since=ls.created)
-            dr_bal = self.total_debit(since=ls.created)
-
-        logger.info(f"cr_bal:{cr_bal} dr_bal:{dr_bal}")
+            closing_balance = latest_statement.get_cb()
+            transactions = self.txns(since=latest_statement.created)
+        
+        # Calculate total credits and debits
+        total_credit = self._calculate_total(transactions, "Cr")
+        total_debit = self._calculate_total(transactions, "Dr")
+        
+        # Adjust balance based on account type
         if self.AccountType_Ext.XactTypeCode_id == "Dr":
-            bal = cb + (dr_bal - cr_bal)
+            current_balance = closing_balance + (total_debit - total_credit)
         else:
-            bal = cb + (cr_bal - dr_bal)
-
-        logger.info(f"bal:{bal}")
-        return bal
-
+            current_balance = closing_balance + (total_credit - total_debit)
+        
+        logger.info(f"Current balance: {current_balance}")
+        return current_balance
+    
+    def _calculate_total(self, transactions, xact_type_code):
+        return Balance([
+            Money(result["total"], result["amount_currency"])
+            for result in transactions.filter(XactTypeCode__XactTypeCode=xact_type_code)
+            .values("amount_currency")
+            .annotate(total=Sum("amount"))
+        ])
+        
     def get_balance(self):
         return self.accountbalance
 

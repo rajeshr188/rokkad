@@ -620,7 +620,17 @@ def contact_list(request, pk: int = None):
         {"contacts": contacts, "customer_id": customer.id},
     )
 
-
+def contact_set_default(request, pk):
+    contact = get_object_or_404(Contact, pk=pk)
+    # customer = contact.customer
+    # # Update all related Contact instances to set is_default to False
+    # Contact.objects.filter(customer=customer).update(is_default=False)
+    # # Set the selected Contact instance to be the default
+    contact.is_default = True
+    contact.save()
+    messages.success(request, f"Contact {contact} set as default.")
+    return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
+    
 @login_required
 def contact_detail(request, pk):
     contact = get_object_or_404(Contact, pk=pk)
@@ -682,6 +692,16 @@ def address_create_or_update(request, customer_pk=None, address_pk=None):
 
     return render(request, "partials/crispy_form.html", context)
 
+def address_set_default(request, pk):
+    address = get_object_or_404(Address, pk=pk)
+    # customer = address.customer
+    # # Update all related Address instances to set is_default to False
+    # Address.objects.filter(customer=customer).update(is_default=False)
+    # # Set the selected Address instance to be the default
+    address.is_default = True
+    address.save()
+    messages.success(request, f"Address {address} set as default.")
+    return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
 @login_required
 def address_detail(request, pk):
