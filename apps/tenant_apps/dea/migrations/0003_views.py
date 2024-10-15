@@ -32,10 +32,164 @@ class Migration(migrations.Migration):
     dependencies = [
         ("dea", "0002_initial_fixture"),
     ]
+    ledger_balance_sql_v7 = """
+        CREATE VIEW jcl.current_ledger_balance AS
+        WITH acc_st AS (
+            SELECT DISTINCT ON (dea_accountstatement."AccountNo_id")
+                dea_accountstatement.id,
+                dea_accountstatement.created,
+                dea_accountstatement."ClosingBalance",
+                dea_accountstatement."AccountNo_id"
+            FROM dea_accountstatement
+            ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+        ),
+        unnested_closing_balance AS (
+            SELECT s."AccountNo_id",
+                (unnest(s."ClosingBalance")).amount AS amount,
+                (unnest(s."ClosingBalance")).currency AS currency
+            FROM acc_st s
+        ),
+        ledger_transactions AS (
+            SELECT
+                t."ledgerno_id" AS ledger_id,
+                t.amount_currency,
+                SUM(CASE WHEN t."ledgerno_dr_id" IS NOT NULL THEN t.amount ELSE 0 END) AS total_debit,
+                SUM(CASE WHEN t."ledgerno_id" IS NOT NULL THEN t.amount ELSE 0 END) AS total_credit
+            FROM jcl.ledgertransaction t
+            LEFT JOIN acc_st s ON t."ledgerno_id" = s."AccountNo_id"
+            WHERE t.created > COALESCE(s.created, '1970-01-01 00:00:00+05:30'::timestamp with time zone)
+            GROUP BY t."ledgerno_id", t.amount_currency
+        ),
+        account_transactions AS (
+            SELECT
+                t."Account_id" AS ledger_id,
+                t.amount_currency,
+                SUM(CASE WHEN t."XactTypeCode_id" = 'Dr' THEN t.amount ELSE 0 END) AS total_debit,
+                SUM(CASE WHEN t."XactTypeCode_id" = 'Cr' THEN t.amount ELSE 0 END) AS total_credit
+            FROM dea_accounttransaction t
+            LEFT JOIN acc_st s ON t."Account_id" = s."AccountNo_id"
+            WHERE t.created > COALESCE(s.created, '1970-01-01 00:00:00+05:30'::timestamp with time zone)
+            GROUP BY t."Account_id", t.amount_currency
+        ),
+        combined_transactions AS (
+            SELECT
+                ledger_id,
+                amount_currency,
+                SUM(total_debit) AS total_debit,
+                SUM(total_credit) AS total_credit
+            FROM (
+                SELECT * FROM ledger_transactions
+                UNION ALL
+                SELECT * FROM account_transactions
+            ) combined
+            GROUP BY ledger_id, amount_currency
+        )
+        SELECT
+            a.id AS "AccountNo_id",
+            a.contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+            ARRAY_AGG(ROW(
+                COALESCE(ct.total_credit, 0::numeric)::numeric(14,3),
+                ct.amount_currency
+            )::money_value) AS cr,
+            ARRAY_AGG(ROW(
+                COALESCE(ct.total_debit, 0::numeric)::numeric(14,3),
+                ct.amount_currency
+            )::money_value) AS dr,
+            ARRAY_AGG(ROW(
+                COALESCE(ucb.amount, 0::numeric) +
+                    COALESCE(ct.total_credit, 0::numeric) -
+                    COALESCE(ct.total_debit, 0::numeric)::numeric(14,3),
+                ucb.currency
+            )::money_value) AS closing_balance
+        FROM jcl.dea_account a
+        LEFT JOIN acc_st ON a.id = acc_st."AccountNo_id"
+        LEFT JOIN unnested_closing_balance ucb ON a.id = ucb."AccountNo_id"
+        LEFT JOIN combined_transactions ct ON ucb."AccountNo_id" = ct.ledger_id AND ucb.currency::text = ct.amount_currency::text
+        GROUP BY a.id, a.contact_id, acc_st.created, acc_st."ClosingBalance";
+        """
+
+    ledger_balance_sql_v6_array_agg = """
+        CREATE VIEW jcl.current_ledger_balance AS
+        WITH latest_statements AS (
+            SELECT DISTINCT ON (ledger_id)
+                id,
+                created,
+                closing_balance,
+                ledger_id
+            FROM jcl.ledgerstatement
+            ORDER BY ledger_id, created DESC
+        ),
+        unnested_closing_balance AS (
+            SELECT
+                s.ledger_id,
+                (unnest(s.closing_balance)).*
+            FROM
+                latest_statements s
+        ),
+        transactions_since_latest AS (
+            SELECT
+                t.ledger_id,
+                t.amount_currency,
+                SUM(CASE WHEN t.xact_type = 'Dr' THEN t.amount ELSE 0 END) AS total_debit,
+                SUM(CASE WHEN t.xact_type = 'Cr' THEN t.amount ELSE 0 END) AS total_credit
+            FROM
+                jcl.ledgertransaction t
+            LEFT JOIN
+                latest_statements s ON t.ledger_id = s.ledger_id
+            WHERE
+                t.created > COALESCE(s.created, '1970-01-01')
+            GROUP BY
+                t.ledger_id, t.amount_currency
+        )
+        SELECT
+            l.id AS ledger_id,
+            ARRAY_AGG(ROW(
+                COALESCE(ucb.amount, 0) + 
+                (COALESCE(tsl.total_debit, 0) - COALESCE(tsl.total_credit, 0)),
+                ucb.currency
+            )::money_value) AS current_balance
+        FROM
+            jcl.ledger l
+        LEFT JOIN
+            unnested_closing_balance ucb ON l.id = ucb.ledger_id
+        LEFT JOIN
+            transactions_since_latest tsl ON ucb.ledger_id = tsl.ledger_id AND ucb.currency = tsl.amount_currency
+        GROUP BY l.id;
+    """
+    ledger_balance_sql_v5 = """
+        CREATE VIEW ledger_balance AS
+        WITH ls AS (
+            SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
+                dea_ledgerstatement.id,
+                dea_ledgerstatement.created,
+                dea_ledgerstatement."ClosingBalance",
+                dea_ledgerstatement.ledgerno_id
+            FROM dea_ledgerstatement
+            ORDER BY dea_ledgerstatement.ledgerno_id, dea_ledgerstatement.created DESC
+        ),unnested_closing_balance AS (
+         SELECT s."AccountNo_id",
+            (unnest(s."ClosingBalance")).amount AS amount,
+            (unnest(s."ClosingBalance")).currency AS currency
+           FROM ls s
+        )
+        SELECT dea_ledger.id AS ledgerno_id,
+            ls.created AS ls_created,
+            ls."ClosingBalance" AS opening_balance,
+            SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_id = dea_ledger.id)::numeric(14,0) AS cr,
+            SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id)::numeric(14,0) AS dr,
+            (ls."ClosingBalance" + SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_id = dea_ledger.id) - SUM(dea_ledgertransaction.amount) FILTER (WHERE dea_ledgertransaction.ledgerno_dr_id = dea_ledger.id))::numeric(14,0) AS closing_balance
+        FROM dea_ledger
+        LEFT JOIN ls ON dea_ledger.id = ls.ledgerno_id
+        LEFT JOIN dea_ledgertransaction ON dea_ledger.id = dea_ledgertransaction.ledgerno_id OR dea_ledger.id = dea_ledgertransaction.ledgerno_dr_id
+        WHERE (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
+        GROUP BY dea_ledger.id, ls.created, ls."ClosingBalance";
+        """
 
     ledger_balance_sql_v4_ob_cb = """
-    need to unnest arrays then perform + - operations
-    CREATE VIEW ledger_balance AS
+        need to unnest arrays then perform + - operations
+        CREATE VIEW ledger_balance AS
         WITH ls AS (
             SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
                 dea_ledgerstatement.id,
@@ -58,7 +212,7 @@ class Migration(migrations.Migration):
         GROUP BY dea_ledger.id, ls.created, ls."ClosingBalance";
     """
     ledger_balance_sql_v3_with_filter = """
-    CREATE VIEW ledger_balance AS
+        CREATE VIEW ledger_balance AS
         WITH ls AS (
             SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
                 dea_ledgerstatement.id,
@@ -243,9 +397,313 @@ class Migration(migrations.Migration):
         FROM ls ls(id, created, "ClosingBalance", ledgerno_id, id_1, name, lft, rght, tree_id, level, "AccountType_id", parent_id)
             JOIN dea_accounttype at ON at.id = ls."AccountType_id";
     """
+
+    account_balance_sql_v7 = """
+        WITH acc_st AS (
+            SELECT DISTINCT ON (dea_accountstatement."AccountNo_id")
+                dea_accountstatement.id,
+                dea_accountstatement.created,
+                dea_accountstatement."ClosingBalance",
+                dea_accountstatement."AccountNo_id"
+            FROM dea_accountstatement
+            ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+        ), unnested_closing_balance AS (
+            SELECT s."AccountNo_id",
+                (unnest(s."ClosingBalance")).amount AS amount,
+                (unnest(s."ClosingBalance")).currency AS currency
+            FROM acc_st s
+        ), transactions_since_latest AS (
+            SELECT t."Account_id",
+                t.amount_currency,
+                SUM(CASE WHEN t."XactTypeCode_id" = 'Dr' THEN t.amount ELSE 0 END) AS total_debit,
+                SUM(CASE WHEN t."XactTypeCode_id" = 'Cr' THEN t.amount ELSE 0 END) AS total_credit
+            FROM dea_accounttransaction t
+            LEFT JOIN acc_st s ON t."Account_id" = s."AccountNo_id"
+            WHERE t.created > COALESCE(s.created, '1970-01-01'::timestamp with time zone)
+            GROUP BY t."Account_id", t.amount_currency
+        )
+        SELECT a.id AS "AccountNo_id",
+            a.contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+
+            -- Credit (Cr) Calculation: Sum of credits since last statement
+            ARRAY_AGG(ROW(
+                COALESCE(tsl.total_credit, 0::numeric)::numeric(14,3),
+                tsl.amount_currency
+            )::money_value) AS cr,
+
+            -- Debit (Dr) Calculation: Sum of debits since last statement
+            ARRAY_AGG(ROW(
+                COALESCE(tsl.total_debit, 0::numeric)::numeric(14,3),
+                tsl.amount_currency
+            )::money_value) AS dr,
+
+            -- Closing Balance Calculation: Add previous closing balance and net transactions (debit - credit)
+            ARRAY_AGG(ROW(
+                COALESCE(ucb.amount, 0::numeric) + 
+                COALESCE(tsl.total_debit - tsl.total_credit, 0::numeric)::numeric(14,3),
+                ucb.currency
+            )::money_value) AS closing_balance
+
+        FROM jcl.dea_account a
+        LEFT JOIN acc_st ON a.id = acc_st."AccountNo_id"
+        LEFT JOIN unnested_closing_balance ucb ON ucb."AccountNo_id" = a.id
+        LEFT JOIN transactions_since_latest tsl ON ucb."AccountNo_id" = tsl."Account_id" AND ucb.currency = tsl.amount_currency
+        GROUP BY a.id, a.contact_id, acc_st.created, acc_st."ClosingBalance";
+    """
+    account_balance_sql_v6_arrayagg = """
+        WITH acc_st AS (
+        SELECT DISTINCT ON (dea_accountstatement."AccountNo_id")
+            dea_accountstatement.id,
+            dea_accountstatement.created,
+            dea_accountstatement."ClosingBalance",
+            dea_accountstatement."AccountNo_id"
+        FROM dea_accountstatement
+        ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+        ), unnested_closing_balance AS (
+            SELECT s."AccountNo_id",
+                (unnest(s."ClosingBalance")).amount AS amount,
+                (unnest(s."ClosingBalance")).currency AS currency
+            FROM acc_st s
+        ), transactions_since_latest AS (
+            SELECT t."Account_id",
+                t.amount_currency,
+                SUM(t.amount) FILTER (WHERE t."XactTypeCode_id" = 'Dr') AS total_debit,
+                SUM(t.amount) FILTER (WHERE t."XactTypeCode_id" = 'Cr') AS total_credit
+            FROM dea_accounttransaction t
+            LEFT JOIN acc_st s ON t."Account_id" = s."AccountNo_id"
+            WHERE t.created > COALESCE(s.created, '1970-01-01 00:00:00+05:30'::timestamp with time zone)
+            GROUP BY t."Account_id", t.amount_currency
+        )
+        SELECT a.id AS "AccountNo_id",
+            a.contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+            ARRAY_AGG(ROW(COALESCE(SUM(t.amount), 0::numeric)::numeric(14,3), t.amount_currency)::money_value) 
+                FILTER (WHERE t."XactTypeCode_id" = 'Dr' AND (acc_st.created IS NULL OR t.created >= acc_st.created)) AS cr,
+            ARRAY_AGG(ROW(COALESCE(SUM(t.amount), 0::numeric)::numeric(14,3), t.amount_currency)::money_value) 
+                FILTER (WHERE t."XactTypeCode_id" = 'Cr' AND (acc_st.created IS NULL OR t.created >= acc_st.created)) AS dr,
+            ARRAY_AGG(ROW(
+                COALESCE(ucb.amount, 0::numeric) + COALESCE(tsl.total_debit - tsl.total_credit, 0::numeric)::numeric(14,3),
+                ucb.currency
+            )::money_value) AS closing_balance
+        FROM jcl.dea_account a
+        LEFT JOIN acc_st ON a.id = acc_st."AccountNo_id"
+        LEFT JOIN dea_accounttransaction t ON a.id = t."Account_id"  -- Include dea_accounttransaction for cr and dr calculations
+        LEFT JOIN unnested_closing_balance ucb ON a.id = ucb."AccountNo_id"
+        LEFT JOIN transactions_since_latest tsl ON a.id = tsl."Account_id" AND ucb.currency = tsl.amount_currency  -- Join with transactions_since_latest (tsl)
+        GROUP BY a.id, a.contact_id, acc_st.created, acc_st."ClosingBalance";
+    """
+    account_balance_final_filter = """
+        WITH acc_st AS (
+        SELECT DISTINCT ON (dea_accountstatement."AccountNo_id")
+            dea_accountstatement.id,
+            dea_accountstatement.created,
+            dea_accountstatement."ClosingBalance",
+            dea_accountstatement."AccountNo_id"
+        FROM dea_accountstatement
+        ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+        ), unnested_closing_balance AS (
+            SELECT s."AccountNo_id",
+                (unnest(s."ClosingBalance")).amount AS amount,
+                (unnest(s."ClosingBalance")).currency AS currency
+            FROM acc_st s
+        ), transactions_since_latest AS (
+            SELECT t."Account_id",
+                t.amount_currency,
+                SUM(t.amount) FILTER (WHERE t."XactTypeCode_id"::text = 'Dr') AS total_debit,
+                SUM(t.amount) FILTER (WHERE t."XactTypeCode_id"::text = 'Cr') AS total_credit
+            FROM dea_accounttransaction t
+            LEFT JOIN acc_st s ON t."Account_id" = s."AccountNo_id"
+            WHERE t.created > COALESCE(s.created, '1970-01-01 00:00:00+05:30'::timestamp with time zone)
+            GROUP BY t."Account_id", t.amount_currency
+        )
+        SELECT a.id AS "AccountNo_id",
+            a.contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+            ARRAY(
+                SELECT ROW(COALESCE(SUM(t.amount), 0::numeric)::numeric(14,3), t.amount_currency)::money_value AS "row"
+                FROM dea_accounttransaction t
+                WHERE t."Account_id" = a.id AND t."XactTypeCode_id"::text = 'Dr' AND (acc_st.created IS NULL OR t.created >= acc_st.created)
+                GROUP BY t.amount_currency
+            ) AS cr,
+            ARRAY(
+                SELECT ROW(COALESCE(SUM(t.amount), 0::numeric)::numeric(14,3), t.amount_currency)::money_value AS "row"
+                FROM dea_accounttransaction t
+                WHERE t."Account_id" = a.id AND t."XactTypeCode_id"::text = 'Cr' AND (acc_st.created IS NULL OR t.created >= acc_st.created)
+                GROUP BY t.amount_currency
+            ) AS dr,
+            ARRAY(
+                SELECT ROW(
+                    COALESCE(ucb.amount, 0::numeric) +
+                        COALESCE(SUM(tsl.total_debit - tsl.total_credit) FILTER (WHERE at."XactTypeCode_id"::text = 'Dr'), 0::numeric) +
+                        COALESCE(SUM(tsl.total_credit - tsl.total_debit) FILTER (WHERE at."XactTypeCode_id"::text = 'Cr'), 0::numeric)::numeric(14,3),
+                    ucb.currency
+                )::money_value AS "row"
+                FROM unnested_closing_balance ucb
+                LEFT JOIN transactions_since_latest tsl ON ucb."AccountNo_id" = tsl."Account_id" AND ucb.currency::text = tsl.amount_currency::text
+                WHERE ucb."AccountNo_id" = a.id
+                GROUP BY ucb.currency, at."XactTypeCode_id", ucb.amount, tsl.total_debit, tsl.total_credit
+            ) AS closing_balance
+        FROM jcl.dea_account a
+        LEFT JOIN acc_st ON a.id = acc_st."AccountNo_id"
+        LEFT JOIN dea_accounttype_ext at ON a."AccountType_Ext_id" = at.id;
+    """
+    account_balance_final_WHEN_CASE = """
+     WITH acc_st AS (
+         SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") dea_accountstatement.id,
+            dea_accountstatement.created,
+            dea_accountstatement."ClosingBalance",
+            dea_accountstatement."AccountNo_id"
+           FROM dea_accountstatement
+          ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+        ), unnested_closing_balance AS (
+         SELECT s."AccountNo_id",
+            (unnest(s."ClosingBalance")).amount AS amount,
+            (unnest(s."ClosingBalance")).currency AS currency
+           FROM acc_st s
+        ), transactions_since_latest AS (
+         SELECT t."Account_id",
+            t.amount_currency,
+            sum(
+                CASE
+                    WHEN t."XactTypeCode_id"::text = 'Dr'::text THEN t.amount
+                    ELSE 0::numeric
+                END) AS total_debit,
+            sum(
+                CASE
+                    WHEN t."XactTypeCode_id"::text = 'Cr'::text THEN t.amount
+                    ELSE 0::numeric
+                END) AS total_credit
+           FROM dea_accounttransaction t
+             LEFT JOIN acc_st s ON t."Account_id" = s."AccountNo_id"
+          WHERE t.created > COALESCE(s.created, '1970-01-01 00:00:00+05:30'::timestamp with time zone)
+          GROUP BY t."Account_id", t.amount_currency
+        )
+        SELECT a.id AS "AccountNo_id",
+            a.contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+            ARRAY( SELECT ROW(COALESCE(sum(t.amount), 0::numeric)::numeric(14,3), t.amount_currency)::money_value AS "row"
+                FROM dea_accounttransaction t
+                WHERE t."Account_id" = a.id AND t."XactTypeCode_id"::text = 'Dr'::text AND (acc_st.created IS NULL OR t.created >= acc_st.created)
+                GROUP BY t.amount_currency) AS cr,
+            ARRAY( SELECT ROW(COALESCE(sum(t.amount), 0::numeric)::numeric(14,3), t.amount_currency)::money_value AS "row"
+                FROM dea_accounttransaction t
+                WHERE t."Account_id" = a.id AND t."XactTypeCode_id"::text = 'Cr'::text AND (acc_st.created IS NULL OR t.created >= acc_st.created)
+                GROUP BY t.amount_currency) AS dr,
+            ARRAY( SELECT ROW(
+                        CASE
+                            WHEN at."XactTypeCode_id"::text = 'Dr'::text THEN COALESCE(ucb.amount, 0::numeric) + (COALESCE(tsl.total_debit, 0::numeric) - COALESCE(tsl.total_credit, 0::numeric))
+                            ELSE COALESCE(ucb.amount, 0::numeric) + (COALESCE(tsl.total_credit, 0::numeric) - COALESCE(tsl.total_debit, 0::numeric))
+                        END::numeric(14,3), ucb.currency)::money_value AS "row"
+                FROM unnested_closing_balance ucb
+                    LEFT JOIN transactions_since_latest tsl ON ucb."AccountNo_id" = tsl."Account_id" AND ucb.currency::text = tsl.amount_currency::text
+                WHERE ucb."AccountNo_id" = a.id
+                GROUP BY ucb.currency, at."XactTypeCode_id", ucb.amount, tsl.total_debit, tsl.total_credit) AS closing_balance
+        FROM jcl.dea_account a
+            LEFT JOIN acc_st ON a.id = acc_st."AccountNo_id"
+            LEFT JOIN dea_accounttype_ext at ON a."AccountType_Ext_id" = at.id;
+     """
+
+    account_balance_sql_v5 = """
+     WITH acc_st AS (
+         SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") dea_accountstatement.id,
+            dea_accountstatement.created,
+            dea_accountstatement."ClosingBalance",
+            dea_accountstatement."AccountNo_id"
+           FROM jcl.dea_accountstatement
+          ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+        ), unnested_closing_balance AS (
+         SELECT s."AccountNo_id",
+            (unnest(s."ClosingBalance")).amount AS amount,
+            (unnest(s."ClosingBalance")).currency AS currency
+           FROM acc_st s
+        ), transactions_since_latest AS (
+         SELECT t."Account_id",
+            t.amount_currency,
+            sum(
+                CASE
+                    WHEN t."XactTypeCode_id"::text = 'Dr'::text THEN t.amount
+                    ELSE 0::numeric
+                END) AS total_debit,
+            sum(
+                CASE
+                    WHEN t."XactTypeCode_id"::text = 'Cr'::text THEN t.amount
+                    ELSE 0::numeric
+                END) AS total_credit
+           FROM jcl.dea_accounttransaction t
+             LEFT JOIN acc_st s ON t."Account_id" = s."AccountNo_id"
+          WHERE t.created > COALESCE(s.created, '1970-01-01 00:00:00+05:30'::timestamp with time zone)
+          GROUP BY t."Account_id", t.amount_currency
+        )
+        SELECT a.id AS "AccountNo_id",
+            a.contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+            ARRAY( SELECT ROW(COALESCE(sum(t.amount), 0::numeric)::numeric(14,3), t.amount_currency)::money_value AS "row"
+                FROM jcl.dea_accounttransaction t
+                WHERE t."Account_id" = a.id AND t."XactTypeCode_id"::text = 'Dr'::text AND (acc_st.created IS NULL OR t.created >= acc_st.created)
+                GROUP BY t.amount_currency) AS cr,
+            ARRAY( SELECT ROW(COALESCE(sum(t.amount), 0::numeric)::numeric(14,3), t.amount_currency)::money_value AS "row"
+                FROM jcl.dea_accounttransaction t
+                WHERE t."Account_id" = a.id AND t."XactTypeCode_id"::text = 'Cr'::text AND (acc_st.created IS NULL OR t.created >= acc_st.created)
+                GROUP BY t.amount_currency) AS dr,
+            ARRAY( SELECT ROW(
+                        CASE
+                            WHEN at."XactTypeCode_id"::text = 'Dr'::text THEN COALESCE(ucb.amount, 0::numeric) + (COALESCE(tsl.total_debit, 0::numeric) - COALESCE(tsl.total_credit, 0::numeric))
+                            ELSE COALESCE(ucb.amount, 0::numeric) + (COALESCE(tsl.total_credit, 0::numeric) - COALESCE(tsl.total_debit, 0::numeric))
+                        END::numeric(14,3), ucb.currency)::money_value AS "row"
+                FROM unnested_closing_balance ucb
+                    LEFT JOIN transactions_since_latest tsl ON ucb."AccountNo_id" = tsl."Account_id" AND ucb.currency::text = tsl.amount_currency::text
+                WHERE ucb."AccountNo_id" = a.id
+                GROUP BY ucb.currency, at."XactTypeCode_id", ucb.amount, tsl.total_debit, tsl.total_credit) AS closing_balance
+                FROM jcl.dea_account a
+            LEFT JOIN acc_st ON a.id = acc_st."AccountNo_id"
+            LEFT JOIN jcl.dea_accounttype_ext at ON a."AccountType_Ext_id" = at.id;
+     """
+    
+    account_balance_sql_v4 = """
+        WITH acc_st AS (
+        SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") dea_accountstatement.id,
+            dea_accountstatement.created,
+            dea_accountstatement."ClosingBalance",
+            dea_accountstatement."AccountNo_id"
+        FROM jcl.dea_accountstatement
+        ORDER BY dea_accountstatement."AccountNo_id", dea_accountstatement.created DESC
+        )
+        SELECT dea_account.id AS "AccountNo_id",
+            dea_account.contact_id,
+            acc_st.created AS ls_created,
+            acc_st."ClosingBalance" AS opening_balance,
+            ARRAY(SELECT ROW(COALESCE(SUM(dea_accounttransaction.amount), 0::numeric)::numeric(14,3), dea_accounttransaction.amount_currency)::money_value AS "row"
+                FROM jcl.dea_accounttransaction
+                WHERE dea_accounttransaction."Account_id" = dea_account.id AND dea_accounttransaction."XactTypeCode_id"::text = 'Dr'::text AND (acc_st.created IS NULL OR dea_accounttransaction.created >= acc_st.created)
+                GROUP BY dea_accounttransaction.amount_currency) AS cr,
+            ARRAY(SELECT ROW(COALESCE(SUM(dea_accounttransaction.amount), 0::numeric)::numeric(14,3), dea_accounttransaction.amount_currency)::money_value AS "row"
+                FROM jcl.dea_accounttransaction
+                WHERE dea_accounttransaction."Account_id" = dea_account.id AND dea_accounttransaction."XactTypeCode_id"::text = 'Cr'::text AND (acc_st.created IS NULL OR dea_accounttransaction.created >= acc_st.created)
+                GROUP BY dea_accounttransaction.amount_currency) AS dr,
+            ARRAY(SELECT ROW(
+                    CASE
+                        WHEN at."XactTypeCode" = 'Dr' THEN
+                            COALESCE(acc_st."ClosingBalance"->>'amount'::numeric, 0) + (COALESCE(SUM(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Dr'::text), 0::numeric) - COALESCE(SUM(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Cr'::text), 0::numeric))
+                        ELSE
+                            COALESCE(acc_st."ClosingBalance"->>'amount'::numeric, 0) + (COALESCE(SUM(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Cr'::text), 0::numeric) - COALESCE(SUM(dea_accounttransaction.amount) FILTER (WHERE dea_accounttransaction."XactTypeCode_id"::text = 'Dr'::text), 0::numeric))
+                    END::numeric(14,3),
+                    dea_accounttransaction.amount_currency)::money_value AS "row"
+                FROM jcl.dea_accounttransaction
+                WHERE dea_accounttransaction."Account_id" = dea_account.id AND (acc_st.created IS NULL OR dea_accounttransaction.created >= acc_st.created)
+                GROUP BY dea_accounttransaction.amount_currency) AS closing_balance
+        FROM jcl.dea_account
+        LEFT JOIN acc_st ON dea_account.id = acc_st."AccountNo_id"
+        LEFT JOIN jcl."AccountType_Ext" at ON dea_account."AccountType_Ext_id" = at.id;
+    """
     account_balance_sql_v3 = """
-    doesnt work dont bother.need to unnest arrays and perform + - operations
-    CREATE VIEW account_balance AS
+        doesnt work dont bother.need to unnest arrays and perform + - operations
+        CREATE VIEW account_balance AS
         WITH acc_st AS (
             SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") 
                 dea_accountstatement.id,
@@ -269,7 +727,7 @@ class Migration(migrations.Migration):
         GROUP BY dea_account.id, dea_account.contact_id, acc_st.created, acc_st."ClosingBalance";
     """
     account_balance_sql_v2 = """
-    CREATE VIEW account_balance AS
+        CREATE VIEW account_balance AS
         WITH acc_st AS (
             SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") 
                 dea_accountstatement.id,

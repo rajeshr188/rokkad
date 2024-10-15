@@ -436,7 +436,7 @@ class Address(models.Model):
     last_updated = models.DateTimeField(auto_now=True, editable=False)
     street = models.TextField(max_length=100, verbose_name=_("Street"))
     city = models.CharField(max_length=30, default="Vellore", verbose_name=_("City"))
-    is_default = models.BooleanField(default=False, verbose_name=_("Default"))
+    is_default = models.BooleanField(default=True, verbose_name=_("Default"))
     is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
 
     class Meta:
@@ -475,7 +475,7 @@ class Contact(models.Model):
         related_name="contactno",
         verbose_name=_("Customer"),
     )
-    is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
+    is_verified = models.BooleanField(default=True, verbose_name=_("Verified"))
     # Fields
     created = models.DateTimeField(auto_now_add=True, editable=False)
 
@@ -491,7 +491,7 @@ class Contact(models.Model):
         verbose_name=_("Contact Type"),
     )
     phone_number = PhoneNumberField(unique=True, verbose_name=_("Phone Number"))
-    is_default = models.BooleanField(default=False)
+    is_default = models.BooleanField(default=True, verbose_name=_("Default"))
     is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
     last_updated = models.DateTimeField(auto_now=True, editable=False)
 

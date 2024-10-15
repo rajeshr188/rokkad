@@ -1,26 +1,20 @@
 subscriptions:mostly stripe handles this
     stripe
-    paypal
     razorpay
-    paytm
-    payu
-    instamojo
-    ccavenue
-    cashfree
-    atom
-    payzippy
-    mobikwik
 
 user tracking:
     with django-channels ,daphne,redis,celery,flower,apache-kafka
+    Google Analytics: For basic user tracking and analytics.
+    Mixpanel: For more advanced user tracking and analytics.
 testing:
-
+    pytest: A simpler and more powerful alternative to Django's default testing framework.
 newapps:
     chitfund
 
 member-specific landing page in tenant
 
-move postgres to managed gcloud postgres or neon postgres
+move postgres to managed gcloud postgres or neon postgres Heroku Postgres: A managed PostgreSQL service that's easy to set up and use.
+Amazon RDS: AWS's managed database service.
 
 using django5 with psycopg2(only hurdle is psycopg composite register and adapt for version3)
 

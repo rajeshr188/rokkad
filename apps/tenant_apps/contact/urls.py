@@ -43,6 +43,7 @@ urlpatterns = (
         views.contact_detail,
         name="customer_contact_detail",
     ),
+    path("customer/contactno/<int:pk>/set_default/", views.contact_set_default, name="customer_contact_set_default"),
     path(
         "customer/<int:customer_pk>/contactno/add/",
         views.contact_save,
@@ -78,6 +79,7 @@ urlpatterns = (
         views.address_create_or_update,
         name="customer_address_update",
     ),
+    path("customer/address/<int:pk>/set_default/", views.address_set_default, name="customer_address_set_default"),
     path(
         "customer/address/<int:pk>/detail/",
         views.address_detail,

@@ -1,15 +1,18 @@
 <li class="list-group-item" hx-target="this">
   <div class="d-flex gap-2 w-100 justify-content-between">
-    <div>
-      <span>{% if i.is_default %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bookmark-star" viewBox="0 0 16 16">
-          <path d="M7.84 4.1a.178.178 0 0 1 .32 0l.634 1.285a.18.18 0 0 0 .134.098l1.42.206c.145.021.204.2.098.303L9.42 6.993a.18.18 0 0 0-.051.158l.242 1.414a.178.178 0 0 1-.258.187l-1.27-.668a.18.18 0 0 0-.165 0l-1.27.668a.178.178 0 0 1-.257-.187l.242-1.414a.18.18 0 0 0-.05-.158l-1.03-1.001a.178.178 0 0 1 .098-.303l1.42-.206a.18.18 0 0 0 .134-.098z"/>
-          <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z"/>
-        </svg>
-        {%endif%}
-      </span>
-      <h6 class="mb-0">{{i.get_contact_type_display}}: {{i.phone_number}}</h6>
-    </div>
+      <p>
+        <span>{% if i.is_default %}
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bookmark-star"
+            viewBox="0 0 16 16">
+            <path
+              d="M7.84 4.1a.178.178 0 0 1 .32 0l.634 1.285a.18.18 0 0 0 .134.098l1.42.206c.145.021.204.2.098.303L9.42 6.993a.18.18 0 0 0-.051.158l.242 1.414a.178.178 0 0 1-.258.187l-1.27-.668a.18.18 0 0 0-.165 0l-1.27.668a.178.178 0 0 1-.257-.187l.242-1.414a.18.18 0 0 0-.05-.158l-1.03-1.001a.178.178 0 0 1 .098-.303l1.42-.206a.18.18 0 0 0 .134-.098z" />
+            <path
+              d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z" />
+          </svg>
+          {%endif%}
+        </span>
+        <h6 class="mb-0">{{i.get_contact_type_display}}: {{i.phone_number}}</h6>
+      </p>
     <div class="dropdown">
       <button class="btn btn-secondary btn-sm " type="button" id="dropdownMenuButton" data-bs-toggle="dropdown"
         aria-expanded="false">
@@ -21,8 +24,13 @@
       </button>
       <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
         {%if not i.is_default%}
-        <a href="" class="dropdown-item link-secondary">set default</a>
+        <li>
+          <a href="" hx-post="{% url 'customer_contact_set_default' i.id%}" class="dropdown-item link-secondary">set
+            default</a>
+        </li>
+
         {%endif%}
+        <li>
           <a hx-get="{% url 'contact_update' contact_pk=i.id customer_pk=i.customer.id %}"
             class="dropdown-item link-secondary">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil"
@@ -30,12 +38,11 @@
               <path
                 d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
             </svg>
-            Edit
-          </a>
+            Edit</a>
         </li>
         <li>
           <a hx-delete="{% url 'customer_contact_delete' i.id %}" hx-confirm="Are you sure to delete this address?"
-              hx-swap="outerHTML" class="dropdown-item link-danger">
+            hx-swap="outerHTML" class="dropdown-item link-danger">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3"
               viewBox="0 0 16 16">
               <path

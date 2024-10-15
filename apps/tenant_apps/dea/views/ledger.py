@@ -8,7 +8,9 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..forms import LedgerForm, LedgerStatementForm, LedgerTransactionForm
 from ..models import JournalEntry, Ledger, LedgerStatement, LedgerTransaction
+import logging
 
+logger = logging.getLogger(__name__)
 
 def set_ledger_ob(request, pk):
     # if this is a POST request we need to process the form data
@@ -53,6 +55,7 @@ def ledger_detail(request, pk):
     )
     dtxns = ledger.dtxns(since=ls_created).select_related("journal_entry__content_type")
     ctxns = ledger.ctxns(since=ls_created).select_related("journal_entry__content_type")
+    logger.warn(f" in views:ledger_detail: {ledger} {dtxns} {ctxns}")
     cr_aleg_txns = ledger.aleg_txns(xacttypecode="Cr", since=ls_created)
     dr_aleg_txns = ledger.aleg_txns(xacttypecode="Dr", since=ls_created)
     return render(
