@@ -210,6 +210,9 @@ def company_dashboard(request):
         .order_by("-num_loans", "sum_loans", "tint")
     )
     context["loan_cumsum"] = list(get_loan_cumulative_amount())
+    licenses = License.objects.all()
+    license_data = [license.get_unreleased_loan_data() for license in licenses]
+    context["license_data"] = license_data
     return render(request, "pages/company_dashboard.html", context)
 
 
