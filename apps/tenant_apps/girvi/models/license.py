@@ -34,6 +34,32 @@ class License(models.Model):
     def get_series_count(self):
         return self.series_set.count()
 
+    def get_unreleased_loan_data(self):
+        series_data = []
+        total_unreleased_loans = 0
+        total_loan_amount = 0
+
+        for series in self.series_set.all():
+            unreleased_loans = series.loan_set.unreleased()
+            loan_count = unreleased_loans.count()
+            loan_amount = unreleased_loans.aggregate(total=Sum('loan_amount'))['total'] or 0
+
+            series_data.append({
+                'series_name': series.name,
+                'loan_count': loan_count,
+                'loan_amount': loan_amount
+            })
+
+            total_unreleased_loans += loan_count
+            total_loan_amount += loan_amount
+
+        return {
+            'license_name': self.name,
+            'total_unreleased_loans': total_unreleased_loans,
+            'total_loan_amount': total_loan_amount,
+            'series_data': series_data
+        }
+
 
 class Series(models.Model):
     name = models.CharField(
@@ -95,3 +121,14 @@ class Series(models.Model):
 
     def get_itemwise_pure_weight(self):
         return self.loan_set.unreleased().with_details(None, None).total_pure_weight()
+
+    def get_unreleased_loan_data(self):
+        unreleased_loans = self.loan_set.unreleased()
+        loan_count = unreleased_loans.count()
+        loan_amount = unreleased_loans.aggregate(total=Sum('loan_amount'))['total'] or 0
+
+        return {
+            'series_name': self.name,
+            'loan_count': loan_count,
+            'loan_amount': loan_amount
+        }

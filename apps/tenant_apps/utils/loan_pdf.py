@@ -794,30 +794,36 @@ def get_custom_jsk(loan):
     customer_pic = None
     default_pic = loan.customer.get_default_pic()
     if default_pic:
-        customer_pic = Image(default_pic.path, 50, 50)
+        try:
+            # Check if the file exists
+            if os.path.exists(default_pic.path):
+                # Set the desired dimensions for the image (e.g., 5x5 cm)
+                desired_width = 2.5 * cm
+                desired_height = 2.5 * cm
 
-        # Set the desired dimensions for the image (e.g., 5x5 cm)
-        desired_width = 2.5 * cm
-        desired_height = 2.5 * cm
+                # Calculate the position for the image
+                image_x = 2 * cm
+                image_y = 16 * cm - desired_height
 
-        # Calculate the position for the image
-        image_x = 2 * cm
-        image_y = 16 * cm - desired_height
+                # Draw the image on the canvas
+                customer_image = Image(default_pic.path, width=desired_width, height=desired_height)
+                customer_image.drawOn(c, image_x, image_y)
 
-        # Draw the image on the canvas
-        customer_image = Image(default_pic, width=desired_width, height=desired_height)
-        customer_image.drawOn(c, image_x, image_y)
-
-        # Draw a border around the image
-        border_padding = 2  # Padding around the image for the border
-        c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
-        c.setLineWidth(1)  # Set the border width
-        c.rect(
-            image_x - border_padding,
-            image_y - border_padding,
-            desired_width + 2 * border_padding,
-            desired_height + 2 * border_padding,
-        )
+                # Draw a border around the image
+                border_padding = 2  # Padding around the image for the border
+                c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
+                c.setLineWidth(1)  # Set the border width
+                c.rect(
+                    image_x - border_padding,
+                    image_y - border_padding,
+                    desired_width + 2 * border_padding,
+                    desired_height + 2 * border_padding,
+                )
+            else:
+                print(f"File not found: {default_pic.path}")
+        except IOError as e:
+            print(f"Cannot open resource: {default_pic.path}. Error: {e}")
+        
 
     address = f"{loan.customer.address.first()}"
     address_paragraph = Paragraph(address, styles["Normal"])
@@ -945,24 +951,35 @@ def get_custom_jcl(loan):
 
         default_pic = loan.customer.get_default_pic()
         if default_pic:
-            desired_width = 2 * cm
-            desired_height = 2 * cm
-            image_x = x_offset + 1.5 * cm
-            image_y = y_offset + 15.5 * cm - desired_height
-            customer_image = Image(
-                default_pic.url, width=desired_width, height=desired_height
-            )
-            customer_image.drawOn(c, image_x, image_y)
-            border_padding = 2
-            c.setStrokeColorRGB(0, 0, 0)
-            c.setLineWidth(1)
-            c.rect(
-                image_x - border_padding,
-                image_y - border_padding,
-                desired_width + 2 * border_padding,
-                desired_height + 2 * border_padding,
-            )
+            try:
+                # Check if the file exists
+                if os.path.exists(default_pic.path):
+                    # Set the desired dimensions for the image (e.g., 5x5 cm)
+                    desired_width = 2.5 * cm
+                    desired_height = 2.5 * cm
 
+                    # Calculate the position for the image
+                    image_x = 2 * cm
+                    image_y = 16 * cm - desired_height
+
+                    # Draw the image on the canvas
+                    customer_image = Image(default_pic.path, width=desired_width, height=desired_height)
+                    customer_image.drawOn(c, image_x, image_y)
+
+                    # Draw a border around the image
+                    border_padding = 2  # Padding around the image for the border
+                    c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
+                    c.setLineWidth(1)  # Set the border width
+                    c.rect(
+                        image_x - border_padding,
+                        image_y - border_padding,
+                        desired_width + 2 * border_padding,
+                        desired_height + 2 * border_padding,
+                    )
+                else:
+                    print(f"File not found: {default_pic.path}")
+            except IOError as e:
+                print(f"Cannot open resource: {default_pic.path}. Error: {e}")
         address = loan.customer.address.first()
         address_paragraph = Paragraph(
             f" {address.doorno},{address.street}<br/>{address.area},{address.city}",
