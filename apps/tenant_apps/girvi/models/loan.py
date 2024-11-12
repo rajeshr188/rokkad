@@ -9,16 +9,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
-from django.db.models import (
-    BooleanField,
-    DecimalField,
-    ExpressionWrapper,
-    F,
-    Func,
-    Max,
-    Q,
-    Sum,
-)
+from django.db.models import (BooleanField, DecimalField, ExpressionWrapper, F,
+                              Func, Max, Q, Sum)
 from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
 from django.urls import reverse
@@ -27,15 +19,13 @@ from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (
-    AccountTransaction,
-    JournalEntry,
-    LedgerTransaction,
-)
+from apps.tenant_apps.dea.models import (AccountTransaction, JournalEntry,
+                                         LedgerTransaction)
 from apps.tenant_apps.rates.models import Rate
 
 # from ..models import Release
-from ..managers import LoanManager, LoanQuerySet, ReleasedManager, UnReleasedManager
+from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
+                        UnReleasedManager)
 
 
 class Loan(models.Model):

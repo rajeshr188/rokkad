@@ -2,7 +2,6 @@ from django import forms
 from django.contrib import admin
 from django.http import Http404
 from django.shortcuts import render
-
 # admin.py
 from django.urls import path, reverse
 from django.utils.html import format_html
@@ -11,24 +10,10 @@ from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 
 from .forms import LoanForm, LoanItemStorageBoxForm
-from .models import (
-    License,
-    Loan,
-    LoanItem,
-    LoanItemStorageBox,
-    LoanPayment,
-    LoanTemplate,
-    Release,
-    Series,
-    TemplateFrame,
-)
-from .resources import (
-    LicenseResource,
-    LoanItemResource,
-    LoanPaymentResource,
-    LoanResource,
-    ReleaseResource,
-)
+from .models import (License, Loan, LoanItem, LoanItemStorageBox, LoanPayment,
+                     LoanTemplate, Release, Series, TemplateFrame)
+from .resources import (LicenseResource, LoanItemResource, LoanPaymentResource,
+                        LoanResource, ReleaseResource)
 
 
 class TemplateFrameInline(admin.TabularInline):
