@@ -3417,7 +3417,7 @@ def get_notice_pdf(selection=None):
                 ),
                 spacer,
                 Paragraph(
-                    "<br/>Name of Pawn Broker: J Champalal Pawn Brokers",
+                    f"<br/>Name of Pawn Broker: {loans[0].series.license.shopname}",
                     styles["Normal"],
                 ),
                 Paragraph("<br/>Description of Articles Pledged:", styles["Normal"]),

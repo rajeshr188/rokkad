@@ -158,25 +158,6 @@ def print_loan(request, pk=None):
         return redirect("girvi:girvi_loan_detail", pk=loan.pk)
     pdf = get_custom_jcl(loan=loan, template_id=template.pk)
     # template = request.user.profile.workspace.preferences["Loan__LoanPDFTemplate"]
-    # if template == "c":
-    #     pdf = get_custom_jsk(loan=loan)
-    # elif template == "j":
-    #     pdf =get_custom_jcl(loan=loan,template_id=1)
-    # import os
-    # try:
-    #     # Get template path from settings
-    #     template_path = "jcl-template-hr-new.pdf"
-    #     if os.path.exists(template_path):
-    #         with open(template_path, 'rb') as f:
-    #             template_pdf = f.read()
-    #         pdf = get_custom_jcl(loan, base_template=template_pdf)
-    #     else:
-    #         raise FileNotFoundError(f"Template not found: {template_path}")
-    # except Exception as e:
-    #     print(f"Error with template: {str(e)}")
-    #     pdf = get_custom_jcl(loan)
-    # else:
-    #     pdf = get_loan_template(loan=loan)
     # Create a response object
     # response = HttpResponse(pdf, content_type="application/pdf")
     # # response["Content-Disposition"] = 'attachment; filename="pledge.pdf"'
