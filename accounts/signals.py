@@ -1,5 +1,4 @@
-from allauth.socialaccount.signals import (social_account_added,
-                                           social_account_updated)
+from allauth.socialaccount.signals import social_account_added, social_account_updated
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 

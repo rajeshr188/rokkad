@@ -43,25 +43,15 @@ check receipt and payment allocation management and report
 
 set opening balances for accounts
 
-change default of area of address to be set from preferences
-
-add custom_user profile 
-
 products:public
 stock:private
 
-better organize loan templates
-    let users upload loan templates and then use them to create loan
-        for each loan templates generate a overlay with coords for fields
-            merge both overlay and templates then print directly using cups or win32print
-                or generate pdf and print using cups or win32print
+using cups or win32print
 
 pg schema clone 
 LOANAMOUNT ON LOAN FORM.ADAPT LOANAMOUNT ON LOANITEMS BASED ON LOANAMOUNT ON LOANMODEL
 improve company creation and tenant setting 
-search for .doc creation in django
-from .doc to .pdf with loan values
-standardize loan template by overlaying a template form with values overwritten at coordinates or any simpler idea
+
 admin:  
     public:
             superuser can manage tenants and membership
@@ -71,3 +61,19 @@ admin:
 backup of database is a task handled by celery
 
 when storage backend is r2 cloudflare image.path will break so use image.url
+
+
+# Follow logs in real-time (like tail -f)
+journalctl -fu gunicorn
+
+# Show last 100 lines and follow
+journalctl -u gunicorn -n 100 -f
+
+# Show logs since last boot
+journalctl -u gunicorn -b
+
+# Show logs with timestamps
+journalctl -u gunicorn --output=short-precise
+
+# Filter by log level (error logs only)
+journalctl -u gunicorn -p err

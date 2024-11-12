@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
@@ -8,9 +10,9 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..forms import LedgerForm, LedgerStatementForm, LedgerTransactionForm
 from ..models import JournalEntry, Ledger, LedgerStatement, LedgerTransaction
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 def set_ledger_ob(request, pk):
     # if this is a POST request we need to process the form data

@@ -2,10 +2,14 @@ from django.conf import settings
 from django.db import connection
 from django.http import Http404, HttpResponseNotFound
 from django.urls import set_urlconf
-from django_tenants.utils import (get_public_schema_name,
-                                  get_public_schema_urlconf,
-                                  get_tenant_domain_model, get_tenant_types,
-                                  has_multi_type_tenants, remove_www)
+from django_tenants.utils import (
+    get_public_schema_name,
+    get_public_schema_urlconf,
+    get_tenant_domain_model,
+    get_tenant_types,
+    has_multi_type_tenants,
+    remove_www,
+)
 
 
 class TenantMainMiddleware:

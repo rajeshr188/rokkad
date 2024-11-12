@@ -3,8 +3,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.urls import reverse_lazy
-from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
-                                  UpdateView)
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    UpdateView,
+)
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
@@ -48,27 +53,3 @@ def activate_series(request, pk):
     s = get_object_or_404(Series, pk=pk)
     s.activate()
     return redirect("girvi:girvi_loan_list")
-
-
-# class SeriesListView(LoginRequiredMixin, ListView):
-#     model = Series
-
-
-# class SeriesCreateView(LoginRequiredMixin, CreateView):
-#     model = Series
-#     form_class = SeriesForm
-#     success_url = reverse_lazy("girvi:girvi_license_list")
-
-
-# class SeriesDetailView(LoginRequiredMixin, DetailView):
-#     model = Series
-
-
-# class SeriesUpdateView(LoginRequiredMixin, UpdateView):
-#     model = Series
-#     form_class = SeriesForm
-
-
-# class SeriesDeleteView(LoginRequiredMixin, DeleteView):
-#     model = Series
-#     success_url = reverse_lazy("girvi:girvi_license_list")

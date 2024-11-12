@@ -145,6 +145,7 @@ urlpatterns += (
     ),
     path("girvi/ledger/", views.export_loans_to_excel, name="girvi_ledger"),
     path("girvi/unreleased/", views.generate_unreleased_pdf, name="girvi_unreleased"),
+    path("girvi/grid-template/", views.print_grid_template, name="girvi_grid_template"),
 )
 
 # urls for loanitem

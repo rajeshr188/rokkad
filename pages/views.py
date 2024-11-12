@@ -7,13 +7,18 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
-from apps.orgs.decorators import (company_member_required, roles_required,
-                                  workspace_required)
+from apps.orgs.decorators import (
+    company_member_required,
+    roles_required,
+    workspace_required,
+)
 from apps.orgs.models import Membership
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.contact.services import (active_customers,
-                                               get_customers_by_type,
-                                               get_customers_by_year)
+from apps.tenant_apps.contact.services import (
+    active_customers,
+    get_customers_by_type,
+    get_customers_by_year,
+)
 from apps.tenant_apps.girvi.models import Loan
 from apps.tenant_apps.girvi.services import *
 
@@ -222,10 +227,15 @@ from moneyed import Money
 from openpyxl import load_workbook
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (AccountStatement, AccountTransaction,
-                                         JournalEntry, Ledger,
-                                         LedgerTransaction, TransactionType_DE,
-                                         TransactionType_Ext)
+from apps.tenant_apps.dea.models import (
+    AccountStatement,
+    AccountTransaction,
+    JournalEntry,
+    Ledger,
+    LedgerTransaction,
+    TransactionType_DE,
+    TransactionType_Ext,
+)
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.purchase.models import Payment, Purchase
 from apps.tenant_apps.sales.models import Invoice, Receipt
@@ -693,3 +703,36 @@ def maxx_files_upload(request):
 #         lts = LedgerTransaction.objects.bulk_create(ledger_transactions)
 #         ats = AccountTransaction.objects.bulk_create(account_transactions)
 #         print(f"lts:{len(lts)} , ats:{len(ats)}")
+
+
+import os
+
+from django.conf import settings
+from django.http import FileResponse, Http404
+
+
+def download_template_pack(request):
+    """Download the template pack zip file"""
+    try:
+        file_path = os.path.join(settings.BASE_DIR, "template_pack.zip")
+        if not os.path.exists(file_path):
+            raise Http404("Template pack not found")
+
+        # Open file and create response
+        file = open(file_path, "rb")
+        response = FileResponse(
+            file,
+            content_type="application/zip",
+            as_attachment=True,
+            filename="template_pack.zip",
+        )
+
+        # Add file size header
+        response["Content-Length"] = os.path.getsize(file_path)
+
+        return response
+
+    except Exception as e:
+        if "file" in locals():
+            file.close()
+        raise Http404(f"Error downloading template pack: {str(e)}")

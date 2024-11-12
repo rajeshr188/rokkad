@@ -93,7 +93,7 @@ class Customer(models.Model):
 
     def __str__(self):
         return f"""{self.name} {self.get_relatedas_display()} {self.relatedto} {self.get_customer_type_display()} \n 
-                {self.address.filter(is_default=True).first()} {self.contactno.filter(is_default=True).first() }"""
+                {self.get_address()} {self.get_contactno() }"""
 
     def get_absolute_url(self):
         return reverse("contact_customer_detail", args=(self.pk,))
@@ -114,6 +114,22 @@ class Customer(models.Model):
         else:
             # Return None or a default image
             return None  # settings.STATIC_URL + "images/falconx.png"
+
+    def get_address(self):
+        """Get customer's address - default if exists, otherwise first available or None"""
+        address = self.address.filter(is_default=True).first()
+        if not address:
+            # Fallback to first address if no default
+            address = self.address.first()
+        return address or ""  # Return empty string if no address exists
+
+    def get_contactno(self):
+        """Get customer's contact - default if exists, otherwise first available or None"""
+        contact = self.contactno.filter(is_default=True).first()
+        if not contact:
+            # Fallback to first contact if no default
+            contact = self.contactno.first()
+        return contact or ""  # Return empty string if no contact exists
 
     def merge(self, dup):
         # to merge one customer into another existing one
