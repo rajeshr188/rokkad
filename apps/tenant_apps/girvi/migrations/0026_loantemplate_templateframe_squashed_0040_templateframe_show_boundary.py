@@ -6,24 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    replaces = [
-        ("girvi", "0026_loantemplate_templateframe"),
-        ("girvi", "0027_alter_templateframe_unique_together"),
-        ("girvi", "0028_alter_templateframe_frame_name"),
-        ("girvi", "0029_alter_templateframe_field_type"),
-        ("girvi", "0030_alter_templateframe_frame_name"),
-        ("girvi", "0031_alter_templateframe_frame_name"),
-        ("girvi", "0032_alter_templateframe_unique_together_and_more"),
-        ("girvi", "0033_loantemplate_page_height_loantemplate_page_width"),
-        ("girvi", "0034_alter_loantemplate_print_option"),
-        ("girvi", "0035_alter_loantemplate_base_template"),
-        ("girvi", "0036_remove_loantemplate_print_layout_and_more"),
-        ("girvi", "0037_alter_templateframe_frame_name"),
-        ("girvi", "0038_alter_templateframe_frame_name"),
-        ("girvi", "0039_alter_templateframe_frame_name"),
-        ("girvi", "0040_templateframe_show_boundary"),
-    ]
-
     dependencies = [
         ("girvi", "0025_alter_loanitemstoragebox_item_type"),
     ]

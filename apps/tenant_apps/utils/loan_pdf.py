@@ -24,23 +24,10 @@ from reportlab.lib.units import cm, inch, mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import (
-    Flowable,
-    Frame,
-    FrameBreak,
-    Image,
-    KeepInFrame,
-    KeepTogether,
-    ListFlowable,
-    ListItem,
-    PageBreak,
-    Paragraph,
-    Preformatted,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import (Flowable, Frame, FrameBreak, Image,
+                                KeepInFrame, KeepTogether, ListFlowable,
+                                ListItem, PageBreak, Paragraph, Preformatted,
+                                SimpleDocTemplate, Spacer, Table, TableStyle)
 
 from apps.tenant_apps.girvi.models import LoanTemplate, TemplateFrame
 

@@ -9,7 +9,8 @@ from import_export.fields import Field
 from import_export.widgets import DateTimeWidget
 
 from .models import Address, Contact, Customer, CustomerPic, Proof
-from .resources import AddressResource, ContactResource, CustomerResource, ProofResource
+from .resources import (AddressResource, ContactResource, CustomerResource,
+                        ProofResource)
 
 
 class AddressAdminForm(forms.ModelForm):
