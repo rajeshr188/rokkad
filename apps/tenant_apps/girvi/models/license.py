@@ -42,22 +42,26 @@ class License(models.Model):
         for series in self.series_set.all():
             unreleased_loans = series.loan_set.unreleased()
             loan_count = unreleased_loans.count()
-            loan_amount = unreleased_loans.aggregate(total=Sum('loan_amount'))['total'] or 0
+            loan_amount = (
+                unreleased_loans.aggregate(total=Sum("loan_amount"))["total"] or 0
+            )
 
-            series_data.append({
-                'series_name': series.name,
-                'loan_count': loan_count,
-                'loan_amount': loan_amount
-            })
+            series_data.append(
+                {
+                    "series_name": series.name,
+                    "loan_count": loan_count,
+                    "loan_amount": loan_amount,
+                }
+            )
 
             total_unreleased_loans += loan_count
             total_loan_amount += loan_amount
 
         return {
-            'license_name': self.name,
-            'total_unreleased_loans': total_unreleased_loans,
-            'total_loan_amount': total_loan_amount,
-            'series_data': series_data
+            "license_name": self.name,
+            "total_unreleased_loans": total_unreleased_loans,
+            "total_loan_amount": total_loan_amount,
+            "series_data": series_data,
         }
 
 
@@ -125,10 +129,10 @@ class Series(models.Model):
     def get_unreleased_loan_data(self):
         unreleased_loans = self.loan_set.unreleased()
         loan_count = unreleased_loans.count()
-        loan_amount = unreleased_loans.aggregate(total=Sum('loan_amount'))['total'] or 0
+        loan_amount = unreleased_loans.aggregate(total=Sum("loan_amount"))["total"] or 0
 
         return {
-            'series_name': self.name,
-            'loan_count': loan_count,
-            'loan_amount': loan_amount
+            "series_name": self.name,
+            "loan_count": loan_count,
+            "loan_amount": loan_amount,
         }

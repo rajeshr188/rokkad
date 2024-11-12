@@ -3,12 +3,13 @@ import os
 from io import BytesIO
 from itertools import groupby
 
+import fitz
+import qrcode
 import reportlab.rl_config
+from PIL import Image as PILImage
 
 reportlab.rl_config.warnOnMissingFontGlyphs = 1
-
 import time
-import unicodedata
 
 from django.http import HttpResponse
 from num2words import num2words
@@ -17,22 +18,31 @@ from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4, landscape, letter, mm
+from reportlab.lib.pagesizes import A4, A5, landscape, letter, mm
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, inch, mm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import (Flowable, Frame, FrameBreak, Image,
-                                KeepTogether, ListFlowable, ListItem,
-                                PageBreak, Paragraph, Preformatted,
-                                SimpleDocTemplate, Spacer, Table, TableStyle)
-from reportlab.platypus.doctemplate import PageTemplate
+from reportlab.platypus import (
+    Flowable,
+    Frame,
+    FrameBreak,
+    Image,
+    KeepInFrame,
+    KeepTogether,
+    ListFlowable,
+    ListItem,
+    PageBreak,
+    Paragraph,
+    Preformatted,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
-from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.girvi.models import Loan
+from apps.tenant_apps.girvi.models import LoanTemplate, TemplateFrame
 
 
 class CentreLine(Flowable):
@@ -56,989 +66,2547 @@ class CentreLine(Flowable):
         self.canv.line(center_x, landscape(A4)[1], center_x, 0)
 
 
-def create_frames(page_width, page_height, margin=10, separation=10):
-    """
-    Creates left and right frames for a page with specified dimensions.
+# def get_custom_jsk(loan):
+#     page_width = 14.6 * cm
+#     page_height = 21 * cm
+#     # Grid spacing
+#     grid_spacing = 1 * cm  # Adjust this value based on your preference
+#     buffer = io.BytesIO()
+#     c = Canvas(buffer, pagesize=(page_width, page_height))
 
-    Args:
-    - page_width: Width of the page.
-    - page_height: Height of the page.
-    - margin: Margin from the page edges.
-    - separation: Space between the left and right frames.
+#     c.setFillColorRGB(0, 0, 0)
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(12 * cm, 18.5 * cm, f"{loan.loan_id}")
+#     c.drawString(11.5 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
 
-    Returns:
-    A tuple containing the left and right Frame objects.
-    """
-    mm = 1 / 25.4 * 72  # Millimeters to points conversion factor
-    frame_width = (page_width - 2 * margin * mm - separation * mm) / 2
-    frame_height = page_height - 2 * margin * mm
+#     styles = getSampleStyleSheet()
 
-    left_frame = Frame(
-        margin * mm,
-        margin * mm,
-        width=frame_width,
-        height=frame_height,
-        showBoundary=1,  # Set to 0 to hide boundary
-    )
+#     customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
+#     customer_paragraph = Paragraph(customer, styles["Heading3"])
+#     # Calculate the width and height of the paragraph
+#     width, height = customer_paragraph.wrap(page_width, page_height)
 
-    right_frame = Frame(
-        page_width / 2 + separation * mm / 2,
-        margin * mm,
-        width=frame_width,
-        height=frame_height,
-        showBoundary=1,  # Set to 0 to hide boundary
-    )
+#     # Draw the paragraph on the canvas at the specified position
+#     customer_paragraph.drawOn(c, 5 * cm, 16 * cm - height)
 
-    return left_frame, right_frame
+#     # Load the customer image from the ImageField
+#     # customer_image_path = (
+#     #     loan.customer.get_default_pic().path
+#     # )  # Use .path to get the file system path
+#     customer_pic = None
+#     default_pic = loan.customer.get_default_pic()
+#     if default_pic:
+#         try:
+#             # Check if the file exists
+#             if os.path.exists(default_pic.path):
+#                 # Set the desired dimensions for the image (e.g., 5x5 cm)
+#                 desired_width = 2.5 * cm
+#                 desired_height = 2.5 * cm
+
+#                 # Calculate the position for the image
+#                 image_x = 2 * cm
+#                 image_y = 16 * cm - desired_height
+
+#                 # Draw the image on the canvas
+#                 customer_image = Image(
+#                     default_pic.path, width=desired_width, height=desired_height
+#                 )
+#                 customer_image.drawOn(c, image_x, image_y)
+
+#                 # Draw a border around the image
+#                 border_padding = 2  # Padding around the image for the border
+#                 c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
+#                 c.setLineWidth(1)  # Set the border width
+#                 c.rect(
+#                     image_x - border_padding,
+#                     image_y - border_padding,
+#                     desired_width + 2 * border_padding,
+#                     desired_height + 2 * border_padding,
+#                 )
+#             else:
+#                 print(f"File not found: {default_pic.path}")
+#         except IOError as e:
+#             print(f"Cannot open resource: {default_pic.path}. Error: {e}")
+
+#     address = f"{loan.customer.address.first()}"
+#     address_paragraph = Paragraph(address, styles["Normal"])
+#     # Calculate the width and height of the paragraph
+#     width, height = address_paragraph.wrap(page_width, page_height)
+#     address_paragraph.drawOn(c, 5 * cm, 15 * cm - height)
+
+#     c.drawString(5 * cm, 14 * cm, f"Ph: {loan.customer.contactno.first()}")
+
+#     c.setFont("Helvetica", 8)
+#     weight = loan.formatted_weight(joiner=",")
+#     c.drawString(10 * cm, 11.8 * cm, f"{weight}gms ")
+#     pure = loan.formatted_pure(joiner=",")
+#     c.drawString(10 * cm, 9.8 * cm, f"{pure} gms ")
+#     c.drawString(10 * cm, 8 * cm, f"{loan.get_current_value()}")
+
+#     c.setFont("Helvetica-Bold", 14)
+
+#     data = [
+#         [
+#             "Description",
+#         ]
+#     ]
+#     for i, item in enumerate(loan.loanitems.all(), start=1):
+#         itemdesc = Paragraph(item.itemdesc, styles["Normal"])
+#         data.append(
+#             [
+#                 f"{i}, {item.itemdesc}",
+#             ]
+#         )
+
+#     table = Table(data)
+#     table.setStyle(
+#         TableStyle(
+#             [
+#                 ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
+#             ]
+#         )
+#     )
+#     # Draw the table on the canvas at the specified position
+#     table.wrapOn(c, page_width / 2, page_height)
+#     table.drawOn(c, 2.5 * cm, 10.5 * cm)
+
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(8 * cm, 6.5 * cm, f"{loan.loan_amount}")
+#     amt_fig = num2words(loan.loan_amount, lang="en_IN")
+#     c.drawString(2 * cm, 6 * cm, f"{amt_fig} rupees only")
+#     c.showPage()
+
+#     # ----------------start the copy page----------------
+#     c.setFont("Helvetica", 12)
+#     # Grid spacing
+#     grid_spacing = 1 * cm  # Adjust this value based on your preference
+
+#     c.drawString(3 * cm, 17.5 * cm, f"{loan.loan_id}")
+#     c.drawString(11 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
+#     c.drawString(5 * cm, 17 * cm, f"{loan.customer.name}")
+#     c.drawString(
+#         5 * cm,
+#         16.5 * cm,
+#         f"{loan.customer.get_relatedas_display()} {loan.customer.relatedto}",
+#     )
+
+#     width, height = address_paragraph.wrap(page_width, page_height)
+#     address_paragraph.drawOn(c, 5 * cm, 16 * cm - height)
+#     c.drawString(5 * cm, 14 * cm, f"{loan.customer.contactno.first()}")
+#     c.drawString(5 * cm, 13.5 * cm, f"{loan.loan_amount}")
+
+#     c.drawString(5 * cm, 13 * cm, f"{amt_fig} rupees only")
+
+#     item_desc_paragraph = Paragraph(loan.item_desc, styles["Normal"])
+#     width, height = item_desc_paragraph.wrap(page_width, page_height)
+#     item_desc_paragraph.drawOn(c, 3 * cm, 11 * cm - height)
+
+#     c.setFont("Helvetica", 8)
+#     c.drawString(3 * cm, 7 * cm, f"{weight}gms")
+#     c.drawString(7 * cm, 7 * cm, f"{pure}")
+
+#     c.drawString(12 * cm, 7 * cm, f"{loan.get_current_value()}")
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(1 * cm, 3.5 * cm, f"{loan.loan_id}")
+#     c.drawString(1 * cm, 3 * cm, f"{loan.loan_date.strftime('%d/%m/%y')}")
+#     c.drawString(1 * cm, 2.5 * cm, f"{loan.loan_amount}   {weight}")
+#     c.drawString(1 * cm, 2 * cm, f"{loan.customer.name}")
+
+#     item_desc_paragraph.drawOn(c, 1 * cm, 1.5 * cm - height)
+
+#     c.save()
+#     pdf = buffer.getvalue()
+#     buffer.close()
+#     return pdf
+
+# with frames
+# def get_custom_jsk(loan):
+#     page_width = 14.6 * cm
+#     page_height = 21 * cm
+#     buffer = io.BytesIO()
+#     c = Canvas(buffer, pagesize=(page_width, page_height))
+
+#     c.setFillColorRGB(0, 0, 0)
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(12 * cm, 18.5 * cm, f"{loan.loan_id}")
+#     c.drawString(11.5 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
+
+#     styles = getSampleStyleSheet()
+
+#     customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
+#     customer_paragraph = Paragraph(customer, styles["Heading3"])
+
+#     # Define a frame to contain the customer paragraph
+#     customer_frame = Frame(5 * cm, 15 * cm, 8 * cm, 2 * cm, showBoundary=1)
+#     customer_frame.addFromList([customer_paragraph], c)
+
+#     # Load the customer image from the ImageField
+#     default_pic = loan.customer.get_default_pic()
+#     if default_pic:
+#         try:
+#             if os.path.exists(default_pic.path):
+#                 desired_width = 2.5 * cm
+#                 desired_height = 2.5 * cm
+#                 image_x = 2 * cm
+#                 image_y = 16 * cm - desired_height
+#                 c.drawImage(default_pic.path, image_x, image_y, width=desired_width, height=desired_height)
+#                 border_padding = 2
+#                 c.setStrokeColorRGB(0, 0, 0)
+#                 c.setLineWidth(1)
+#                 c.rect(image_x - border_padding, image_y - border_padding, desired_width + 2 * border_padding, desired_height + 2 * border_padding)
+#             else:
+#                 print(f"File not found: {default_pic.path}")
+#         except IOError as e:
+#             print(f"Cannot open resource: {default_pic.path}. Error: {e}")
+
+#     address = f"{loan.customer.address.first()}"
+#     address_paragraph = Paragraph(address, styles["Normal"])
+#     address_frame = Frame(5 * cm, 14 * cm, 8 * cm, 1 * cm, showBoundary=1)
+#     address_frame.addFromList([address_paragraph], c)
+
+#     c.drawString(5 * cm, 13 * cm, f"Ph: {loan.customer.contactno.first()}")
+
+#     c.setFont("Helvetica", 8)
+#     weight = loan.formatted_weight(joiner=",")
+#     c.drawString(10 * cm, 11.8 * cm, f"{weight}gms ")
+#     pure = loan.formatted_pure(joiner=",")
+#     c.drawString(10 * cm, 9.8 * cm, f"{pure} gms ")
+#     c.drawString(10 * cm, 8 * cm, f"{loan.get_current_value()}")
+
+#     c.setFont("Helvetica-Bold", 14)
+
+#     data = [["Description"]]
+#     for i, item in enumerate(loan.loanitems.all(), start=1):
+#         itemdesc = Paragraph(item.itemdesc, styles["Normal"])
+#         data.append([f"{i}, {item.itemdesc}"])
+
+#     table = Table(data)
+#     table.setStyle(TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black)]))
+#     table.wrapOn(c, page_width / 2, page_height)
+#     table.drawOn(c, 2.5 * cm, 10.5 * cm)
+
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(8 * cm, 6.5 * cm, f"{loan.loan_amount}")
+#     amt_fig = num2words(loan.loan_amount, lang="en_IN")
+#     c.drawString(2 * cm, 6 * cm, f"{amt_fig} rupees only")
+#     c.showPage()
+
+#     # ----------------start the copy page----------------
+#     c.setFont("Helvetica", 12)
+#     c.drawString(3 * cm, 17.5 * cm, f"{loan.loan_id}")
+#     c.drawString(11 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
+#     c.drawString(5 * cm, 17 * cm, f"{loan.customer.name}")
+#     c.drawString(5 * cm, 16.5 * cm, f"{loan.customer.get_relatedas_display()} {loan.customer.relatedto}")
+
+#     address_frame.addFromList([address_paragraph], c)
+#     c.drawString(5 * cm, 14 * cm, f"{loan.customer.contactno.first()}")
+#     c.drawString(5 * cm, 13.5 * cm, f"{loan.loan_amount}")
+#     c.drawString(5 * cm, 13 * cm, f"{amt_fig} rupees only")
+
+#     item_desc_paragraph = Paragraph(loan.item_desc, styles["Normal"])
+#     item_desc_frame = Frame(3 * cm, 10 * cm, 8 * cm, 1 * cm, showBoundary=1)
+#     item_desc_frame.addFromList([item_desc_paragraph], c)
+
+#     c.setFont("Helvetica", 8)
+#     c.drawString(3 * cm, 7 * cm, f"{weight}gms")
+#     c.drawString(7 * cm, 7 * cm, f"{pure}")
+#     c.drawString(12 * cm, 7 * cm, f"{loan.get_current_value()}")
+
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(1 * cm, 3.5 * cm, f"{loan.loan_id}")
+#     c.drawString(1 * cm, 3 * cm, f"{loan.loan_date.strftime('%d/%m/%y')}")
+#     c.drawString(1 * cm, 2.5 * cm, f"{loan.loan_amount}   {weight}")
+#     c.drawString(1 * cm, 2 * cm, f"{loan.customer.name}")
+
+#     item_desc_frame.addFromList([item_desc_paragraph], c)
+
+#     c.save()
+#     pdf = buffer.getvalue()
+#     buffer.close()
+#     return pdf
+
+# with keepinframe
+# def get_custom_jsk(loan):
+#     page_width = 14.6 * cm
+#     page_height = 21 * cm
+#     buffer = io.BytesIO()
+#     c = Canvas(buffer, pagesize=(page_width, page_height))
+
+#     styles = getSampleStyleSheet()
+
+#     # Loan ID and Date
+#     c.setFillColorRGB(0, 0, 0)
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(12 * cm, 18.5 * cm, f"{loan.loan_id}")
+#     c.drawString(11.5 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
 
 
-def generate_loan_items_table(loan, styles):
-    """
-    Generates a table of loan items for a given loan.
+#     # Customer Information Combined
+#     customer_text = f"""
+#     {loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}
+#     {loan.customer.address.first()}
+#     Ph: {loan.customer.contactno.first()}
+#     """.strip()
 
-    Args:
-    - loan: The loan object containing loan items.
-    - styles: A dictionary of styles for formatting the table content.
+#     # Create paragraph with custom style for line spacing
+#     customer_style = ParagraphStyle(
+#         'CustomerInfo',
+#         parent=styles['Normal'],
+#         leading=14,  # Line spacing
+#         spaceBefore=0,
+#         spaceAfter=0
+#     )
 
-    Returns:
-    A Table object populated with loan items data.
-    """
-    boldStyle = ParagraphStyle(
-        "Bold", parent=styles["Normal"], fontName="Helvetica-Bold"
-    )
-    # Initialize table data with headers
-    li_data = [
-        [
-            "Item",
-            "Weight",
-            "Amount",
-            # "Value"
-        ]
-    ]
+#     customer_paragraph = Paragraph(customer_text, customer_style)
 
-    # Populate table data with loan items
-    for i, item in enumerate(loan.loanitems.all(), start=1):
-        itemdesc = Paragraph(item.itemdesc, styles["Normal"])
-        li_data.append(
-            [
-                f"{i}.{item.itemdesc}-{item.itemtype}",
-                item.weight,
-                item.loanamount,
-                # item.current_value(),
-            ]
-        )
+#     # Single frame for all customer info
+#     customer_frame = KeepInFrame(
+#         8 * cm,    # maxWidth
+#         3 * cm,    # maxHeight for 3 lines
+#         content=[customer_paragraph],
+#         mode="shrink"
+#     )
 
-    # Append total row
-    li_data.append(
-        [
-            "Total",
-            loan.formatted_weight(joiner=","),
-            Paragraph(f"{loan.loan_amount}", boldStyle),
-            # loan.current_value(),
-        ]
-    )
+#     customer_frame_container = Frame(
+#         5 * cm,    # x position
+#         13 * cm,   # y position
+#         8 * cm,    # width
+#         3 * cm,    # height
+#         showBoundary=1
+#     )
 
-    # Append loan amount in words
-    li_data.append(
-        [
-            Paragraph(
-                f"Loan Amount In Words: <b><font size=10>{num2words(loan.loan_amount, lang='en_IN').title()} rupees only</font></b>",
-                styles["Normal"],
-            ),
-            "",
-            Paragraph(f"Value : {loan.get_current_value()}", boldStyle),
-        ]
-    )
+#     customer_frame_container.addFromList([customer_frame], c)
 
-    # Create the table
-    loanitems_table = Table(li_data)
-    # Define column widths and row heights
-    # col_widths = [150, 50, 50, 50]  # Adjust these values as needed
-    # row_heights = [None] * len(li_data)  # Use None for auto height, or specify fixed heights
+#     # Weight and Pure Weight
+#     c.setFont("Helvetica", 8)
+#     weight = loan.formatted_weight(joiner=",")
+#     c.drawString(10 * cm, 11.8 * cm, f"{weight}gms")
+#     pure = loan.formatted_pure(joiner=",")
+#     c.drawString(10 * cm, 9.8 * cm, f"{pure} gms")
+#     c.drawString(10 * cm, 8 * cm, f"{loan.get_current_value()}")
 
-    # # Create the table with fixed column widths and row heights
-    # loanitems_table = Table(li_data, colWidths=col_widths, rowHeights=row_heights)
+#     # Table of Loan Items
+#     c.setFont("Helvetica-Bold", 14)
+#     data = [["Description"]]
+#     for i, item in enumerate(loan.loanitems.all(), start=1):
+#         item_text = f"{i}, {item.itemdesc}"
+#         item_paragraph = Paragraph(item_text, styles["Normal"])
+#         item_frame = KeepInFrame(8 * cm, 1 * cm, content=[item_paragraph], mode="shrink")
+#         data.append([item_frame])
 
-    # Set table style
-    loanitems_table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 8),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
-                (
-                    "SPAN",
-                    (0, -1),
-                    (1, -1),
-                ),
-                # (
-                #     "SPAN",
-                #     (0, -1),
-                #     (-1, -1),
-                # ),  # Span the first cell of the last row across all columns
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
-            ]
-        )
-    )
+#     table = Table(data)
+#     table.setStyle(TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black)]))
+#     table.wrapOn(c, page_width / 2, page_height)
+#     table.drawOn(c, 2.5 * cm, 10.5 * cm)
 
-    return loanitems_table
+#     # Loan Amount in Words
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(8 * cm, 6.5 * cm, f"{loan.loan_amount}")
+#     amt_fig = f"{num2words(loan.loan_amount, lang='en_IN')} rupees only"
+#     amt_fig_frame = KeepInFrame(8 * cm, 1 * cm, content=[Paragraph(amt_fig, styles["Normal"])], mode="shrink")
+#     amt_fig_frame_container = Frame(2 * cm, 6 * cm, 8 * cm, 1 * cm, showBoundary=1)
+#     amt_fig_frame_container.addFromList([amt_fig_frame], c)
+#     c.showPage()
+
+#     # Copy Page with KeepInFrame for Consistent Layout
+#     c.setFont("Helvetica", 12)
+#     c.drawString(3 * cm, 17.5 * cm, f"{loan.loan_id}")
+#     c.drawString(11 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
+#     customer_frame_container = Frame(
+#         5 * cm,    # x position
+#         14 * cm,   # y position
+#         8 * cm,    # width
+#         3 * cm,    # height
+#         showBoundary=1
+#     )
+
+#     customer_frame_container.addFromList([customer_frame], c)
+#     c.drawString(5 * cm, 13.5 * cm, f"{loan.loan_amount}")
+#     c.drawString(5 * cm, 13 * cm, f"{amt_fig} rupees only")
+
+#     # Item Description with KeepInFrame
+#     item_desc_paragraph = Paragraph(loan.item_desc, styles["Normal"])
+#     item_desc_frame = KeepInFrame(8 * cm, 1 * cm, content=[item_desc_paragraph], mode="shrink")
+#     item_desc_frame_container = Frame(3 * cm, 10 * cm, 8 * cm, 1 * cm, showBoundary=1)
+#     item_desc_frame_container.addFromList([item_desc_frame], c)
+
+#     # Weight, Pure Weight, and Current Value on Copy Page
+#     c.setFont("Helvetica", 8)
+#     c.drawString(3 * cm, 7 * cm, f"{weight}gms")
+#     c.drawString(7 * cm, 7 * cm, f"{pure}")
+#     c.drawString(12 * cm, 7 * cm, f"{loan.get_current_value()}")
+
+#     # Final Information on Copy Page
+#     c.setFont("Helvetica-Bold", 12)
+#     c.drawString(1 * cm, 3.5 * cm, f"{loan.loan_id}")
+#     c.drawString(1 * cm, 3 * cm, f"{loan.loan_date.strftime('%d/%m/%y')}")
+#     c.drawString(1 * cm, 2.5 * cm, f"{loan.loan_amount}   {weight}")
+#     c.drawString(1 * cm, 2 * cm, f"{loan.customer.name}")
+
+#     # Save PDF
+#     c.save()
+#     pdf = buffer.getvalue()
+#     buffer.close()
+#     return pdf
 
 
-def draw_center_dotted_line(canvas, page_size=A4, orientation="landscape"):
-    """
-    Draws a dotted line at the center of the page.
-
-    Args:
-    - canvas: The canvas object to draw on.
-    - page_size: The size of the page, default is A4.
-    - orientation: The orientation of the page, 'portrait' or 'landscape'.
-    """
-    # Set the line width and style
-    canvas.setLineWidth(0.5)
-    canvas.setDash(1, 3)  # 1pt on, 3pt off
-
-    # Adjust page size for orientation
-    if orientation == "landscape":
-        page_width, page_height = landscape(page_size)
+def get_frame_definitions(is_original=True):
+    """Define frames and their positions for original/duplicate"""
+    if is_original:
+        return {
+            "loan_header": Frame(12 * cm, 18.5 * cm, 4 * cm, 1 * cm, showBoundary=1),
+            "customer_info": Frame(5 * cm, 13 * cm, 8 * cm, 3 * cm, showBoundary=1),
+            "weights": Frame(10 * cm, 8 * cm, 4 * cm, 4 * cm, showBoundary=1),
+            "items_table": Frame(2.5 * cm, 10.5 * cm, 8 * cm, 4 * cm, showBoundary=1),
+            "amount": Frame(8 * cm, 6.5 * cm, 4 * cm, 1 * cm, showBoundary=1),
+            "amount_words": Frame(2 * cm, 6 * cm, 8 * cm, 1 * cm, showBoundary=1),
+        }
     else:
-        page_width, page_height = page_size
+        return {
+            "loan_header": Frame(3 * cm, 17.5 * cm, 4 * cm, 1 * cm, showBoundary=1),
+            "customer_info": Frame(5 * cm, 14 * cm, 8 * cm, 3 * cm, showBoundary=1),
+            "items": Frame(3 * cm, 10 * cm, 8 * cm, 1 * cm, showBoundary=1),
+            "weights": Frame(3 * cm, 7 * cm, 10 * cm, 1 * cm, showBoundary=1),
+            "summary": Frame(1 * cm, 2 * cm, 12 * cm, 2 * cm, showBoundary=1),
+        }
 
-    # Calculate the center of the page
-    center_x = page_width / 2
-    center_y = page_height / 2
 
-    # Draw the dotted line from top to bottom at the center of the page
-    canvas.line(center_x, page_height, center_x, 0)
+def get_frame_content(loan, styles):
+    """Map loan data to frame content"""
+    customer_text = f"""
+    {loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}
+    {loan.customer.address.first()}
+    Ph: {loan.customer.contactno.first()}
+    """.strip()
 
-
-def create_loan_header_table(loan, styles, spacer):
-    """
-    Creates a header table for a loan document.
-
-    Args:
-    - loan: The loan object containing loan details.
-    - styles: A dictionary of styles for formatting the table content.
-
-    Returns:
-    A Table object populated with loan header data.
-    """
-    centered_style = ParagraphStyle(
-        name="Centered", parent=styles["Normal"], alignment=1
-    )  # 1 is for center alignment
-
-    # Generate the QR code
-    qr_code_value = f"{loan.loan_id}"
-    qr_code = qr.QrCodeWidget(qr_code_value)
-    bounds = qr_code.getBounds()
-    width = bounds[2] - bounds[0]
-    height = bounds[3] - bounds[1]
-    d = Drawing(50, 50, transform=[50.0 / width, 0, 0, 50.0 / height, 0, 0])
-    d.add(qr_code)
-
-    logo = Image("static/images/falconx.png", 50, 50)
-
-    shop_license = loan.series.license
-    customer = loan.customer
-    customer_pic = None
-    default_pic = customer.get_default_pic()
-    if default_pic:
-        customer_pic = Image(default_pic.path, 50, 50)
-    # Create new styles with center alignment
-    centeredHeading2 = ParagraphStyle(
-        name="CenteredHeading2",
-        parent=styles["Heading2"],
-        alignment=TA_CENTER,
+    customer_style = ParagraphStyle(
+        "CustomerInfo", parent=styles["Normal"], leading=14, spaceBefore=0, spaceAfter=0
     )
 
-    centeredHeading3 = ParagraphStyle(
-        name="CenteredHeading3",
-        parent=styles["Heading3"],
-        alignment=TA_CENTER,
-    )
-    header_data = [
-        [
-            Paragraph("Sec Rules 8", styles["Normal"]),
+    weight = loan.formatted_weight(joiner=",")
+    pure = loan.formatted_pure(joiner=",")
+    amt_fig = f"{num2words(loan.loan_amount, lang='en_IN')} rupees only"
+
+    return {
+        "loan_header": [
+            Paragraph(f"Loan ID: {loan.loan_id}", styles["Normal"]),
+            Paragraph(f"Date: {loan.loan_date.strftime('%d-%m-%Y')}", styles["Normal"]),
+        ],
+        "customer_info": [Paragraph(customer_text, customer_style)],
+        "weights": [
+            Paragraph(f"Weight: {weight}gms", styles["Normal"]),
+            Paragraph(f"Pure: {pure}gms", styles["Normal"]),
+            Paragraph(f"Value: {loan.get_current_value()}", styles["Normal"]),
+        ],
+        "items_table": [
+            Table(
+                [[item.itemdesc] for item in loan.loanitems.all()],
+                style=TableStyle([("GRID", (0, 0), (-1, -1), 0.25, colors.black)]),
+            )
+        ],
+        "amount": [Paragraph(str(loan.loan_amount), styles["Normal"])],
+        "amount_words": [Paragraph(amt_fig, styles["Normal"])],
+        "summary": [
             Paragraph(
-                f"Pawn Ticket <font face='NotoSansTamil-Regular'>அடகு சீட்டு </font>",
-                styles["Heading3"],
-            ),
-            Paragraph(f"", styles["Normal"]),
-            Paragraph(f"P.B.L No:{loan.series.license.name}", styles["Normal"]),
+                f"{loan.loan_id} {loan.loan_date.strftime('%d/%m/%y')} "
+                f"{loan.loan_amount} {weight} {loan.customer.name}",
+                styles["Normal"],
+            )
         ],
-        [
-            logo,
-            [
-                Paragraph(shop_license.shopname, styles["Heading3"]),
-                Paragraph("Pawn Brokers", styles["Heading3"]),
-                Paragraph(
-                    f"<font size=12>{shop_license.address}</font>", styles["Normal"]
-                ),
-                Paragraph(
-                    f"<font size=10>Propreitor :{shop_license.propreitor}</font>",
-                    styles["Normal"],
-                ),
-            ],
-            "",
-            d,
-        ],
-        [
-            Paragraph(f"Loan Id : <b>{loan.loan_id}</b>", styles["Normal"]),
-            Paragraph(""),
-            Paragraph(
-                f"Date : <b>{loan.loan_date.strftime('%d-%m-%Y')}</b>", styles["Normal"]
-            ),
-        ],
-        [Paragraph("Customer", styles["Heading5"])],
-        [
-            customer_pic,
-            [
-                Paragraph(
-                    f"{customer.name} {customer.relatedas} {customer.relatedto}".title(),
-                    centered_style,
-                ),
-                Paragraph(
-                    f"""{loan.customer.address.first()}<br />ph:{loan.customer.contactno.first()}""",
-                    centered_style,
-                ),
-            ],
-        ],
-        [Paragraph("Following article/s are pawned with me:", styles["Heading5"])],
-    ]
-
-    header = Table(header_data)
-    header_style = TableStyle(
-        [
-            ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
-            ("SPAN", (0, 7), (-1, 7)),
-            ("SPAN", (0, 8), (-1, 8)),
-            ("SPAN", (0, 11), (-1, 11)),
-            ("SPAN", (1, 0), (2, 0)),
-            ("SPAN", (1, 1), (2, 1)),
-            ("SPAN", (0, 3), (-1, 3)),
-            ("SPAN", (0, 2), (1, 2)),
-            ("SPAN", (2, 2), (3, 2)),
-            ("SPAN", (1, 4), (-1, 4)),
-            ("SPAN", (0, 5), (-1, 5)),
-            ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),  # Center-align text in all cells
-            (
-                "BACKGROUND",
-                (1, 0),
-                (1, 0),
-                colors.grey,
-            ),  # Set background color to grey for the second column of the first row
-            (
-                "TEXTCOLOR",
-                (1, 0),
-                (1, 0),
-                colors.whitesmoke,
-            ),  # Set text color to white for the second column of the first row
-        ]
-    )
-    header.setStyle(header_style)
-    return header
-
-
-def get_label(loan, styles):
-    """
-    Generates a label for the loan document.
-
-    Args:
-    - loan: The loan object containing loan details.
-    - styles: A dictionary of styles for formatting the label content.
-
-    Returns:
-    A Table object populated with label data.
-    """
-
-    normal = styles["Normal"]
-    normal.fontName = "Helvetica"
-    normal.fontSize = 10
-    normal.alignment = TA_LEFT
-    label = Table(
-        [
-            [
-                Paragraph(
-                    f"""<b>{loan.loan_id}  {loan.loan_date.date()}</b><br/>
-                    <b>{loan.loan_amount}  {loan.customer.name}</b><br/>
-                    <b>{loan.formatted_weight()}</b>""",
-                    styles["Normal"],
-                ),
-                Paragraph(f"<b>Items:</b> {loan.item_desc}", styles["Normal"]),
-            ]
-        ],
-        colWidths=[None, None],
-    )
-    label_style = TableStyle(
-        [
-            ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
-            ("BOX", (0, 0), (-1, 0), 0.25, colors.black),  # Add border to the first row
-            (
-                "BOX",
-                (0, 1),
-                (-1, 1),
-                0.25,
-                colors.black,
-            ),  # Add border to the second row
-        ]
-    )
-    label.setStyle(label_style)
-    return label
-
-
-def create_terms_flowable(styles, simple_tblstyle):
-    """
-    Creates a flowable for the terms section.
-
-    Args:
-    - normal: The style to be applied to the paragraphs.
-    - simple_tblstyle: The style to be applied to the table.
-
-    Returns:
-    A flowable object containing the terms section.
-    """
-    normal = styles["Normal"]
-    normal.fontName = "Helvetica"
-    normal.fontSize = 8
-    terms = Table(
-        [
-            [
-                ListFlowable(
-                    [
-                        Paragraph(
-                            "Time agreed for redemption of pawned articles is 3 months.",
-                            normal,
-                        ),
-                        Paragraph("Above mentioned articles are my own", normal),
-                        Paragraph("My monthly income is above Rs:", normal),
-                        Paragraph(
-                            "Working Hours:9:00 am to 1:00 pm & 2:00 pm to 7:00pm Sunday Holiday",
-                            normal,
-                        ),
-                        Paragraph(
-                            "The conditions printed overleaf were read over and signed by me after understanding the same.",
-                            normal,
-                        ),
-                    ],
-                    bulletType="bullet",
-                )
-            ],
-        ]
-    )
-    terms.setStyle(simple_tblstyle)
-
-    return terms
-
-
-def create_signature_flowable(styles, simple_tblstyle):
-    """
-    Creates a signature table flowable.
-
-    Args:
-    - normal: The style object for normal text.
-    - simple_tblstyle: The table style to be applied.
-
-    Returns:
-    A Table flowable object for signatures.
-    """
-    normal = styles["Normal"]
-    normal.fontName = "Helvetica"
-    normal.fontSize = 8
-
-    signature = Table(
-        [
-            ["", ""],
-            ["", ""],
-            [
-                Paragraph(
-                    "<font size=8>Signature/Thumb Impression of the pawner</font>",
-                    normal,
-                ),
-                Paragraph(
-                    "<font size=8>Signature of the Pawn broker/his Agent</font>", normal
-                ),
-            ],
-        ]
-    )
-    signature.setStyle(
-        TableStyle(
-            [
-                ("LINEBEFORE", (0, 0), (-1, -1), 0, colors.white),
-                ("LINEAFTER", (0, 0), (-1, -1), 0, colors.white),
-                ("LINEABOVE", (0, 0), (-1, -1), 0, colors.white),
-                ("LINEBELOW", (0, 0), (-1, -1), 0, colors.white),
-            ]
-        )
-    )
-    return signature
-
-
-def page3(styles):
-    """
-    Generates the terms and conditions section for the third page of the loan document.
-
-    Args:
-    - styles: A dictionary containing styles for formatting the document.
-    - tamfont: A function to handle Tamil font rendering.
-
-    Returns:
-    A list of flowables to be added to a frame on the third page.
-    """
-    normal = styles[
-        "Normal"
-    ]  # Assuming 'Normal' style is defined in the styles dictionary
-    centeredHeading2 = ParagraphStyle(
-        name="CenteredHeading2",
-        parent=styles["Heading2"],
-        alignment=TA_CENTER,
-    )
-
-    terms_conditions_flowables = [
-        Paragraph("Terms & Conditions", centeredHeading2),
-        ListFlowable(
-            [
-                ListItem(
-                    Paragraph(
-                        "The rate of interest on any pledged articles shall not exceed 24% per annum.",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        "Every Pledge shall be redeemable within a period of one year or such longer period as may be provided in the contract between the parties from the day of pawning and shall further continue to be redeemable during seven days of grace following the said period. A pledge shall further continue to be redeemable until it is disposed of as provided in the act although the period of redemption and of grace have expired.",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        "Rate of Interest charged 12% per annum. The time agreed upon for redemption of the article in months only.",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        f"<font name='NotoSansTamil-Regular'>3 மதத்திற்கு ஒரு முறை  தவறாமல் வட்டி செலுத்தவேண்டும்</font>",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        f"<font name='NotoSansTamil-Regular'>இந்த ரசித்து கொண்டுவந்ததால் தன பொருள் (அ ) நகை கொடுக்கப்படும் </font>",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        f"<font name='NotoSansTamil-Regular'>வியாபாரம் நேரம் :காலை  9:00 முதல் பகல் 1:00 மணி வரை ,பகல் 2:00 மணி முதல் மலை 7:00 மணி வரை  ஞாயுறு விடுமுறை .</font>",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        f"<font name='NotoSansTamil-Regular'>இந்த ரசித்து பிறர் வசம்  கொடுக்கக்கூடாது</font>",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        f"<font name='NotoSansTamil-Regular'>ஒரு வருடம் 7 நாட்களுக்குமேல் தாங்கள் அடகு வாய்த்த பொருட்கள் ஏல்லத்தில் விட படும்</font>",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        f"<font name='NotoSansTamil-Regular'>குறிப்பு: மதத்திற்கு அவ்வளவு நாட்கள் குறையினும் முழு மாத வட்டி செலுத்தவேண்டும் .நீங்கள் வரு இடம் போகும் பட்சத்தில் விலாசம் தெரிவிக்க வேண்டும்.</font>",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-                ListItem(
-                    Paragraph(
-                        f"<font name='NotoSansTamil-Regular'>இதில் கண்ட நகைகள் சரிபாத்து பெற்றுக்கொண்டேன் .</font>",
-                        normal,
-                    ),
-                    spaceBefore=10,
-                    spaceAfter=10,
-                ),
-            ],
-            bulletType="bullet",
-        ),
-    ]
-
-    return terms_conditions_flowables
-
-
-def page4(styles):
-    # Register the font
-    pdfmetrics.registerFont(
-        TTFont("NotoSansTamil", "static/fonts/NotoSansTamil-Regular.ttf")
-    )
-    normal = ParagraphStyle(
-        name="Normal",
-        parent=styles["Normal"],
-        alignment=TA_CENTER,
-        fontName="NotoSansTamil",
-    )  # Assuming 'Normal' style is defined in the styles dictionary
-    centeredHeading1 = ParagraphStyle(
-        name="CenteredHeading1",
-        parent=styles["Heading1"],
-        alignment=TA_CENTER,
-        fontName="NotoSansTamil",
-    )
-    centeredHeading2 = ParagraphStyle(
-        name="CenteredHeading2",
-        parent=styles["Heading3"],
-        alignment=TA_CENTER,
-        fontName="NotoSansTamil",
-    )
-
-    right_flowables_page2 = [
-        Paragraph(
-            f"D3  படிவம்",
-            centeredHeading2,
-        ),
-        Preformatted(
-            """
-        (8(6) பிரிவையும்  6(1) விதியையும் பார்க்கவும் )
-        அடகு சீட்டு தொலைந்து விட்டது அல்லது அழிந்து 
-        விட்டது என்று அடகு வைத்தவரால் கொடுக்கப்படும் 
-        உறுதிமொழி சீட்டு""",
-            centeredHeading2,
-        ),
-        Preformatted(
-            """
-        பெயர் ................................................................................................................
-        தந்தை /கணவர் .................................................................................................
-        ஊர் ..........................தாலுகா ...............................................................................
-        நாலிட்ட ..............................என்னுள்ள (தெரிந்தால் ) அடகு 
-        சீட்டை பெற்றுக்கொண்டேன் என்றும் அது இப்போது தொலைந்து 
-        விட்டது/அழிந்து விட்டது என்றும் எனக்கு நன்றாக தெரிந்திருந்து 
-        நான் அவ்வாறு நம்புகின்ற அளவில் இந்த அடகு வாய்த்த சீட்டு 
-        என்னால் எவருக்கும் விற்கப்படவில்லை ஒப்படிக்க படவில்லை 
-        அல்லது மாற்றப்படவில்லை என்றும் தமிழ்நாடு 1943-ஆம் ஆண்டு 
-        அடகுக்கடைக்காரர் சட்டம் (23,1943)8-வது பிரிவை சேர்ந்த 
-        (6)உட்பிரிவின்படி உளமாரவும் உண்மையாகவும் உறுதிமொழி 
-        கூறுகின்றேன் .
-
-        மேலே குறிப்பிட்டுள்ள பொருள் /பொருள்கள் பின்வரும் விவரம் :
-        உள்ளதாகும் /உள்ளவையாகும் :
-
-            அடகு வைத்தவரின் கையொப்பம் :
-
-            தொழில் :
-            முகவரி :
-            நாள் :
-
-        மேற்படி உறுதிமொழி கொடுத்தவர் ..................................
-        என்பவர் எனக்கு தெரியும் என்று .....................................
-        சேர்ந்த ..................நன் என்னும் மேற்படி சட்டத்தின் 8-வது பிரிவை 
-        சேர்ந்த (6) உட்பிரிவின்படி உண்மையாகவும் உறுதிமொழி 
-        கூறுகின்றேன்
-
-            அடையாளம் கொடுப்பவரின் கையொப்பம் :
-            தொழில் :
-            முகவரி :
-            நாள் :
-
-
-        """,
-            normal,
-        ),
-    ]
-
-    return right_flowables_page2
-
-
-def get_loan_template(loan):
-    pdfmetrics.registerFont(
-        TTFont(
-            "NotoSansTamil-Regular",
-            "static/fonts/NotoSansTamil-Regular.ttf",
-        ),
-    )
-
-    # Create a file-like buffer to receive PDF data.
-    buffer = io.BytesIO()
-    my_canvas = Canvas(buffer, pagesize=landscape(A4))
-    w, h = my_canvas._pagesize
-    spacer = Spacer(0, 0.15 * inch)
-
-    # Define styles for the paragraphs
-    styles = getSampleStyleSheet()
-    normal = styles["Normal"]
-    normal.alignment = TA_JUSTIFY
-
-    simple_tblstyle = TableStyle(
-        [
-            ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
-            ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
-            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
-            ("FONTSIZE", (0, 0), (-1, -1), 10),
-            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ]
-    )
-
-    header = create_loan_header_table(loan, styles, spacer)
-    loanitems_table = generate_loan_items_table(loan, styles)
-    terms = create_terms_flowable(styles, simple_tblstyle)
-    sign = create_signature_flowable(styles, simple_tblstyle)
-    release_para = Table(
-        [
-            [
-                Paragraph(
-                    f"""
-    Principle Rs. {loan.loan_amount} Interest Rs. ...............Total Rs. ....................I hereby acknowledge to have paid <br/>on .........
-    and received the Jewel/Jewels in good condition and this cancels my account.<br/>
-    Signature or Thumb Impression of the Pawner:............................................<br />
-    """,
-                    normal,
-                )
-            ]
-        ]
-    )
-    release_para.setStyle(simple_tblstyle)
-    # Define the headings
-    header_style = styles["Heading4"]
-    original_heading = Paragraph("Original", header_style)
-    duplicate_heading = Paragraph("Duplicate", header_style)
-    flowables = [header, loanitems_table, spacer, sign]
-    left_flowables = [
-        original_heading,
-        *flowables,
-        spacer,
-        Paragraph("Terms & Conditions", normal),
-        terms,
-    ]
-    right_flowables = [duplicate_heading, *flowables, spacer, release_para]
-
-    left_frame, right_frame = create_frames(w, h, margin=10, separation=10)
-    left_frame.addFromList(left_flowables, my_canvas)
-    right_frame.addFromList(right_flowables, my_canvas)
-    draw_center_dotted_line(my_canvas)
-    label = get_label(loan, styles)
-    label_height = 25  # Assuming the height of the label, adjust as needed
-    bottom_margin = 5 * mm  # Adjust based on your document's bottom margin
-
-    # Calculate the y position for the label to be at the bottom of the frame
-    label_y_position = bottom_margin + label_height
-
-    label.wrapOn(my_canvas, (w / 2) - 15 * mm, h)
-    # Adjust the y coordinate to position the label at the bottom
-    label.drawOn(my_canvas, (w) / 2 + 5 * mm, label_y_position)
-
-    my_canvas.showPage()
-
-    # # Recreate the frames for the second page
-    # left_frame, right_frame = create_frames(w, h, margin=10, separation=10)
-    # page3_flowables = page3(styles)
-    # page4_flowables = page4(styles)
-    # left_frame.addFromList(page3_flowables, my_canvas)
-    # right_frame.addFromList(page4_flowables, my_canvas)
-    # draw_center_dotted_line(my_canvas)
-
-    my_canvas.save()
-    pdf = buffer.getvalue()
-    buffer.close()
-    return pdf
+    }
 
 
 def get_custom_jsk(loan):
-    page_width = 14.6 * cm
-    page_height = 21 * cm
-    # Grid spacing
-    grid_spacing = 1 * cm  # Adjust this value based on your preference
+    """Generate PDF with original and duplicate pages"""
     buffer = io.BytesIO()
-    c = Canvas(buffer, pagesize=(page_width, page_height))
-
-    c.setFillColorRGB(0, 0, 0)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(12 * cm, 18.5 * cm, f"{loan.loan_id}")
-    c.drawString(11.5 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
-
+    c = Canvas(buffer, pagesize=(14.6 * cm, 21 * cm))
     styles = getSampleStyleSheet()
 
-    customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
-    customer_paragraph = Paragraph(customer, styles["Heading3"])
-    # Calculate the width and height of the paragraph
-    width, height = customer_paragraph.wrap(page_width, page_height)
+    # Original page
+    frames = get_frame_definitions(is_original=True)
+    content = get_frame_content(loan, styles)
 
-    # Draw the paragraph on the canvas at the specified position
-    customer_paragraph.drawOn(c, 5 * cm, 16 * cm - height)
+    for frame_name, frame in frames.items():
+        if frame_name in content:
+            frame_content = KeepInFrame(
+                frame._width, frame._height, content[frame_name], mode="shrink"
+            )
+            frame.addFromList([frame_content], c)
 
-    # Load the customer image from the ImageField
-    # customer_image_path = (
-    #     loan.customer.get_default_pic().path
-    # )  # Use .path to get the file system path
-    customer_pic = None
-    default_pic = loan.customer.get_default_pic()
-    if default_pic:
-        try:
-            # Check if the file exists
-            if os.path.exists(default_pic.path):
-                # Set the desired dimensions for the image (e.g., 5x5 cm)
-                desired_width = 2.5 * cm
-                desired_height = 2.5 * cm
-
-                # Calculate the position for the image
-                image_x = 2 * cm
-                image_y = 16 * cm - desired_height
-
-                # Draw the image on the canvas
-                customer_image = Image(default_pic.path, width=desired_width, height=desired_height)
-                customer_image.drawOn(c, image_x, image_y)
-
-                # Draw a border around the image
-                border_padding = 2  # Padding around the image for the border
-                c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
-                c.setLineWidth(1)  # Set the border width
-                c.rect(
-                    image_x - border_padding,
-                    image_y - border_padding,
-                    desired_width + 2 * border_padding,
-                    desired_height + 2 * border_padding,
-                )
-            else:
-                print(f"File not found: {default_pic.path}")
-        except IOError as e:
-            print(f"Cannot open resource: {default_pic.path}. Error: {e}")
-        
-
-    address = f"{loan.customer.address.first()}"
-    address_paragraph = Paragraph(address, styles["Normal"])
-    # Calculate the width and height of the paragraph
-    width, height = address_paragraph.wrap(page_width, page_height)
-    address_paragraph.drawOn(c, 5 * cm, 15 * cm - height)
-
-    c.drawString(5 * cm, 14 * cm, f"Ph: {loan.customer.contactno.first()}")
-
-    c.setFont("Helvetica", 8)
-    weight = loan.formatted_weight(joiner=",")
-    c.drawString(10 * cm, 11.8 * cm, f"{weight}gms ")
-    pure = loan.formatted_pure(joiner=",")
-    c.drawString(10 * cm, 9.8 * cm, f"{pure} gms ")
-    c.drawString(10 * cm, 8 * cm, f"{loan.get_current_value()}")
-
-    c.setFont("Helvetica-Bold", 14)
-
-    data = [
-        [
-            "Description",
-        ]
-    ]
-    for i, item in enumerate(loan.loanitems.all(), start=1):
-        itemdesc = Paragraph(item.itemdesc, styles["Normal"])
-        data.append(
-            [
-                f"{i}, {item.itemdesc}",
-            ]
-        )
-
-    table = Table(data)
-    table.setStyle(
-        TableStyle(
-            [
-                ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
-            ]
-        )
-    )
-    # Draw the table on the canvas at the specified position
-    table.wrapOn(c, page_width / 2, page_height)
-    table.drawOn(c, 2.5 * cm, 10.5 * cm)
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(8 * cm, 6.5 * cm, f"{loan.loan_amount}")
-    amt_fig = num2words(loan.loan_amount, lang="en_IN")
-    c.drawString(2 * cm, 6 * cm, f"{amt_fig} rupees only")
     c.showPage()
 
-    c.setFont("Helvetica", 12)
-    # Grid spacing
-    grid_spacing = 1 * cm  # Adjust this value based on your preference
+    # Duplicate page
+    frames = get_frame_definitions(is_original=False)
 
-    c.drawString(3 * cm, 17.5 * cm, f"{loan.loan_id}")
-    c.drawString(11 * cm, 17.5 * cm, f"{loan.loan_date.strftime('%d-%m-%Y')}")
-    c.drawString(5 * cm, 17 * cm, f"{loan.customer.name}")
-    c.drawString(
-        5 * cm,
-        16.5 * cm,
-        f"{loan.customer.get_relatedas_display()} {loan.customer.relatedto}",
+    for frame_name, frame in frames.items():
+        if frame_name in content:
+            frame_content = KeepInFrame(
+                frame._width, frame._height, content[frame_name], mode="shrink"
+            )
+            frame.addFromList([frame_content], c)
+
+    c.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
+
+
+# def create_loan_frames(c, is_original=True):
+#     """Create frames for different sections of the loan document"""
+#     styles = getSampleStyleSheet()
+
+#     # Define frame positions for original and duplicate
+#     positions = {
+#         'original': {
+#             'loan_id': (12*cm, 18.5*cm, 4*cm, 1*cm),
+#             'date': (11.5*cm, 17.5*cm, 4*cm, 1*cm),
+#             'customer': (5*cm, 16*cm, 8*cm, 2*cm),
+#             'photo': (2*cm, 16*cm, 2.5*cm, 2.5*cm),
+#             'address': (5*cm, 14*cm, 8*cm, 1*cm),
+#             'phone': (5*cm, 13*cm, 8*cm, 1*cm),
+#             'items': (2.5*cm, 10.5*cm, 10*cm, 3*cm),
+#             'amount': (8*cm, 6.5*cm, 4*cm, 1*cm)
+#         },
+#         'duplicate': {
+#             'loan_id': (3*cm, 17.5*cm, 4*cm, 1*cm),
+#             'date': (11*cm, 17.5*cm, 4*cm, 1*cm),
+#             'customer': (5*cm, 17*cm, 8*cm, 1*cm),
+#             'address': (5*cm, 15*cm, 8*cm, 1*cm),
+#             'phone': (5*cm, 14*cm, 8*cm, 1*cm),
+#             'items': (3*cm, 10*cm, 8*cm, 3*cm),
+#             'amount': (5*cm, 13.5*cm, 4*cm, 1*cm)
+#         }
+#     }
+
+#     pos = positions['original'] if is_original else positions['duplicate']
+
+#     frames = {
+#         'loan_id': Frame(*pos['loan_id'], showBoundary=0),
+#         'date': Frame(*pos['date'], showBoundary=0),
+#         'customer': Frame(*pos['customer'], showBoundary=0),
+#         'address': Frame(*pos['address'], showBoundary=0),
+#         'phone': Frame(*pos['phone'], showBoundary=0),
+#         'items': Frame(*pos['items'], showBoundary=0),
+#         'amount': Frame(*pos['amount'], showBoundary=0)
+#     }
+
+#     return frames
+
+# def render_loan_content(c, loan, frames, styles):
+#     """Render content in the specified frames"""
+#     # Loan ID
+#     frames['loan_id'].addFromList([Paragraph(loan.loan_id, styles['Normal'])], c)
+
+#     # Date
+#     frames['date'].addFromList([
+#         Paragraph(loan.loan_date.strftime('%d-%m-%Y'), styles['Normal'])
+#     ], c)
+
+#     # Customer details
+#     customer_text = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
+#     frames['customer'].addFromList([Paragraph(customer_text, styles['Normal'])], c)
+
+#     # Address
+#     frames['address'].addFromList([
+#         Paragraph(str(loan.customer.address.first()), styles['Normal'])
+#     ], c)
+
+#     # Phone
+#     frames['phone'].addFromList([
+#         Paragraph(str(loan.customer.contactno.first()), styles['Normal'])
+#     ], c)
+
+#     # Items
+#     items_text = loan.item_desc
+#     frames['items'].addFromList([Paragraph(items_text, styles['Normal'])], c)
+
+#     # Amount
+#     frames['amount'].addFromList([
+#         Paragraph(str(loan.loan_amount), styles['Normal'])
+#     ], c)
+
+# def get_custom_jsk(loan):
+#     # Setup canvas
+#     page_width = 14.6 * cm
+#     page_height = 21 * cm
+#     buffer = io.BytesIO()
+#     c = Canvas(buffer, pagesize=(page_width, page_height))
+#     styles = getSampleStyleSheet()
+
+#     # Original copy
+#     frames = create_loan_frames(c, is_original=True)
+#     render_loan_content(c, loan, frames, styles)
+#     c.showPage()
+
+#     # Duplicate copy
+#     frames = create_loan_frames(c, is_original=False)
+#     render_loan_content(c, loan, frames, styles)
+
+#     c.save()
+#     pdf = buffer.getvalue()
+#     buffer.close()
+#     return pdf
+
+
+# below this is solved-------------------------------------------
+
+# from reportlab.platypus import (
+#     Paragraph,
+#     Table,
+#     TableStyle,
+#     Frame,
+#     KeepInFrame,
+#     PageTemplate,
+#     BaseDocTemplate
+# )
+# from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+# from reportlab.lib import colors
+# from reportlab.lib.units import cm
+# from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+
+# class LoanDocument(BaseDocTemplate):
+#     def __init__(self, buffer, loan):
+#         super().__init__(buffer, pagesize=(14.6*cm, 21*cm))
+#         self.loan = loan
+#         self.styles = self._create_styles()
+#         self.addPageTemplates(self._create_templates())
+
+#     def _create_styles(self):
+#         styles = getSampleStyleSheet()
+
+#         # Custom styles
+#         styles.add(ParagraphStyle(
+#             name='CustomerName',
+#             parent=styles['Normal'],
+#             fontSize=12,
+#             leading=14,
+#             spaceAfter=6
+#         ))
+
+#         styles.add(ParagraphStyle(
+#             name='Address',
+#             parent=styles['Normal'],
+#             fontSize=10,
+#             leading=12
+#         ))
+
+#         styles.add(ParagraphStyle(
+#             name='ItemsTable',
+#             parent=styles['Normal'],
+#             fontSize=10,
+#             leading=12
+#         ))
+
+#         return styles
+
+#     def _create_templates(self):
+#         # Define frames for different content areas
+#         frames = {
+#             'header': Frame(
+#                 12*cm, 18.5*cm, 4*cm, 1*cm,  # x, y, width, height
+#                 leftPadding=0,
+#                 bottomPadding=0,
+#                 rightPadding=0,
+#                 topPadding=0
+#             ),
+#             'customer': Frame(
+#                 5*cm, 15*cm, 8*cm, 3*cm,
+#                 showBoundary=0
+#             ),
+#             'items': Frame(
+#                 2.5*cm, 10.5*cm, 10*cm, 4*cm,
+#                 showBoundary=0
+#             )
+#         }
+
+#         template = PageTemplate(
+#             'normal',
+#             frames=[frames[k] for k in ['header', 'customer', 'items']]
+#         )
+#         return [template]
+
+# def generate_loan_document(loan):
+#     buffer = io.BytesIO()
+#     doc = LoanDocument(buffer, loan)
+
+#     # Prepare content
+#     story = []
+
+#     # Header content (Loan ID, Date)
+#     header = [
+#         Paragraph(f"Loan ID: {loan.loan_id}", doc.styles['Normal']),
+#         Paragraph(f"Date: {loan.loan_date.strftime('%d-%m-%Y')}", doc.styles['Normal'])
+#     ]
+
+#     # Customer details with controlled width/height
+#     customer_content = [
+#         Paragraph(loan.customer.name, doc.styles['CustomerName']),
+#         Paragraph(str(loan.customer.address.first()), doc.styles['Address']),
+#         Paragraph(f"Ph: {loan.customer.contactno.first()}", doc.styles['Normal'])
+#     ]
+
+#     # Items as table with auto-wrapping
+#     items_data = []
+#     for item in loan.loanitems.all():
+#         items_data.append([
+#             str(item.id),
+#             Paragraph(item.itemdesc, doc.styles['ItemsTable']),
+#             f"{item.weight}gms"
+#         ])
+
+#     items_table = Table(
+#         items_data,
+#         colWidths=[1*cm, 7*cm, 2*cm],
+#         style=TableStyle([
+#             ('GRID', (0,0), (-1,-1), 0.25, colors.black),
+#             ('VALIGN', (0,0), (-1,-1), 'TOP'),
+#             ('ALIGN', (0,0), (0,-1), 'CENTER'),
+#             ('ALIGN', (-1,0), (-1,-1), 'RIGHT'),
+#         ])
+#     )
+
+#     # Keep content within frames
+#     story.extend([
+#         KeepInFrame(
+#             4*cm, 1*cm,  # maxWidth, maxHeight
+#             header,
+#             mode='shrink'
+#         ),
+#         KeepInFrame(
+#             8*cm, 3*cm,
+#             customer_content,
+#             mode='shrink'
+#         ),
+#         KeepInFrame(
+#             10*cm, 4*cm,
+#             [items_table],
+#             mode='shrink'
+#         ),
+#         Paragraph(
+#             f"Amount: Rs. {loan.loan_amount}",
+#             doc.styles['Normal']
+#         )
+#     ])
+
+#     # Build document
+#     doc.build(story)
+#     return buffer.getvalue()
+
+# def get_custom_jcl(loan):
+#     page_width, page_height = landscape(A4)
+#     a5_width = page_width / 2
+#     a5_height = page_height
+#     buffer = io.BytesIO()
+#     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+
+#     styles = getSampleStyleSheet()
+
+#     def draw_frame(x_offset, y_offset):
+#         c.setFillColorRGB(0, 0, 0)
+#         c.setFont("Helvetica-Bold", 11)
+#         c.drawString(x_offset + 11 * cm, y_offset + 15.7 * cm, f"{loan.loan_id}")
+#         c.drawString(
+#             x_offset + 11 * cm,
+#             y_offset + 15.2 * cm,
+#             f"{loan.loan_date.strftime('%d-%m-%Y')}",
+#         )
+#         draw_qr_code(
+#             loan.loan_id,
+#             c,
+#             x_offset + 11 * cm,
+#             y_offset + 15.2 * cm,
+#             label_width=1.8 * cm,
+#         )
+
+#         # Define the maximum width for the paragraph
+#         max_width = a5_width - 8 * cm  # Adjust the width as needed
+#         customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
+#         customer_paragraph = Paragraph(customer, styles["Heading3"])
+#         width, height = customer_paragraph.wrap(max_width, a5_height)
+#         customer_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 15.5 * cm - height)
+
+#         default_pic = loan.customer.get_default_pic()
+#         if default_pic:
+#             try:
+#                 # Check if the file exists
+#                 if os.path.exists(default_pic.path):
+#                     # Set the desired dimensions for the image (e.g., 5x5 cm)
+#                     desired_width = 2 * cm
+#                     desired_height = 2 * cm
+
+#                     # Calculate the position for the image
+#                     image_x = x_offset + 1.5 * cm
+#                     image_y = y_offset + 15.5 * cm - desired_height
+
+#                     # Draw the image on the canvas
+#                     customer_image = Image(
+#                         default_pic.path, width=desired_width, height=desired_height
+#                     )
+#                     customer_image.drawOn(c, image_x, image_y)
+
+#                     # Draw a border around the image
+#                     border_padding = 2  # Padding around the image for the border
+#                     c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
+#                     c.setLineWidth(1)  # Set the border width
+#                     c.rect(
+#                         image_x - border_padding,
+#                         image_y - border_padding,
+#                         desired_width + 2 * border_padding,
+#                         desired_height + 2 * border_padding,
+#                     )
+#                 else:
+#                     print(f"File not found: {default_pic.path}")
+#             except IOError as e:
+#                 print(f"Cannot open resource: {default_pic.path}. Error: {e}")
+#         address = loan.customer.address.first()
+#         address_paragraph = Paragraph(
+#             f" {address.doorno},{address.street}<br/>{address.area},{address.city}",
+#             styles["Normal"],
+#         )
+#         width, height = address_paragraph.wrap(a5_width, a5_height)
+#         c.setFont("Helvetica-Bold", 10)
+#         address_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 14.5 * cm - height)
+
+#         c.drawString(
+#             x_offset + 4 * cm,
+#             y_offset + 13.4 * cm,
+#             f"Ph: {loan.customer.contactno.first()}",
+#         )
+
+#         c.setFont("Helvetica-Bold", 14)
+#         data = [["Description"]]
+#         for i, item in enumerate(loan.loanitems.all(), start=1):
+#             itemdesc = Paragraph(item.itemdesc, styles["Normal"])
+#             data.append([f"{i}) {item.itemdesc}, Qty:{item.quantity}"])
+
+#         table = Table(data)
+#         table.setStyle(
+#             TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black)])
+#         )
+#         table.wrapOn(c, a5_width / 2, a5_height)
+#         table.drawOn(c, x_offset + 1.5 * cm, y_offset + 11.5 * cm)
+
+#         c.setFont("Helvetica", 12)
+#         c.drawString(
+#             x_offset + 3 * cm, y_offset + 8.8 * cm, loan.formatted_weight(joiner="gms,")
+#         )
+#         c.drawString(
+#             x_offset + 11.5 * cm, y_offset + 8.8 * cm, f"{loan.get_current_value()}"
+#         )
+
+#         c.setFont("Helvetica-Bold", 12)
+#         c.drawString(x_offset + 3 * cm, y_offset + 7.8 * cm, f"{loan.loan_amount}")
+#         amt_fig = Paragraph(
+#             f"{num2words(loan.loan_amount, lang='en_IN')} rupees only", styles["Normal"]
+#         )
+#         max_width = 8 * cm
+#         # Wrap the paragraph within the specified max_width
+#         width, height = amt_fig.wrap(max_width, a5_height)
+#         # c.setFont("Helvetica-Bold", 10)
+#         # c.drawString(x_offset + 6.2 * cm, y_offset + 7.8 * cm, f"{amt_fig} rupees only")
+#         # Draw the paragraph on the canvas
+#         amt_fig.drawOn(c, x_offset + 6 * cm, y_offset + 8 * cm - height)
+
+#     # Draw the first frame (left side)
+#     draw_frame(0, 0)
+
+#     # Draw the second frame (right side)
+#     draw_frame(a5_width, 0)
+
+#     c.save()
+#     pdf = buffer.getvalue()
+#     buffer.close()
+#     return pdf
+
+# TODO
+# Consider adding a visual template designer UI.
+# Let's create a visual template designer UI using Django and JavaScript. Here's the plan:
+
+# Create template designer view
+# Add drag-and-drop interface
+# Build coordinate capture system
+# Implement template preview
+# Key features:
+
+# Drag-and-drop field placement
+# Visual field resizing
+# PDF template preview
+# Coordinate system conversion
+# Field position persistence
+# Requirements:
+
+# Usage:
+
+# Open template designer
+# Drag fields onto template
+# Resize and position fields
+# Save template configuration
+# Preview generated PDFs
+# Consider adding:
+
+# Field property editor
+# Grid snapping
+# Undo/redo
+# Template versioning
+
+# def get_custom_jcl(loan, base_template=None):
+#     # Generate the content PDF
+#     page_width, page_height = landscape(A4)
+#     content_buffer = io.BytesIO()
+#     c = canvas.Canvas(content_buffer, pagesize=(page_width, page_height))
+
+#     styles = getSampleStyleSheet()
+
+#     # Define A5-sized frames
+#     a5_width = page_width / 2
+#     a5_height = page_height
+#     original_x, original_y = 0, 0
+#     duplicate_x, duplicate_y = a5_width, 0
+
+#     def create_ticket_content(x_offset, y_offset, title):
+#         frames = {
+#             "customer_pic": {
+#                 "frame": Frame(x_offset + 1.2 * cm, y_offset + a5_height - 10 * cm, 2.5 * cm, 2.8 * cm, showBoundary=0),
+#                 "type": "image"
+#             },
+#             "loanitem_pic": {
+#                 "frame": Frame(x_offset + 10.2 * cm, y_offset + a5_height - 13.2 * cm, 2.5 * cm, 2.8 * cm, showBoundary=0),
+#                 "type": "image"
+#             },
+#             "loan_id": {
+#                 "frame": Frame(x_offset + 10.2 * cm, y_offset + a5_height - 6.7 * cm, 3.2 * cm, 2 * cm, showBoundary=0),
+#                 "type": "text"
+#             },
+#             "customer_info": {
+#                 "frame":Frame(x_offset + 3.8 * cm, y_offset + a5_height - 7.8 * cm, 6.2 * cm, 2.8 * cm, showBoundary=0),
+#                 "type": "text"
+#             },
+#             "loan_desc": {
+#                 "frame": Frame(x_offset + 1.2 * cm, y_offset + a5_height - 11.2 * cm, 9 * cm, 3 * cm, showBoundary=0),
+#                 "type": "text"
+#             },
+#             "weight": {
+#                 "frame":Frame(x_offset + 2.5 * cm, y_offset + a5_height - 12.5 * cm, 7.8 * cm, 1 * cm, showBoundary=0),
+#                 "type": "text"
+#             },
+#             "value": {
+#                 "frame": Frame(x_offset + 11.5 * cm, y_offset + a5_height - 12.5 * cm, 2.5 * cm, 1 * cm, showBoundary=0),
+#                 "type": "text"
+#             },
+#             "loan_amount": {
+#                 "frame": Frame(x_offset + 2.7 * cm, y_offset + a5_height - 13.5 * cm, 3.1 * cm, 1 * cm, showBoundary=0),
+#                 "type": "text"
+#             },
+#             "loan_amount_in_figures": {
+#                 "frame": Frame(x_offset + 7.5 * cm, y_offset + a5_height - 13.5 * cm, 6.5 * cm, 1 * cm, showBoundary=0),
+#                 "type": "text"
+#             },
+#             'loan_qr': {
+#                 "frame": Frame(x_offset + 10* cm, y_offset + a5_height - 9.5 * cm, 2 * cm, 2 * cm, showBoundary=1),
+#                 "type": "qr"
+#             },
+#         }
+
+#         data_mapping = {
+#             "customer_pic": loan.customer.get_default_pic().path if loan.customer.pics else None,
+#             "loanitem_pic": loan.loanitems.first().pic.path if loan.loanitems.first().pic else None,
+#             "loan_id": f"Loan ID: {loan.loan_id} <br/>Date: {loan.loan_date.strftime('%d-%m-%Y')}",
+#             "customer_info": f"{loan.customer.name}, {loan.customer.get_relatedas_display()} {loan.customer.relatedto}<br/>{loan.customer.address.first()}<br/>Ph: {loan.customer.contactno.first()}",
+#             "loan_desc": "<br/>".join([f"{i + 1}) {item.itemdesc}, Qty: {item.quantity}" for i, item in enumerate(loan.loanitems.all())]),
+#             "weight": f"{loan.formatted_weight(joiner=', ')}",
+#             "value": f"{loan.get_current_value()}",
+#             "loan_amount": f"{loan.loan_amount}",
+#             "loan_amount_in_figures": num2words(loan.loan_amount, lang='en_IN') + " rupees only",
+#             "loan_qr": loan.loan_id,
+#         }
+
+#         # for field, frame in frames.items():
+#         #     content = Paragraph(data_mapping[field], styles["Normal"])
+#         #     keep_in_frame = KeepInFrame(frame._width, frame._height, [content], mode='shrink')
+#         #     frame.addFromList([keep_in_frame], c)
+#         for field, frame_info in frames.items():
+#             frame = frame_info["frame"]
+#             content_type = frame_info["type"]
+#             data = data_mapping.get(field)
+
+#             if data:
+#                 if content_type == "text":
+#                     content = Paragraph(data, styles["Normal"])
+#                     keep_in_frame = KeepInFrame(frame._width, frame._height, [content], mode='shrink')
+#                     frame.addFromList([keep_in_frame], c)
+#                 elif content_type == "image" and os.path.exists(data):
+#                     # Calculate image dimensions to fit frame
+#                     img = PILImage.open(data)
+#                     img_w, img_h = img.size
+#                     aspect = img_w / float(img_h)
+
+#                     # Calculate dimensions to fit frame while maintaining aspect ratio
+#                     frame_w = frame._width
+#                     frame_h = frame._height
+
+#                     if frame_w / float(frame_h) > aspect:
+#                         w = frame_h * aspect
+#                         h = frame_h
+#                     else:
+#                         w = frame_w
+#                         h = frame_w / aspect
+
+#                     # Calculate centering position
+#                     x = frame._x + (frame_w - w) / 2
+#                     y = frame._y + (frame_h - h) / 2
+
+#                     # Draw image
+#                     c.drawImage(data, x, y, width=w, height=h, preserveAspectRatio=True)
+#                 elif content_type == "qr":
+#                     try:
+#                         # Generate and draw QR code
+#                         qr = qrcode.make(data)
+#                         qr_buffer = io.BytesIO()
+#                         qr.save(qr_buffer, format="PNG")
+#                         qr_buffer.seek(0)
+#                         qr_img = PILImage.open(qr_buffer)
+#                         qr_img_w, qr_img_h = qr_img.size
+#                         qr_aspect = qr_img_w / float(qr_img_h)
+
+#                         # if frame._width / float(frame._height) > qr_aspect:
+#                         #     qr_w, qr_h = frame._height * qr_aspect, frame._height
+#                         # else:
+#                         #     qr_w, qr_h = frame._width, frame._width / qr_aspect
+
+#                         # qr_x, qr_y = frame._x + (frame._width - qr_w) / 2, frame._y + (frame._height - qr_h) / 2
+#                         # c.drawImage(qr_buffer, qr_x, qr_y, width=qr_w, height=qr_h, preserveAspectRatio=True)
+#                         # qr_buffer.close()
+#                         # Calculate dimensions
+#                         qr_w = frame._width * 0.9  # 90% of frame width
+#                         qr_h = frame._height * 0.9  # 90% of frame height
+
+#                         # Center in frame
+#                         qr_x = frame._x + (frame._width - qr_w) / 2
+#                         qr_y = frame._y + (frame._height - qr_h) / 2
+
+#                         # Draw using ImageReader
+#                         c.drawImage(
+#                             ImageReader(qr_buffer),
+#                             qr_x, qr_y,
+#                             width=qr_w,
+#                             height=qr_h,
+#                             preserveAspectRatio=True
+#                         )
+
+#                         qr_buffer.close()
+#                     except Exception as e:
+#                         print(f"QR Code rendering error: {e}")
+
+#     create_ticket_content(original_x, original_y, "Original Copy")
+#     create_ticket_content(duplicate_x, duplicate_y, "Duplicate Copy")
+
+#     c.save()
+#     content_pdf = content_buffer.getvalue()
+#     content_buffer.close()
+
+#     # If no base template, return the content PDF directly
+#     if base_template is None:
+#         print("No base template provided")
+#         return content_pdf
+
+#     # Merge with base template using PyMuPDF
+#     try:
+#         # Create PDF documents from bytes
+#         base_doc = fitz.open("pdf", base_template)
+#         content_doc = fitz.open("pdf", content_pdf)
+
+#         # Overlay each page of content on the corresponding base template page
+#         for page_num in range(len(base_doc)):
+#             base_page = base_doc[page_num]
+#             if page_num < len(content_doc):
+#                 content_page = content_doc[page_num]
+#                 # Render content page onto base page as an overlay
+#                 base_page.show_pdf_page(base_page.rect, content_doc, page_num)
+
+#         # Save the merged result
+#         output_buffer = io.BytesIO()
+#         base_doc.save(output_buffer)
+#         final_pdf = output_buffer.getvalue()
+
+#         # Clean up
+#         base_doc.close()
+#         content_doc.close()
+#         output_buffer.close()
+
+#         return final_pdf
+
+#     except Exception as e:
+#         print(f"Error merging PDFs: {str(e)}")
+#         return content_pdf
+
+
+def merge_pdfs(base_template_bytes, content_pdf_bytes):
+    """
+    Merge content PDF with base template using PyMuPDF
+    Args:
+        base_template_bytes: Bytes of base template PDF
+        content_pdf_bytes: Bytes of content PDF with frames
+    Returns:
+        Merged PDF as bytes
+    """
+
+    # Create PDF documents from bytes
+    base_doc = fitz.open(stream=base_template_bytes, filetype="pdf")
+    content_doc = fitz.open(stream=content_pdf_bytes, filetype="pdf")
+
+    # Get first pages
+    base_page = base_doc[0]
+
+    # Overlay content page onto base page
+    base_page.show_pdf_page(
+        base_page.rect,  # Target rectangle (full page)
+        content_doc,  # Source document
+        0,  # Source page number
+        overlay=True,  # Overlay mode
     )
 
-    width, height = address_paragraph.wrap(page_width, page_height)
-    address_paragraph.drawOn(c, 5 * cm, 16 * cm - height)
-    c.drawString(5 * cm, 14 * cm, f"{loan.customer.contactno.first()}")
-    c.drawString(5 * cm, 13.5 * cm, f"{loan.loan_amount}")
+    # Write to bytes
+    output_buffer = base_doc.write()
 
-    c.drawString(5 * cm, 13 * cm, f"{amt_fig} rupees only")
+    # Clean up
+    base_doc.close()
+    content_doc.close()
 
-    item_desc_paragraph = Paragraph(loan.item_desc, styles["Normal"])
-    width, height = item_desc_paragraph.wrap(page_width, page_height)
-    item_desc_paragraph.drawOn(c, 3 * cm, 11 * cm - height)
-
-    c.setFont("Helvetica", 8)
-    c.drawString(3 * cm, 7 * cm, f"{weight}gms")
-    c.drawString(7 * cm, 7 * cm, f"{pure}")
-
-    c.drawString(12 * cm, 7 * cm, f"{loan.get_current_value()}")
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(1 * cm, 3.5 * cm, f"{loan.loan_id}")
-    c.drawString(1 * cm, 3 * cm, f"{loan.loan_date.strftime('%d/%m/%y')}")
-    c.drawString(1 * cm, 2.5 * cm, f"{loan.loan_amount}   {weight}")
-    c.drawString(1 * cm, 2 * cm, f"{loan.customer.name}")
-
-    item_desc_paragraph.drawOn(c, 1 * cm, 1.5 * cm - height)
-
-    c.save()
-    pdf = buffer.getvalue()
-    buffer.close()
-    return pdf
+    return output_buffer
 
 
-def get_custom_jcl(loan):
-    page_width, page_height = landscape(A4)
-    a5_width = page_width / 2
-    a5_height = page_height
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+def merge_pdfs_double_sided(front_template, content, back_template):
+    """
+    Merge PDFs for double-sided printing with front and back pages
+    Args:
+        front_template (bytes): Front template PDF content
+        content (bytes): Content to merge with front template
+        back_template (bytes): Back template PDF content
+    Returns:
+        bytes: Merged double-sided PDF content
+    """
+    try:
+        # Create output document
+        output_doc = fitz.open()
 
-    styles = getSampleStyleSheet()
+        # Handle front page (template + content)
+        front_doc = fitz.open("pdf", front_template)
+        content_doc = fitz.open("pdf", content)
 
-    def draw_frame(x_offset, y_offset):
-        c.setFillColorRGB(0, 0, 0)
-        c.setFont("Helvetica-Bold", 11)
-        c.drawString(x_offset + 11 * cm, y_offset + 15.7 * cm, f"{loan.loan_id}")
-        c.drawString(
-            x_offset + 11 * cm,
-            y_offset + 15.2 * cm,
-            f"{loan.loan_date.strftime('%d-%m-%Y')}",
+        # Merge front template with content
+        front_page = front_doc[0]
+        content_page = content_doc[0]
+        front_page.show_pdf_page(front_page.rect, content_doc, 0, overlay=True)
+
+        # Add merged front page to output
+        output_doc.insert_pdf(front_doc, from_page=0, to_page=0)
+
+        # Add back template as second page
+        back_doc = fitz.open("pdf", back_template)
+        output_doc.insert_pdf(back_doc)
+
+        # Save to buffer
+        output_buffer = io.BytesIO()
+        output_doc.save(output_buffer)
+        merged_content = output_buffer.getvalue()
+
+        # Cleanup
+        front_doc.close()
+        content_doc.close()
+        back_doc.close()
+        output_doc.close()
+        output_buffer.close()
+
+        return merged_content
+
+    except Exception as e:
+        print(f"Error creating double-sided PDF: {str(e)}")
+        return None
+
+
+def merge_multiple_pdfs(pdf_contents):
+    """
+    Merge multiple PDF contents into a single PDF using PyMuPDF
+    Args:
+        pdf_contents (list): List of PDF file contents in bytes
+    Returns:
+        bytes: Merged PDF content
+    """
+    try:
+        # Create new output document
+        output_doc = fitz.open()
+
+        # Process each PDF content
+        for content in pdf_contents:
+            # Open PDF from bytes
+            doc = fitz.open("pdf", content)
+
+            # Copy all pages to output
+            output_doc.insert_pdf(doc)
+
+            # Close temporary document
+            doc.close()
+
+        # Save merged content to buffer
+        output_buffer = io.BytesIO()
+        output_doc.save(output_buffer)
+        merged_content = output_buffer.getvalue()
+
+        # Cleanup
+        output_doc.close()
+        output_buffer.close()
+
+        return merged_content
+
+    except Exception as e:
+        print(f"Error merging multiple PDFs: {str(e)}")
+        return None
+
+
+def merge_pdfs_side_by_side(left_pdf, right_pdf):
+    """
+    Merge two A5 PDFs side by side into single A4 landscape
+    """
+    try:
+        # Create output doc with A4 landscape
+        output_doc = fitz.open()
+
+        # A4 landscape dimensions
+        width = A4[1]  # 842pt
+        height = A4[0]  # 595pt
+
+        output_page = output_doc.new_page(width=width, height=height)
+
+        # Open source PDFs
+        left_doc = fitz.open("pdf", left_pdf)
+        right_doc = fitz.open("pdf", right_pdf)
+
+        # Calculate target rects for A4 landscape
+        # Each half should be A5 portrait
+        left_rect = fitz.Rect(0, 0, width / 2, height)  # Left A5
+        right_rect = fitz.Rect(width / 2, 0, width, height)  # Right A5
+
+        # Insert pages side by side, scaling to fit
+        output_page.show_pdf_page(left_rect, left_doc, 0, rotate=0)
+        output_page.show_pdf_page(right_rect, right_doc, 0, rotate=0)
+
+        # Save to buffer
+        output_buffer = io.BytesIO()
+        output_doc.save(output_buffer)
+        merged_content = output_buffer.getvalue()
+
+        # Cleanup
+        left_doc.close()
+        right_doc.close()
+        output_doc.close()
+        output_buffer.close()
+
+        return merged_content
+
+    except Exception as e:
+        print(f"Error merging PDFs side by side: {str(e)}")
+        return None
+
+
+def _render_regular_image(c, frame, data, x_offset, frame_y):
+    """Handle rendering of regular images"""
+    img = PILImage.open(data)
+    img_w, img_h = img.size
+    aspect = img_w / float(img_h)
+
+    frame_w = float(frame.width) * cm
+    frame_h = float(frame.height) * cm
+
+    # Calculate image dimensions
+    if frame_w / float(frame_h) > aspect:
+        w = frame_h * aspect
+        h = frame_h
+    else:
+        w = frame_w
+        h = frame_w / aspect
+
+    # Adjust x,y position with offsets
+    x = x_offset + float(frame.x_pos) * cm + (frame_w - w) / 2
+    y = frame_y + (frame_h - h) / 2
+
+    print(f"Drawing image at: x={x}, y={y}, w={w}, h={h}")
+    c.drawImage(data, x, y, width=w, height=h, preserveAspectRatio=True)
+
+
+def _render_qr_code(c, frame, img):
+    """Handle rendering of QR codes"""
+    qr_buffer = BytesIO()
+    img.save(qr_buffer, format="PNG")
+    qr_buffer.seek(0)
+
+    # Calculate dimensions - use 90% of frame size
+    qr_w = frame._width * 0.9
+    qr_h = frame._height * 0.9
+
+    # Center in frame
+    qr_x = frame._x + (frame._width - qr_w) / 2
+    qr_y = frame._y + (frame._height - qr_h) / 2
+
+    # Draw using ImageReader
+    c.drawImage(
+        ImageReader(qr_buffer),
+        qr_x,
+        qr_y,
+        width=qr_w,
+        height=qr_h,
+        preserveAspectRatio=True,
+    )
+
+    qr_buffer.close()
+
+
+# def get_custom_jcl(loan, template_id=None):
+#     """Generate PDF using user-defined template and frame configuration"""
+#     try:
+#         # Fetch template if template_id provided, else use default template logic
+#         template = LoanTemplate.objects.get(id=template_id, is_active=True) if template_id else None
+
+#         # Initialize canvas with template dimensions
+#         page_width = float(template.page_width) * cm if template else landscape(A4)[0]
+#         page_height = float(template.page_height) * cm if template else landscape(A4)[1]
+
+#         content_buffer = io.BytesIO()
+#         c = canvas.Canvas(content_buffer, pagesize=(page_width, page_height))
+#         styles = getSampleStyleSheet()
+
+#         # Define frame positions based on template layout
+#         if template and template.print_layout == LoanTemplate.PrintLayout.SINGLE_A4:
+#             # For A4 landscape with two A5 copies
+#             frame_positions = [(0, 0), (page_width/2, 0)]
+#         else:
+#             # For single A5
+#             frame_positions = [(0, 0)]
+
+#         # Data mapping for frame content
+#         data_mapping = {
+#             "customer_pic": lambda: loan.customer.get_default_pic().path if loan.customer.get_default_pic() else None,
+#             "loanitem_pic": lambda: loan.loanitems.first().pic.path if loan.loanitems.first().pic else None,
+#             "loan_id": lambda: f"Loan ID: {loan.loan_id} <br/>Date: {loan.loan_date.strftime('%d-%m-%Y')}",
+#             "customer_info": lambda: f"{loan.customer.name}, {loan.customer.get_relatedas_display()} {loan.customer.relatedto}<br/>{loan.customer.address.first()}<br/>Ph: {loan.customer.contactno.first()}",
+#             "loan_desc": lambda: "<br/>".join([f"{i + 1}) {item.itemdesc}, Qty: {item.quantity}" for i, item in enumerate(loan.loanitems.all())]),
+#             "weight": lambda: f"{loan.formatted_weight(joiner=', ')}",
+#             "value": lambda: f"{loan.get_current_value()}",
+#             "amount": lambda: f"{loan.loan_amount}",
+#             "amount_words": lambda: num2words(loan.loan_amount, lang='en_IN') + " rupees only",
+#             "loan_qr": lambda: loan.loan_id,
+#         }
+
+#         def render_frame(frame, x_offset, y_offset):
+#             frame_data = data_mapping.get(frame.frame_name, lambda: None)()
+#             if not frame_data:
+#                 return
+
+#             # Create reportlab frame with offset
+#             reportlab_frame = Frame(
+#                 x_offset + float(frame.x_pos) * cm,
+#                 y_offset + float(frame.y_pos) * cm,
+#                 float(frame.width) * cm,
+#                 float(frame.height) * cm,
+#                 showBoundary=1
+#             )
+
+#             if frame.field_type == 'text':
+#                 # Create paragraph with custom style
+#                 style = ParagraphStyle(
+#                     f'Custom_{frame.frame_name}',
+#                     parent=styles['Normal'],
+#                     fontSize=frame.font_size,
+#                     fontName=frame.font_name
+#                 )
+#                 content = Paragraph(frame_data, style)
+#                 keep_frame = KeepInFrame(
+#                     reportlab_frame._width,
+#                     reportlab_frame._height,
+#                     [content],
+#                     mode='shrink'
+#                 )
+#                 reportlab_frame.addFromList([keep_frame], c)
+
+#             elif frame.field_type == 'image' and os.path.exists(frame_data):
+#                 img = PILImage.open(frame_data)
+#                 img_w, img_h = img.size
+#                 aspect = img_w / float(img_h)
+
+#                 if reportlab_frame._width / float(reportlab_frame._height) > aspect:
+#                     w = reportlab_frame._height * aspect
+#                     h = reportlab_frame._height
+#                 else:
+#                     w = reportlab_frame._width
+#                     h = reportlab_frame._width / aspect
+
+#                 x = reportlab_frame._x + (reportlab_frame._width - w) / 2
+#                 y = reportlab_frame._y + (reportlab_frame._height - h) / 2
+
+#                 c.drawImage(frame_data, x, y, width=w, height=h, preserveAspectRatio=True)
+
+#             elif frame.field_type == 'qr':
+#                 try:
+#                     qr_img = qrcode.make(frame_data)
+#                     qr_buffer = io.BytesIO()
+#                     qr_img.save(qr_buffer, format="PNG")
+#                     qr_buffer.seek(0)
+
+#                     qr_w = reportlab_frame._width * 0.9
+#                     qr_h = reportlab_frame._height * 0.9
+
+#                     qr_x = reportlab_frame._x + (reportlab_frame._width - qr_w) / 2
+#                     qr_y = reportlab_frame._y + (reportlab_frame._height - qr_h) / 2
+
+#                     c.drawImage(
+#                         ImageReader(qr_buffer),
+#                         qr_x, qr_y,
+#                         width=qr_w, height=qr_h,
+#                         preserveAspectRatio=True
+#                     )
+#                     qr_buffer.close()
+#                 except Exception as e:
+#                     print(f"QR Code rendering error: {e}")
+
+#         # Render frames for each position
+#         if template:
+#             template_frames = template.templateframe_set.all()
+#             for x_offset, y_offset in frame_positions:
+#                 for frame in template_frames:
+#                     render_frame(frame, x_offset, y_offset)
+
+#         c.save()
+#         content_pdf = content_buffer.getvalue()
+#         content_buffer.close()
+
+#         # Merge with base template if provided
+#         if template and template.base_template:
+#             # try:
+#             #     base_doc = fitz.open("pdf", template.base_template.read())
+#             #     content_doc = fitz.open("pdf", content_pdf)
+
+#             #     for page_num in range(len(base_doc)):
+#             #         base_page = base_doc[page_num]
+#             #         if page_num < len(content_doc):
+#             #             content_page = content_doc[page_num]
+#             #             base_page.show_pdf_page(base_page.rect, content_doc, page_num)
+
+#             #     output_buffer = io.BytesIO()
+#             #     base_doc.save(output_buffer)
+#             #     final_pdf = output_buffer.getvalue()
+
+#             #     base_doc.close()
+#             #     content_doc.close()
+#             #     output_buffer.close()
+
+#             #     return final_pdf
+
+#             # except Exception as e:
+#             #     print(f"Error merging PDFs: {str(e)}")
+#             #     return content_pdf
+#             return merge_pdfs(template.base_template.read(), content_pdf)
+
+#         return content_pdf
+
+#     except LoanTemplate.DoesNotExist:
+#         print("Template not found or inactive")
+#         return None
+#     except Exception as e:
+#         print(f"Error generating PDF: {str(e)}")
+#         return None
+
+# desired print utility for loanticket printing
+# def get_custom_jcl(loan, template_id=None):
+#     """Generate PDF using user-defined template and frame configuration"""
+#     try:
+#         template = LoanTemplate.objects.get(id=template_id, is_active=True) if template_id else None
+#         if not template:
+#             return None
+
+#         # Set page dimensions based on print layout
+#         if template.print_layout == LoanTemplate.PrintLayout.SINGLE_A4:
+#             page_width, page_height = landscape(A4)  # A4 landscape for side-by-side A5
+#         else:
+#             page_width, page_height = A4[0]/2, A4[1]  # A5 dimensions (half of A4)
+
+#         content_buffer = io.BytesIO()
+#         c = canvas.Canvas(content_buffer, pagesize=(page_width, page_height))
+#         styles = getSampleStyleSheet()
+
+#         # Data mapping for frame content
+#         data_mapping = {
+#             "customer_pic": lambda: loan.customer.get_default_pic().path if loan.customer.get_default_pic() else None,
+#             "loanitem_pic": lambda: loan.loanitems.first().pic.path if loan.loanitems.first().pic else None,
+#             "loan_id": lambda: f"Loan ID: {loan.loan_id} <br/>Date: {loan.loan_date.strftime('%d-%m-%Y')}",
+#             "customer_info": lambda: f"{loan.customer.name}, {loan.customer.get_relatedas_display()} {loan.customer.relatedto}<br/>{loan.customer.address.first()}<br/>Ph: {loan.customer.contactno.first()}",
+#             "loan_desc": lambda: "<br/>".join([f"{i + 1}) {item.itemdesc}, Qty: {item.quantity}" for i, item in enumerate(loan.loanitems.all())]),
+#             "weight": lambda: f"{loan.formatted_weight(joiner=', ')}",
+#             "value": lambda: f"{loan.get_current_value()}",
+#             "amount": lambda: f"{loan.loan_amount}",
+#             "amount_words": lambda: num2words(loan.loan_amount, lang='en_IN') + " rupees only",
+#             "loan_qr": lambda: loan.loan_id,
+#         }
+
+#         def render_frame(frame, x_offset, y_offset):
+#             """Render individual frame with content"""
+#             frame_data = data_mapping.get(frame.frame_name, lambda: None)()
+#             if not frame_data:
+#                 return
+
+#             reportlab_frame = Frame(
+#                 x_offset + float(frame.x_pos) * cm,
+#                 y_offset + float(frame.y_pos) * cm,
+#                 float(frame.width) * cm,
+#                 float(frame.height) * cm,
+#                 showBoundary=1
+#             )
+
+#             if frame.field_type == 'text':
+#                 style = ParagraphStyle(
+#                     f'Custom_{frame.frame_name}',
+#                     parent=styles['Normal'],
+#                     fontSize=frame.font_size,
+#                     fontName=frame.font_name
+#                 )
+#                 content = Paragraph(frame_data, style)
+#                 keep_frame = KeepInFrame(
+#                     reportlab_frame._width,
+#                     reportlab_frame._height,
+#                     [content],
+#                     mode='shrink'
+#                 )
+#                 reportlab_frame.addFromList([keep_frame], c)
+
+#             elif frame.field_type == 'image' and os.path.exists(frame_data):
+#                 img = PILImage.open(frame_data)
+#                 img_w, img_h = img.size
+#                 aspect = img_w / float(img_h)
+
+#                 if reportlab_frame._width / float(reportlab_frame._height) > aspect:
+#                     w = reportlab_frame._height * aspect
+#                     h = reportlab_frame._height
+#                 else:
+#                     w = reportlab_frame._width
+#                     h = reportlab_frame._width / aspect
+
+#                 x = reportlab_frame._x + (reportlab_frame._width - w) / 2
+#                 y = reportlab_frame._y + (reportlab_frame._height - h) / 2
+#                 c.drawImage(frame_data, x, y, width=w, height=h, preserveAspectRatio=True)
+
+#             elif frame.field_type == 'qr':
+#                 try:
+#                     qr_img = qrcode.make(frame_data)
+#                     qr_buffer = io.BytesIO()
+#                     qr_img.save(qr_buffer, format="PNG")
+#                     qr_buffer.seek(0)
+
+#                     qr_w = reportlab_frame._width * 0.9
+#                     qr_h = reportlab_frame._height * 0.9
+#                     qr_x = reportlab_frame._x + (reportlab_frame._width - qr_w) / 2
+#                     qr_y = reportlab_frame._y + (reportlab_frame._height - qr_h) / 2
+
+#                     c.drawImage(
+#                         ImageReader(qr_buffer),
+#                         qr_x, qr_y,
+#                         width=qr_w, height=qr_h,
+#                         preserveAspectRatio=True
+#                     )
+#                     qr_buffer.close()
+#                 except Exception as e:
+#                     print(f"QR Code rendering error: {e}")
+
+#         def get_template_frames(template_type):
+#             """Get frames for specific template type including shared frames"""
+#             return template.templateframe_set.filter(
+#                 template_type__in=[template_type, TemplateFrame.TemplateType.BOTH]
+#             )
+
+#         def render_page_content(template_type, x_offset=0):
+#             """Render all frames for a specific template type"""
+#             frames = get_template_frames(template_type)
+#             for frame in frames:
+#                 render_frame(frame, x_offset, 0)
+
+#         # # Handle different print layouts and options
+#         # if template.print_layout == LoanTemplate.PrintLayout.SINGLE_A4:
+#         #     # Render both copies side by side on A4
+#         #     render_page_content(TemplateFrame.TemplateType.ORIGINAL, 0)
+#         #     render_page_content(TemplateFrame.TemplateType.DUPLICATE, page_width/2)
+
+#         #     c.save()
+#         #     content_pdf = content_buffer.getvalue()
+#         #     content_buffer.close()
+#         #     return merge_pdfs(template.base_template.read(), content_pdf)
+
+#         # else:
+#         #     # Handle separate A5 pages
+#         #     if template.print_option in ['O', 'OT']:
+#         #         # Original copy only
+#         #         render_page_content(TemplateFrame.TemplateType.ORIGINAL)
+#         #         c.save()
+#         #         content_pdf = content_buffer.getvalue()
+#         #         content_buffer.close()
+
+#         #         if template.print_option == 'OT':
+#         #             # Add terms on back
+#         #             return merge_pdfs_double_sided(
+#         #                 template.base_template.read(),
+#         #                 content_pdf,
+#         #                 template.terms_template.read()
+#         #             )
+#         #         return merge_pdfs(template.base_template.read(), content_pdf)
+
+#         #     elif template.print_option in ['D', 'DF']:
+#         #         # Duplicate copy only
+#         #         render_page_content(TemplateFrame.TemplateType.DUPLICATE)
+#         #         c.save()
+#         #         content_pdf = content_buffer.getvalue()
+#         #         content_buffer.close()
+
+#         #         if template.print_option == 'DF':
+#         #             # Add form on back
+#         #             return merge_pdfs_double_sided(
+#         #                 template.dup_template.read(),
+#         #                 content_pdf,
+#         #                 template.form_d3_template.read()
+#         #             )
+#         #         return merge_pdfs(template.dup_template.read(), content_pdf)
+
+#         #     else:
+#         #         # Both copies with appropriate backside content
+#         #         render_page_content(TemplateFrame.TemplateType.ORIGINAL)
+#         #         c.showPage()
+#         #         render_page_content(TemplateFrame.TemplateType.DUPLICATE)
+
+#         #         c.save()
+#         #         content_pdf = content_buffer.getvalue()
+#         #         content_buffer.close()
+
+#         #         if template.print_option == 'BD':
+#         #             # Double sided with terms and form
+#         #             original_pdf = merge_pdfs_double_sided(
+#         #                 template.base_template.read(),
+#         #                 content_pdf,
+#         #                 template.terms_template.read()
+#         #             )
+#         #             duplicate_pdf = merge_pdfs_double_sided(
+#         #                 template.dup_template.read(),
+#         #                 content_pdf,
+#         #                 template.form_d3_template.read()
+#         #             )
+#         #             return merge_multiple_pdfs([original_pdf, duplicate_pdf])
+
+#         #         # Single sided copies
+#         #         original_pdf = merge_pdfs(template.base_template.read(), content_pdf)
+#         #         duplicate_pdf = merge_pdfs(template.dup_template.read(), content_pdf)
+#         #         return merge_multiple_pdfs([original_pdf, duplicate_pdf])
+
+#         # Handle different print layouts and options
+#         # if template.print_layout == LoanTemplate.PrintLayout.SINGLE_A4:
+#         #     # Render both copies side by side on A4 landscape
+#         #     render_page_content(TemplateFrame.TemplateType.ORIGINAL, 0)
+#         #     render_page_content(TemplateFrame.TemplateType.DUPLICATE, page_width/2)
+#         # Modify the print layout handling section:
+#         if template.print_layout == LoanTemplate.PrintLayout.SINGLE_A4:
+#             # Create separate buffers for each half
+#             original_buffer = io.BytesIO()
+#             duplicate_buffer = io.BytesIO()
+
+#             # Render original content
+#             c_original = canvas.Canvas(original_buffer, pagesize=(page_width/2, page_height))
+#             render_page_content(TemplateFrame.TemplateType.ORIGINAL, 0)
+#             c_original.save()
+
+#             # Render duplicate content
+#             c_duplicate = canvas.Canvas(duplicate_buffer, pagesize=(page_width/2, page_height))
+#             render_page_content(TemplateFrame.TemplateType.DUPLICATE, 0)
+#             c_duplicate.save()
+
+#             # Merge contents with respective templates
+#             original_pdf = merge_pdfs(template.base_template.read(), original_buffer.getvalue())
+#             duplicate_pdf = merge_pdfs(template.dup_template.read(), duplicate_buffer.getvalue())
+
+#             # Combine side by side into A4 landscape
+#             content_pdf = merge_pdfs_side_by_side(original_pdf, duplicate_pdf)
+
+#             # Cleanup
+#             original_buffer.close()
+#             duplicate_buffer.close()
+
+#             return content_pdf
+#         else:
+#             # Handle separate A5 pages based on print option
+#             if template.print_option in ['O', 'OT']:
+#                 render_page_content(TemplateFrame.TemplateType.ORIGINAL)
+#             elif template.print_option in ['D', 'DF']:
+#                 render_page_content(TemplateFrame.TemplateType.DUPLICATE)
+#             elif template.print_option in ['BS', 'BD', 'BA']:
+#                 render_page_content(TemplateFrame.TemplateType.ORIGINAL)
+#                 c.showPage()
+#                 render_page_content(TemplateFrame.TemplateType.DUPLICATE)
+
+#         c.save()
+#         content_pdf = content_buffer.getvalue()
+#         content_buffer.close()
+
+#         # Handle template merging based on print option
+#         if template.print_option in ['O', 'OT']:
+#             return merge_pdfs(template.base_template.read(), content_pdf)
+#         elif template.print_option in ['D', 'DF']:
+#             return merge_pdfs(template.dup_template.read(), content_pdf)
+#         elif template.print_option in ['BS', 'BD', 'BA']:
+#             return merge_multiple_pdfs([
+#                 merge_pdfs(template.base_template.read(), content_pdf),
+#                 merge_pdfs(template.dup_template.read(), content_pdf)
+#             ])
+
+#         return content_pdf
+
+#     except LoanTemplate.DoesNotExist:
+#         print("Template not found or inactive")
+#         return None
+#     except Exception as e:
+#         print(f"Error generating PDF: {str(e)}")
+#         return None
+
+# desired output but lacks proper rendering of page sizes
+# def get_custom_jcl(loan, template_id=None):
+#     """Generate PDF using user-defined template and frame configuration"""
+#     try:
+#         template = LoanTemplate.objects.get(id=template_id, is_active=True) if template_id else None
+#         if not template:
+#             return None
+
+#         # Set page dimensions based on print layout
+#         if template.print_layout == LoanTemplate.PrintLayout.SINGLE_A4:
+#             page_width, page_height = landscape(A4)  # A4 landscape
+#         else:
+#             page_width, page_height = A4[0]/2, A4[1]  # A5 portrait
+
+#         def render_frame(frame, x_offset, y_offset, canvas_obj):
+#             """
+#             Render individual frame with content
+#             Args:
+#                 frame: TemplateFrame object
+#                 x_offset: X position offset
+#                 y_offset: Y position offset
+#                 canvas_obj: ReportLab canvas object to draw on
+#             """
+#             # Data mapping for frame content
+#             data_mapping = {
+#                 "customer_pic": lambda: loan.customer.get_default_pic().path if loan.customer.get_default_pic() else None,
+#                 "loanitem_pic": lambda: loan.loanitems.first().pic.path if loan.loanitems.first().pic else None,
+#                 "loan_id": lambda: f"Loan ID: {loan.loan_id} <br/>Date: {loan.loan_date.strftime('%d-%m-%Y')}",
+#                 "customer_info": lambda: f"{loan.customer.name}, {loan.customer.get_relatedas_display()} {loan.customer.relatedto}<br/>{loan.customer.address.first()}<br/>Ph: {loan.customer.contactno.first()}",
+#                 "loan_desc": lambda: "<br/>".join([f"{i + 1}) {item.itemdesc}, Qty: {item.quantity}" for i, item in enumerate(loan.loanitems.all())]),
+#                 "weight": lambda: f"{loan.formatted_weight(joiner=', ')}",
+#                 "value": lambda: f"{loan.get_current_value()}",
+#                 "amount": lambda: f"{loan.loan_amount}",
+#                 "amount_words": lambda: num2words(loan.loan_amount, lang='en_IN') + " rupees only",
+#                 "loan_qr": lambda: loan.loan_id,
+#             }
+
+#             frame_data = data_mapping.get(frame.frame_name, lambda: None)()
+#             if not frame_data:
+#                 return
+
+#             reportlab_frame = Frame(
+#                 x_offset + float(frame.x_pos) * cm,
+#                 y_offset + float(frame.y_pos) * cm,
+#                 float(frame.width) * cm,
+#                 float(frame.height) * cm,
+#                 showBoundary=1
+#             )
+
+#             if frame.field_type == 'text':
+#                 styles = getSampleStyleSheet()
+#                 style = ParagraphStyle(
+#                     f'Custom_{frame.frame_name}',
+#                     parent=styles['Normal'],
+#                     fontSize=frame.font_size,
+#                     fontName=frame.font_name
+#                 )
+#                 content = Paragraph(frame_data, style)
+#                 keep_frame = KeepInFrame(
+#                     reportlab_frame._width,
+#                     reportlab_frame._height,
+#                     [content],
+#                     mode='shrink'
+#                 )
+#                 reportlab_frame.addFromList([keep_frame], canvas_obj)
+
+#             elif frame.field_type == 'image' and os.path.exists(frame_data):
+#                 img = PILImage.open(frame_data)
+#                 img_w, img_h = img.size
+#                 aspect = img_w / float(img_h)
+
+#                 if reportlab_frame._width / float(reportlab_frame._height) > aspect:
+#                     w = reportlab_frame._height * aspect
+#                     h = reportlab_frame._height
+#                 else:
+#                     w = reportlab_frame._width
+#                     h = reportlab_frame._width / aspect
+
+#                 x = reportlab_frame._x + (reportlab_frame._width - w) / 2
+#                 y = reportlab_frame._y + (reportlab_frame._height - h) / 2
+#                 canvas_obj.drawImage(frame_data, x, y, width=w, height=h, preserveAspectRatio=True)
+
+#             elif frame.field_type == 'qr':
+#                 try:
+#                     qr_img = qrcode.make(frame_data)
+#                     qr_buffer = io.BytesIO()
+#                     qr_img.save(qr_buffer, format="PNG")
+#                     qr_buffer.seek(0)
+
+#                     qr_w = reportlab_frame._width * 0.9
+#                     qr_h = reportlab_frame._height * 0.9
+#                     qr_x = reportlab_frame._x + (reportlab_frame._width - qr_w) / 2
+#                     qr_y = reportlab_frame._y + (reportlab_frame._height - qr_h) / 2
+
+#                     canvas_obj.drawImage(
+#                         ImageReader(qr_buffer),
+#                         qr_x, qr_y,
+#                         width=qr_w, height=qr_h,
+#                         preserveAspectRatio=True
+#                     )
+#                     qr_buffer.close()
+#                 except Exception as e:
+#                     print(f"QR Code rendering error: {e}")
+
+#         def render_page_content_to_canvas(canvas_obj, template_type, x_offset=0):
+#             """Helper to render content with specific canvas"""
+#             frames = template.templateframe_set.filter(
+#                 template_type__in=[template_type, TemplateFrame.TemplateType.BOTH]
+#             )
+#             for frame in frames:
+#                 render_frame(frame, x_offset, 0, canvas_obj)
+
+#         if template.print_layout == LoanTemplate.PrintLayout.SINGLE_A4:
+#             # Create separate buffers for each half
+#             original_buffer = io.BytesIO()
+#             duplicate_buffer = io.BytesIO()
+
+#             # Render original content
+#             c_original = canvas.Canvas(original_buffer, pagesize=(page_width/2, page_height))
+#             render_page_content_to_canvas(c_original, TemplateFrame.TemplateType.ORIGINAL)
+#             c_original.save()
+
+#             # Render duplicate content
+#             c_duplicate = canvas.Canvas(duplicate_buffer, pagesize=(page_width/2, page_height))
+#             render_page_content_to_canvas(c_duplicate, TemplateFrame.TemplateType.DUPLICATE)
+#             c_duplicate.save()
+
+#             # Merge contents with respective templates
+#             original_pdf = merge_pdfs(template.base_template.read(), original_buffer.getvalue())
+#             duplicate_pdf = merge_pdfs(template.dup_template.read(), duplicate_buffer.getvalue())
+
+#             # Combine side by side into A4 landscape
+#             content_pdf = merge_pdfs_side_by_side(original_pdf, duplicate_pdf)
+
+#             # Cleanup
+#             original_buffer.close()
+#             duplicate_buffer.close()
+
+#             return content_pdf
+
+#         else:
+#             # Handle separate A5 pages
+#             content_buffer = io.BytesIO()
+#             c = canvas.Canvas(content_buffer, pagesize=(page_width, page_height))
+
+#             if template.print_option in ['O', 'OT']:
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+
+#                 if template.print_option == 'OT':
+#                     return merge_pdfs_double_sided(
+#                         template.base_template.read(),
+#                         content_pdf,
+#                         template.terms_template.read()
+#                     )
+#                 return merge_pdfs(template.base_template.read(), content_pdf)
+
+#             elif template.print_option in ['D', 'DF']:
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+
+#                 if template.print_option == 'DF':
+#                     return merge_pdfs_double_sided(
+#                         template.dup_template.read(),
+#                         content_pdf,
+#                         template.form_d3_template.read()
+#                     )
+#                 return merge_pdfs(template.dup_template.read(), content_pdf)
+
+#             else:  # Both copies options
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+#                 c.showPage()
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+
+#                 if template.print_option == 'BD':
+#                     original_pdf = merge_pdfs_double_sided(
+#                         template.base_template.read(),
+#                         content_pdf,
+#                         template.terms_template.read()
+#                     )
+#                     duplicate_pdf = merge_pdfs_double_sided(
+#                         template.dup_template.read(),
+#                         content_pdf,
+#                         template.form_d3_template.read()
+#                     )
+#                     return merge_multiple_pdfs([original_pdf, duplicate_pdf])
+
+#                 return merge_multiple_pdfs([
+#                     merge_pdfs(template.base_template.read(), content_pdf),
+#                     merge_pdfs(template.dup_template.read(), content_pdf)
+#                 ])
+
+#     except LoanTemplate.DoesNotExist:
+#         print("Template not found or inactive")
+#         return None
+#     except Exception as e:
+#         print(f"Error generating PDF: {str(e)}")
+#         return None
+
+# def get_custom_jcl(loan, template_id=None):
+#     """Generate PDF using user-defined template and print options"""
+#     try:
+#         template = LoanTemplate.objects.get(id=template_id, is_active=True) if template_id else None
+#         if not template:
+#             return None
+
+#         def render_page_content_to_canvas(canvas_obj, template_type, x_offset=0):
+#             """Helper to render content with specific canvas"""
+#             frames = template.templateframe_set.filter(
+#                 template_type__in=[template_type, TemplateFrame.TemplateType.BOTH]
+#             )
+#             for frame in frames:
+#                 render_frame(frame, x_offset, 0, canvas_obj)
+
+#         if template.print_option in ['BA', 'BDA']:  # A4 Landscape options
+#             # A4 landscape for side-by-side A5
+#             page_width, page_height = landscape(A4)
+
+#             # Create buffers for original and duplicate
+#             original_buffer = io.BytesIO()
+#             duplicate_buffer = io.BytesIO()
+
+#             # Render original and duplicate content
+#             c_original = canvas.Canvas(original_buffer, pagesize=(page_width/2, page_height))
+#             render_page_content_to_canvas(c_original, TemplateFrame.TemplateType.ORIGINAL)
+#             c_original.save()
+
+#             c_duplicate = canvas.Canvas(duplicate_buffer, pagesize=(page_width/2, page_height))
+#             render_page_content_to_canvas(c_duplicate, TemplateFrame.TemplateType.DUPLICATE)
+#             c_duplicate.save()
+
+#             # Merge with templates
+#             original_pdf = merge_pdfs(template.base_template.read(), original_buffer.getvalue())
+#             duplicate_pdf = merge_pdfs(template.dup_template.read(), duplicate_buffer.getvalue())
+
+#             # Combine side by side for first page
+#             front_page = merge_pdfs_side_by_side(original_pdf, duplicate_pdf)
+
+#             # Handle double-sided A4 option
+#             if template.print_option == 'BDA':
+#                 # Create second page with terms and form
+#                 back_page = merge_pdfs_side_by_side(
+#                     template.terms_template.read(),
+#                     template.form_d3_template.read()
+#                 )
+#                 result = merge_multiple_pdfs([front_page, back_page])
+#             else:
+#                 result = front_page
+
+#             # Cleanup
+#             original_buffer.close()
+#             duplicate_buffer.close()
+#             return result
+
+#         else:  # A5 options
+#             page_width, page_height = A4[0]/2, A4[1]  # A5 size
+#             content_buffer = io.BytesIO()
+#             c = canvas.Canvas(content_buffer, pagesize=(page_width, page_height))
+
+#             if template.print_option == 'O':
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+#                 return merge_pdfs(template.base_template.read(), content_pdf)
+
+#             elif template.print_option == 'OT':
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+#                 return merge_pdfs_double_sided(
+#                     template.base_template.read(),
+#                     content_pdf,
+#                     template.terms_template.read()
+#                 )
+
+#             elif template.print_option == 'D':
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+#                 return merge_pdfs(template.dup_template.read(), content_pdf)
+
+#             elif template.print_option == 'DF':
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+#                 return merge_pdfs_double_sided(
+#                     template.dup_template.read(),
+#                     content_pdf,
+#                     template.form_d3_template.read()
+#                 )
+
+#             elif template.print_option == 'BS':
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+#                 c.showPage()
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+#                 return merge_multiple_pdfs([
+#                     merge_pdfs(template.base_template.read(), content_pdf),
+#                     merge_pdfs(template.dup_template.read(), content_pdf)
+#                 ])
+
+#             elif template.print_option == 'BD':
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+#                 c.showPage()
+#                 render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+#                 c.save()
+#                 content_pdf = content_buffer.getvalue()
+#                 content_buffer.close()
+
+#                 return merge_multiple_pdfs([
+#                     merge_pdfs_double_sided(
+#                         template.base_template.read(),
+#                         content_pdf,
+#                         template.terms_template.read()
+#                     ),
+#                     merge_pdfs_double_sided(
+#                         template.dup_template.read(),
+#                         content_pdf,
+#                         template.form_d3_template.read()
+#                     )
+#                 ])
+
+#     except LoanTemplate.DoesNotExist:
+#         print("Template not found or inactive")
+#         return None
+#     except Exception as e:
+#         print(f"Error generating PDF: {str(e)}")
+#         return None
+
+
+def get_custom_jcl(loan, template_id=None):
+    """Generate PDF using user-defined template and print options"""
+    try:
+        template = (
+            LoanTemplate.objects.get(id=template_id, is_active=True)
+            if template_id
+            else None
         )
-        draw_qr_code(
-            loan.loan_id,
-            c,
-            x_offset + 11 * cm,
-            y_offset + 15.2 * cm,
-            label_width=1.8 * cm,
-        )
+        if not template:
+            return None
 
-        # Define the maximum width for the paragraph
-        max_width = a5_width - 8 * cm  # Adjust the width as needed
-        customer = f"{loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}"
-        customer_paragraph = Paragraph(customer, styles["Heading3"])
-        width, height = customer_paragraph.wrap(max_width, a5_height)
-        customer_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 15.5 * cm - height)
+        def has_template(template_file):
+            """Check if template file exists and is not None"""
+            return bool(template_file and template_file.name)
 
-        default_pic = loan.customer.get_default_pic()
-        if default_pic:
-            try:
-                # Check if the file exists
-                if os.path.exists(default_pic.path):
-                    # Set the desired dimensions for the image (e.g., 5x5 cm)
-                    desired_width = 2.5 * cm
-                    desired_height = 2.5 * cm
+        def render_frame(frame, x_offset, y_offset, canvas_obj):
+            """
+            Render individual frame with content
+            Args:
+                frame: TemplateFrame object
+                x_offset: X position offset
+                y_offset: Y position offset
+                canvas_obj: ReportLab canvas object to draw on
+            """
+            # Data mapping for frame content
+            data_mapping = {
+                "license_no": lambda: loan.series.license.name,
+                "license_name": lambda: loan.series.license.shopname,
+                "license_address": lambda: loan.series.license.address,
+                "license_propreitor": lambda: f"Prop:{loan.series.license.propreitor}",
+                "customer_pic": lambda: loan.customer.get_default_pic().path
+                if loan.customer.get_default_pic()
+                else None,
+                "loanitem_pic": lambda: loan.loanitems.first().pic.path
+                if loan.loanitems.first().pic
+                else None,
+                "loan_id": lambda: loan.loan_id,
+                "loan_date": lambda: loan.loan_date.strftime("%d-%m-%Y"),
+                "customer_name": lambda: loan.customer.name,
+                "customer_info": lambda: f"{loan.customer.name}, {loan.customer.get_relatedas_display()} {loan.customer.relatedto}<br/>{loan.customer.get_address()}<br/>Ph: {loan.customer.get_contactno()}",
+                "loan_desc": lambda: "<br/>".join(
+                    [
+                        f"{i + 1}) {item.itemdesc}, Qty: {item.quantity}"
+                        for i, item in enumerate(loan.loanitems.all())
+                    ]
+                ),
+                "weight": lambda: f"{loan.formatted_weight(joiner=', ')}",
+                "pure": lambda: f"{loan.formatted_pure(joiner=', ')}",
+                "value": lambda: f"{loan.get_current_value()}",
+                "amount": lambda: f"{loan.loan_amount}",
+                "amount_words": lambda: num2words(loan.loan_amount, lang="en_IN")
+                + " rupees only",
+                "loan_qr": lambda: loan.loan_id,
+                "label": lambda: f"{loan.loan_id} - {loan.loan_date.strftime('%d-%m-%Y')} <br/>{loan.loan_amount} - {loan.weight} <br/>{loan.customer.name} - {loan.item_desc}",
+            }
 
-                    # Calculate the position for the image
-                    image_x = 2 * cm
-                    image_y = 16 * cm - desired_height
+            frame_data = data_mapping.get(frame.frame_name, lambda: None)()
+            if not frame_data:
+                return
 
-                    # Draw the image on the canvas
-                    customer_image = Image(default_pic.path, width=desired_width, height=desired_height)
-                    customer_image.drawOn(c, image_x, image_y)
+            reportlab_frame = Frame(
+                x_offset + float(frame.x_pos) * cm,
+                y_offset + float(frame.y_pos) * cm,
+                float(frame.width) * cm,
+                float(frame.height) * cm,
+                showBoundary=frame.show_boundary,
+            )
 
-                    # Draw a border around the image
-                    border_padding = 2  # Padding around the image for the border
-                    c.setStrokeColorRGB(0, 0, 0)  # Set the border color (black)
-                    c.setLineWidth(1)  # Set the border width
-                    c.rect(
-                        image_x - border_padding,
-                        image_y - border_padding,
-                        desired_width + 2 * border_padding,
-                        desired_height + 2 * border_padding,
-                    )
+            if frame.field_type == "text":
+                styles = getSampleStyleSheet()
+                style = ParagraphStyle(
+                    f"Custom_{frame.frame_name}",
+                    parent=styles["Normal"],
+                    fontSize=frame.font_size,
+                    fontName=frame.font_name,
+                )
+                content = Paragraph(frame_data, style)
+                keep_frame = KeepInFrame(
+                    reportlab_frame._width,
+                    reportlab_frame._height,
+                    [content],
+                    mode="shrink",
+                )
+                reportlab_frame.addFromList([keep_frame], canvas_obj)
+
+            elif frame.field_type == "image" and os.path.exists(frame_data):
+                img = PILImage.open(frame_data)
+                img_w, img_h = img.size
+                aspect = img_w / float(img_h)
+
+                if reportlab_frame._width / float(reportlab_frame._height) > aspect:
+                    w = reportlab_frame._height * aspect
+                    h = reportlab_frame._height
                 else:
-                    print(f"File not found: {default_pic.path}")
-            except IOError as e:
-                print(f"Cannot open resource: {default_pic.path}. Error: {e}")
-        address = loan.customer.address.first()
-        address_paragraph = Paragraph(
-            f" {address.doorno},{address.street}<br/>{address.area},{address.city}",
-            styles["Normal"],
-        )
-        width, height = address_paragraph.wrap(a5_width, a5_height)
-        c.setFont("Helvetica-Bold", 10)
-        address_paragraph.drawOn(c, x_offset + 4 * cm, y_offset + 14.5 * cm - height)
+                    w = reportlab_frame._width
+                    h = reportlab_frame._width / aspect
 
-        c.drawString(
-            x_offset + 4 * cm,
-            y_offset + 13.4 * cm,
-            f"Ph: {loan.customer.contactno.first()}",
-        )
+                x = reportlab_frame._x + (reportlab_frame._width - w) / 2
+                y = reportlab_frame._y + (reportlab_frame._height - h) / 2
+                canvas_obj.drawImage(
+                    frame_data, x, y, width=w, height=h, preserveAspectRatio=True
+                )
 
-        c.setFont("Helvetica-Bold", 14)
-        data = [["Description"]]
-        for i, item in enumerate(loan.loanitems.all(), start=1):
-            itemdesc = Paragraph(item.itemdesc, styles["Normal"])
-            data.append([f"{i}) {item.itemdesc}, Qty:{item.quantity}"])
+            elif frame.field_type == "qr":
+                try:
+                    qr_img = qrcode.make(frame_data)
+                    qr_buffer = io.BytesIO()
+                    qr_img.save(qr_buffer, format="PNG")
+                    qr_buffer.seek(0)
 
-        table = Table(data)
-        table.setStyle(
-            TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black)])
-        )
-        table.wrapOn(c, a5_width / 2, a5_height)
-        table.drawOn(c, x_offset + 1.5 * cm, y_offset + 11.5 * cm)
+                    qr_w = reportlab_frame._width * 0.9
+                    qr_h = reportlab_frame._height * 0.9
+                    qr_x = reportlab_frame._x + (reportlab_frame._width - qr_w) / 2
+                    qr_y = reportlab_frame._y + (reportlab_frame._height - qr_h) / 2
 
-        c.setFont("Helvetica", 12)
-        c.drawString(
-            x_offset + 3 * cm, y_offset + 8.8 * cm, loan.formatted_weight(joiner="gms,")
-        )
-        c.drawString(
-            x_offset + 11.5 * cm, y_offset + 8.8 * cm, f"{loan.get_current_value()}"
-        )
+                    canvas_obj.drawImage(
+                        ImageReader(qr_buffer),
+                        qr_x,
+                        qr_y,
+                        width=qr_w,
+                        height=qr_h,
+                        preserveAspectRatio=True,
+                    )
+                    qr_buffer.close()
+                except Exception as e:
+                    print(f"QR Code rendering error: {e}")
 
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(x_offset + 3 * cm, y_offset + 7.8 * cm, f"{loan.loan_amount}")
-        amt_fig = Paragraph(
-            f"{num2words(loan.loan_amount, lang='en_IN')} rupees only", styles["Normal"]
-        )
-        max_width = 8 * cm
-        # Wrap the paragraph within the specified max_width
-        width, height = amt_fig.wrap(max_width, a5_height)
-        # c.setFont("Helvetica-Bold", 10)
-        # c.drawString(x_offset + 6.2 * cm, y_offset + 7.8 * cm, f"{amt_fig} rupees only")
-        # Draw the paragraph on the canvas
-        amt_fig.drawOn(c, x_offset + 6 * cm, y_offset + 8 * cm - height)
+        def render_page_content_to_canvas(canvas_obj, template_type, x_offset=0):
+            """Helper to render content with specific canvas"""
+            frames = template.templateframe_set.filter(
+                template_type__in=[template_type, TemplateFrame.TemplateType.BOTH]
+            )
+            for frame in frames:
+                render_frame(frame, x_offset, 0, canvas_obj)
 
-    # Draw the first frame (left side)
-    draw_frame(0, 0)
+        if template.print_option in ["BA", "BDA"]:  # A4 Landscape options
+            # A4 landscape for side-by-side A5
+            page_width, page_height = landscape(A4)
 
-    # Draw the second frame (right side)
-    draw_frame(a5_width, 0)
+            # Create buffers for original and duplicate
+            original_buffer = io.BytesIO()
+            duplicate_buffer = io.BytesIO()
 
-    c.save()
-    pdf = buffer.getvalue()
-    buffer.close()
-    return pdf
+            # Render original and duplicate content
+            c_original = canvas.Canvas(
+                original_buffer, pagesize=(page_width / 2, page_height)
+            )
+            render_page_content_to_canvas(
+                c_original, TemplateFrame.TemplateType.ORIGINAL
+            )
+            c_original.save()
+
+            c_duplicate = canvas.Canvas(
+                duplicate_buffer, pagesize=(page_width / 2, page_height)
+            )
+            render_page_content_to_canvas(
+                c_duplicate, TemplateFrame.TemplateType.DUPLICATE
+            )
+            c_duplicate.save()
+
+            # Merge with templates
+            original_pdf = (
+                merge_pdfs(template.base_template.read(), original_buffer.getvalue())
+                if has_template(template.base_template)
+                else original_buffer.getvalue()
+            )
+            duplicate_pdf = (
+                merge_pdfs(template.dup_template.read(), duplicate_buffer.getvalue())
+                if has_template(template.dup_template)
+                else duplicate_buffer.getvalue()
+            )
+
+            # Combine side by side for first page
+            front_page = merge_pdfs_side_by_side(original_pdf, duplicate_pdf)
+
+            # Handle double-sided A4 option
+            if (
+                template.print_option == "BDA"
+                and has_template(template.terms_template)
+                and has_template(template.form_d3_template)
+            ):
+                # Create second page with terms and form
+                back_page = merge_pdfs_side_by_side(
+                    template.terms_template.read(), template.form_d3_template.read()
+                )
+                result = merge_multiple_pdfs([front_page, back_page])
+            else:
+                result = front_page
+
+            # Cleanup
+            original_buffer.close()
+            duplicate_buffer.close()
+            return result
+
+        else:  # A5 options
+            page_width, page_height = A5[0], A5[1]  # A5 size
+            content_buffer = io.BytesIO()
+            c = canvas.Canvas(content_buffer, pagesize=(page_width, page_height))
+
+            if template.print_option == "O":
+                render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+                c.save()
+                content_pdf = content_buffer.getvalue()
+                content_buffer.close()
+                return (
+                    merge_pdfs(template.base_template.read(), content_pdf)
+                    if has_template(template.base_template)
+                    else content_pdf
+                )
+
+            elif template.print_option == "OT":
+                render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+                c.save()
+                content_pdf = content_buffer.getvalue()
+                content_buffer.close()
+                if has_template(template.base_template) and has_template(
+                    template.terms_template
+                ):
+                    return merge_pdfs_double_sided(
+                        template.base_template.read(),
+                        content_pdf,
+                        template.terms_template.read(),
+                    )
+                return content_pdf
+
+            elif template.print_option == "D":
+                render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+                c.save()
+                content_pdf = content_buffer.getvalue()
+                content_buffer.close()
+                return (
+                    merge_pdfs(template.dup_template.read(), content_pdf)
+                    if has_template(template.dup_template)
+                    else content_pdf
+                )
+
+            elif template.print_option == "DF":
+                render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+                c.save()
+                content_pdf = content_buffer.getvalue()
+                content_buffer.close()
+                if has_template(template.dup_template) and has_template(
+                    template.form_d3_template
+                ):
+                    return merge_pdfs_double_sided(
+                        template.dup_template.read(),
+                        content_pdf,
+                        template.form_d3_template.read(),
+                    )
+                return content_pdf
+
+            elif template.print_option == "BS":
+                render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+                c.showPage()
+                render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+                c.save()
+                content_pdf = content_buffer.getvalue()
+                content_buffer.close()
+                if not (
+                    has_template(template.base_template)
+                    or has_template(template.dup_template)
+                ):
+                    return content_pdf
+
+                return merge_multiple_pdfs(
+                    [
+                        merge_pdfs(template.base_template.read(), content_pdf)
+                        if has_template(template.base_template)
+                        else content_pdf,
+                        merge_pdfs(template.dup_template.read(), content_pdf)
+                        if has_template(template.dup_template)
+                        else content_pdf,
+                    ]
+                )
+
+            elif template.print_option == "BD":
+                render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+                c.showPage()
+                render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+                c.save()
+                content_pdf = content_buffer.getvalue()
+                content_buffer.close()
+
+                if not (
+                    has_template(template.base_template)
+                    or has_template(template.dup_template)
+                ):
+                    return content_pdf
+
+                return merge_multiple_pdfs(
+                    [
+                        merge_pdfs_double_sided(
+                            template.base_template.read(),
+                            content_pdf,
+                            template.terms_template.read(),
+                        )
+                        if (
+                            has_template(template.base_template)
+                            and has_template(template.terms_template)
+                        )
+                        else content_pdf,
+                        merge_pdfs_double_sided(
+                            template.dup_template.read(),
+                            content_pdf,
+                            template.form_d3_template.read(),
+                        )
+                        if (
+                            has_template(template.dup_template)
+                            and has_template(template.form_d3_template)
+                        )
+                        else content_pdf,
+                    ]
+                )
+
+    except LoanTemplate.DoesNotExist:
+        print("Template not found or inactive")
+        return None
+    except Exception as e:
+        print(f"Error generating PDF: {str(e)}")
+        return None
+
+
+# with better oops
+# from dataclasses import dataclass
+# from typing import Any, Dict, Callable, Optional, Union
+# from PIL import Image as PILImage
+# from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+# from reportlab.lib.units import cm
+# from reportlab.platypus import Frame, Paragraph, KeepInFrame
+# from reportlab.pdfgen import canvas
+# from reportlab.lib.utils import ImageReader
+# import qrcode
+# import io
+# from io import BytesIO
+# import os
+# import logging
+
+# logger = logging.getLogger(__name__)
+
+# @dataclass
+# class FrameConfig:
+#     x_pos: float
+#     y_pos: float
+#     width: float
+#     height: float
+#     font_size: int = 12
+#     font_name: str = 'Helvetica'
+
+# class PDFRenderer:
+#     def __init__(self, template, loan):
+#         self.template = template
+#         self.loan = loan
+#         self.page_width = float(template.page_width) * cm
+#         self.page_height = float(template.page_height) * cm
+#         self.styles = getSampleStyleSheet()
+
+#     def _generate_qr_code(self, data: str) -> PILImage.Image:
+#         qr = qrcode.QRCode(
+#             version=1,
+#             error_correction=qrcode.constants.ERROR_CORRECT_L,
+#             box_size=10,
+#             border=4,
+#         )
+#         qr.add_data(data)
+#         qr.make(fit=True)
+#         img = qr.make_image(fill_color="black", back_color="white")
+#         buffer = BytesIO()
+#         img.save(buffer, format="PNG")
+#         return buffer.getvalue()
+
+#     def _get_data_mapping(self) -> Dict[str, Callable[[], Any]]:
+#         return {
+#             'loan_id': lambda: f"Loan ID: {self.loan.loan_id} <br/>Date: {self.loan.loan_date.strftime('%d-%m-%Y')}",
+#             'loan_qr': lambda: self._generate_qr_code(self.loan.loan_id),
+#             'customer_name': lambda: f"{self.loan.customer.name}, {self.loan.customer.get_relatedas_display()} {self.loan.customer.relatedto}",
+#             "customer_info": lambda: (f"{self.loan.customer.name}, {self.loan.customer.get_relatedas_display()} "
+#                                    f"{self.loan.customer.relatedto}<br/>{self.loan.customer.address.first()}"
+#                                    f"<br/>Ph: {self.loan.customer.contactno.first()}"),
+#             "customer_pic": lambda: self.loan.customer.get_default_pic().path if self.loan.customer.pics else None,
+#             "loanitem_pic": lambda: self.loan.loanitems.first().pic.path if self.loan.loanitems.first().pic else None,
+#             'address': lambda: str(self.loan.customer.address.first()),
+#             'phone': lambda: str(self.loan.customer.contactno.first()),
+#             'items_table': lambda: "<br/>".join([f"{i + 1}) {item.itemdesc}, Qty: {item.quantity}"
+#                                                for i, item in enumerate(self.loan.loanitems.all())]),
+#             "loan_desc": lambda: "<br/>".join([f"{i + 1}) {item.itemdesc}, Qty: {item.quantity}"
+#                                              for i, item in enumerate(self.loan.loanitems.all())]),
+#             "weight": lambda: self.loan.formatted_weight(joiner=', '),
+#             "value": lambda: str(self.loan.get_current_value()),
+#             "loan_amount": lambda: str(self.loan.loan_amount),
+#             "loan_amount_in_figures": lambda: num2words(self.loan.loan_amount, lang='en_IN') + " rupees only",
+#         }
+
+#     def _render_text_frame(self, canvas_obj, frame_config: FrameConfig, content: str):
+#         style = ParagraphStyle(
+#             'Custom',
+#             parent=self.styles['Normal'],
+#             fontSize=frame_config.font_size,
+#             fontName=frame_config.font_name
+#         )
+#         paragraph = Paragraph(content, style)
+#         frame = Frame(
+#             frame_config.x_pos * cm,
+#             frame_config.y_pos * cm,
+#             frame_config.width * cm,
+#             frame_config.height * cm,
+#             showBoundary=1
+#         )
+#         keep_frame = KeepInFrame(
+#             frame_config.width * cm,
+#             frame_config.height * cm,
+#             [paragraph],
+#             mode='shrink'
+#         )
+#         frame.addFromList([keep_frame], canvas_obj)
+
+#     def _render_image_frame(self, canvas_obj, frame_config: FrameConfig, image_data: Union[str, PILImage.Image]):
+#         try:
+#             img = (image_data if isinstance(image_data, PILImage.Image)
+#                   else PILImage.open(image_data))
+
+#             img_w, img_h = img.size
+#             aspect = img_w / float(img_h)
+
+#             frame_w = frame_config.width * cm
+#             frame_h = frame_config.height * cm
+
+#             # Calculate dimensions maintaining aspect ratio
+#             if frame_w / frame_h > aspect:
+#                 w, h = frame_h * aspect, frame_h
+#             else:
+#                 w, h = frame_w, frame_w / aspect
+
+#             x = frame_config.x_pos * cm + (frame_w - w) / 2
+#             y = frame_config.y_pos * cm + (frame_h - h) / 2
+
+#             if isinstance(image_data, PILImage.Image):
+#                 buffer = BytesIO()
+#                 image_data.save(buffer, format='PNG')  # Use image_data instead of img
+#                 buffer.seek(0)
+#                 canvas_obj.drawImage(ImageReader(buffer), x, y, width=w, height=h, preserveAspectRatio=True)
+#                 buffer.close()
+#             else:
+#                 canvas_obj.drawImage(image_data, x, y, width=w, height=h, preserveAspectRatio=True)
+
+#         except Exception as e:
+#             logger.error(f"Error rendering image: {e}")
+
+#     def render_frames(self, canvas_obj, x_offset: float = 0, y_offset: float = 0):
+#         data_mapping = self._get_data_mapping()
+
+#         for frame in self.template.templateframe_set.all():
+#             frame_config = FrameConfig(
+#                 x_pos=float(frame.x_pos) + float(x_offset),
+#                 y_pos=float(frame.y_pos) + float(y_offset),
+#                 width=float(frame.width),
+#                 height=float(frame.height),
+#                 font_size=frame.font_size,
+#                 font_name=frame.font_name
+#             )
+
+#             data = data_mapping.get(frame.frame_name, lambda: None)()
+#             if not data:
+#                 continue
+
+#             if frame.field_type == 'text':
+#                 self._render_text_frame(canvas_obj, frame_config, data)
+#             elif frame.field_type in ('image', 'qr'):
+#                 self._render_image_frame(canvas_obj, frame_config, data)
+
+# def get_custom_jcl(loan, template_id: Optional[int] = None) -> bytes:
+#     """Generate PDF using user-defined template configuration"""
+#     try:
+#         template = LoanTemplate.objects.get(id=template_id, is_active=True)
+#     except LoanTemplate.DoesNotExist:
+#         raise ValueError("Template not found or inactive")
+
+#     content_buffer = io.BytesIO()
+#     c = canvas.Canvas(content_buffer, pagesize=(float(template.page_width) * cm,
+#                                               float(template.page_height) * cm))
+
+#     renderer = PDFRenderer(template, loan)
+
+#     if template.print_layout == LoanTemplate.PrintLayout.SINGLE_A4:
+#         renderer.render_frames(c, 0, 0)
+#         renderer.render_frames(c, template.page_width/2, 0)
+#     else:  # SEPARATE_A5
+#         renderer.render_frames(c, 0, 0)
+
+#     c.save()
+#     content_pdf = content_buffer.getvalue()
+#     content_buffer.close()
+
+#     if template.base_template:
+#         return merge_pdfs(template.base_template.read(), content_pdf)
+
+#     return content_pdf
 
 
 def generate_grid_template():
@@ -1064,6 +2632,73 @@ def generate_grid_template():
     c.setStrokeColorRGB(0, 0, 0)  # Black for the separator line
     c.setLineWidth(2)
     c.line(page_width / 2, 0, page_width / 2, page_height)
+
+    c.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
+
+
+def grid_template(page_size=A5, grid_spacing_cm=1, show_margins=True, margin_cm=1):
+    """
+    Generate a PDF with measurement grid for template design
+    Args:
+        page_size: Tuple of (width, height) in points
+        grid_spacing_cm: Grid spacing in centimeters
+        show_margins: Show margin guides
+        margin_cm: Margin size in centimeters
+    Returns:
+        bytes: PDF content
+    """
+    page_width, page_height = page_size
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=page_size)
+
+    # Colors
+    GRID_COLOR = (0.3, 0.3, 0.3)  # Light gray
+    MARGIN_COLOR = (1, 0.8, 0.8)  # Light red
+    TEXT_COLOR = (0.3, 0.3, 0.3)  # Dark gray
+
+    # Draw grid
+    c.setFont("Helvetica", 6)
+    c.setStrokeColorRGB(*GRID_COLOR)
+    c.setLineWidth(0.1)
+
+    # Draw vertical lines and labels
+    for x in range(0, int(page_width), int(grid_spacing_cm * cm)):
+        c.line(x, 0, x, page_height)
+        # Draw coordinate at top and bottom
+        c.setFillColorRGB(*TEXT_COLOR)
+        c.drawString(x + 2, 2, f"{x/cm:.1f}")
+        c.drawString(x + 2, page_height - 8, f"{x/cm:.1f}")
+
+    # Draw horizontal lines and labels
+    for y in range(0, int(page_height), int(grid_spacing_cm * cm)):
+        c.line(0, y, page_width, y)
+        # Draw coordinate at left and right
+        c.setFillColorRGB(*TEXT_COLOR)
+        c.drawString(2, y + 2, f"{y/cm:.1f}")
+        c.drawString(page_width - 20, y + 2, f"{y/cm:.1f}")
+
+    # Draw margins if requested
+    if show_margins:
+        c.setStrokeColorRGB(*MARGIN_COLOR)
+        c.setLineWidth(0.5)
+        margin = margin_cm * cm
+        # Left margin
+        c.line(margin, 0, margin, page_height)
+        # Right margin
+        c.line(page_width - margin, 0, page_width - margin, page_height)
+        # Top margin
+        c.line(0, page_height - margin, page_width, page_height - margin)
+        # Bottom margin
+        c.line(0, margin, page_width, margin)
+
+    # Add page size info
+    c.setFillColorRGB(0, 0, 0)
+    c.setFont("Helvetica", 8)
+    size_text = f"Page Size: {page_width/cm:.1f}cm x {page_height/cm:.1f}cm"
+    c.drawString(10, page_height - 20, size_text)
 
     c.save()
     pdf = buffer.getvalue()
@@ -1885,9 +3520,27 @@ def print_noticegroup(selection=None):
 #     response["Content-Disposition"] = "inline; filename=labels.pdf"
 #     return response
 
-from reportlab.graphics import renderPDF
+from reportlab.graphics import renderPDF, renderPM
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
+
+
+def generate_qr_code(data):
+    # Generate QR code using ReportLab's QRCodeWidget
+    qr_code = qr.QrCodeWidget(data)
+    qr_code.barWidth = 2 * inch  # Width of the QR code
+    qr_code.barHeight = 2 * inch  # Height of the QR code
+    qr_code.qrVersion = 1
+
+    # Place the QR code in a drawing
+    drawing = Drawing(2 * inch, 2 * inch)
+    drawing.add(qr_code)
+
+    # Render the drawing to a PNG image in memory
+    buffer = BytesIO()
+    renderPM.drawToFile(drawing, buffer, fmt="PNG")
+    buffer.seek(0)
+    return buffer
 
 
 def draw_qr_code(loan_id, canvas, x_offset, y_offset, label_width):

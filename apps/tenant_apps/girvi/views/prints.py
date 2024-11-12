@@ -1,21 +1,38 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4, landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, inch, mm
 from reportlab.pdfgen import canvas
-from reportlab.platypus import (BalancedColumns, Frame, ListFlowable, ListItem,
-                                LongTable, PageBreak, PageTemplate, Paragraph,
-                                SimpleDocTemplate, Spacer, Table, TableStyle)
+from reportlab.platypus import (
+    BalancedColumns,
+    Frame,
+    ListFlowable,
+    ListItem,
+    LongTable,
+    PageBreak,
+    PageTemplate,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from reportlab.platypus.tableofcontents import TableOfContents
 
+from apps.tenant_apps.girvi.models.template import LoanTemplate
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-from apps.tenant_apps.utils.loan_pdf import (get_custom_jcl, get_custom_jsk,
-                                             get_loan_template, get_notice_pdf,
-                                             print_labels_pdf)
+from apps.tenant_apps.utils.loan_pdf import (
+    get_custom_jcl,
+    get_custom_jsk,
+    get_notice_pdf,
+    grid_template,
+    print_labels_pdf,
+)
 
 from ..forms import LoanSelectionForm
 from ..models import Loan
@@ -136,22 +153,71 @@ def notify_print(request):
     return HttpResponse(status=200, content="No unreleased loans selected.")
 
 
+import base64
+
+
 @login_required
 def print_loan(request, pk=None):
     loan = get_object_or_404(Loan, pk=pk)
-    template = request.user.workspace.preferences["Loan__LoanPDFTemplate"]
-    if template == "c":
-        pdf = get_custom_jsk(loan=loan)
-    elif template == "j":
-        pdf = get_custom_jcl(loan=loan)
-    else:
-        pdf = get_loan_template(loan=loan)
+    template = LoanTemplate.objects.get_default()
+    if not template:
+        messages.warning(
+            request, "No default template configured. Please set a default template."
+        )
+        return redirect("girvi:girvi_loan_detail", pk=loan.pk)
+    pdf = get_custom_jcl(loan=loan, template_id=template.pk)
+    # template = request.user.profile.workspace.preferences["Loan__LoanPDFTemplate"]
+    # if template == "c":
+    #     pdf = get_custom_jsk(loan=loan)
+    # elif template == "j":
+    #     pdf =get_custom_jcl(loan=loan,template_id=1)
+    # import os
+    # try:
+    #     # Get template path from settings
+    #     template_path = "jcl-template-hr-new.pdf"
+    #     if os.path.exists(template_path):
+    #         with open(template_path, 'rb') as f:
+    #             template_pdf = f.read()
+    #         pdf = get_custom_jcl(loan, base_template=template_pdf)
+    #     else:
+    #         raise FileNotFoundError(f"Template not found: {template_path}")
+    # except Exception as e:
+    #     print(f"Error with template: {str(e)}")
+    #     pdf = get_custom_jcl(loan)
+    # else:
+    #     pdf = get_loan_template(loan=loan)
     # Create a response object
-    response = HttpResponse(pdf, content_type="application/pdf")
-    # response["Content-Disposition"] = 'attachment; filename="pledge.pdf"'
-    response["Content-Disposition"] = f"inline; filename='{loan.loan_id}.pdf'"
-    response["Content-Transfer-Encoding"] = "binary"
-    return response
+    # response = HttpResponse(pdf, content_type="application/pdf")
+    # # response["Content-Disposition"] = 'attachment; filename="pledge.pdf"'
+    # response["Content-Disposition"] = f"inline; filename='{loan.loan_id}.pdf'"
+    # response["Content-Transfer-Encoding"] = "binary"
+    # return response
+    # Encode the PDF in base64
+    pdf_base64 = base64.b64encode(pdf).decode("utf-8")
+
+    # Render the object HTML
+    object_html = f"""
+    <object data="data:application/pdf;base64,{pdf_base64}" type="application/pdf" width="100%" height="600px">
+        <p>Your browser does not support PDFs. <a href="data:application/pdf;base64,{pdf_base64}">Download the PDF</a>.</p>
+    </object>
+    """
+    return HttpResponse(object_html)
+
+
+@login_required
+def print_grid_template(request):
+    pdf = grid_template()
+
+    # Encode the PDF in base64
+    pdf_base64 = base64.b64encode(pdf).decode("utf-8")
+
+    # Render the object HTML
+    object_html = f"""
+    <object data="data:application/pdf;base64,{pdf_base64}" type="application/pdf" width="100%" height="600px">
+        <p>Your browser does not support PDFs. <a href="data:application/pdf;base64,{pdf_base64}">Download the PDF</a>.</p>
+    </object>
+    """
+    return HttpResponse(object_html)
 
 
 class PageNumCanvas(canvas.Canvas):

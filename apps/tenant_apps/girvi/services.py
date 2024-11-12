@@ -3,12 +3,24 @@ from collections import Counter
 from datetime import datetime
 
 from django.db import transaction
-from django.db.models import (Avg, Case, Count, F, IntegerField, Max, OuterRef,
-                              Q, Subquery, Sum, Value, When, Window)
+from django.db.models import (
+    Avg,
+    Case,
+    Count,
+    F,
+    IntegerField,
+    Max,
+    OuterRef,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+    When,
+    Window,
+)
 from django.db.models.functions import ExtractYear, TruncDate
 
-from .models import (Customer, License, Loan, LoanItem, LoanPayment, Release,
-                     Series)
+from .models import Customer, License, Loan, LoanItem, LoanPayment, Release, Series
 
 
 def generate_loan_id(series_id: int = None) -> str:

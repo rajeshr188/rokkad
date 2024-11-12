@@ -124,7 +124,7 @@ def loan_save(request, id=None, pk=None):
             messages.success(
                 request, f"{'Updated' if obj else 'Created'} Loan: {loan.loan_id}"
             )
-            return loan_detail(request, loan.id)
+            # return loan_detail(request, loan.id)
             # response = TemplateResponse(
             #     request,
             #     "girvi/loan/loan_detail.html",
@@ -134,9 +134,23 @@ def loan_save(request, id=None, pk=None):
             #     "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
             # )
             # return response
+            response = TemplateResponse(
+                request,
+                "girvi/loan/loan_detail.html",
+                {"loan": loan, "object": loan, "customer": loan.customer},
+            )
+            response["Hx-Push"] = reverse(
+                "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
+            )
+            return response
 
         else:
             messages.warning(request, "Please correct the error below.")
+            return TemplateResponse(
+                request,
+                "girvi/loan/loan_form.html",
+                {"form": form, "loan": obj, "object": obj},
+            )
 
     if not obj:
         initial = {}

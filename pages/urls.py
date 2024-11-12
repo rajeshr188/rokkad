@@ -24,4 +24,5 @@ urlpatterns = [
     # path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path("company_dashboard/", company_dashboard, name="company_dashboard"),
     path("maxxupload/", maxx_files_upload, name="maxx_upload"),
+    path("download-templates/", download_template_pack, name="download_template_pack"),
 ]

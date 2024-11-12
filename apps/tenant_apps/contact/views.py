@@ -28,11 +28,18 @@ from tablib import Dataset
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from .filters import CustomerFilter
-from .forms import (AddressForm, ContactForm, CustomerForm, CustomerMergeForm,
-                    CustomerPicForm, CustomerRelationshipForm,
-                    CustomerReportForm, ExportForm, ImportForm)
-from .models import (Address, Contact, Customer, CustomerPic,
-                     CustomerRelationship, Proof)
+from .forms import (
+    AddressForm,
+    ContactForm,
+    CustomerForm,
+    CustomerMergeForm,
+    CustomerPicForm,
+    CustomerRelationshipForm,
+    CustomerReportForm,
+    ExportForm,
+    ImportForm,
+)
+from .models import Address, Contact, Customer, CustomerPic, CustomerRelationship, Proof
 from .tables import CustomerExportTable, CustomerTable
 
 logger = logging.getLogger(__name__)
@@ -620,6 +627,7 @@ def contact_list(request, pk: int = None):
         {"contacts": contacts, "customer_id": customer.id},
     )
 
+
 def contact_set_default(request, pk):
     contact = get_object_or_404(Contact, pk=pk)
     # customer = contact.customer
@@ -630,7 +638,8 @@ def contact_set_default(request, pk):
     contact.save()
     messages.success(request, f"Contact {contact} set as default.")
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
-    
+
+
 @login_required
 def contact_detail(request, pk):
     contact = get_object_or_404(Contact, pk=pk)
@@ -692,6 +701,7 @@ def address_create_or_update(request, customer_pk=None, address_pk=None):
 
     return render(request, "partials/crispy_form.html", context)
 
+
 def address_set_default(request, pk):
     address = get_object_or_404(Address, pk=pk)
     # customer = address.customer
@@ -702,6 +712,7 @@ def address_set_default(request, pk):
     address.save()
     messages.success(request, f"Address {address} set as default.")
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
+
 
 @login_required
 def address_detail(request, pk):

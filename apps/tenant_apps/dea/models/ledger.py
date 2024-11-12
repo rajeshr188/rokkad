@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -10,9 +12,9 @@ from mptt.models import MPTTModel, TreeForeignKey
 from ..managers import LedgerManager
 from ..utils.currency import Balance
 from .moneyvalue import MoneyValueField
-import logging  
 
 logger = logging.getLogger(__name__)
+
 
 # ledger account type  for COA ,asset,liability,revenue,expense,gain,loss
 class AccountType(models.Model):
@@ -67,14 +69,13 @@ class Ledger(MPTTModel):
         # ensure there aint no txns before setting op bal if present then audit and adjust
         return LedgerStatement.objects.create(self, amount)
 
-    def ctxns(self, since=None):    
+    def ctxns(self, since=None):
         if since is not None:
             return self.credit_txns.filter(created__gte=since).select_related(
                 "journal_entry"
             )
         else:
             return self.credit_txns.all().select_related("journal_entry")
-
 
     def dtxns(self, since=None):
         if since is not None:
@@ -171,15 +172,16 @@ class Ledger(MPTTModel):
             cb = ls.get_cb()
             since = ls.created
 
-        credit_balance = self.get_credit_bal(since) # credit balance with aleg
-        debit_balance = self.get_debit_bal(since) # debit balance with aleg
-        logger.warning(f"credit_balance: {credit_balance} debit_balance: {debit_balance}")
+        credit_balance = self.get_credit_bal(since)  # credit balance with aleg
+        debit_balance = self.get_debit_bal(since)  # debit balance with aleg
+        logger.warning(
+            f"credit_balance: {credit_balance} debit_balance: {debit_balance}"
+        )
 
         bal = cb + (debit_balance - credit_balance)
         return bal
 
     def current_balance_with_aleg(self):
-        
         ls = self.get_latest_stmt()
         if ls is None:
             cb = Balance()

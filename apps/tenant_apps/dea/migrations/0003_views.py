@@ -32,6 +32,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("dea", "0002_initial_fixture"),
     ]
+
     ledger_balance_sql_v7 = """
         CREATE VIEW jcl.current_ledger_balance AS
         WITH acc_st AS (
@@ -109,7 +110,6 @@ class Migration(migrations.Migration):
         LEFT JOIN combined_transactions ct ON ucb."AccountNo_id" = ct.ledger_id AND ucb.currency::text = ct.amount_currency::text
         GROUP BY a.id, a.contact_id, acc_st.created, acc_st."ClosingBalance";
         """
-
     ledger_balance_sql_v6_array_agg = """
         CREATE VIEW jcl.current_ledger_balance AS
         WITH latest_statements AS (
@@ -186,7 +186,6 @@ class Migration(migrations.Migration):
         WHERE (ls.created IS NULL OR dea_ledgertransaction.created >= ls.created)
         GROUP BY dea_ledger.id, ls.created, ls."ClosingBalance";
         """
-
     ledger_balance_sql_v4_ob_cb = """
         need to unnest arrays then perform + - operations
         CREATE VIEW ledger_balance AS
@@ -288,7 +287,6 @@ class Migration(migrations.Migration):
         LEFT JOIN ls ON dea_ledger.id = ls.ledgerno_id
         JOIN dea_accounttype at ON at.id = dea_ledger."AccountType_id";        
             """
-
     ledger_balance_sql_v1 = """
         CREATE VIEW ledger_balance AS
         WITH ls AS (
@@ -319,7 +317,6 @@ class Migration(migrations.Migration):
         LEFT JOIN ls ON dea_ledger.id = ls.ledgerno_id
         JOIN dea_accounttype at ON at.id = dea_ledger."AccountType_id";        
             """
-
     ledger_balance_sql = """
          WITH ls AS (
          SELECT DISTINCT ON (dea_ledgerstatement.ledgerno_id) 
@@ -607,7 +604,6 @@ class Migration(migrations.Migration):
             LEFT JOIN acc_st ON a.id = acc_st."AccountNo_id"
             LEFT JOIN dea_accounttype_ext at ON a."AccountType_Ext_id" = at.id;
      """
-
     account_balance_sql_v5 = """
      WITH acc_st AS (
          SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") dea_accountstatement.id,
@@ -664,7 +660,6 @@ class Migration(migrations.Migration):
             LEFT JOIN acc_st ON a.id = acc_st."AccountNo_id"
             LEFT JOIN jcl.dea_accounttype_ext at ON a."AccountType_Ext_id" = at.id;
      """
-    
     account_balance_sql_v4 = """
         WITH acc_st AS (
         SELECT DISTINCT ON (dea_accountstatement."AccountNo_id") dea_accountstatement.id,
@@ -761,7 +756,6 @@ class Migration(migrations.Migration):
         FROM dea_account
             LEFT JOIN acc_st ON dea_account.id = acc_st."AccountNo_id"            
     """
-
     account_balance_sql_v1 = """
     CREATE VIEW account_balance AS
         WITH acc_st AS (

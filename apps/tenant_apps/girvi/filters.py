@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import django_filters
 from django.db.models import Q
+from django_filters.widgets import RangeWidget
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
@@ -20,6 +21,11 @@ class LoanFilter(django_filters.FilterSet):
     #     field_name="loan_date",
     #     help_text="dd/mm/yy", label="Loan Date"
     # )
+    loan_date_range = django_filters.DateFromToRangeFilter(
+        field_name="loan_date",
+        label="Loan Date Range",
+        widget=RangeWidget(attrs={"type": "date"}),
+    )
     date = django_filters.DateRangeFilter(field_name="loan_date", label="Loan Date")
 
     # notice = django_filters.CharFilter(
@@ -67,6 +73,7 @@ class LoanFilter(django_filters.FilterSet):
             "query",
             "series",
             "customer",
+            "loan_date_range",
         ]
 
     def universal_search(self, queryset, name, value):

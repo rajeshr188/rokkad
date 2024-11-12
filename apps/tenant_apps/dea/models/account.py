@@ -179,7 +179,7 @@ class Account(models.Model):
     def current_balance(self):
         # Retrieve the latest statement
         latest_statement = self.latest_stmt()
-        
+
         # Initialize balances
         if latest_statement is None:
             closing_balance = Balance()
@@ -187,28 +187,32 @@ class Account(models.Model):
         else:
             closing_balance = latest_statement.get_cb()
             transactions = self.txns(since=latest_statement.created)
-        
+
         # Calculate total credits and debits
         total_credit = self._calculate_total(transactions, "Cr")
         total_debit = self._calculate_total(transactions, "Dr")
-        
+
         # Adjust balance based on account type
         if self.AccountType_Ext.XactTypeCode_id == "Dr":
             current_balance = closing_balance + (total_debit - total_credit)
         else:
             current_balance = closing_balance + (total_credit - total_debit)
-        
+
         logger.info(f"Current balance: {current_balance}")
         return current_balance
-    
+
     def _calculate_total(self, transactions, xact_type_code):
-        return Balance([
-            Money(result["total"], result["amount_currency"])
-            for result in transactions.filter(XactTypeCode__XactTypeCode=xact_type_code)
-            .values("amount_currency")
-            .annotate(total=Sum("amount"))
-        ])
-        
+        return Balance(
+            [
+                Money(result["total"], result["amount_currency"])
+                for result in transactions.filter(
+                    XactTypeCode__XactTypeCode=xact_type_code
+                )
+                .values("amount_currency")
+                .annotate(total=Sum("amount"))
+            ]
+        )
+
     def get_balance(self):
         return self.accountbalance
 
