@@ -92,8 +92,11 @@ class Customer(models.Model):
         unique_together = ("name", "relatedas", "relatedto")
 
     def __str__(self):
-        return f"""{self.name} {self.get_relatedas_display()} {self.relatedto} {self.get_customer_type_display()} \n 
-                {self.get_address()} {self.get_contactno() }"""
+        return f"""
+                {self.name} {self.get_relatedas_display()} {self.relatedto} 
+                {self.get_customer_type_display()} \n
+                {self.get_address()} 
+                {self.get_contactno() }"""
 
     def get_absolute_url(self):
         return reverse("contact_customer_detail", args=(self.pk,))

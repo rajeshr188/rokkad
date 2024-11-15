@@ -159,21 +159,21 @@ def print_loan(request, pk=None):
     pdf = get_custom_jcl(loan=loan, template_id=template.pk)
     # template = request.user.profile.workspace.preferences["Loan__LoanPDFTemplate"]
     # Create a response object
-    # response = HttpResponse(pdf, content_type="application/pdf")
-    # # response["Content-Disposition"] = 'attachment; filename="pledge.pdf"'
-    # response["Content-Disposition"] = f"inline; filename='{loan.loan_id}.pdf'"
-    # response["Content-Transfer-Encoding"] = "binary"
-    # return response
+    response = HttpResponse(pdf, content_type="application/pdf")
+    # response["Content-Disposition"] = 'attachment; filename="pledge.pdf"'
+    response["Content-Disposition"] = f"inline; filename='{loan.loan_id}.pdf'"
+    response["Content-Transfer-Encoding"] = "binary"
+    return response
     # Encode the PDF in base64
-    pdf_base64 = base64.b64encode(pdf).decode("utf-8")
+    # pdf_base64 = base64.b64encode(pdf).decode("utf-8")
 
-    # Render the object HTML
-    object_html = f"""
-    <object data="data:application/pdf;base64,{pdf_base64}" type="application/pdf" width="100%" height="600px">
-        <p>Your browser does not support PDFs. <a href="data:application/pdf;base64,{pdf_base64}">Download the PDF</a>.</p>
-    </object>
-    """
-    return HttpResponse(object_html)
+    # # Render the object HTML
+    # object_html = f"""
+    # <object data="data:application/pdf;base64,{pdf_base64}" type="application/pdf" width="100%" height="600px">
+    #     <p>Your browser does not support PDFs. <a href="data:application/pdf;base64,{pdf_base64}">Download the PDF</a>.</p>
+    # </object>
+    # """
+    # return HttpResponse(object_html)
 
 
 @login_required

@@ -56,7 +56,7 @@ class LoanTable(tables.Table):
         )
 
     def value_customer(self, record):
-        return record.customer.name
+        return f"{record.customer}"
 
     def render_total_weight(self, record):
         gold_weight = (
@@ -115,7 +115,7 @@ class LoanTable(tables.Table):
         return value.date
 
     def value_loan_date(self, record):
-        return record.loan_date.date()
+        return record.loan_date.date().isoformat()
 
     # is_overdue = tables.Column(verbose_name="Overdue?")
     total_due = tables.Column(verbose_name="Due", localize=True)
