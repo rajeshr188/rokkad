@@ -54,7 +54,4 @@ def update_loan(sender, instance, **kwargs):
     except Exception as e:
         logger.warning(f"Error: {e}")
         # print(f"Error while updating laon: {e}")
-    # loan.loan_amount = LoanItem.objects.filter(loan=loan).aggregate(total_loanamount=Sum('loanamount'))['total_loanamount']
-    # loan.item_desc = ", ".join([item.itemdesc for item in LoanItem.objects.filter(loan=loan)])
-    # loan.interest = LoanItem.objects.filter(loan=loan).aggregate(total_interest=Sum('interest'))['total_interest'] or 0
-    # loan.save()
+    

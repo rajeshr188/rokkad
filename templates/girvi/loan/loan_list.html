@@ -118,9 +118,8 @@
     <h1 class="h2">{%trans "Loans" %}</h1>
     <div class="btn-toolbar mb-md-0">
       <div class="btn-group mr-2">
-        <a class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}"
-          hx-swap="innerHTML transition:true" hx-target="#loan-content"
-          hx-trigger="click,keyup[shiftKey&&key=='N'] from:body" role="button">
+        <a class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}" hx-swap="innerHTML transition:true"
+          hx-target="#loan-content" hx-trigger="click,keyup[shiftKey&&key=='N'] from:body" role="button">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle"
             viewBox="0 0 16 16">
             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
@@ -154,9 +153,12 @@
           </button>
           <ul class="dropdown-menu">
             {% for format in export_formats %}
-            <li><a class="dropdown-item" href="{% export_url format %}"><code>.{{format}}</code></a></li>
+            <li> 
+              <a class="dropdown-item"
+                href="{% export_url format %}">
+                <code>.{{format}}</code></a>
+            </li>
             {% endfor %}
-
           </ul>
         </div>
 
@@ -192,7 +194,7 @@
                 Select All
               </label>
             </div>
-  
+
           </div>
           <div class="col">
             <p>
@@ -220,8 +222,8 @@
                       </svg></a>
                   </li>
                   <li>
-                    <a class="dropdown-item link-success" hx-get="{% url 'girvi:bulk_release'%}" hx-include="[name='selection']"
-                      hx-push-url="true">
+                    <a class="dropdown-item link-success" hx-get="{% url 'girvi:bulk_release'%}"
+                      hx-include="[name='selection']" hx-push-url="true">
                       {%trans "Release"%}
                     </a>
                   </li>
@@ -240,8 +242,9 @@
                     <hr class="dropdown-divider">
                   </li>
                   <li>
-                    <a class="dropdown-item dropdown-item-danger link-danger" hx-post="{% url 'girvi:girvi_loan_deletemultiple'%}"
-                      hx-include="[name='selection']" hx-target="#table" hx-vals='{"use_block":"table"}'
+                    <a class="dropdown-item dropdown-item-danger link-danger"
+                      hx-post="{% url 'girvi:girvi_loan_deletemultiple'%}" hx-include="[name='selection']"
+                      hx-target="#table" hx-vals='{"use_block":"table"}'
                       hx-confirm="Are you sure to delete selected items?">
                       {%trans "Delete"%}
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -253,7 +256,7 @@
                       </svg>
                     </a>
                   </li>
-  
+
                 </ul>
               </div>
             </div>
@@ -275,7 +278,7 @@
         {% render_table table %}
         {%endblock%}
       </div>
-      
+
     </div>
 
   </div>
