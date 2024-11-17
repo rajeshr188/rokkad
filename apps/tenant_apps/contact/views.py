@@ -4,7 +4,6 @@ import uuid
 from datetime import datetime
 from importlib import import_module
 
-# from actstream import action
 from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
@@ -484,35 +483,6 @@ def customer_pic_set_default(request, pk):
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
 
-# @login_required
-# def relationship_save(request, from_customer_id, relationship_id=None):
-#     from_customer = get_object_or_404(Customer, pk=from_customer_id)
-#     form = CustomerRelationshipForm(request.POST or None, customer_id=from_customer.id)
-
-#     if relationship_id:
-#         relationship_instance = get_object_or_404(
-#             CustomerRelationship, pk=relationship_id
-#         )
-#         form = CustomerRelationshipForm(
-#             request.POST or None, instance=relationship_instance, customer_id=from_customer.id
-#         )
-
-#     if request.method == "POST":
-#         if form.is_valid():
-#             relationship_instance = form.save(commit=False)
-#             relationship_instance.customer = from_customer
-#             relationship_instance.save()
-#             messages.success(request, f"Relationship {relationship_instance} updated.")
-#             response = HttpResponse()
-#             response["HX-Trigger"] = "listChanged"
-#             return response
-
-#     return render(
-#         request,
-#         "partials/crispy_form.html",
-#         {"form": form, "customer": from_customer},
-#     )
-
 
 @login_required
 def relationship_save(request, customer_id, relationship_id=None):
@@ -623,10 +593,6 @@ def contact_list(request, pk: int = None):
 
 def contact_set_default(request, pk):
     contact = get_object_or_404(Contact, pk=pk)
-    # customer = contact.customer
-    # # Update all related Contact instances to set is_default to False
-    # Contact.objects.filter(customer=customer).update(is_default=False)
-    # # Set the selected Contact instance to be the default
     contact.is_default = True
     contact.save()
     messages.success(request, f"Contact {contact} set as default.")
@@ -697,10 +663,6 @@ def address_create_or_update(request, customer_pk=None, address_pk=None):
 
 def address_set_default(request, pk):
     address = get_object_or_404(Address, pk=pk)
-    # customer = address.customer
-    # # Update all related Address instances to set is_default to False
-    # Address.objects.filter(customer=customer).update(is_default=False)
-    # # Set the selected Address instance to be the default
     address.is_default = True
     address.save()
     messages.success(request, f"Address {address} set as default.")

@@ -73,6 +73,7 @@ class Journal(models.Model):
             self.journal_entries.delete()
 
     def get_transactions(self):
+        # to be implemented by the subclass or notimplementederror
         lt = []
         at = []
         # to be defined by the subclass

@@ -82,6 +82,8 @@ class Customer(models.Model):
     relatedto = models.CharField(
         max_length=30, blank=True, null=True, verbose_name=_("Related To")
     )
+    # dob = models.DateField(null=True, blank=True, verbose_name=_("Date of Birth"))
+    # email_id = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
     active = models.BooleanField(blank=True, default=True, verbose_name=_("Active"))
     # pricing_tier = models.ForeignKey(
     #     "product.PricingTier", on_delete=models.CASCADE, null=True, blank=True
