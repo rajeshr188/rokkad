@@ -209,10 +209,9 @@ class LoanItemAdmin(admin.TabularInline):
     # resource_class = LoanItemResource
     list_display = ("loan", "itemdesc", "itemtype", "weight", "loanamount")
     search_fields = ["loan__loan_id", "itemdesc"]
-    autocomplete_fields = [
-        "loan",
-    ]
+    autocomplete_fields = ["loan",]
     model = LoanItem
+    fk_name = "loan"
 
 
 class ReleaseAdminForm(forms.ModelForm):
