@@ -527,14 +527,14 @@ class LoanItem(models.Model):
         max_length=100, blank=True, null=True, verbose_name="Item"
     )
 
-    # is_repledged = models.BooleanField(default=False)
-    # repledged_to = models.ForeignKey(
-    #     'Loan',
-    #     on_delete=models.SET_NULL,
-    #     null=True,
-    #     blank=True,
-    #     related_name='repledged_items'
-    # )
+    is_repledged = models.BooleanField(default=False)
+    repledged_to = models.ForeignKey(
+        'Loan',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='repledged_items'
+    )
 
     
     journal_entries = GenericRelation(JournalEntry, related_query_name="loanitem_doc")
@@ -703,13 +703,13 @@ class LoanItem(models.Model):
     def get_item_pic(self):
         return self.pic.url if self.pic and self.pic else None
     
-    # @property
-    # def is_available_for_repledge(self):
-    #     return (
-    #         not self.is_repledged and 
-    #         not self.loan.is_released and
-    #         self.loan.loan_type == self.loan.LoanType.GIVEN
-    #     )
+    @property
+    def is_available_for_repledge(self):
+        return (
+            not self.is_repledged and 
+            not self.loan.is_released and
+            self.loan.loan_type == self.loan.LoanType.GIVEN
+        )
 
 
 class LoanItemPic(models.Model):

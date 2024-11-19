@@ -228,11 +228,11 @@ class CompanyForm(forms.ModelForm):
                     .exclude(pk=self.instance.pk)
                     .exists()
                 ):
-                    raise ValidationError("Company with this name already exists.")
+                    raise forms.ValidationError("Company with this name already exists.")
             else:
                 # Check for new instances
                 if Company.objects.filter(name=name).exists():
-                    raise ValidationError("Company with this name already exists.")
+                    raise forms.ValidationError("Company with this name already exists.")
         return name
 
 

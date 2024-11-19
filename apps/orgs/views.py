@@ -81,7 +81,7 @@ def company_create(request):
                     company=company,
                     role=Role.objects.get(name="Owner"),
                 )
-                request.user.set_workspace(company)
+                request.user.profile.set_workspace(company)
             return redirect("orgs_company_list")
     else:
         form = CompanyForm()
@@ -123,7 +123,7 @@ def company_update(request, company_id):
     )
 
 
-@roles_required(["Owner", "Admin"])
+# @roles_required(["Owner", "Admin"])
 def company_delete(request, company_id):
     company = get_object_or_404(Company, id=company_id)
 
@@ -137,14 +137,13 @@ def company_delete(request, company_id):
             return redirect("error_page")  # Redirect to an error page
 
         # Switch to the public schema before deleting the company
-        with schema_context(get_public_schema_name()):
+        with schema_context(company.schema_name):
             company.delete()
-            print(f"public_schema: {get_public_schema_name()}")
+            
             # Reset the user's workspace to the public schema
-            print(f"request.user.workspace: {request.user.workspace}")
             request.user.workspace = Company.objects.get(name=get_public_schema_name())
             request.user.save()
-            print(f"request.user.workspace: {request.user.workspace}")
+            
         return redirect("orgs_company_list")
 
 
