@@ -52,12 +52,6 @@ pg schema clone
 LOANAMOUNT ON LOAN FORM.ADAPT LOANAMOUNT ON LOANITEMS BASED ON LOANAMOUNT ON LOANMODEL
 improve company creation and tenant setting 
 
-admin:  
-    public:
-            superuser can manage tenants and membership
-    tenants:
-            only members,admin,owner can access tenant specific models
-
 backup of database is a task handled by celery
 
 when storage backend is r2 cloudflare image.path will break so use image.url
