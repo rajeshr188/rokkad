@@ -130,7 +130,7 @@ def company_dashboard(request):
     # context['s_map'] = round(total_sbal_ratecut['bal']/total_sbal_ratecut['net_wt'],3)
     customers = Customer.objects.all()
     context["total_customers"] = customers.filter(active=True).count()
-
+    context['item_loanamount_avg'] = get_itemtype_averages()
     # Optimize the query for new customers
     context["new_customers"] = customers.only(
         "id", "name", "customer_type"

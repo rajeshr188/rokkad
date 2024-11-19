@@ -129,6 +129,7 @@
       </div>
     </div>
   </div>
+
   <div class="col-sm-6 col-md-3">
     <div class="card card-stats card-round">
       <div class="card-body">
@@ -161,19 +162,66 @@
     </div>
   </div>
 </div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+  {% for item_type, stats in item_loanamount_avg.items %}
+    <div class="col">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center gap-2">
+            {% if item_type == 'Gold' %}
+              <i class="bi bi-circle-fill text-warning"></i>
+            {% elif item_type == 'Silver' %}
+              <i class="bi bi-circle-fill text-secondary"></i>
+            {% else %}
+              <i class="bi bi-circle-fill text-bronze"></i>
+            {% endif %}
+            {{ item_type }}
+          </h5>
+          
+          <div class="card-text">
+            <div class="d-flex justify-content-between mb-2">
+              <span>Average per gram:</span>
+              <span class="fw-bold">₹{{ stats.avg_per_gram|floatformat:2 }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Total weight:</span>
+              <span>{{ stats.total_weight|floatformat:2 }}g</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span>Items:</span>
+              <span>{{ stats.count }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer bg-transparent">
+          <small class="text-muted">
+            Total amount: ₹{{ stats.total_amount|floatformat:2 }}
+          </small>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<style>
+.text-bronze {
+  color: #cd7f32;
+}
+</style>
 <div class="row">
   <div class="col-md-6">
     <div class="card card-round">
       <div class="card-header">
         <div class="card-head-row">
-          <div class="card-title">Loan Distribution</div>
+          <div class="card-title">Loan Amount Distribution</div>
         </div>
       </div>
       <div class="card-body">
-        <h1>License-wise Loan Amount Distribution</h1>
+        <h1>License-wise </h1>
     <canvas id="licenseChart"></canvas>
 
-    <h1>Series-wise Loan Amount Distribution</h1>
+    <h1>Series-wise </h1>
     <canvas id="seriesChart"></canvas>
 
     <script>

@@ -4,25 +4,25 @@ from django.utils.translation import gettext_lazy as _
 
 
 class CustomUser(AbstractUser):
-    workspace = models.ForeignKey(
-        "orgs.Company",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        default=None,
-        verbose_name=_("Workspace"),
-    )
-    profile_picture = models.ImageField(
-        upload_to="profile_pictures/", null=True, blank=True
-    )
-    social_profile_picture = models.URLField(max_length=200, null=True, blank=True)
+    # workspace = models.ForeignKey(
+    #     "orgs.Company",
+    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     blank=True,
+    #     default=None,
+    #     verbose_name=_("Workspace"),
+    # )
+    # profile_picture = models.ImageField(
+    #     upload_to="profile_pictures/", null=True, blank=True
+    # )
+    # social_profile_picture = models.URLField(max_length=200, null=True, blank=True)
 
     def __str__(self):
         return self.email
 
-    def set_workspace(self, workspace):
-        self.workspace = workspace
-        self.save()
+    # def set_workspace(self, workspace):
+    #     self.workspace = workspace
+    #     self.save()
 
     # def delete(self, *args, **kwargs):
     #     for tenant in self.memberships.all():

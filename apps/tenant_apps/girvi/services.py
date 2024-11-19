@@ -1,3 +1,4 @@
+from decimal import Decimal
 import re
 from collections import Counter
 from datetime import datetime
@@ -5,7 +6,7 @@ from datetime import datetime
 from django.db import transaction
 from django.db.models import (Avg, Case, Count, F, IntegerField, Max, OuterRef,
                               Q, Subquery, Sum, Value, When, Window)
-from django.db.models.functions import ExtractYear, TruncDate
+from django.db.models.functions import ExtractYear, TruncDate, Coalesce
 
 from .models import (Customer, License, Loan, LoanItem, LoanPayment, Release,
                      Series)
@@ -144,11 +145,54 @@ def get_unreleased_loans_by_year():
 
 
 def get_loanamount_by_itemtype():
-    query = LoanItem.objects.values("itemtype").annotate(  # Group by loan type
+    query = LoanItem.objects.filter(
+            loan__release__isnull=True,
+            loan__loan_type='Given'
+        ).values("itemtype").annotate(  # Group by loan type
         total_loan_amount=Sum("loanamount")
     )
     return query
 
+from django.db.models import F, Sum, Count, Case, When, Value, ExpressionWrapper, DecimalField
+from django.db.models.functions import Coalesce
+from decimal import Decimal
+
+def get_itemtype_averages():
+    """Calculate average loan amount per gram for each item type."""
+    try:
+        stats = LoanItem.objects.filter(
+            loan__release__isnull=True,
+            loan__loan_type='Given'
+        ).values('itemtype').annotate(
+            total_weight=Coalesce(Sum('weight'), Decimal('0.00')),
+            total_amount=Coalesce(Sum('loanamount'), Decimal('0.00'))
+        ).annotate(
+            avg_per_gram=Case(
+                When(
+                    Q(total_weight__gt=0),  # Compare annotated field instead of Sum
+                    then=ExpressionWrapper(
+                        F('total_amount') / F('total_weight'),
+                        output_field=DecimalField(max_digits=10, decimal_places=2)
+                    )
+                ),
+                default=Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            ),
+            count=Count('id')
+        ).order_by('itemtype')
+
+        return {
+            item['itemtype']: {
+                'avg_per_gram': item['avg_per_gram'],
+                'total_weight': item['total_weight'],
+                'total_amount': item['total_amount'],
+                'count': item['count']
+            }
+            for item in stats
+        }
+    except Exception as e:
+        print(f"Error calculating averages: {e}")
+        return {}   
 
 def get_interest_paid():
     data = (

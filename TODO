@@ -78,4 +78,4 @@ journalctl -u gunicorn --output=short-precise
 # Filter by log level (error logs only)
 journalctl -u gunicorn -p err
 
-sync migrations on local and server hint: squash migrations
+
