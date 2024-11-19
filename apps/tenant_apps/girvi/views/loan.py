@@ -35,7 +35,7 @@ from ..tables import LoanTable
 def ld(request):
     # TODO get last date by series
 
-    default_date = request.user.workspace.preferences["Loan__Default_Date"]
+    default_date = request.user.profile.workspace.preferences["Loan__Default_Date"]
     user_timezone = "Asia/Kolkata"
     user_tz = pytz.timezone(user_timezone)
     if default_date == "N":
@@ -56,11 +56,11 @@ def get_interestrate(request):
     metal = request.GET["itemtype"]
     interest = 0
     if metal == "Gold":
-        interest = request.user.workspace.preferences["Interest_Rate__gold"]
+        interest = request.user.profile.workspace.preferences["Interest_Rate__gold"]
     elif metal == "Silver":
-        interest = request.user.workspace.preferences["Interest_Rate__silver"]
+        interest = request.user.profile.workspace.preferences["Interest_Rate__silver"]
     else:
-        interest = request.user.workspace.preferences["Interest_Rate__other"]
+        interest = request.user.profile.workspace.preferences["Interest_Rate__other"]
     form = LoanItemForm(initial={"interestrate": interest})
     context = {
         "field": form["interestrate"],
