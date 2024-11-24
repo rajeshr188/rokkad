@@ -102,6 +102,18 @@ class LoanItemFilter(django_filters.FilterSet):
     loan = django_filters.ModelChoiceFilter(
         widget=LoansWidget, queryset=Loan.objects.all()
     )
+    status = django_filters.ChoiceFilter(
+        choices=LoanFilter.STATUS_CHOICES,
+        method="filter_status",
+        label="Status",
+    )
+
+    def filter_status(self, queryset, name, value):
+        if value == "Released":
+            return queryset.filter(loan__release__isnull=False)
+        elif value == "UnReleased":
+            return queryset.filter(loan__release__isnull=True)
+        return queryset
     class Meta:
         model = LoanItem
         fields = {

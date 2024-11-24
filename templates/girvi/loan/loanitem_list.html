@@ -33,7 +33,7 @@
             <div class="col-md-9 " id="table">
               {%block table%}
               <div class="table-responsive">
-                
+                <p>Total items: {{ table.paginator.count }}</p> <!-- Display queryset count -->
                 {% render_table table %}
                 {%endblock%}
               </div>
