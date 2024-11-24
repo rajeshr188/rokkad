@@ -168,6 +168,7 @@ urlpatterns += (
         views.loanitem_delete,
         name="girvi_loanitem_delete",
     ),
+    path('loanitems/', views.loanitem_list, name='loanitem_list'),
 )
 
 # urls for LoanPayment
