@@ -362,6 +362,79 @@ class Loan(models.Model):
         # return combined_transactions
         return list(ledger_transactions)
 
+    # def get_transactions(self):
+    #     if not hasattr(self.customer, "account"):
+    #         self.customer.save()
+    #     if all([self.loan_amount, self.interest]) == 0:
+    #         return None, None
+    #     document_charge = Money(10, "INR")
+    #     interest = Money(self.interest, "INR")
+    #     amount = Money(self.loan_amount, "INR") 
+        
+    #     if self.loan_type == self.LoanType.TAKEN:
+    #         lt = [
+               
+    #             # {"ledgerno": "Loans", "ledgerno_dr": "Cash", "amount": amount},
+    #             # {
+    #             #     "ledgerno": "Cash",
+    #             #     "ledgerno_dr": "Interest Paid",
+    #             #     "amount": interest,
+    #             # },
+    #         ]
+    #         at = [
+    #             {
+    #                 "ledgerno": "Cash",
+    #                 "XactTypeCode": "Dr",
+    #                 "XactTypeCode_Ext": "LT",
+    #                 "Account": self.customer.account,
+    #                 "amount": amount-interest-document_charge,
+    #             },
+    #             {
+    #                 "ledgerno": "Interest Paid",
+    #                 "XactTypeCode": "Dr",
+    #                 "XactTypeCode_Ext": "IP",
+    #                 "Account": self.customer.account,
+    #                 "amount": interest,
+    #             },
+    #             {
+    #                 "ledgerno": "Document Charge Expense",
+    #                 "XactTypeCode": "Dr",
+    #                 "XactTypeCode_Ext": "DCE",
+    #                 "Account": self.customer.account,
+    #                 "amount": document_charge,
+    #             },
+    #         ]
+    #     else:
+    #         lt = []
+    #         at = [
+                
+    #             {
+    #                 "ledgerno": "Cash",
+    #                 "XactTypeCode": "Cr",
+    #                 "XactTypeCode_Ext": "LG",
+    #                 "Account": self.customer.account,
+    #                 "amount": amount + interest + document_charge,
+    #             },
+    #             {
+    #                 "ledgerno": "Interest Receivables",
+    #                 "XactTypeCode": "Dr",
+    #                 "XactTypeCode_Ext": "IR",
+    #                 "Account": self.customer.account,
+    #                 "amount": interest,
+    #             },
+    #             {
+    #                 "ledgerno": "Document Charge",
+    #                 "XactTypeCode": "Dr",
+    #                 "XactTypeCode_Ext": "DC",
+    #                 "Account": self.customer.account,
+    #                 "amount": document_charge,
+    #             },
+             
+                
+          
+    #         ]
+    #     return lt, at
+
     def get_transactions(self):
         if not hasattr(self.customer, "account"):
             self.customer.save()
@@ -414,7 +487,7 @@ class Loan(models.Model):
                     "XactTypeCode": "Cr",
                     "XactTypeCode_Ext": "LG",
                     "Account": self.customer.account,
-                    "amount": amount,
+                    "amount": amount + interest + document_charge,
                 },
                 {
                     "ledgerno": "Cash",

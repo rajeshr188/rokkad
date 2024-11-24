@@ -1,0 +1,45 @@
+<!-- loanitem_list.html -->
+{% extends 'tenant.html'%}
+{% load render_table from django_tables2 %}
+
+{% block content %}
+
+    <div class="container mt-5">
+        <h1>Loan Items</h1>
+        <div class="row">
+            <div class="col-md-3" id="filter">
+              <!-- Filter Toggle Button (Mobile Only) -->
+              <div class="d-md-none mb-3">
+                <button class="btn btn-primary w-100" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#filterPanel"
+                        aria-expanded="false"
+                        aria-controls="filterPanel">
+                  <i class="bi bi-funnel"></i> 
+                  <span>Filters</span>
+                  <i class="bi bi-chevron-down ms-2"></i>
+                </button>
+              </div>
+              
+              <!-- Filter Panel -->
+              <div class="collapse d-md-block" id="filterPanel">
+                <div class="card card-body border-0">
+                  {% include "filter.html"%}
+                </div>
+              </div>
+            </div>
+                
+            <div class="col-md-9 " id="table">
+              {%block table%}
+              <div class="table-responsive">
+                
+                {% render_table table %}
+                {%endblock%}
+              </div>
+        
+            </div>
+        
+          </div>
+    </div>
+{% endblock %}  

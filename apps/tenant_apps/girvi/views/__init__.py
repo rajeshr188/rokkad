@@ -10,3 +10,4 @@ from .reports import *
 from .series import *
 from .statement import *
 from .storagebox import *
+from .loanitem import *

@@ -17,10 +17,7 @@ class LoanFilter(django_filters.FilterSet):
         queryset=Customer.objects.all(),
         widget=CustomerWidget(),
     )
-    # loan_date = django_filters.DateFromToRangeFilter(
-    #     field_name="loan_date",
-    #     help_text="dd/mm/yy", label="Loan Date"
-    # )
+    
     loan_date_range = django_filters.DateFromToRangeFilter(
         field_name="loan_date",
         label="Loan Date Range",
@@ -31,9 +28,9 @@ class LoanFilter(django_filters.FilterSet):
     # notice = django_filters.CharFilter(
     #     field_name="notifications__notice_type", lookup_expr="icontains"
     # )
-    # loan_type = django_filters.ChoiceFilter(
-    #     choices=Loan.LoanType.choices, empty_label="Select Loan Type"
-    # )
+    loan_type = django_filters.ChoiceFilter(
+        choices=Loan.LoanType.choices, empty_label="Select Loan Type"
+    )
     def filter_item_type(self, queryset, name, value):
         return queryset.filter(loanitems__itemtype=value)
 
@@ -101,6 +98,23 @@ class LoanFilter(django_filters.FilterSet):
     def sunken(self, queryset, name, value):
         return queryset.filter(is_overdue=value)
 
+class LoanItemFilter(django_filters.FilterSet):
+    loan = django_filters.ModelChoiceFilter(
+        widget=LoansWidget, queryset=Loan.objects.all()
+    )
+    class Meta:
+        model = LoanItem
+        fields = {
+            'loan': ['exact'],
+            'itemtype': ['exact'],
+            'quantity': ['gte', 'lte'],
+            'weight': ['gte', 'lte'],
+            'purity': ['gte', 'lte'],
+            'loanamount': ['gte', 'lte'],
+            'interestrate': ['gte', 'lte'],
+            'interest': ['gte', 'lte'],
+            'is_repledged': ['exact'],
+        }
 
 class LoanPaymentFilter(django_filters.FilterSet):
     class Meta:
