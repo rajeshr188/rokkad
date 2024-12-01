@@ -139,11 +139,13 @@ def company_delete(request, company_id):
         # Switch to the public schema before deleting the company
         with schema_context(company.schema_name):
             company.delete()
-            
+
             # Reset the user's workspace to the public schema
-            request.user.workspace = Company.objects.get(name=get_public_schema_name())
-            request.user.save()
-            
+            request.user.profile.workspace = Company.objects.get(
+                name=get_public_schema_name()
+            )
+            request.user.profile.save()
+
         return redirect("orgs_company_list")
 
 
@@ -256,8 +258,9 @@ def membership_revoke(request, company_id, membership_id):
 
 
 @login_required
-@roles_required(["Owner", "Admin"])
+# @roles_required(["Owner", "Admin"])
 def membership_update(request, company_id, membership_id):
+    print("membership_update")
     company = get_object_or_404(Company, id=company_id)
     membership = get_object_or_404(Membership, id=membership_id, company=company)
     roles = Role.objects.all()

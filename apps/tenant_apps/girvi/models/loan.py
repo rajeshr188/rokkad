@@ -1,3 +1,4 @@
+import logging
 import re
 from decimal import Decimal
 
@@ -7,8 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
-from django.db.models import (DecimalField, ExpressionWrapper, F,Q,
-                              Func,Sum)
+from django.db.models import DecimalField, ExpressionWrapper, F, Func, Q, Sum
 from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
 from django.urls import reverse
@@ -23,6 +23,8 @@ from apps.tenant_apps.rates.models import Rate
 
 from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
                         UnReleasedManager)
+
+logger = logging.getLogger(__name__)
 
 
 class Loan(models.Model):
@@ -141,7 +143,7 @@ class Loan(models.Model):
 
     def formatted_weight(self, joiner=","):
         return joiner.join(
-            [f"{item['itemtype']} {item['total_weight']} " for item in self.get_weight]
+            f"{item['itemtype']} {item['total_weight']}" for item in self.get_weight
         )
 
     def formatted_pure(self, joiner=", "):
@@ -151,7 +153,15 @@ class Loan(models.Model):
 
     @property
     def get_loanamount(self):
-        return self.loanitems.aggregate(Sum("loanamount"))["loanamount__sum"] or 0
+        if self.loan_type == self.LoanType.GIVEN:
+            return self.loanitems.aggregate(Sum("loanamount"))["loanamount__sum"] or 0
+        elif self.loan_type == self.LoanType.TAKEN:
+            return (
+                self.repledgedloanitems.aggregate(Sum("repledged_loanamount"))[
+                    "repledged_loanamount__sum"
+                ]
+                or 0
+            )
 
     @property
     def get_loanamount_with_currency(self):
@@ -192,7 +202,6 @@ class Loan(models.Model):
     def noofmonths(self, date=None):
         if date is None:
             date = timezone.now()
-        # date = date.replace(tzinfo=None)
         nom = relativedelta(date, self.loan_date)
         return nom.years * 12 + nom.months
 
@@ -203,11 +212,22 @@ class Loan(models.Model):
 
     def get_current_value(self):
         try:
-            total_current_value = sum(
-                loan_item.current_value()
-                for loan_item in self.loanitems.select_related("item").all()
-            )
+            if self.loan_type == self.LoanType.GIVEN:
+                total_current_value = sum(
+                    loan_item.current_value()
+                    for loan_item in self.loanitems.select_related("item").all()
+                )
+            elif self.loan_type == self.LoanType.TAKEN:
+                total_current_value = sum(
+                    repledged_item.original_loanitem.current_value()
+                    for repledged_item in self.repledgedloanitems.select_related(
+                        "original_loanitem__item"
+                    ).all()
+                )
+            else:
+                total_current_value = 0
         except Exception as e:
+            logger.error(f"An error occurred while calculating current value: {e}")
             return 0
 
         return total_current_value
@@ -279,14 +299,42 @@ class Loan(models.Model):
     #     super(Loan, self).save(*args, **kwargs)
 
     def update(self):
-        item_desc = ", ".join(
-            [item.itemdesc for item in LoanItem.objects.filter(loan=self)]
-        )
-        # Aggregate the loan amounts and interests
-        aggregates = self.loanitems.aggregate(
-            loan_amount=Coalesce(Sum("loanamount"), 0, output_field=DecimalField()),
-            interest=Coalesce(Sum("interest"), 0, output_field=DecimalField()),
-        )
+        # # Aggregate the loan amounts and interests
+        # aggregates = self.loanitems.aggregate(
+        #     loan_amount=Coalesce(Sum("loanamount"), 0, output_field=DecimalField()),
+        #     interest=Coalesce(Sum("interest"), 0, output_field=DecimalField()),
+        # )
+        # loan_amount = aggregates["loan_amount"]
+        # interest = aggregates["interest"]
+        if self.loan_type == self.LoanType.GIVEN:
+            item_desc = ", ".join(
+                [item.itemdesc for item in LoanItem.objects.filter(loan=self)]
+            )
+            print(f"in loan {self.loan_id} update Given")
+            # Aggregate the loan amounts and interests for given loans
+            aggregates = self.loanitems.aggregate(
+                loan_amount=Coalesce(Sum("loanamount"), 0, output_field=DecimalField()),
+                interest=Coalesce(Sum("interest"), 0, output_field=DecimalField()),
+            )
+
+        elif self.loan_type == self.LoanType.TAKEN:
+            item_desc = ", ".join(
+                [
+                    item.original_loanitem.itemdesc
+                    for item in RepledgedLoanItem.objects.filter(loan=self)
+                ]
+            )
+            print("in loan update Taken")
+            # Aggregate the loan amounts and interests for taken loans
+            aggregates = self.repledgedloanitems.aggregate(
+                loan_amount=Coalesce(
+                    Sum("repledged_loanamount"), 0, output_field=DecimalField()
+                ),
+                interest=Coalesce(
+                    Sum("original_loanitem__interest"), 0, output_field=DecimalField()
+                ),
+            )
+
         loan_amount = aggregates["loan_amount"]
         interest = aggregates["interest"]
 
@@ -369,11 +417,11 @@ class Loan(models.Model):
     #         return None, None
     #     document_charge = Money(10, "INR")
     #     interest = Money(self.interest, "INR")
-    #     amount = Money(self.loan_amount, "INR") 
-        
+    #     amount = Money(self.loan_amount, "INR")
+
     #     if self.loan_type == self.LoanType.TAKEN:
     #         lt = [
-               
+
     #             # {"ledgerno": "Loans", "ledgerno_dr": "Cash", "amount": amount},
     #             # {
     #             #     "ledgerno": "Cash",
@@ -407,7 +455,7 @@ class Loan(models.Model):
     #     else:
     #         lt = []
     #         at = [
-                
+
     #             {
     #                 "ledgerno": "Cash",
     #                 "XactTypeCode": "Cr",
@@ -429,9 +477,7 @@ class Loan(models.Model):
     #                 "Account": self.customer.account,
     #                 "amount": document_charge,
     #             },
-             
-                
-          
+
     #         ]
     #     return lt, at
 
@@ -444,43 +490,32 @@ class Loan(models.Model):
         interest = Money(self.interest, "INR")
         document_charge = Money(10, "INR")
         if self.loan_type == self.LoanType.TAKEN:
-            lt = [
-                # {"ledgerno": "Loans", "ledgerno_dr": "Cash", "amount": amount},
-                # {
-                #     "ledgerno": "Cash",
-                #     "ledgerno_dr": "Interest Paid",
-                #     "amount": interest,
-                # },
-            ]
+            lt = {}
             at = [
                 {
-                    "ledgerno": "Loans",
-                    "xacttypecode": "Dr",
-                    "xacttypecode_ext": "LT",
-                    "account": self.customer.account,
-                    "amount": amount,
+                    "ledgerno": "Cash",
+                    "XactTypeCode": "Dr",
+                    "XactTypeCode_Ext": "LT",
+                    "Account": self.customer.account,
+                    "amount": amount + interest + document_charge,
                 },
-                # {
-                #     "ledgerno": "Interest Payable",
-                #     "xacttypecode": "Cr",
-                #     "xacttypecode_ext": "IP",
-                #     "account": self.loan.customer.account,
-                #     "amount": interest,
-                # },
+                {
+                    "ledgerno": "Cash",
+                    "XactTypeCode": "Cr",
+                    "XactTypeCode_Ext": "IP",
+                    "Account": self.customer.account,
+                    "amount": interest,
+                },
+                {
+                    "ledgerno": "Cash",
+                    "XactTypeCode": "Cr",
+                    "XactTypeCode_Ext": "DCE",
+                    "Account": self.customer.account,
+                    "amount": document_charge,
+                },
             ]
         else:
-            lt = [
-                # {
-                #     "ledgerno": "Cash",
-                #     "ledgerno_dr": "Loans & Advances",
-                #     "amount": amount,
-                # },
-                # {
-                #     "ledgerno": "Interest Received",
-                #     "ledgerno_dr": "Cash",
-                #     "amount": interest,
-                # },
-            ]
+            lt = {}
             at = [
                 {
                     "ledgerno": "Cash",
@@ -520,12 +555,8 @@ class Loan(models.Model):
 
     def delete_txns(self):
         je = self.get_journal_entry()
-        at = ledger_transactions = AccountTransaction.objects.filter(
-            journal_entry=je
-        ).delete()
-        lt = ledger_transactions = LedgerTransaction.objects.filter(
-            journal_entry=je
-        ).delete()
+        AccountTransaction.objects.filter(journal_entry=je).delete()
+        LedgerTransaction.objects.filter(journal_entry=je).delete()
 
     def create_transactions(self):
         # print("Creating transactions")
@@ -601,27 +632,32 @@ class LoanItem(models.Model):
     )
 
     is_repledged = models.BooleanField(default=False)
-    repledged_to = models.ForeignKey(
-        'Loan',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='repledged_items'
-    )
 
-    
     journal_entries = GenericRelation(JournalEntry, related_query_name="loanitem_doc")
 
+    class Meta:
+        ordering = (
+            "id",
+            "loan",
+        )
+        get_latest_by = "id"
+
     def __str__(self):
-        return f"{self.itemdesc} - {self.quantity}"
+        return (
+            f"{self.loan.loan_id}:₹{self.loanamount}({self.itemdesc} - {self.quantity})"
+        )
 
     def get_absolute_url(self):
         # return self.loan.get_absolute_url()
         return reverse("girvi:girvi_loanitem_detail", args=(self.pk,))
 
+    # def get_hx_edit_url(self):
+    #     kwargs = {"parent_id": self.loan.id, "id": self.id}
+    #     return reverse("girvi:hx-loanitem-detail", kwargs=kwargs)
+
     def get_hx_edit_url(self):
         kwargs = {"parent_id": self.loan.id, "id": self.id}
-        return reverse("girvi:hx-loanitem-detail", kwargs=kwargs)
+        return reverse("girvi:loanitem_create_update", kwargs=kwargs)
 
     def get_delete_url(self):
         return reverse(
@@ -775,14 +811,52 @@ class LoanItem(models.Model):
 
     def get_item_pic(self):
         return self.pic.url if self.pic and self.pic else None
-    
+
     @property
     def is_available_for_repledge(self):
         return (
-            not self.is_repledged and 
-            not self.loan.is_released and
-            self.loan.loan_type == self.loan.LoanType.GIVEN
+            not self.is_repledged
+            and not self.loan.is_released
+            and self.loan.loan_type == self.loan.LoanType.GIVEN
         )
+
+
+class RepledgedLoanItem(models.Model):
+    original_loanitem = models.ForeignKey(
+        LoanItem, on_delete=models.CASCADE, related_name="repledged_items"
+    )
+    loan = models.ForeignKey(
+        Loan, on_delete=models.CASCADE, related_name="repledgedloanitems"
+    )
+    repledged_loanamount = models.DecimalField(max_digits=10, decimal_places=2)
+    interest_rate = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    interest = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    repledged_date = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Repledged {self.original_loanitem} to {self.loan}"
+
+    def get_absolute_url(self):
+        # return self.loan.get_absolute_url()
+        return reverse("girvi:repledgedloanitem_detail", args=(self.pk,))
+
+    def get_hx_edit_url(self):
+        kwargs = {"parent_id": self.loan.id, "id": self.id}
+        return reverse("girvi:loanitem_create_update", kwargs=kwargs)
+
+    def get_delete_url(self):
+        return reverse(
+            "girvi:girvi_loanitem_delete",
+            kwargs={"id": self.id, "parent_id": self.loan.id},
+        )
+
+    def save(self, *args, **kwargs):
+        # if self.loan.is_released:
+        #     raise ValidationError(
+        #         "Cannot modify LoanItem because related Loan has a Release."
+        #     )
+        self.interest = (self.interest_rate / 100) * self.repledged_loanamount
+        super().save(*args, **kwargs)
 
 
 class LoanItemPic(models.Model):

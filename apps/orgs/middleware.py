@@ -1,6 +1,7 @@
 from django.conf import settings
+from django.core.exceptions import DisallowedHost
 from django.db import connection
-from django.http import Http404, HttpResponseNotFound
+from django.http import Http404
 from django.urls import set_urlconf
 from django_tenants.utils import (get_public_schema_name,
                                   get_public_schema_urlconf,

@@ -7,7 +7,7 @@ from django.utils.html import format_html
 from django.utils.timesince import timesince
 from django_tables2.utils import A
 
-from .models import Loan, Release,LoanItem
+from .models import Loan, LoanItem, Release
 
 
 class ImageColumn(tables.Column):
@@ -26,11 +26,27 @@ class CheckBoxColumnWithName(tables.CheckBoxColumn):
 
 
 class LoanTable(tables.Table):
-    loan_id = tables.Column(verbose_name="LoanID")
-    loan_date = tables.Column(verbose_name="Date", localize=True)
-    item_desc = tables.Column(verbose_name="Description",attrs={"td": {"style": "width: 20px;"}})
-    address = tables.Column(verbose_name="Address", visible = False,accessor="customer.get_address",exclude_from_export=False)
-    lic = tables.Column(verbose_name="License",visible=False,accessor="series.license", exclude_from_export=False)
+    loan_id = tables.Column(
+        verbose_name="LoanID", attrs={"td": {"style": "width: 100px;"}}
+    )
+    loan_date = tables.Column(
+        verbose_name="Date", localize=True, attrs={"td": {"style": "width: 120px;"}}
+    )
+    item_desc = tables.Column(
+        verbose_name="Description", attrs={"td": {"style": "width: 20px;"}}
+    )
+    address = tables.Column(
+        verbose_name="Address",
+        visible=False,
+        accessor="customer.get_address",
+        exclude_from_export=False,
+    )
+    lic = tables.Column(
+        verbose_name="License",
+        visible=False,
+        accessor="series.license",
+        exclude_from_export=False,
+    )
     # pic = ImageColumn()
     # https://stackoverflow.com/questions/12939548/select-all-rows-in-django-tables2/12944647#12944647
     selection = tables.CheckBoxColumn(
@@ -172,7 +188,6 @@ class LoanTable(tables.Table):
             "item_desc",
             "total_weight",
             "loan_amount",
-            
         )
         # https://stackoverflow.com/questions/37513463/how-to-change-color-of-django-tables-row
         row_attrs = {
@@ -185,6 +200,7 @@ class LoanTable(tables.Table):
         }
         empty_text = "There are no loans matching the search criteria..."
         template_name = "table_htmx.html"
+
 
 class LoanItemTable(tables.Table):
     def render_loan(self, record):
@@ -199,12 +215,28 @@ class LoanItemTable(tables.Table):
             record.loan.id,
             record.loan.loan_id,
         )
+
     class Meta:
         model = LoanItem
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("loan", "item", "itemtype", "quantity", "weight", "purity", "loanamount", "interestrate", "interest", "itemdesc", "is_repledged")
+        fields = (
+            "loan",
+            "item",
+            "itemtype",
+            "quantity",
+            "weight",
+            "purity",
+            "loanamount",
+            "interestrate",
+            "interest",
+            "itemdesc",
+            "is_repledged",
+        )
         order_by = "loan"
-        attrs = {"class": "table table-sm table-bordered table-striped-columns table-hover"}  # Add Bootstrap 5 classes
+        attrs = {
+            "class": "table table-sm table-bordered table-striped-columns table-hover"
+        }  # Add Bootstrap 5 classes
+
 
 class ReleaseTable(tables.Table):
     release_id = tables.Column(linkify=True)

@@ -3,7 +3,7 @@ import datetime
 from django.core.cache import cache
 from django.db import models
 from django.db.models import (Case, DecimalField, ExpressionWrapper, F, Func,
-                              OuterRef, Q, Subquery, Sum, Value, When)
+                              OuterRef, Q, Subquery, Sum, Value, When, Window)
 from django.db.models.functions import (Cast, Ceil, Coalesce, ExtractDay,
                                         ExtractMonth, ExtractYear, Round)
 from django.utils import timezone
@@ -129,60 +129,224 @@ class LoanQuerySet(models.QuerySet):
             total_due=F("loan_amount") + F("total_interest"),
             total_gold_weight=Sum(
                 Case(
-                    When(loanitems__itemtype="Gold", then=F("loanitems__weight")),
+                    When(
+                        loan_type="Given",
+                        then=Case(
+                            When(
+                                loanitems__itemtype="Gold", then=F("loanitems__weight")
+                            ),
+                            default=Value(0),
+                            output_field=DecimalField(max_digits=10, decimal_places=2),
+                        ),
+                    ),
+                    When(
+                        loan_type="Taken",
+                        then=Case(
+                            When(
+                                repledgedloanitems__original_loanitem__itemtype="Gold",
+                                then=F("repledgedloanitems__original_loanitem__weight"),
+                            ),
+                            default=Value(0),
+                            output_field=DecimalField(max_digits=10, decimal_places=2),
+                        ),
+                    ),
                     default=Value(0),
-                    output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
                 )
             ),
             total_silver_weight=Sum(
                 Case(
-                    When(loanitems__itemtype="Silver", then=F("loanitems__weight")),
+                    When(
+                        loan_type="Given",
+                        then=Case(
+                            When(
+                                loanitems__itemtype="Silver",
+                                then=F("loanitems__weight"),
+                            ),
+                            default=Value(0),
+                            output_field=DecimalField(max_digits=10, decimal_places=2),
+                        ),
+                    ),
+                    When(
+                        loan_type="Taken",
+                        then=Case(
+                            When(
+                                repledgedloanitems__original_loanitem__itemtype="Silver",
+                                then=F("repledgedloanitems__original_loanitem__weight"),
+                            ),
+                            default=Value(0),
+                            output_field=DecimalField(max_digits=10, decimal_places=2),
+                        ),
+                    ),
                     default=Value(0),
-                    output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
                 )
             ),
             total_bronze_weight=Sum(
                 Case(
-                    When(loanitems__itemtype="Bronze", then=F("loanitems__weight")),
+                    When(
+                        loan_type="Given",
+                        then=Case(
+                            When(
+                                loanitems__itemtype="Bronze",
+                                then=F("loanitems__weight"),
+                            ),
+                            default=Value(0),
+                            output_field=DecimalField(max_digits=10, decimal_places=2),
+                        ),
+                    ),
+                    When(
+                        loan_type="Taken",
+                        then=Case(
+                            When(
+                                repledgedloanitems__original_loanitem__itemtype="Bronze",
+                                then=F("repledgedloanitems__original_loanitem__weight"),
+                            ),
+                            default=Value(0),
+                            output_field=DecimalField(max_digits=10, decimal_places=2),
+                        ),
+                    ),
                     default=Value(0),
-                    output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
                 )
             ),
             pure_gold_weight=Sum(
                 Coalesce(
                     Case(
                         When(
-                            loanitems__itemtype="Gold",
-                            then=F("loanitems__weight") * F("loanitems__purity") / 100,
-                        )
+                            loan_type="Given",
+                            then=Case(
+                                When(
+                                    loanitems__itemtype="Gold",
+                                    then=ExpressionWrapper(
+                                        F("loanitems__weight")
+                                        * F("loanitems__purity")
+                                        / 100,
+                                        output_field=DecimalField(
+                                            max_digits=10, decimal_places=2
+                                        ),
+                                    ),
+                                )
+                            ),
+                        ),
+                        When(
+                            loan_type="Taken",
+                            then=Case(
+                                When(
+                                    repledgedloanitems__original_loanitem__itemtype="Gold",
+                                    then=ExpressionWrapper(
+                                        F(
+                                            "repledgedloanitems__original_loanitem__weight"
+                                        )
+                                        * F(
+                                            "repledgedloanitems__original_loanitem__purity"
+                                        )
+                                        / 100,
+                                        output_field=DecimalField(
+                                            max_digits=10, decimal_places=2
+                                        ),
+                                    ),
+                                )
+                            ),
+                        ),
+                        default=Value(0),
+                        output_field=DecimalField(max_digits=10, decimal_places=2),
                     ),
                     Value(0),
-                ),
-                output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                )
             ),
             pure_silver_weight=Sum(
                 Coalesce(
                     Case(
                         When(
-                            loanitems__itemtype="Silver",
-                            then=F("loanitems__weight") * F("loanitems__purity") / 100,
-                        )
+                            loan_type="Given",
+                            then=Case(
+                                When(
+                                    loanitems__itemtype="Silver",
+                                    then=ExpressionWrapper(
+                                        F("loanitems__weight")
+                                        * F("loanitems__purity")
+                                        / 100,
+                                        output_field=DecimalField(
+                                            max_digits=10, decimal_places=2
+                                        ),
+                                    ),
+                                )
+                            ),
+                        ),
+                        When(
+                            loan_type="Taken",
+                            then=Case(
+                                When(
+                                    repledgedloanitems__original_loanitem__itemtype="Silver",
+                                    then=ExpressionWrapper(
+                                        F(
+                                            "repledgedloanitems__original_loanitem__weight"
+                                        )
+                                        * F(
+                                            "repledgedloanitems__original_loanitem__purity"
+                                        )
+                                        / 100,
+                                        output_field=DecimalField(
+                                            max_digits=10, decimal_places=2
+                                        ),
+                                    ),
+                                )
+                            ),
+                        ),
+                        default=Value(0),
+                        output_field=DecimalField(max_digits=10, decimal_places=2),
                     ),
                     Value(0),
-                ),
-                output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                )
             ),
             pure_bronze_weight=Sum(
                 Coalesce(
                     Case(
                         When(
-                            loanitems__itemtype="Bronze",
-                            then=F("loanitems__weight") * F("loanitems__purity") / 100,
-                        )
+                            loan_type="Given",
+                            then=Case(
+                                When(
+                                    loanitems__itemtype="Bronze",
+                                    then=ExpressionWrapper(
+                                        F("loanitems__weight")
+                                        * F("loanitems__purity")
+                                        / 100,
+                                        output_field=DecimalField(
+                                            max_digits=10, decimal_places=2
+                                        ),
+                                    ),
+                                )
+                            ),
+                        ),
+                        When(
+                            loan_type="Taken",
+                            then=Case(
+                                When(
+                                    repledgedloanitems__original_loanitem__itemtype="Bronze",
+                                    then=ExpressionWrapper(
+                                        F(
+                                            "repledgedloanitems__original_loanitem__weight"
+                                        )
+                                        * F(
+                                            "repledgedloanitems__original_loanitem__purity"
+                                        )
+                                        / 100,
+                                        output_field=DecimalField(
+                                            max_digits=10, decimal_places=2
+                                        ),
+                                    ),
+                                )
+                            ),
+                        ),
+                        default=Value(0),
+                        output_field=DecimalField(max_digits=10, decimal_places=2),
                     ),
                     Value(0),
-                ),
-                output_field=models.DecimalField(max_digits=10, decimal_places=2),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                )
             ),
             current_value=Round(
                 ExpressionWrapper(

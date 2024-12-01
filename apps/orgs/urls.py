@@ -38,7 +38,7 @@ urlpatterns = [
     ),
     path("membership/list/", views.membership_list, name="orgs_membership_list"),
     path(
-        "membership/update/<int:company_id>/<int:membership_id>/",
+        "company/<int:company_id>/membership/<int:membership_id>/update",
         views.membership_update,
         name="orgs_membership_update",
     ),

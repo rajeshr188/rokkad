@@ -1,5 +1,6 @@
 # Create your models here.
 from decimal import Decimal
+
 from django.db import models
 from django.urls import reverse
 

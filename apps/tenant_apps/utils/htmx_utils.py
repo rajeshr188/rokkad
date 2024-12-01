@@ -42,14 +42,19 @@ def for_htmx(
     for this decorator to be applied.
     """
     if len([p for p in [use_block, use_template, use_block_from_params] if p]) != 1:
-        raise ValueError("You must pass exactly one of 'use_template', 'use_block' or 'use_block_from_params=True'")
+        raise ValueError(
+            "You must pass exactly one of 'use_template', 'use_block' or 'use_block_from_params=True'"
+        )
 
     def decorator(view):
         @wraps(view)
         def _view(request, *args, **kwargs):
             resp = view(request, *args, **kwargs)
             if is_htmx(request):
-                if if_hx_target is None or request.headers.get("Hx-Target", None) == if_hx_target:
+                if (
+                    if_hx_target is None
+                    or request.headers.get("Hx-Target", None) == if_hx_target
+                ):
                     blocks_to_use = use_block
                     if not hasattr(resp, "render"):
                         if not resp.content and any(
@@ -64,12 +69,18 @@ def for_htmx(
                             # This is a special case response, it doesn't need modifying:
                             return resp
 
-                        raise ValueError("Cannot modify a response that isn't a TemplateResponse")
+                        raise ValueError(
+                            "Cannot modify a response that isn't a TemplateResponse"
+                        )
                     if resp.is_rendered:
-                        raise ValueError("Cannot modify a response that has already been rendered")
+                        raise ValueError(
+                            "Cannot modify a response that has already been rendered"
+                        )
 
                     if use_block_from_params:
-                        use_block_from_params_val = _get_param_from_request(request, "use_block")
+                        use_block_from_params_val = _get_param_from_request(
+                            request, "use_block"
+                        )
                         if use_block_from_params_val is not None:
                             blocks_to_use = use_block_from_params_val
 
@@ -80,7 +91,12 @@ def for_htmx(
                             blocks_to_use = [blocks_to_use]
 
                         rendered_blocks = [
-                            render_block_to_string(resp.template_name, b, context=resp.context_data, request=request)
+                            render_block_to_string(
+                                resp.template_name,
+                                b,
+                                context=resp.context_data,
+                                request=request,
+                            )
                             for b in blocks_to_use
                         ]
                         # Create new simple HttpResponse as replacement

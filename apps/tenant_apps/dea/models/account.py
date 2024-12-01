@@ -354,3 +354,24 @@ class Accountbalance(models.Model):
 
     def get_ob(self):
         return Balance(self.opening_balance)
+
+
+# class AccountBalance(models.Model):
+# AccountNo = models.OneToOneField(
+#         Account,
+#         on_delete=models.DO_NOTHING,
+#         primary_key=True,
+#         related_name="accountbalance",
+#     )
+#     account_no_id = models.IntegerField(primary_key=True)
+#     contact_id = models.IntegerField()
+#     ls_created = models.DateTimeField()
+#     opening_balance = ArrayField(MoneyValueField(null=True, blank=True))
+#     cr = ArrayField(MoneyValueField(null=True, blank=True))
+#     dr = ArrayField(MoneyValueField(null=True, blank=True))
+#     closing_balance = ArrayField(MoneyValueField(null=True, blank=True))
+
+
+#     class Meta:
+#         managed = False
+#         db_table = 'account_balance'
