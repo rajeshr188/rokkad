@@ -7,6 +7,7 @@ from django import forms
 from django.contrib import admin
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django_select2 import forms as s2forms
@@ -19,7 +20,8 @@ from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.rates.models import Rate
 
 from .models import (License, Loan, LoanItem, LoanItemStorageBox, LoanPayment,
-                     Release, Series, Statement, StatementItem)
+                     Release, RepledgedLoanItem, Series, Statement,
+                     StatementItem)
 
 
 class LoansWidget(s2forms.ModelSelect2Widget):
@@ -51,7 +53,7 @@ class LicenseForm(forms.ModelForm):
 class SeriesForm(forms.ModelForm):
     class Meta:
         model = Series
-        fields = ["name", "license", "is_active"]
+        fields = ["name", "license", "is_active", "loan_type"]
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -309,7 +311,9 @@ class LoanForm(forms.ModelForm):
 
         if not self.cleaned_data["series"].is_active:
             # Using self.add_error to add an error to the 'series' field
-            self.add_error("series", f"Series {series} is Inactive")
+            self.add_error(
+                "series", f"Series {self.cleaned_data['series']} is Inactive"
+            )
 
             # Alternatively, using raise forms.ValidationError to stop processing
             # raise forms.ValidationError(f"Series {series} is Inactive")
@@ -402,6 +406,38 @@ class LoanItemForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class RepledgedLoanItemForm(forms.ModelForm):
+    original_loanitem = forms.ModelChoiceField(
+        queryset=LoanItem.objects.filter(
+            is_repledged=False, loan__loan_type=Loan.LoanType.GIVEN
+        ),
+        widget=ModelSelect2Widget(
+            search_fields=["loan__loan_id__icontains"],
+            select2_options={
+                "width": "100%",
+            },
+        ),
+        required=False,
+    )
+
+    class Meta:
+        model = RepledgedLoanItem
+        fields = ["original_loanitem", "repledged_loanamount", "interest_rate"]
+
+    def __init__(self, *args, **kwargs):
+        # loan = kwargs.pop('loan', None)
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["original_loanitem"].queryset = LoanItem.objects.filter(
+                Q(is_repledged=False, loan__loan_type=Loan.LoanType.GIVEN)
+                | Q(pk=self.instance.original_loanitem.pk)
+            )
+        else:
+            self.fields["original_loanitem"].queryset = LoanItem.objects.filter(
+                is_repledged=False, loan__loan_type=Loan.LoanType.GIVEN
+            )
 
 
 class LoanSelectionForm(forms.Form):

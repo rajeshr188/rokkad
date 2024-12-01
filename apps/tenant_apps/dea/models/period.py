@@ -9,7 +9,7 @@
 #         OPEN = 'OPEN', 'Open'
 #         CLOSED = 'CLOSED', 'Closed'
 #         LOCKED = 'LOCKED', 'Locked'
-    
+
 #     start_date = models.DateField()
 #     end_date = models.DateField()
 #     status = models.CharField(
@@ -19,14 +19,14 @@
 #     )
 #     closed_date = models.DateTimeField(null=True, blank=True)
 #     closed_by = models.ForeignKey(
-#         'users.CustomUser', 
+#         'users.CustomUser',
 #         on_delete=models.PROTECT,
 #         null=True,
 #         blank=True
 #     )
 #     closing_journal_entry = models.OneToOneField(
 #         'JournalEntry',
-#         on_delete=models.PROTECT, 
+#         on_delete=models.PROTECT,
 #         null=True,
 #         blank=True,
 #         related_name='closing_period'
@@ -45,7 +45,7 @@
 #         if self.start_date and self.end_date:
 #             if self.end_date <= self.start_date:
 #                 raise ValidationError('End date must be after start date')
-            
+
 #             # Check for overlapping periods
 #             overlapping = AccountingPeriod.objects.filter(
 #                 start_date__lte=self.end_date,
@@ -66,10 +66,10 @@
 #         income_accounts = Ledger.objects.filter(
 #             AccountType__AccountType__in=['Revenue', 'Expense']
 #         )
-        
+
 #         closing_entries = []
 #         retained_earnings = Ledger.objects.get(name='Retained Earnings')
-        
+
 #         # Close income/expense accounts to retained earnings
 #         for account in income_accounts:
 #             balance = account.get_balance()
@@ -85,7 +85,7 @@
 #             desc=f'Period Closing Entry - {self.end_date}',
 #         )
 #         je.transact(closing_entries, [])
-        
+
 #         self.status = self.PeriodStatus.CLOSED
 #         self.closed_date = timezone.now()
 #         self.closed_by = user

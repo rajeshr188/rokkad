@@ -57,6 +57,7 @@ class RateMiddleware(MiddlewareMixin):
         request.srate = srate
         request.brate = brate
 
+
 # from decimal import Decimal
 # from typing import Optional
 # from django.core.cache import cache
@@ -72,17 +73,17 @@ class RateMiddleware(MiddlewareMixin):
 
 # class RateMiddleware(MiddlewareMixin):
 #     """Middleware to handle metal rates caching and retrieval.
-    
+
 #     Attaches latest gold, silver and bronze rates to the request object.
 #     Handles caching to minimize database queries.
 #     """
-    
+
 #     CACHE_KEYS = {
 #         Rate.Metal.GOLD: "gold_rate",
-#         Rate.Metal.SILVER: "silver_rate", 
+#         Rate.Metal.SILVER: "silver_rate",
 #         Rate.Metal.BRONZE: "bronze_rate"
 #     }
-    
+
 #     DEFAULT_RATES = {
 #         Rate.Metal.GOLD: Decimal("0.0"),
 #         Rate.Metal.SILVER: Decimal("0.0"),
@@ -117,7 +118,7 @@ class RateMiddleware(MiddlewareMixin):
 #         # Early returns
 #         if not request.user.is_authenticated:
 #             return None
-            
+
 #         company = getattr(request.user.profile, 'workspace', None)
 #         if not company or company.schema_name == get_public_schema_name():
 #             return None
@@ -127,12 +128,12 @@ class RateMiddleware(MiddlewareMixin):
 #             for metal in Rate.Metal:
 #                 rate = self.get_cached_rate(metal) or self.get_latest_rate(metal) or None
 #                 setattr(request, f"{metal.lower()[:1]}rate", rate)
-                
+
 #         except Exception as e:
 #             logger.error(f"Error processing rates: {str(e)}")
 #             # Set default rates on error
 #             for metal in Rate.Metal:
-#                 setattr(request, f"{metal.lower()[:]}rate", 
+#                 setattr(request, f"{metal.lower()[:]}rate",
 #                     None)
 
 #         return None

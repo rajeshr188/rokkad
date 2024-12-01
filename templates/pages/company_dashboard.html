@@ -24,7 +24,7 @@
 </div>
 {% if can_view %}
 <div class="row">
-  <div class="col-sm-6 col-md-3">
+  <div class="col-sm-6 col-md-3 g-4 mb-4">
     <div class="card card-stats card-round" hx-get="{% url 'contact_customer_list' %}" hx-target="#content"
       hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-trigger="click" hx-push-url="true"
       style="cursor:pointer;">
@@ -47,7 +47,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3">
+  <div class="col-sm-6 col-md-3 g-4 mb-4">
     <div class="card card-stats card-round" href="" hx-get="{% url 'girvi:girvi_loan_list' %}" hx-target="#content"
       hx-swap="innerHTML" hx-trigger="click" style="cursor: pointer;" hx-vals='{"use_block": "content"}'
       hx-push-url="true">
@@ -70,7 +70,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3">
+  <div class="col-sm-6 col-md-3 g-4 mb-4">
     <div class="card card-stats card-round">
       <div class="card-body">
         <div class="row align-items-center">
@@ -89,7 +89,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3">
+  <div class="col-sm-6 col-md-3 g-4 mb-4">
     <div class="card card-stats card-round">
       <div class="card-body">
         <div class="row align-items-center">
@@ -110,7 +110,7 @@
   </div>
 </div>
 <div class="row">
-  <div class="col-sm-6 col-md-3">
+  <div class="col-sm-6 col-md-3 g-4 mb-4">
     <div class="card card-stats card-round">
       <div class="card-body">
         <div class="row align-items-center">
@@ -129,8 +129,7 @@
       </div>
     </div>
   </div>
-
-  <div class="col-sm-6 col-md-3">
+  <div class="col-sm-6 col-md-3 g-4 mb-4">
     <div class="card card-stats card-round">
       <div class="card-body">
         <div class="row align-items-center">
@@ -149,7 +148,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3">
+  <div class="col-sm-6 col-md-3 g-4 mb-4">
     <div class="card card-round">
       <div class="card-body pb-0">
         <div class="h1 fw-bold float-end text-primary">{{loan_progress}}%</div>
@@ -210,7 +209,7 @@
 }
 </style>
 <div class="row">
-  <div class="col-md-6">
+  <div class="col-md-6 g-4 mb-4">
     <div class="card card-round">
       <div class="card-header">
         <div class="card-head-row">
@@ -292,9 +291,8 @@
       </div>
     </div> 
   </div>
-  
 
-  <div class="col-md-4">
+  <div class="col-md-4 g-4 mb-4">
     <div class="card card-round">
       <div class="card-header">
         <div class="card-head-row">
@@ -347,7 +345,8 @@
       </div>
     </div>
   </div>
-  <div class="col-md-4">
+
+  <div class="col-md-4 g-4 mb-4">
     <div class="card">
       <div class="card-header">
         <div class="card-title">Loan Chart</div>
@@ -400,7 +399,8 @@
       </div>
     </div>
   </div>
-  <div class="col-md-4">
+
+  <div class="col-md-4 g-4 mb-4">
     <div class="card">
       <div class="card-header">
         <div class="card-title">Loan By Year Chart</div>
@@ -463,12 +463,13 @@
 </div>
 <div class="row">
 
-  <div class="col-md-6">
+  <div class="col-md-6 g-4 mb-4">
     <div class="div-holderl">
       {% get_widget_from_url url_name="girvi:series_report" display_table=False extra_params="time_series_pattern=monthly"%}
     </div>
   </div>
-  <div class="col-md-6">
+
+  <div class="col-md-6 g-4 mb-4">
     <div class="div-holderl">
       {% get_widget_from_url url_name="girvi:license_report" display_table=False extra_params="time_series_pattern=monthly"%}
     </div>
@@ -476,7 +477,7 @@
 
 </div>
 <div class="row">
-  <div class="col-md-6">
+  <div class="col-md-6 g-4 mb-4">
     <div class="card card-round">
       <div class="card-header">
         <div class="card-head-row card-tools-still-right">
@@ -543,7 +544,7 @@
       </div>
     </div>
   </div>
-  <div class="col-md-6">
+  <div class="col-md-6 g-4 mb-4">
     <div class="card card-round">
       <div class="card-header">
         <div class="card-head-row card-tools-still-right">

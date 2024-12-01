@@ -60,10 +60,40 @@ class Release(models.Model):
     def get_update_url(self):
         return reverse("girvi:girvi_release_update", args=(self.pk,))
 
+    # fixed a critical bug here where the release_id was not being generated correctly due to empty series name not being distinguishedfrom other series name
+    # this is probably better way to generate release_id suggested by chatgpt
+    # def generate_release_id(self, series):
+    #     default_prefix = 'RL'  # Define a default prefix
+    #     delimiter = '-'  # Define a delimiter to separate the prefix and the sequence number
+
+    #     # Use the series name if it's not empty, otherwise use the default prefix
+    #     prefix = series.name if series.name else default_prefix
+
+    #     with transaction.atomic():
+    #         last_release = (
+    #             Release.objects.filter(loan__series__name=series.name)
+    #             .order_by("-release_id")
+    #             .select_for_update()
+    #             .first()
+    #         )
+    #         if last_release:
+    #             release_id = last_release.release_id
+    #             # Extract the sequence number
+    #             match = re.match(rf"^{re.escape(prefix)}{re.escape(delimiter)}(\d+)$", release_id)
+    #             if match:
+    #                 sequence_number = int(match.group(1)) + 1
+    #             else:
+    #                 sequence_number = 1
+    #         else:
+    #             sequence_number = 1
+
+    #         new_release_id = f"{prefix}{delimiter}{sequence_number:0{series.max_limit}d}"
+    #         return new_release_id
+
     def generate_release_id(self, series):
         with transaction.atomic():
             last_release = (
-                Release.objects.filter(release_id__startswith=series.name)
+                Release.objects.filter(loan__series__name=series.name)
                 .order_by("-release_id")
                 .select_for_update()
                 .first()

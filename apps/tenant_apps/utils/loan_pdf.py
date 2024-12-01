@@ -428,8 +428,6 @@ def get_custom_jsk(loan):
 # Template versioning
 
 
-
-
 def merge_pdfs(base_template_bytes, content_pdf_bytes):
     """
     Merge content PDF with base template using PyMuPDF
@@ -648,7 +646,6 @@ def _render_qr_code(c, frame, img):
     )
 
     qr_buffer.close()
-
 
 
 def get_custom_jcl(loan, template_id=None):
@@ -2016,6 +2013,7 @@ def print_noticegroup(selection=None):
         content = "attachment; filename='%s'" % (filename)
     response["Content-Disposition"] = content
     return response
+
 
 from reportlab.graphics import renderPDF, renderPM
 from reportlab.graphics.barcode import qr

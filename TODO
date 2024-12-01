@@ -73,3 +73,5 @@ journalctl -u gunicorn --output=short-precise
 journalctl -u gunicorn -p err
 
 
+
+ask chat gpt to device a solid way to use htmx withdjango models crud

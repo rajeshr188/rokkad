@@ -7,7 +7,7 @@ from django.db.models.signals import (post_delete, post_save, pre_delete,
                                       pre_save)
 from django.dispatch import receiver
 
-from .models import Loan, LoanItem, LoanPayment
+from .models import Loan, LoanItem, LoanPayment, RepledgedLoanItem
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ def create_journal_entry(sender, instance, created, **kwargs):
 
 
 @receiver([post_delete, post_save], sender=LoanItem)
+@receiver([post_save, post_delete], sender=RepledgedLoanItem)
 def update_loan(sender, instance, **kwargs):
     try:
         logger.info(f"Signal received for LoanItem with id {instance.id}")
@@ -47,11 +48,10 @@ def update_loan(sender, instance, **kwargs):
         if loan is None:
             logger.error("Loan instance is None")
             return
-        logger.warning(f"Updating Loan with id {loan.id}")
+        logger.warning(f"Updating Loan with id {loan.loan_id}")
 
         loan.update()
-        logger.warning(f"Loan with id {loan.id} updated")
+        logger.warning(f"Loan with id {loan.loan_id} updated")
     except Exception as e:
         logger.warning(f"Error: {e}")
         # print(f"Error while updating laon: {e}")
-    

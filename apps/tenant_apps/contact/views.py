@@ -483,7 +483,6 @@ def customer_pic_set_default(request, pk):
     return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
 
 
-
 @login_required
 def relationship_save(request, customer_id, relationship_id=None):
     customer = get_object_or_404(Customer, pk=customer_id)

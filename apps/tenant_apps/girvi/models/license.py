@@ -78,6 +78,18 @@ class Series(models.Model):
     license = models.ForeignKey(
         License, on_delete=models.CASCADE, verbose_name=_("License")
     )
+
+    class LoanType(models.TextChoices):
+        TAKEN = "Taken", "Taken"
+        GIVEN = "Given", "Given"
+
+    loan_type = models.CharField(
+        max_length=10,
+        choices=LoanType.choices,
+        default=LoanType.GIVEN,
+        null=True,
+        blank=True,
+    )
     is_active = models.BooleanField(default=True, verbose_name=_("Is Active"))
 
     class Meta:

@@ -150,25 +150,47 @@ urlpatterns += (
 
 # urls for loanitem
 urlpatterns += (
-    path(
-        "loan/<int:parent_id>/item/create",
-        views.loan_item_update_hx_view,
-        name="girvi_loanitem_create",
-    ),
-    path(
-        "loan/<int:parent_id>/item/<int:id>/",
-        views.loan_item_update_hx_view,
-        name="hx-loanitem-detail",
-    ),
+    # path(
+    #     "loan/<int:parent_id>/item/create",
+    #     views.loan_item_update_hx_view,
+    #     name="girvi_loanitem_create",
+    # ),
+    # path(
+    #     "loan/<int:parent_id>/item/<int:id>/",
+    #     views.loan_item_update_hx_view,
+    #     name="hx-loanitem-detail",
+    # ),
     path(
         "loan/item/<int:pk>/detail", views.loanitem_detail, name="girvi_loanitem_detail"
+    ),
+    path(
+        "loan/repledged_item/<int:pk>/",
+        views.repledgedloanitem_detail,
+        name="repledgedloanitem_detail",
     ),
     path(
         "loan/<int:parent_id>/item/<int:id>/delete/",
         views.loanitem_delete,
         name="girvi_loanitem_delete",
     ),
-    path('loanitems/', views.loanitem_list, name='loanitem_list'),
+    path(
+        "loan/<int:parent_id>/repledgedloanitem/<int:id>/delete/",
+        views.repledged_loanitem_delete,
+        name="repledgedloanitem_delete",
+    ),
+    path("loanitems/", views.loanitem_list, name="loanitem_list"),
+    # path('repledgedloanitem/<int:parent_id>/create/', views.repledgedloanitem_create_update, name='repledgedloanitem_create'),
+    # path('repledgedloanitem/<int:parent_id>/update/<int:id>/', views.repledgedloanitem_create_update, name='repledgedloanitem_update'),
+    path(
+        "loanitem/<int:parent_id>/create/",
+        views.loanitem_create_update,
+        name="loanitem_create_update",
+    ),
+    path(
+        "loanitem/<int:parent_id>/update/<int:id>/",
+        views.loanitem_create_update,
+        name="loanitem_create_update",
+    ),
 )
 
 # urls for LoanPayment

@@ -26,7 +26,8 @@ from apps.tenant_apps.rates.models import Rate
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import LoanFilter
-from ..forms import LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm
+from ..forms import (LoanForm, LoanItemForm, LoanRenewForm, LoanReportForm,
+                     RepledgedLoanItemForm)
 from ..models import *
 from ..services import generate_loan_id
 from ..tables import LoanTable
@@ -124,7 +125,8 @@ def loan_save(request, id=None, pk=None):
             messages.success(
                 request, f"{'Updated' if obj else 'Created'} Loan: {loan.loan_id}"
             )
-            # return loan_detail(request, loan.id)
+            return loan_detail(request, loan.id)
+
             # response = TemplateResponse(
             #     request,
             #     "girvi/loan/loan_detail.html",
@@ -134,15 +136,14 @@ def loan_save(request, id=None, pk=None):
             #     "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
             # )
             # return response
-            response = TemplateResponse(
-                request,
-                "girvi/loan/loan_detail.html",
-                {"loan": loan, "object": loan, "customer": loan.customer},
-            )
-            response["Hx-Push"] = reverse(
-                "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
-            )
-            return response
+
+            # response = TemplateResponse(
+            #     request,
+            #     "girvi/loan/loan_detail.html",
+            #     {"loan": loan, "object": loan, "customer": loan.customer},
+            # )
+            # response["HX-Redirect"] = reverse("girvi:girvi_loan_detail", kwargs={"pk": loan.id})
+            # return response
 
         else:
             messages.warning(request, "Please correct the error below.")
@@ -351,60 +352,6 @@ def deleteLoan(request):
 
 
 @login_required
-def loan_item_update_hx_view(request, parent_id=None, id=None):
-    if not request.htmx:
-        raise Http404("This view is meant for Htmx requests only.")
-
-    try:
-        parent_obj = Loan.objects.get(id=parent_id)
-    except Loan.DoesNotExist:
-        return HttpResponse("Not found.", status=404)
-
-    instance = None
-    if id is not None:
-        try:
-            instance = LoanItem.objects.get(loan=parent_obj, id=id)
-        except LoanItem.DoesNotExist:
-            instance = None
-
-    if request.method == "POST":
-        form = LoanItemForm(request.POST, request.FILES, instance=instance)
-        if form.is_valid():
-            new_obj = form.save(commit=False)
-            if instance is None:
-                new_obj.loan = parent_obj
-            image_data = request.POST.get("image_data")
-
-            if image_data:
-                image_file = ContentFile(
-                    base64.b64decode(image_data.split(",")[1]),
-                    name=f"{new_obj.loan.loan_id}_{new_obj.id}.jpg",
-                )
-
-                new_obj.pic = image_file
-            new_obj.save()
-            messages.success(request, f"Created Item : {new_obj.id}")
-            context = {"object": new_obj, "i": new_obj}
-
-            if request.htmx:
-                return HttpResponse(status=204, headers={"HX-Trigger": "loanChanged"})
-            return render(request, "girvi/partials/item-inline-new.html", context)
-        # else:
-        #     context = {"url": url, "form": form, "object": instance}
-        #     return render(request, "girvi/partials/item-form.html", context)
-
-    else:
-        form = LoanItemForm(instance=instance)
-
-    url = reverse("girvi:girvi_loanitem_create", kwargs={"parent_id": parent_obj.id})
-    if instance:
-        url = instance.get_hx_edit_url()
-
-    context = {"url": url, "form": form, "object": instance}
-    return render(request, "girvi/partials/item-form.html", context)
-
-
-@login_required
 def loanitem_delete(request, parent_id, id):
     item = get_object_or_404(LoanItem, id=id, loan_id=parent_id)
     loan = item.loan
@@ -418,3 +365,84 @@ def loanitem_delete(request, parent_id, id):
 def loanitem_detail(request, pk):
     item = get_object_or_404(LoanItem, pk=pk)
     return render(request, "girvi/partials/item-inline-new.html", {"object": item})
+
+
+@login_required
+def repledgedloanitem_detail(request, pk):
+    item = get_object_or_404(RepledgedLoanItem, pk=pk)
+    return render(
+        request, "girvi/partials/repledged_item_inline_new.html", {"object": item}
+    )
+
+
+@login_required
+def repledged_loanitem_delete(request, parent_id, id):
+    item = get_object_or_404(RepledgedLoanItem, id=id, loan_id=parent_id)
+    loan = item.loan
+    item.delete()
+    messages.error(request, f"Repledged Item {item} Deleted")
+    loan.save()
+    return HttpResponse(status=204, headers={"HX-Trigger": "loanChanged"})
+
+
+@login_required
+def loanitem_create_update(request, parent_id, id=None):
+    parent_obj = get_object_or_404(Loan, id=parent_id)
+    instance = None
+    form_class = (
+        LoanItemForm
+        if parent_obj.loan_type == Loan.LoanType.GIVEN
+        else RepledgedLoanItemForm
+    )
+    model_class = (
+        LoanItem if parent_obj.loan_type == Loan.LoanType.GIVEN else RepledgedLoanItem
+    )
+    template_name = (
+        "girvi/partials/item-form.html"
+        if parent_obj.loan_type == Loan.LoanType.GIVEN
+        else "girvi/partials/repledged_item_form.html"
+    )
+
+    if id:
+        instance = get_object_or_404(model_class, id=id, loan=parent_obj)
+
+    if request.method == "POST":
+        form = form_class(request.POST, request.FILES, instance=instance)
+        if form.is_valid():
+            new_obj = form.save(commit=False)
+            new_obj.loan = parent_obj
+            if parent_obj.loan_type == Loan.LoanType.TAKEN:
+                new_obj.new_loan = parent_obj
+                new_obj.original_loanitem.is_repledged = True
+                new_obj.original_loanitem.save()
+            else:
+                image_data = request.POST.get("image_data")
+                if image_data:
+                    image_file = ContentFile(
+                        base64.b64decode(image_data.split(",")[1]),
+                        name=f"{new_obj.loan.loan_id}_{new_obj.id}.jpg"
+                        if parent_obj.loan_type == Loan.LoanType.GIVEN
+                        else f"{new_obj.new_loan.loan_id}_{new_obj.id}.jpg",
+                    )
+                    new_obj.pic = image_file
+
+            new_obj.save()
+            messages.success(request, f"Created Item : {new_obj.id}")
+            context = {"object": new_obj, "i": new_obj}
+
+            if request.htmx:
+                return HttpResponse(status=204, headers={"HX-Trigger": "loanChanged"})
+            if parent_obj.loan_type == Loan.LoanType.GIVEN:
+                return render(request, "girvi/partials/item-inline-new.html", context)
+            return render(
+                request, "girvi/partials/repledged_item_inline_new.html", context
+            )
+    else:
+        form = form_class(instance=instance)
+
+    url = reverse("girvi:loanitem_create_update", kwargs={"parent_id": parent_obj.id})
+    if instance:
+        url = instance.get_hx_edit_url()
+
+    context = {"url": url, "form": form, "object": instance}
+    return render(request, template_name, context)

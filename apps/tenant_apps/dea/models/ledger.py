@@ -349,3 +349,18 @@ class Ledgerbalance(models.Model):
 
     def get_cr(self):
         return Balance(self.cr)
+
+
+# class LedgerBalance(models.Model):
+#     ledgerno_id = models.IntegerField(primary_key=True)
+#     name = models.CharField(max_length=255)
+#     account_type = models.CharField(max_length=255)
+#     ls_created = models.DateTimeField()
+#     opening_balance = ArrayField(MoneyValueField(null=True, blank=True))
+#     cr = ArrayField(MoneyValueField(null=True, blank=True))
+#     dr = ArrayField(MoneyValueField(null=True, blank=True))
+#     closing_balance = ArrayField(MoneyValueField(null=True, blank=True))
+
+#     class Meta:
+#         managed = False
+#         db_table = 'ledger_balance'
