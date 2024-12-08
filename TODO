@@ -49,14 +49,16 @@ stock:private
 using cups or win32print
 
 pg schema clone 
-LOANAMOUNT ON LOAN FORM.ADAPT LOANAMOUNT ON LOANITEMS BASED ON LOANAMOUNT ON LOANMODEL
+
 improve company creation and tenant setting 
 
 backup of database is a task handled by celery
 
 when storage backend is r2 cloudflare image.path will break so use image.url
 
+either move tenant management to company dashboard so permission checking with tenant only or improve the permission decorators for views in public and tenant
 
+validate loanitems for loan  taken should not be in other loan taken and on  loan taken released they become available for other loan taken
 # Follow logs in real-time (like tail -f)
 journalctl -fu gunicorn
 

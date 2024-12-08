@@ -91,6 +91,7 @@ class Release(models.Model):
     #         return new_release_id
 
     def generate_release_id(self, series):
+        print("series name", series.name)
         with transaction.atomic():
             last_release = (
                 Release.objects.filter(loan__series__name=series.name)
@@ -98,21 +99,54 @@ class Release(models.Model):
                 .select_for_update()
                 .first()
             )
+            print("last_release", last_release)
             if last_release:
                 release_id = last_release.release_id
+                print("release_id", release_id)
                 # Extract the sequence number
                 match = re.match(rf"^{re.escape(series.name)}(\d+)$", release_id)
+                print("match", match)
                 if match:
+                    print("match.group(1)", match.group(1))
                     sequence_number = int(match.group(1)) + 1
                 else:
+                    print("else")
                     sequence_number = 1
             else:
+                print("no last release")
                 sequence_number = 1
 
             new_release_id = f"{series.name}{sequence_number:0{series.max_limit}d}"
+            print("new_release_id", new_release_id)
             return new_release_id
 
     def save(self, *args, **kwargs):
         if not self.release_id:
             self.release_id = self.generate_release_id(series=self.loan.series)
         super().save(*args, **kwargs)
+
+
+# with schema_context(jcl):
+#     releases = Release.objects.all().order_by('created_at')
+    
+#     # Track processed releases per series
+#     series_counters = {}
+    
+#     for release in releases:
+#         series = release.loan.series
+#         series_name = series.name or 'RL'
+        
+#         # Initialize counter for new series
+#         if series_name not in series_counters:
+#             series_counters[series_name] = 1
+        
+#         # Generate new release ID
+#         new_release_id = f"{series_name}{series_counters[series_name]:0{series.max_limit}d}"
+        
+#         # Update counter
+#         series_counters[series_name] += 1
+        
+#         # Update release ID
+#         print(f'Updating release {release.pk}: {release.release_id} → {new_release_id}')
+#         release.release_id = new_release_id
+#         release.save(update_fields=['release_id'])

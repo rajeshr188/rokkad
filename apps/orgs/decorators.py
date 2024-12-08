@@ -42,40 +42,75 @@ def role_required(role_name):
     return decorator
 
 
+# def roles_required(allowed_roles):
+#     def decorator(view_func):
+#         @login_required
+#         def _wrapped_view(request, *args, **kwargs):
+#             user = request.user
+#             workspace = request.user.profile.workspace or None
+#             print(
+#                 f"User: {user} workspace:{workspace} roles_required: {allowed_roles} {get_public_schema_name()}"
+#             )
+#             if workspace and workspace.name != get_public_schema_name():
+#                 # print(f"in if company_id: {kwargs.get('company_id')}")
+#                 company = Company.objects.get(name=workspace)
+#                 try:
+#                     membership = Membership.objects.get(user=user, company=company)
+#                     # print(
+#                     #     f"Membership {membership} Role: {membership.role.name} {membership.role.name in allowed_roles}"
+#                     # )
+#                     if membership.role.name not in allowed_roles:
+#                         raise Http404(
+#                             "You do not have the required role to proceed with this action."
+#                         )
+#                 except Membership.DoesNotExist:
+#                     raise Http404(
+#                         "No Membership!You do not have the required role to proceed with this action."
+#                     )
+#             else:
+#                 return redirect("dashboard")
+
+#             # print(f"User: {user} Company:{company} roles_required: {allowed_roles}")
+
+#             return view_func(request, *args, **kwargs)
+
+#         return _wrapped_view
+
+#     return decorator
+
 def roles_required(allowed_roles):
     def decorator(view_func):
+        @functools.wraps(view_func)
         @login_required
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
-            workspace = request.user.profile.workspace or None
-            print(
-                f"User: {user} workspace:{workspace} roles_required: {allowed_roles} {get_public_schema_name()}"
-            )
-            if workspace and workspace.name != get_public_schema_name():
-                # print(f"in if company_id: {kwargs.get('company_id')}")
-                company = Company.objects.get(name=workspace)
-                try:
-                    membership = Membership.objects.get(user=user, company=company)
-                    # print(
-                    #     f"Membership {membership} Role: {membership.role.name} {membership.role.name in allowed_roles}"
-                    # )
-                    if membership.role.name not in allowed_roles:
-                        raise Http404(
-                            "You do not have the required role to proceed with this action."
-                        )
-                except Membership.DoesNotExist:
-                    raise Http404(
-                        "No Membership!You do not have the required role to proceed with this action."
-                    )
-            else:
-                return redirect("dashboard")
+            workspace = request.user.profile.workspace
 
-            # print(f"User: {user} Company:{company} roles_required: {allowed_roles}")
+            if workspace and workspace.name == get_public_schema_name():
+                # Public schema: Get company_id from view parameters
+                company_id = kwargs.get("company_id")
+                if not company_id:
+                    return HttpResponseForbidden("Company ID is required")
+
+                try:
+                    company = Company.objects.get(id=company_id)
+                    membership = Membership.objects.get(user=user, company=company)
+                    if membership.role.name not in allowed_roles:
+                        raise Http404("You do not have the required role to proceed with this action.")
+                except (Company.DoesNotExist, Membership.DoesNotExist):
+                    raise Http404("No Membership! You do not have the required role to proceed with this action.")
+            else:
+                # Tenant schema: Use workspace as company
+                try:
+                    company = Company.objects.get(name=workspace.name)
+                    membership = Membership.objects.get(user=user, company=company)
+                    if membership.role.name not in allowed_roles:
+                        raise Http404("You do not have the required role to proceed with this action.")
+                except (Company.DoesNotExist, Membership.DoesNotExist):
+                    raise Http404("No Membership! You do not have the required role to proceed with this action.")
 
             return view_func(request, *args, **kwargs)
-
         return _wrapped_view
-
     return decorator
 
 
@@ -97,28 +132,6 @@ def company_member_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
-
-
-# def company_member_required(view_func):
-#     @login_required
-#     def _wrapped_view(request, *args, **kwargs):
-#         company = request.user.workspace
-#         # Check if the company exists
-#         if company:
-#             # Restrict access if the company schema is public
-#             if company.schema_name == get_public_schema_name():
-#                 return redirect("home")
-#             try:
-#                 # Try to get the membership for the user and company
-#                 membership = Membership.objects.get(
-#                     user=request.user, company_id=company.id
-#                 )
-#             except Membership.DoesNotExist:
-#                 # If membership does not exist, return forbidden response
-#                 return HttpResponseForbidden()
-#         return view_func(request, *args, **kwargs)
-
-#     return _wrapped_view
 
 
 def membership_required(role_name):

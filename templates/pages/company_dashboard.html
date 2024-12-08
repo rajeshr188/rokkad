@@ -24,6 +24,38 @@
 </div>
 {% if can_view %}
 <div class="row">
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
+        <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-2">
+          <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+            <i class="bi bi-people-fill text-primary fs-4"></i>
+          </div>
+          <h6 class="card-subtitle text-muted mb-0">Total Members</h6>
+        </div>
+        <h2 class="card-title mb-0 display-6 fw-bold">
+          {{request.user.profile.workspace.memberships.count}}
+        </h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
+    <div class="card shadow-sm h-100">
+  <div class="card-body">
+    <div class="d-flex align-items-center mb-2">
+      <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+        <i class="bi bi-people-fill text-primary fs-4"></i>
+      </div>
+      <h6 class="card-subtitle text-muted mb-0">Invitations</h6>
+    </div>
+    <h2 class="card-title mb-0 display-6 fw-bold">
+      {{request.user.profile.workspace.pending_invitations.count}}
+    </h2>
+  </div>
+</div>
+</div>
+</div>
+<div class="row">
   <div class="col-sm-6 col-md-3 g-4 mb-4">
     <div class="card card-stats card-round" hx-get="{% url 'contact_customer_list' %}" hx-target="#content"
       hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-trigger="click" hx-push-url="true"

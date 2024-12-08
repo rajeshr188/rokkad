@@ -68,7 +68,7 @@ class FaqPageView(TemplateView):
 
 
 @login_required
-# @roles_required(["Owner", "Admin"])
+@roles_required(["Owner", "Admin"])
 def Dashboard(request):
     context = {}
     return render(request, "pages/dashboard.html", context)

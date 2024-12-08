@@ -7,25 +7,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    replaces = [
-        ("girvi", "0014_loanitempic"),
-        ("girvi", "0015_statement_completed_statementitem_descrepancy_found_and_more"),
-        ("girvi", "0016_statementitem_unique_loan_per_statement"),
-        ("girvi", "0017_loan_value_loan_weight_alter_loan_tenure"),
-        ("girvi", "0018_remove_loan_voucher_date_remove_loan_voucher_no"),
-        ("girvi", "0019_loanitemstoragebox"),
-        ("girvi", "0020_loan_loan_id_copy_alter_loanitemstoragebox_item_type"),
-        ("girvi", "0021_series_max_limit"),
-        ("girvi", "0022_alter_series_name"),
-        ("girvi", "0023_alter_loan_options"),
-        ("girvi", "0024_alter_loanitemstoragebox_end_item_id_and_more"),
-        ("girvi", "0025_alter_loanitemstoragebox_item_type"),
-        (
-            "girvi",
-            "0026_loantemplate_templateframe_squashed_0040_templateframe_show_boundary",
-        ),
-        ("girvi", "0041_alter_loantemplate_page_height_and_more"),
-    ]
+    # replaces = [
+    #     ("girvi", "0014_loanitempic"),
+    #     ("girvi", "0015_statement_completed_statementitem_descrepancy_found_and_more"),
+    #     ("girvi", "0016_statementitem_unique_loan_per_statement"),
+    #     ("girvi", "0017_loan_value_loan_weight_alter_loan_tenure"),
+    #     ("girvi", "0018_remove_loan_voucher_date_remove_loan_voucher_no"),
+    #     ("girvi", "0019_loanitemstoragebox"),
+    #     ("girvi", "0020_loan_loan_id_copy_alter_loanitemstoragebox_item_type"),
+    #     ("girvi", "0021_series_max_limit"),
+    #     ("girvi", "0022_alter_series_name"),
+    #     ("girvi", "0023_alter_loan_options"),
+    #     ("girvi", "0024_alter_loanitemstoragebox_end_item_id_and_more"),
+    #     ("girvi", "0025_alter_loanitemstoragebox_item_type"),
+    #     (
+    #         "girvi",
+    #         "0026_loantemplate_templateframe_squashed_0040_templateframe_show_boundary",
+    #     ),
+    #     ("girvi", "0041_alter_loantemplate_page_height_and_more"),
+    # ]
 
     dependencies = [
         ("girvi", "0013_alter_loan_customer"),
