@@ -187,8 +187,8 @@ def ledger_transaction_update(request, pk):
     if request.method == "POST":
         form = LedgerTransactionForm(request.POST, instance=ledger_transaction)
         if form.is_valid():
-            ledger_transaction = form.save(commit=False)
-            ledger_transaction.journal_entry = journal_entry
+            # ledger_transaction = form.save(commit=False)
+            # ledger_transaction.journal_entry = journal_entry
             ledger_transaction.save()
             messages.success(request, "Ledger transaction updated successfully!")
             return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})

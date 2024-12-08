@@ -99,7 +99,8 @@ def company_list(request):
     )
 
 
-@company_member_required
+# @company_member_required
+@roles_required(["member", "admin", "owner"])
 def company_detail(request, company_id):
     company = Company.objects.get(id=company_id)
     roles = Role.objects.all()
@@ -123,7 +124,7 @@ def company_update(request, company_id):
     )
 
 
-# @roles_required(["Owner", "Admin"])
+@roles_required(["Owner", "Admin"])
 def company_delete(request, company_id):
     company = get_object_or_404(Company, id=company_id)
 
@@ -157,7 +158,7 @@ def companyinvitations_list(request):
     )
 
 
-# @role_required('Owner')
+@role_required('Owner')
 def create_invite(request, company_id):
     company = Company.objects.get(id=company_id)
     if request.method == "POST":
@@ -258,7 +259,7 @@ def membership_revoke(request, company_id, membership_id):
 
 
 @login_required
-# @roles_required(["Owner", "Admin"])
+@roles_required(["Owner", "Admin"])
 def membership_update(request, company_id, membership_id):
     print("membership_update")
     company = get_object_or_404(Company, id=company_id)

@@ -197,10 +197,10 @@ class Migration(migrations.Migration):
             LEFT JOIN acc_st ON dea_account.id = acc_st."AccountNo_id";
     """
     operations = [
-        migrations.RunSQL("DROP VIEW IF EXISTS ledger_balance;"),
-        migrations.RunSQL("DROP VIEW IF EXISTS account_balance;"),
-        migrations.RunSQL(ledger_balance_sql, reverse_sql="DROP VIEW ledger_balance;"),
-        migrations.RunSQL(
-            account_balance_sql, reverse_sql="DROP VIEW account_balance;"
-        ),
+        # migrations.RunSQL("DROP VIEW IF EXISTS ledger_balance;"),
+        # migrations.RunSQL("DROP VIEW IF EXISTS account_balance;"),
+        # migrations.RunSQL(ledger_balance_sql, reverse_sql="DROP VIEW ledger_balance;"),
+        # migrations.RunSQL(
+        #     account_balance_sql, reverse_sql="DROP VIEW account_balance;"
+        # ),
     ]

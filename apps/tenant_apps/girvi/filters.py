@@ -7,8 +7,8 @@ from django_filters.widgets import RangeWidget
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 
-from .forms import LoansWidget
-from .models import Loan, LoanItem, LoanPayment, Release
+from .forms import LoansWidget,SeriesWidget
+from .models import Loan,Series, LoanItem, LoanPayment, Release
 
 
 class LoanFilter(django_filters.FilterSet):
@@ -151,4 +151,4 @@ class ReleaseFilter(django_filters.FilterSet):
 
     class Meta:
         model = Release
-        fields = ["release_id", "loan", "release_date"]
+        fields = ["release_id", "loan", "release_date","loan__series"]
