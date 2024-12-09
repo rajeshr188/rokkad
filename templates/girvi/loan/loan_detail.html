@@ -33,7 +33,7 @@
   </div>
 </div>
 {% block loaninfo%}
-<div class="container" hx-trigger="loanChanged from:body" hx-get="{% url 'girvi:girvi_loan_detail' loan.id %}"
+<div class="container-lg" hx-trigger="loanChanged from:body" hx-get="{% url 'girvi:girvi_loan_detail' loan.id %}"
   hx-target="this" hx-swap="outerHTML transition:true" hx-trigger="click" hx-vals='{"use_block":"loaninfo"}'>
 
     <div class="btn-toolbar mb-3" role="toolbar" aria-label="Loan Actions">

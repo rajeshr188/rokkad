@@ -71,9 +71,9 @@ def statement_delete(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
     statement.delete()
     messages.error(request, f"Verification Session {statement} Deleted")
-    return redirect("girvi:statement_list")
+    return HttpResponse("")
 
-
+from django.template.loader import render_to_string
 def statement_item_add(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
     if request.method == "POST":
@@ -99,12 +99,13 @@ def statement_item_add(request, pk):
                 messages.error(request, f"Loan {loan_id} already released.")
                 print(item)
             # Construct the HTML snippet using the item attributes
-            item_html = f"""
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                {item.loan} 
-                {'(Discrepancy: ' + item.descrepancy_note + ')' if item.descrepancy_found else ''}
-            </li>
-            """
+            # item_html = f"""
+            # <li class="list-group-item d-flex justify-content-between align-items-center">
+            #     {item.loan} 
+            #     {'(Discrepancy: ' + item.descrepancy_note + ')' if item.descrepancy_found else ''}
+            # </li>
+            # """
+            item_html = render_to_string('girvi/statement/statement_item_detail.html', {'item': item})
             return HttpResponse(item_html)
         else:
             item_html = f"""
