@@ -38,6 +38,8 @@ class CustomUser(AbstractUser):
     #             self.releases_created.all().update(created_by=None)
 
     #     super().delete(*args, **kwargs)
+    def get_owned_companies(self):
+        return self.owned_companies.exclude(name="public")
 
 
 class UserProfile(models.Model):

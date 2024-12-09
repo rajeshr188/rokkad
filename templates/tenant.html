@@ -23,7 +23,7 @@
 
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <nav class="navbar navbar-expand-lg text-white sticky-top"  style="background-color: {{theme}};" >
-    <div class="container-fluid">
+    <div class="container-lg">
       <!-- Brand -->
       <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
         <img src="{% if logo %}{{logo.url}}{%else%}{% static 'images/falconx.png' %}{%endif%}" 
@@ -162,6 +162,19 @@
               </svg></a></li>
             </ul>
           </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="manageDropdown" role="button" data-bs-toggle="dropdown"
+              aria-expanded="false">
+              Manage
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="manageDropdown">
+              <li><a class="dropdown-item" href="{% url 'orgs_company_list' %}">{% trans "Company" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'orgs_membership_list' %}">{% trans "Membership" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'orgs_company_invitations_list' %}">{% trans "Invitations" %}</a></li>
+              <li><a class="dropdown-item" href="#">Payments</a></li>
+              <li><a class="dropdown-item" href="#">Subscription</a></li>
+            </ul>
+          </li>
           {% else %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="manageDropdown" role="button" data-bs-toggle="dropdown"
@@ -270,7 +283,7 @@
   </div>
 
   {% if user.profile.workspace and user.profile.workspace.schema_name != 'public' %}
-  <div class="dropdown position-fixed bottom-0 end-0 mb-3 me-3 bd-mode-toggle">
+  <div class="dropdown position-fixed bottom-0 end-0 mb-5 me-3 bd-mode-toggle">
     <button class="btn btn-bd-primary py-2 dropdown-toggle d-flex align-items-center"
             id="bd-theme"
             type="button"
@@ -321,14 +334,22 @@
   </div>
   {% endif %}
 
-  <footer class="footer mt-auto py-3 bg-secondary text-white">
-    <div class="container">
-      <span class="text-muted"> &copy; 2017-2024, made with <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-suit-heart-fill" viewBox="0 0 16 16">
-        <path d="M4 1c2.21 0 4 1.755 4 3.92C8 2.755 9.79 1 12 1s4 1.755 4 3.92c0 3.263-3.234 4.414-7.608 9.608a.513.513 0 0 1-.784 0C3.234 9.334 0 8.183 0 4.92 0 2.755 1.79 1 4 1"/>
-      </svg> by <a href="#">H RajeshRathod</a></span>
-    </div>
+   <footer class="footer mt-auto py-3 bg-secondary text-white">
+      <div class="container d-flex justify-content-between align-items-center">
+          <div>
+              <span class="text-muted">&copy; 2017-2024, made with 
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-suit-heart-fill mx-1" viewBox="0 0 16 16">
+                      <path d="M4 1c2.21 0 4 1.755 4 3.92C8 2.755 9.79 1 12 1s4 1.755 4 3.92c0 3.263-3.234 4.414-7.608 9.608a.513.513 0 0 1-.784 0C3.234 9.334 0 8.183 0 4.92 0 2.755 1.79 1 4 1"/>
+                  </svg> 
+                  by <a href="#" class="text-white text-decoration-none">H RajeshRathod</a>
+              </span>
+          </div>
+          <div>
+              <a href="#" class="text-white text-decoration-none me-3">Privacy Policy</a>
+              <a href="#" class="text-white text-decoration-none">Terms of Service</a>
+          </div>
+      </div>
   </footer>
-
   {% include "toasts.html" %}
 
   {%block javascript%}
