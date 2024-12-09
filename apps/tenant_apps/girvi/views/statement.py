@@ -1,3 +1,4 @@
+import stat
 from django.contrib import messages
 from django.db.models import Count, F, OuterRef
 from django.http import HttpResponse
@@ -21,6 +22,15 @@ def verification_session_create(request):
     v_session = Statement.objects.create(created_by=request.user)
     return redirect(v_session.get_absolute_url())
 
+def verification_session_update(request, pk):
+    statement = get_object_or_404(Statement, pk=pk)
+    if statement.completed:
+        statement.completed = None
+    else:
+        statement.completed = timezone.now()
+    statement.save()
+    messages.success(request, f"Verification Session {statement} Updated")
+    return redirect(statement.get_absolute_url())
 
 def verification_session_detail(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
