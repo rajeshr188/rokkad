@@ -1,3 +1,4 @@
+import stat
 from django.urls import include, path
 from django.views.generic.dates import ArchiveIndexView
 
@@ -304,6 +305,7 @@ urlpatterns += (
         views.verification_session_create,
         name="statement_create",
     ),
+    path("statement/update/<int:pk>/", views.verification_session_update, name="statement_update"),
     path(
         "statement/detail/<int:pk>/",
         views.verification_session_detail,
