@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django_tenants.utils import (get_public_schema_name, remove_www,
@@ -100,9 +100,11 @@ def company_list(request):
 
 
 # @company_member_required
-@roles_required(["member", "admin", "owner"])
+@roles_required(["Member", "Admin", "Owner"])
 def company_detail(request, company_id):
     company = Company.objects.get(id=company_id)
+    if company.is_deleted:
+        raise Http404("Company not found")
     roles = Role.objects.all()
     return render(
         request, "company/company_detail.html", {"company": company, "roles": roles}

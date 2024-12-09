@@ -19,6 +19,10 @@ from invitations.base_invitation import AbstractBaseInvitation
 
 User = get_user_model()
 
+class CompanyManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
 
 class Company(TenantMixin):
     name = models.CharField(_("Name"), max_length=200, unique=True)
@@ -43,9 +47,13 @@ class Company(TenantMixin):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_deleted = models.BooleanField(default=False)  # Soft delete flag
 
     auto_create_schema = True
     auto_drop_schema = True
+
+    objects = CompanyManager()  # Use custom manager
+    all_objects = models.Manager()  # Include soft-deleted instances
 
     class Meta:
         unique_together = ("name", "owner")
@@ -65,6 +73,17 @@ class Company(TenantMixin):
 
     def get_absolute_url(self):
         return reverse("orgs_company_detail", args=[str(self.id)])
+    
+    def delete(self, *args, **kwargs):
+        self.is_deleted = True
+        self.save()
+
+    def hard_delete(self):
+        super(Company, self).delete()
+
+    def restore(self):
+        self.is_deleted = False
+        self.save()
 
 
 class Domain(DomainMixin):

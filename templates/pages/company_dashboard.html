@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
   <div>
-    <h3 class="fw-bold mb-3">Dashboard</h3>
+    <h3 class="fw-bold mb-3">{{request.tenant|title}} Dashboard</h3>
   </div>
   <div class="ms-md-auto py-2 py-md-0">
     <a href="#" class="btn btn-label-info btn-round me-2">Manage</a>
@@ -56,7 +56,7 @@
 </div>
 </div>
 <div class="row">
-  <div class="col-sm-6 col-md-3 g-4 mb-4">
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-stats card-round" hx-get="{% url 'contact_customer_list' %}" hx-target="#content"
       hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-trigger="click" hx-push-url="true"
       style="cursor:pointer;">
@@ -79,7 +79,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3 g-4 mb-4">
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-stats card-round" href="" hx-get="{% url 'girvi:girvi_loan_list' %}" hx-target="#content"
       hx-swap="innerHTML" hx-trigger="click" style="cursor: pointer;" hx-vals='{"use_block": "content"}'
       hx-push-url="true">
@@ -102,7 +102,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3 g-4 mb-4">
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-stats card-round">
       <div class="card-body">
         <div class="row align-items-center">
@@ -121,7 +121,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3 g-4 mb-4">
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-stats card-round">
       <div class="card-body">
         <div class="row align-items-center">
@@ -142,7 +142,7 @@
   </div>
 </div>
 <div class="row">
-  <div class="col-sm-6 col-md-3 g-4 mb-4">
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-stats card-round">
       <div class="card-body">
         <div class="row align-items-center">
@@ -161,7 +161,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3 g-4 mb-4">
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-stats card-round">
       <div class="card-body">
         <div class="row align-items-center">
@@ -180,7 +180,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-md-3 g-4 mb-4">
+  <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-round">
       <div class="card-body pb-0">
         <div class="h1 fw-bold float-end text-primary">{{loan_progress}}%</div>
@@ -194,7 +194,7 @@
   </div>
 </div>
 
-<div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+<div class="row row-cols-1 row-cols-md-3 g-2 mb-2">
   {% for item_type, stats in item_loanamount_avg.items %}
     <div class="col">
       <div class="card h-100">
@@ -241,7 +241,7 @@
 }
 </style>
 <div class="row">
-  <div class="col-md-6 g-4 mb-4">
+  <div class="col-md-6 g-2 mb-2">
     <div class="card card-round">
       <div class="card-header">
         <div class="card-head-row">
@@ -324,7 +324,7 @@
     </div> 
   </div>
 
-  <div class="col-md-4 g-4 mb-4">
+  <div class="col-md-4 g-2 mb-2">
     <div class="card card-round">
       <div class="card-header">
         <div class="card-head-row">
@@ -378,7 +378,7 @@
     </div>
   </div>
 
-  <div class="col-md-4 g-4 mb-4">
+  <div class="col-md-4 g-2 mb-2">
     <div class="card">
       <div class="card-header">
         <div class="card-title">Loan Chart</div>
@@ -432,7 +432,7 @@
     </div>
   </div>
 
-  <div class="col-md-4 g-4 mb-4">
+  <div class="col-md-4 g-2 mb-2">
     <div class="card">
       <div class="card-header">
         <div class="card-title">Loan By Year Chart</div>

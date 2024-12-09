@@ -31,6 +31,22 @@ class PublicTenantOnlyMixin:
     def has_view_or_change_permission(self, request, view=None):
         return self._only_public_tenant_access(request)
 
+class SoftDeletedFilter(admin.SimpleListFilter):
+    title = 'soft deleted'
+    parameter_name = 'is_deleted'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('yes', 'Yes'),
+            ('no', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.filter(is_deleted=True)
+        if self.value() == 'no':
+            return queryset.filter(is_deleted=False)
+        return queryset
 
 class CompanyAdminForm(forms.ModelForm):
     class Meta:
@@ -46,9 +62,23 @@ class CompanyAdminForm(forms.ModelForm):
 @admin.register(Company)
 class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
     form = CompanyAdminForm
-    list_display = ("name", "owner", "theme", "logo")
+    list_display = ("name", "owner", "theme", "logo", "is_deleted")
     search_fields = ["name"]
-    list_filter = ["owner"]
+    list_filter = ["owner",SoftDeletedFilter]
+    actions = ['restore_companies','hard_delete_companies']
+
+    def get_queryset(self, request):
+        # Use the all_objects manager to include soft-deleted instances
+        return self.model.all_objects.all()
+
+    def restore_companies(self, request, queryset):
+        queryset.update(is_deleted=False)
+    restore_companies.short_description = "Restore selected companies"
+
+    def hard_delete_companies(self, request, queryset):
+        for company in queryset:
+            company.hard_delete()
+    hard_delete_companies.short_description = "Permanently delete selected companies"
 
 
 # app = apps.get_app_config('orgs')
