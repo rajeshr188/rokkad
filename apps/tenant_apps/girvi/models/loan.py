@@ -20,6 +20,7 @@ from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import (AccountTransaction, JournalEntry,
                                          LedgerTransaction)
 from apps.tenant_apps.rates.models import Rate
+from apps.tenant_apps.dea.models import AccountStatement
 
 from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
                         UnReleasedManager)
