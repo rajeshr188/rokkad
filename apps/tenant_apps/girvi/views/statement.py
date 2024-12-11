@@ -1,3 +1,4 @@
+from calendar import c
 import stat
 from django.contrib import messages
 from django.db.models import Count, F, OuterRef
@@ -17,19 +18,17 @@ def verification_session_list(request):
         context={"sessions": sessions},
     )
 
-
 def verification_session_create(request):
     v_session = Statement.objects.create(created_by=request.user)
     return redirect(v_session.get_absolute_url())
 
-def verification_session_update(request, pk):
+def verification_session_toggle(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
-    if statement.completed:
-        statement.completed = None
+    statement.toggle_complete(completed_by=request.user)
+    if statement.is_complete:
+        messages.success(request, f"Verification Session {statement} Completed")
     else:
-        statement.completed = timezone.now()
-    statement.save()
-    messages.success(request, f"Verification Session {statement} Updated")
+        messages.success(request, f"Verification Session {statement} Reopened")
     return redirect(statement.get_absolute_url())
 
 def verification_session_detail(request, pk):
@@ -62,19 +61,14 @@ def verification_session_detail(request, pk):
     )
 
 
-def complete_verification_session(request, pk):
-    statement = get_object_or_404(Statement, pk=pk)
+# def complete_verification_session(request, pk):
+#     statement = get_object_or_404(Statement, pk=pk)
 
-    # Subquery to check if a loan is in the statement items
-    statement_item_subquery = StatementItem.objects.filter(
-        statement=statement, loan_id=OuterRef("pk")
-    ).values("pk")
+#     summary = statement.mark_complete(completed_by=request.user)
+#     messages.warning(request, f"Found {summary['missing_count']} missing loans")
+#     messages.warning(request, f"Found {summary['released_present_count']} released loans still present")
 
-    # Update statement completion time
-    statement.completed = timezone.now()
-    statement.save()
-    messages.success(request, f"Verification Session {statement} Completed")
-    return redirect(statement.get_absolute_url())
+#     return redirect(statement.get_absolute_url())
 
 
 def statement_delete(request, pk):

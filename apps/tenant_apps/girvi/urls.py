@@ -26,6 +26,7 @@ urlpatterns = (
     # Example: /2012/week/23/
     path("girvi/notice/", views.notice, name="notice"),
     path("girvi/outdatedloans/notify/", views.notify_print, name="girvi_create_notice"),
+    path('loans/today/', views.loans_created_on_day_excluding_current_month, name='loans_created_on_day_excluding_current_month'),
 )
 
 # urls for archive views
@@ -151,16 +152,6 @@ urlpatterns += (
 
 # urls for loanitem
 urlpatterns += (
-    # path(
-    #     "loan/<int:parent_id>/item/create",
-    #     views.loan_item_update_hx_view,
-    #     name="girvi_loanitem_create",
-    # ),
-    # path(
-    #     "loan/<int:parent_id>/item/<int:id>/",
-    #     views.loan_item_update_hx_view,
-    #     name="hx-loanitem-detail",
-    # ),
     path(
         "loan/item/<int:pk>/detail", views.loanitem_detail, name="girvi_loanitem_detail"
     ),
@@ -305,17 +296,17 @@ urlpatterns += (
         views.verification_session_create,
         name="statement_create",
     ),
-    path("statement/update/<int:pk>/", views.verification_session_update, name="statement_update"),
+    path("statement/<int:pk>/toggle_complete", views.verification_session_toggle, name="statement_update"),
     path(
-        "statement/detail/<int:pk>/",
+        "statement/<int:pk>/detail/",
         views.verification_session_detail,
         name="statement_detail",
     ),
-    path(
-        "statement/complete/<int:pk>/",
-        views.complete_verification_session,
-        name="statement_complete",
-    ),
+    # path(
+    #     "statement/complete/<int:pk>/",
+    #     views.complete_verification_session,
+    #     name="statement_complete",
+    # ),
     path(
         "statement/<int:pk>/delete/",
         views.statement_delete,
