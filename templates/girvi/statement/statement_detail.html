@@ -69,8 +69,11 @@
                             <div class="accordion-body">
                                 <ul class="list-group">
                                     {%for i in summary.dc%}
-                                    <li class="list-group-item"><a
+                                    <li class="list-group-item">
+                                        <p>{{i.descrepancy_note}}
+                                            <a
                                             href="{% url 'girvi:girvi_loan_detail' i.loan.id %}">{{i.loan.loan_id}}</a>
+                                        </p>
                                     </li>
                                     {%endfor%}
                                 </ul>
@@ -111,7 +114,7 @@
                     type="text" id="loan-id-input" name="loan_id" placeholder="Loan ID" required>
             </div>
 
-            <a href="{% url 'girvi:statement_complete' statement.id %}" class="btn btn-primary">Complete</a>
+            <a href="{% url 'girvi:statement_update' statement.id %}" class="btn btn-primary">Complete</a>
             {% endif %}
         </div>
 

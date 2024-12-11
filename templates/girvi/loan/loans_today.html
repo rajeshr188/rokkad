@@ -1,0 +1,10 @@
+{% include 'tenant.html'%}
+{% block content%}
+<h1>Loans Created on This Day Excluding Current Month</h1>
+    <ul>
+        {% for loan in loans %}
+            <li>{{ loan.loan_id }} - {{ loan.loan_amount }} - {{ loan.loan_date }}</li>
+        {% endfor %}
+    </ul>
+
+{% endblock %}

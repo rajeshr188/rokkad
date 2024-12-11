@@ -32,6 +32,19 @@ from ..models import *
 from ..services import generate_loan_id
 from ..tables import LoanTable
 
+from django.shortcuts import render
+from django.utils import timezone
+
+def loans_created_on_day_excluding_current_month(request):
+    today = timezone.now()
+    loans = Loan.objects.filter(
+        loan_date__day=today.day,
+        release__isnull=True
+    ).exclude(
+        loan_date__month=today.month,
+        loan_date__year=today.year
+    )
+    return render(request, 'girvi/loan/loans_today.html', {'loans': loans})
 
 def ld(request):
     # TODO get last date by series
