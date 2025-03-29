@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dea", "0013_journalentry_parent_content_type_and_more"),
         ("product", "0015_stocktransaction_journal_entry"),
     ]
 

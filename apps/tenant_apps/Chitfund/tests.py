@@ -1,12 +1,10 @@
 import unittest
 
-from django.contrib.auth.models import Group, User
-from django.contrib.contenttypes.models import ContentType
 from django.test import Client
 from django.urls import reverse
 from users.models import CustomUser
 
-from .models import Allotment, Chit, Collection, Contact
+from .models import Contact
 
 
 def create_django_contrib_auth_models_user(**kwargs):

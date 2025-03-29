@@ -19,6 +19,22 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunSQL(
+            # Forward SQL
+            """
+            DO $$ 
+            BEGIN
+                CREATE TYPE money_value AS (
+                    amount numeric,
+                    currency varchar(3)
+                );
+            EXCEPTION 
+                WHEN duplicate_object THEN NULL;
+            END $$;
+            """,
+            # Reverse SQL
+            "DROP TYPE IF EXISTS money_value;",
+        ),
         migrations.CreateModel(
             name="Account",
             fields=[

@@ -1,16 +1,9 @@
-from datetime import datetime
-
 from django import forms
 from django.contrib import admin
-from django.db import transaction
-from import_export import fields, resources
 from import_export.admin import ImportExportActionModelAdmin
-from import_export.fields import Field
-from import_export.widgets import DateTimeWidget
 
 from .models import Address, Contact, Customer, CustomerPic, Proof
-from .resources import (AddressResource, ContactResource, CustomerResource,
-                        ProofResource)
+from .resources import AddressResource, ContactResource, CustomerResource, ProofResource
 
 
 class AddressAdminForm(forms.ModelForm):

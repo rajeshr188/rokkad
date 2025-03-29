@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum
 from django.shortcuts import reverse
 from django.utils.translation import gettext_lazy as _
@@ -64,20 +64,34 @@ class License(models.Model):
             "series_data": series_data,
         }
 
+    def create_series(self, name, prefix):
+        """Create a new series under this license"""
+        return Series.objects.create(license=self, name=name, prefix=prefix.upper())
+
 
 class Series(models.Model):
+    license = models.ForeignKey(
+        License, on_delete=models.CASCADE, verbose_name=_("License")
+    )
     name = models.CharField(
         max_length=30,
         default="",
         blank=True,
         verbose_name=_("Series Name/prefix"),
     )
+    prefix = models.CharField(
+        max_length=3,
+        help_text="Prefix for loan IDs in this series",
+        default="Z",
+        # unique=True,default="Z",
+    )
+    max_limit = models.PositiveIntegerField(
+        default=5,
+        help_text="Number of digits in loan ID sequence",
+        verbose_name=_("Max Limit"),
+    )
     created = models.DateTimeField(auto_now_add=True, editable=False)
     last_updated = models.DateTimeField(auto_now=True)
-    max_limit = models.PositiveIntegerField(default=5, verbose_name=_("Max Limit"))
-    license = models.ForeignKey(
-        License, on_delete=models.CASCADE, verbose_name=_("License")
-    )
 
     class LoanType(models.TextChoices):
         TAKEN = "Taken", "Taken"
@@ -97,7 +111,7 @@ class Series(models.Model):
         unique_together = ["license", "name"]
 
     def __str__(self):
-        return f"Series {self.name}"
+        return f"{self.prefix}-{self.name}"
 
     def get_absolute_url(self):
         return reverse("girvi:girvi_license_series_detail", args=(self.pk,))
@@ -148,3 +162,24 @@ class Series(models.Model):
             "loan_count": loan_count,
             "loan_amount": loan_amount,
         }
+
+    def get_next_loan_id(self):
+        """Generate next loan ID for this series"""
+        with transaction.atomic():
+            # Lock the series row
+            series = Series.objects.select_for_update().get(id=self.id)
+
+            # Get last loan in series
+            last_loan = (
+                series.loan_set.filter(series=series).order_by("-loan_id").first()
+            )
+
+            if last_loan:
+                # Extract number from last loan ID
+                last_num = int(last_loan.loan_id[len(self.prefix) :])
+                next_num = last_num + 1
+            else:
+                next_num = 1
+
+            # Format: PREFIX + padded number
+            return f"{self.prefix}{next_num:0{self.max_limit}d}"

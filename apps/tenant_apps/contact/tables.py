@@ -1,7 +1,6 @@
 import django_tables2 as tables
 from django.utils.html import escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
-from django_tables2.utils import A
 
 from .models import Customer
 

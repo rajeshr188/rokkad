@@ -1,13 +1,11 @@
 # Register your models here.
 # admin.py
 from django import forms
-from django.apps import apps
 from django.contrib import admin
 from django_tenants.admin import TenantAdminMixin
 from django_tenants.utils import get_public_schema_name
-from invitations.admin import InvitationAdmin
 
-from .models import Company, CompanyInvitation, Domain, Membership, Role
+from .models import Company, Domain, Membership, Role
 
 
 class PublicTenantOnlyMixin:
@@ -31,22 +29,24 @@ class PublicTenantOnlyMixin:
     def has_view_or_change_permission(self, request, view=None):
         return self._only_public_tenant_access(request)
 
+
 class SoftDeletedFilter(admin.SimpleListFilter):
-    title = 'soft deleted'
-    parameter_name = 'is_deleted'
+    title = "soft deleted"
+    parameter_name = "is_deleted"
 
     def lookups(self, request, model_admin):
         return (
-            ('yes', 'Yes'),
-            ('no', 'No'),
+            ("yes", "Yes"),
+            ("no", "No"),
         )
 
     def queryset(self, request, queryset):
-        if self.value() == 'yes':
+        if self.value() == "yes":
             return queryset.filter(is_deleted=True)
-        if self.value() == 'no':
+        if self.value() == "no":
             return queryset.filter(is_deleted=False)
         return queryset
+
 
 class CompanyAdminForm(forms.ModelForm):
     class Meta:
@@ -64,8 +64,8 @@ class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
     form = CompanyAdminForm
     list_display = ("name", "owner", "theme", "logo", "is_deleted")
     search_fields = ["name"]
-    list_filter = ["owner",SoftDeletedFilter]
-    actions = ['restore_companies','hard_delete_companies']
+    list_filter = ["owner", SoftDeletedFilter]
+    actions = ["restore_companies", "hard_delete_companies"]
 
     def get_queryset(self, request):
         # Use the all_objects manager to include soft-deleted instances
@@ -73,11 +73,13 @@ class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
 
     def restore_companies(self, request, queryset):
         queryset.update(is_deleted=False)
+
     restore_companies.short_description = "Restore selected companies"
 
     def hard_delete_companies(self, request, queryset):
         for company in queryset:
             company.hard_delete()
+
     hard_delete_companies.short_description = "Permanently delete selected companies"
 
 

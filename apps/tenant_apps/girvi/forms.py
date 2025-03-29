@@ -1,27 +1,31 @@
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Button, Column, Layout, Row, Submit
 from django import forms
-from django.contrib import admin
-from django.contrib.admin.widgets import AutocompleteSelect
-from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django_select2 import forms as s2forms
-from django_select2.forms import (ModelSelect2Widget, Select2MultipleWidget,
-                                  Select2Widget)
+from django_select2.forms import ModelSelect2Widget
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.rates.models import Rate
 
-from .models import (License, Loan, LoanItem, LoanItemStorageBox, LoanPayment,
-                     Release, RepledgedLoanItem, Series, Statement,
-                     StatementItem)
+from .models import (
+    License,
+    Loan,
+    LoanItem,
+    LoanItemStorageBox,
+    LoanPayment,
+    Release,
+    RepledgedLoanItem,
+    Series,
+    StatementItem,
+)
 
 
 class LoansWidget(s2forms.ModelSelect2Widget):
@@ -53,7 +57,7 @@ class LicenseForm(forms.ModelForm):
 class SeriesForm(forms.ModelForm):
     class Meta:
         model = Series
-        fields = ["name", "license", "is_active", "loan_type"]
+        fields = ["name", "license", "prefix", "is_active", "loan_type"]
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -765,3 +769,82 @@ class LoanItemStorageBoxForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class ApproveLoanForm(forms.Form):
+    approved_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["approved_by"].initial = user.username
+
+
+class DisburseLoanForm(forms.Form):
+    disbursed_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["disbursed_by"].initial = user.username
+
+
+class DeliverLoanForm(forms.Form):
+    created_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    released_by = forms.ModelChoiceField(
+        queryset=Customer.objects.all(),
+        widget=CustomerWidget,
+    )
+    release_date = forms.DateTimeField(required=False)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["created_by"].initial = user
+
+
+class CancelLoanForm(forms.Form):
+    cancelled_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    reason = forms.CharField(widget=forms.Textarea)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["cancelled_by"].initial = user.username
+
+
+class MarkDefaultedLoanForm(forms.Form):
+    marked_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    reason = forms.CharField(widget=forms.Textarea)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["marked_by"].initial = user.username
+
+
+class MarkAuctionedLoanForm(forms.Form):
+    auctioned_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    amount = forms.DecimalField(max_digits=10, decimal_places=2)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["auctioned_by"].initial = user.username
+
+
+class MarkSoldLoanForm(forms.Form):
+    sold_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    amount = forms.DecimalField(max_digits=10, decimal_places=2)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["sold_by"].initial = user.username

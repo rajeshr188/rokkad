@@ -1,0 +1,12 @@
+{% extends "_base.html" %}
+{% load crispy_forms_tags%}
+{% block content %}
+  {{form.media}}
+  <h2>Transition Loan</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <input type="hidden" name="transition" value="{{ transition_name }}">
+    <button class="btn btn-outline-primary" type="submit">Submit</button>
+  </form>
+{% endblock %}

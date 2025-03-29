@@ -1,7 +1,42 @@
 import django_tables2 as tables
 from django.utils.html import format_html
 
-from .models import Stock
+from .models import Category, Product, ProductType, ProductVariant, Stock
+
+
+class CategoryTable(tables.Table):
+    class Meta:
+        model = Category
+        template_name = "django_tables2/bootstrap.html"
+        fields = ("name", "slug", "description", "parent", "background_image")
+
+
+class ProductTypeTable(tables.Table):
+    class Meta:
+        model = ProductType
+        template_name = "django_tables2/bootstrap.html"
+        fields = ("name", "has_variants", "product_attributes", "variant_attributes")
+
+
+class ProductTable(tables.Table):
+    class Meta:
+        model = Product
+        template_name = "django_tables2/bootstrap.html"
+        fields = (
+            "product_type",
+            "name",
+            "description",
+            "category",
+            "attributes",
+            "jattributes",
+        )
+
+
+class ProductVariantTable(tables.Table):
+    class Meta:
+        model = ProductVariant
+        template_name = "django_tables2/bootstrap.html"
+        fields = ("sku", "name", "product", "product_code", "attributes", "jattributes")
 
 
 class StockTable(tables.Table):

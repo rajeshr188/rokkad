@@ -19,9 +19,13 @@ from invitations.base_invitation import AbstractBaseInvitation
 
 User = get_user_model()
 
+
 class CompanyManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(is_deleted=False)
+
+    def all_with_deleted(self):
+        return super().get_queryset()
 
 
 class Company(TenantMixin):
@@ -73,7 +77,7 @@ class Company(TenantMixin):
 
     def get_absolute_url(self):
         return reverse("orgs_company_detail", args=[str(self.id)])
-    
+
     def delete(self, *args, **kwargs):
         self.is_deleted = True
         self.save()

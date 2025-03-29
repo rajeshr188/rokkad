@@ -1,7 +1,6 @@
 import logging
 
 from django.contrib.postgres.fields import ArrayField
-from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
@@ -9,7 +8,6 @@ from djmoney.models.fields import MoneyField
 from moneyed import Money
 from mptt.models import MPTTModel, TreeForeignKey
 
-from ..managers import LedgerManager
 from ..utils.currency import Balance
 from .moneyvalue import MoneyValueField
 
@@ -42,6 +40,13 @@ class Ledger(MPTTModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "parent"], name="unique ledgername-parent"
+            )
+        ]
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "parent"], name="unique_ledgername_parent"
             )
         ]
 
@@ -111,6 +116,7 @@ class Ledger(MPTTModel):
         #                 for r in acc.credit_txns.values("amount_currency").annotate(total = Sum("amount"))])
         #         for acc in decendants
         #         ]
+
         descendants = [
             i.get_balance() for i in self.get_descendants(include_self=False)
         ]
@@ -174,9 +180,9 @@ class Ledger(MPTTModel):
 
         credit_balance = self.get_credit_bal(since)  # credit balance with aleg
         debit_balance = self.get_debit_bal(since)  # debit balance with aleg
-        logger.warning(
-            f"credit_balance: {credit_balance} debit_balance: {debit_balance}"
-        )
+        # logger.warning(
+        #     f"credit_balance: {credit_balance} debit_balance: {debit_balance}"
+        # )
 
         bal = cb + (debit_balance - credit_balance)
         return bal
@@ -236,6 +242,103 @@ class Ledger(MPTTModel):
     def get_balance(self):
         return self.ledgerbalance.get_currbal()
 
+    # -------------------ditching custom postgres money_value----------------
+
+    # def get_closing_balance(self):
+    #     """Get closing balance in all active currencies"""
+    #     balances = []
+
+    #     # Get all active currencies for this ledger
+    #     for currency in self.get_active_currencies():
+    #         try:
+    #             # Get latest statement for this currency
+    #             stmt = self.ledgerstatements.filter(
+    #                 ClosingBalance_currency=currency
+    #             ).latest()
+    #             balances.append(stmt.ClosingBalance)
+    #         except LedgerStatement.DoesNotExist:
+    #             # If no statement exists for this currency, add zero balance
+    #             balances.append(Money(0, currency))
+
+    #     return Balance(balances)
+
+    # def get_active_currencies(self):
+    #     """Get list of currencies used in this ledger's transactions"""
+    #     currencies = set()
+    #     currencies.update(self.credit_txns.values_list('amount_currency', flat=True).distinct())
+    #     currencies.update(self.debit_txns.values_list('amount_currency', flat=True).distinct())
+    #     currencies.update(self.aleg.values_list('amount_currency', flat=True).distinct())
+    #     return list(currencies)
+
+    # def calculate_balance(self, currency, since=None):
+    #     """Calculate balance changes for specific currency since given date"""
+    #     # Base filters for currency
+    #     credit_filters = {'amount_currency': currency}
+    #     debit_filters = {'amount_currency': currency}
+
+    #     # Add date filter only if since is not None
+    #     if since:
+    #         credit_filters['created__gt'] = since
+    #         debit_filters['created__gt'] = since
+
+    #     # Get credits with proper filters
+    #     credit_sum = self.credit_txns.filter(
+    #         **credit_filters
+    #     ).aggregate(total=Sum('amount'))['total'] or 0
+
+    #     aleg_credit_sum = self.aleg.filter(
+    #         **credit_filters,
+    #         XactTypeCode='Cr'
+    #     ).aggregate(total=Sum('amount'))['total'] or 0
+
+    #     # Get debits with proper filters
+    #     debit_sum = self.debit_txns.filter(
+    #         **debit_filters
+    #     ).aggregate(total=Sum('amount'))['total'] or 0
+
+    #     aleg_debit_sum = self.aleg.filter(
+    #         **debit_filters,
+    #         XactTypeCode='Dr'
+    #     ).aggregate(total=Sum('amount'))['total'] or 0
+
+    #     return Money(
+    #         (debit_sum + aleg_debit_sum) - (credit_sum + aleg_credit_sum),
+    #         currency
+    #     )
+
+    # def current_balance(self):
+    #     """Get current balance in all active currencies"""
+    #     balances = []
+    #     for currency in self.get_active_currencies():
+    #         # Get latest statement for this currency
+    #         try:
+    #             stmt = self.ledgerstatements.filter(
+    #                 ClosingBalance_currency=currency
+    #             ).latest()
+    #             prev_balance = stmt.ClosingBalance
+    #             since = stmt.created
+    #         except LedgerStatement.DoesNotExist:
+    #             prev_balance = Money(0, currency)
+    #             since = None
+
+    #         # Calculate changes since last statement
+    #         balance_change = self.calculate_balance(currency, since)
+    #         balances.append(prev_balance + balance_change)
+
+    #     return Balance(balances)
+
+    # def audit(self):
+    #     """Create statements for all active currencies"""
+    #     statements = []
+    #     for currency in self.get_active_currencies():
+    #         balance = self.current_balance().get(currency)
+    #         stmt = LedgerStatement.objects.create(
+    #             ledgerno=self,
+    #             ClosingBalance=balance
+    #         )
+    #         statements.append(stmt)
+    #     return statements
+
 
 class LedgerTransactionManager(models.Manager):
     def create_txn(self, journal_entry, ledgerno, ledgerno_dr, amount):
@@ -294,9 +397,15 @@ class LedgerStatement(models.Model):
         # unique = True,
         auto_now_add=True
     )
+    # ClosingBalance = MoneyField(
+    #     max_digits=13,
+    #     decimal_places=3,
+    #     default_currency="INR",
+    # )
     ClosingBalance = ArrayField(MoneyValueField(null=True, blank=True))
 
     class Meta:
+        # unique_together = ['ledgerno', 'ClosingBalance_currency', 'created']
         get_latest_by = "created"
         ordering = ["-created"]
 
@@ -315,19 +424,25 @@ class Ledgerbalance(models.Model):
         primary_key=True,
         related_name="ledgerbalance",
     )
-    ls_created = models.DateTimeField()
-    opening_balance = ArrayField(MoneyValueField(null=True, blank=True))
-    closing_balance = ArrayField(MoneyValueField(null=True, blank=True))
-    cr = ArrayField(MoneyValueField(null=True, blank=True))
-    dr = ArrayField(MoneyValueField(null=True, blank=True))
+    # name = models.CharField(max_length=100)
+    # AccountType = models.CharField(max_length=50)
+    statement_created = models.DateTimeField()
+    opening_balance = ArrayField(
+        MoneyValueField(blank=True, null=True), blank=True, null=True
+    )
+    closing_balance = ArrayField(
+        MoneyValueField(blank=True, null=True), blank=True, null=True
+    )
+    credit = ArrayField(MoneyValueField(blank=True, null=True), blank=True, null=True)
+    debit = ArrayField(MoneyValueField(blank=True, null=True), blank=True, null=True)
 
     class Meta:
         managed = False
-        db_table = "ledger_balance"
-        ordering = ["ledgerno__AccountType", "ledgerno__name"]
+        db_table = "resultlb11"
+        # ordering = ["ledgerno__AccountType", "ledgerno__name"]
 
     def get_currbal(self):
-        return Balance(self.opening_balance) + Balance(self.closing_balance)
+        return Balance(self.closing_balance)
 
     def get_ob(self):
         return Balance(self.opening_balance)
@@ -345,22 +460,7 @@ class Ledgerbalance(models.Model):
         )
 
     def get_dr(self):
-        return Balance(self.dr)
+        return Balance(self.debit)
 
     def get_cr(self):
-        return Balance(self.cr)
-
-
-# class LedgerBalance(models.Model):
-#     ledgerno_id = models.IntegerField(primary_key=True)
-#     name = models.CharField(max_length=255)
-#     account_type = models.CharField(max_length=255)
-#     ls_created = models.DateTimeField()
-#     opening_balance = ArrayField(MoneyValueField(null=True, blank=True))
-#     cr = ArrayField(MoneyValueField(null=True, blank=True))
-#     dr = ArrayField(MoneyValueField(null=True, blank=True))
-#     closing_balance = ArrayField(MoneyValueField(null=True, blank=True))
-
-#     class Meta:
-#         managed = False
-#         db_table = 'ledger_balance'
+        return Balance(self.credit)

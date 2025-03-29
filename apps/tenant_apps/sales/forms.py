@@ -1,17 +1,14 @@
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import (ButtonHolder, Column, Field, Layout, Row,
-                                 Submit)
+from crispy_forms.layout import ButtonHolder, Column, Field, Layout, Row, Submit
 from django import forms
 from django.urls import reverse_lazy
 from django_select2.forms import Select2Widget
-from django_tables2 import Column
 
 from apps.tenant_apps.approval.models import Approval
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.forms import StockWidget
 from apps.tenant_apps.product.models import Stock
-from apps.tenant_apps.utils.custom_layout_object import *
 
 from .models import Invoice, InvoiceItem, Receipt
 

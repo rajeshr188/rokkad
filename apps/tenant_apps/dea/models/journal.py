@@ -158,6 +158,16 @@ class JournalEntry(models.Model):
         else:
             return None
 
+    # def check_data_integrity(self, lt, at):
+    #    # check data integrity constraints before adding transactions chatgpt suggest
+    #     total_debit_ledger = sum(i["amount"] for i in lt if i["XactTypeCode"] == "Dr")
+    #     total_credit_ledger = sum(i["amount"] for i in lt if i["XactTypeCode"] == "Cr")
+    #     total_debit_account = sum(i["amount"] for i in at if i["XactTypeCode"] == "Dr")
+    #     total_credit_account = sum(i["amount"] for i in at if i["XactTypeCode"] == "Cr")
+    #     if total_debit_ledger != total_credit_ledger or total_debit_account != total_credit_account:
+    #         raise ValueError("Transactions are not balanced")
+    #     return True
+
     def check_data_integrity(self, lt, at):
         # check data integrity constraints before adding transactions
         # for example, make sure the sum of debit amounts equals the sum of credit amounts
@@ -229,14 +239,8 @@ class JournalEntry(models.Model):
             )
 
         for i in at:
-            xacttypecode = ""
-            xacttypecode_ext = ""
-            if i["XactTypeCode"] == "Cr":
-                xacttypecode = "Dr"
-                xacttypecode_ext = "AC"
-            else:
-                xacttypecode = "Cr"
-                xacttypecode_ext = "AD"
+            xacttypecode = "Dr" if i["XactTypeCode"] == "Cr" else "Cr"
+            xacttypecode_ext = "AC" if i["XactTypeCode"] == "Cr" else "AD"
             AccountTransaction.objects.create_txn(
                 self,
                 i["ledgerno"],

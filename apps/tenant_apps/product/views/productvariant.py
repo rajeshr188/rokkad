@@ -3,8 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse_lazy
-from django.views.generic import DeleteView, DetailView, UpdateView
-from django_filters.views import FilterView
+from django.views.generic import DeleteView
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 

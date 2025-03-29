@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from django import forms
 from django.urls import reverse_lazy
 from django_select2.forms import Select2Widget

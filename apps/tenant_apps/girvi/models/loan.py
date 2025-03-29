@@ -1,16 +1,14 @@
-from enum import auto
 import logging
-from operator import is_
 import re
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
-from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
-from django.db.models import DecimalField, ExpressionWrapper, F, Func, Q, Sum
+from django.db.models import DecimalField, ExpressionWrapper, F, Func, Sum
 from django.db.models.functions import Coalesce
 from django.forms.models import model_to_dict
 from django.urls import reverse
@@ -18,16 +16,20 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
+from apps.orgs.models import Membership
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (AccountTransaction, JournalEntry,
-                                         LedgerTransaction)
+from apps.tenant_apps.dea.models import (
+    AccountStatement,
+    AccountTransaction,
+    JournalEntry,
+    LedgerTransaction,
+)
 from apps.tenant_apps.rates.models import Rate
-from apps.tenant_apps.dea.models import AccountStatement
 
-from ..managers import (LoanManager, LoanQuerySet, ReleasedManager,
-                        UnReleasedManager)
+from ..managers import LoanManager, LoanQuerySet, ReleasedManager, UnReleasedManager
 
 logger = logging.getLogger(__name__)
+
 
 class LoanStatus(models.TextChoices):
     CREATED = "Created", "Created"
@@ -42,10 +44,16 @@ class LoanStatus(models.TextChoices):
     DEFAULTED = "Defaulted", "Defaulted"
     AUCTIONED = "Auctioned", "Auctioned"
 
+
 class ItemType(models.TextChoices):
     GOLD = "Gold", "Gold"
     SILVER = "Silver", "Silver"
     BRONZE = "Bronze", "Bronze"
+
+
+class InterestType(models.TextChoices):
+    SIMPLE = "Simple", "Simple"
+    COMPOUND = "Compound", "Compound"
 
 
 class Loan(models.Model):
@@ -64,13 +72,8 @@ class Loan(models.Model):
         related_name="loans_created",
     )
     loan_date = models.DateTimeField(default=timezone.now, verbose_name=_("Loan Date"))
-    lid = models.IntegerField(blank=True, null=True)
     loan_id = models.CharField(max_length=255, unique=True, db_index=True)
-    status = models.CharField(
-        max_length=10,
-        choices=LoanStatus.choices,
-        default=LoanStatus.CREATED,
-    )
+
     class LoanType(models.TextChoices):
         TAKEN = "Taken", "Taken"
         GIVEN = "Given", "Given"
@@ -97,11 +100,11 @@ class Loan(models.Model):
         max_digits=10, decimal_places=2, default=0, null=True, blank=True
     )
     value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-
-    # -----------------------------------
-    class InterestType(models.TextChoices):
-        SIMPLE = "Simple", "Simple"
-        COMPOUND = "Compound", "Compound"
+    status = models.CharField(
+        max_length=20,
+        choices=LoanStatus.choices,
+        default=LoanStatus.CREATED,
+    )
 
     interest_type = models.CharField(
         max_length=10, choices=InterestType.choices, default=InterestType.SIMPLE
@@ -110,6 +113,7 @@ class Loan(models.Model):
         "girvi.Series",
         on_delete=models.CASCADE,
         verbose_name="Series",
+        # related_name="loans",
     )
     tenure = models.PositiveIntegerField(default=3)
     customer = models.ForeignKey(
@@ -128,6 +132,20 @@ class Loan(models.Model):
     class Meta:
         ordering = ("series", "loan_id")
         get_latest_by = "id"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["series", "loan_id"], name="unique_loan_id_per_series"
+            )
+        ]
+        permissions = [
+            ("can_approve_loan", "Can approve loan"),
+            ("can_disburse_loan", "Can disburse loan"),
+            ("can_release_loan", "Can release loan"),
+            ("can_cancel_loan", "Can cancel loan"),
+            ("can_mark_defaulted", "Can mark loan as defaulted"),
+            ("can_mark_auctioned", "Can mark loan as auctioned"),
+            ("can_mark_sold", "Can mark loan as sold"),
+        ]
 
     def __str__(self):
         return f"{self.loan_id} - {self.loan_amount} - {self.loan_date.date()}"
@@ -279,7 +297,7 @@ class Loan(models.Model):
         try:
             if not self.is_released and self.loanitems.exists():
                 return round((value - due) / self.interest, 1)
-        except Exception as e:
+        except Exception:
             return 0
         return 0
 
@@ -323,6 +341,21 @@ class Loan(models.Model):
 
     #     super(Loan, self).save(*args, **kwargs)
 
+    def save(self, *args, **kwargs):
+        if not self.loan_id:
+            with transaction.atomic():
+                # Generate and set loan ID
+                self.loan_id = self.series.get_next_loan_id()
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
+
+    @classmethod
+    def validate_loan_id(cls, loan_id, series_prefix):
+        """Validate loan ID format"""
+        pattern = f"^{series_prefix}\\d{{{loan_id.series.max_limit}}}$"
+        return bool(re.match(pattern, loan_id))
+
     def update(self):
         # # Aggregate the loan amounts and interests
         # aggregates = self.loanitems.aggregate(
@@ -360,8 +393,9 @@ class Loan(models.Model):
                 ),
             )
 
-        loan_amount = aggregates["loan_amount"]
-        interest = aggregates["interest"]
+        loan_amount = aggregates["loan_amount"] or 0
+        interest = aggregates["interest"] or 0
+        print(f"updating loan_amount: {loan_amount}, interest: {interest}")
 
         try:
             # Update the loan object with the aggregated values
@@ -621,10 +655,228 @@ class Loan(models.Model):
             ).first()
         except LoanItemStorageBox.DoesNotExist:
             return None
-        except Exception as e:
+        except Exception:
             # Log the exception if needed
             # print(f"An error occurred: {e}")
             return None
+
+    # Add to Loan class
+    def create_split_loan(self, loan_item, created_by=None):
+        """Creates a new loan from an existing loan item"""
+        new_loan = Loan.objects.create(
+            created_by=created_by or self.created_by,
+            loan_date=self.loan_date,
+            loan_type=self.loan_type,
+            interest_type=self.interest_type,
+            series=self.series,
+            tenure=self.tenure,
+            customer=self.customer,
+            status=self.status,
+        )
+
+        # Move loan item to new loan
+        loan_item.loan = new_loan
+        loan_item.save()
+
+        # Update both loans
+        self.update()
+        new_loan.update()
+
+        return new_loan
+
+    def split_loan_items(self, loan_item_ids=None):
+        """
+        Splits selected loan items into separate loans.
+        If no loan_item_ids provided, splits all loan items except the first one.
+        First loan item always stays with original loan.
+        Only loans with more than one item can be split.
+
+        Returns list of newly created loans.
+        """
+        if self.loanitems.count() <= 1:
+            raise ValidationError("Loan must have more than one item to split")
+
+        # Get loan items to split
+        if loan_item_ids:
+            # Exclude first loan item if it's in the list
+            first_item = self.loanitems.earliest("id")
+            items_to_split = self.loanitems.filter(id__in=loan_item_ids).exclude(
+                id=first_item.id
+            )
+        else:
+            # Get all items except first one
+            items_to_split = self.loanitems.exclude(id=self.loanitems.earliest("id").id)
+
+        if not items_to_split:
+            raise ValidationError("No valid loan items found to split")
+
+        new_loans = []
+
+        try:
+            with transaction.atomic():
+                # Create new loan for each item
+                for loan_item in items_to_split:
+                    new_loan = self.create_split_loan(loan_item)
+
+                    # Log the split
+                    LoanChangeLog.objects.create(
+                        loan=self,
+                        source=f"Split loan item {loan_item.id}",
+                        target=f"Created new loan {new_loan.id}",
+                        author=self.created_by,
+                    )
+
+                    new_loans.append(new_loan)
+
+        except Exception as e:
+            logger.error(f"Error splitting loan {self.id}: {str(e)}")
+            raise
+
+        return new_loans
+
+    # def merge_loans(self, loan_ids):
+    #     """
+    #     Merges selected loans into the current loan.
+    #     """
+    #     loans_to_merge = Loan.objects.filter(id__in=loan_ids)
+
+    #     if not loans_to_merge:
+    #         raise ValidationError("No valid loans found to merge")
+
+    #     try:
+    #         with transaction.atomic():
+    #             for loan in loans_to_merge:
+    #                 # Move all loan items to current loan
+    #                 loan.loanitems.update(loan=self)
+
+    #                 # Log the merge
+    #                 LoanChangeLog.objects.create(
+    #                     loan=self,
+    #                     source=f"Merged loan {loan.id}",
+    #                     target=f"Added loan items",
+    #                     author=self.created_by
+    #                 )
+
+    #                 # Delete the merged loan
+    #                 loan.delete()
+
+    #     except Exception as e:
+    #         logger.error(f"Error merging loans into loan {self.id}: {str(e)}")
+    #         raise
+
+    def merge_loans(self, loans_to_merge):
+        """
+        Merges multiple loans into this loan.
+        Args:
+            loans_to_merge: QuerySet or list of Loan objects to merge into this one
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        if not loans_to_merge:
+            raise ValidationError("No loans provided to merge")
+
+        # Validate merge conditions
+        for loan in loans_to_merge:
+            if loan.customer != self.customer:
+                raise ValidationError(
+                    f"Cannot merge loan {loan.loan_id} - different customer"
+                )
+            if loan.is_released:
+                raise ValidationError(
+                    f"Cannot merge loan {loan.loan_id} - already released"
+                )
+            if loan.id == self.id:
+                raise ValidationError("Cannot merge loan with itself")
+
+        try:
+            with transaction.atomic():
+                # Log the merge
+                merge_log = LoanChangeLog.objects.create(
+                    loan=self,
+                    source=f"Merging loans: {', '.join(l.loan_id for l in loans_to_merge)}",
+                    target=f"Into loan: {self.loan_id}",
+                    author=self.created_by,
+                    diff=f"Merged {len(loans_to_merge)} loans",
+                )
+
+                # Move all loan items to this loan
+                for loan in loans_to_merge:
+                    # Reverse any transactions
+                    loan.reverse_transactions()
+
+                    # Move loan items
+                    loan.loanitems.update(loan=self)
+
+                    # Log individual loan merges
+                    LoanChangeLog.objects.create(
+                        loan=loan,
+                        source=f"Loan merged",
+                        target=f"Into loan: {self.loan_id}",
+                        author=self.created_by,
+                        diff="Loan merged and deleted",
+                    )
+
+                    # Delete the merged loan
+                    loan.delete()
+
+                # Update the merged loan
+                self.update()
+
+                return (
+                    True,
+                    f"Successfully merged {len(loans_to_merge)} loans into {self.loan_id}",
+                )
+
+        except Exception as e:
+            logger.error(f"Error merging loans into {self.loan_id}: {str(e)}")
+            raise ValidationError(f"Failed to merge loans: {str(e)}")
+
+    @classmethod
+    def validate_merge_selection(cls, loan_ids):
+        """
+        Validates if selected loans can be merged.
+        Returns tuple of (can_merge: bool, message: str, base_loan: Loan)
+        """
+        if not loan_ids or len(loan_ids) < 2:
+            return False, "Select at least two loans to merge", None
+
+        loans = cls.objects.filter(id__in=loan_ids)
+
+        # Get earliest loan as base
+        base_loan = loans.earliest("created_at")
+
+        # Check all loans have same customer
+        customers = set(loans.values_list("customer_id", flat=True))
+        if len(customers) > 1:
+            return False, "Selected loans must belong to the same customer", None
+
+        # Check none are released
+        if loans.filter(status=LoanStatus.RELEASED).exists():
+            return False, "Cannot merge released loans", None
+
+        return True, f"Selected loans can be merged into {base_loan.loan_id}", base_loan
+
+    def get_status_history(self):
+        """Get complete status change history"""
+        return self.loanchangelog_set.all().order_by("-changed")
+
+
+class LoanChangeLog(models.Model):
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
+    changed = models.DateTimeField(default=timezone.now)
+    source = models.CharField(max_length=255)
+    target = models.CharField(max_length=255)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    diff = models.TextField()
+    notes = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)  # For additional data
+
+    class Meta:
+        ordering = ["-changed"]
+
+    def __str__(self):
+        return f"{self.loan.loan_id} - {self.source} → {self.target}"
 
 
 class LoanItem(models.Model):
@@ -633,12 +885,6 @@ class LoanItem(models.Model):
         "product.ProductVariant", on_delete=models.SET_NULL, null=True, blank=True
     )
     pic = models.ImageField(upload_to="loan_pics/", null=True, blank=True)
-
-    class ItemType(models.TextChoices):
-        GOLD = "Gold", "Gold"
-        SILVER = "Silver", "Silver"
-        BRONZE = "Bronze", "Bronze"
-
     itemtype = models.CharField(
         max_length=30, choices=ItemType.choices, default=ItemType.GOLD
     )
@@ -655,9 +901,7 @@ class LoanItem(models.Model):
     itemdesc = models.TextField(
         max_length=100, blank=True, null=True, verbose_name="Item"
     )
-
     is_repledged = models.BooleanField(default=False)
-
     journal_entries = GenericRelation(JournalEntry, related_query_name="loanitem_doc")
 
     class Meta:
@@ -675,10 +919,6 @@ class LoanItem(models.Model):
     def get_absolute_url(self):
         # return self.loan.get_absolute_url()
         return reverse("girvi:girvi_loanitem_detail", args=(self.pk,))
-
-    # def get_hx_edit_url(self):
-    #     kwargs = {"parent_id": self.loan.id, "id": self.id}
-    #     return reverse("girvi:hx-loanitem-detail", kwargs=kwargs)
 
     def get_hx_edit_url(self):
         kwargs = {"parent_id": self.loan.id, "id": self.id}
@@ -1103,32 +1343,33 @@ class Statement(models.Model):
         "accounts.CustomUser",
         on_delete=models.DO_NOTHING,
         null=True,
-        related_name="statements_completed"
+        related_name="statements_completed",
     )
     reopened_at = models.DateTimeField(null=True)
     reopened_by = models.ForeignKey(
         "accounts.CustomUser",
         on_delete=models.DO_NOTHING,
         null=True,
-        related_name="statements_reopened"
+        related_name="statements_reopened",
     )
     statement_type = models.CharField(
         max_length=20,
         choices=[
-            ('REGULAR', 'Regular Verification'),
-            ('SPOT', 'Spot Check'),
-            ('ANNUAL', 'Annual Audit')
-        ],default='REGULAR'
+            ("REGULAR", "Regular Verification"),
+            ("SPOT", "Spot Check"),
+            ("ANNUAL", "Annual Audit"),
+        ],
+        default="REGULAR",
     )
     # Status tracking
     status = models.CharField(
         max_length=20,
         choices=[
-            ('DRAFT', 'In Progress'),
-            ('COMPLETED', 'Completed'),
-            ('REOPENED', 'Reopened'),
+            ("DRAFT", "In Progress"),
+            ("COMPLETED", "Completed"),
+            ("REOPENED", "Reopened"),
         ],
-        default='DRAFT'
+        default="DRAFT",
     )
     notes = models.TextField(blank=True)
 
@@ -1145,19 +1386,18 @@ class Statement(models.Model):
     @property
     def previous(self):
         return Statement.objects.filter(id__lt=self.id).order_by("id").last()
-    
+
     def get_missing_loans(self):
         """
         Returns unreleased loans that were not physically present during verification
         """
-        verified_loans = self.statementitem_set.values_list('loan_id', flat=True)
+        verified_loans = self.statementitem_set.values_list("loan_id", flat=True)
         if self.is_complete:
             return Loan.unreleased.exclude(id__in=verified_loans)
         else:
             return Loan.objects.filter(
-            statementitem__statement=self,
-            statementitem__descrepancy_type='MISSING'
-        )
+                statementitem__statement=self, statementitem__descrepancy_type="MISSING"
+            )
 
     def get_released_items_present(self):
         """
@@ -1166,30 +1406,30 @@ class Statement(models.Model):
         return self.statementitem_set.filter(
             loan__release__isnull=False,
             descrepancy_found=True,
-            descrepancy_note="Loan already released"
+            descrepancy_note="Loan already released",
         )
-    
+
     def get_verification_summary(self):
         """
         Returns summary of verification
         """
         missing_loans = self.get_missing_loans()
         released_present = self.get_released_items_present()
-        
+
         return {
-            'total_verified': self.statementitem_set.count(),
-            'missing_loans': list(missing_loans),
-            'released_present': list(released_present),
-            'missing_count': missing_loans.count(),
-            'released_present_count': released_present.count()
+            "total_verified": self.statementitem_set.count(),
+            "missing_loans": list(missing_loans),
+            "released_present": list(released_present),
+            "missing_count": missing_loans.count(),
+            "released_present_count": released_present.count(),
         }
-    
-    def mark_complete(self,completed_by = None):
+
+    def mark_complete(self, completed_by=None):
         """
         Mark verification as complete and record discrepancies
         """
         missing_loans = self.get_missing_loans()
-        
+
         # Create statement items for missing loans
         for loan in missing_loans:
             StatementItem.objects.create(
@@ -1197,20 +1437,20 @@ class Statement(models.Model):
                 loan=loan,
                 descrepancy_found=True,
                 descrepancy_note="Loan collateral missing",
-                auto_generated=True
+                auto_generated=True,
             )
-        
+
         self.completed = timezone.now()
         self.completed_by = completed_by
         self.save()
-        
+
         return self.get_verification_summary()
-    
-    @property 
+
+    @property
     def is_complete(self):
         return bool(self.completed)
-    
-    def toggle_complete(self,completed_by = None):
+
+    def toggle_complete(self, completed_by=None):
         if self.is_complete:
             self.completed = None
             self.reopened_at = timezone.now()
@@ -1239,13 +1479,13 @@ class StatementItem(models.Model):
     descrepancy_type = models.CharField(
         max_length=20,
         choices=[
-            ('MISSING', 'Item Missing'),
-            ('WEIGHT', 'Weight Mismatch'),
-            ('CONDITION', 'Condition Changed'),
-            ('RELEASED', 'Released but Present')
+            ("MISSING", "Item Missing"),
+            ("WEIGHT", "Weight Mismatch"),
+            ("CONDITION", "Condition Changed"),
+            ("RELEASED", "Released but Present"),
         ],
         null=True,
-        blank=True
+        blank=True,
     )
     descrepancy_note = models.TextField(blank=True, null=True)
     auto_generated = models.BooleanField(default=False)

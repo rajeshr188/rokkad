@@ -5,4 +5,4 @@ class PurchaseConfig(AppConfig):
     name = "apps.tenant_apps.purchase"
 
     def ready(self):
-        import apps.tenant_apps.purchase.signals
+        from . import signals

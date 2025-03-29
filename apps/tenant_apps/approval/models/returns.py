@@ -7,7 +7,6 @@ from django.urls import reverse
 from apps.tenant_apps.approval.models import ApprovalLine
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
-from apps.tenant_apps.product.models import Stock
 
 """
 When an approval voucher is created, the stock items that are being approved for release to a contact should be recorded in the database or inventory management system, along with the contact's information.

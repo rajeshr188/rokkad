@@ -1,11 +1,9 @@
-from datetime import datetime, timedelta
-from math import floor
+from datetime import datetime
 
 import django_tables2 as tables
 import pytz
 from django.utils.html import format_html
 from django.utils.timesince import timesince
-from django_tables2.utils import A
 
 from .models import Loan, LoanItem, Release
 

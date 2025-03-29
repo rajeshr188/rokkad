@@ -1,27 +1,18 @@
-import re
-from typing import List
-
-import pytz
-import tablib
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_tables2.config import RequestConfig
-from openpyxl import load_workbook
 from render_block import render_block_to_string
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.product.models import (PricingTier,
-                                             PricingTierProductPrice,
-                                             ProductVariant, Stock)
-from apps.tenant_apps.utils.htmx_utils import for_htmx
+from apps.tenant_apps.product.models import PricingTierProductPrice, Stock
 
 # from ..admin import InvoiceResource, ReceiptResource
 from ..filters import InvoiceFilter
 from ..forms import InvoiceForm, InvoiceItemForm
 from ..models import Invoice, InvoiceItem
+
 # from ..render import Render
 from ..tables import InvoiceTable
 

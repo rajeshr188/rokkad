@@ -1,5 +1,4 @@
 from django.apps import AppConfig
-from django.conf import settings
 from dynamic_preferences.registries import preference_models
 
 from .registries import company_preference_registry

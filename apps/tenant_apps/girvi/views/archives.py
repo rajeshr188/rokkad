@@ -1,7 +1,11 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic.dates import (DayArchiveView, MonthArchiveView,
-                                        TodayArchiveView, WeekArchiveView,
-                                        YearArchiveView)
+from django.views.generic.dates import (
+    DayArchiveView,
+    MonthArchiveView,
+    TodayArchiveView,
+    WeekArchiveView,
+    YearArchiveView,
+)
 
 from ..models import Loan
 

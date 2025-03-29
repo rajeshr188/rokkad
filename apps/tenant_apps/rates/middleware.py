@@ -1,5 +1,4 @@
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
 from django.utils.deprecation import MiddlewareMixin
 from django_tenants.utils import get_public_schema_name

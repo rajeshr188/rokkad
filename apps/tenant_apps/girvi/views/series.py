@@ -3,7 +3,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..forms import LoanForm, SeriesForm
-from ..models import Loan, Series
+from ..models import Series
 from ..services import generate_loan_id
 
 # @login_required
@@ -40,7 +40,8 @@ def next_loanid(request):
         series_id = request.GET.get("series", None)
         if series_id:
             series = get_object_or_404(Series, id=series_id)
-            loan_id = generate_loan_id(series_id=series_id)
+            loan_id = series.get_next_loan_id()
+            # loan_id = generate_loan_id(series_id=series_id)
             print(loan_id)
         else:
             loan_id = ""

@@ -5,9 +5,15 @@ from django.urls import reverse_lazy
 from django_select2 import forms as s2forms
 from djmoney.forms import MoneyField
 
-from .models import (Account, AccountStatement, AccountTransaction,
-                     JournalEntry, Ledger, LedgerStatement, LedgerTransaction,
-                     TransactionType_Ext)
+from .models import (
+    Account,
+    AccountStatement,
+    AccountTransaction,
+    JournalEntry,
+    Ledger,
+    LedgerStatement,
+    LedgerTransaction,
+)
 
 
 class AccountWidget(s2forms.ModelSelect2Widget):

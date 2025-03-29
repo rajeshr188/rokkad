@@ -1,9 +1,3 @@
-from io import BytesIO
-
-import xhtml2pdf.pisa as pisa
-from django.http import HttpResponse
-from django.template.loader import get_template
-
 # class Render:
 #     @staticmethod
 #     def render(path: str, params: dict):

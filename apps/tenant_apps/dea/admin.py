@@ -1,6 +1,5 @@
 from django.contrib import admin
 from mptt.admin import MPTTModelAdmin
-from mptt.models import MPTTModel
 
 # Register your models here.
 from . import models

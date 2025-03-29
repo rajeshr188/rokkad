@@ -10,10 +10,6 @@ class LedgerManager(models.Manager):
             .prefetch_related("ledgerstatements", "credit_txns", "debit_txns")
         )
 
-    # check all statements valid
-    # delete all statements and transactions
-    # with last closing balance create a new statement that hence forth acts as op bal
-
 
 class AccountManager(models.Manager):
     def get_queryset(self, *args, **kwargs):

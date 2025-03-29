@@ -1,7 +1,6 @@
 import csv
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
 from django_tenants.utils import schema_context
 
 from apps.tenant_apps.girvi.models import Loan

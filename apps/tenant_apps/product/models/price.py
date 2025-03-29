@@ -1,5 +1,4 @@
 from django.db import models
-from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 
 

@@ -68,6 +68,7 @@ SHARED_APPS = [
     "invitations",
     "slick_reporting",
     "django_cleanup.apps.CleanupConfig",
+    "viewflow",
 ]
 
 TENANT_APPS = [

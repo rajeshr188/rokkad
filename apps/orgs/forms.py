@@ -1,13 +1,13 @@
 from django import forms
-from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django_select2.forms import Select2Widget
-from dynamic_preferences.forms import (PreferenceForm,
-                                       SinglePerInstancePreferenceForm,
-                                       preference_form_builder)
+from dynamic_preferences.forms import (
+    PreferenceForm,
+    SinglePerInstancePreferenceForm,
+    preference_form_builder,
+)
 from invitations.adapters import get_invitations_adapter
-from invitations.exceptions import (AlreadyAccepted, AlreadyInvited,
-                                    UserRegisteredEmail)
+from invitations.exceptions import AlreadyAccepted, AlreadyInvited
 from invitations.forms import CleanEmailMixin
 from invitations.utils import get_invitation_model
 
@@ -120,10 +120,10 @@ class CompanyInvitationForm(forms.ModelForm):
         company = self.company
         errors = {
             "already_invited": _(
-                f"This e-mail address has already been invited for this company."
+                "This e-mail address has already been invited for this company."
             ),
             "already_accepted": _(
-                f"This e-mail address has already accepted an invite for this company."
+                "This e-mail address has already accepted an invite for this company."
             ),
         }
 
@@ -198,9 +198,6 @@ class InvitationAdminChangeForm(forms.ModelForm):
         fields = "__all__"
 
 
-from colorfield.widgets import ColorWidget
-
-
 class ColorInput(forms.TextInput):
     input_type = "color"
 
@@ -209,6 +206,7 @@ class CompanyForm(forms.ModelForm):
     name = forms.CharField(label=_("Business Name"), required=True)
     logo = forms.ImageField(label=_("Logo"), required=False)
     theme = forms.CharField(label=_("Theme"), required=False, widget=ColorInput)
+    # theme = forms.CharField(label=_("Theme"), required=False, widget=forms.TextInput(attrs={'type': 'color'}))
 
     class Meta:
         model = Company
@@ -223,8 +221,10 @@ class CompanyForm(forms.ModelForm):
             # Check if the form is updating an existing instance
             if self.instance.pk:
                 # Allow the current instance's name
+                print("form is updating an existing instance")
                 if (
-                    Company.objects.filter(name=name)
+                    Company.objects.all_with_deleted()
+                    .filter(name=name)
                     .exclude(pk=self.instance.pk)
                     .exists()
                 ):
@@ -233,10 +233,12 @@ class CompanyForm(forms.ModelForm):
                     )
             else:
                 # Check for new instances
-                if Company.objects.filter(name=name).exists():
+                if Company.objects.all_with_deleted().filter(name=name).exists():
+                    print("Company with this name already exists.")
                     raise forms.ValidationError(
                         "Company with this name already exists."
                     )
+                print("Company with this name does not exist.")
         return name
 
 

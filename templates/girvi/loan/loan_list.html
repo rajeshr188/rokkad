@@ -1,4 +1,4 @@
-{%extends "tenant.html"%}
+{%extends "_base.html"%}
 {% load static %}
 {% load i18n %}
 {%load django_tables2%}
@@ -113,7 +113,7 @@
     }
   }
 </style>
-<div id="loan-content" class="container-lg">
+<div id="loan-content" class="container-lg" ">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2">{%trans "Loans" %}</h1>
     
@@ -123,6 +123,7 @@
         <a class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}" 
            hx-swap="innerHTML transition:true"
            hx-target="#loan-content" 
+           hx-push-url="true"
            hx-trigger="click,keyup[shiftKey&&key=='N'] from:body">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">
             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -268,6 +269,17 @@
                       </svg></a>
                   </li>
                   <li>
+                    <a class="dropdown-item dropdown-item-info link-info"
+                      hx-post="{% url 'girvi:merge_loans' %}" 
+                      hx-confirm="Are you sure you want to merge selected loans?"
+                      hx-include="[name='selection']"
+                      hx-target="#table" hx-vals='{"use_block":"table"}'>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-intersect" viewBox="0 0 16 16">
+                        <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
+                      </svg>{%trans "Merge"%}
+                    </a>
+                  </li>
+                  <li>
                     <hr class="dropdown-divider">
                   </li>
                   <li>
@@ -285,25 +297,22 @@
                       </svg>
                     </a>
                   </li>
-
                 </ul>
               </div>
             </div>
           </div>
         </div>
-        <p class="d-inline-flex gap-1">
-          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample"
-            aria-expanded="false" aria-controls="collapseExample">
-            stats
-          </button>
-        </p>
-        <div class="collapse" id="collapseExample">
-          <div class="card card-body ">
-            <p>Total Loan Amount: {{total_loan_amount.total}} <br>
-              Total Interest :{{total_interest.total}} <br>
-              Results :{{table.paginator.count}} </p>
-          </div>
-        </div>
+        
+        <details>
+          <summary>
+            Stats
+          </summary>
+          <ul>
+            <li>Total Loan Amount: {{total_loan_amount.total}}</li>
+            <li>Total Interest :{{total_interest.total}}</li>
+            <li>Results :{{table.paginator.count}}</li>
+          </ul>
+        </details>
         {% render_table table %}
         {%endblock%}
       </div>

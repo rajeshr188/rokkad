@@ -1,13 +1,7 @@
-import decimal
 import uuid
-from itertools import chain, islice, tee
 
-from dateutil import relativedelta
-from django.conf import settings
-from django.core.files.storage import default_storage
 from django.db import models, transaction
-from django.db.models import Avg, Case, Count, FloatField, Q, Sum, When
-from django.db.models.expressions import OrderBy
+from django.db.models import Avg, Case, FloatField, Sum, When
 from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils import timezone

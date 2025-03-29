@@ -6,4 +6,4 @@ class ProductConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):
-        import apps.tenant_apps.product.signals
+        pass

@@ -1,4 +1,4 @@
-{% extends "tenant.html" %}
+{% extends "_base.html" %}
 {%load static%}
 {% load i18n%}
 {%load django_tables2%}
@@ -123,6 +123,7 @@
         <a class="btn btn-success mr-2" role="button"
             href="" hx-get="{% url 'contact_customer_create' %}" 
             hx-target="#content"
+            hx-push-url="true"
             hx-trigger="click, keyup[shiftKey&&key=='N'] from:body"
             >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16">

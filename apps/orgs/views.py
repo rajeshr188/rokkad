@@ -7,16 +7,18 @@ from django.db.models import Count
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django_tenants.utils import (get_public_schema_name, remove_www,
-                                  schema_context)
+from django_tenants.utils import get_public_schema_name, remove_www, schema_context
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
 
-from .decorators import (company_member_required, membership_required,
-                         role_required, roles_required, workspace_required)
-from .forms import (CompanyForm, CompanyInvitationForm, MembershipForm,
-                    company_preference_form_builder)
+from .decorators import role_required, roles_required
+from .forms import (
+    CompanyForm,
+    CompanyInvitationForm,
+    MembershipForm,
+    company_preference_form_builder,
+)
 from .models import Company, CompanyInvitation, Domain, Membership, Role
 
 # Create your views here.
@@ -62,8 +64,8 @@ def has_role(user, tenant, role_name):
 @login_required
 def company_create(request):
     if request.method == "POST":
-        form = CompanyForm(request.POST)
-        # TODO: set schema to public schema and then create the company
+        form = CompanyForm(request.POST, request.FILES)
+        print(f"form: {form.is_valid()}")
         if form.is_valid():
             with schema_context(get_public_schema_name()):
                 company = form.save(commit=False)
@@ -83,6 +85,9 @@ def company_create(request):
                 )
                 request.user.profile.set_workspace(company)
             return redirect("orgs_company_list")
+        else:
+            # Handle form errors
+            return render(request, "company/company_form.html", {"form": form})
     else:
         form = CompanyForm()
     return render(request, "company/company_form.html", {"form": form})
@@ -160,7 +165,7 @@ def companyinvitations_list(request):
     )
 
 
-@role_required('Owner')
+@role_required("Owner")
 def create_invite(request, company_id):
     company = Company.objects.get(id=company_id)
     if request.method == "POST":
@@ -315,7 +320,6 @@ def invitation_delete(request, invitation_id):
 from io import StringIO
 
 from django.core.management import call_command
-from django.http import JsonResponse
 from django.views import View
 
 

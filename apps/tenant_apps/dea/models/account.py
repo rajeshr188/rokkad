@@ -1,9 +1,9 @@
 import logging
 
+from django import db
 from django.contrib.postgres.fields import ArrayField
-from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Case, F, Sum, Value, When, Window
+from django.db.models import Sum
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
@@ -11,7 +11,7 @@ from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
 
-from ..managers import AccountManager
+from ..managers.managers import AccountManager
 from ..utils.currency import Balance
 from .ledger import Ledger
 from .moneyvalue import MoneyValueField
@@ -68,6 +68,9 @@ class Account(models.Model):
 
     class Meta:
         ordering = ("id",)
+        constraints = [
+            models.UniqueConstraint(fields=["contact"], name="unique_contact_account")
+        ]
 
     def __str__(self):
         return f"{self.id} | {self.contact} | {self.AccountType_Ext}"
@@ -78,7 +81,7 @@ class Account(models.Model):
     def set_opening_bal(self, amount):
         # amount is a MoneyField
         # ensure there aint no txns before setting op bal if present then audit and adjust
-        return AccountStatement.objects.create(self, ClosingBalance=Balance(amount))
+        return AccountStatement.objects.create(self, ClosingBalance=amount)
 
     def adjust(self, amount, xacttypecode):
         pass
@@ -176,6 +179,17 @@ class Account(models.Model):
     #     logger.info(f"bal:{bal}")
     #     return bal
 
+    # def current_balance(self):
+    # chatgpt suggested this change
+    #     latest_statement = self.latest_stmt()
+    #     closing_balance = Balance() if latest_statement is None else latest_statement.get_cb()
+    #     transactions = self.txns() if latest_statement is None else self.txns(since=latest_statement.created)
+    #     total_credit = self._calculate_total(transactions, "Cr")
+    #     total_debit = self._calculate_total(transactions, "Dr")
+    #     current_balance = closing_balance + (total_debit - total_credit) if self.account_type_ext.XactTypeCode_id == "Dr" else closing_balance + (total_credit - total_debit)
+    #     logger.info(f"Current balance: {current_balance}")
+    #     return current_balance
+
     def current_balance(self):
         # Retrieve the latest statement
         latest_statement = self.latest_stmt()
@@ -216,6 +230,100 @@ class Account(models.Model):
     def get_balance(self):
         return self.accountbalance
 
+    # # ------------------------ditch custom postgres money_value type------------------------
+
+    # def get_active_currencies(self):
+    #     """Get list of currencies used in this account's transactions"""
+    #     return list(self.accounttransactions.values_list(
+    #         'amount_currency', flat=True
+    #     ).distinct())
+
+    # def calculate_balance(self, currency, since=None):
+    #     """Calculate balance changes for specific currency since given date"""
+    #     transactions = self.accounttransactions.filter(
+    #         amount_currency=currency,
+    #         created__gt=since if since else None
+    #     )
+
+    #     credits = transactions.filter(
+    #         XactTypeCode__XactTypeCode='Cr'
+    #     ).aggregate(total=Sum('amount'))['total'] or 0
+
+    #     debits = transactions.filter(
+    #         XactTypeCode__XactTypeCode='Dr'
+    #     ).aggregate(total=Sum('amount'))['total'] or 0
+
+    #     if self.AccountType_Ext.XactTypeCode_id == 'Dr':
+    #         return debits - credits
+    #     else:
+    #         return credits - debits
+
+    # def current_balance(self):
+    #     """Get current balance in all active currencies"""
+    #     balances = []
+    #     for currency in self.get_active_currencies():
+    #         try:
+    #             # Get latest statement for this currency
+    #             stmt = self.accountstatements.filter(
+    #                 ClosingBalance_currency=currency
+    #             ).latest()
+    #             prev_balance = stmt.ClosingBalance
+    #             since = stmt.created
+    #         except AccountStatement.DoesNotExist:
+    #             prev_balance = Money(0, currency)
+    #             since = None
+
+    #         # Calculate changes since last statement
+    #         balance_change = self.calculate_balance(currency, since)
+    #         balances.append(prev_balance + balance_change)
+
+    #     return Balance(balances)
+
+    # def audit(self):
+    #     """Create statements for all active currencies"""
+    #     statements = []
+    #     for currency in self.get_active_currencies():
+    #         # Get transactions since last statement
+    #         try:
+    #             last_stmt = self.accountstatements.filter(
+    #                 ClosingBalance_currency=currency
+    #             ).latest()
+    #             since = last_stmt.created
+    #         except AccountStatement.DoesNotExist:
+    #             since = None
+
+    #         # Calculate totals
+    #         txns = self.accounttransactions.filter(
+    #             amount_currency=currency,
+    #             created__gt=since if since else None
+    #         )
+
+    #         total_credits = txns.filter(
+    #             XactTypeCode__XactTypeCode='Cr'
+    #         ).aggregate(total=Sum('amount'))['total'] or 0
+
+    #         total_debits = txns.filter(
+    #             XactTypeCode__XactTypeCode='Dr'
+    #         ).aggregate(total=Sum('amount'))['total'] or 0
+
+    #         # Calculate closing balance
+    #         if self.AccountType_Ext.XactTypeCode_id == 'Dr':
+    #             closing_balance = total_debits - total_credits
+    #         else:
+    #             closing_balance = total_credits - total_debits
+
+    #         # Create new statement
+    #         stmt = AccountStatement.objects.create(
+    #             AccountNo=self,
+    #             currency=currency,
+    #             ClosingBalance=closing_balance,
+    #             TotalCredit=total_credits,
+    #             TotalDebit=total_debits
+    #         )
+    #         statements.append(stmt)
+
+    #     return statements
+
 
 # account statement for ext account
 class AccountStatement(models.Model):
@@ -226,18 +334,38 @@ class AccountStatement(models.Model):
         # unique = True,
         auto_now_add=True
     )
+    # ClosingBalance = MoneyField(
+    #     max_digits=13,
+    #     decimal_places=3,
+    #     default_currency="INR",
+    #     # validators=[MinValueValidator(limit_value=0.0)],
+    # )
+    # TotalCredit = MoneyField(
+    #     max_digits=13,
+    #     decimal_places=3,
+    #     default_currency="INR",
+    #     # validators=[MinValueValidator(limit_value=0.0)],
+    # )
+    # TotalDebit = MoneyField(
+    #     max_digits=13,
+    #     decimal_places=3,
+    #     default_currency="INR",
+    #     # validators=[MinValueValidator(limit_value=0.0)],
+    # )
     ClosingBalance = ArrayField(MoneyValueField(null=True, blank=True))
     TotalCredit = ArrayField(MoneyValueField(null=True, blank=True))
     TotalDebit = ArrayField(MoneyValueField(null=True, blank=True))
 
     class Meta:
         get_latest_by = "created"
+        # Use _currency suffix that MoneyField automatically creates
+        # unique_together = ['AccountNo', 'ClosingBalance_currency', 'created']
 
     def __str__(self):
-        return f"{self.id} | {self.AccountNo} = {Balance(self.ClosingBalance)}({Balance(self.TotalDebit)} - {Balance(self.TotalCredit)})"
+        return f"{self.id} | {self.AccountNo} = {self.ClosingBalance}({self.TotalDebit} - {self.TotalCredit})"
 
     def get_cb(self):
-        return Balance(self.ClosingBalance)
+        return self.ClosingBalance
 
 
 # sales,purchase,receipt,payment,loan,release
@@ -328,6 +456,7 @@ class Accountbalance(models.Model):
     class Meta:
         managed = False
         db_table = "account_balance"
+        # db_table = "acc_bal_v4"
 
     def __str__(self):
         return f"{self.get_currbal()}"
@@ -335,9 +464,8 @@ class Accountbalance(models.Model):
     def get_currbal(self):
         # more like op + cb(dr-cr if acc.type == dr else cr-dr)
         if self.AccountNo.AccountType_Ext.XactTypeCode_id == "Dr":
-            return (
-                Balance(self.opening_balance) - self.get_cb()
-            )  # (self.get_cr() - self.get_dr())
+            return Balance(self.opening_balance) - self.get_cb()
+        # (self.get_cr() - self.get_dr())
         else:
             return (
                 Balance(self.opening_balance) + self.get_cb()
@@ -356,13 +484,13 @@ class Accountbalance(models.Model):
         return Balance(self.opening_balance)
 
 
-# class AccountBalance(models.Model):
-# AccountNo = models.OneToOneField(
-#         Account,
-#         on_delete=models.DO_NOTHING,
-#         primary_key=True,
-#         related_name="accountbalance",
-#     )
+# class Accountbalance(models.Model):
+#     AccountNo = models.OneToOneField(
+#             Account,
+#             on_delete=models.DO_NOTHING,
+#             # primary_key=True,
+#             related_name="accountbalance",
+#         )
 #     account_no_id = models.IntegerField(primary_key=True)
 #     contact_id = models.IntegerField()
 #     ls_created = models.DateTimeField()

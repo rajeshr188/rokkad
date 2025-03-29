@@ -1,21 +1,15 @@
 from datetime import datetime
-from typing import List
 
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.template.response import TemplateResponse
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods, require_POST
-from django.views.generic import CreateView, DeleteView, DetailView, UpdateView
-from django_filters.views import FilterView
+from django.views.decorators.http import require_POST
+from django.views.generic import DeleteView
 from django_tables2.config import RequestConfig
-from django_tables2.export.export import TableExport
-from django_tables2.export.views import ExportMixin
-from django_tables2.views import SingleTableMixin
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
@@ -116,8 +110,6 @@ class ReleaseDeleteView(LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy("girvi:girvi_release_list")
     template_name = "girvi/release/release_confirm_delete.html"
 
-
-from django.db import IntegrityError
 
 # @for_htmx(use_block="content")
 # def bulk_release(request):

@@ -1,20 +1,15 @@
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, UpdateView
-from django_filters.views import FilterView
 from django_tables2.config import RequestConfig
-from django_tables2.export.views import ExportMixin
-from django_tables2.views import SingleTableMixin
-from num2words import num2words
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import ReceiptFilter
 from ..forms import ReceiptForm
-from ..models import Receipt, ReceiptAllocation
+from ..models import Receipt
 from ..tables import ReceiptTable
 
 # class ReceiptListView(ExportMixin, SingleTableMixin, FilterView):

@@ -1,9 +1,7 @@
 from django.db import transaction
-from django.db.models import signals
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from apps.tenant_apps.dea.models import JournalEntry
 from apps.tenant_apps.sales.models import Invoice, InvoiceItem, Receipt
 
 # @receiver(signals.post_delete, sender=ReceiptAllocation)

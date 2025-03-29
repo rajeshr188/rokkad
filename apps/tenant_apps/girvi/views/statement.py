@@ -1,12 +1,8 @@
-from calendar import c
-import stat
 from django.contrib import messages
-from django.db.models import Count, F, OuterRef
+from django.db.models import Count, F
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 
-from ..forms import StatementItemForm
 from ..models import Loan, Statement, StatementItem
 
 
@@ -18,9 +14,11 @@ def verification_session_list(request):
         context={"sessions": sessions},
     )
 
+
 def verification_session_create(request):
     v_session = Statement.objects.create(created_by=request.user)
     return redirect(v_session.get_absolute_url())
+
 
 def verification_session_toggle(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
@@ -30,6 +28,7 @@ def verification_session_toggle(request, pk):
     else:
         messages.success(request, f"Verification Session {statement} Reopened")
     return redirect(statement.get_absolute_url())
+
 
 def verification_session_detail(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
@@ -77,7 +76,10 @@ def statement_delete(request, pk):
     messages.error(request, f"Verification Session {statement} Deleted")
     return HttpResponse("")
 
+
 from django.template.loader import render_to_string
+
+
 def statement_item_add(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
     if request.method == "POST":
@@ -105,11 +107,13 @@ def statement_item_add(request, pk):
             # Construct the HTML snippet using the item attributes
             # item_html = f"""
             # <li class="list-group-item d-flex justify-content-between align-items-center">
-            #     {item.loan} 
+            #     {item.loan}
             #     {'(Discrepancy: ' + item.descrepancy_note + ')' if item.descrepancy_found else ''}
             # </li>
             # """
-            item_html = render_to_string('girvi/statement/statement_item_detail.html', {'item': item})
+            item_html = render_to_string(
+                "girvi/statement/statement_item_detail.html", {"item": item}
+            )
             return HttpResponse(item_html)
         else:
             item_html = f"""

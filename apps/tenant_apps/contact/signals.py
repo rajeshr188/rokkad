@@ -1,10 +1,14 @@
-from actstream import action
+import logging
+from venv import logger
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from apps.tenant_apps.dea.models import Account, AccountType_Ext, EntityType
 
 from .models import Customer
+
+logger = logging.getLogger(__name__)
 
 # models_to_track = [Model1, Model2, Model3]
 
@@ -27,6 +31,7 @@ from .models import Customer
 
 @receiver(post_save, sender=Customer)
 def add_account(sender, instance, created, **kwargs):
+    logger.info("Adding account")
     entity_t = EntityType.objects.get(name="Person")
     if instance.customer_type == "W" or instance.customer_type == "R":
         acct_d = AccountType_Ext.objects.get(description="Debtor")
