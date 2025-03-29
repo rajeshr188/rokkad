@@ -1,15 +1,11 @@
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
-from django.db.models import F, Sum
-from django.db.models.functions import Coalesce
 from django.shortcuts import reverse
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField
-from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 
 from ..attributes import get_product_attributes_data
-from .stock import StockTransaction
 
 
 class Category(MPTTModel):

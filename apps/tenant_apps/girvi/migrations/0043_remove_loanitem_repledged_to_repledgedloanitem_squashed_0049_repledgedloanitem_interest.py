@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("girvi", "0042_loanitem_is_repledged_loanitem_repledged_to"),
     ]

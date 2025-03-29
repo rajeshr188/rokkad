@@ -6,4 +6,4 @@ class DeaConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):
-        from . import signals
+        from apps.tenant_apps.dea import signals

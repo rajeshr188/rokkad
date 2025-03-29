@@ -1,5 +1,4 @@
 from import_export import fields, resources
-from import_export.admin import ImportExportModelAdmin
 from import_export.fields import Field
 from import_export.widgets import DateTimeWidget, ForeignKeyWidget
 

@@ -1,35 +1,46 @@
+import os
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, FloatField, Sum
-from django.db.models.functions import Cast, Coalesce
-from django.http import HttpResponse, HttpResponseForbidden
+from django.db import transaction
+from django.db.models import Count, Sum
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
+from moneyed import Money
+from openpyxl import load_workbook
 
-from apps.orgs.decorators import (company_member_required, roles_required,
-                                  workspace_required)
-from apps.orgs.models import Membership
+from apps.orgs.decorators import roles_required
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.contact.services import (active_customers,
-                                               get_customers_by_type,
-                                               get_customers_by_year)
-from apps.tenant_apps.girvi.models import Loan
+from apps.tenant_apps.contact.services import (
+    active_customers,
+    get_customers_by_type,
+    get_customers_by_year,
+)
+from apps.tenant_apps.dea.models import (
+    AccountStatement,
+    AccountTransaction,
+    JournalEntry,
+    Ledger,
+    LedgerTransaction,
+    TransactionType_DE,
+    TransactionType_Ext,
+)
+from apps.tenant_apps.dea.utils.currency import Balance
+from apps.tenant_apps.girvi.models import License, Loan, LoanItem, Release
 from apps.tenant_apps.girvi.services import *
+from apps.tenant_apps.purchase.models import Payment, Purchase
+from apps.tenant_apps.sales.models import Invoice, Receipt
+
+from .forms import MaxxFileUploadForm
 
 
 class HomePageView(TemplateView):
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            if (
-                request.user.profile.workspace is None
-                or request.user.profile.workspace.schema_name == "public"
-            ):
-                return redirect("dashboard")
-            else:
-                return redirect("company_dashboard")
-        else:
-            return super().dispatch(request, *args, **kwargs)
+            return redirect("dashboard")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_template_names(self):
         return ["pages/home.html"]
@@ -68,15 +79,23 @@ class FaqPageView(TemplateView):
 
 
 @login_required
-# @roles_required(["Owner", "Admin"])
 def Dashboard(request):
+    if (
+        request.user.profile.workspace
+        and request.user.profile.workspace.schema_name != "public"
+    ):
+        return redirect("company_dashboard")
     context = {}
     return render(request, "pages/dashboard.html", context)
 
 
 @roles_required(["Owner", "Admin", "Member"])
-@workspace_required
 def company_dashboard(request):
+    if (
+        request.user.profile.workspace
+        and request.user.profile.workspace.schema_name == "public"
+    ):
+        return redirect("dashboard")
     context = {}
     company = request.user.profile.workspace
     context["can_view"] = request.user.memberships.filter(
@@ -214,23 +233,6 @@ def company_dashboard(request):
     license_data = [license.get_unreleased_loan_data() for license in licenses]
     context["license_data"] = license_data
     return render(request, "pages/company_dashboard.html", context)
-
-
-from django.apps import apps
-from django.db import transaction
-from moneyed import Money
-from openpyxl import load_workbook
-
-from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (AccountStatement, AccountTransaction,
-                                         JournalEntry, Ledger,
-                                         LedgerTransaction, TransactionType_DE,
-                                         TransactionType_Ext)
-from apps.tenant_apps.dea.utils.currency import Balance
-from apps.tenant_apps.purchase.models import Payment, Purchase
-from apps.tenant_apps.sales.models import Invoice, Receipt
-
-from .forms import MaxxFileUploadForm
 
 
 def create_purchase_data(file):
@@ -693,12 +695,6 @@ def maxx_files_upload(request):
 #         lts = LedgerTransaction.objects.bulk_create(ledger_transactions)
 #         ats = AccountTransaction.objects.bulk_create(account_transactions)
 #         print(f"lts:{len(lts)} , ats:{len(ats)}")
-
-
-import os
-
-from django.conf import settings
-from django.http import FileResponse, Http404
 
 
 def download_template_pack(request):

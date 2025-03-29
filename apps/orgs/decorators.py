@@ -1,8 +1,8 @@
 import functools
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseForbidden
-from django.shortcuts import redirect
 from django_tenants.utils import get_public_schema_name
 
 from apps.orgs.models import Company, Membership
@@ -78,6 +78,7 @@ def role_required(role_name):
 
 #     return decorator
 
+
 def roles_required(allowed_roles):
     def decorator(view_func):
         @functools.wraps(view_func)
@@ -90,27 +91,38 @@ def roles_required(allowed_roles):
                 # Public schema: Get company_id from view parameters
                 company_id = kwargs.get("company_id")
                 if not company_id:
+                    messages.error(request, "Company ID is required")
                     return HttpResponseForbidden("Company ID is required")
 
                 try:
                     company = Company.objects.get(id=company_id)
                     membership = Membership.objects.get(user=user, company=company)
                     if membership.role.name not in allowed_roles:
-                        raise Http404("You do not have the required role to proceed with this action.")
+                        raise Http404(
+                            "You do not have the required role to proceed with this action."
+                        )
                 except (Company.DoesNotExist, Membership.DoesNotExist):
-                    raise Http404("No Membership! You do not have the required role to proceed with this action.")
+                    raise Http404(
+                        "No Membership! You do not have the required role to proceed with this action."
+                    )
             else:
                 # Tenant schema: Use workspace as company
                 try:
                     company = Company.objects.get(name=workspace.name)
                     membership = Membership.objects.get(user=user, company=company)
                     if membership.role.name not in allowed_roles:
-                        raise Http404("You do not have the required role to proceed with this action.")
+                        raise Http404(
+                            "You do not have the required role to proceed with this action."
+                        )
                 except (Company.DoesNotExist, Membership.DoesNotExist):
-                    raise Http404("No Membership! You do not have the required role to proceed with this action.")
+                    raise Http404(
+                        "No Membership! You do not have the required role to proceed with this action."
+                    )
 
             return view_func(request, *args, **kwargs)
+
         return _wrapped_view
+
     return decorator
 
 

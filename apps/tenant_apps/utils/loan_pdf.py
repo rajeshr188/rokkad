@@ -1,35 +1,41 @@
 import io
 import os
+import time
 from io import BytesIO
 from itertools import groupby
 
 import fitz
 import qrcode
 import reportlab.rl_config
-from PIL import Image as PILImage
-
-reportlab.rl_config.warnOnMissingFontGlyphs = 1
-import time
-
 from django.http import HttpResponse
 from num2words import num2words
+from PIL import Image as PILImage
 from reportlab.graphics import renderPDF
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4, A5, landscape, letter, mm
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+from reportlab.lib.pagesizes import A4, A5, landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm, inch, mm
+from reportlab.lib.units import cm, inch
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import (Flowable, Frame, FrameBreak, Image,
-                                KeepInFrame, KeepTogether, ListFlowable,
-                                ListItem, PageBreak, Paragraph, Preformatted,
-                                SimpleDocTemplate, Spacer, Table, TableStyle)
+from reportlab.platypus import (
+    Flowable,
+    Frame,
+    KeepInFrame,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 from apps.tenant_apps.girvi.models import LoanTemplate, TemplateFrame
+
+reportlab.rl_config.warnOnMissingFontGlyphs = 1
 
 
 class CentreLine(Flowable):
@@ -2015,9 +2021,7 @@ def print_noticegroup(selection=None):
     return response
 
 
-from reportlab.graphics import renderPDF, renderPM
-from reportlab.graphics.barcode import qr
-from reportlab.graphics.shapes import Drawing
+from reportlab.graphics import renderPM
 
 
 def generate_qr_code(data):

@@ -2,7 +2,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django_tables2 import RequestConfig
-from num2words import num2words
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 

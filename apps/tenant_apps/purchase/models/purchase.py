@@ -1,11 +1,11 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
-from django.db.models import CharField, F, Q, Sum, Value
+from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.forms import model_to_dict
 from django.urls import reverse
@@ -19,7 +19,6 @@ from apps.tenant_apps.dea.models import AccountStatement  # , JournalTypes
 from apps.tenant_apps.dea.models import JournalEntry
 from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
-from apps.tenant_apps.product.attributes import get_product_attributes_data
 from apps.tenant_apps.product.models import ProductVariant, Stock
 from apps.tenant_apps.terms.models import PaymentTerm
 

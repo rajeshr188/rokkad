@@ -1,4 +1,4 @@
-{% extends 'tenant.html' %}
+{% extends '_base.html' %}
 {% load mptt_tags %}
 {% block title %}DEA{% endblock %}
 
@@ -39,7 +39,7 @@
                                     <td>{{i.ledgerno.AccountType}}</td>
                                     <td><a href="{% url 'dea_ledger_detail' i.ledgerno_id %}">{{ i.ledgerno.name }}</a></td>
                                     <td>{{i.ls_created}}</td>
-                                    <td>{{i.get_cb}}</td>
+                                    <td>{{i.get_ob}}</td>
                                     <td>{{i.get_dr}}</td>
                                     <td>{{i.get_cr}}</td>
                                     <td>{{i.get_currbal}}</td>

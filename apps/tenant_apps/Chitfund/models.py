@@ -1,8 +1,6 @@
-from django.contrib.auth import models as auth_models
 from django.db import models as models
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 from django_extensions.db import fields as extension_fields
 
 

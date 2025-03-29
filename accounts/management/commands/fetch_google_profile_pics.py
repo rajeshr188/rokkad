@@ -1,7 +1,5 @@
-import requests
 from allauth.socialaccount.models import SocialAccount
 from django.core.management.base import BaseCommand
-from your_app.models import CustomUser
 
 
 class Command(BaseCommand):

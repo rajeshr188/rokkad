@@ -1,22 +1,14 @@
-from datetime import date, timedelta
-
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
-from django.contrib.postgres.fields import ArrayField
-from django.db import models, transaction
-from django.db.models import Func, Q, Sum
+from django.db import models
+from django.db.models import Q, Sum
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
 from moneyed import Money
 
-from apps.tenant_apps.approval.models import ReturnItem
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
-from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
-from apps.tenant_apps.product.models import Stock, StockTransaction
-from apps.tenant_apps.terms.models import PaymentTerm
 
 
 class Receipt(models.Model):

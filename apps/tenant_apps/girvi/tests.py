@@ -1,14 +1,3 @@
-import unittest
-
-from django.contrib.auth.models import Group, User
-from django.contrib.contenttypes.models import ContentType
-from django.test import Client
-from django.urls import reverse
-from useres.models import CustomUser
-
-from .models import License, Loan, Release
-
-
 class LoanModelTest(TestCase):
     def setUp(self):
         # Set up initial data for tests

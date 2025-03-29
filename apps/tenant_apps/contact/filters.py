@@ -1,8 +1,6 @@
-from decimal import Decimal
-
 import django_filters
 from django.db.models import Q
-from django.forms.widgets import CheckboxInput, RadioSelect
+from django.forms.widgets import RadioSelect
 
 from .models import Customer
 

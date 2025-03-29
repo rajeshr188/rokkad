@@ -1,17 +1,15 @@
+import logging
 import re
 
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericRelation
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.shortcuts import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import JournalEntry
 
-from ..models import LoanPayment
+logger = logging.getLogger(__name__)
 
 
 class ReleaseManager(models.Manager):
@@ -121,31 +119,48 @@ class Release(models.Model):
             return new_release_id
 
     def save(self, *args, **kwargs):
-        if not self.release_id:
+        if not self.pk and not self.release_id:
             self.release_id = self.generate_release_id(series=self.loan.series)
         super().save(*args, **kwargs)
+        # Transition the loan status to "delivered" after saving the release
+        try:
+            from ..flows import LoanFlow
+
+            flow = LoanFlow(
+                self.loan, self.created_by, self.created_by.profile.workspace
+            )
+            if flow.deliver.can_proceed():
+                flow.deliver(
+                    created_by=self.created_by,
+                    released_by=self.released_by,
+                    release_date=self.release_date,
+                )
+        except IntegrityError as e:
+            logger.error(f"IntegrityError while transitioning loan status: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error while transitioning loan status: {e}")
 
 
 # with schema_context(jcl):
 #     releases = Release.objects.all().order_by('created_at')
-    
+
 #     # Track processed releases per series
 #     series_counters = {}
-    
+
 #     for release in releases:
 #         series = release.loan.series
 #         series_name = series.name or 'RL'
-        
+
 #         # Initialize counter for new series
 #         if series_name not in series_counters:
 #             series_counters[series_name] = 1
-        
+
 #         # Generate new release ID
 #         new_release_id = f"{series_name}{series_counters[series_name]:0{series.max_limit}d}"
-        
+
 #         # Update counter
 #         series_counters[series_name] += 1
-        
+
 #         # Update release ID
 #         print(f'Updating release {release.pk}: {release.release_id} → {new_release_id}')
 #         release.release_id = new_release_id

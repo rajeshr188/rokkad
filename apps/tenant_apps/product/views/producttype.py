@@ -1,7 +1,6 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 
@@ -60,11 +59,11 @@ def producttype_delete(request, pk):
 
 
 import uuid  # Import the uuid module
+
 # views.py
 from itertools import product
 
 from django.db import IntegrityError
-from django.shortcuts import get_object_or_404, redirect
 
 # def generate_products_and_variants(request, product_type_id):
 #     product_type = get_object_or_404(ProductType, id=product_type_id)
@@ -161,24 +160,29 @@ def generate_products_and_variants(request, product_type_id):
 
             for product_attr_comb in product_attr_combinations:
                 try:
-                    # Create a new Product instance
-                    product_g = Product.objects.create(
+                    # Check if the product already exists
+                    product_g, created = Product.objects.get_or_create(
                         product_type=product_type,
                         name=f"{product_type.name} {' '.join([attr_value.name for attr_value in product_attr_comb])}",
-                        description="Generated product",
-                        category=Category.objects.first(),  # Assuming product_type has a category field
-                        attributes={
-                            str(attr_value.attribute.id): str(attr_value.id)
-                            for attr_value in product_attr_comb
-                        },
-                        jattributes={
-                            attr_value.attribute.name: attr_value.name
-                            for attr_value in product_attr_comb
+                        defaults={
+                            "description": "Generated product",
+                            "category": Category.objects.first(),  # Assuming product_type has a category field
+                            "attributes": {
+                                str(attr_value.attribute.id): str(attr_value.id)
+                                for attr_value in product_attr_comb
+                            },
+                            "jattributes": {
+                                attr_value.attribute.name: attr_value.name
+                                for attr_value in product_attr_comb
+                            },
                         },
                     )
+                    if created:
+                        logger.error(f"Product created: {product_g.name}")
+                    else:
+                        logger.error(f"Product already exists: {product_g.name}")
                 except IntegrityError as e:
                     logger.error(f"IntegrityError while creating product: {e}")
-                    # Skip product creation if unique constraint exception occurs
                     continue
 
                 for variant_attr_comb in variant_attr_combinations:

@@ -1,5 +1,4 @@
 import django_filters
-from django_select2.forms import Select2Widget
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer

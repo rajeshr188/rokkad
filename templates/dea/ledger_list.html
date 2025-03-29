@@ -1,4 +1,4 @@
-{% extends 'tenant.html' %}
+{% extends '_base.html' %}
 {% load mptt_tags %}
 {% block title %}Ledger List{% endblock %}
 
@@ -48,11 +48,7 @@
                         </ul>
                         {% endif %}
                       </div>
-                      <span class="badge text-bg-primary rounded-pill">{{node.current_balance_wrt_descendants}}</span>
-                    
-                    
-                    
-                    
+                      <span class="badge text-bg-primary rounded-pill">{{node.ledgerbalance.get_cb}}/{{node.current_balance}}</span>
                 </li>
                 {% endrecursetree %}
             </ol>

@@ -2,7 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.db import transaction
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 
@@ -209,10 +209,7 @@ import re
 
 import openpyxl
 from django import forms
-from django.http import HttpResponse
-from django.shortcuts import render
 from django.views import View
-from faker import Faker
 
 
 def extract_name(upistring):

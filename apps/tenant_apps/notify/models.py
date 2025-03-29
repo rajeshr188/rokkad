@@ -1,4 +1,3 @@
-from django.contrib.postgres.fields import DateRangeField
 from django.db import models
 from django.shortcuts import reverse
 

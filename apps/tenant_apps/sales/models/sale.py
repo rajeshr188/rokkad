@@ -9,17 +9,15 @@ from django.db.models import F, Func, Q, Sum
 from django.forms import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
 from moneyed import Money
 
-from apps.tenant_apps.approval.models import ReturnItem
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import AccountStatement  # , JournalTypes
 from apps.tenant_apps.dea.models import JournalEntry
 from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
-from apps.tenant_apps.product.models import Stock, StockTransaction
+from apps.tenant_apps.product.models import Stock
 from apps.tenant_apps.terms.models import PaymentTerm
 
 # from sympy import content

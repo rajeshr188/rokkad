@@ -5,25 +5,29 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4, landscape, letter
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm, inch, mm
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch, mm
 from reportlab.pdfgen import canvas
-from reportlab.platypus import (BalancedColumns, Frame, ListFlowable, ListItem,
-                                LongTable, PageBreak, PageTemplate, Paragraph,
-                                SimpleDocTemplate, Spacer, Table, TableStyle)
-from reportlab.platypus.tableofcontents import TableOfContents
+from reportlab.platypus import (
+    BalancedColumns,
+    ListFlowable,
+    ListItem,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+)
 
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.filters import LoanFilter
 from apps.tenant_apps.girvi.models.template import LoanTemplate
 from apps.tenant_apps.notify.models import NoticeGroup, Notification
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-from apps.tenant_apps.utils.loan_pdf import (get_custom_jcl, get_custom_jsk,
-                                             get_notice_pdf, grid_template,
-                                             print_labels_pdf)
+from apps.tenant_apps.utils.loan_pdf import (
+    get_custom_jcl,
+    grid_template,
+    print_labels_pdf,
+)
 
 from ..forms import LoanSelectionForm
 from ..models import Loan
@@ -449,7 +453,7 @@ def generate_unreleased_pdf(request):
 
 from openpyxl import Workbook
 
-from ..models import Loan, Series
+from ..models import Series
 from ..resources import LedgerResource
 
 
@@ -487,7 +491,7 @@ def export_loans_to_excel(request):
     )
     response[
         "Content-Disposition"
-    ] = f'attachment; filename="{request.user.workspace.name}_ledger.xlsx"'
+    ] = f'attachment; filename="{request.user.profile.workspace.name}_ledger.xlsx"'
     wb.save(response)
 
     return response

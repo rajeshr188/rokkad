@@ -1,18 +1,12 @@
-from typing import List
-
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django_tables2.config import RequestConfig
-from num2words import num2words
-from render_block import render_block_to_string
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.product.models import (PricingTier,
-                                             PricingTierProductPrice,
-                                             ProductVariant)
+from apps.tenant_apps.product.models import PricingTierProductPrice, ProductVariant
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import PurchaseFilter

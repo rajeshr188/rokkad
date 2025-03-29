@@ -1,10 +1,6 @@
 from django.db import transaction
-from django.db.models import signals
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.forms import model_to_dict
-
-from apps.tenant_apps.dea.models import JournalEntry
 
 from .models import Payment, Purchase, PurchaseItem
 

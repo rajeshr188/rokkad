@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 
 from apps.tenant_apps.utils.loan_pdf import generate_form_h
 
-from ..models import Loan, Release
+from ..models import Release
 
 
 def form_h(request, pk):

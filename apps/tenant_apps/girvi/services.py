@@ -1,15 +1,12 @@
 import re
 from collections import Counter
-from datetime import datetime
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import (Avg, Case, Count, F, IntegerField, Max, OuterRef,
-                              Q, Subquery, Sum, Value, When, Window)
-from django.db.models.functions import Coalesce, ExtractYear, TruncDate
+from django.db.models import Case, Count, F, IntegerField, Q, Sum, Value, When, Window
+from django.db.models.functions import Coalesce, ExtractYear
 
-from .models import (Customer, License, Loan, LoanItem, LoanPayment, Release,
-                     Series)
+from .models import Customer, License, Loan, LoanItem, LoanPayment, Series
 
 
 def generate_loan_id(series_id: int = None) -> str:
@@ -26,9 +23,9 @@ def generate_loan_id(series_id: int = None) -> str:
             new_loan_id = f"{series_title}{sequence_number:0{num_length}d}"
             return new_loan_id
 
-    except (Series.DoesNotExist, License.DoesNotExist) as e:
+    except (Series.DoesNotExist, License.DoesNotExist):
         raise
-    except Exception as e:
+    except Exception:
         raise
 
 
@@ -153,11 +150,7 @@ def get_loanamount_by_itemtype():
     return query
 
 
-from decimal import Decimal
-
-from django.db.models import (Case, Count, DecimalField, ExpressionWrapper, F,
-                              Sum, Value, When)
-from django.db.models.functions import Coalesce
+from django.db.models import DecimalField, ExpressionWrapper
 
 
 def get_itemtype_averages():

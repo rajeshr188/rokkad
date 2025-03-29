@@ -6,8 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_http_methods  # new
-from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
-                                  UpdateView)
+from django.views.generic import DetailView, ListView
 from django.views.generic.base import TemplateView
 from django_tables2.config import RequestConfig
 
@@ -16,7 +15,7 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import StockFilter
 from ..forms import StockInForm, StockOutForm, UniqueForm
-from ..models import Stock, StockBalance, StockStatement, StockTransaction
+from ..models import Stock, StockStatement, StockTransaction
 from ..tables import StockTable
 
 

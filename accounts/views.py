@@ -3,10 +3,9 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django_tenants.utils import get_public_schema_name
 
-from apps.orgs.decorators import company_member_required
 from apps.orgs.models import Company
 
-from .forms import SwitchWorkspaceForm, UserProfileForm
+from .forms import UserProfileForm
 from .models import UserProfile
 
 # views.py

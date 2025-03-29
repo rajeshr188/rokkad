@@ -1,5 +1,4 @@
-import stat
-from django.urls import include, path
+from django.urls import path
 from django.views.generic.dates import ArchiveIndexView
 
 from . import views
@@ -26,7 +25,11 @@ urlpatterns = (
     # Example: /2012/week/23/
     path("girvi/notice/", views.notice, name="notice"),
     path("girvi/outdatedloans/notify/", views.notify_print, name="girvi_create_notice"),
-    path('loans/today/', views.loans_created_on_day_excluding_current_month, name='loans_created_on_day_excluding_current_month'),
+    path(
+        "loans/today/",
+        views.loans_created_on_day_excluding_current_month,
+        name="loans_created_on_day_excluding_current_month",
+    ),
 )
 
 # urls for archive views
@@ -96,6 +99,8 @@ urlpatterns += (
 
 # urls for Loan
 urlpatterns += (
+    path("girvi/loan/<int:pk>/split/", views.split_loan_items, name="split_loan_items"),
+    path("girvi/loan/merge/", views.merge_loans, name="merge_loans"),
     path("girvi/loan/", views.loan_list, name="girvi_loan_list"),
     path("girvi/loan/renew/<int:pk>/", views.loan_renew, name="girvi_loan_renew"),
     path("girvi/loan/create/", views.loan_save, name="girvi_loan_create"),
@@ -148,6 +153,12 @@ urlpatterns += (
     path("girvi/ledger/", views.export_loans_to_excel, name="girvi_ledger"),
     path("girvi/unreleased/", views.generate_unreleased_pdf, name="girvi_unreleased"),
     path("girvi/grid-template/", views.print_grid_template, name="girvi_grid_template"),
+    # path("girvi/loan<int:pk>/approve/", views.approve_loan, name="girvi_approve_loan"),
+    # path("girvi/loan<int:pk>/disburse/", views.disburse_loan, name="girvi_disburse_loan"),
+    # path('loan/<int:pk>/transition/<str:transition_name>/', views.handle_transition, name='handle_transition'),
+    path(
+        "loan/<int:pk>/transition/", views.loan_transition_view, name="loan_transition"
+    ),
 )
 
 # urls for loanitem
@@ -296,7 +307,11 @@ urlpatterns += (
         views.verification_session_create,
         name="statement_create",
     ),
-    path("statement/<int:pk>/toggle_complete", views.verification_session_toggle, name="statement_update"),
+    path(
+        "statement/<int:pk>/toggle_complete",
+        views.verification_session_toggle,
+        name="statement_update",
+    ),
     path(
         "statement/<int:pk>/detail/",
         views.verification_session_detail,

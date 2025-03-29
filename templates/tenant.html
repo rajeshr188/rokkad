@@ -5,9 +5,11 @@
 
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <title>{% block title %}Rokkad{% endblock title %}</title>
   <meta content="width=device-width, initial-scale=1.0, shrink-to-fit=no" name="viewport" />
+  <meta name="description" content="A framework for launching new Django projects quickly.">
+  <meta name="author" content="rajeshrathodh">
   <link rel="icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon" />
   
   <!-- Bootstrap CSS -->
@@ -21,7 +23,7 @@
 
 </head>
 
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' class="d-flex flex-column min-vh-100">
   <nav class="navbar navbar-expand-lg text-white sticky-top"  style="background-color: {{theme}};" >
     <div class="container-lg">
       <!-- Brand -->
@@ -281,7 +283,43 @@
       {% endblock %}
     </div>
   </div>
-
+ 
+  
+  <footer class="footer mt-auto py-3 bg-body-tertiary">
+      <div class="container">
+          <div class="row gy-3 align-items-center">
+              <!-- Copyright -->
+              <div class="col-12 col-md-4 text-center text-md-start">
+                  <span class="text-body-secondary">
+                      &copy; 2024, <a href="#" class="text-body-secondary" style="color: #ffffff;">H Rajesh Rathod</a>
+                  </span>
+              </div>
+              
+              <!-- Social Links -->
+              <div class="col-12 col-md-4 text-center">
+                  <div class="social-links">
+                      <a href="#" class="text-body-secondary mx-2" aria-label="GitHub" style="color: #ffffff;">
+                          <i class="bi bi-github fs-5"></i>
+                      </a>
+                      <a href="#" class="text-body-secondary mx-2" aria-label="LinkedIn" style="color: #ffffff;">
+                          <i class="bi bi-linkedin fs-5"></i>
+                      </a>
+                      <a href="#" class="text-body-secondary mx-2" aria-label="Twitter" style="color: #ffffff;">
+                          <i class="bi bi-twitter fs-5"></i>
+                      </a>
+                  </div>
+              </div>
+              
+              <!-- Legal Links -->
+              <div class="col-12 col-md-4 text-center text-md-end">
+                  <a href="" hx-get="{% url 'privacy_policy'%}" hx-target="#content" class="text-body-secondary me-3" style="color: #ffffff;">Privacy Policy</a>
+                  <a href="" hx-get="{% url 'terms_and_conditions' %}" hx-target="#content"class="text-body-secondary" style="color: #ffffff;">Terms of Service</a>
+              </div>
+          </div>
+      </div>
+  </footer>
+  
+  {% include "toasts.html" %}
   {% if user.profile.workspace and user.profile.workspace.schema_name != 'public' %}
   <div class="dropdown position-fixed bottom-0 end-0 mb-5 me-3 bd-mode-toggle">
     <button class="btn btn-bd-primary py-2 dropdown-toggle d-flex align-items-center"
@@ -305,18 +343,16 @@
             <path d="M8.256 14a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z"/>
           </svg>
           Customer
-          
         </button>
       </li>
       <li>
-        <button type="button" class="dropdown-item d-flex align-items-center" 
+        <button type="button" class="dropdown-item d-flex align-items-center" hx-push-url="true"
         hx-trigger="click" hx-get="{% url 'girvi:girvi_loan_create'%}" hx-target="#content">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-plus" viewBox="0 0 16 16">
             <path d="M8.5 6a.5.5 0 0 0-1 0v1.5H6a.5.5 0 0 0 0 1h1.5V10a.5.5 0 0 0 1 0V8.5H10a.5.5 0 0 0 0-1H8.5z"/>
             <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
           </svg>
           Loan
-          
         </button>
       </li>
       <li>
@@ -327,31 +363,11 @@
             <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
           </svg>
           Release
-          
         </button>
       </li>
     </ul>
   </div>
-  {% endif %}
-
-   <footer class="footer mt-auto py-3 bg-secondary text-white">
-      <div class="container-lg d-flex justify-content-between align-items-center">
-          <div>
-              <span class="text-muted">&copy; 2017-2024, made with 
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-suit-heart-fill mx-1" viewBox="0 0 16 16">
-                      <path d="M4 1c2.21 0 4 1.755 4 3.92C8 2.755 9.79 1 12 1s4 1.755 4 3.92c0 3.263-3.234 4.414-7.608 9.608a.513.513 0 0 1-.784 0C3.234 9.334 0 8.183 0 4.92 0 2.755 1.79 1 4 1"/>
-                  </svg> 
-                  by <a href="#" class="text-white text-decoration-none">H RajeshRathod</a>
-              </span>
-          </div>
-          <div>
-              <a href="#" class="text-white text-decoration-none me-3">Privacy Policy</a>
-              <a href="#" class="text-white text-decoration-none">Terms of Service</a>
-          </div>
-      </div>
-  </footer>
-  {% include "toasts.html" %}
-
+{% endif %}
   {%block javascript%}
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
@@ -365,7 +381,5 @@
   <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "3a847016b98a4d22ac7c24848e1a78f9"}'></script>                              
   <!-- End Cloudflare Web Analytics -->
   {%endblock%}
-  
 </body>
-
 </html>

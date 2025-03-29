@@ -75,3 +75,5 @@ journalctl -u gunicorn -p err
 
 
 ask chat gpt to device a solid way to use htmx withdjango models crud
+
+Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force

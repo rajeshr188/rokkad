@@ -1,13 +1,11 @@
-from django.db.models import Prefetch, Q, Sum
-from django.http import HttpResponse
+from django.db.models import Q
 from django.shortcuts import render
 from django_tables2 import RequestConfig
-from django_tables2.export.export import TableExport
 
 from ..filters import LedgerTransactionFilter
-from ..models import (AccountTransaction, AccountType, Balance, Ledger,
-                      Ledgerbalance, LedgerTransaction)
-from ..tables import JournalEntriesTable, LedgerTransactionTable
+from ..models import AccountType, Balance, Ledger, Ledgerbalance, LedgerTransaction
+from ..tables import LedgerTransactionTable
+from ..utils.currency import Balance
 
 
 def home(request):
@@ -34,7 +32,7 @@ def home(request):
     te = Balance()
     for i in lb:
         if i.ledgerno.AccountType.AccountType == "Asset":
-            ta = ta + (i.get_currbal())
+            ta = ta + abs(i.get_currbal())
         elif i.ledgerno.AccountType.AccountType == "Liability":
             tl = tl + abs(i.get_currbal())
         elif i.ledgerno.AccountType.AccountType == "Income":

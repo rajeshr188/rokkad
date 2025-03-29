@@ -10,7 +10,6 @@ from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
 from django.views.generic import DeleteView
 
-from apps.tenant_apps.dea.models import JournalEntry
 from apps.tenant_apps.sales.models import Invoice as sinv
 from apps.tenant_apps.sales.models import InvoiceItem as sinvitem
 from apps.tenant_apps.terms.models import PaymentTerm

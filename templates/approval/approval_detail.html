@@ -1,4 +1,4 @@
-{% extends "tenant.html" %}
+{% extends "_base.html" %}
 {% load static %}
 {% block content %}
 <div id = "content" hx-trigger="approvalChanged from:body" hx-get="{% url 'approval:approval_approval_detail' object.id%}">

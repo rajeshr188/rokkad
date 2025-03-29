@@ -39,7 +39,7 @@ def create_membership(sender, **kwargs):
 from allauth.account.signals import user_signed_up
 from django.dispatch import receiver
 
-from .models import Membership, PendingInvitation
+from .models import PendingInvitation
 
 # @receiver(user_signed_up)
 # def create_membership_on_signup(sender, **kwargs):
@@ -55,7 +55,6 @@ from .models import Membership, PendingInvitation
 #             user=user, company=invitation.company, role=invitation.role
 #         )
 #         print(f"Membership created: {membership}")
-
 
 
 @receiver(user_signed_up)

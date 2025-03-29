@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import django_filters
 from django.db.models import Q
 from django_filters.widgets import RangeWidget
@@ -7,8 +5,8 @@ from django_filters.widgets import RangeWidget
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 
-from .forms import LoansWidget,SeriesWidget
-from .models import Loan,Series, LoanItem, LoanPayment, Release
+from .forms import LoansWidget
+from .models import ItemType, Loan, LoanItem, LoanPayment, Release
 
 
 class LoanFilter(django_filters.FilterSet):
@@ -37,7 +35,7 @@ class LoanFilter(django_filters.FilterSet):
 
     item_type = django_filters.ChoiceFilter(
         method="filter_item_type",
-        choices=LoanItem.ItemType.choices,
+        choices=ItemType.choices,
         empty_label="Select Item Type",
         label="Item Type",
     )
@@ -151,4 +149,4 @@ class ReleaseFilter(django_filters.FilterSet):
 
     class Meta:
         model = Release
-        fields = ["release_id", "loan", "release_date","loan__series"]
+        fields = ["release_id", "loan", "release_date", "loan__series"]
