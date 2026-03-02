@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django_tables2 import RequestConfig
 
 from ..filters import LedgerTransactionFilter
-from ..models import AccountType, Balance, Ledger, Ledgerbalance, LedgerTransaction
+from ..models import AccountType, Balance, Ledger, LedgerTransaction
 from ..tables import LedgerTransactionTable
 from ..utils.currency import Balance
 
@@ -11,47 +11,52 @@ from ..utils.currency import Balance
 def home(request):
     context = {}
     balancesheet = {}
-    lb = Ledgerbalance.objects.all()
+    # Get all ledgers and prefetch their balances instead of select_related
+    lb = (
+        Ledger.objects.select_related("AccountType")
+        .prefetch_related("ledgerbalance")
+        .order_by("tree_id", "lft")
+    )
     account_type = AccountType.objects.all()
 
-    for i in account_type:
-        ledgers = i.ledgers.all()
-        total = Balance()
-        for j in ledgers:
-            total = total + j.ledgerbalance.get_currbal()
-        balancesheet[i.AccountType] = total
+    # for i in account_type:
+    #     ledgers = i.ledgers.all()
+    #     total = Balance()
+    #     for j in ledgers:
+    #         total = total + j.get_current_balance()
+    #     balancesheet[i.AccountType] = total
 
-    balancesheet["assets"] = lb.filter(ledgerno__AccountType__AccountType="Asset")
-    # # Get the balance sheet data
-    # # balancesheet = lb.balancesheet()
+    # balancesheet["assets"] = lb.filter(ledgerno__AccountType__AccountType="Asset")
+    # # # Get the balance sheet data
+    # # # balancesheet = lb.balancesheet()
 
-    balancesheet["equity"] = lb.filter(ledgerno__AccountType__AccountType="Equity")
-    ta = Balance()
-    tl = Balance()
-    ti = Balance()
-    te = Balance()
-    for i in lb:
-        if i.ledgerno.AccountType.AccountType == "Asset":
-            ta = ta + abs(i.get_currbal())
-        elif i.ledgerno.AccountType.AccountType == "Liability":
-            tl = tl + abs(i.get_currbal())
-        elif i.ledgerno.AccountType.AccountType == "Income":
-            ti = ti + abs(i.get_currbal())
-        elif i.ledgerno.AccountType.AccountType == "Expense":
-            te = te + abs(i.get_currbal())
-    pnloss = {}
-    pnloss["income"] = lb.filter(ledgerno__AccountType__AccountType="Income")
-    pnloss["expense"] = lb.filter(ledgerno__AccountType__AccountType="Expense")
-    context["ta"] = ta
-    context["tl"] = tl
-    context["ti"] = ti
-    context["te"] = te
-    balancesheet["liabilities"] = lb.filter(
-        ledgerno__AccountType__AccountType="Liability"
-    )
-    context["pnloss"] = pnloss
+    # balancesheet["equity"] = lb.filter(ledgerno__AccountType__AccountType="Equity")
+    # ta = Balance()
+    # tl = Balance()
+    # ti = Balance()
+    # te = Balance()
+    # for i in lb:
+    #     if i.ledgerno.AccountType.AccountType == "Asset":
+    #         ta = ta + abs(i.get_currbal())
+    #     elif i.ledgerno.AccountType.AccountType == "Liability":
+    #         tl = tl + abs(i.get_currbal())
+    #     elif i.ledgerno.AccountType.AccountType == "Income":
+    #         ti = ti + abs(i.get_currbal())
+    #     elif i.ledgerno.AccountType.AccountType == "Expense":
+    #         te = te + abs(i.get_currbal())
+    # pnloss = {}
+    # pnloss["income"] = lb.filter(ledgerno__AccountType__AccountType="Income")
+    # pnloss["expense"] = lb.filter(ledgerno__AccountType__AccountType="Expense")
+    # context["ta"] = ta
+    # context["tl"] = tl
+    # context["ti"] = ti
+    # context["te"] = te
+    # balancesheet["liabilities"] = lb.filter(
+    #     ledgerno__AccountType__AccountType="Liability"
+    # )
+    # context["pnloss"] = pnloss
 
-    context["balancesheet"] = balancesheet
+    # context["balancesheet"] = balancesheet
     context["ledger"] = lb
 
     return render(request, "dea/home.html", {"data": context})

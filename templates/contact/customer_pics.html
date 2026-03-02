@@ -3,7 +3,9 @@
     {% for pic in pics %}
     <div class="col-md-4">
         <div class="card mb-4">
+            {% if pic.image %}
             <img src="{{ pic.image.url }}" class="card-img-top" alt="Customer Pic" width="100">
+            {%endif%}
             <div class="card-body">
                 {% if pic.is_default %}
                 <h5 class="card-title">Default Picture</h5>

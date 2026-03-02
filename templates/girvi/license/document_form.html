@@ -1,0 +1,22 @@
+{% extends 'layouts/base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+<div class="container col-md-6 mt-4 mb-3" id="content">
+    <h3>Upload License Document</h3>
+    <div class="card">
+        <div class="card-header">
+            <h5>{{ license.name }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <div class="mt-3">
+                    <button class="btn btn-primary" type="submit">Upload</button>
+                    <a href="{% url 'girvi:girvi_license_detail' license.id %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,15 +1,37 @@
 import uuid
 
 from django.db import models, transaction
-from django.db.models import Avg, Case, FloatField, Sum, When
-from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear
+from django.db.models import Avg, F, ExpressionWrapper, DurationField, Sum
+from django.db.models.functions import Coalesce
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.modelfields import PhoneNumberField
 
 
+class CustomerQuerySet(models.QuerySet):
+    """Custom QuerySet for Customer model with optimized queries"""
+
+    def with_contacts(self):
+        """Prefetch all related contact information"""
+        return self.prefetch_related(
+            "address",
+            "contactno",
+            "pics",
+            "relationships_created",
+            "relationships_received",
+        )
+
+    def active(self):
+        """Filter only active customers"""
+        return self.filter(active=True)
+
+
 class RelationType(models.TextChoices):
+    """Types of family relationships"""
+
     Son = "s", "S/o"
     Daughter = "d", "D/o"
     Father = "f", "F/o"
@@ -21,9 +43,25 @@ class RelationType(models.TextChoices):
 
 
 class Customer(models.Model):
-    # Fields
-    created = models.DateTimeField(auto_now_add=True, editable=False)
-    updated = models.DateTimeField(auto_now=True, editable=False)
+    """
+    Customer Model - represents customers/contacts in the system.
+    Optimized with proper indexing and clean field structure.
+    """
+
+    class CustomerType(models.TextChoices):
+        Retail = "R", "Retail"
+        Wholesale = "W", "Wholesale"
+        Supplier = "S", "Supplier"
+
+    # Timestamps
+    created = models.DateTimeField(
+        auto_now_add=True, editable=False, verbose_name=_("Created")
+    )
+    updated = models.DateTimeField(
+        auto_now=True, editable=False, verbose_name=_("Updated")
+    )
+
+    # User tracking
     created_by = models.ForeignKey(
         "accounts.CustomUser",
         on_delete=models.DO_NOTHING,
@@ -32,19 +70,20 @@ class Customer(models.Model):
         verbose_name=_("Created By"),
         related_name="customers_created",
     )
-    name = models.CharField(max_length=255, blank=True, verbose_name=_("Name"))
-    firstname = models.CharField(
-        max_length=255, null=True, blank=True, verbose_name=_("First Name")
-    )
+
+    # Personal Information
+    firstname = models.CharField(max_length=255, verbose_name=_("First Name"))
     lastname = models.CharField(
-        max_length=255, null=True, blank=True, verbose_name=_("Last Name")
+        max_length=255, blank=True, null=True, verbose_name=_("Last Name")
     )
+
     gender = models.CharField(
         max_length=1,
-        choices=(("M", "M"), ("F", "F"), ("N", "N")),
+        choices=(("M", "Male"), ("F", "Female"), ("N", "Non-binary")),
         default="M",
         verbose_name=_("Gender"),
     )
+
     religion = models.CharField(
         max_length=10,
         choices=(
@@ -54,19 +93,21 @@ class Customer(models.Model):
             ("Atheist", "Atheist"),
         ),
         default="Hindu",
+        verbose_name=_("Religion"),
     )
 
-    class CustomerType(models.TextChoices):
-        Retail = "R", "Retail"
-        Wholesale = "W", "Wholesale"
-        Supplier = "S", "Supplier"
+    dob = models.DateField(null=True, blank=True, verbose_name=_("Date of Birth"))
+    email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
 
+    # Customer Classification
     customer_type = models.CharField(
         max_length=30,
         choices=CustomerType.choices,
         default=CustomerType.Retail,
         verbose_name=_("Customer Type"),
     )
+
+    # Family Relationship
     relatedas = models.CharField(
         max_length=5,
         choices=RelationType.choices,
@@ -76,23 +117,35 @@ class Customer(models.Model):
     relatedto = models.CharField(
         max_length=30, blank=True, null=True, verbose_name=_("Related To")
     )
-    # dob = models.DateField(null=True, blank=True, verbose_name=_("Date of Birth"))
-    # email_id = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
-    active = models.BooleanField(blank=True, default=True, verbose_name=_("Active"))
-    # pricing_tier = models.ForeignKey(
-    #     "product.PricingTier", on_delete=models.CASCADE, null=True, blank=True
-    # )
+
+    # Status
+    active = models.BooleanField(default=True, verbose_name=_("Active"))
+
+    # Manager
+    objects = CustomerQuerySet.as_manager()
 
     class Meta:
-        ordering = ("-created", "name", "relatedto")
-        unique_together = ("name", "relatedas", "relatedto")
+        ordering = ("-created", "firstname", "lastname")
+        unique_together = ("firstname", "lastname", "relatedas", "relatedto")
+        indexes = [
+            models.Index(fields=["firstname", "lastname"]),
+            models.Index(fields=["-created"]),
+            models.Index(fields=["customer_type"]),
+            models.Index(fields=["active"]),
+        ]
+        verbose_name = _("Customer")
+        verbose_name_plural = _("Customers")
+
+    @property
+    def name(self):
+        """Get customer's full name"""
+        if self.lastname:
+            return f"{self.firstname} {self.lastname}".strip()
+        return self.firstname
 
     def __str__(self):
-        return f"""
-                {self.name} {self.get_relatedas_display()} {self.relatedto} 
-                {self.get_customer_type_display()} \n
-                {self.get_address()} 
-                {self.get_contactno() }"""
+        """Clean string representation"""
+        return f"{self.name} ({self.get_customer_type_display()})"
 
     def get_absolute_url(self):
         return reverse("contact_customer_detail", args=(self.pk,))
@@ -100,271 +153,150 @@ class Customer(models.Model):
     def get_update_url(self):
         return reverse("contact_customer_update", args=(self.pk,))
 
-    # def save(self, *args, **kwargs):
-    #     if not self.id:
-    #         self.created = timezone.now()
-    #     self.updated = timezone.now()
-    #     super().save(*args, **kwargs)
+    def clean(self):
+        """Validate customer data"""
+        if self.dob and self.dob > timezone.now().date():
+            raise ValidationError({"dob": _("Date of birth cannot be in the future")})
+        if not self.firstname:
+            raise ValidationError({"firstname": _("First name is required")})
+
+    def save(self, *args, **kwargs):
+        """Override save to run validation"""
+        self.clean()
+        super().save(*args, **kwargs)
 
     def get_default_pic(self):
+        """Get customer's default profile picture"""
         default_pic = self.pics.filter(is_default=True).first()
         if default_pic and default_pic.image:
             return default_pic.image
-        else:
-            # Return None or a default image
-            return None  # settings.STATIC_URL + "images/falconx.png"
+        return None
 
+    def get_default_address(self):
+        """Get customer's default address"""
+        try:
+            return self.address.get(is_default=True)
+        except Address.DoesNotExist:
+            return self.address.first()
+
+    # Backward compatibility alias
     def get_address(self):
-        """Get customer's address - default if exists, otherwise first available or None"""
-        address = self.address.filter(is_default=True).first()
-        if not address:
-            # Fallback to first address if no default
-            address = self.address.first()
-        return address or ""  # Return empty string if no address exists
+        """Backward compatibility - returns default address"""
+        return self.get_default_address() or ""
 
+    def get_default_contact(self):
+        """Get customer's default contact"""
+        try:
+            return self.contactno.get(is_default=True)
+        except Contact.DoesNotExist:
+            return self.contactno.first()
+
+    # Backward compatibility alias
     def get_contactno(self):
-        """Get customer's contact - default if exists, otherwise first available or None"""
-        contact = self.contactno.filter(is_default=True).first()
-        if not contact:
-            # Fallback to first contact if no default
-            contact = self.contactno.first()
-        return contact or ""  # Return empty string if no contact exists
+        """Backward compatibility - returns default contact"""
+        return self.get_default_contact() or ""
 
     def merge(self, dup):
-        # to merge one customer into another existing one
-
+        """Merge duplicate customer into this customer"""
         with transaction.atomic():
-            # Transfer duplicate customer's loans to original customer
+            # Transfer all related objects to this customer
             dup.loan_set.update(customer=self)
-
-            # Transfer duplicate customer's contacts to original customer
             dup.contactno.all().update(customer=self)
-
-            # Transfer duplicate customer's addresses to original customer
             dup.address.all().update(customer=self)
-
-            # Transfer duplicate customer's proofs to original customer
             dup.proofs.all().update(customer=self)
+            dup.relationships_created.all().update(customer=self)
+            dup.relationships_received.all().update(related_customer=self)
 
-            # Transfer duplicate customer's relationships to original customer
-            dup.relationships.all().update(customer=self)
-
-            # for related_model in [RelatedModel1, RelatedModel2]:  # replace with your related models
-            # related_model.objects.filter(customer=customer_to_delete).update(customer=customer_to_keep)
             # Delete duplicate customer
             dup.delete()
 
     @property
     def get_contact(self):
-        return list(self.contactno.values_list("national_number", flat=True))
+        """Get list of contact numbers"""
+        return list(self.contactno.values_list("phone_number", flat=True))
 
     def get_next(self):
+        """Get next customer in list"""
         return Customer.objects.filter(id__gt=self.id).order_by("id").first()
 
     def get_previous(self):
+        """Get previous customer in list"""
         return Customer.objects.filter(id__lt=self.id).order_by("-id").first()
 
     @property
     def get_loans(self):
+        """Get all unreleased loans"""
         return self.loan_set.unreleased()
 
     def get_total_loanamount(self):
+        """Get total loan amount for unreleased loans"""
         amount = self.loan_set.unreleased().aggregate(
             total=Coalesce(Sum("loan_amount"), 0)
         )
         return amount["total"]
 
     def get_total_interest_due(self):
+        """Calculate total interest due on unreleased loans"""
         total_int = 0
-        for i in self.get_loans:
-            total_int += i.interestdue()
+        for loan in self.get_loans:
+            total_int += loan.interestdue()
         return total_int
 
     @property
     def get_loans_count(self):
+        """Get count of unreleased loans"""
         return self.loan_set.unreleased().count()
 
     def get_interestdue(self):
+        """Get total interest due from unreleased loans"""
         return self.loan_set.unreleased().aggregate(total=Sum("interest"))["total"]
 
     def get_weight(self):
+        """Get total weight - placeholder for future implementation"""
         return 0
 
     @property
     def get_release_average(self):
-        # Calculate the difference in months between the release and loan creation times
-        release_time = Case(
-            When(
-                release__isnull=False,
-                then=(
-                    (ExtractYear("release__release_date") - ExtractYear("loan_date"))
-                    * 12
-                    + (
-                        ExtractMonth("release__release_date")
-                        - ExtractMonth("loan_date")
-                    )
-                ),
-            ),
-            When(
-                release__isnull=True,
-                then=(
-                    (ExtractYear(timezone.now()) - ExtractYear("loan_date")) * 12
-                    + (ExtractMonth(timezone.now()) - ExtractMonth("loan_date"))
-                ),
-            ),
-            output_field=FloatField(),
+        """Calculate average time to release loans in months"""
+        average_release_time = (
+            self.loan_set.released()
+            .annotate(
+                duration=ExpressionWrapper(
+                    F("release__release_date") - F("loan_date"),
+                    output_field=DurationField(),
+                )
+            )
+            .aggregate(average=Avg("duration"))["average"]
         )
 
-        # Calculate the average release time
-        average_release_time = self.loan_set.released().aggregate(
-            average=Avg(release_time)
-        )["average"]
+        if average_release_time is None:
+            return 0
 
-        return round(average_release_time) if average_release_time is not None else 0
-
-    # sales queries
-    # def get_sales_invoice(self):
-    #     return self.sales.all()
-
-    # def get_total_invoice_cash(self):
-    #     return self.sales.aggregate(
-    #         total=Coalesce(
-    #             Sum("sale_balance__cash_balance", output_field=models.DecimalField()),
-    #             decimal.Decimal(0.0),
-    #         )
-    #     )["total"]
-
-    # def get_total_invoice_metal(self):
-    #     return self.sales.aggregate(
-    #         total=Coalesce(
-    #             Sum("sale_balance__gold_balance", output_field=models.DecimalField()),
-    #             decimal.Decimal(0.0),
-    #         )
-    #     )
-
-    # def get_unpaid(self):
-    #     return self.sales.exclude(status="Paid")
-
-    # def get_unpaid_cash(self):
-    #     return self.get_unpaid().values("created", "id", "sale_balance")
-
-    # def get_unpaid_cash_total(self):
-    #     return self.get_unpaid_cash().aggregate(
-    #         total=Coalesce(Sum("sale_balance__cash_balance"), decimal.Decimal(0))
-    #     )["total"]
-
-    # def get_unpaid_metal(self):
-    #     return self.get_unpaid().values("created", "id", "sale_balance")
-
-    # def get_unpaid_metal_total(self):
-    #     return self.get_unpaid_metal().aggregate(
-    #         total=Coalesce(Sum("sale_balance__gold_balance"), decimal.Decimal(0))
-    #     )["total"]
-
-    # def get_total_invoice_paid_cash(self):
-    #     pass
-
-    # def get_total_invoice_paid_metal(self):
-    #     pass
-
-    # def get_cash_receipts_total(self):
-    #     return self.receipts.filter(type="Cash").aggregate(total=Sum("total"))["total"]
-
-    # def get_metal_receipts_total(self):
-    #     return self.receipts.filter(type="Metal").aggregate(
-    #         total=Coalesce(Sum("total"), decimal.Decimal(0))
-    #     )["total"]
-
-    # def get_metal_balance(self):
-    #     return self.get_total_invoice_metal() - self.get_metal_receipts_total()
-
-    # def get_cash_balance(self):
-    #     return self.get_total_invoice_cash() - self.get_cash_receipts_total()
-
-    # def get_receipts(self):
-    #     return self.receipts.all()
-
-    # def reallot_receipts(self):
-    #     receipts = self.get_receipts()
-    #     for i in receipts:
-    #         i.deallot()
-    #     for i in receipts:
-    #         i.allot()
-
-    # def reallot_payments(self):
-    #     payments = self.payments.all()
-    #     for i in payments:
-    #         i.deallot()
-    #     for i in payments:
-    #         i.allot()
-
-    # def previous_and_next(self, some_iterable):
-    #     prevs, items, nexts = tee(some_iterable, 3)
-    #     prevs = chain([None], prevs)
-    #     nexts = chain(islice(nexts, 1, None), [None])
-    #     return zip(prevs, items, nexts)
-
-    # def get_all_txns(self):
-    #     sales = self.sales.all().values()
-    #     for s in sales:
-    #         s["type"] = "sale"
-
-    #     receipts = self.receipts.all().values()
-    #     for r in receipts:
-    #         r["type"] = "receipt"
-
-    #     purchases = self.purchases.all().values()
-    #     for p in purchases:
-    #         p["type"] = "purchase"
-
-    #     payments = self.payments.all().values()
-    #     for pay in payments:
-    #         pay["type"] = "payment"
-
-    #     txn_list = sorted(
-    #         chain(sales, receipts, purchases, payments),
-    #         key=lambda i: i["created"],
-    #         reverse=True,
-    #     )
-
-    #     for prev, item, next in self.previous_and_next(txn_list):
-    #         if item["type"] == "sale":
-    #             if prev:
-    #                 item["metal_bal"] = prev["metal_bal"] - item["balance"]
-    #             else:
-    #                 item["metal_bal"] = item["balance"]
-    #         elif item["type"] == "purchase":
-    #             if prev:
-    #                 item["metal_bal"] = prev["metal_bal"] + item["balance"]
-    #             else:
-    #                 item["metal_bal"] = item["balance"]
-    #         elif item["type"] == "receipt":
-    #             if prev:
-    #                 item["metal_bal"] = prev["metal_bal"] + item["total"]
-    #             else:
-    #                 item["metal_bal"] = item["balance"]
-    #         elif item["type"] == "payment":
-    #             if prev:
-    #                 item["metal_bal"] = prev["metal_bal"] - item["total"]
-    #             else:
-    #                 item["metal_bal"] = item["total"]
-
-    #     return txn_list
+        # Convert to months (approximate)
+        return round(average_release_time.days / 30.44)
 
 
 def customer_pic_upload_to(instance, filename):
+    """Generate upload path for customer pictures"""
     ext = filename.split(".")[-1]
     return f"customer_pics/{uuid.uuid4()}.{ext}"
 
 
 class CustomerPic(models.Model):
+    """Customer profile picture model"""
+
     customer = models.ForeignKey(
         Customer, related_name="pics", on_delete=models.CASCADE
     )
     image = models.ImageField(upload_to=customer_pic_upload_to)
-    is_default = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False, verbose_name=_("Default"))
+
+    class Meta:
+        verbose_name = _("Customer Picture")
+        verbose_name_plural = _("Customer Pictures")
 
     def save(self, *args, **kwargs):
+        """Ensure only one default picture per customer"""
         if self.is_default:
             CustomerPic.objects.filter(customer=self.customer, is_default=True).update(
                 is_default=False
@@ -373,66 +305,129 @@ class CustomerPic(models.Model):
 
 
 class CustomerRelationship(models.Model):
+    """
+    Model representing relationships between customers.
+    Automatically creates bidirectional relationships.
+    """
+
+    REVERSE_RELATIONSHIPS = {
+        "s": "f",  # Son of -> Father of
+        "f": "s",  # Father of -> Son of
+        "d": "f",  # Daughter of -> Father of
+        "c": "p",  # Child of -> Parent of
+        "p": "c",  # Parent of -> Child of
+        "w": "h",  # Wife of -> Husband of
+        "h": "w",  # Husband of -> Wife of
+        "o": "o",  # Other -> Other
+    }
+
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
-        related_name="relationships",
+        related_name="relationships_created",
         verbose_name=_("Customer"),
     )
     related_customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
-        related_name="relatedby",
+        related_name="relationships_received",
         verbose_name=_("Related Customer"),
     )
     relationship = models.CharField(
-        max_length=2,
+        max_length=1,
         choices=RelationType.choices,
         default=RelationType.Son,
         verbose_name=_("Relationship"),
     )
+    created = models.DateTimeField(auto_now_add=True, editable=False)
 
     class Meta:
         unique_together = ("customer", "related_customer", "relationship")
+        indexes = [
+            models.Index(fields=["customer", "relationship"]),
+            models.Index(fields=["related_customer"]),
+        ]
+        verbose_name = _("Customer Relationship")
+        verbose_name_plural = _("Customer Relationships")
 
     def __str__(self):
         return f"{self.customer.name} - {self.get_relationship_display()} - {self.related_customer.name}"
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)  # Call the "real" save() method.
+        """Save with automatic reverse relationship creation"""
+        if not self.pk:  # Only on creation
+            super().save(*args, **kwargs)
 
-        # Define the reverse relationship mapping
-        reverse_relationships = {
-            "s": "f",  # Son of -> Father of
-            "f": "s",  # Father of -> Son of
-            "d": "f",  # Daughter of -> Father of
-            "c": "p",  # Child of -> Parent of
-            "p": "c",  # Parent of -> Child of
-            "w": "h",  # Wife of -> Husband of
-            "h": "w",  # Husband of -> Wife of
-            "o": "o",  # Other -> Other
-        }
-
-        # Get the reverse relationship
-        reverse_relationship = reverse_relationships.get(self.relationship)
-
-        # Check if the reverse relationship exists
-        reverse_exists = CustomerRelationship.objects.filter(
-            customer=self.related_customer,
-            related_customer=self.customer,
-            relationship=reverse_relationship,
-        ).exists()
-
-        # If the reverse relationship doesn't exist, create it
-        if not reverse_exists:
-            CustomerRelationship.objects.create(
-                customer=self.related_customer,
-                related_customer=self.customer,
-                relationship=reverse_relationship,
-            )
+            reverse_type = self.REVERSE_RELATIONSHIPS.get(self.relationship)
+            if reverse_type:
+                CustomerRelationship.objects.get_or_create(
+                    customer=self.related_customer,
+                    related_customer=self.customer,
+                    relationship=reverse_type,
+                )
+        else:
+            super().save(*args, **kwargs)
 
 
 class Address(models.Model):
+    """
+    Customer address model with support for multiple addresses per customer.
+    Includes validation for Indian postal codes.
+    """
+
+    # Constants
+    COUNTRIES = [
+        ("IN", "India"),
+        ("US", "United States"),
+        ("UK", "United Kingdom"),
+        # Add more as needed
+    ]
+
+    INDIAN_STATES = [
+        ("AP", "Andhra Pradesh"),
+        ("AR", "Arunachal Pradesh"),
+        ("AS", "Assam"),
+        ("BR", "Bihar"),
+        ("CG", "Chhattisgarh"),
+        ("GA", "Goa"),
+        ("GJ", "Gujarat"),
+        ("HR", "Haryana"),
+        ("HP", "Himachal Pradesh"),
+        ("JH", "Jharkhand"),
+        ("KA", "Karnataka"),
+        ("KL", "Kerala"),
+        ("MP", "Madhya Pradesh"),
+        ("MH", "Maharashtra"),
+        ("MN", "Manipur"),
+        ("ML", "Meghalaya"),
+        ("MZ", "Mizoram"),
+        ("NL", "Nagaland"),
+        ("OD", "Odisha"),
+        ("PB", "Punjab"),
+        ("RJ", "Rajasthan"),
+        ("SK", "Sikkim"),
+        ("TN", "Tamil Nadu"),
+        ("TS", "Telangana"),
+        ("TR", "Tripura"),
+        ("UP", "Uttar Pradesh"),
+        ("UK", "Uttarakhand"),
+        ("WB", "West Bengal"),
+        ("AN", "Andaman and Nicobar Islands"),
+        ("CH", "Chandigarh"),
+        ("DN", "Dadra and Nagar Haveli and Daman and Diu"),
+        ("DL", "Delhi"),
+        ("JK", "Jammu and Kashmir"),
+        ("LA", "Ladakh"),
+        ("LD", "Lakshadweep"),
+        ("PY", "Puducherry"),
+    ]
+
+    # Validators
+    zip_code_validator = RegexValidator(
+        regex=r"^[0-9]{6}$", message=_("Enter a valid 6-digit PIN code")
+    )
+
     # Relationships
     customer = models.ForeignKey(
         "contact.Customer",
@@ -441,24 +436,46 @@ class Address(models.Model):
         verbose_name=_("Customer"),
     )
 
-    # Fields
-    area = models.CharField(max_length=30, verbose_name=_("Area"))
-    created = models.DateTimeField(auto_now_add=True, editable=False)
-    doorno = models.CharField(max_length=30, verbose_name=_("Door No"))
-    zipcode = models.CharField(
-        max_length=6, default="632001", verbose_name=_("Zip Code")
+    # Address Fields
+    door_number = models.CharField(
+        max_length=30, blank=True, verbose_name=_("Door/Building No")
     )
-    last_updated = models.DateTimeField(auto_now=True, editable=False)
-    street = models.TextField(max_length=100, verbose_name=_("Street"))
-    city = models.CharField(max_length=30, default="Vellore", verbose_name=_("City"))
-    is_default = models.BooleanField(default=True, verbose_name=_("Default"))
+    street = models.TextField(max_length=100, blank=True, verbose_name=_("Street"))
+    area = models.CharField(max_length=50, blank=True, verbose_name=_("Area/Locality"))
+    city = models.CharField(max_length=50, verbose_name=_("City"))
+    state = models.CharField(
+        max_length=2, choices=INDIAN_STATES, verbose_name=_("State")
+    )
+    country = models.CharField(
+        max_length=2, choices=COUNTRIES, default="IN", verbose_name=_("Country")
+    )
+    zip_code = models.CharField(
+        max_length=6,
+        validators=[zip_code_validator],
+        verbose_name=_("PIN Code"),
+        help_text=_("6-digit postal PIN code"),
+    )
+
+    # Status Fields
+    is_default = models.BooleanField(default=False, verbose_name=_("Default Address"))
     is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
 
+    # Timestamps
+    created = models.DateTimeField(auto_now_add=True, editable=False)
+    last_updated = models.DateTimeField(auto_now=True, editable=False)
+
     class Meta:
-        ordering = ("-created",)
+        ordering = ["-is_default", "-created"]
+        indexes = [
+            models.Index(fields=["customer", "-is_default"]),
+            models.Index(fields=["city", "state"]),
+        ]
+        verbose_name = _("Address")
+        verbose_name_plural = _("Addresses")
 
     def __str__(self):
-        return f"{self.doorno},{self.street},{self.area},{self.zipcode},{self.city}"
+        parts = [self.door_number, self.street, self.area, self.city, self.zip_code]
+        return ", ".join(filter(None, parts))
 
     def get_absolute_url(self):
         return reverse("Customer_Address_detail", args=(self.pk,))
@@ -467,22 +484,56 @@ class Address(models.Model):
         return reverse("Customer_Address_update", args=(self.pk,))
 
     def verify(self):
+        """Mark address as verified"""
         self.is_verified = True
-        self.save()
+        self.save(update_fields=["is_verified"])
 
     def set_default(self):
+        """Set this address as default and unset others"""
+        Address.objects.filter(customer=self.customer, is_default=True).update(
+            is_default=False
+        )
         self.is_default = True
-        self.save()
+        self.save(update_fields=["is_default"])
+
+    def clean(self):
+        """Validate address data"""
+        if not any([self.door_number, self.street, self.area]):
+            raise ValidationError(
+                _("At least one of door number, street, or area must be provided")
+            )
+
+    # Backward compatibility properties
+    @property
+    def doorno(self):
+        """Backward compatibility for doorno field"""
+        return self.door_number
+
+    @property
+    def zipcode(self):
+        """Backward compatibility for zipcode field"""
+        return self.zip_code
 
     def save(self, *args, **kwargs):
+        """Ensure only one default address per customer"""
         if self.is_default:
-            Address.objects.filter(customer=self.customer, is_default=True).update(
-                is_default=False
-            )
-        super().save(*args, **kwargs)
+            Address.objects.filter(customer=self.customer, is_default=True).exclude(
+                pk=self.pk
+            ).update(is_default=False)
+        return super().save(*args, **kwargs)
 
 
 class Contact(models.Model):
+    """
+    Customer contact number model with support for multiple numbers per customer.
+    Enforces uniqueness per customer/phone/type combination.
+    """
+
+    class ContactType(models.TextChoices):
+        Home = "H", _("Home")
+        Office = "O", _("Office")
+        Mobile = "M", _("Mobile")
+
     # Relationships
     customer = models.ForeignKey(
         "contact.Customer",
@@ -490,31 +541,36 @@ class Contact(models.Model):
         related_name="contactno",
         verbose_name=_("Customer"),
     )
-    is_verified = models.BooleanField(default=True, verbose_name=_("Verified"))
+
     # Fields
-    created = models.DateTimeField(auto_now_add=True, editable=False)
-
-    class ContactType(models.TextChoices):
-        Home = "H", "Home"
-        Office = "O", "Office"
-        Mobile = "M", "Mobile"
-
+    phone_number = PhoneNumberField(
+        verbose_name=_("Phone Number"),
+        help_text=_("Enter phone with country code, e.g., +91 9876543210"),
+    )
     contact_type = models.CharField(
         max_length=1,
         choices=ContactType.choices,
         default=ContactType.Mobile,
         verbose_name=_("Contact Type"),
     )
-    phone_number = PhoneNumberField(unique=True, verbose_name=_("Phone Number"))
-    is_default = models.BooleanField(default=True, verbose_name=_("Default"))
+    is_default = models.BooleanField(default=False, verbose_name=_("Default"))
     is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
+
+    # Timestamps
+    created = models.DateTimeField(auto_now_add=True, editable=False)
     last_updated = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        ordering = ("-created",)
+        unique_together = ("customer", "phone_number", "contact_type")
+        ordering = ["-is_default", "-created"]
+        indexes = [
+            models.Index(fields=["customer", "-is_default"]),
+        ]
+        verbose_name = _("Contact")
+        verbose_name_plural = _("Contacts")
 
     def __str__(self):
-        return str(self.phone_number)
+        return f"{self.get_contact_type_display()}: {self.phone_number}"
 
     def get_absolute_url(self):
         return reverse("Customer_Contact_detail", args=(self.pk,))
@@ -523,22 +579,58 @@ class Contact(models.Model):
         return reverse("Customer_Contact_update", args=(self.pk,))
 
     def verify(self):
+        """Mark contact as verified"""
         self.is_verified = True
-        self.save()
+        self.save(update_fields=["is_verified"])
 
     def set_default(self):
+        """Set this contact as default for its type"""
+        Contact.objects.filter(
+            customer=self.customer, contact_type=self.contact_type, is_default=True
+        ).exclude(pk=self.pk).update(is_default=False)
         self.is_default = True
-        self.save()
+        self.save(update_fields=["is_default"])
+
+    def clean(self):
+        """Validate contact data"""
+        if not self.phone_number:
+            raise ValidationError({"phone_number": _("Phone number is required")})
 
     def save(self, *args, **kwargs):
+        """Save with default handling"""
+        self.clean()
         if self.is_default:
-            Contact.objects.filter(customer=self.customer, is_default=True).update(
-                is_default=False
-            )
+            Contact.objects.filter(
+                customer=self.customer, contact_type=self.contact_type, is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
         super().save(*args, **kwargs)
 
 
 class Proof(models.Model):
+    """
+    Customer identity proof model with validation for Indian documents.
+    """
+
+    class DocType(models.TextChoices):
+        AADHAR = "AA", _("Aadhaar Number")
+        DRIVING_LICENSE = "DL", _("Driving License")
+        PAN = "PN", _("PAN Card")
+        VOTER_ID = "VI", _("Voter ID")
+        PASSPORT = "PP", _("Passport")
+
+    # Validators for different document types
+    PROOF_VALIDATORS = {
+        "AA": RegexValidator(regex=r"^\d{12}$", message=_("Aadhaar must be 12 digits")),
+        "PN": RegexValidator(
+            regex=r"^[A-Z]{5}[0-9]{4}[A-Z]$",
+            message=_("PAN must be in format: ABCDE1234F"),
+        ),
+        "DL": RegexValidator(
+            regex=r"^[A-Z]{2}[0-9]{13}$",
+            message=_("Driving License format: TN1234567890123"),
+        ),
+    }
+
     # Relationships
     customer = models.ForeignKey(
         "contact.Customer",
@@ -546,30 +638,77 @@ class Proof(models.Model):
         related_name="proofs",
         verbose_name=_("Customer"),
     )
-    is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
 
     # Fields
-    class DocType(models.TextChoices):
-        Aadhar = "AA", "AadharNo"
-        Driving_License = "DL", "Driving License"
-        Pan = "PN", "PanCard No"
-
     proof_type = models.CharField(
-        max_length=2, choices=DocType.choices, default=DocType.Aadhar
+        max_length=2,
+        choices=DocType.choices,
+        default=DocType.AADHAR,
+        verbose_name=_("Document Type"),
     )
+    proof_number = models.CharField(max_length=50, verbose_name=_("Document Number"))
+    document = models.FileField(
+        upload_to="proofs/", blank=True, null=True, verbose_name=_("Document File")
+    )
+    is_verified = models.BooleanField(default=False, verbose_name=_("Verified"))
+
+    # Timestamps
     created = models.DateTimeField(auto_now_add=True, editable=False)
-    proof_no = models.CharField(max_length=30)
-    doc = models.FileField(upload_to="upload/files/proofs")
     last_updated = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        ordering = ("-created",)
+        unique_together = ("customer", "proof_type")
+        ordering = ["-created"]
+        indexes = [
+            models.Index(fields=["customer", "proof_type"]),
+        ]
+        verbose_name = _("Identity Proof")
+        verbose_name_plural = _("Identity Proofs")
 
     def __str__(self):
-        return str(self.pk)
+        return f"{self.get_proof_type_display()}: {self.proof_number}"
 
     def get_absolute_url(self):
         return reverse("Customer_Proof_detail", args=(self.pk,))
 
     def get_update_url(self):
         return reverse("Customer_Proof_update", args=(self.pk,))
+
+    def clean(self):
+        """Validate proof number based on type"""
+        if self.proof_type in self.PROOF_VALIDATORS:
+            validator = self.PROOF_VALIDATORS[self.proof_type]
+            try:
+                validator(self.proof_number)
+            except ValidationError as e:
+                raise ValidationError({"proof_number": e.message})
+
+        # Normalize PAN to uppercase
+        if self.proof_type == self.DocType.PAN:
+            self.proof_number = self.proof_number.upper()
+
+    def save(self, *args, **kwargs):
+        """Save with validation"""
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Delete associated file when proof is deleted"""
+        if self.document:
+            storage = self.document.storage
+            name = self.document.name
+            super().delete(*args, **kwargs)
+            storage.delete(name)
+        else:
+            super().delete(*args, **kwargs)
+
+    # Backward compatibility properties
+    @property
+    def proof_no(self):
+        """Backward compatibility for proof_no field"""
+        return self.proof_number
+
+    @property
+    def doc(self):
+        """Backward compatibility for doc field"""
+        return self.document

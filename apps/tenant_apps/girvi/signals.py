@@ -4,15 +4,24 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
-from .models import Loan, LoanItem, LoanPayment, RepledgedLoanItem
+from .models import (
+    BaseLoan,
+    GivenLoan,
+    TakenLoan,
+    LoanItem,
+    LoanPayment,
+    RepledgedLoanItem,
+)
 
 logger = logging.getLogger(__name__)
 
 
 @receiver(pre_save, sender=LoanPayment)
-@receiver(pre_save, sender=Loan)
+@receiver(pre_save, sender=GivenLoan)
+@receiver(pre_save, sender=TakenLoan)
 @receiver(post_delete, sender=LoanPayment)
-@receiver(post_delete, sender=Loan)
+@receiver(post_delete, sender=GivenLoan)
+@receiver(post_delete, sender=TakenLoan)
 def reverse_journal_entry(sender, instance, **kwargs):
     # print(" in pre_save:reverse journal entry")
     if instance.pk:  # If journal is being updated
@@ -26,14 +35,6 @@ def reverse_journal_entry(sender, instance, **kwargs):
         if old_instance.is_changed(instance):
             old_instance.reverse_transactions()
             instance.create_transactions()
-
-
-@receiver(post_save, sender=LoanPayment)
-@receiver(post_save, sender=Loan)
-def create_journal_entry(sender, instance, created, **kwargs):
-    # print(" in post_save:create journal entry")
-    if created:
-        instance.create_transactions()
 
 
 @receiver([post_delete, post_save], sender=LoanItem)

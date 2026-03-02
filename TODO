@@ -16,12 +16,10 @@ member-specific landing page in tenant
 move postgres to managed gcloud postgres or neon postgres Heroku Postgres: A managed PostgreSQL service that's easy to set up and use.
 Amazon RDS: AWS's managed database service.
 
-using django5 with psycopg2(only hurdle is psycopg composite register and adapt for version3)
+bring loan templates into public schema or create templates on tenant creation and allow edit per tenant and let users select the template from preferences
 
 archived views of dea on/as dashboard
 
-django-waffle
-django-wagtail
 
 improve stock merge if possible venture out django-mptt in stock and django-taggit
 

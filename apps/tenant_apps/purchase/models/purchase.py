@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
-from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
@@ -17,12 +16,72 @@ from moneyed import Money
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import AccountStatement  # , JournalTypes
 from apps.tenant_apps.dea.models import JournalEntry
-from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.models import ProductVariant, Stock
 from apps.tenant_apps.terms.models import PaymentTerm
 
-from ..managers import PurchaseQueryset
+
+class PurchaseQueryset(models.QuerySet):
+    def is_gst(self, value):
+        return self.filter(is_gst=value)
+
+    def is_ratecut(self, value):
+        return self.filter(is_ratecut=value)
+
+    def today(self):
+        return self.filter(created__date=date.today())
+
+    def cur_month(self):
+        return self.filter(
+            created__month=date.today().month, created__year=date.today().year
+        )
+
+    def cur_year(self):
+        return self.filter(created__year=date.today().year)
+
+    def with_balances(self):
+        return self.prefetch_related("balances", "paymentallocation_set").annotate(
+            total_cash=Coalesce(
+                Sum("balances__amount", filter=Q(balances__amount_currency="INR")), 0
+            ),
+            total_gold=Coalesce(
+                Sum("balances__amount", filter=Q(balances__amount_currency="USD")), 0
+            ),
+            total_silver=Coalesce(
+                Sum("balances__amount", filter=Q(balances__amount_currency="EUR")), 0
+            ),
+            allocated_cash=Coalesce(
+                Sum(
+                    "paymentallocation__allocated",
+                    filter=Q(paymentallocation__allocated_currency="INR"),
+                ),
+                0,
+            ),
+            allocated_gold=Coalesce(
+                Sum(
+                    "paymentallocation__allocated",
+                    filter=Q(paymentallocation__allocated_currency="USD"),
+                ),
+                0,
+            ),
+            allocated_silver=Coalesce(
+                Sum(
+                    "paymentallocation__allocated",
+                    filter=Q(paymentallocation__allocated_currency="EUR"),
+                ),
+                0,
+            ),
+            outstanding_cash=F("total_cash") - F("allocated_cash"),
+            outstanding_gold=F("total_gold") - F("allocated_gold"),
+            outstanding_silver=F("total_silver") - F("allocated_silver"),
+        )
+
+    def for_list_view(self):
+        return (
+            self.select_related("supplier", "term", "created_by")
+            .prefetch_related("balances", "paymentallocation_set", "journal_entries")
+            .with_balances()
+        )
 
 
 class Purchase(models.Model):
@@ -52,16 +111,6 @@ class Purchase(models.Model):
     # make rates auto fill from the latest rates
     gold_rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
     silver_rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
-    balance_cash = MoneyField(
-        max_digits=14, decimal_places=3, default_currency="INR", null=True, blank=True
-    )
-    balance_gold = MoneyField(
-        max_digits=14, decimal_places=3, default_currency="USD", null=True, blank=True
-    )
-    balance_silver = MoneyField(
-        max_digits=14, decimal_places=3, default_currency="EUR", null=True, blank=True
-    )
-    balance = ArrayField(MoneyValueField(null=True, blank=True), null=True, blank=True)
     # Relationship Fields
     supplier = models.ForeignKey(
         Customer,
@@ -158,25 +207,66 @@ class Purchase(models.Model):
         return gst
 
     def calculate_balances(self):
-        self.balance = Balance().monies()
+        """Calculate and store balances in PurchaseBalance table"""
+        self.balances.all().delete()
+
         if self.is_ratecut:
-            self.balance_cash = Money(
-                self.get_sum_cash_balance().amount
-                + self.get_sum_gold_balance().amount * self.gold_rate
-                + self.get_sum_silver_balance().amount * self.silver_rate,
-                "INR",
-            )
-            if self.is_gst:
-                self.balance_cash.amount += self.balance_cash.amount * Decimal(0.03)
-            self.balance_gold = Money(0, "USD")
-            self.balance_silver = Money(0, "EUR")
+            total = self._calculate_ratecut_total()
+            PurchaseBalance.objects.create(purchase=self, amount=Money(total, "INR"))
         else:
-            self.balance_cash = self.get_sum_cash_balance()
-            self.balance_gold = self.get_sum_gold_balance()
-            self.balance_silver = self.get_sum_silver_balance()
-        self.balance = Balance(
-            [self.balance_cash, self.balance_gold, self.balance_silver]
-        ).monies()
+            self._create_currency_balances()
+
+    def _calculate_ratecut_total(self):
+        cash = self.purchase_items.aggregate(total=Coalesce(Sum("cash_balance"), 0))[
+            "total"
+        ]
+        gold = (
+            self.purchase_items.filter(metal_balance_currency="USD").aggregate(
+                total=Coalesce(Sum("metal_balance"), 0)
+            )["total"]
+            * self.gold_rate
+        )
+        silver = (
+            self.purchase_items.filter(metal_balance_currency="EUR").aggregate(
+                total=Coalesce(Sum("metal_balance"), 0)
+            )["total"]
+            * self.silver_rate
+        )
+
+        total = cash + gold + silver
+        if self.is_gst:
+            total += total * Decimal("0.03")
+        return total
+
+    def _create_currency_balances(self):
+        aggregates = self.purchase_items.aggregate(
+            cash=Coalesce(Sum("cash_balance"), 0),
+            gold=Coalesce(
+                Sum("metal_balance", filter=Q(metal_balance_currency="USD")), 0
+            ),
+            silver=Coalesce(
+                Sum("metal_balance", filter=Q(metal_balance_currency="EUR")), 0
+            ),
+        )
+
+        if aggregates["cash"]:
+            PurchaseBalance.objects.create(
+                purchase=self, amount=Money(aggregates["cash"], "INR")
+            )
+        if aggregates["gold"]:
+            PurchaseBalance.objects.create(
+                purchase=self, amount=Money(aggregates["gold"], "USD")
+            )
+        if aggregates["silver"]:
+            PurchaseBalance.objects.create(
+                purchase=self, amount=Money(aggregates["silver"], "EUR")
+            )
+
+    def get_balance(self):
+        """Returns the pre-calculated balance from balances table"""
+        if not hasattr(self, "_balance"):
+            self._balance = Balance([b.amount for b in self.balances.all()])
+        return self._balance
 
     def save(self, calculate_balances=True, *args, **kwargs):
         if self.pk and calculate_balances:
@@ -266,14 +356,14 @@ class Purchase(models.Model):
             )
         return Balance(0, "INR")
 
-    def get_balance(self):
-        return Balance(
-            [
-                self.balance_cash or Money(0, "INR"),
-                self.balance_gold or Money(0, "USD"),
-                self.balance_silver or Money(0, "EUR"),
-            ]
-        )
+    # def get_balance(self):
+    #     return Balance(
+    #         [
+    #             self.balance_cash or Money(0, "INR"),
+    #             self.balance_gold or Money(0, "USD"),
+    #             self.balance_silver or Money(0, "EUR"),
+    #         ]
+    #     )
 
     def get_balance_with_allocations(self):
         return self.balance - self.get_allocations()
@@ -426,6 +516,37 @@ class Purchase(models.Model):
             old_instance, fields=["balance_cash", "balance_gold", "balance_silver"]
         )
 
+    def get_outstanding_balance(self):
+        """Returns Balance object with outstanding amounts in each currency"""
+        return Balance(
+            [
+                Money(getattr(self, "outstanding_cash", 0), "INR"),
+                Money(getattr(self, "outstanding_gold", 0), "USD"),
+                Money(getattr(self, "outstanding_silver", 0), "EUR"),
+            ]
+        )
+
+    def get_allocated_payments(self):
+        """Returns Balance object with allocated amounts in each currency"""
+        return Balance(
+            [
+                Money(getattr(self, "allocated_cash", 0), "INR"),
+                Money(getattr(self, "allocated_gold", 0), "USD"),
+                Money(getattr(self, "allocated_silver", 0), "EUR"),
+            ]
+        )
+
+    def update_status(self):
+        """Update payment status based on outstanding balance"""
+        outstanding = self.get_outstanding_balance()
+        if outstanding.is_zero():
+            self.status = "Paid"
+        elif outstanding < self.get_balance():
+            self.status = "PartiallyPaid"
+        else:
+            self.status = "Unpaid"
+        self.save(update_fields=["status"])
+
 
 class PurchaseItem(models.Model):
     # TODO:if saved and lot has sold items this shouldnt/cant be edited
@@ -564,76 +685,16 @@ class PurchaseItem(models.Model):
         purchase.save()
 
 
-"""
- initial logic for purchase balance
-  SELECT purchase_invoice.id AS voucher_id,
-    sum(pi.cash_balance) AS cash_balance,
-    sum(pi.metal_balance) AS metal_balance
-   FROM purchase_invoice
-     JOIN purchase_invoiceitem pi ON pi.invoice_id = purchase_invoice.id
-  GROUP BY purchase_invoice.id;
-    --------------------------------------------
-  improved logic:
-  SELECT purchase_invoice.id AS voucher_id,
-    sum(pi.cash_balance) AS cash_balance,
-    sum(pi.metal_balance) FILTER(WHERE pi.metal_balance_currency = 'USD') AS gold_balance,
-    sum(pi.metal_balance) FILTER(WHERE pi.metal_balance_currency = 'EUR') AS silver_balance
-   FROM purchase_invoice
-     JOIN purchase_invoiceitem pi ON pi.invoice_id = purchase_invoice.id
-  GROUP BY 
-    purchase_invoice.id;
-  --------------------------------------------
-
-
-   SELECT purchase_invoice.id AS voucher_id,
-    ROW(COALESCE(sum(pi.cash_balance), 0::numeric)::numeric(14,0), 'INR'::character varying(3))::money_value AS cash_balance,
-    ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'USD'::text), 0::numeric)::numeric(14,0), 'USD'::character varying(3))::money_value AS gold_balance,
-    ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'EUR'::text), 0::numeric)::numeric(14,0), 'EUR'::character varying(3))::money_value AS silver_balance,
-    ARRAY[
-		ROW(COALESCE(sum(pi.cash_balance), 0::numeric)::numeric(14,0), 'INR'::character varying(3))::money_value, 
-		ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'USD'::text), 0::numeric)::numeric(14,0), 'USD'::character varying(3))::money_value, 
-		ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'EUR'::text), 0::numeric)::numeric(14,0), 'EUR'::character varying(3))::money_value] AS balances
-   FROM purchase_invoice
-     JOIN purchase_invoiceitem pi ON pi.invoice_id = purchase_invoice.id
-  GROUP BY purchase_invoice.id;
-
-    --------------------------------------------
-  final:
-  SELECT purchase_invoice.id AS voucher_id,
-    ROW(COALESCE(sum(pi.cash_balance), 0.0), 'INR'::character varying(3))::money_value AS cash_balance,
-    ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'USD'::text), 0.0), 'USD'::character varying(3))::money_value AS gold_balance,
-    ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'EUR'::text), 0.0), 'EUR'::character varying(3))::money_value AS silver_balance,
-    ARRAY[
-		ROW(COALESCE(sum(pi.cash_balance), 0.0), 'INR'::character varying(3))::money_value, 
-		ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'USD'::text), 0.0), 'USD'::character varying(3))::money_value, 
-		ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'EUR'::text), 0.0), 'EUR'::character varying(3))::money_value
-	] AS balances
-   FROM purchase_invoice
-     JOIN purchase_invoiceitem pi ON pi.invoice_id = purchase_invoice.id
-  GROUP BY purchase_invoice.id;"""
-
-
-# db view for tracking the balance of a invoice from its invoice items in multicurrency
 class PurchaseBalance(models.Model):
-    voucher = models.OneToOneField(
-        Purchase,
-        on_delete=models.DO_NOTHING,
-        primary_key=True,
-        related_name="purchase_balance",
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    purchase = models.ForeignKey(
+        "Purchase", on_delete=models.CASCADE, related_name="balances"
     )
-    cash_balance = MoneyValueField(null=True, blank=True)
-    gold_balance = MoneyValueField(null=True, blank=True)
-    silver_balance = MoneyValueField(null=True, blank=True)
-    balances = ArrayField(MoneyValueField(null=True, blank=True))
-    # cash_received = models.DecimalField(max_digits=14, decimal_places=3)
-    # gold_received = models.DecimalField(max_digits=14, decimal_places=3)
-    # silver_received = models.DecimalField(max_digits=14, decimal_places=3)
-    # received = ArrayField(MoneyValueField(null=True, blank=True))
+    amount = MoneyField(max_digits=14, decimal_places=3, null=True, blank=True)
 
     class Meta:
-        managed = False
-        db_table = "purchase_balance"
+        ordering = ("-created",)
 
     def __str__(self):
-        # return f"Balance:{Balance([self.balances]) - Balance([self.received])}"
-        return f"Balance:{Balance([self.balances])}"
+        return f"{self.amount}"

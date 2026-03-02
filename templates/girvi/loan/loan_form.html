@@ -1,4 +1,14 @@
 {%block content%}
+{{ form.media.js }}
+<style>
+  .select2-dropdown-modal {
+  z-index: 1056 !important; /* Higher than modal's z-index */
+}
+
+.select2-container--open {
+  z-index: 1056 !important;
+}
+</style>
 <div class="container" id="form" hx-history="false">
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     {% if loan%}
@@ -21,7 +31,10 @@
     </div>
   </div>
 </div>
+
+
 <script>
+  
   document.addEventListener('DOMContentLoaded', function () {
   
       // Bind HTMX trigger to Select2 change event
@@ -38,4 +51,5 @@
     });
   });
 </script>
+
 {%endblock%}

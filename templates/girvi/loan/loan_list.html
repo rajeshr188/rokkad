@@ -1,164 +1,66 @@
-{%extends "_base.html"%}
+{% extends 'layouts/base.html' %}
+
+{% block content %}
 {% load static %}
+{% load partials%}
 {% load i18n %}
 {%load django_tables2%}
-{% block content %}
-<style>
-  /* Table style */
-  .table-container th.asc:after {
-    content: '\0000a0\0025b2';
-    float: right;
-  }
-
-  .table-container th.desc:after {
-    content: '\0000a0\0025bc';
-    float: right;
-  }
-
-  .table-container table td:nth-child(1) {
-    width: 5%;
-  }
-
-  .table-container table td:nth-child(2) {
-    width: 20%;
-  }
-
-  .table-container table td:nth-child(3) {
-    width: 50%;
-  }
-
-  /* Progress bar */
-  .progress {
-    height: 4px;
-    width: 100%;
-    border-radius: 2px;
-    background-clip: padding-box;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .progress {
-    opacity: 0;
-  }
-
-  .htmx-request .progress {
-    opacity: 1;
-  }
-
-  .htmx-request.progress {
-    opacity: 1;
-  }
-
-  .progress .indeterminate {
-    background-color: blue;
-  }
-
-  .progress .indeterminate:before {
-    content: '';
-    position: absolute;
-    background-color: inherit;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    will-change: left, right;
-    -webkit-animation: indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
-    animation: indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
-  }
-
-  .progress .indeterminate:after {
-    content: '';
-    position: absolute;
-    background-color: inherit;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    will-change: left, right;
-    -webkit-animation: indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
-    animation: indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
-    -webkit-animation-delay: 1.15s;
-    animation-delay: 1.15s;
-  }
-
-  @keyframes indeterminate {
-    0% {
-      left: -35%;
-      right: 100%;
-    }
-
-    60% {
-      left: 100%;
-      right: -90%;
-    }
-
-    100% {
-      left: 100%;
-      right: -90%;
-    }
-  }
-
-  @keyframes indeterminate-short {
-    0% {
-      left: -200%;
-      right: 100%;
-    }
-
-    60% {
-      left: 107%;
-      right: -8%;
-    }
-
-    100% {
-      left: 107%;
-      right: -8%;
-    }
-  }
-</style>
-<div id="loan-content" class="container-lg" ">
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+{% load crispy_forms_tags %}
+{%partialdef loan-content inline%}
+<div id="loan-content" class="container-lg">
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2">{%trans "Loans" %}</h1>
-    
+
     <div class="btn-toolbar gap-2 mb-2 mb-md-0">
       <!-- Primary Actions Group -->
       <div class="btn-group btn-group-sm mb-2 mb-sm-0">
-        <a class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}" 
-           hx-swap="innerHTML transition:true"
-           hx-target="#loan-content" 
-           hx-push-url="true"
-           hx-trigger="click,keyup[shiftKey&&key=='N'] from:body">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">
-            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+        <a class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}" hx-target="#modal-content"
+          _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()"
+          hx-trigger="click,keyup[shiftKey&&key=='N'] from:body">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle"
+            viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+            <path
+              d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
           </svg>
         </a>
       </div>
-  
+
       <!-- Secondary Actions Group -->
       <div class="btn-group btn-group-sm mb-2 mb-sm-0">
         <a class="btn btn-primary" href="{% url 'girvi:bulk_release' %}">Bulk Release</a>
         <a class="btn btn-primary" href="{% url 'girvi:girvi_ledger' %}">Ledger</a>
         <a class="btn btn-primary" href="{% url 'girvi:storage_boxes' %}">Storage</a>
-        <a class="btn btn-primary" href="{% url 'girvi:loanitem_list' %}">Items <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart-check-fill" viewBox="0 0 16 16">
-          <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-1.646-7.646-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708"/>
-        </svg></a> <!-- New Link -->
+        <a class="btn btn-primary" href="{% url 'girvi:loanitem_list' %}">Items <svg xmlns="http://www.w3.org/2000/svg"
+            width="16" height="16" fill="currentColor" class="bi bi-cart-check-fill" viewBox="0 0 16 16">
+            <path
+              d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-1.646-7.646-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708" />
+          </svg></a> <!-- New Link -->
       </div>
-  
+
       <!-- Archive Button -->
       <div class="btn-group btn-group-sm mb-2 mb-sm-0">
         <a class="btn btn-primary" href="{% url 'girvi:loan_archive'%}">
           {%trans "Archive"%}
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-archive" viewBox="0 0 16 16">
-            <path d="M0 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 1 12.5V5a1 1 0 0 1-1-1V2zm2 3v7.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V5H2zm13-3H1v2h14V2zM5 7.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-archive"
+            viewBox="0 0 16 16">
+            <path
+              d="M0 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 1 12.5V5a1 1 0 0 1-1-1V2zm2 3v7.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V5H2zm13-3H1v2h14V2zM5 7.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z" />
           </svg>
         </a>
       </div>
-      
+
       <!-- Export Dropdown -->
       <div class="btn-group btn-group-sm mb-2 mb-sm-0">
         <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
-              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+          <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+            aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download"
+              viewBox="0 0 16 16">
+              <path
+                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+              <path
+                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
             </svg>
           </button>
           <ul class="dropdown-menu">
@@ -172,14 +74,17 @@
           </ul>
         </div>
       </div>
-  
+
       <!-- Verify Button -->
       <div class="btn-group btn-group-sm mb-2 mb-sm-0">
         <a class="btn btn-success" href="{%url 'girvi:statement_list'%}">
           Verify
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-card-checklist" viewBox="0 0 16 16">
-            <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
-            <path d="M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0zM7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 0 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0z"/>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+            class="bi bi-card-checklist" viewBox="0 0 16 16">
+            <path
+              d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z" />
+            <path
+              d="M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0zM7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 0 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0z" />
           </svg>
         </a>
       </div>
@@ -192,28 +97,28 @@
     <div class="col-md-3" id="filter">
       <!-- Filter Toggle Button (Mobile Only) -->
       <div class="d-md-none mb-3">
-        <button class="btn btn-primary w-100" 
-                type="button" 
-                data-bs-toggle="collapse" 
-                data-bs-target="#filterPanel"
-                aria-expanded="false"
-                aria-controls="filterPanel">
-          <i class="bi bi-funnel"></i> 
+        <button class="btn btn-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel"
+          aria-expanded="false" aria-controls="filterPanel">
+          <i class="bi bi-funnel"></i>
           <span>Filters</span>
           <i class="bi bi-chevron-down ms-2"></i>
         </button>
       </div>
-      
+
       <!-- Filter Panel -->
       <div class="collapse d-md-block" id="filterPanel">
         <div class="card card-body border-0">
-          {% include "filter.html"%}
+          <form id="loan-filter-form" hx-get="{% url 'girvi:loan_table_partial' %}" hx-target="#loan-table-container"
+            hx-trigger="input,select,keyup,change,submit" hx-push-url="true">
+            {% crispy filter.form %}
+            <button type="submit" class="btn btn-primary">Filter</button>
+          </form>
         </div>
       </div>
     </div>
-        
+
     <div class="col-md-9 " id="table">
-      {%block table%}
+
       <div class="table-responsive">
         <div class="row">
           <div class="col">
@@ -269,13 +174,13 @@
                       </svg></a>
                   </li>
                   <li>
-                    <a class="dropdown-item dropdown-item-info link-info"
-                      hx-post="{% url 'girvi:merge_loans' %}" 
-                      hx-confirm="Are you sure you want to merge selected loans?"
-                      hx-include="[name='selection']"
+                    <a class="dropdown-item dropdown-item-info link-info" hx-post="{% url 'girvi:merge_loans' %}"
+                      hx-confirm="Are you sure you want to merge selected loans?" hx-include="[name='selection']"
                       hx-target="#table" hx-vals='{"use_block":"table"}'>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-intersect" viewBox="0 0 16 16">
-                        <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                        class="bi bi-intersect" viewBox="0 0 16 16">
+                        <path
+                          d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z" />
                       </svg>{%trans "Merge"%}
                     </a>
                   </li>
@@ -302,7 +207,7 @@
             </div>
           </div>
         </div>
-        
+
         <details>
           <summary>
             Stats
@@ -313,8 +218,12 @@
             <li>Results :{{table.paginator.count}}</li>
           </ul>
         </details>
-        {% render_table table %}
-        {%endblock%}
+
+        <div id="loan-table-container" hx-get="{% url 'girvi:loan_table_partial' %}?{{ request.GET.urlencode }}"
+          hx-trigger="load">
+          <!-- Table will be loaded here via HTMX -->
+        </div>
+
       </div>
 
     </div>
@@ -350,4 +259,5 @@
       checkboxes[i].checked = source.checked;
   }
 </script>
+{%endpartialdef%}
 {% endblock %}

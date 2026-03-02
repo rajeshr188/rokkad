@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from ..forms import LoanForm, SeriesForm
 from ..models import Series
-from ..services import generate_loan_id
+from ..services import LoanIDGenerator
 
 # @login_required
 # def next_loanid(request):
@@ -35,17 +35,16 @@ from ..services import generate_loan_id
 
 @login_required
 def next_loanid(request):
-    # def generate_loan_id(request):
+    """AJAX endpoint to preview next loan ID when series is selected."""
     try:
         series_id = request.GET.get("series", None)
         if series_id:
             series = get_object_or_404(Series, id=series_id)
-            loan_id = series.get_next_loan_id()
-            # loan_id = generate_loan_id(series_id=series_id)
-            print(loan_id)
+            # Generate preview using LoanIDGenerator
+            loan_id = LoanIDGenerator.generate(series)
         else:
             loan_id = ""
-        print(loan_id)
+
         form = LoanForm(initial={"loan_id": loan_id})
         context = {
             "field": form["loan_id"],
@@ -54,7 +53,7 @@ def next_loanid(request):
     except Http404:
         return JsonResponse({"error": "Series not found"}, status=404)
     except Exception as e:
-        return HttpResponse(e, status=500)
+        return HttpResponse(f"Error generating loan ID: {str(e)}", status=500)
 
 
 # create views to crud series

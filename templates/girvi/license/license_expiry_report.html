@@ -1,0 +1,94 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container-fluid mt-3 mb-3" id="content">
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <h3>License Expiry Report</h3>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'girvi:girvi_license_list' %}" class="btn btn-secondary">Back to Licenses</a>
+        </div>
+    </div>
+
+    {% if expiring_licenses %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Licenses Expiring Within 90 Days</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>License</th>
+                                    <th>Number</th>
+                                    <th>Type</th>
+                                    <th>Business</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Left</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for license in expiring_licenses %}
+                                <tr class="{% if license.is_expired %}table-danger{% elif license.is_expiring_soon %}table-warning{% endif %}">
+                                    <td>
+                                        <a href="{{ license.get_absolute_url }}">{{ license.name }}</a>
+                                    </td>
+                                    <td><small>{{ license.license_number }}</small></td>
+                                    <td>
+                                        <span class="badge bg-info">{{ license.get_type_display }}</span>
+                                    </td>
+                                    <td>{{ license.shopname }}</td>
+                                    <td>
+                                        <strong>{{ license.date_expires|date:"M d, Y" }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if license.days_until_expiry %}
+                                            {% if license.is_expired %}
+                                                <span class="badge bg-danger">Expired {{ license.days_until_expiry|abs }} days ago</span>
+                                            {% elif license.days_until_expiry <= 7 %}
+                                                <span class="badge bg-danger">{{ license.days_until_expiry }} days</span>
+                                            {% elif license.days_until_expiry <= 30 %}
+                                                <span class="badge bg-warning">{{ license.days_until_expiry }} days</span>
+                                            {% else %}
+                                                <span class="badge bg-info">{{ license.days_until_expiry }} days</span>
+                                            {% endif %}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if license.is_expired %}
+                                            <span class="badge bg-danger">Expired</span>
+                                        {% elif license.is_expiring_soon %}
+                                            <span class="badge bg-warning">Expiring Soon</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'girvi:girvi_license_renewal' license.id %}" class="btn btn-sm btn-warning">Renew</a>
+                                        <a href="{{ license.get_absolute_url }}" class="btn btn-sm btn-info">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <h4>Great News!</h4>
+        <p>No licenses are expiring within the next 90 days.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -5,11 +5,20 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
+from django.contrib.auth.decorators import login_required
 
+from apps.tenant_apps.dea.models import ledger
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..forms import LedgerForm, LedgerStatementForm, LedgerTransactionForm
-from ..models import JournalEntry, Ledger, LedgerStatement, LedgerTransaction
+from ..models import (
+    JournalEntry,
+    Ledger,
+    LedgerStatement,
+    LedgerTransaction,
+    LedgerBalance,
+)
+from ..utils.currency import Balance, Money
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +51,348 @@ def audit_ledger(request):
     return redirect("/dea")
 
 
+# @for_htmx(use_block="content")
+# def ledger_list(request):
+#     # Get all ledgers with their balances in one query
+#     # ledgers = (Ledger.objects
+#     #            .select_related('AccountType', 'ledgerbalance')
+#     #            .order_by('tree_id','lft','AccountType__AccountType', 'name'))
+#     # Get all ledgers and prefetch their balances instead of select_related
+#     ledgers = (Ledger.objects
+#                .select_related('AccountType')
+#                .prefetch_related('ledgerbalance')
+#                .order_by('tree_id', 'lft'))
+#     return TemplateResponse(request, "dea/ledger_list.html", {"ledgers": ledgers})
+
+
+# @login_required
 @for_htmx(use_block="content")
 def ledger_list(request):
-    ledgers = Ledger.objects.all()
-    return TemplateResponse(request, "dea/ledger_list.html", {"ledgers": ledgers})
+    # Get all ledger balances from view, ordered by tree structure
+    ledger_balances = LedgerBalance.objects.select_related(
+        "ledgerno", "AccountType"
+    ).order_by("ledgerno__tree_id", "ledgerno__lft", "currency")
+
+    # Group balances by ledger and create Balance objects
+    ledgers_with_balances = {}
+    for lb in ledger_balances:
+        if lb.ledgerno_id not in ledgers_with_balances:
+            ledgers_with_balances[lb.ledgerno_id] = {
+                "ledger": lb.ledgerno,
+                "name": lb.ledger_name,
+                "account_type": lb.AccountType,
+                "opening_balance": Balance(),
+                "credits": Balance(),
+                "debits": Balance(),
+                "current_balance": Balance(),
+            }
+
+        # Convert each amount to Money and add to respective Balance objects
+        entry = ledgers_with_balances[lb.ledgerno_id]
+        entry["opening_balance"] += Balance([Money(lb.opening_balance, lb.currency)])
+        entry["credits"] += Balance([Money(lb.total_credit_sum, lb.currency)])
+        entry["debits"] += Balance([Money(lb.total_debit_sum, lb.currency)])
+        entry["current_balance"] += Balance([Money(lb.current_balance, lb.currency)])
+
+    context = {"ledgers": ledgers_with_balances.values()}
+
+    return TemplateResponse(request, "dea/ledger_list.html", context)
+
+
+# @login_required
+@for_htmx(use_block="content")
+def trial_balance(request, as_of=None):
+    """
+    Generate trial balance showing debit/credit totals per account type
+    """
+    # Get all ledger balances grouped by account type
+    balances = LedgerBalance.objects.select_related("ledgerno", "AccountType").order_by(
+        "AccountType__AccountType", "ledger_name", "currency"
+    )
+
+    # Group balances by account type
+    trial_balance = {
+        "assets": {"type": "Asset", "entries": []},
+        "liabilities": {"type": "Liability", "entries": []},
+        "income": {"type": "Revenue", "entries": []},
+        "expenses": {"type": "Expense", "entries": []},
+        "totals": {"debit": Balance(), "credit": Balance()},
+    }
+
+    # Process each balance entry
+    for entry in balances:
+        money = Money(entry.current_balance, entry.currency)
+        account_type = entry.AccountType.AccountType
+        balance_entry = {
+            "ledger": entry.ledger_name,
+            "currency": entry.currency,
+            "debit": Money(0, entry.currency),
+            "credit": Money(0, entry.currency),
+        }
+
+        # Place amount in correct column based on account type and balance
+        if account_type in ["Asset", "Expense"]:
+            if money.amount > 0:
+                balance_entry["debit"] = money
+                trial_balance["totals"]["debit"] += Balance([money])
+            else:
+                balance_entry["credit"] = abs(money)
+                trial_balance["totals"]["credit"] += Balance([abs(money)])
+        else:  # Liability, Revenue
+            if money.amount > 0:
+                balance_entry["credit"] = money
+                trial_balance["totals"]["credit"] += Balance([money])
+            else:
+                balance_entry["debit"] = abs(money)
+                trial_balance["totals"]["debit"] += Balance([abs(money)])
+
+        # Add to appropriate section
+        if account_type == "Asset":
+            trial_balance["assets"]["entries"].append(balance_entry)
+        elif account_type == "Liability":
+            trial_balance["liabilities"]["entries"].append(balance_entry)
+        elif account_type == "Revenue":
+            trial_balance["income"]["entries"].append(balance_entry)
+        elif account_type == "Expense":
+            trial_balance["expenses"]["entries"].append(balance_entry)
+
+    return TemplateResponse(
+        request, "dea/trial_balance.html", {"trial_balance": trial_balance}
+    )
+
+
+# @login_required
+def balance_sheet(request, as_of=None):
+    """Generate balance sheet showing assets, liabilities and equity"""
+
+    balances = LedgerBalance.objects.select_related("ledgerno", "AccountType").order_by(
+        "AccountType__AccountType", "ledger_name", "currency"
+    )
+
+    statement = {
+        "assets": {
+            "current": {"entries": [], "total": Balance()},
+            "fixed": {"entries": [], "total": Balance()},
+            "total": Balance(),
+        },
+        "liabilities": {
+            "current": {"entries": [], "total": Balance()},
+            "long_term": {"entries": [], "total": Balance()},
+            "total": Balance(),
+        },
+        "equity": {"entries": [], "total": Balance()},
+    }
+
+    for entry in balances:
+        money = Money(entry.current_balance, entry.currency)
+        account_type = entry.AccountType.AccountType
+
+        if account_type == "Asset":
+            if entry.ledgerno.is_current_asset:
+                statement["assets"]["current"]["entries"].append(
+                    {"ledger": entry.ledger_name, "balance": money}
+                )
+                statement["assets"]["current"]["total"] += Balance([money])
+            else:
+                statement["assets"]["fixed"]["entries"].append(
+                    {"ledger": entry.ledger_name, "balance": money}
+                )
+                statement["assets"]["fixed"]["total"] += Balance([money])
+            statement["assets"]["total"] += Balance([money])
+
+        elif account_type == "Liability":
+            if entry.ledgerno.is_current_liability:
+                statement["liabilities"]["current"]["entries"].append(
+                    {"ledger": entry.ledger_name, "balance": money}
+                )
+                statement["liabilities"]["current"]["total"] += Balance([money])
+            else:
+                statement["liabilities"]["long_term"]["entries"].append(
+                    {"ledger": entry.ledger_name, "balance": money}
+                )
+                statement["liabilities"]["long_term"]["total"] += Balance([money])
+            statement["liabilities"]["total"] += Balance([money])
+
+        elif account_type == "Equity":
+            statement["equity"]["entries"].append(
+                {"ledger": entry.ledger_name, "balance": money}
+            )
+            statement["equity"]["total"] += Balance([money])
+
+    return TemplateResponse(request, "dea/balance_sheet.html", {"statement": statement})
+
+
+# @login_required
+def income_statement(request, from_date=None, to_date=None):
+    """Generate income statement (P&L) for a period"""
+
+    balances = (
+        LedgerBalance.objects.select_related("ledgerno", "AccountType")
+        .filter(AccountType__AccountType__in=["Revenue", "Expense"])
+        .order_by("AccountType__AccountType", "ledger_name", "currency")
+    )
+
+    statement = {
+        "revenue": {"entries": [], "total": Balance()},
+        "expenses": {"entries": [], "total": Balance()},
+        "net_income": Balance(),
+    }
+
+    for entry in balances:
+        money = Money(entry.current_balance, entry.currency)
+        if entry.AccountType.AccountType == "Revenue":
+            statement["revenue"]["entries"].append(
+                {
+                    "ledger": entry.ledger_name,
+                    "balance": abs(money),  # Revenue is normally negative
+                }
+            )
+            statement["revenue"]["total"] += Balance([abs(money)])
+        else:  # Expense
+            statement["expenses"]["entries"].append(
+                {"ledger": entry.ledger_name, "balance": money}
+            )
+            statement["expenses"]["total"] += Balance([money])
+
+    # Calculate net income
+    statement["net_income"] = (
+        statement["revenue"]["total"] - statement["expenses"]["total"]
+    )
+
+    return TemplateResponse(
+        request, "dea/income_statement.html", {"statement": statement}
+    )
+
+
+@login_required
+def profit_loss(request, from_date=None, to_date=None):
+    """
+    Generate Profit & Loss statement showing:
+    - Revenue by type
+    - Direct expenses (COGS)
+    - Gross profit
+    - Operating expenses
+    - Operating profit
+    - Other income/expenses
+    - Net profit
+    """
+
+    # Get all revenue and expense accounts
+    balances = (
+        LedgerBalance.objects.select_related("ledgerno", "AccountType")
+        .filter(AccountType__AccountType__in=["Revenue", "Expense"])
+        .order_by("AccountType__AccountType", "ledger_name", "currency")
+    )
+
+    statement = {
+        "revenue": {
+            "operating": {"entries": [], "total": Balance()},
+            "other": {"entries": [], "total": Balance()},
+            "total": Balance(),
+        },
+        "expenses": {
+            "direct": {"entries": [], "total": Balance()},  # COGS
+            "operating": {"entries": [], "total": Balance()},
+            "other": {"entries": [], "total": Balance()},
+            "total": Balance(),
+        },
+        "gross_profit": Balance(),
+        "operating_profit": Balance(),
+        "net_profit": Balance(),
+    }
+
+    # Process each balance entry
+    for entry in balances:
+        money = Money(abs(entry.current_balance), entry.currency)
+        category = entry.AccountType.AccountType
+
+        if category == "Revenue":
+            if entry.ledgerno.is_operating_revenue:
+                statement["revenue"]["operating"]["entries"].append(
+                    {"ledger": entry.ledger_name, "amount": money}
+                )
+                statement["revenue"]["operating"]["total"] += Balance([money])
+            else:
+                statement["revenue"]["other"]["entries"].append(
+                    {"ledger": entry.ledger_name, "amount": money}
+                )
+                statement["revenue"]["other"]["total"] += Balance([money])
+            statement["revenue"]["total"] += Balance([money])
+
+        elif category == "Expense":
+            if entry.ledgerno.is_direct_expense:
+                statement["expenses"]["direct"]["entries"].append(
+                    {"ledger": entry.ledger_name, "amount": money}
+                )
+                statement["expenses"]["direct"]["total"] += Balance([money])
+            elif entry.ledgerno.is_operating_expense:
+                statement["expenses"]["operating"]["entries"].append(
+                    {"ledger": entry.ledger_name, "amount": money}
+                )
+                statement["expenses"]["operating"]["total"] += Balance([money])
+            else:
+                statement["expenses"]["other"]["entries"].append(
+                    {"ledger": entry.ledger_name, "amount": money}
+                )
+                statement["expenses"]["other"]["total"] += Balance([money])
+            statement["expenses"]["total"] += Balance([money])
+
+    # Calculate profits
+    statement["gross_profit"] = (
+        statement["revenue"]["operating"]["total"]
+        - statement["expenses"]["direct"]["total"]
+    )
+
+    statement["operating_profit"] = (
+        statement["gross_profit"] - statement["expenses"]["operating"]["total"]
+    )
+
+    statement["net_profit"] = (
+        statement["operating_profit"]
+        + statement["revenue"]["other"]["total"]
+        - statement["expenses"]["other"]["total"]
+    )
+
+    return TemplateResponse(
+        request,
+        "dea/profit_loss.html",
+        {"statement": statement, "from_date": from_date, "to_date": to_date},
+    )
+
+
+# @login_required
+def cash_flow_statement(request, from_date=None, to_date=None):
+    """Generate cash flow statement showing operating, investing and financing activities"""
+
+    cash_ledgers = LedgerBalance.objects.select_related(
+        "ledgerno", "AccountType"
+    ).filter(
+        ledgerno__name__icontains="cash"  # Or your cash account identifier
+    )
+
+    statement = {
+        "operating": {"entries": [], "total": Balance()},
+        "investing": {"entries": [], "total": Balance()},
+        "financing": {"entries": [], "total": Balance()},
+        "net_change": Balance(),
+        "opening_balance": Balance(),
+        "closing_balance": Balance(),
+    }
+
+    # Get opening balances
+    for cash in cash_ledgers:
+        statement["opening_balance"] += Balance(
+            [Money(cash.opening_balance, cash.currency)]
+        )
+        statement["closing_balance"] += Balance(
+            [Money(cash.current_balance, cash.currency)]
+        )
+
+    statement["net_change"] = (
+        statement["closing_balance"] - statement["opening_balance"]
+    )
+
+    return TemplateResponse(request, "dea/cash_flow.html", {"statement": statement})
 
 
 def ledger_detail(request, pk):

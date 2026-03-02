@@ -1,0 +1,122 @@
+"""
+GivenLoan Disbursal Posting Rule
+Generated: February 26, 2026
+
+When we give out a loan (disburse it):
+- Dr LOAN_RECEIVABLE (we now have a receivable)
+- Cr CASH (money goes out)
+- Plus subledger for the customer account
+"""
+
+from decimal import Decimal
+from django.core.exceptions import ValidationError
+from moneyed import Money
+
+from ..types import PostingBundle, DualLedgerLine, AccountLine
+from .base import BasePostingRule
+from ..resolver import get_ledger_id_by_key
+from ..registry import register_rule
+
+
+@register_rule("GIVENLOAN_PAYMENT")
+class GivenLoanDisbursalRule(BasePostingRule):
+    """
+    Posting rule for GivenLoan disbursals.
+
+    When we give out a loan:
+    - Dr LOAN_RECEIVABLE (we now have a receivable from the borrower)
+    - Cr CASH (money goes out)
+
+    Plus subledger entry:
+    - Customer account: DEBIT (they owe us)
+    """
+
+    voucher_type = "GIVENLOAN_PAYMENT"
+    rule_version = "1"
+
+    def build_posting(self, ctx) -> PostingBundle:
+        """
+        Build posting bundle for loan disbursal.
+
+        ctx.doc = PaymentVoucher instance
+        """
+        payment = ctx.doc
+        tenant_id = getattr(ctx, "tenant_id", None)
+
+        # Extract economic data - use principal amount
+        principal_amount = payment.principal_amount or payment.total_amount
+
+        # Get amount as Decimal
+        principal_decimal = Decimal(str(principal_amount.amount))
+
+        # Validation
+        if principal_decimal <= 0:
+            raise ValidationError("Disbursal amount must be positive")
+
+        # Get source loan to access customer
+        source_loan = payment.source_loan
+        if not source_loan:
+            raise ValidationError("Cannot find source GivenLoan")
+
+        if not hasattr(source_loan, "customer") or not source_loan.customer:
+            raise ValidationError("Loan has no customer")
+
+        if (
+            not hasattr(source_loan.customer, "account")
+            or not source_loan.customer.account
+        ):
+            raise ValidationError(f"Customer {source_loan.customer} has no account")
+
+        # Resolve ledgers
+        cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
+        loan_receivable_id = get_ledger_id_by_key(
+            "LOAN_RECEIVABLE", tenant_id=tenant_id
+        )
+
+        if not cash_id or not loan_receivable_id:
+            raise ValidationError("Required ledgers (CASH, LOAN_RECEIVABLE) not found")
+
+        # Build posting - dual-leg ledger entry
+        # Dr LOAN_RECEIVABLE, Cr CASH
+        ledger_lines = [
+            DualLedgerLine(
+                debit_ledger_id=loan_receivable_id,
+                credit_ledger_id=cash_id,
+                amount=principal_decimal,
+                amount_base=principal_decimal,
+            )
+        ]
+
+        # Account line for customer (DEBIT side - they now owe us)
+        account_lines = [
+            AccountLine(
+                ledger_id=loan_receivable_id,
+                account_id=source_loan.customer.account.id,
+                side="Dr",
+                currency=str(payment.total_amount.currency),
+                amount=principal_decimal,
+                amount_base=principal_decimal,
+                xact_type_ext="LG",  # Loan Given
+            )
+        ]
+
+        return PostingBundle(ledger_lines=ledger_lines, account_lines=account_lines)
+
+    def fingerprint_payload(self, ctx):
+        """
+        Economic payload for idempotency.
+        """
+        payment = ctx.doc
+        source_loan = payment.source_loan
+
+        return {
+            "voucher_type": self.voucher_type,
+            "rule_version": self.rule_version,
+            "source_loan_id": source_loan.id if source_loan else None,
+            "payment_id": payment.payment_id,
+            "payment_date": payment.payment_date.isoformat()
+            if payment.payment_date
+            else None,
+            "total_amount": str(payment.total_amount.amount),
+            "currency": str(payment.total_amount.currency),
+        }

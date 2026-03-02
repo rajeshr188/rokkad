@@ -30,8 +30,8 @@ class AddressSerializer(serializers.ModelSerializer):
         fields = [
             "area",
             "created",
-            "doorno",
-            "zipcode",
+            "door_number",
+            "zip_code",
             "last_updated",
             "street",
             "Customer",
@@ -56,8 +56,8 @@ class ProofSerializer(serializers.ModelSerializer):
         fields = [
             "proof_type",
             "created",
-            "proof_no",
-            "doc",
+            "proof_number",
+            "document",
             "last_updated",
             "Customer",
         ]

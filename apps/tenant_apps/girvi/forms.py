@@ -16,15 +16,16 @@ from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.rates.models import Rate
 
 from .models import (
+    GivenLoan,
     License,
-    Loan,
+    LicenseDocument,
     LoanItem,
     LoanItemStorageBox,
     LoanPayment,
     Release,
     RepledgedLoanItem,
     Series,
-    StatementItem,
+    TakenLoan,
 )
 
 
@@ -45,13 +46,58 @@ class LicenseForm(forms.ModelForm):
         model = License
         fields = [
             "name",
+            "license_number",
             "type",
+            "status",
             "shopname",
+            "business_type",
             "address",
+            "city",
+            "state",
+            "postal_code",
             "phonenumber",
+            "email",
             "propreitor",
+            "issuing_authority",
+            "date_issued",
             "renewal_date",
+            "date_expires",
+            "is_renewable",
+            "notes",
+            "is_active",
         ]
+        widgets = {
+            "address": forms.Textarea(attrs={"rows": 3}),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+            "date_issued": forms.DateInput(attrs={"type": "date"}),
+            "renewal_date": forms.DateInput(attrs={"type": "date"}),
+            "date_expires": forms.DateInput(attrs={"type": "date"}),
+        }
+
+
+class LicenseDocumentForm(forms.ModelForm):
+    """Form for uploading and managing license documents"""
+
+    class Meta:
+        model = LicenseDocument
+        fields = [
+            "document_type",
+            "title",
+            "description",
+            "document_file",
+            "expiry_date",
+            "is_verified",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "expiry_date": forms.DateInput(attrs={"type": "date"}),
+            "document_file": forms.FileInput(
+                attrs={
+                    "accept": ".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls",
+                    "class": "form-control",
+                }
+            ),
+        }
 
 
 class SeriesForm(forms.ModelForm):
@@ -123,7 +169,7 @@ class LoanReportForm(forms.Form):
     )
 
     class Meta:
-        model = Loan
+        model = GivenLoan
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
@@ -171,12 +217,12 @@ class LoanReportForm(forms.Form):
 
 
 class LoanForm(forms.ModelForm):
-    customer = forms.ModelChoiceField(
+    borrower = forms.ModelChoiceField(
         queryset=Customer.objects.all(),
         widget=CustomerWidget(
             attrs={
                 "autofocus": True,
-                "name": "customer",
+                "name": "borrower",
             }
         ),
     )
@@ -215,12 +261,11 @@ class LoanForm(forms.ModelForm):
     )
 
     class Meta:
-        model = Loan
+        model = GivenLoan
         fields = [
-            "loan_type",
             "series",
             "loan_id",
-            "customer",
+            "borrower",
             "loan_date",
         ]
 
@@ -231,15 +276,12 @@ class LoanForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
-                Column("loan_type", css_class="form-group col-md-6 mb-0"),
-            ),
-            Row(
                 Column("series", css_class="form-group col-md-6 mb-0"),
                 Column("loan_id", css_class="form-group col-md-6 mb-0"),
                 css_class="form-row",
             ),
             Row(
-                Column("customer", css_class="form-group col-md-6 mb-0"),
+                Column("borrower", css_class="form-group col-md-6 mb-0"),
                 Column("loan_date", css_class="form-group col-md-6 mb-0"),
                 css_class="form-row",
             ),
@@ -265,14 +307,13 @@ class LoanForm(forms.ModelForm):
                 **{
                     "hx-get": cancel_url,
                     "hx-target": "#content",
-                    "hx-vals": '{"use_block":"content"}',
+                    "data-bs-dismiss": "modal",
                 },
             )
         else:
             self.helper.attrs = {
                 "hx-post": reverse("girvi:girvi_loan_create"),
                 "hx-target": "#content",
-                "hx-swap": "innerHTML",
             }
             cancel_url = reverse("girvi:girvi_loan_list")
             cancel_button = Button(
@@ -282,7 +323,7 @@ class LoanForm(forms.ModelForm):
                 **{
                     "hx-get": cancel_url,
                     "hx-target": "#content",
-                    "hx-vals": '{"use_block":"content"}',
+                    "data-bs-dismiss": "modal",
                 },
             )
 
@@ -301,13 +342,15 @@ class LoanForm(forms.ModelForm):
     def clean_loan_id(self):
         cleaned_data = super().clean()
         loan_id = cleaned_data.get("loan_id", None)
-        if (
-            loan_id
-            and Loan.objects.filter(loan_id=loan_id)
-            .exclude(pk=self.instance.pk)
-            .exists()
-        ):
-            raise forms.ValidationError("A loan with this LoanID already exists.")
+        if loan_id:
+            loan_exists = (
+                GivenLoan.objects.filter(loan_id=loan_id)
+                .exclude(pk=self.instance.pk)
+                .exists()
+                or TakenLoan.objects.filter(loan_id=loan_id).exists()
+            )
+            if loan_exists:
+                raise forms.ValidationError("A loan with this LoanID already exists.")
         return loan_id
 
     def clean(self):
@@ -383,7 +426,7 @@ class LoanItemForm(forms.ModelForm):
 
     def clean_loan(self):
         loan = self.cleaned_data["loan"]
-        if loan.is_released():
+        if loan.is_released:
             raise forms.ValidationError("Loan already has a release.")
         return loan
 
@@ -415,7 +458,7 @@ class LoanItemForm(forms.ModelForm):
 class RepledgedLoanItemForm(forms.ModelForm):
     original_loanitem = forms.ModelChoiceField(
         queryset=LoanItem.objects.filter(
-            is_repledged=False, loan__loan_type=Loan.LoanType.GIVEN
+            custody_status="in_vault", loan__release__isnull=True
         ),
         widget=ModelSelect2Widget(
             search_fields=["loan__loan_id__icontains"],
@@ -435,18 +478,18 @@ class RepledgedLoanItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields["original_loanitem"].queryset = LoanItem.objects.filter(
-                Q(is_repledged=False, loan__loan_type=Loan.LoanType.GIVEN)
+                Q(custody_status="in_vault", loan__release__isnull=True)
                 | Q(pk=self.instance.original_loanitem.pk)
             )
         else:
             self.fields["original_loanitem"].queryset = LoanItem.objects.filter(
-                is_repledged=False, loan__loan_type=Loan.LoanType.GIVEN
+                custody_status="in_vault", loan__release__isnull=True
             )
 
 
 class LoanSelectionForm(forms.Form):
     loans = forms.ModelMultipleChoiceField(
-        queryset=Loan.objects.all(), widget=MultipleLoansWidget
+        queryset=GivenLoan.objects.all(), widget=MultipleLoansWidget
     )
 
 
@@ -461,7 +504,10 @@ class ReleaseForm(forms.ModelForm):
             format="%d-%m-%Y %H:%M:%S",
         ),
     )
-    loan = forms.ModelChoiceField(widget=LoansWidget, queryset=Loan.unreleased.all())
+    loan = forms.ModelChoiceField(
+        widget=LoansWidget,
+        queryset=GivenLoan.objects.filter(release__isnull=True),
+    )
     released_by = forms.ModelChoiceField(
         required=False,
         queryset=Customer.objects.all(),
@@ -479,9 +525,9 @@ class ReleaseForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
-            self.fields["loan"].queryset = Loan.unreleased.all() | Loan.objects.filter(
-                pk=self.instance.loan.pk
-            )
+            self.fields["loan"].queryset = GivenLoan.objects.filter(
+                release__isnull=True
+            ) | GivenLoan.objects.filter(pk=self.instance.loan.pk)
             self.fields["loan"].initial = self.instance.loan
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -574,7 +620,7 @@ class BulkReleaseForm(forms.Form):
     )
     loans = forms.ModelMultipleChoiceField(
         widget=MultipleLoansWidget,
-        queryset=Loan.unreleased.all(),
+        queryset=GivenLoan.objects.filter(release__isnull=True),
     )
     # def __init__(self,*args,**kwargs):
     #     super().__init__(*args,**kwargs)
@@ -592,10 +638,13 @@ class BulkReleaseForm(forms.Form):
     #     )
 
 
+from .models import StatementItem  # Import here to avoid circular imports
+
+
 class StatementItemForm(forms.ModelForm):
     loan = forms.ModelChoiceField(
         widget=LoansWidget,
-        queryset=Loan.objects.filter(series__is_active=True),
+        queryset=GivenLoan.objects.filter(series__is_active=True),
     )
 
     class Meta:
@@ -609,7 +658,7 @@ class StatementItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         # Filter loans that are not already in the statement
-        self.fields["loan"].queryset = Loan.objects.filter(
+        self.fields["loan"].queryset = GivenLoan.objects.filter(
             series__is_active=True
         ).exclude(id__in=statement.statementitem_set.values_list("loan_id", flat=True))
         self.fields["loan"].widget.attrs = {
@@ -661,10 +710,10 @@ class LoanPaymentForm(forms.ModelForm):
         )
     )
     loan = forms.ModelChoiceField(
-        queryset=Loan.unreleased.all(),
+        queryset=GivenLoan.objects.filter(release__isnull=True),
         widget=ModelSelect2Widget(
-            model=Loan,
-            queryset=Loan.unreleased.all(),
+            model=GivenLoan,
+            queryset=GivenLoan.objects.filter(release__isnull=True),
             search_fields=["loan_id__icontains"],
             # dependent_fields={'customer':'customer'}
         ),
@@ -708,13 +757,13 @@ class LoanPaymentForm(forms.ModelForm):
 
 class LoanItemStorageBoxForm(forms.ModelForm):
     start_item_id = forms.ModelChoiceField(
-        queryset=Loan.unreleased.all(),
+        queryset=GivenLoan.objects.filter(release__isnull=True),
         to_field_name="id",
         label="Start Loan ID",
         widget=LoansWidget(),
     )
     end_item_id = forms.ModelChoiceField(
-        queryset=Loan.unreleased.all(),
+        queryset=GivenLoan.objects.filter(release__isnull=True),
         to_field_name="id",
         label="End Loan ID",
         widget=LoansWidget(),
@@ -729,10 +778,10 @@ class LoanItemStorageBoxForm(forms.ModelForm):
         if self.instance.pk:
             print(self.instance.start_item_id)
             print(self.instance.end_item_id)
-            self.initial["start_item_id"] = Loan.objects.get(
+            self.initial["start_item_id"] = GivenLoan.objects.get(
                 loan_id=self.instance.start_item_id
             ).id
-            self.initial["end_item_id"] = Loan.objects.get(
+            self.initial["end_item_id"] = GivenLoan.objects.get(
                 loan_id=self.instance.end_item_id
             ).id
 

@@ -1,0 +1,579 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n partials%}
+
+{% block title %}{{ customer.full_name }} - {% trans "Customer" %}{% endblock %}
+
+{% block content %}
+
+{% partialdef customer-detail inline %}
+<style>
+  .customer-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .info-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .tab-content {
+    padding: 2rem 0;
+  }
+  
+  .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #667eea;
+  }
+  
+  .stat-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    color: #999;
+    letter-spacing: 0.5px;
+  }
+
+  .header-info-item {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .header-info-item:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .header-info-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+  }
+
+  .header-info-value {
+    color: white;
+    font-weight: 500;
+    word-break: break-word;
+  }
+
+  .header-info-value a {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  .header-info-value a:hover {
+    opacity: 0.9;
+  }
+</style>
+<div class="container-lg py-4">
+  
+ 
+  <div class="customer-header">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <img 
+          src="{% if customer.get_default_pic %}{{ customer.get_default_pic.url }}{% else %}{% static 'images/falconx.png' %}{% endif %}"
+          alt="{{ customer.full_name }}"
+          class="avatar-large"
+          loading="lazy"
+        >
+      </div>
+      <div class="col">
+        <h1 class="mb-3">{{ customer.firstname }}</h1>
+
+        <div class="row g-3 align-items-start">
+          <div class="col-auto">
+            
+            {% if customer.relatedto %}
+              <div class="small mt-2 text-white-75">
+                {% trans customer.get_relatedas_display %}: <strong>{{ customer.relatedto }}</strong>
+              </div>
+            {% endif %}
+            <span class="badge bg-white text-dark fs-6">
+              {{ customer.get_customer_type_display }}
+            </span>
+          </div>
+
+          <div class="col">
+            <div class="row g-4">
+              <div class="col-auto">
+                {% if customer.get_default_contact %}
+                <div class="header-info-item">
+                  <div class="header-info-label"><i class="bi bi-telephone me-1"></i>{% trans "Phone" %}</div>
+                  <div class="header-info-value">
+                    <a href="tel:{{ customer.get_default_contact }}">{{ customer.get_default_contact }}</a>
+                  </div>
+                </div>
+                {% endif %}
+
+                {% if customer.email %}
+                <div class="header-info-item">
+                  <div class="header-info-label"><i class="bi bi-envelope me-1"></i>{% trans "Email" %}</div>
+                  <div class="header-info-value">
+                    <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="col-auto">
+                {% if customer.get_default_address %}
+                <div class="header-info-item">
+                  <div class="header-info-label"><i class="bi bi-geo-alt me-1"></i>{% trans "Address" %}</div>
+                  <div class="header-info-value small">
+                    {{ customer.get_default_address.door_number }}, {{ customer.get_default_address.street }}<br>
+                    {{ customer.get_default_address.area }}<br>
+                    {{ customer.get_default_address.city }} - {{ customer.get_default_address.zip_code }}
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-auto text-end">
+        <a href="{% url 'contact_customer_list' %}" 
+           class="btn btn-light btn-sm me-2"
+           title="{% trans 'Back to customers' %}">
+          <i class="bi bi-arrow-left me-1"></i>{% trans "Back" %}
+        </a>
+        <button class="btn btn-light btn-sm"
+                hx-get="{% url 'contact_customer_update' customer.id %}"
+                hx-target="#modal-content"
+                data-bs-toggle="modal"
+                data-bs-target="#modal"
+                title="{% trans 'Edit customer' %}">
+          <i class="bi bi-pencil me-1"></i>{% trans "Edit" %}
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="row row-cols-1 row-cols-md-4 g-3 mb-4">
+    <div class="col">
+      <div class="card info-card">
+        <div class="card-body text-center">
+          <div class="stat-label mb-1">{% trans "Status" %}</div>
+          <div class="stat-value">
+            {% if customer.active %}
+              <span class="badge bg-success">{% trans "Active" %}</span>
+            {% else %}
+              <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col">
+      <div class="card info-card">
+        <div class="card-body text-center">
+          <div class="stat-label mb-1">{% trans "Total Loans" %}</div>
+          <div class="stat-value">{{ total_loans }}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col">
+      <div class="card info-card">
+        <div class="card-body text-center">
+          <div class="stat-label mb-1">{% trans "Total Amount" %}</div>
+          <div class="stat-value">₹{{ total_amount|floatformat:0 }}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col">
+      <div class="card info-card">
+        <div class="card-body text-center">
+          <div class="stat-label mb-1">{% trans "Member Since" %}</div>
+          <div style="font-size: 1.25rem; font-weight: 500;">
+            {{ customer.created|date:"M y" }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+ 
+  <div class="row g-4">
+    
+  
+    <aside class="col-lg-3">
+      <div class="card sticky-top" style="top: 1rem;">
+        
+        {# Pictures Gallery #}
+        <div class="card-body">
+          <h6 class="card-title mb-3">
+            <i class="bi bi-image me-2 text-primary"></i>{% trans "Pictures" %}
+          </h6>
+          
+          {% if customer.pics.all %}
+            <div class="row g-2 mb-3">
+              {% for pic in customer.pics.all %}
+                <div class="col-12 position-relative">
+                  <img 
+                    src="{{ pic.image.url }}"
+                    alt="Customer pic"
+                    class="img-fluid rounded"
+                    style="max-height: 150px; object-fit: cover; cursor: pointer;"
+                    data-bs-toggle="modal"
+                    data-bs-target="#picModal{{ pic.id }}"
+                  >
+                  {% if pic.is_default %}
+                    <span class="position-absolute top-0 start-0 badge bg-primary">
+                      <i class="bi bi-star-fill"></i> {% trans "Default" %}
+                    </span>
+                  {% endif %}
+                  <div class="btn-group btn-group-sm w-100 mt-2" role="group">
+                    {% if not pic.is_default %}
+                      <button class="btn btn-sm btn-outline-primary flex-fill" 
+                              hx-post="{% url 'contact_pic_set_default' pic.id %}"
+                              title="{% trans 'Set as default' %}">
+                        <i class="bi bi-star"></i>
+                      </button>
+                    {% endif %}
+                    <button class="btn btn-sm btn-outline-danger flex-fill" 
+                            hx-delete="{% url 'contact_pic_delete' pic.id %}"
+                            hx-confirm="{% trans 'Are you sure?' %}"
+                            hx-target="closest .col-12"
+                            hx-swap="outerHTML swap:0.5s"
+                            title="{% trans 'Delete picture' %}">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+
+                {# Image Modal #}
+                <div class="modal fade" id="picModal{{ pic.id }}" tabindex="-1">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">{{ customer.full_name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <img src="{{ pic.image.url }}" class="img-fluid" alt="Customer pic">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <button class="btn btn-success btn-sm w-100" 
+                  hx-get="{% url 'contact_customer_pic_add' customer.id %}"
+                  hx-target="#modal-content"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modal"
+                  title="{% trans 'Add picture' %}">
+            <i class="bi bi-plus-lg me-1"></i>{% trans "Add Photo" %}
+          </button>
+        </div>
+        
+        <hr class="my-0">
+        
+        <div class="card-body">
+          <h6 class="card-title mb-3">
+            <i class="bi bi-safe me-2 text-primary"></i>{% trans "Account" %}
+          </h6>
+          
+          <dl class="row g-2 small mb-0">
+            <dt class="col-7 text-muted">{% trans "Created:" %}</dt>
+            <dd class="col-5">{{ customer.created|date:"SHORT_DATE_FORMAT" }}</dd>
+            
+            <dt class="col-7 text-muted">{% trans "Updated:" %}</dt>
+            <dd class="col-5">{{ customer.updated|date:"SHORT_DATE_FORMAT" }}</dd>
+            
+            {% if customer.created_by %}
+              <dt class="col-7 text-muted">{% trans "Created By:" %}</dt>
+              <dd class="col-5">{{ customer.created_by }}</dd>
+            {% endif %}
+          </dl>
+        </div>
+        
+      </div>
+    </aside>
+
+    
+    <main class="col-lg-9">
+      
+     
+      <ul class="nav nav-tabs card-header-tabs mb-4" id="customerTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="about-tab" data-bs-toggle="tab" data-bs-target="#about" 
+                  type="button" role="tab" aria-controls="about" aria-selected="true">
+            <i class="bi bi-info-circle me-2"></i>{% trans "About" %}
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" 
+                  type="button" role="tab" aria-controls="details" aria-selected="false">
+            <i class="bi bi-file-text me-2"></i>{% trans "Details" %}
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="loans-tab" data-bs-toggle="tab" data-bs-target="#loans" 
+                  type="button" role="tab" aria-controls="loans" aria-selected="false">
+            <i class="bi bi-calendar-event me-2"></i>{% trans "Loans" %} 
+            <span class="badge bg-primary ms-2">{{ total_loans }}</span>
+          </button>
+        </li>
+      </ul>
+
+      {# TAB CONTENT #}
+      <div class="tab-content" id="customerTabContent">
+        
+        {# ABOUT TAB #}
+        <div class="tab-pane fade show active" id="about" role="tabpanel" aria-labelledby="about-tab">
+          <div class="row g-4">
+            
+            {# Contact Numbers #}
+            <div class="col-md-6">
+              <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h6 class="card-title mb-0">
+                    <i class="bi bi-telephone me-2"></i>{% trans "Contact Numbers" %}
+                  </h6>
+                  <button class="btn btn-success btn-sm" 
+                          hx-get="{% url 'contact_create' customer.id %}"
+                          hx-target="#modal-content"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modal">
+                    <i class="bi bi-plus-lg"></i>
+                  </button>
+                </div>
+                <div class="card-body">
+                  <ul class="list-group list-group-flush" id="contacts-list">
+                    {% for contact in customer.contactno.all %}
+                      <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                          <strong>{{ contact.get_contact_type_display }}</strong><br>
+                          <a href="tel:{{ contact.phone_number }}">{{ contact.phone_number }}</a>
+                          {% if contact.is_default %}
+                            <span class="badge bg-primary ms-2">{% trans "Default" %}</span>
+                          {% endif %}
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                          {% if not contact.is_default %}
+                            <button class="btn btn-outline-primary" 
+                                    hx-post="{% url 'customer_contact_set_default' contact.id %}"
+                                    hx-target="#contacts-list">
+                              {% trans "Set Default" %}
+                            </button>
+                          {% endif %}
+                          <button class="btn btn-outline-danger" 
+                                  hx-delete="{% url 'customer_contact_delete' contact.id %}"
+                                  hx-confirm="{% trans 'Are you sure?' %}"
+                                  hx-target="#contacts-list">
+                            {% trans "Delete" %}
+                          </button>
+                        </div>
+                      </li>
+                    {% empty %}
+                      <li class="list-group-item text-muted text-center py-4">
+                        {% trans "No contact numbers added" %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {# Addresses #}
+            <div class="col-md-6">
+              <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h6 class="card-title mb-0">
+                    <i class="bi bi-geo-alt me-2"></i>{% trans "Addresses" %}
+                  </h6>
+                  <button class="btn btn-success btn-sm" 
+                          hx-get="{% url 'customer_address_create' customer.id %}"
+                          hx-target="#modal-content"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modal">
+                    <i class="bi bi-plus-lg"></i>
+                  </button>
+                </div>
+                <div class="card-body">
+                  <ul class="list-group list-group-flush" id="addresses-list">
+                    {% for address in customer.address.all %}
+                      <li class="list-group-item">
+                        <div class="mb-2">
+                          <strong>{{ address.door_number }}, {{ address.street }}</strong>
+                          {% if address.is_default %}
+                            <span class="badge bg-primary ms-2">{% trans "Default" %}</span>
+                          {% endif %}
+                        </div>
+                        <small class="text-muted">
+                          {{ address.area }}, {{ address.city }} - {{ address.zip_code }}
+                        </small>
+                      </li>
+                    {% empty %}
+                      <li class="list-group-item text-muted text-center py-4">
+                        {% trans "No addresses added" %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {# Identity Proofs #}
+            <div class="col-md-6">
+              <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h6 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-check me-2"></i>{% trans "Identity Proofs" %}
+                  </h6>
+                  <button class="btn btn-success btn-sm" 
+                          hx-get="{% url 'customer_proof_create' customer.id %}"
+                          hx-target="#modal-content"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modal">
+                    <i class="bi bi-plus-lg"></i>
+                  </button>
+                </div>
+                <div class="card-body">
+                  <ul class="list-group list-group-flush" id="proofs-list">
+                    {% for proof in customer.proofs.all %}
+                      <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div class="flex-grow-1">
+                            <div class="mb-2">
+                              <strong>{{ proof.get_proof_type_display }}</strong>
+                              {% if proof.is_verified %}
+                                <span class="badge bg-success ms-2">{% trans "Verified" %}</span>
+                              {% else %}
+                                <span class="badge bg-warning ms-2">{% trans "Unverified" %}</span>
+                              {% endif %}
+                            </div>
+                            <small class="text-muted d-block">
+                              {{ proof.proof_number }}
+                            </small>
+                          </div>
+                          <div class="btn-group btn-group-sm ms-2" role="group">
+                            <button class="btn btn-outline-primary" 
+                                    hx-get="{% url 'customer_proof_update' proof.customer.id proof.id %}"
+                                    hx-target="#modal-content"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modal"
+                                    title="{% trans 'Edit proof' %}">
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" 
+                                    hx-delete="{% url 'customer_proof_delete' proof.id %}"
+                                    hx-confirm="{% trans 'Are you sure?' %}"
+                                    hx-target="closest li"
+                                    hx-swap="outerHTML swap:0.5s"
+                                    title="{% trans 'Delete proof' %}">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    {% empty %}
+                      <li class="list-group-item text-muted text-center py-4">
+                        {% trans "No proofs added" %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {# DETAILS TAB #}
+        <div class="tab-pane fade" id="details" role="tabpanel" aria-labelledby="details-tab">
+          <dl class="row">
+            <dt class="col-sm-3">{% trans "Full Name:" %}</dt>
+            <dd class="col-sm-9">{{ customer.full_name }}</dd>
+            
+            <dt class="col-sm-3">{% trans "Type:" %}</dt>
+            <dd class="col-sm-9">{{ customer.get_customer_type_display }}</dd>
+            
+            <dt class="col-sm-3">{% trans "Status:" %}</dt>
+            <dd class="col-sm-9">
+              {% if customer.active %}
+                <span class="badge bg-success">{% trans "Active" %}</span>
+              {% else %}
+                <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+              {% endif %}
+            </dd>
+            
+            <dt class="col-sm-3">{% trans "Created:" %}</dt>
+            <dd class="col-sm-9">{{ customer.created }}</dd>
+            
+            <dt class="col-sm-3">{% trans "Updated:" %}</dt>
+            <dd class="col-sm-9">{{ customer.updated }}</dd>
+          </dl>
+        </div>
+
+        {# LOANS TAB #}
+        <div class="tab-pane fade" id="loans" role="tabpanel" aria-labelledby="loans-tab">
+          {% if loans %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>{% trans "Loan ID" %}</th>
+                    <th>{% trans "Amount" %}</th>
+                    <th>{% trans "Date" %}</th>
+                    <th>{% trans "Status" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for loan in loans %}
+                    <tr>
+                      <td><strong>#{{ loan.id }}</strong></td>
+                      <td>₹{{ loan.loan_amount|floatformat:2 }}</td>
+                      <td>{{ loan.loan_date|date:"SHORT_DATE_FORMAT" }}</td>
+                      <td><span class="badge bg-warning">{% trans "Active" %}</span></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="alert alert-info" role="alert">
+              <i class="bi bi-info-circle me-2"></i>{% trans "No loans found" %}
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+
+{% endpartialdef %}
+{% endblock %}

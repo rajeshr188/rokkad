@@ -1,3 +1,5 @@
+import re
+
 from import_export import fields, resources
 from import_export.fields import Field
 from import_export.widgets import DateTimeWidget, ForeignKeyWidget
@@ -5,7 +7,7 @@ from import_export.widgets import DateTimeWidget, ForeignKeyWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 
-from .models import License, Loan, LoanItem, LoanPayment, Release, Series
+from .models import GivenLoan, License, LoanItem, LoanPayment, Release, Series
 
 
 class LicenseResource(resources.ModelResource):
@@ -78,9 +80,9 @@ class LoanResource(resources.ModelResource):
         column_name="loan_date",
         widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
     )
-    customer = fields.Field(
-        column_name="customer",
-        attribute="customer",
+    borrower = fields.Field(
+        column_name="borrower",
+        attribute="borrower",
         widget=ForeignKeyWidget(Customer, "pk"),
     )
     series = fields.Field(
@@ -101,13 +103,13 @@ class LoanResource(resources.ModelResource):
         queryset = (
             super()
             .get_queryset()
-            .select_related("customer", "series")
+            .select_related("borrower", "series")
             .prefetch_related("loanitems", "loan_payments", "release")
         )
         return queryset
 
     class Meta:
-        model = Loan
+        model = GivenLoan
         import_id_fields = ("id",)
         skip_unchanged = True
         report_skipped = True
@@ -128,21 +130,21 @@ class LoanResource(resources.ModelResource):
 
 
 class LedgerResource(resources.ModelResource):
-    customer = fields.Field(
-        column_name="customer",
-        attribute="customer",
+    borrower = fields.Field(
+        column_name="borrower",
+        attribute="borrower",
         widget=ForeignKeyWidget(Customer, "id"),
     )
 
-    def dehydrate_customer(self, loan):
+    def dehydrate_borrower(self, loan):
         # Customize this method to include the details you want
-        return f"{loan.customer.name} {loan.customer.address.first()}"
+        return f"{loan.borrower.name} {loan.borrower.address.first()}"
 
     class Meta:
-        model = Loan
+        model = GivenLoan
         fields = (
             "loan_id",
-            "customer",
+            "borrower",
             "loan_date",
             "loan_amount",
             "weight",
@@ -158,7 +160,7 @@ class LedgerResource(resources.ModelResource):
 
 class LoanItemResource(resources.ModelResource):
     loan = fields.Field(
-        column_name="loan", attribute="loan", widget=ForeignKeyWidget(Loan, "pk")
+        column_name="loan", attribute="loan", widget=ForeignKeyWidget(GivenLoan, "pk")
     )
     item = fields.Field(
         column_name="item",
@@ -182,7 +184,7 @@ class LoanPaymentResource(resources.ModelResource):
         widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
     )
     loan = fields.Field(
-        column_name="loan", attribute="loan", widget=ForeignKeyWidget(Loan, "pk")
+        column_name="loan", attribute="loan", widget=ForeignKeyWidget(GivenLoan, "pk")
     )
 
     class Meta:
@@ -206,7 +208,7 @@ class ReleaseResource(resources.ModelResource):
         widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
     )
     loan = fields.Field(
-        column_name="loan", attribute="loan", widget=ForeignKeyWidget(Loan, "pk")
+        column_name="loan", attribute="loan", widget=ForeignKeyWidget(GivenLoan, "pk")
     )
     released_by = fields.Field(
         column_name="released_by",

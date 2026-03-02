@@ -10,6 +10,15 @@
               {{ form.as_p }}
 
               <div class="row g-3 mb-3">
+                <!-- Add this block where you want the camera controls -->
+<div id="camera-section" class="mb-3">
+  <video id="video" autoplay style="width:320px;"></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <img id="photo" alt="Captured photo" style="width:320px;" />
+  <button id="startbutton" type="button" class="btn btn-primary">Capture</button>
+  <input type="hidden" id="image-data" name="image-data" />
+  <select id="videoSource" class="form-select"></select>
+</div>
                 <input type="hidden" id="image-data" name="image_data">
                 <select id="videoSource"></select>
                 <div class="col-md-4">

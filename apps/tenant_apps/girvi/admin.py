@@ -9,14 +9,16 @@ from django.utils.html import format_html
 
 from .forms import LoanItemStorageBoxForm
 from .models import (
+    GivenLoan,
     License,
-    Loan,
+    LicenseDocument,
     LoanItem,
     LoanItemStorageBox,
     LoanPayment,
     LoanTemplate,
     Release,
     Series,
+    TakenLoan,
     TemplateFrame,
 )
 from .resources import (
@@ -165,24 +167,129 @@ class LicenseAdminForm(forms.ModelForm):
         fields = "__all__"
 
 
+class LicenseDocumentInline(admin.TabularInline):
+    """Inline for managing license documents"""
+
+    model = LicenseDocument
+    extra = 1
+    fields = [
+        "document_type",
+        "title",
+        "document_file",
+        "expiry_date",
+        "is_verified",
+        "is_active",
+    ]
+    readonly_fields = ["upload_date"]
+
+
 class LicenseAdmin(admin.ModelAdmin):
     form = LicenseAdminForm
     inlines = [
         SeriesAdmin,
+        LicenseDocumentInline,
     ]
     resource_class = LicenseResource
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "name",
+                    "license_number",
+                    "type",
+                    "status",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Business Details",
+            {
+                "fields": (
+                    "shopname",
+                    "business_type",
+                    "address",
+                    "city",
+                    "state",
+                    "postal_code",
+                    "phonenumber",
+                    "email",
+                    "propreitor",
+                )
+            },
+        ),
+        (
+            "License Details",
+            {
+                "fields": (
+                    "issuing_authority",
+                    "date_issued",
+                    "renewal_date",
+                    "date_expires",
+                    "is_renewable",
+                )
+            },
+        ),
+        (
+            "Additional Notes",
+            {"fields": ("notes",), "classes": ("collapse",)},
+        ),
+    )
     list_display = [
         "name",
+        "license_number",
         "id",
-        "created",
-        "updated",
+        "status",
         "type",
+        "business_type",
         "shopname",
-        "address",
-        "phonenumber",
-        "propreitor",
-        "renewal_date",
+        "status_color_display",
+        "expiry_status",
+        "created",
     ]
+    list_filter = [
+        "status",
+        "type",
+        "business_type",
+        "is_active",
+        "date_expires",
+        "created",
+    ]
+    search_fields = [
+        "name",
+        "license_number",
+        "shopname",
+        "propreitor",
+        "address",
+    ]
+    readonly_fields = ["created", "updated"]
+    ordering = ["-created"]
+
+    def status_color_display(self, obj):
+        """Display colored status badge"""
+        color = obj.get_status_display_color()
+        return format_html(
+            '<span class="badge bg-{}">{}</span>',
+            color,
+            obj.get_status_display(),
+        )
+
+    status_color_display.short_description = "Status"
+
+    def expiry_status(self, obj):
+        """Display expiry status"""
+        if obj.is_expired():
+            return format_html('<span class="badge bg-danger">Expired</span>')
+        elif obj.is_expiring_soon(days=30):
+            days = obj.days_until_expiry()
+            return format_html(
+                '<span class="badge bg-warning">Expires in {} days</span>',
+                days,
+            )
+        return format_html('<span class="badge bg-success">Active</span>')
+
+    expiry_status.short_description = "Expiry Status"
 
 
 class LoanPaymentAdminForm(forms.ModelForm):
@@ -252,40 +359,151 @@ class ReleaseAdmin(admin.TabularInline):
 
 class LoanAdminForm(forms.ModelForm):
     date_heirarchy = "created"
-    list_filter = ("customer", "series")
+    list_filter = ("borrower", "series")
 
     class Meta:
-        model = Loan
+        model = GivenLoan
         fields = "__all__"
 
 
 # class LoanAdmin(ImportExportModelAdmin):
-class LoanAdmin(admin.ModelAdmin):
+class GivenLoanAdmin(admin.ModelAdmin):
     form = LoanAdminForm
     resource_class = LoanResource
     inlines = [
         LoanItemAdmin,
-        ReleaseAdmin,
-        LoanPaymentAdmin,
+        # ReleaseAdmin,  # Removed: Release only applies to GivenLoan, configured separately
+        # LoanPaymentAdmin,  # Removed: LoanPayment FK needs updating to support GivenLoan/TakenLoan
     ]
     list_display = [
         "id",
         "loan_id",
-        "customer",
+        "borrower",
         "series",
         "loan_date",
-        "item_desc",
-        "loan_amount",
+        "display_item_desc",
+        "display_loan_amount",
     ]
-    search_fields = ["customer__name", "loan_id", "item_desc"]
-    autocomplete_fields = ["customer"]
+    search_fields = ["borrower__firstname", "borrower__lastname", "loan_id"]
+    autocomplete_fields = ["borrower"]
     list_filter = ["series"]
+
+    def display_item_desc(self, obj):
+        """Display the item description"""
+        return obj.get_item_description()
+
+    display_item_desc.short_description = "Item Description"
+
+    def display_loan_amount(self, obj):
+        """Display the calculated loan amount"""
+        return obj.get_loan_amount
+
+    display_loan_amount.short_description = "Loan Amount"
+
+
+class TakenLoanAdminForm(forms.ModelForm):
+    date_heirarchy = "created"
+    list_filter = ("lender", "series")
+
+    class Meta:
+        model = TakenLoan
+        fields = "__all__"
+
+
+class TakenLoanAdmin(admin.ModelAdmin):
+    form = TakenLoanAdminForm
+    resource_class = LoanResource
+    inlines = []  # RepledgedLoanItem inline can be added later
+    list_display = [
+        "id",
+        "loan_id",
+        "lender",
+        "series",
+        "loan_date",
+        "display_item_desc",
+        "display_loan_amount",
+    ]
+    search_fields = ["lender__firstname", "lender__lastname", "loan_id"]
+    autocomplete_fields = ["lender"]
+    list_filter = ["series"]
+
+    def display_item_desc(self, obj):
+        """Display the item description"""
+        return obj.get_item_description()
+
+    display_item_desc.short_description = "Item Description"
+
+    def display_loan_amount(self, obj):
+        """Display the calculated loan amount"""
+        return obj.get_loan_amount
+
+    display_loan_amount.short_description = "Loan Amount"
 
 
 class LoanItemStorageBoxAdmin(admin.ModelAdmin):
     form = LoanItemStorageBoxForm
 
 
+class LicenseDocumentAdmin(admin.ModelAdmin):
+    """Admin for License Documents"""
+
+    list_display = [
+        "title",
+        "license",
+        "document_type",
+        "upload_date",
+        "expiry_date",
+        "is_verified",
+        "is_active",
+    ]
+    list_filter = [
+        "document_type",
+        "is_verified",
+        "is_active",
+        "upload_date",
+    ]
+    search_fields = ["title", "license__name", "license__license_number"]
+    readonly_fields = ["upload_date", "uploaded_by", "file_size", "file_type"]
+    fieldsets = (
+        (
+            "Document Information",
+            {
+                "fields": (
+                    "license",
+                    "document_type",
+                    "title",
+                    "description",
+                )
+            },
+        ),
+        (
+            "File Information",
+            {
+                "fields": (
+                    "document_file",
+                    "file_size",
+                    "file_type",
+                    "upload_date",
+                    "uploaded_by",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Verification & Status",
+            {
+                "fields": (
+                    "expiry_date",
+                    "is_verified",
+                    "is_active",
+                ),
+            },
+        ),
+    )
+
+
 admin.site.register(License, LicenseAdmin)
-admin.site.register(Loan, LoanAdmin)
+admin.site.register(LicenseDocument, LicenseDocumentAdmin)
+admin.site.register(GivenLoan, GivenLoanAdmin)
+admin.site.register(TakenLoan, TakenLoanAdmin)
 admin.site.register(LoanItemStorageBox, LoanItemStorageBoxAdmin)

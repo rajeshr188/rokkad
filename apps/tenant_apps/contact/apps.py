@@ -6,12 +6,6 @@ class ContactConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):
-        from . import signals
-
-        # from actstream import registry
+        from . import signals  # noqa: F401
 
         pass
-
-        # registry.register(self.get_model("Customer"))
-        # registry.register(self.get_model("Contact"))
-        # registry.register(self.get_model("Address"))

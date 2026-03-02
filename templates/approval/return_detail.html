@@ -1,4 +1,4 @@
-{%extends '_base.html'%}
+{% extends 'layouts/base.html' %}
 {%block content%}
 
 <div id = "content" hx-trigger="returnChanged from:body" hx-get="{% url 'approval:approval_return_detail' object.id%}">

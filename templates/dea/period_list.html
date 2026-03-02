@@ -1,0 +1,106 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Accounting Periods{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Accounting Periods</h5>
+        <a href="{% url 'dea_period_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle"></i> Create Period
+        </a>
+    </div>
+    
+    <div class="card-body">
+        <!-- Filter Form -->
+        <form method="get" class="mb-3">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    {{ filter.form.status.label_tag }}
+                    {{ filter.form.status }}
+                </div>
+                <div class="col-md-3">
+                    {{ filter.form.name.label_tag }}
+                    {{ filter.form.name }}
+                </div>
+                <div class="col-md-2">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-secondary w-100">Filter</button>
+                </div>
+                <div class="col-md-2">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'dea_period_list' %}" class="btn btn-outline-secondary w-100">Clear</a>
+                </div>
+            </div>
+        </form>
+
+        <!-- Periods Table -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Period Name</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                        <th class="text-end">Entries</th>
+                        <th class="text-end">Statements</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for period in periods %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'dea_period_detail' period.pk %}">
+                                <strong>{{ period.name }}</strong>
+                            </a>
+                        </td>
+                        <td>{{ period.start_date|date:"Y-m-d" }}</td>
+                        <td>{{ period.end_date|date:"Y-m-d" }}</td>
+                        <td>
+                            {% if period.status == 'OPEN' %}
+                                <span class="badge bg-success">OPEN</span>
+                            {% elif period.status == 'CLOSED' %}
+                                <span class="badge bg-warning text-dark">CLOSED</span>
+                            {% elif period.status == 'LOCKED' %}
+                                <span class="badge bg-danger">LOCKED</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ period.journal_count }}</td>
+                        <td class="text-end">{{ period.ledger_stmt_count|add:period.account_stmt_count }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'dea_period_detail' period.pk %}" 
+                                   class="btn btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                
+                                {% if period.status == 'OPEN' %}
+                                    <a href="{% url 'dea_period_update' period.pk %}" 
+                                       class="btn btn-outline-secondary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'dea_period_close' period.pk %}" 
+                                       class="btn btn-outline-danger" title="Close Period">
+                                        <i class="bi bi-lock"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            No accounting periods found. 
+                            <a href="{% url 'dea_period_create' %}">Create one now</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,125 +1,258 @@
-{% extends '_base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load i18n %}
-{% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-3">
-            <div class="card">       
+{% load orgs_tags %}
+
+{% block title %}{{ company.name }} - Workspaces - Rokkad{% endblock %}
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'workspace_list' %}">Workspaces</a></li>
+        <li class="breadcrumb-item active">{{ company.name }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block workspace_content %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
                 <div class="card-body">
-                    <p><strong>Company:</strong> {{ company.name }}</p>
-                    <p><strong>Creator:</strong> {{ company.creator }}</p>
-                    <p><strong>Owner:</strong> {{ company.owner }}</p>
-                    <p><strong>Created At:</strong> {{ company.created_at }}</p>
-                    <p><strong>Updated At:</strong> {{ company.updated_at }}</p>
-                    <a class="btn btn-warning" href="{% url 'orgs_company_update' company.id%}">Edit</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md">
-            <div class="card">
-                <div class="card-body">
-                    <ul class="nav nav-tabs" id="myTab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                          <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">{%trans "Members"%}</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                          <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">{%trans "Invitations"%}</button>
-                        </li>
-                      
-                      </ul>
-                      <div class="tab-content" id="myTabContent">
-                        <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
-                            <div class="card">
-                                
-                                <div class="card-body table-responsive" >
-                                    <div id="form">
-                                        <a class="btn btn-success" href="" hx-get="{% url 'invite_to_company' company.id%}"
-                                            hx-target="#form" hx-swap="innerHTML" hx-pushurl="true">Invite</a>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-xl bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3">
+                                <i class="bi bi-building text-primary" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <div>
+                                <h1 class="h3 mb-1">{{ company.name }}</h1>
+                                <div class="d-flex gap-3 text-muted small">
+                                    <span><i class="bi bi-calendar"></i> Created {{ company.created_at|date:"M d, Y" }}</span>
+                                    <span><i class="bi bi-person"></i> Owner: {{ company.owner }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if request.user|has_permission:"orgs.change_company" %}
+                        <div>
+                            <a href="{% url 'workspace_update' workspace_id=company.id %}" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil-square"></i> Edit Workspace
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="row mt-4 g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-muted small">Team Members</div>
+                                        <div class="h4 mb-0">{{ company.memberships.count }}</div>
                                     </div>
-                                    
-            
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>Member</th>
-                                                <th>Role</th>
-                                                <th>Company</th>
-                                                <th>Date Joined</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for member in company.memberships.all %}
-                                        <tr>
-                                            <td>{{member.user}}</td>
-                                            <td>{{member.role}} <a href="" hx-get="{% url 'orgs_membership_update' company_id=member.company.id membership_id=member.id%}"
-                                                hx-target = "closest td" hx-swap="innerHTML"   
-                                            ><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
-                                      </svg></a></td>
-                                            <td>{{member.company}}</td>
-                                            <td>{{member.date_joined}}</td>
-                                            <td>
-                                              <a href="{% url 'orgs_membership_revoke' company.id member.id%}"
-                                                    >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                                                        <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
-                                                        <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
-                                                      </svg>
-                                            </a></td>
-                                        </tr>
-                                        {% endfor %}
-                                        </tbody>
-                                    </table>
+                                    <i class="bi bi-people text-primary" style="font-size: 2rem;"></i>
                                 </div>
                             </div>
                         </div>
-                       
-                        <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
-                            <div class="card">
-                                <!-- if owned then send invites -->    
-                                <div class="card-body table-responsive">
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>Invited</th>
-                                                <th>Invited By</th>
-                                                <th>Company</th>
-                                                <th>Role</th>
-                                                <th>Invited At</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for invitation in company.invitations.all %}
-                                            <tr>
-                                                <td>{{invitation.email}}</td>
-                                                <td>{{invitation.inviter}}</td>
-                                                <td>{{invitation.company}}</td>
-                                                <td>{{invitation.role}}</td>
-                                                <td>{{invitation.created}}</td>
-                                                <td>{{invitation.accepted|yesno:"Accepted,Rejected"}}</td>
-                                                <td><a hx-post="{% url 'orgs_invite_delete' invitation.id%}" hx-target="closest tr"
-                                                        class="btn btn-sm btn-danger">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                                                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
-                                                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
-                                                        </svg></a>
-                                                </td>
-                                            </tr>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-muted small">Pending Invitations</div>
+                                        <div class="h4 mb-0">{{ company.invitations.count }}</div>
+                                    </div>
+                                    <i class="bi bi-envelope text-warning" style="font-size: 2rem;"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-muted small">Your Role</div>
+                                        <div class="h4 mb-0">
+                                            {% for membership in user.memberships.all %}
+                                                {% if membership.company.id == company.id %}
+                                                    {% render_role_badge role=membership.role.name %}
+                                                {% endif %}
                                             {% endfor %}
-                                        </tbody>
-                                    </table>
+                                        </div>
+                                    </div>
+                                    <i class="bi bi-person-badge text-success" style="font-size: 2rem;"></i>
                                 </div>
                             </div>
                         </div>
-                      </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
+    <!-- Workspace Management Tabs -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-4" id="workspaceTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="members-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#members-pane" type="button" role="tab">
+                                <i class="bi bi-people"></i> {% trans "Team Members" %}
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="invitations-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#invitations-pane" type="button" role="tab">
+                                <i class="bi bi-envelope"></i> {% trans "Invitations" %}
+                                {% if company.invitations.count > 0 %}
+                                <span class="badge bg-warning text-dark ms-1">{{ company.invitations.count }}</span>
+                                {% endif %}
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="workspaceTabContent">
+                        <!-- Members Tab -->
+                        <div class="tab-pane fade show active" id="members-pane" role="tabpanel">
+                            {% if request.user|has_permission:"orgs.add_membership" %}
+                            <div class="mb-4" id="form">
+                                <button class="btn btn-success" hx-get="{% url 'team_invite' workspace_id=company.id %}"
+                                        hx-target="#form" hx-swap="innerHTML" hx-push-url="true">
+                                    <i class="bi bi-person-plus"></i> Invite Team Member
+                                </button>
+                            </div>
+                            {% endif %}
+
+                            {% if company.memberships.all %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Member</th>
+                                            <th>Role</th>
+                                            <th>Date Joined</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for member in company.memberships.all %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                        <i class="bi bi-person"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">{{ member.user.get_full_name|default:member.user.username }}</div>
+                                                        <small class="text-muted">{{ member.user.email }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% render_role_badge role=member.role.name %}
+                                                {% if request.user|has_permission:"company.change_company" %}
+                                                <a href="#" hx-get="{% url 'team_change_role' workspace_id=member.company.id membership_id=member.id %}"
+                                                   hx-target="closest td" hx-swap="innerHTML" class="ms-2 text-primary" title="Edit role">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </a>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ member.date_joined|date:"M d, Y" }}</td>
+                                            <td>
+                                                {% if request.user|has_permission:"company.change_company" and member.user != user %}
+                                                <a href="{% url 'team_remove_member' workspace_id=company.id membership_id=member.id %}" 
+                                                   class="btn btn-sm btn-outline-danger"
+                                                   onclick="return confirm('Remove {{ member.user }} from this workspace?')">
+                                                    <i class="bi bi-person-dash"></i> Remove
+                                                </a>
+                                                {% elif member.user == user %}
+                                                <span class="text-muted small">You</span>
+                                                {% else %}
+                                                <span class="text-muted small">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            {% empty_state title="No Team Members" message="Invite team members to collaborate in this workspace" icon="people" %}
+                            {% endif %}
+                        </div>
+
+                        <!-- Invitations Tab -->
+                        <div class="tab-pane fade" id="invitations-pane" role="tabpanel">
+                            {% if company.invitations.all %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Invited Email</th>
+                                            <th>Role</th>
+                                            <th>Invited By</th>
+                                            <th>Invited At</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for invitation in company.invitations.all %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-envelope me-2 text-muted"></i>
+                                                    {{ invitation.email }}
+                                                </div>
+                                            </td>
+                                            <td>{% render_role_badge role=invitation.role.name size='small' %}</td>
+                                            <td>{{ invitation.inviter.get_full_name|default:invitation.inviter.username }}</td>
+                                            <td>{{ invitation.created|date:"M d, Y" }}</td>
+                                            <td>
+                                                {% if invitation.accepted %}
+                                                <span class="badge bg-success">Accepted</span>
+                                                {% elif invitation.accepted == False %}
+                                                <span class="badge bg-danger">Declined</span>
+                                                {% else %}
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if request.user|has_permission:"company.add_companymember" and not invitation.accepted %}
+                                                <button hx-post="{% url 'orgs_invite_delete' invitation.id %}" 
+                                                        hx-target="closest tr" hx-swap="outerHTML"
+                                                        hx-confirm="Cancel invitation to {{ invitation.email }}?"
+                                                        class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-x-circle"></i> Cancel
+                                                </button>
+                                                {% else %}
+                                                <span class="text-muted small">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            {% empty_state title="No Pending Invitations" message="Invite team members to see pending invitations here" icon="envelope" %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
 {% endblock %}
+
+<style>
+.avatar-xl {
+    width: 80px;
+    height: 80px;
+}
+
+.avatar-sm {
+    width: 36px;
+    height: 36px;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+</style>

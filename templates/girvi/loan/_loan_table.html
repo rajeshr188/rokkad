@@ -1,0 +1,6 @@
+{%load django_tables2%}
+{% render_table table %}
+<div>
+  <strong>Total Loan Amount:</strong> {{ total_loan_amount.total }}
+  <strong>Total Interest:</strong> {{ total_interest.total }}
+</div>

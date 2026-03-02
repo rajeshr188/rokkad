@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import make_aware
-from girvi.models import Loan, Release
+from girvi.models import GivenLoan, Release
 
 CREATE = "create"
 LIST = "list"

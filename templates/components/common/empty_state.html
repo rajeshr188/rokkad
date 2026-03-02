@@ -1,0 +1,90 @@
+<!-- Empty State Component -->
+<!-- Usage: include 'components/common/empty_state.html' with title='No members' message='Invite team members to get started' action_label='Invite Member' action_url='...' -->
+
+<div class="empty-state">
+    <div class="empty-state__icon">
+        {% if icon %}
+            <i class="bi bi-{{ icon }}"></i>
+        {% else %}
+            <i class="bi bi-inbox"></i>
+        {% endif %}
+    </div>
+    
+    {% if title %}
+    <h3 class="empty-state__title">{{ title }}</h3>
+    {% endif %}
+    
+    {% if message %}
+    <p class="empty-state__message">{{ message }}</p>
+    {% endif %}
+    
+    {% if action_url %}
+    <div class="empty-state__action">
+        <a href="{{ action_url }}" class="btn btn-primary">
+            {% if action_icon %}<i class="bi bi-{{ action_icon }}"></i> {% endif %}
+            {{ action_label|default:"Get Started" }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    background-color: #f9f9f9;
+    border: 2px dashed #dee2e6;
+    border-radius: 0.5rem;
+    min-height: 300px;
+}
+
+.empty-state__icon {
+    font-size: 3rem;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+}
+
+.empty-state__title {
+    margin-bottom: 0.5rem;
+    color: #495057;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.empty-state__message {
+    margin-bottom: 2rem;
+    color: #6c757d;
+    max-width: 400px;
+}
+
+.empty-state__action {
+    margin-top: auto;
+}
+
+.empty-state__action .btn {
+    min-width: 200px;
+}
+
+/* Variations */
+.empty-state--sm {
+    min-height: 200px;
+    padding: 2rem 1.5rem;
+}
+
+.empty-state--sm .empty-state__icon {
+    font-size: 2rem;
+}
+
+.empty-state--sm .empty-state__title {
+    font-size: 1.1rem;
+}
+
+.empty-state--sm .empty-state__message {
+    font-size: 0.9rem;
+}
+</style>

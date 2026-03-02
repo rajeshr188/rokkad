@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic.dates import ArchiveIndexView
 
 from . import views
-from .models import Loan
+from .models import GivenLoan
 
 app_name = "girvi"
 
@@ -37,7 +37,7 @@ urlpatterns += (
     path(
         "loan_archive/",
         ArchiveIndexView.as_view(
-            model=Loan,
+            model=GivenLoan,
             date_field="loan_date",
             allow_empty=True,
             paginate_by=10,
@@ -95,6 +95,26 @@ urlpatterns += (
         views.LicenseDeleteView.as_view(),
         name="girvi_license_delete",
     ),
+    path(
+        "girvi/license/expiry-report/",
+        views.LicenseExpiryReportView.as_view(),
+        name="girvi_license_expiry_report",
+    ),
+    path(
+        "girvi/license/<int:license_id>/document/upload/",
+        views.LicenseDocumentUploadView.as_view(),
+        name="girvi_license_document_upload",
+    ),
+    path(
+        "girvi/license/document/<int:pk>/delete/",
+        views.LicenseDocumentDeleteView.as_view(),
+        name="girvi_license_document_delete",
+    ),
+    path(
+        "girvi/license/<int:pk>/renew/",
+        views.LicenseRenewalView.as_view(),
+        name="girvi_license_renewal",
+    ),
 )
 
 # urls for Loan
@@ -102,6 +122,7 @@ urlpatterns += (
     path("girvi/loan/<int:pk>/split/", views.split_loan_items, name="split_loan_items"),
     path("girvi/loan/merge/", views.merge_loans, name="merge_loans"),
     path("girvi/loan/", views.loan_list, name="girvi_loan_list"),
+    path("girvi/loan/table/", views.loan_table_partial, name="loan_table_partial"),
     path("girvi/loan/renew/<int:pk>/", views.loan_renew, name="girvi_loan_renew"),
     path("girvi/loan/create/", views.loan_save, name="girvi_loan_create"),
     path(

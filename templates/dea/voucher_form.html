@@ -1,0 +1,105 @@
+{% extends 'layouts/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if voucher %}
+        Edit Voucher #{{ voucher.voucher_no }}
+    {% else %}
+        New Voucher
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1 class="display-6 mb-4">
+                <i class="bi bi-receipt"></i>
+                {% if voucher %}
+                    Edit Voucher #{{ voucher.voucher_no }}
+                {% else %}
+                    Create New Voucher
+                {% endif %}
+            </h1>
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            <h4 class="alert-heading">Form Errors</h4>
+                            {% for error in form.non_field_errors %}
+                            <p class="mb-0">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                {% include 'includes/field_input.html' with field=form.voucher_no classes='mb-3' %}
+                            </div>
+                            <div class="col-md-6">
+                                {% include 'includes/field_select.html' with field=form.voucher_type classes='mb-3' %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                {% include 'includes/field_input.html' with field=form.voucher_date classes='mb-3' %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {% include 'includes/field_textarea.html' with field=form.narration classes='mb-3' %}
+                        </div>
+
+                        <!-- Reference Document (Hidden in most cases) -->
+                        {{ form.doc_content_type }}
+                        {{ form.doc_object_id }}
+
+                        <!-- Form Actions -->
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i>
+                                {% if voucher %}
+                                    Update Voucher
+                                {% else %}
+                                    Create Voucher
+                                {% endif %}
+                            </button>
+                            <a href="{% url 'dea_voucher_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Text -->
+            <div class="alert alert-info mt-4" role="alert">
+                <h5 class="alert-heading">
+                    <i class="bi bi-info-circle"></i> Instructions
+                </h5>
+                <ul class="mb-0">
+                    <li>Enter voucher details in the form above</li>
+                    <li>A voucher number will be auto-generated based on type and period</li>
+                    <li>You can add line items after creating the voucher</li>
+                    <li>Draft vouchers can be edited at any time</li>
+                    <li>Once posted, a voucher cannot be edited (use reversal instead)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .display-6 {
+        font-weight: 600;
+    }
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
+{% endblock %}

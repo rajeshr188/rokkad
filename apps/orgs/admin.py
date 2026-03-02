@@ -5,7 +5,7 @@ from django.contrib import admin
 from django_tenants.admin import TenantAdminMixin
 from django_tenants.utils import get_public_schema_name
 
-from .models import Company, Domain, Membership, Role
+from .models import AuditLog, Company, Domain, Membership, Role
 
 
 class PublicTenantOnlyMixin:
@@ -95,3 +95,47 @@ class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
 admin.site.register(Membership)
 admin.site.register(Role)
 admin.site.register(Domain)
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    """Read-only admin for audit logs"""
+
+    list_display = (
+        "timestamp",
+        "action",
+        "user",
+        "company",
+        "success",
+        "ip_address",
+        "description",
+    )
+    list_filter = ("action", "success", "timestamp", "company")
+    search_fields = ("user__email", "user__username", "description", "ip_address")
+    readonly_fields = (
+        "timestamp",
+        "action",
+        "user",
+        "company",
+        "content_type",
+        "object_id",
+        "description",
+        "ip_address",
+        "user_agent",
+        "success",
+        "data",
+    )
+    date_hierarchy = "timestamp"
+    ordering = ("-timestamp",)
+
+    def has_add_permission(self, request):
+        # Audit logs should only be created programmatically
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of audit logs (compliance requirement)
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Audit logs are immutable
+        return False

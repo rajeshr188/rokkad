@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
 from django.db.models.functions import ExtractYear
 
 from .models import Customer
@@ -28,11 +28,15 @@ def get_customers_by_type():
 
 
 def active_customers():
-    # Query to get the count of customers with at least one loan without a release
+    # Query to get the count of customers with at least one unreleased GivenLoan
+    from apps.tenant_apps.girvi.models import Release
+
     customers_count = (
         Customer.objects.filter(
-            loan__isnull=False,  # Customers with at least one loan
-            loan__release__isnull=True,  # Customers with at least one loan without a release
+            ~Exists(
+                Release.objects.filter(loan__borrower=OuterRef("pk"))
+            ),  # Without a corresponding Release
+            loans_received__isnull=False,  # Customers with at least one GivenLoan (reverse relation)
         )
         .distinct()
         .count()

@@ -1,11 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import models, transaction
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django_tables2 import RequestConfig
 from django_tables2.export.export import TableExport
+from moneyed import Money
 
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.utils.htmx_utils import for_htmx
@@ -87,50 +88,195 @@ def get_customer_balance(request):
     return HttpResponse(alert_html)
 
 
+# @login_required
+# @for_htmx(use_block="content")
+# def account_detail(request, pk=None):
+#     acc = get_object_or_404(Account, pk=pk)
+#     acctype = acc.AccountType_Ext.XactTypeCode.XactTypeCode
+#     accountbalance = acc.accountbalance
+#     ct = {}
+#     ct["object"] = acc
+#     ct["accountbalance"] = accountbalance
+#     ct["opening_balance"] = accountbalance.get_ob()
+#     ct["closing_balance"] = accountbalance.get_balance()
+
+#     txns = acc.txns(since=accountbalance.last_statement_date or None)
+
+#     # Convert the queryset to a list
+#     account_transactions_list = list(txns)
+
+#     # Sort the list in Python using the voucher_Date attribute of the content_object
+#     # account_transactions_list.sort(
+#     #     key=lambda x: attrgetter("journal_entry.content_object.voucher_date")(x)
+#     # )
+
+#     running_totals = []
+#     running_total = Balance()
+
+#     for txn in account_transactions_list:
+#         if acctype == "Cr":
+#             if txn.XactTypeCode_id == "Cr":
+#                 running_total -= Balance([txn.amount])
+#             else:
+#                 running_total += Balance([txn.amount])
+#         else:
+#             if txn.XactTypeCode_id == "Cr":
+#                 running_total += Balance([txn.amount])
+#             else:
+#                 running_total -= Balance([txn.amount])
+
+#         running_totals.append(running_total + accountbalance.get_ob())
+#     ct["running_totals"] = running_totals
+#     ct["raw"] = account_transactions_list
+
+#     return TemplateResponse(
+#         request, "dea/account_detail.html", {"object": acc, "ct": ct}
+#     )
+
+# @login_required
+# @for_htmx(use_block="content")
+# def account_detail(request, pk=None):
+#     acc = get_object_or_404(Account, pk=pk)
+#     acctype = acc.AccountType_Ext.XactTypeCode.XactTypeCode
+
+#     # Get all currencies this account has transactions in
+#     currencies = (AccountTransaction.objects
+#                  .filter(Account_id=acc)
+#                  .values_list('amount_currency', flat=True)
+#                  .distinct())
+
+#     # Initialize running balances for each currency
+#     running_balances = {}
+#     for currency in currencies:
+#         try:
+#             latest_statement = (AccountStatement.objects
+#                               .filter(AccountNo=acc, ClosingBalance_currency=currency)
+#                               .latest('created'))
+#             running_balances[currency] = latest_statement.ClosingBalance
+#             statement_date = latest_statement.created
+#         except AccountStatement.DoesNotExist:
+#             running_balances[currency] = Balance([Money(0, currency)])
+#             statement_date = None
+
+#     # Get all transactions since last statement, ordered by date
+#     txns = (acc.txns(since=statement_date)
+#             .order_by('created'))
+
+#     # Calculate running totals for each transaction
+#     transactions_with_balances = []
+#     for txn in txns:
+#         currency = txn.amount_currency
+
+#         # Update running balance based on transaction type
+#         if acctype == "Cr":
+#             if txn.XactTypeCode_id == "Cr":
+#                 running_balances[currency] -= Balance([txn.amount])
+#             else:
+#                 running_balances[currency] += Balance([txn.amount])
+#         else:
+#             if txn.XactTypeCode_id == "Cr":
+#                 running_balances[currency] += Balance([txn.amount])
+#             else:
+#                 running_balances[currency] -= Balance([txn.amount])
+
+#         transactions_with_balances.append({
+#             'transaction': txn,
+#             'balances': {curr: bal for curr, bal in running_balances.items()}
+#         })
+
+#     ct = {
+#         'object': acc,
+#         'opening_balances': {curr: bal for curr, bal in running_balances.items()},
+#         'transactions': transactions_with_balances,
+#         'closing_balances': running_balances,
+#         'raw': transactions_with_balances  # For backward compatibility
+#     }
+
+#     return TemplateResponse(request, "dea/account_detail.html", {'ct': ct})
+
+
 @login_required
 @for_htmx(use_block="content")
 def account_detail(request, pk=None):
     acc = get_object_or_404(Account, pk=pk)
     acctype = acc.AccountType_Ext.XactTypeCode.XactTypeCode
-    accountbalance = acc.accountbalance
-    ct = {}
-    ct["object"] = acc
-    ct["accountbalance"] = accountbalance
-    ct["opening_balance"] = accountbalance.get_ob()
-    ct["closing_balance"] = accountbalance.get_currbal()
 
-    txns = acc.txns(since=accountbalance.ls_created or None)
+    # Get all currencies this account has transactions in
+    currencies = (
+        AccountTransaction.objects.filter(Account=acc)
+        .values_list("amount_currency", flat=True)
+        .distinct()
+    )
 
-    # Convert the queryset to a list
-    account_transactions_list = list(txns)
+    # Initialize opening balances and statement dates for each currency
+    opening_balances = {}
+    running_balances = {}
 
-    # Sort the list in Python using the voucher_Date attribute of the content_object
-    # account_transactions_list.sort(
-    #     key=lambda x: attrgetter("journal_entry.content_object.voucher_date")(x)
-    # )
+    for currency in currencies:
+        try:
+            latest_statement = AccountStatement.objects.filter(
+                AccountNo=acc, ClosingBalance_currency=currency
+            ).latest("created")
+            # Store opening balance from statement
+            opening_balances[currency] = latest_statement.ClosingBalance
+            # Store statement date for filtering transactions
+            statement_date = latest_statement.created
+            # Initialize running balance with opening balance
+            running_balances[currency] = latest_statement.ClosingBalance
+        except AccountStatement.DoesNotExist:
+            opening_balances[currency] = Balance([Money(0, currency)])
+            statement_date = None
+            running_balances[currency] = Balance([Money(0, currency)])
 
-    running_totals = []
-    running_total = Balance()
+    # Get all transactions since last statements, ordered by date
+    txns = (
+        acc.txns(since=statement_date)
+        # .filter(
+        #     # Get transactions after their respective currency's statement date
+        #     created__gt=models.Case(
+        #         *[models.When(
+        #             amount_currency=curr,
+        #             then=models.Value(date)
+        #         ) for curr, date in statement_dates.items() if date],
+        #         default=None
+        #     )
+        # )
+        .order_by("created")
+    )
 
-    for txn in account_transactions_list:
+    # Calculate running totals for each transaction
+    transactions_with_balances = []
+    for txn in txns:
+        currency = txn.amount_currency
+
+        # Update running balance based on transaction type
         if acctype == "Cr":
             if txn.XactTypeCode_id == "Cr":
-                running_total -= Balance([txn.amount])
+                running_balances[currency] -= Balance([txn.amount])
             else:
-                running_total += Balance([txn.amount])
+                running_balances[currency] += Balance([txn.amount])
         else:
             if txn.XactTypeCode_id == "Cr":
-                running_total += Balance([txn.amount])
+                running_balances[currency] += Balance([txn.amount])
             else:
-                running_total -= Balance([txn.amount])
+                running_balances[currency] -= Balance([txn.amount])
 
-        running_totals.append(running_total + accountbalance.get_ob())
-    ct["running_totals"] = running_totals
-    ct["raw"] = account_transactions_list
+        transactions_with_balances.append(
+            {
+                "transaction": txn,
+                "balances": {curr: bal for curr, bal in running_balances.items()},
+            }
+        )
 
-    return TemplateResponse(
-        request, "dea/account_detail.html", {"object": acc, "ct": ct}
-    )
+    ct = {
+        "object": acc,
+        "opening_balances": opening_balances,  # Now uses actual opening balances from statements
+        "transactions": transactions_with_balances,
+        "closing_balances": running_balances,
+        "raw": transactions_with_balances,
+    }
+
+    return TemplateResponse(request, "dea/account_detail.html", {"ct": ct})
 
 
 def account_delete(request, pk):

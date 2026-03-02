@@ -7,17 +7,17 @@ from django.views.generic.dates import (
     YearArchiveView,
 )
 
-from ..models import Loan
+from ..models import GivenLoan
 
 
 class LoanYearArchiveView(LoginRequiredMixin, YearArchiveView):
-    queryset = Loan.objects.all()
+    queryset = GivenLoan.objects.all()
     date_field = "loan_date"
     make_object_list = True
 
 
 class LoanMonthArchiveView(LoginRequiredMixin, MonthArchiveView):
-    queryset = Loan.objects.unreleased()
+    queryset = GivenLoan.objects.filter(release__isnull=True)
     date_field = "loan_date"
     make_object_list = True
 
@@ -28,19 +28,19 @@ class LoanMonthArchiveView(LoginRequiredMixin, MonthArchiveView):
 
 
 class LoanWeekArchiveView(LoginRequiredMixin, WeekArchiveView):
-    queryset = Loan.objects.unreleased()
+    queryset = GivenLoan.objects.filter(release__isnull=True)
     date_field = "loan_date"
     week_format = "%W"
 
 
 class LoanDayArchiveView(LoginRequiredMixin, DayArchiveView):
-    queryset = Loan.objects.unreleased()
+    queryset = GivenLoan.objects.filter(release__isnull=True)
     date_field = "loan_date"
     allow_empty = True
 
 
 class LoanTodayArchiveView(TodayArchiveView):
-    queryset = Loan.objects.unreleased()
+    queryset = GivenLoan.objects.filter(release__isnull=True)
     date_field = "loan_date"
     allow_empty = True
     # template_name = "girvi/loan/loan_archive_day.html"

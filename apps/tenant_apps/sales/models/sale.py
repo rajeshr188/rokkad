@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
-from django.db.models import F, Func, Q, Sum
+from django.db.models import F, Func, Q, Sum, Count
 from django.forms import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
@@ -15,12 +15,9 @@ from moneyed import Money
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import AccountStatement  # , JournalTypes
 from apps.tenant_apps.dea.models import JournalEntry
-from apps.tenant_apps.dea.models.moneyvalue import MoneyValueField
 from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.product.models import Stock
 from apps.tenant_apps.terms.models import PaymentTerm
-
-# from sympy import content
 
 
 class Month(Func):
@@ -50,60 +47,58 @@ class SalesQueryset(models.QuerySet):
             created__month=date.today().month, created__year=date.today().year
         )
 
-    def total_with_ratecut(self):
-        return self.aggregate(
-            cash=Sum("balance", filter=Q(balancetype="INR")),
-            cash_g=Sum("balance", filter=Q(balancetype="INR", metaltype="Gold")),
-            cash_s=Sum("balance", filter=Q(balancetype="INR", metaltype="Silver")),
-            cash_g_nwt=Sum("net_wt", filter=Q(balancetype="INR", metaltype="Gold")),
-            cash_s_nwt=Sum("net_wt", filter=Q(balancetype="INR", metaltype="Silver")),
-            gold=Sum("balance", filter=Q(balancetype="USD")),
-            silver=Sum("balance", filter=Q(balancetype="AUD")),
+    def with_balances(self):
+        return self.prefetch_related("balances", "receiptallocation_set").annotate(
+            total_cash=Coalesce(
+                Sum("balances__amount", filter=Q(balances__amount_currency="INR")), 0
+            ),
+            total_gold=Coalesce(
+                Sum("balances__amount", filter=Q(balances__amount_currency="USD")), 0
+            ),
+            total_silver=Coalesce(
+                Sum("balances__amount", filter=Q(balances__amount_currency="EUR")), 0
+            ),
+            allocated_cash=Coalesce(
+                Sum(
+                    "receiptallocation__allocated",
+                    filter=Q(receiptallocation__allocated_currency="INR"),
+                ),
+                0,
+            ),
+            allocated_gold=Coalesce(
+                Sum(
+                    "receiptallocation__allocated",
+                    filter=Q(receiptallocation__allocated_currency="USD"),
+                ),
+                0,
+            ),
+            allocated_silver=Coalesce(
+                Sum(
+                    "receiptallocation__allocated",
+                    filter=Q(receiptallocation__allocated_currency="EUR"),
+                ),
+                0,
+            ),
         )
 
-    def with_balance(self):
-        return self.annotate(
-            gold_balance=Sum(
-                "saleitem__metal_balance", filter=Q(metal_balance_currency="USD")
-            ),
-            silver_balance=Sum(
-                "saleitem__metal_balance", filter=Q(metal_balance_currency="EUR")
-            ),
-            cash_balance=Sum("saleitem__cash_balance"),
-        ).select_related("saleitem")
-
-    def with_allocated_payment(self):
-        return self.annotate(
-            gold_amount=Sum(
-                "receiptallocation__allocated",
-                filter=Q(receiptallocation__allocated_currency="USD"),
-            ),
-            silver_amount=Sum(
-                "receiptallocation__allocated",
-                filter=Q(receiptallocation__allocated_currency="EUR"),
-            ),
-            cash_amount=Sum(
-                "receiptallocation__allocated",
-                filter=Q(receiptallocation__allocated_currency="INR"),
-            ),
-        ).select_related("receiptallocation")
-
-    def with_outstanding_balance(self):
-        return self.annotate(
-            outstanding_gold_balance=F("gold_amount") - F("sale_balance__gold_balance"),
-            outstanding_silver_balance=F("silver_amount")
-            - F("sale_balance__silver_balance"),
-            outstanding_cash_balance=F("cash_amount") - F("sale_balance__cash_balance"),
+    def for_list_view(self):
+        return (
+            self.select_related("customer", "term", "approval", "created_by")
+            .prefetch_related("balances", "journal_entries")
+            .with_balances()
         )
+
+    def get_status_counts(self):
+        return self.values("status").annotate(count=Count("id"))
 
 
 class Invoice(models.Model):
     # Fields
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     updated = models.DateTimeField(auto_now=True, editable=False)
-    voucher_date = models.DateTimeField(default=timezone.now)
-    voucher_no = models.CharField(max_length=20, null=True, blank=True)
-    due_date = models.DateField(null=True, blank=True)
+    voucher_date = models.DateTimeField(default=timezone.now, db_index=True)
+    voucher_no = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    due_date = models.DateField(null=True, blank=True, db_index=True)
     created_by = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
@@ -120,20 +115,12 @@ class Invoice(models.Model):
         ("PartiallyPaid", "PartiallyPaid"),
         ("Unpaid", "Unpaid"),
     )
-    status = models.CharField(max_length=15, choices=status_choices, default="Unpaid")
+    status = models.CharField(
+        max_length=15, choices=status_choices, default="Unpaid", db_index=True
+    )
     # make rates auto fill from the latest rates
     gold_rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
     silver_rate = models.DecimalField(max_digits=14, decimal_places=3, default=0)
-    balance_cash = MoneyField(
-        max_digits=14, decimal_places=3, default_currency="INR", null=True, blank=True
-    )
-    balance_gold = MoneyField(
-        max_digits=14, decimal_places=3, default_currency="USD", null=True, blank=True
-    )
-    balance_silver = MoneyField(
-        max_digits=14, decimal_places=3, default_currency="EUR", null=True, blank=True
-    )
-    balance = ArrayField(MoneyValueField(null=True, blank=True), null=True, blank=True)
     # Relationship Fields
     customer = models.ForeignKey(
         Customer,
@@ -164,6 +151,11 @@ class Invoice(models.Model):
     class Meta:
         ordering = ("-created",)
         get_latest_by = "id"
+        indexes = [
+            models.Index(fields=["status", "-created"]),
+            models.Index(fields=["customer", "-created"]),
+            models.Index(fields=["due_date", "status"]),
+        ]
 
     def __str__(self):
         return f"{self.id}"
@@ -190,7 +182,6 @@ class Invoice(models.Model):
         return Invoice.objects.filter(id__lt=self.id).order_by("id").last()
 
     def get_gross_wt(self):
-        # this should return the sum of all purchaseitems weight by metal_balance_currency
         weights = self.sale_items.values("metal_balance_currency").annotate(
             amount=Sum("weight"), currency=F("metal_balance_currency")
         )
@@ -232,8 +223,16 @@ class Invoice(models.Model):
         return Money(bal, "INR")
 
     @property
+    def is_overdue(self):
+        if self.due_date:
+            return timezone.now().date() > self.due_date
+        return False
+
+    @property
     def overdue_days(self):
-        return (timezone.now().date() - self.date_due).days
+        if self.is_overdue:
+            return (timezone.now().date() - self.due_date).days
+        return 0
 
     def deactivate(self):
         self.is_active = False
@@ -241,80 +240,95 @@ class Invoice(models.Model):
 
     def get_gst(self):
         amount = self.sale_items.aggregate(t=Sum("cash_balance"))["t"] or 0
-        gst = Money(amount * Decimal(0.03), "INR")
-        return gst
+        return Money(amount * Decimal(0.03), "INR")
 
-    def calculate_balances(self):
-        self.balance = Balance().monies()
-        if self.is_ratecut:
-            self.balance_cash = Money(
-                self.get_sum_cash_balance().amount
-                + self.get_sum_gold_balance().amount * self.gold_rate
-                + self.get_sum_silver_balance().amount * self.silver_rate,
-                "INR",
-            )
-            if self.is_gst:
-                self.balance_cash.amount += self.balance_cash.amount * Decimal(0.03)
-            self.balance_gold = Money(0, "USD")
-            self.balance_silver = Money(0, "EUR")
-        else:
-            self.balance_cash = self.get_sum_cash_balance()
-            self.balance_gold = self.get_sum_gold_balance()
-            self.balance_silver = self.get_sum_silver_balance()
-        self.balance = Balance(
-            [self.balance_cash, self.balance_gold, self.balance_silver]
-        ).monies()
+    def get_balance(self):
+        """Returns the pre-calculated balance from balances table"""
+        if not hasattr(self, "_balance"):
+            self._balance = Balance([b.amount for b in self.balances.all()])
+        return self._balance
 
     def save(self, *args, **kwargs):
-        if self.pk:
+        is_new = self.pk is None
+
+        if self.term and not self.due_date:
+            # Calculate due date based on payment term
+            self.due_date = self.voucher_date.date() + timedelta(
+                days=self.term.due_days
+            )
+
+        super().save(*args, **kwargs)
+
+        if not is_new:
             self.calculate_balances()
 
-        if not self.due_date:
-            if self.term:
-                self.due_date = self.voucher_date + timedelta(days=self.term.due_days)
+    @transaction.atomic
+    def calculate_balances(self):
+        """Calculate and store balances in Balance table"""
+        self.balances.all().delete()
 
-        super(Invoice, self).save(*args, **kwargs)
+        if self.is_ratecut:
+            total = self._calculate_ratecut_total()
+            Balance.objects.create(invoice=self, amount=Money(total, "INR"))
+        else:
+            self._create_currency_balances()
 
-    # def delete(self, *args, **kwargs):
-    #     if self.approval:
-    #         self.approval.is_billed = False
-    #     super(Invoice, self).delete(*args, **kwargs)
-
-    @classmethod
-    def with_outstanding_balance(cls):
-        return cls.objects.annotate(
-            total_allocated_cash=Coalesce(
-                Sum(
-                    "receiptallocation__allocated",
-                    filter=Q(receiptallocation__allocated_currency="INR"),
-                ),
-                0,
-                output_field=models.DecimalField(),
-            ),
-            total_allocated_gold=Coalesce(
-                Sum(
-                    "receiptallocation__allocated",
-                    filter=Q(receiptallocation__allocated_currency="USD"),
-                ),
-                0,
-                output_field=models.DecimalField(),
-            ),
-            total_allocated_silver=Coalesce(
-                Sum(
-                    "receiptallocation__allocated",
-                    filter=Q(receiptallocation__allocated_currency="EUR"),
-                ),
-                0,
-                output_field=models.DecimalField(),
-            ),
-        ).annotate(
-            outstanding_balance_cash=F("sales_balance__cash_balance")
-            - F("total_allocated_cash"),
-            outstanding_balance_gold=F("sales_balance__gold_balance")
-            - F("total_allocated_gold"),
-            outstanding_balance_silver=F("sales_balance__silver_balance")
-            - F("total_allocated_silver"),
+    def _calculate_ratecut_total(self):
+        cash = self.sale_items.aggregate(total=Coalesce(Sum("cash_balance"), 0))[
+            "total"
+        ]
+        gold = (
+            self.sale_items.filter(metal_balance_currency="USD").aggregate(
+                total=Coalesce(Sum("metal_balance"), 0)
+            )["total"]
+            * self.gold_rate
         )
+        silver = (
+            self.sale_items.filter(metal_balance_currency="EUR").aggregate(
+                total=Coalesce(Sum("metal_balance"), 0)
+            )["total"]
+            * self.silver_rate
+        )
+
+        total = cash + gold + silver
+        if self.is_gst:
+            total += total * Decimal("0.03")
+        return total
+
+    def _create_currency_balances(self):
+        aggregates = self.sale_items.aggregate(
+            cash=Coalesce(Sum("cash_balance"), 0),
+            gold=Coalesce(
+                Sum("metal_balance", filter=Q(metal_balance_currency="USD")), 0
+            ),
+            silver=Coalesce(
+                Sum("metal_balance", filter=Q(metal_balance_currency="EUR")), 0
+            ),
+        )
+
+        if aggregates["cash"]:
+            Balance.objects.create(
+                invoice=self, amount=Money(aggregates["cash"], "INR")
+            )
+        if aggregates["gold"]:
+            Balance.objects.create(
+                invoice=self, amount=Money(aggregates["gold"], "USD")
+            )
+        if aggregates["silver"]:
+            Balance.objects.create(
+                invoice=self, amount=Money(aggregates["silver"], "EUR")
+            )
+
+    def update_status(self):
+        """Update payment status based on outstanding balance"""
+        outstanding = self.get_outstanding_balance()
+        if outstanding.is_zero():
+            self.status = "Paid"
+        elif outstanding < self.get_balance():
+            self.status = "PartiallyPaid"
+        else:
+            self.status = "Unpaid"
+        self.save(update_fields=["status"])
 
     def get_allocations(self):
         if self.receiptallocation_set.exists():
@@ -344,9 +358,20 @@ class Invoice(models.Model):
             )
         return Balance(0, "INR")
 
-    def get_balance(self):
-        return Balance(self.balance)
-        # return self.balance - self.get_allocations()
+    def get_allocated_payments(self):
+        """Returns total allocated payments per currency"""
+        allocations = self.receiptallocation_set.values("allocated_currency").annotate(
+            total=Coalesce(Sum("allocated"), 0)
+        )
+        return Balance(
+            [Money(item["total"], item["allocated_currency"]) for item in allocations]
+        )
+
+    def get_outstanding_balance(self):
+        """Returns true outstanding balance after subtracting allocations"""
+        total_balance = self.get_balance()
+        allocated = self.get_allocated_payments()
+        return total_balance - allocated
 
     def get_transactions(self):
         if not hasattr(self.customer, "account"):
@@ -652,43 +677,16 @@ class InvoiceItem(models.Model):
             print(f"unposting:{x}")
 
 
-class SaleBalance(models.Model):
-    """
-    SELECT sales_invoice.id AS voucher_id,
-        COALESCE(sum(pi.cash_balance), 0.0) AS cash_balance,
-        COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'USD'::text), 0.0) AS gold_balance,
-        COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'EUR'::text), 0.0) AS silver_balance,
-        ARRAY[ROW(COALESCE(sum(pi.cash_balance), 0.0)::numeric(14,0), 'INR'::character varying(3))::money_value, ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'USD'::text), 0.0)::numeric(14,0), 'USD'::character varying(3))::money_value, ROW(COALESCE(sum(pi.metal_balance) FILTER (WHERE pi.metal_balance_currency::text = 'EUR'::text), 0.0)::numeric(14,0), 'EUR'::character varying(3))::money_value] AS balances,
-        COALESCE(sum(pa.allocated) FILTER (WHERE pa.allocated_currency::text = 'INR'::text), 0.0) AS cash_received,
-        COALESCE(sum(pa.allocated) FILTER (WHERE pa.allocated_currency::text = 'USD'::text), 0.0) AS gold_received,
-        COALESCE(sum(pa.allocated) FILTER (WHERE pa.allocated_currency::text = 'EUR'::text), 0.0) AS silver_received,
-        ARRAY[ROW(COALESCE(sum(pa.allocated) FILTER (WHERE pa.allocated_currency::text = 'INR'::text), 0.0)::numeric(14,0), 'INR'::character varying(3))::money_value, ROW(COALESCE(sum(pa.allocated) FILTER (WHERE pa.allocated_currency::text = 'USD'::text), 0.0)::numeric(14,0), 'USD'::character varying(3))::money_value, ROW(COALESCE(sum(pa.allocated) FILTER (WHERE pa.allocated_currency::text = 'EUR'::text), 0.0)::numeric(14,0), 'EUR'::character varying(3))::money_value] AS received
-    FROM sales_invoice
-     JOIN sales_invoiceitem pi ON pi.invoice_id = sales_invoice.id
-     LEFT JOIN sales_receiptallocation pa ON pa.invoice_id = sales_invoice.id
-    GROUP BY sales_invoice.id;"""
-
-    voucher = models.OneToOneField(
-        "sales.Invoice",
-        on_delete=models.DO_NOTHING,
-        primary_key=True,
-        related_name="sale_balance",
+class Balance(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    invoice = models.ForeignKey(
+        "Invoice", on_delete=models.CASCADE, related_name="balances"
     )
-    cash_balance = models.DecimalField(max_digits=14, decimal_places=3)
-    gold_balance = models.DecimalField(max_digits=14, decimal_places=3)
-    silver_balance = models.DecimalField(max_digits=14, decimal_places=3)
-    balances = ArrayField(MoneyValueField(null=True, blank=True))
-    cash_received = models.DecimalField(max_digits=14, decimal_places=3)
-    gold_received = models.DecimalField(max_digits=14, decimal_places=3)
-    silver_received = models.DecimalField(max_digits=14, decimal_places=3)
-    received = ArrayField(MoneyValueField(null=True, blank=True))
+    amount = MoneyField(max_digits=14, decimal_places=3, null=True, blank=True)
 
     class Meta:
-        managed = False
-        db_table = "sales_balance"
+        ordering = ("-created",)
 
     def __str__(self):
-        return f"Balance:{Balance([self.balances]) - Balance([self.received])}"
-
-    def balance(self):
-        return Balance([self.balances]) - Balance([self.received])
+        return f"{self.amount}"

@@ -1,0 +1,350 @@
+{% extends 'layouts/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Voucher #{{ voucher.voucher_no }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-6">
+                <i class="bi bi-receipt"></i> {{ voucher.voucher_no }}
+            </h1>
+            <p class="text-muted">{{ voucher.voucher_type.name }} • {{ voucher.voucher_date|date:"Y-m-d" }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <!-- Status Badge -->
+            <span class="badge" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                {% if voucher.status == 'DRAFT' %}
+                    <span class="badge bg-secondary">📝 Draft</span>
+                {% elif voucher.status == 'POSTED' %}
+                    <span class="badge bg-success">✓ Posted</span>
+                {% elif voucher.status == 'REVERSED' %}
+                    <span class="badge bg-danger">↩️ Reversed</span>
+                {% else %}
+                    <span class="badge bg-warning">⚠️ {{ voucher.get_status_display }}</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <!-- Voucher Details Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Voucher Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Voucher Type</label>
+                                <p class="h6">{{ voucher.voucher_type.name }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Voucher Date</label>
+                                <p class="h6">{{ voucher.voucher_date|date:"Y-m-d" }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Created By</label>
+                                <p class="h6">{{ voucher.created_by.get_full_name|default:voucher.created_by }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Created At</label>
+                                <p class="h6">{{ voucher.created_at|date:"Y-m-d H:i" }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Last Updated</label>
+                                <p class="h6">{{ voucher.updated_at|date:"Y-m-d H:i" }}</p>
+                            </div>
+                            {% if voucher.last_posted_at %}
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Posted At</label>
+                                <p class="h6">{{ voucher.last_posted_at|date:"Y-m-d H:i" }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if voucher.narration %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Description</label>
+                        <p>{{ voucher.narration }}</p>
+                    </div>
+                    {% endif %}
+                    {% if voucher.business_doc %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Reference Document</label>
+                        <p class="h6">
+                            <a href="{{ voucher.business_doc.get_absolute_url }}">
+                                {{ voucher.business_doc.__class__.__name__ }} #{{ voucher.business_doc.id }}
+                            </a>
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Line Items Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-check"></i> Line Items
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if line_items %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>GL Account</th>
+                                    <th>Account</th>
+                                    <th>Side</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in line_items %}
+                                <tr>
+                                    <td><code>{{ item.ledger }}</code></td>
+                                    <td>{{ item.account|default:"—" }}</td>
+                                    <td>
+                                        {% if item.side == 'DEBIT' %}
+                                            <span class="badge bg-info">DR</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">CR</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">{{ item.amount|floatformat:2 }}</td>
+                                    <td>{{ item.description|default:"—" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3">
+                        <i class="bi bi-inbox"></i> No line items
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="row text-end">
+                        <div class="col-md-8">
+                            <strong>Total Debit:</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <code>{{ total_debit|floatformat:2 }}</code>
+                        </div>
+                    </div>
+                    <div class="row text-end">
+                        <div class="col-md-8">
+                            <strong>Total Credit:</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <code>{{ total_credit|floatformat:2 }}</code>
+                        </div>
+                    </div>
+                    <div class="row text-end mt-2">
+                        <div class="col-md-8">
+                            <strong>Status:</strong>
+                        </div>
+                        <div class="col-md-4">
+                            {% if is_balanced %}
+                                <span class="badge bg-success">✓ Balanced</span>
+                            {% else %}
+                                <span class="badge bg-danger">✗ Not Balanced</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Journal Entries Card (if posted) -->
+            {% if journal_entries %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-journal-text"></i> Journal Entries
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for je in journal_entries %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <strong>JE-{{ je.id }}</strong>
+                                    {% if je.is_reversal_of %}
+                                        <span class="badge bg-danger ms-2">Reversal of JE-{{ je.is_reversal_of.id }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col text-end">
+                                    <small class="text-muted">
+                                        Posted at {{ je.posted_at|date:"Y-m-d H:i" }} by {{ je.posted_by }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text text-muted">{{ je.desc }}</p>
+                            
+                            <!-- Transactions -->
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Ledger (DR)</th>
+                                            <th>Ledger (CR)</th>
+                                            <th class="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for ltxn in je.ltxns.all %}
+                                        <tr>
+                                            <td><code>{{ ltxn.ledgerno_dr.name }}</code></td>
+                                            <td><code>{{ ltxn.ledgerno.name }}</code></td>
+                                            <td class="text-end">{{ ltxn.amount|floatformat:2 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Actions -->
+        <div class="col-md-4">
+            <!-- Action Buttons Card -->
+            <div class="card mb-4 sticky-top" style="top: 80px;">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning"></i> Actions
+                    </h5>
+                </div>
+                <div class="card-body d-grid gap-2">
+                    {% if can_edit %}
+                    <a href="{% url 'dea_voucher_update' voucher.pk %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <a href="{% url 'dea_voucher_delete' voucher.pk %}" class="btn btn-danger" onclick="return confirm('Delete this draft voucher?')">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
+                    {% endif %}
+                    
+                    {% if can_post %}
+                    <form method="post" action="{% url 'dea_voucher_post' voucher.pk %}" class="d-grid">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Post this voucher?')">
+                            <i class="bi bi-check-circle"></i> Post to Journal
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    {% if can_reverse %}
+                    <form method="post" action="{% url 'dea_voucher_reverse' voucher.pk %}" class="d-grid">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Reverse this voucher?')">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reverse
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <hr>
+
+                    <a href="{% url 'dea_voucher_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <!-- Status Info Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Current Status</label>
+                        <p>
+                            {% if voucher.status == 'DRAFT' %}
+                                <span class="badge bg-secondary" style="font-size: 0.9rem; padding: 0.5rem 0.75rem;">
+                                    📝 Draft - Can be edited or posted
+                                </span>
+                            {% elif voucher.status == 'POSTED' %}
+                                <span class="badge bg-success" style="font-size: 0.9rem; padding: 0.5rem 0.75rem;">
+                                    ✓ Posted - Locked, can be reversed
+                                </span>
+                            {% elif voucher.status == 'REVERSED' %}
+                                <span class="badge bg-danger" style="font-size: 0.9rem; padding: 0.5rem 0.75rem;">
+                                    ↩️ Reversed - See journal entries for details
+                                </span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    {% if not is_balanced %}
+                    <div class="alert alert-warning mb-0" role="alert">
+                        <i class="bi bi-exclamation-circle"></i> <strong>Not Balanced</strong>
+                        <br>
+                        Debit and Credit totals do not match. Cannot post until balanced.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Reversal Info Card (if reversed) -->
+            {% if reversed_by_je %}
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reversal Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>Reversed By:</strong> JE-{{ reversed_by_je.id }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>Reversed At:</strong> {{ reversed_by_je.posted_at|date:"Y-m-d H:i" }}
+                    </p>
+                    <p class="mb-0">
+                        <strong>Reversed By:</strong> {{ reversed_by_je.posted_by }}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .display-6 {
+        font-weight: 600;
+    }
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    code {
+        background-color: #f5f5f5;
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+    }
+</style>
+{% endblock %}

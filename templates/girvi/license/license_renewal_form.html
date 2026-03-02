@@ -1,0 +1,46 @@
+{% extends 'layouts/base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+<div class="container col-md-6 mt-4 mb-3" id="content">
+    <h3>Renew License</h3>
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">{{ object.name }}</h5>
+        </div>
+        <div class="card-body">
+            {% if object.is_expired %}
+            <div class="alert alert-danger">
+                <strong>This license has expired!</strong> Please renew it immediately.
+            </div>
+            {% elif object.is_expiring_soon %}
+            <div class="alert alert-warning">
+                <strong>This license is expiring soon!</strong> Renewal is recommended.
+            </div>
+            {% endif %}
+
+            <div class="alert alert-info">
+                <h6>Current Renewal Status:</h6>
+                <ul class="mb-0">
+                    <li>Expiry Date: <strong>{{ object.date_expires|date:"M d, Y" }}</strong></li>
+                    <li>Days Until Expiry: 
+                        {% if object.days_until_expiry %}
+                            <strong>{{ object.days_until_expiry }}</strong> days
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <div class="mt-3">
+                    <button class="btn btn-primary" type="submit">Renew License</button>
+                    <a href="{% url 'girvi:girvi_license_detail' object.id %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

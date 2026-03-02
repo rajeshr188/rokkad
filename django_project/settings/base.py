@@ -62,8 +62,12 @@ SHARED_APPS = [
     "django_htmx",
     "import_export",
     "colorfield",
+    "template_partials",
+    "guardian",  # Object-level permissions
     # Local
     "accounts",
+    "apps.onboarding",  # User onboarding flow
+    "apps.subscriptions",
     "pages",
     "invitations",
     "slick_reporting",
@@ -106,9 +110,13 @@ MIDDLEWARE = [
     # "debug_toolbar.middleware.DebugToolbarMiddleware",  # Django Debug Toolbar
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "apps.orgs.middleware.WorkspaceMiddleware",
+    # 🔒 SECURITY FIX: Using secure middleware with membership validation
+    # OLD (VULNERABLE): "apps.orgs.middleware.WorkspaceMiddleware",
+    "apps.orgs.middleware_v2.SecureWorkspaceMiddleware",
     "apps.tenant_apps.rates.middleware.RateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # Phase 2: Subscription validation (must come after MessageMiddleware)
+    "django_project.middleware.SubscriptionValidationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",  # django-allauth
     "django_project.middleware.HtmxMessagesMiddleware",
@@ -135,6 +143,11 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.orgs.context_processors.theme_processor",
+                # UI/UX enhancements
+                "django_project.context_processors.user_permissions",
+                "django_project.context_processors.navigation_config",
+                "django_project.context_processors.workspace_context",
+                "django_project.context_processors.subscription_context",
             ],
         },
     },
@@ -277,15 +290,20 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "home"
 
 # https://django-allauth.readthedocs.io/en/latest/installation.html?highlight=backends
 AUTHENTICATION_BACKENDS = (
-    "django.contrib.auth.backends.ModelBackend",
+    "django.contrib.auth.backends.ModelBackend",  # Default
+    "guardian.backends.ObjectPermissionBackend",  # Guardian object permissions
     "allauth.account.auth_backends.AuthenticationBackend",
 )
+
+# Guardian settings
+ANONYMOUS_USER_NAME = None
+GUARDIAN_RENDER_403 = True
+GUARDIAN_TEMPLATE_403 = "403.html"
+
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 # ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_LOGIN_METHOD = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*" "password1*"]
 ACCOUNT_UNIQUE_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
@@ -423,3 +441,15 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 # USE_THOUSAND_SEPARATOR = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ============================================================================
+# Razorpay Payment Gateway Configuration
+# ============================================================================
+RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID", default="test_key_id")
+RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET", default="test_key_secret")
+
+# Billing Configuration
+BILLING_TAX_RATE = env("BILLING_TAX_RATE", default="18")  # 18% GST for India
+
+THOUSAND_SEPARATOR = ","
+DECIMAL_SEPARATOR = "."

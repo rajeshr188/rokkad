@@ -1,15 +1,15 @@
+from datetime import timezone
 import logging
 
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 from djmoney.models.fields import MoneyField
 from moneyed import Money
 from mptt.models import MPTTModel, TreeForeignKey
 
 from ..utils.currency import Balance
-from .moneyvalue import MoneyValueField
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 class AccountType(models.Model):
     AccountType = models.CharField(max_length=50)
     description = models.CharField(max_length=100)
+    code_prefix = models.CharField(
+        max_length=2,
+        help_text="Leading segment for ledger codes (e.g., 1=Asset, 2=Liability, 4=Income, 5=Expense)",
+        default="",
+        blank=True,
+    )
 
     def __str__(self):
         return self.AccountType
@@ -29,14 +35,38 @@ class Ledger(MPTTModel):
     AccountType = models.ForeignKey(
         AccountType, on_delete=models.CASCADE, related_name="ledgers"
     )
-    name = models.CharField(max_length=100)
+    code = models.CharField(
+        max_length=64, unique=True, db_index=True, blank=True, default=""
+    )
+    sort_order = models.PositiveIntegerField(
+        default=0, help_text="Optional manual ordering among siblings"
+    )
+    name = models.CharField(
+        max_length=100,
+        unique=True,  # if you have tenant scoping, drop this and add a UniqueConstraint with tenant
+        null=True,
+        blank=True,
+        help_text="Stable symbolic key for posting rules (e.g., 'LOAN_RECEIVABLE', 'CASH').",
+    )
     parent = TreeForeignKey(
         "self", null=True, blank=True, on_delete=models.CASCADE, related_name="children"
     )
+    # Add new classification fields
+    is_operating_revenue = models.BooleanField(
+        default=False, help_text="Indicates if this is an operating revenue account"
+    )
+    is_direct_expense = models.BooleanField(
+        default=False, help_text="Indicates if this is a direct expense (COGS) account"
+    )
+    is_operating_expense = models.BooleanField(
+        default=False, help_text="Indicates if this is an operating expense account"
+    )
+
     # objects = LedgerManager()
 
     class MPTTMeta:
         order_insertion_by = ["name"]
+        parent_attr = "parent"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "parent"], name="unique ledgername-parent"
@@ -44,11 +74,44 @@ class Ledger(MPTTModel):
         ]
 
     class Meta:
+        ordering = ["tree_id", "lft"]  # Add proper MPTT ordering
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "parent"], name="unique_ledgername_parent"
             )
         ]
+
+    def clean(self):
+        """Validate ledger classification"""
+        # Prevent code change after it has transactions
+        if self.pk and self.code:
+            has_txn = (
+                self.credit_txns.exists()
+                or self.debit_txns.exists()
+                or self.aleg.exists()
+            )
+            if has_txn:
+                # protect immutability of code
+                orig = type(self).objects.only("code").get(pk=self.pk)
+                if orig.code != self.code:
+                    raise ValidationError(
+                        "Ledger code cannot be changed after transactions exist."
+                    )
+        super().clean()
+
+        # Ensure revenue accounts are properly marked
+        if self.AccountType.AccountType == "Revenue":
+            if self.is_direct_expense or self.is_operating_expense:
+                raise ValidationError("Revenue account cannot be marked as an expense")
+
+        # Ensure expense accounts are properly marked
+        if self.AccountType.AccountType == "Expense":
+            if self.is_operating_revenue:
+                raise ValidationError("Expense account cannot be marked as revenue")
+            if self.is_direct_expense and self.is_operating_expense:
+                raise ValidationError(
+                    "Expense account cannot be both direct and operating"
+                )
 
     def __str__(self):
         return f"{self.name} - {self.AccountType}"
@@ -62,17 +125,30 @@ class Ledger(MPTTModel):
         except LedgerStatement.DoesNotExist:
             return None
 
-    def get_closing_balance(self):
-        # just return the ledgerbalance views closing balance
-        ls = self.get_latest_stmt()
-        if ls is None:
-            return Balance(self.ledgerbalance.ClosingBalance)
-        else:
-            return Balance(ls.ClosingBalance)
+    def set_opening_bal(self, amounts):
+        """
+        Set opening balances for multiple currencies
+        Args:
+            amounts: List[Money] - List of Money objects for different currencies
+        Returns:
+            List[LedgerStatement] - Created statements
+        """
+        statements = []
 
-    def set_opening_bal(self, amount):
-        # ensure there aint no txns before setting op bal if present then audit and adjust
-        return LedgerStatement.objects.create(self, amount)
+        # Validate no existing transactions
+        if self.credit_txns.exists() or self.debit_txns.exists() or self.aleg.exists():
+            raise ValidationError(
+                "Cannot set opening balance - ledger already has transactions"
+            )
+
+        for amount in amounts:
+            # Create statement for each currency
+            statement = LedgerStatement.objects.create(
+                ledgerno=self, ClosingBalance=amount
+            )
+            statements.append(statement)
+
+        return statements
 
     def ctxns(self, since=None):
         if since is not None:
@@ -100,254 +176,293 @@ class Ledger(MPTTModel):
                 "journal_entry"
             )
 
-    def audit(self):
-        # this statement will serve as opening balance for this acc
-        return LedgerStatement.objects.create(
-            ledgerno=self, ClosingBalance=self.current_balance().monies()
+    def get_closing_balance(self):
+        """Get closing balance in all active currencies"""
+        balances = []
+
+        # Get all active currencies for this ledger
+        for currency in self.get_active_currencies():
+            try:
+                # Get latest statement for this currency
+                stmt = self.ledgerstatements.filter(
+                    ClosingBalance_currency=currency
+                ).latest()
+                balances.append(stmt.ClosingBalance)
+            except LedgerStatement.DoesNotExist:
+                # If no statement exists for this currency, add zero balance
+                balances.append(Money(0, currency))
+
+        return Balance(balances)
+
+    def get_active_currencies(self):
+        """Get list of currencies used in this ledger's transactions"""
+        currencies = set()
+        currencies.update(
+            self.credit_txns.values_list("amount_currency", flat=True).distinct()
         )
-
-    def current_balance_wrt_descendants(self):
-        # decendants = self.get_descendants(include_self = True)
-
-        # bal = [Balance([Money(r["total"], r["amount_currency"])
-        #                 for r in acc.debit_txns.values("amount_currency").annotate(total = Sum("amount"))])
-        #         -
-        #        Balance([Money(r["total"], r["amount_currency"])
-        #                 for r in acc.credit_txns.values("amount_currency").annotate(total = Sum("amount"))])
-        #         for acc in decendants
-        #         ]
-
-        descendants = [
-            i.get_balance() for i in self.get_descendants(include_self=False)
-        ]
-        bal = sum(descendants, self.get_balance())
-        return bal
-
-    def get_credit_bal(self, since=None):
-        c_bal = (
-            Balance(
-                [
-                    Money(r["total"], r["amount_currency"])
-                    for r in self.ctxns(since)
-                    .values("amount_currency")
-                    .annotate(total=Sum("amount"))
-                ]
-            )
-            if self.ctxns(since=since)
-            else Balance()
+        currencies.update(
+            self.debit_txns.values_list("amount_currency", flat=True).distinct()
         )
-        aleg_cr = Balance(
-            [
-                Money(r["total"], r["amount_currency"])
-                for r in self.aleg_txns(since, "Cr")
-                .values("amount_currency")
-                .annotate(total=Sum("amount"))
+        currencies.update(
+            self.aleg.values_list("amount_currency", flat=True).distinct()
+        )
+        return list(currencies)
+
+    def calculate_balance(self, currency, since=None):
+        """
+        Calculate balance changes for specific currency since given date
+        Returns net balance change (Dr - Cr) for given currency since date.
+        Positive = net debit, Negative = net credit.
+        """
+        # Base filters for currency
+        credit_filters = {"amount_currency": currency}
+        debit_filters = {"amount_currency": currency}
+
+        # Add date filter only if since is not None
+        if since:
+            credit_filters["created__gt"] = since
+            debit_filters["created__gt"] = since
+
+        # Get credits with proper filters
+        credit_sum = (
+            self.credit_txns.filter(**credit_filters).aggregate(total=Sum("amount"))[
+                "total"
             ]
+            or 0
         )
-        return c_bal + aleg_cr
 
-    def get_debit_bal(self, since=None):
-        d_bal = (
-            Balance(
-                [
-                    Money(r["total"], r["amount_currency"])
-                    for r in self.dtxns(since)
-                    .values("amount_currency")
-                    .annotate(total=Sum("amount"))
-                ]
-            )
-            if self.dtxns(since=since)
-            else Balance()
+        aleg_credit_sum = (
+            self.aleg.filter(**credit_filters, XactTypeCode="Cr").aggregate(
+                total=Sum("amount")
+            )["total"]
+            or 0
         )
-        aleg_dr = Balance(
-            [
-                Money(r["total"], r["amount_currency"])
-                for r in self.aleg_txns(since, "Dr")
-                .values("amount_currency")
-                .annotate(total=Sum("amount"))
+
+        # Get debits with proper filters
+        debit_sum = (
+            self.debit_txns.filter(**debit_filters).aggregate(total=Sum("amount"))[
+                "total"
             ]
+            or 0
         )
-        return d_bal + aleg_dr
+
+        aleg_debit_sum = (
+            self.aleg.filter(**debit_filters, XactTypeCode="Dr").aggregate(
+                total=Sum("amount")
+            )["total"]
+            or 0
+        )
+        print(
+            f"ds:{debit_sum} , cs:{ credit_sum}, ads:{aleg_debit_sum}, acs:{aleg_credit_sum}"
+        )
+        m = Money(
+            (debit_sum + aleg_debit_sum) - (credit_sum + aleg_credit_sum), currency
+        )
+        print(f"calculated balance {self.name} change: {m}")
+        return m
+
+    def calculate_period_balance(self, period):
+        """
+        Calculate balance for transactions within a specific accounting period.
+        Only includes transactions created within the period date range.
+
+        Args:
+            period: AccountingPeriod instance
+
+        Returns:
+            Money: Net balance change for the period in the primary currency (INR)
+        """
+        from .period import AccountingPeriod
+
+        if not isinstance(period, AccountingPeriod):
+            raise ValueError("Must provide an AccountingPeriod instance")
+
+        # Filter transactions by period dates
+        credit_sum = (
+            self.credit_txns.filter(
+                created__date__gte=period.start_date,
+                created__date__lte=period.end_date,
+                amount_currency="INR",
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+
+        debit_sum = (
+            self.debit_txns.filter(
+                created__date__gte=period.start_date,
+                created__date__lte=period.end_date,
+                amount_currency="INR",
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+
+        aleg_credit_sum = (
+            self.aleg.filter(
+                created__date__gte=period.start_date,
+                created__date__lte=period.end_date,
+                XactTypeCode__XactTypeCode="Cr",
+                amount_currency="INR",
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+
+        aleg_debit_sum = (
+            self.aleg.filter(
+                created__date__gte=period.start_date,
+                created__date__lte=period.end_date,
+                XactTypeCode__XactTypeCode="Dr",
+                amount_currency="INR",
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+
+        net_balance = (debit_sum + aleg_debit_sum) - (credit_sum + aleg_credit_sum)
+        return Money(net_balance, "INR")
+
+    def get_opening_balance_for_period(self, period):
+        """
+        Get the opening balance for a period (closing balance of previous period).
+
+        Args:
+            period: AccountingPeriod instance
+
+        Returns:
+            Balance: Opening balance in all currencies
+        """
+        from .period import AccountingPeriod
+
+        if not isinstance(period, AccountingPeriod):
+            raise ValueError("Must provide an AccountingPeriod instance")
+
+        # Get the previous period
+        previous_period = period.get_previous_period()
+
+        if not previous_period:
+            # No previous period, use first opening statement
+            try:
+                stmt = self.ledgerstatements.filter(is_opening_statement=True).earliest(
+                    "created"
+                )
+                return stmt.get_cb()
+            except LedgerStatement.DoesNotExist:
+                return Balance()
+
+        # Get closing balance of previous period
+        try:
+            stmt = self.ledgerstatements.filter(
+                period=previous_period, is_opening_statement=False
+            ).latest("created")
+            return stmt.get_cb()
+        except LedgerStatement.DoesNotExist:
+            # If no closing statement, calculate from transactions
+            return Balance()
+
+    def get_balance_at_period_end(self, period):
+        """
+        Get cumulative balance through the end of a specific period.
+        This is: opening balance + period transactions.
+
+        Args:
+            period: AccountingPeriod instance
+
+        Returns:
+            Balance: Cumulative balance through period end
+        """
+        opening_balance = self.get_opening_balance_for_period(period)
+        period_change = self.calculate_period_balance(period)
+
+        # Combine balances
+        balances = []
+        for money in opening_balance.monies():
+            new_balance = money + period_change
+            balances.append(new_balance)
+
+        if not balances and period_change.amount != 0:
+            balances = [period_change]
+
+        return Balance(balances)
 
     def current_balance(self):
-        ls = self.get_latest_stmt()
-        if ls is None:
-            cb = Balance()
-            since = None
-        else:
-            cb = ls.get_cb()
-            since = ls.created
+        """Get current balance in all active currencies"""
+        balances = []
+        for currency in self.get_active_currencies():
+            # Get latest statement for this currency
+            try:
+                stmt = self.ledgerstatements.filter(
+                    ClosingBalance_currency=currency
+                ).latest()
+                prev_balance = stmt.ClosingBalance
+                since = stmt.created
+            except LedgerStatement.DoesNotExist:
+                prev_balance = Money(0, currency)
+                since = None
 
-        credit_balance = self.get_credit_bal(since)  # credit balance with aleg
-        debit_balance = self.get_debit_bal(since)  # debit balance with aleg
-        # logger.warning(
-        #     f"credit_balance: {credit_balance} debit_balance: {debit_balance}"
-        # )
+            # Calculate changes since last statement
+            balance_change = self.calculate_balance(currency, since)
+            balances.append(prev_balance + balance_change)
 
-        bal = cb + (debit_balance - credit_balance)
-        return bal
+        return Balance(balances)
 
-    def current_balance_with_aleg(self):
-        ls = self.get_latest_stmt()
-        if ls is None:
-            cb = Balance()
-            since = None
-        else:
-            cb = ls.get_cb()
-            since = ls.created
-        c_bal = (
-            Balance(
-                [
-                    Money(r["total"], r["amount_currency"])
-                    for r in self.ctxns(since)
-                    .values("amount_currency")
-                    .annotate(total=Sum("amount"))
-                ]
+    def get_current_balance(self):
+        """Get current balance using the database view with optimized querying"""
+        try:
+            balances = []
+            # Use select_related to optimize the query
+            balance_entries = LedgerBalance.objects.filter(
+                ledgerno=self
+            ).select_related("ledgerno")
+
+            if not balance_entries.exists():
+                return Balance([Money(0, "INR")])  # Default balance if no entries found
+
+            for balance in balance_entries:
+                balances.append(Money(balance.current_balance, balance.currency))
+            return Balance(balances)
+        except Exception as e:
+            logger.error(
+                f"Error getting current balance for ledger {self.pk}: {str(e)}"
             )
-            if self.ctxns(since=since)
-            else Balance()
-        )
-        d_bal = (
-            Balance(
-                [
-                    Money(r["total"], r["amount_currency"])
-                    for r in self.dtxns(since)
-                    .values("amount_currency")
-                    .annotate(total=Sum("amount"))
-                ]
-            )
-            if self.dtxns(since=since)
-            else Balance()
-        )
-        aleg_cr = Balance(
-            [
-                Money(r["total"], r["amount_currency"])
-                for r in self.aleg_txns(since, "Cr")
-                .values("amount_currency")
-                .annotate(total=Sum("amount"))
-            ]
-        )
-        aleg_dr = Balance(
-            [
-                Money(r["total"], r["amount_currency"])
-                for r in self.aleg_txns(since, "Dr")
-                .values("amount_currency")
-                .annotate(total=Sum("amount"))
-            ]
-        )
+            return Balance([Money(0, "INR")])  # Return safe default on error
 
-        bal = cb + (d_bal - c_bal) + (aleg_cr - aleg_dr)
-        return bal
+    def audit(self):
+        """Create statements for all active currencies"""
+        # statements = []
+        # for currency in self.get_active_currencies():
+        #     balance = self.current_balance().get(currency)
+        #     stmt = LedgerStatement.objects.create(
+        #         ledgerno=self,
+        #         ClosingBalance=balance
+        #     )
+        #     statements.append(stmt)
+        # return statements
 
-    def get_balance(self):
-        return self.ledgerbalance.get_currbal()
+        balance = self.current_balance()
+        for money in balance.monies():
+            LedgerStatement.objects.create(ledgerno=self, ClosingBalance=money)
 
-    # -------------------ditching custom postgres money_value----------------
+    def save(self, *args, **kwargs):
+        # Assign code if missing (predictable, concurrency-safe)
+        if not self.code:
+            from .numbering import generate_ledger_code
 
-    # def get_closing_balance(self):
-    #     """Get closing balance in all active currencies"""
-    #     balances = []
-
-    #     # Get all active currencies for this ledger
-    #     for currency in self.get_active_currencies():
-    #         try:
-    #             # Get latest statement for this currency
-    #             stmt = self.ledgerstatements.filter(
-    #                 ClosingBalance_currency=currency
-    #             ).latest()
-    #             balances.append(stmt.ClosingBalance)
-    #         except LedgerStatement.DoesNotExist:
-    #             # If no statement exists for this currency, add zero balance
-    #             balances.append(Money(0, currency))
-
-    #     return Balance(balances)
-
-    # def get_active_currencies(self):
-    #     """Get list of currencies used in this ledger's transactions"""
-    #     currencies = set()
-    #     currencies.update(self.credit_txns.values_list('amount_currency', flat=True).distinct())
-    #     currencies.update(self.debit_txns.values_list('amount_currency', flat=True).distinct())
-    #     currencies.update(self.aleg.values_list('amount_currency', flat=True).distinct())
-    #     return list(currencies)
-
-    # def calculate_balance(self, currency, since=None):
-    #     """Calculate balance changes for specific currency since given date"""
-    #     # Base filters for currency
-    #     credit_filters = {'amount_currency': currency}
-    #     debit_filters = {'amount_currency': currency}
-
-    #     # Add date filter only if since is not None
-    #     if since:
-    #         credit_filters['created__gt'] = since
-    #         debit_filters['created__gt'] = since
-
-    #     # Get credits with proper filters
-    #     credit_sum = self.credit_txns.filter(
-    #         **credit_filters
-    #     ).aggregate(total=Sum('amount'))['total'] or 0
-
-    #     aleg_credit_sum = self.aleg.filter(
-    #         **credit_filters,
-    #         XactTypeCode='Cr'
-    #     ).aggregate(total=Sum('amount'))['total'] or 0
-
-    #     # Get debits with proper filters
-    #     debit_sum = self.debit_txns.filter(
-    #         **debit_filters
-    #     ).aggregate(total=Sum('amount'))['total'] or 0
-
-    #     aleg_debit_sum = self.aleg.filter(
-    #         **debit_filters,
-    #         XactTypeCode='Dr'
-    #     ).aggregate(total=Sum('amount'))['total'] or 0
-
-    #     return Money(
-    #         (debit_sum + aleg_debit_sum) - (credit_sum + aleg_credit_sum),
-    #         currency
-    #     )
-
-    # def current_balance(self):
-    #     """Get current balance in all active currencies"""
-    #     balances = []
-    #     for currency in self.get_active_currencies():
-    #         # Get latest statement for this currency
-    #         try:
-    #             stmt = self.ledgerstatements.filter(
-    #                 ClosingBalance_currency=currency
-    #             ).latest()
-    #             prev_balance = stmt.ClosingBalance
-    #             since = stmt.created
-    #         except LedgerStatement.DoesNotExist:
-    #             prev_balance = Money(0, currency)
-    #             since = None
-
-    #         # Calculate changes since last statement
-    #         balance_change = self.calculate_balance(currency, since)
-    #         balances.append(prev_balance + balance_change)
-
-    #     return Balance(balances)
-
-    # def audit(self):
-    #     """Create statements for all active currencies"""
-    #     statements = []
-    #     for currency in self.get_active_currencies():
-    #         balance = self.current_balance().get(currency)
-    #         stmt = LedgerStatement.objects.create(
-    #             ledgerno=self,
-    #             ClosingBalance=balance
-    #         )
-    #         statements.append(stmt)
-    #     return statements
+            self.code = generate_ledger_code(self)
+        super().save(*args, **kwargs)
 
 
 class LedgerTransactionManager(models.Manager):
     def create_txn(self, journal_entry, ledgerno, ledgerno_dr, amount):
-        dr = Ledger.objects.get(name=ledgerno_dr)
-        cr = Ledger.objects.get(name=ledgerno)
-        txn = self.create(
-            journal_entry=journal_entry, ledgerno=cr, ledgerno_dr=dr, amount=amount
-        )
-        return txn
+        """Create a new ledger transaction with validation"""
+        try:
+            dr = Ledger.objects.select_related("AccountType").get(name=ledgerno_dr)
+            cr = Ledger.objects.select_related("AccountType").get(name=ledgerno)
+
+            txn = self.create(
+                journal_entry=journal_entry, ledgerno=cr, ledgerno_dr=dr, amount=amount
+            )
+            return txn
+        except Ledger.DoesNotExist as e:
+            logger.error(f"Error creating transaction: {str(e)}")
+            raise ValueError("Invalid ledger account specified")
 
 
 class LedgerTransaction(models.Model):
@@ -369,21 +484,19 @@ class LedgerTransaction(models.Model):
         decimal_places=3,
         default_currency="INR",
     )
+    amount_base = MoneyField(
+        max_digits=13, decimal_places=3, default_currency="INR", null=True, blank=True
+    )
     objects = LedgerTransactionManager()
 
     class Meta:
         indexes = [
-            models.Index(
-                fields=[
-                    "ledgerno",
-                ]
-            ),
-            models.Index(
-                fields=[
-                    "ledgerno_dr",
-                ]
-            ),
+            models.Index(fields=["ledgerno"]),
+            models.Index(fields=["ledgerno_dr"]),
+            models.Index(fields=["created"]),
+            models.Index(fields=["journal_entry", "created"]),
         ]
+        ordering = ["-created"]
 
     def __str__(self):
         return self.ledgerno.name
@@ -393,74 +506,114 @@ class LedgerStatement(models.Model):
     ledgerno = models.ForeignKey(
         Ledger, on_delete=models.CASCADE, related_name="ledgerstatements"
     )
+    period = models.ForeignKey(
+        "AccountingPeriod",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="ledger_statements",
+        help_text="Accounting period this statement belongs to",
+    )
     created = models.DateTimeField(
         # unique = True,
         auto_now_add=True
     )
-    # ClosingBalance = MoneyField(
-    #     max_digits=13,
-    #     decimal_places=3,
-    #     default_currency="INR",
-    # )
-    ClosingBalance = ArrayField(MoneyValueField(null=True, blank=True))
+    ClosingBalance = MoneyField(
+        max_digits=13,
+        decimal_places=3,
+        default_currency="INR",
+    )
+    is_opening_statement = models.BooleanField(
+        default=False,
+        help_text="True if this is an opening balance statement, False if closing",
+    )
 
     class Meta:
-        # unique_together = ['ledgerno', 'ClosingBalance_currency', 'created']
+        unique_together = ["ledgerno", "ClosingBalance_currency", "created"]
         get_latest_by = "created"
         ordering = ["-created"]
+        indexes = [
+            models.Index(fields=["ledgerno", "period"]),
+            models.Index(fields=["period", "is_opening_statement"]),
+        ]
 
     def __str__(self):
-        return f"{self.created.date()} - {self.ledgerno} - {self.ClosingBalance}"
+        stmt_type = "Opening" if self.is_opening_statement else "Closing"
+        period_str = f" ({self.period})" if self.period else ""
+        return f"{self.created.date()} - {stmt_type} - {self.ledgerno} - {self.ClosingBalance}{period_str}"
 
     def get_cb(self):
         return Balance(self.ClosingBalance)
 
+    # def clean(self):
+    #     """Validate statement data before saving"""
+    #     if self.ClosingBalance.amount < 0 and self.ledgerno.AccountType.AccountType in ['Asset', 'Expense']:
+    #         raise ValidationError('Asset and Expense accounts cannot have negative balance')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def create_statement(cls, ledger, balance, date=None):
+        """Factory method to create new statement with validation"""
+        try:
+            return cls.objects.create(
+                ledgerno=ledger, ClosingBalance=balance, created=date or timezone.now()
+            )
+        except Exception as e:
+            logger.error(f"Error creating statement for ledger {ledger.pk}: {str(e)}")
+            raise
+
 
 # postgresql read-only-view
-class Ledgerbalance(models.Model):
+
+
+class LedgerBalance(models.Model):
+    """
+    Model representing the lb_1 database view that shows ledger balances with transaction details
+    """
+
     ledgerno = models.OneToOneField(
-        Ledger,
-        on_delete=models.DO_NOTHING,
+        "dea.Ledger",
         primary_key=True,
-        related_name="ledgerbalance",
+        db_column="ledgerno_id",
+        on_delete=models.DO_NOTHING,
     )
-    # name = models.CharField(max_length=100)
-    # AccountType = models.CharField(max_length=50)
-    statement_created = models.DateTimeField()
-    opening_balance = ArrayField(
-        MoneyValueField(blank=True, null=True), blank=True, null=True
+    ledger_name = models.CharField(max_length=255)
+    AccountType = models.ForeignKey(
+        "dea.AccountType", on_delete=models.DO_NOTHING, db_column="AccountType_id"
     )
-    closing_balance = ArrayField(
-        MoneyValueField(blank=True, null=True), blank=True, null=True
-    )
-    credit = ArrayField(MoneyValueField(blank=True, null=True), blank=True, null=True)
-    debit = ArrayField(MoneyValueField(blank=True, null=True), blank=True, null=True)
+    currency = models.CharField(max_length=3, default="INR")
+    last_statement_date = models.DateTimeField(null=True)
+    opening_balance = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    ledger_credit_sum = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    ledger_debit_sum = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    account_credit_sum = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    account_debit_sum = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    total_credit_sum = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    total_debit_sum = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    current_balance = models.DecimalField(max_digits=15, decimal_places=3, default=0)
 
     class Meta:
         managed = False
-        db_table = "resultlb11"
-        # ordering = ["ledgerno__AccountType", "ledgerno__name"]
+        db_table = "ledger_balances"
 
-    def get_currbal(self):
-        return Balance(self.closing_balance)
+    def get_balance(self):
+        """Returns the current balance as a Money object"""
+        return Money(self.current_balance, self.currency)
 
-    def get_ob(self):
-        return Balance(self.opening_balance)
+    def get_opening_balance(self):
+        """Returns the opening balance as a Money object"""
+        return Money(self.opening_balance, self.currency)
 
-    def get_cb(self):
-        return Balance(self.closing_balance)
+    def get_total_credits(self):
+        """Returns total credits as a Money object"""
+        return Money(self.total_credit_sum, self.currency)
 
-    def get_running_balance(self):
-        return sum(
-            [
-                i.ledgerbalance.get_currbal()
-                for i in self.ledgerno.get_descendants(include_self=True)
-            ],
-            Balance(),
-        )
+    def get_total_debits(self):
+        """Returns total debits as a Money object"""
+        return Money(self.total_debit_sum, self.currency)
 
-    def get_dr(self):
-        return Balance(self.debit)
-
-    def get_cr(self):
-        return Balance(self.credit)
+    def __str__(self):
+        return f"{self.ledger_name} ({self.currency}): {self.get_balance()}"

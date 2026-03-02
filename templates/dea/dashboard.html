@@ -1,0 +1,488 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.metric-card {
+    border-left: 4px solid;
+    transition: transform 0.2s;
+}
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0.5rem 0;
+}
+.metric-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.alert-card {
+    border-left: 4px solid;
+    margin-bottom: 0.5rem;
+}
+.alert-card.alert-danger {
+    border-left-color: #dc3545;
+}
+.alert-card.alert-warning {
+    border-left-color: #ffc107;
+}
+.alert-card.alert-info {
+    border-left-color: #17a2b8;
+}
+.stat-badge {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.75rem;
+}
+.period-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fa fa-tachometer-alt"></i> Accounting Dashboard</h2>
+            {% if current_period %}
+            <p class="text-muted">
+                Current Period: <strong>{{ current_period.name }}</strong>
+                ({{ current_period.start_date|date:"M d, Y" }} - {{ current_period.end_date|date:"M d, Y" }})
+            </p>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i> No active accounting period found.
+                <a href="{% url 'dea_period_create' %}" class="alert-link">Create one now</a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-outline-primary" onclick="refreshMetrics()">
+                <i class="fa fa-sync"></i> Refresh
+            </button>
+            <a href="{% url 'trial_balance' %}" class="btn btn-primary">
+                <i class="fa fa-file-alt"></i> Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Alerts Section -->
+    {% if alerts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fa fa-bell"></i> Alerts & Notifications</h5>
+                </div>
+                <div class="card-body">
+                    {% for alert in alerts %}
+                    <div class="alert alert-{{ alert.type }} alert-card d-flex align-items-center" role="alert">
+                        <i class="fa fa-{{ alert.icon }} me-3"></i>
+                        <div class="flex-grow-1">
+                            <strong>{{ alert.title }}</strong>
+                            <p class="mb-0">{{ alert.message }}</p>
+                        </div>
+                        {% if alert.link %}
+                        <a href="{{ alert.link }}" class="btn btn-sm btn-outline-{{ alert.type }}">
+                            {{ alert.link_text }}
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Key Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card h-100" style="border-left-color: #28a745;">
+                <div class="card-body">
+                    <div class="metric-label">Total Cash</div>
+                    <div class="metric-value text-success">
+                        {{ metrics.total_cash }}
+                    </div>
+                    <small class="text-muted">Cash & Bank Accounts</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card metric-card h-100" style="border-left-color: #007bff;">
+                <div class="card-body">
+                    <div class="metric-label">Receivables</div>
+                    <div class="metric-value text-primary">
+                        {{ metrics.total_receivables }}
+                    </div>
+                    <small class="text-muted">Amount Due from Debtors</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card metric-card h-100" style="border-left-color: #dc3545;">
+                <div class="card-body">
+                    <div class="metric-label">Payables</div>
+                    <div class="metric-value text-danger">
+                        {{ metrics.total_payables }}
+                    </div>
+                    <small class="text-muted">Amount Due to Creditors</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card metric-card h-100" style="border-left-color: #6c757d;">
+                <div class="card-body">
+                    <div class="metric-label">Working Capital</div>
+                    <div class="metric-value">
+                        {{ metrics.net_working_capital }}
+                    </div>
+                    <small class="text-muted">AR - AP (simplified)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Period Summary -->
+    {% if period_summary %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="period-summary">
+                <h5 class="mb-3">
+                    <i class="fa fa-chart-line"></i> Performance - {{ current_period.name }}
+                </h5>
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <div class="mb-2">Revenue</div>
+                        <h4>{{ period_summary.revenue }}</h4>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-2">COGS</div>
+                        <h4>{{ period_summary.cogs }}</h4>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-2">Gross Profit</div>
+                        <h4>{{ period_summary.gross_profit }}</h4>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-2">Op. Expenses</div>
+                        <h4>{{ period_summary.operating_expenses }}</h4>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-2">Op. Profit</div>
+                        <h4>{{ period_summary.operating_profit }}</h4>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-2">Net Profit</div>
+                        <h4><strong>{{ period_summary.net_profit }}</strong></h4>
+                        {% if metrics.profit_margin %}
+                        <small>({{ metrics.profit_margin }})</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fa fa-chart-bar"></i> System Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-2">
+                            <div class="mb-2 text-muted">Total Vouchers</div>
+                            <h3>{{ stats.total_vouchers }}</h3>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="mb-2 text-muted">Posted</div>
+                            <h3 class="text-success">{{ stats.posted_vouchers }}</h3>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="mb-2 text-muted">Drafts</div>
+                            <h3 class="text-warning">{{ stats.draft_vouchers }}</h3>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="mb-2 text-muted">Active Accounts</div>
+                            <h3>{{ stats.active_accounts }}</h3>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="mb-2 text-muted">Ledgers</div>
+                            <h3>{{ stats.total_ledgers }}</h3>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="mb-2 text-muted">Open Periods</div>
+                            <h3>{{ stats.open_periods }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Debtors & Creditors -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fa fa-user-plus"></i> Top 5 Debtors</h5>
+                    <a href="{% url 'ar_aging' %}" class="btn btn-sm btn-outline-primary">
+                        View Aging
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Account</th>
+                                <th>Contact</th>
+                                <th class="text-end">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for debtor in top_debtors %}
+                            <tr>
+                                <td>
+                                    <a href="{{ debtor.account.get_absolute_url }}">
+                                        {{ debtor.account_number }}
+                                    </a>
+                                </td>
+                                <td>{{ debtor.contact.name|truncatewords:3 }}</td>
+                                <td class="text-end">{{ debtor.balance }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No debtors found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fa fa-user-minus"></i> Top 5 Creditors</h5>
+                    <a href="{% url 'ap_aging' %}" class="btn btn-sm btn-outline-primary">
+                        View Aging
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Account</th>
+                                <th>Contact</th>
+                                <th class="text-end">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for creditor in top_creditors %}
+                            <tr>
+                                <td>
+                                    <a href="{{ creditor.account.get_absolute_url }}">
+                                        {{ creditor.account_number }}
+                                    </a>
+                                </td>
+                                <td>{{ creditor.contact.name|truncatewords:3 }}</td>
+                                <td class="text-end">{{ creditor.balance }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No creditors found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fa fa-file-invoice"></i> Recent Vouchers</h5>
+                    <a href="#" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Number</th>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for voucher in recent_vouchers %}
+                            <tr>
+                                <td>
+                                    <a href="{{ voucher.get_absolute_url }}">
+                                        {{ voucher.voucher_number }}
+                                    </a>
+                                </td>
+                                <td>{{ voucher.voucher_type.name }}</td>
+                                <td>{{ voucher.voucher_date|date:"M d" }}</td>
+                                <td>
+                                    <span class="badge bg-{{ voucher.status.label|lower }}">
+                                        {{ voucher.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No recent vouchers</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fa fa-book"></i> Recent Journal Entries</h5>
+                    <a href="{% url 'dea_journal_entries_list' %}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Voucher</th>
+                                <th>Period</th>
+                                <th>Posted</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in recent_entries %}
+                            <tr>
+                                <td>
+                                    <a href="{{ entry.get_absolute_url }}">
+                                        #{{ entry.id }}
+                                    </a>
+                                </td>
+                                <td>{{ entry.voucher.voucher_number|truncatechars:15 }}</td>
+                                <td>{{ entry.period.name|truncatechars:10 }}</td>
+                                <td>
+                                    {% if entry.is_posted %}
+                                    <i class="fa fa-check text-success"></i>
+                                    {% else %}
+                                    <i class="fa fa-clock text-warning"></i>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No recent entries</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fa fa-bolt"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <a href="#" class="btn btn-lg btn-outline-primary w-100" onclick="alert('Voucher CRUD views coming soon!'); return false;">
+                                <i class="fa fa-plus-circle d-block mb-2" style="font-size: 2rem;"></i>
+                                Create Voucher
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'dea_account_list' %}" class="btn btn-lg btn-outline-success w-100">
+                                <i class="fa fa-user-plus d-block mb-2" style="font-size: 2rem;"></i>
+                                New Account
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'trial_balance' %}" class="btn btn-lg btn-outline-info w-100">
+                                <i class="fa fa-balance-scale d-block mb-2" style="font-size: 2rem;"></i>
+                                Trial Balance
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'dea_period_list' %}" class="btn btn-lg btn-outline-warning w-100">
+                                <i class="fa fa-calendar-alt d-block mb-2" style="font-size: 2rem;"></i>
+                                Manage Periods
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshMetrics() {
+    // Show loading state
+    const btn = event.target;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Refreshing...';
+    btn.disabled = true;
+    
+    // Fetch updated metrics
+    fetch('{% url "dashboard_metrics_ajax" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload page to show updated metrics
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing metrics:', error);
+            alert('Failed to refresh metrics');
+        })
+        .finally(() => {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        });
+}
+</script>
+{% endblock %}

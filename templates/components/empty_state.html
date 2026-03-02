@@ -1,0 +1,40 @@
+{% comment %}
+Empty state fallback template.
+Shown when no items exist in a list view.
+
+Context:
+  - message: Custom empty state message
+  - icon: Icon to display (default: 📭)
+  - create_url: URL for creating new item (optional)
+  - create_text: Text for create button (default: "Create new item")
+  - can_create: Boolean to show/hide create button
+{% endcomment %}
+
+{% if not items %}
+<div class="empty-state text-center py-5" style="min-height: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+  <div class="empty-icon mb-3" style="font-size: 3rem;">
+    {{ icon|default:"📭" }}
+  </div>
+  
+  <h3 class="mb-2">{{ title|default:"No items yet" }}</h3>
+  
+  {% if message %}
+    <p class="text-muted mb-4">{{ message }}</p>
+  {% endif %}
+  
+  {% if create_url and can_create %}
+    <a href="{{ create_url }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> {{ create_text|default:"Create new item" }}
+    </a>
+  {% elif not can_create %}
+    <p class="text-muted">
+      <i class="bi bi-info-circle"></i>
+      You don't have permission to create items. Contact a workspace admin.
+    </p>
+  {% endif %}
+</div>
+{% else %}
+  {% block items_content %}
+    {# Items content goes here in including template #}
+  {% endblock %}
+{% endif %}

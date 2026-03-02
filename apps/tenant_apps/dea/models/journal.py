@@ -1,14 +1,15 @@
-import uuid
-
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
+from decimal import Decimal
 from django.db import models, transaction
-from django.forms import model_to_dict
+from django.core.exceptions import ValidationError
 from django.urls import reverse
-
+from django.contrib.auth import get_user_model
+from apps.tenant_apps.dea.models.voucher import Voucher
 from .account import AccountTransaction
 from .ledger import LedgerTransaction
+from django.utils.translation import gettext_lazy as _
 
+
+User = get_user_model()
 # create a voucher you create a je
 # edit voucher:
 #     if changed and statement created after the voucher created then reverse the transactions and create new transactions
@@ -21,142 +22,234 @@ from .ledger import LedgerTransaction
 #     3. create a journal entry with both receipt and payment as voucher
 
 
-def reverse_journal_entry(sender, instance, **kwargs):
-    #     # Access model and subclass:
-    if instance.pk:  # If journal is being updated
-        # Retrieve the old data from the database
-        old_instance = sender.objects.get(pk=instance.pk)
-        if old_instance.is_changed(instance):
-            with transaction.atomic():
-                old_instance.reverse_transactions()
-                instance.create_transactions()
-
-
-def create_journal_entry(sender, instance, created, **kwargs):
-    if created:
-        with transaction.atomic():
-            instance.create_transactions()
-
-
-# no longer relevant
-class Journal(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-    created_by = models.ForeignKey(
-        "users.CustomUser", on_delete=models.CASCADE, null=True, blank=True
-    )
-    desc = models.TextField(blank=True, null=True)
-    uuid = models.UUIDField(
-        unique=True, default=uuid.uuid4, editable=False, null=True, blank=True
-    )
-
-    class Meta:
-        abstract = True
-
-    def get_class_name(self):
-        return self.__class__.__name__
-
-    def get_items(self):
-        # By default, return None or an empty list.
-        return None
-
-    def get_journal_entry(self, desc=None):
-        if self.journal_entries.exists():
-            return self.journal_entries.latest()
-        else:
-            return JournalEntry.objects.create(
-                content_object=self, desc=self.__class__.__name__
-            )
-
-    def delete_journal_entry(self):
-        if self.journal_entries.exists():
-            self.journal_entries.delete()
-
-    def get_transactions(self):
-        # to be implemented by the subclass or notimplementederror
-        lt = []
-        at = []
-        # to be defined by the subclass
-        return lt, at
-
-    def create_transactions(self):
-        journal_entry = self.get_journal_entry()
-        lt, at = self.get_transactions()
-        if lt and at:
-            journal_entry.transact(lt, at)
-
-    def reverse_transactions(self):
-        journal_entry = self.get_journal_entry()
-        lt, at = self.get_transactions()
-        if lt and at:
-            journal_entry.untransact(lt, at)
-
-    def is_changed(self, old_instance):
-        # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
-        # TODO efficient way to compare old and new instances
-        # Implement logic to compare old and new instances
-        # Compare all fields using dictionaries
-        return model_to_dict(
-            self, fields=["loan_amount", "customer", "lid"]
-        ) != model_to_dict(old_instance, fields=["loan_amount", "customer", "lid"])
-
-    # https://stackoverflow.com/questions/7792287/how-to-use-django-model-inheritance-with-signals
-    @classmethod
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        models.signals.pre_save.connect(reverse_journal_entry, sender=cls)
-        models.signals.post_save.connect(create_journal_entry, sender=cls)
-
-
 class JournalEntry(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
+    # Audit fields
+    posted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    posted_at = models.DateTimeField(auto_now_add=True)  # When this JE was created
     desc = models.TextField(blank=True, null=True)
-    # Below the mandatory fields for generic relation
-    content_type = models.ForeignKey(
-        ContentType,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="item_entries",
-    )
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    content_object = GenericForeignKey("content_type", "object_id")
 
-    parent_content_type = models.ForeignKey(
-        ContentType,
-        on_delete=models.CASCADE,
+    # Accounting period link
+    period = models.ForeignKey(
+        "AccountingPeriod",
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
-        related_name="parent_entries",
+        related_name="journal_entries",
+        help_text="Accounting period this entry belongs to",
     )
-    parent_object_id = models.PositiveIntegerField(null=True, blank=True)
-    parent_object = GenericForeignKey("parent_content_type", "parent_object_id")
+
+    voucher = models.ForeignKey(
+        Voucher, on_delete=models.PROTECT, related_name="journal_entries"
+    )
+    is_reversal_of = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="reversed_by",
+    )
 
     class Meta:
         get_latest_by = "id"
         indexes = [
-            models.Index(fields=["content_type", "object_id"]),
+            models.Index(fields=["period", "posted_at"]),
+            models.Index(fields=["voucher", "posted_at"]),
         ]
+        permissions = [
+            ("can_reverse_entry", "Can reverse journal entries"),
+            ("can_delete_posted_entry", "Can delete posted entries"),
+        ]
+        verbose_name = _("Journal Entry")
+        verbose_name_plural = _("Journal Entries")
 
     def __str__(self):
-        return f"#{self.id} - {self.content_type}# {self.object_id}"
+        status = "Posted" if self.is_posted else "Draft"
+        return f"JE-{self.id} ({status}) - {self.voucher}"
+
+    @property
+    def is_posted(self):
+        """
+        Derive posting status from voucher status.
+        Posted if voucher is POSTED (not DRAFT, not REVERSED).
+        """
+        from .voucher import VoucherStatus
+
+        return self.voucher.status == VoucherStatus.POSTED
 
     def get_absolute_url(self):
         return reverse("dea_journal_entry_detail", kwargs={"pk": self.pk})
 
+    def clean(self):
+        """Validate journal entry before saving"""
+        from .voucher import VoucherStatus
+
+        # Prevent modification of posted entries
+        if self.pk:
+            original = JournalEntry.objects.get(pk=self.pk)
+            # Check if original was posted (derived from voucher status)
+            if original.voucher.status == VoucherStatus.POSTED:
+                raise ValidationError(
+                    "Cannot modify posted journal entries. Create a reversal entry instead."
+                )
+
+        # Validate period
+        if self.period and not self.period.can_modify_transactions():
+            raise ValidationError(
+                f"Cannot post entries to {self.period.status} period. "
+                f"Period must be OPEN for new entries."
+            )
+
+    def save(self, *args, **kwargs):
+        """
+        Auto-assign period if not specified and validate
+        """
+        from .period import AccountingPeriod
+        from django.utils import timezone
+
+        # Auto-assign current period if not specified
+        if not self.period:
+            # Use voucher date if available, otherwise today
+            target_date = (
+                getattr(self.voucher, "voucher_date", None) or timezone.now().date()
+            )
+            self.period = AccountingPeriod.objects.get_period_for_date(target_date)
+
+            if not self.period:
+                raise ValidationError(
+                    f"No accounting period found for date {target_date}. "
+                    "Please create an accounting period or specify one explicitly."
+                )
+
+        # Run validation
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Prevent deletion of posted entries"""
+        from .voucher import VoucherStatus
+
+        if self.voucher.status == VoucherStatus.POSTED:
+            raise ValidationError(
+                "Cannot delete posted journal entries. Create a reversal entry instead."
+            )
+        super().delete(*args, **kwargs)
+
+    def validate_balanced(self):
+        """
+        Validate that debits equal credits for this journal entry.
+
+        The two-sided design means each LedgerTransaction has:
+        - ledgerno_dr (debit ledger)
+        - ledgerno (credit ledger)
+        - amount (same amount posted to both sides)
+
+        This method aggregates ALL debits and credits across the journal entry
+        to ensure total DR = total CR.
+
+        Returns (is_balanced, debit_total, credit_total, imbalance_by_currency)
+        """
+        from djmoney.money import Money
+
+        # Aggregate ledger transactions
+        ledger_debits = {}
+        ledger_credits = {}
+
+        for txn in self.ltxns.all():
+            currency = txn.amount.currency
+            amount = txn.amount.amount
+
+            # Debit side: ledgerno_dr receives the debit
+            ledger_debits[currency] = ledger_debits.get(currency, Decimal("0")) + amount
+            # Credit side: ledgerno receives the credit (same amount, opposite side)
+            ledger_credits[currency] = (
+                ledger_credits.get(currency, Decimal("0")) + amount
+            )
+
+        # Aggregate account transactions
+        account_debits = {}
+        account_credits = {}
+
+        for txn in self.atxns.all():
+            currency = txn.amount.currency
+            if txn.XactTypeCode.XactTypeCode == "Dr":
+                account_debits[currency] = (
+                    account_debits.get(currency, Decimal("0")) + txn.amount.amount
+                )
+            else:
+                account_credits[currency] = (
+                    account_credits.get(currency, Decimal("0")) + txn.amount.amount
+                )
+
+        # Combine all currencies
+        all_currencies = (
+            set(ledger_debits.keys())
+            | set(ledger_credits.keys())
+            | set(account_debits.keys())
+            | set(account_credits.keys())
+        )
+
+        imbalances = {}
+        is_balanced = True
+
+        for currency in all_currencies:
+            total_dr = ledger_debits.get(currency, Decimal("0")) + account_debits.get(
+                currency, Decimal("0")
+            )
+            total_cr = ledger_credits.get(currency, Decimal("0")) + account_credits.get(
+                currency, Decimal("0")
+            )
+
+            diff = abs(total_dr - total_cr)
+            if diff > Decimal("0.01"):  # Allow for rounding tolerance
+                is_balanced = False
+                imbalances[currency] = Money(diff, currency)
+
+        return is_balanced, ledger_debits, ledger_credits, imbalances
+
+    def get_total_debit(self):
+        """Get total debit amount from all transactions"""
+        from ..utils.currency import Balance
+
+        amounts = []
+
+        # Ledger debits
+        for txn in self.ltxns.all():
+            amounts.append(txn.amount)
+
+        # Account debits
+        for txn in self.atxns.filter(XactTypeCode__XactTypeCode="Dr"):
+            amounts.append(txn.amount)
+
+        return Balance(amounts)
+
+    def get_total_credit(self):
+        """Get total credit amount from all transactions"""
+        from ..utils.currency import Balance
+
+        amounts = []
+
+        # Ledger credits
+        for txn in self.ltxns.all():
+            amounts.append(txn.amount)
+
+        # Account credits
+        for txn in self.atxns.filter(XactTypeCode__XactTypeCode="Cr"):
+            amounts.append(txn.amount)
+
+        return Balance(amounts)
+
     def get_voucher_url(self):
-        # voucher = self.content_object
         # if voucher is not None:
         #     return voucher.get_absolute_url()
         # else:
         #     return None
-        if self.parent_object is not None:
-            return self.parent_object.get_absolute_url()
-        elif self.content_object is not None:
-            return self.content_object.get_absolute_url()
-        else:
-            return None
+        # if self.parent_object is not None:
+        #     return self.parent_object.get_absolute_url()
+        # elif self.content_object is not None:
+        #     return self.content_object.get_absolute_url()
+        # else:
+        #     return None
+        pass
 
     # def check_data_integrity(self, lt, at):
     #    # check data integrity constraints before adding transactions chatgpt suggest
@@ -168,7 +261,7 @@ class JournalEntry(models.Model):
     #         raise ValueError("Transactions are not balanced")
     #     return True
 
-    def check_data_integrity(self, lt, at):
+    def check_data_integrity(self, ledger_transactions, account_transactions):
         # check data integrity constraints before adding transactions
         # for example, make sure the sum of debit amounts equals the sum of credit amounts
         # return True if all checks pass, False otherwise

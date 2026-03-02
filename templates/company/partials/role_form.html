@@ -1,5 +1,5 @@
 {% load crispy_forms_tags %}
-<form method="post" hx-post="{% url 'orgs_membership_update' company.id membership.id %}" hx-trigger="change from:select[name='role']" hx-target="this">
+<form method="post" hx-post="{% url 'team_change_role' company.id membership.id %}" hx-trigger="change from:select[name='role']" hx-target="this">
     {% csrf_token %}
     
     <div class="form-group">

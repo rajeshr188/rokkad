@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from dynamic_preferences.preferences import Section
+from dynamic_preferences.registries import global_preferences_registry
 from dynamic_preferences.types import (
     BooleanPreference,
     ChoicePreference,
@@ -9,7 +10,8 @@ from dynamic_preferences.types import (
 
 from apps.orgs.registries import company_preference_registry
 
-general = Section("general")
+loan_section = Section("Loan")
+interest_rate_section = Section("Interest_Rate")
 
 
 # @company_preference_registry.register
@@ -25,45 +27,76 @@ general = Section("general")
 #     required = True
 
 
-@company_preference_registry.register
-class LoanInterestDeduction(BooleanPreference):
-    section = "Loan"
+class BaseLoanInterestDeduction(BooleanPreference):
+    section = loan_section
     name = "Interest_Deduction"
     default = False
     required = False
 
 
-# @global_preferences_registry.register
+@global_preferences_registry.register
+class GlobalLoanInterestDeduction(BaseLoanInterestDeduction):
+    pass
+
+
 @company_preference_registry.register
-class GoldInterestRate(DecimalPreference):
-    section = "Interest_Rate"
+class CompanyLoanInterestDeduction(BaseLoanInterestDeduction):
+    pass
+
+
+class BaseGoldInterestRate(DecimalPreference):
+    section = interest_rate_section
     name = "gold"
     default = Decimal("2.00")
     required = True
 
 
-# @global_preferences_registry.register
+@global_preferences_registry.register
+class GlobalGoldInterestRate(BaseGoldInterestRate):
+    pass
+
+
 @company_preference_registry.register
-class SilverInterestRate(DecimalPreference):
-    section = "Interest_Rate"
+class CompanyGoldInterestRate(BaseGoldInterestRate):
+    pass
+
+
+class BaseSilverInterestRate(DecimalPreference):
+    section = interest_rate_section
     name = "silver"
     default = Decimal("4.00")
     required = True
 
 
-# @global_preferences_registry.register
+@global_preferences_registry.register
+class GlobalSilverInterestRate(BaseSilverInterestRate):
+    pass
+
+
 @company_preference_registry.register
-class OtherInterestRate(DecimalPreference):
-    section = "Interest_Rate"
+class CompanySilverInterestRate(BaseSilverInterestRate):
+    pass
+
+
+class BaseOtherInterestRate(DecimalPreference):
+    section = interest_rate_section
     name = "other"
     default = Decimal("8.00")
     required = True
 
 
-# @global_preferences_registry.register
+@global_preferences_registry.register
+class GlobalOtherInterestRate(BaseOtherInterestRate):
+    pass
+
+
 @company_preference_registry.register
-class Loandate(ChoicePreference):
-    section = "Loan"
+class CompanyOtherInterestRate(BaseOtherInterestRate):
+    pass
+
+
+class BaseLoanDefaultDate(ChoicePreference):
+    section = loan_section
     name = "Default_Date"
     default = "N"
     choices = [
@@ -72,10 +105,28 @@ class Loandate(ChoicePreference):
     ]
 
 
-# @global_preferences_registry.register
+@global_preferences_registry.register
+class GlobalLoanDefaultDate(BaseLoanDefaultDate):
+    pass
+
+
 @company_preference_registry.register
-class LoanHaircut(DecimalPreference):
-    section = "Loan"
+class CompanyLoanDefaultDate(BaseLoanDefaultDate):
+    pass
+
+
+class BaseLoanHaircut(DecimalPreference):
+    section = loan_section
     name = "Haircut"
     default = Decimal("75.00")
     required = True
+
+
+@global_preferences_registry.register
+class GlobalLoanHaircut(BaseLoanHaircut):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanHaircut(BaseLoanHaircut):
+    pass
