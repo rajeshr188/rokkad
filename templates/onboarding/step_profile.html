@@ -1,0 +1,37 @@
+{% extends "onboarding/base_onboarding.html" %}
+{% load crispy_forms_tags %}
+
+{% block onboarding_content %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div class="mb-4">
+        <p class="lead">Let's start by setting up your profile.</p>
+    </div>
+
+    {{ form|crispy }}
+
+    <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary btn-lg">
+            Continue <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
+</form>
+
+<script>
+    // Preview profile picture
+    document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+        if (e.target.files && e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                img.className = 'img-thumbnail mt-2';
+                img.style.maxWidth = '150px';
+                e.target.parentElement.appendChild(img);
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+</script>
+{% endblock %}

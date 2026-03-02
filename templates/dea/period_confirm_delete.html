@@ -1,0 +1,47 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Delete Period: {{ period.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-trash"></i>
+                    Confirm Period Deletion
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <strong>Warning:</strong> You are about to permanently delete this accounting period.
+                </div>
+
+                <p>Are you sure you want to delete the period:</p>
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="mb-1">{{ period.name }}</h6>
+                        <small class="text-muted">
+                            {{ period.start_date|date:"F j, Y" }} - {{ period.end_date|date:"F j, Y" }}
+                        </small>
+                    </div>
+                </div>
+
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+
+                <form method="post" class="mt-3">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'dea_period_detail' period.pk %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Delete Period
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

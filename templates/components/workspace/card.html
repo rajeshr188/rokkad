@@ -1,0 +1,144 @@
+<!-- Workspace Card Component -->
+<!-- Usage: include 'components/workspace/card.html' with workspace=workspace -->
+
+{% if workspace %}
+<div class="workspace-card card">
+    <div class="card-body">
+        <!-- Header -->
+        <div class="workspace-card__header">
+            <div class="workspace-card__icon">
+                <i class="bi bi-briefcase-fill"></i>
+            </div>
+            <div class="workspace-card__title">
+                <h5 class="mb-0">{{ workspace.name }}</h5>
+                <small class="text-muted">{{ workspace.industry|default:"General" }}</small>
+            </div>
+        </div>
+        
+        <!-- Description -->
+        {% if workspace.description %}
+        <p class="workspace-card__description mt-2 mb-2">
+            {{ workspace.description|truncatewords:20 }}
+        </p>
+        {% endif %}
+        
+        <!-- Stats -->
+        <div class="workspace-card__stats row g-2 mt-3 mb-3">
+            <div class="col-6">
+                <div class="stat-item">
+                    <strong>{{ workspace.member_count }}</strong>
+                    <small>Members</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-item">
+                    <strong>{{ workspace.project_count }}</strong>
+                    <small>Projects</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Role Badge -->
+        {% if user_role %}
+        <div class="workspace-card__role mb-3">
+            Your Role: 
+            {% include 'components/team/role_badge.html' with role=user_role %}
+        </div>
+        {% endif %}
+        
+        <!-- Actions -->
+        <div class="workspace-card__actions">
+            <a href="{% url 'workspace_select' workspace.id %}" class="btn btn-sm btn-primary btn-block">
+                <i class="bi bi-arrow-right"></i> Open Workspace
+            </a>
+            {% if user_is_admin %}
+            <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="btn btn-sm btn-outline-secondary mt-2 w-100">
+                <i class="bi bi-gear"></i> Settings
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.workspace-card {
+    height: 100%;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.workspace-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.workspace-card__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.workspace-card__icon {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.workspace-card__title h5 {
+    margin: 0;
+    font-weight: 700;
+}
+
+.workspace-card__description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    text-align: center;
+}
+
+.stat-item strong {
+    font-size: 1.3rem;
+    color: #0d6efd;
+}
+
+.stat-item small {
+    color: #6c757d;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.workspace-card__role {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.workspace-card__actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.btn-block {
+    width: 100%;
+}
+</style>

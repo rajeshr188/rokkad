@@ -18,8 +18,8 @@ class AddressAdmin(admin.TabularInline):
     list_display = [
         "area",
         "created",
-        "doorno",
-        "zipcode",
+        "door_number",
+        "zip_code",
         "last_updated",
         "street",
     ]
@@ -60,8 +60,8 @@ class ProofAdmin(admin.TabularInline):
     list_display = [
         "proof_type",
         "created",
-        "proof_no",
-        "doc",
+        "proof_number",
+        "document",
         "last_updated",
     ]
     readonly_fields = [
@@ -94,7 +94,7 @@ class CustomerAdmin(ImportExportActionModelAdmin):
     form = CustomerAdminForm
     resource_class = CustomerResource
     inlines = [AddressAdmin, ContactAdmin, ProofAdmin, CustomerPicAdmin]
-    search_fields = ["id", "name", "relatedto", "Address"]
+    search_fields = ["id", "firstname", "lastname", "relatedto", "Address"]
     list_display = [
         "name",
         "id",

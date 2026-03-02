@@ -1,0 +1,103 @@
+{% load static %}
+{% load i18n %}
+<!-- Main Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <!-- Brand -->
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <i class="bi bi-building"></i> Rokkad
+        </a>
+        
+        <!-- Toggler for mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Navigation Items -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
+                    <!-- Workspace Switcher -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="workspaceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-briefcase"></i>
+                            {% if request.user.profile.workspace %}
+                                {{ request.user.profile.workspace.name }}
+                            {% else %}
+                                Select Workspace
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="workspaceDropdown">
+                            {% for membership in request.user.memberships.all %}
+                                <li>
+                                    <a class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}" 
+                                       href="{% url 'workspace_select' membership.company.id %}">
+                                        {{ membership.company.name }}
+                                        {% if request.user.profile.workspace.id == membership.company.id %}
+                                            <i class="bi bi-check-lg ms-2"></i>
+                                        {% endif %}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'workspace_list' %}">
+                                    <i class="bi bi-plus-circle"></i> All Workspaces
+                                </a>
+                            </li>
+                            {% if request.user.profile.workspace and request.user.profile.workspace.schema_name != 'public' %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'clear_workspace' %}">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Clear Workspace
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    
+                    <!-- User Menu -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle"></i> {{ request.user.first_name|default:request.user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="{% url 'userprofile_detail' request.user.profile.id %}"><i class="bi bi-person"></i> Profile</a></li>
+                            <li><a class="dropdown-item" href="{% url 'workspace_management' %}"><i class="bi bi-briefcase-fill"></i> Workspace Management</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <!-- Language Switcher in User Menu -->
+                            <li class="dropdown-submenu">
+                                <a class="dropdown-item dropdown-toggle" href="#"><i class="bi bi-globe"></i> Language</a>
+                                <ul class="dropdown-menu">
+                                    {% get_available_languages as LANGUAGES %}
+                                    {% get_current_language as LANGUAGE_CODE %}
+                                    {% get_language_info_list for LANGUAGES as languages %}
+                                    {% for lang in languages %}
+                                    <li>
+                                        <form method="post" action="{% url 'set_language' %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="language" value="{{ lang.code }}">
+                                            <button type="submit" class="dropdown-item {% if lang.code == LANGUAGE_CODE %}active{% endif %}" style="border: none; background: none; cursor: pointer; text-align: left; padding: 0.5rem 1rem;">
+                                                {{ lang.name_local }}
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'account_logout' %}"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'account_login' %}"><i class="bi bi-box-arrow-in-right"></i> Sign In</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'account_signup' %}"><i class="bi bi-person-plus"></i> Sign Up</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

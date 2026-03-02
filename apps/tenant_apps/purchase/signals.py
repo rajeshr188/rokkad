@@ -29,15 +29,6 @@ def reverse_journal_entry(sender, instance, **kwargs):
             instance.create_transactions()
 
 
-@receiver(post_save, sender=Payment)
-@receiver(post_save, sender=Purchase)
-def create_journal_entry(sender, instance, created, **kwargs):
-    print(" in post_save:create journal entry")
-    if created:
-        with transaction.atomic():
-            instance.create_transactions()
-
-
 @receiver(pre_save, sender=PurchaseItem)
 def reverse_stock_entry(sender, instance, **kwargs):
     print(" in pre_save:reverse stock entry")

@@ -282,3 +282,7 @@ class CompanyPreferenceModel(PerInstancePreferenceModel):
 
     class Meta:
         app_label = "orgs"
+
+
+# Import AuditLog model to make it discoverable by migrations
+from apps.orgs.audit import AuditLog  # noqa: E402, F401

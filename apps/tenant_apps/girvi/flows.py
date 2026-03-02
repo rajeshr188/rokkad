@@ -6,7 +6,7 @@ from viewflow import fsm, this
 from apps.orgs.models import Membership
 from apps.orgs.views import has_permission
 
-from .models import Loan, LoanChangeLog, LoanStatus
+from .models import BaseLoan, LoanChangeLog, LoanStatus
 
 
 def has_permission(user, permission_codename):
@@ -26,7 +26,7 @@ class LoanFlow(object):
 
     status = fsm.State(LoanStatus, default=LoanStatus.CREATED)
 
-    def __init__(self, loan: Loan, user, tenant, ip_address=None):
+    def __init__(self, loan: BaseLoan, user, tenant, ip_address=None):
         self.loan = loan
         self.user = user
         self.tenant = tenant

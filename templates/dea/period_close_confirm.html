@@ -1,0 +1,48 @@
+{% extends 'layouts/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Close Period: {{ period.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Close Accounting Period
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h6><strong>Warning:</strong> You are about to close the accounting period:</h6>
+                    <p class="mb-0">
+                        <strong>{{ period.name }}</strong><br>
+                        {{ period.start_date|date:"F j, Y" }} - {{ period.end_date|date:"F j, Y" }}
+                    </p>
+                </div>
+
+                <h6>What will happen:</h6>
+                <ul>
+                    <li>All <strong>{{ entries_count }}</strong> journal entries will be finalized</li>
+                    <li>Closing statements will be generated for <strong>{{ ledgers_count }}</strong> ledgers</li>
+                    <li>Closing statements will be generated for <strong>{{ accounts_count }}</strong> accounts</li>
+                    <li>Revenue and expense accounts will be closed to Retained Earnings</li>
+                    <li>No new entries can be posted to this period after closing</li>
+                    <li>The period status will change from OPEN to CLOSED</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Note:</strong> You can still lock the period after closing to prevent any modifications.
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    {% crispy form %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

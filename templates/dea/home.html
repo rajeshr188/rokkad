@@ -1,4 +1,4 @@
-{% extends '_base.html' %}
+{% extends 'layouts/base.html' %}
 {% load mptt_tags %}
 {% block title %}DEA{% endblock %}
 
@@ -36,13 +36,13 @@
                             <tbody>
                                 {%for i in data.ledger%}
                                 <tr>
-                                    <td>{{i.ledgerno.AccountType}}</td>
-                                    <td><a href="{% url 'dea_ledger_detail' i.ledgerno_id %}">{{ i.ledgerno.name }}</a></td>
+                                    <td>{{i.AccountType}}</td>
+                                    <td><a href="{% url 'dea_ledger_detail' i.id %}">{{ i.name }}</a></td>
                                     <td>{{i.ls_created}}</td>
                                     <td>{{i.get_ob}}</td>
                                     <td>{{i.get_dr}}</td>
                                     <td>{{i.get_cr}}</td>
-                                    <td>{{i.get_currbal}}</td>
+                                    <td>{{i.current_balance}}/{{i.get_current_balance}}</td>
                                 </tr>
                                 {%endfor%}
                             </tbody>

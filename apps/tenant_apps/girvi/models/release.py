@@ -1,13 +1,13 @@
 import logging
-import re
 
 from django.conf import settings
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, models
 from django.shortcuts import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.girvi.services import ReleaseIDGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class Release(models.Model):
     )
     # Relationship Fields
     loan = models.OneToOneField(
-        "girvi.Loan", on_delete=models.CASCADE, related_name="release"
+        "girvi.GivenLoan", on_delete=models.CASCADE, related_name="release"
     )
     objects = ReleaseManager()
 
@@ -58,69 +58,9 @@ class Release(models.Model):
     def get_update_url(self):
         return reverse("girvi:girvi_release_update", args=(self.pk,))
 
-    # fixed a critical bug here where the release_id was not being generated correctly due to empty series name not being distinguishedfrom other series name
-    # this is probably better way to generate release_id suggested by chatgpt
-    # def generate_release_id(self, series):
-    #     default_prefix = 'RL'  # Define a default prefix
-    #     delimiter = '-'  # Define a delimiter to separate the prefix and the sequence number
-
-    #     # Use the series name if it's not empty, otherwise use the default prefix
-    #     prefix = series.name if series.name else default_prefix
-
-    #     with transaction.atomic():
-    #         last_release = (
-    #             Release.objects.filter(loan__series__name=series.name)
-    #             .order_by("-release_id")
-    #             .select_for_update()
-    #             .first()
-    #         )
-    #         if last_release:
-    #             release_id = last_release.release_id
-    #             # Extract the sequence number
-    #             match = re.match(rf"^{re.escape(prefix)}{re.escape(delimiter)}(\d+)$", release_id)
-    #             if match:
-    #                 sequence_number = int(match.group(1)) + 1
-    #             else:
-    #                 sequence_number = 1
-    #         else:
-    #             sequence_number = 1
-
-    #         new_release_id = f"{prefix}{delimiter}{sequence_number:0{series.max_limit}d}"
-    #         return new_release_id
-
-    def generate_release_id(self, series):
-        print("series name", series.name)
-        with transaction.atomic():
-            last_release = (
-                Release.objects.filter(loan__series__name=series.name)
-                .order_by("-release_id")
-                .select_for_update()
-                .first()
-            )
-            print("last_release", last_release)
-            if last_release:
-                release_id = last_release.release_id
-                print("release_id", release_id)
-                # Extract the sequence number
-                match = re.match(rf"^{re.escape(series.name)}(\d+)$", release_id)
-                print("match", match)
-                if match:
-                    print("match.group(1)", match.group(1))
-                    sequence_number = int(match.group(1)) + 1
-                else:
-                    print("else")
-                    sequence_number = 1
-            else:
-                print("no last release")
-                sequence_number = 1
-
-            new_release_id = f"{series.name}{sequence_number:0{series.max_limit}d}"
-            print("new_release_id", new_release_id)
-            return new_release_id
-
     def save(self, *args, **kwargs):
         if not self.pk and not self.release_id:
-            self.release_id = self.generate_release_id(series=self.loan.series)
+            self.release_id = ReleaseIDGenerator.generate(self.loan.series)
         super().save(*args, **kwargs)
         # Transition the loan status to "delivered" after saving the release
         try:

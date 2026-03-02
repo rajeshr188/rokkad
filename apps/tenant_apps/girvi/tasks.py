@@ -12,14 +12,16 @@ logger = get_task_logger(__name__)
 from django_tables2.export.export import TableExport
 
 from .filters import LoanFilter
+from .models import GivenLoan
+from .tables import LoanTable
 
 
 @shared_task
 def export_table(export_format, query_params):
     filter = LoanFilter(
         query_params,
-        queryset=Loan.objects.order_by("-id")
-        .with_details()
+        queryset=GivenLoan.objects.order_by("-id")
+        .for_table_display()
         .prefetch_related("notifications", "loanitems"),
     )
     table = LoanTable(filter.qs)
@@ -30,7 +32,7 @@ def export_table(export_format, query_params):
             "selection",
             "notified",
             "months_since_created",
-            "current_value",
+            "total_current_value",
             "total_due",
             "total_interest",
         ),

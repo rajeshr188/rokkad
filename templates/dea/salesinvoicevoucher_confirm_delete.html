@@ -1,0 +1,58 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Delete Sales Invoice{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Warning!</strong> This action cannot be undone. Are you sure you want to delete this sales invoice?
+                    </div>
+
+                    <h5>Invoice Details:</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="30%">Invoice Number:</th>
+                            <td><strong>{{ object.invoice_number }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Customer:</th>
+                            <td>{{ object.customer }}</td>
+                        </tr>
+                        <tr>
+                            <th>Invoice Date:</th>
+                            <td>{{ object.invoice_date|date:"d M Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total Amount:</th>
+                            <td><strong class="text-danger">₹{{ object.total_amount|floatformat:2 }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Description:</th>
+                            <td>{{ object.description }}</td>
+                        </tr>
+                    </table>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'dea_sales_invoice_detail' object.pk %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Yes, Delete
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

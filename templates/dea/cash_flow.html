@@ -1,0 +1,68 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <h5 class="card-title">Cash Flow Statement</h5>
+        <small class="text-muted">Period: {{ from_date|default:'All time' }} to {{ to_date|default:'Present' }}</small>
+    </div>
+    <div class="card-body">
+        <!-- Opening Balance -->
+        <div class="row mx-2">
+            <div class="col"><strong>Opening Cash Balance</strong></div>
+            <div class="col text-end">{{ statement.opening_balance }}</div>
+        </div>
+
+        <!-- Operating Activities -->
+        <h6 class="border-bottom mt-4">Operating Activities</h6>
+        {% for entry in statement.operating.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.description }}</div>
+            <div class="col text-end">{{ entry.amount }}</div>
+        </div>
+        {% endfor %}
+        <div class="row border-top mx-2">
+            <div class="col"><em>Net Cash from Operations</em></div>
+            <div class="col text-end">{{ statement.operating.total }}</div>
+        </div>
+
+        <!-- Investing Activities -->
+        <h6 class="border-bottom mt-4">Investing Activities</h6>
+        {% for entry in statement.investing.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.description }}</div>
+            <div class="col text-end">{{ entry.amount }}</div>
+        </div>
+        {% endfor %}
+        <div class="row border-top mx-2">
+            <div class="col"><em>Net Cash from Investing</em></div>
+            <div class="col text-end">{{ statement.investing.total }}</div>
+        </div>
+
+        <!-- Financing Activities -->
+        <h6 class="border-bottom mt-4">Financing Activities</h6>
+        {% for entry in statement.financing.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.description }}</div>
+            <div class="col text-end">{{ entry.amount }}</div>
+        </div>
+        {% endfor %}
+        <div class="row border-top mx-2">
+            <div class="col"><em>Net Cash from Financing</em></div>
+            <div class="col text-end">{{ statement.financing.total }}</div>
+        </div>
+
+        <!-- Net Change and Closing Balance -->
+        <div class="row border-top border-dark mx-2 mt-4">
+            <div class="col"><strong>Net Change in Cash</strong></div>
+            <div class="col text-end {% if statement.net_change.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                <strong>{{ statement.net_change }}</strong>
+            </div>
+        </div>
+        <div class="row mx-2">
+            <div class="col"><strong>Closing Cash Balance</strong></div>
+            <div class="col text-end"><strong>{{ statement.closing_balance }}</strong></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

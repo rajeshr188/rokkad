@@ -1,4 +1,4 @@
-{% extends "_base.html" %}
+{% extends 'layouts/base.html' %}
 {% load static %}
 {% load l10n %}
 {% block content %}
@@ -8,7 +8,7 @@
     <div class="btn-group">
       <!-- List Button -->
       <button class="btn btn-outline-primary" hx-get="{% url 'girvi:girvi_loan_list' %}"
-        hx-trigger="click,loanDeleted from:body" hx-vals='{"use_block":"content"}' hx-target="#content"
+        hx-trigger="click,loanDeleted from:body"  hx-target="#content"
         hx-swap="innerHTML transition:true" hx-push-url="true">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list"
           viewBox="0 0 16 16">
@@ -146,7 +146,7 @@
      <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb" >
        <ol class="breadcrumb">
          <li><strong>Status: </strong></li>
-         {% for transition in change_log %}
+         {% for transition in possible_transitions %}
          <li class="breadcrumb-item active" aria-current="page">
            <a href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
              {{ transition|capfirst }}

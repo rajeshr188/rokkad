@@ -307,9 +307,6 @@ class Stock(models.Model):
             return new_lot
         raise Exception("Unique lots cant be split")
 
-    def get_age(self):
-        return (timezone.now() - self.created).days
-
 
 class Movement(models.Model):
 

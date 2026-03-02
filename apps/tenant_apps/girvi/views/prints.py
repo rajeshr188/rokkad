@@ -30,7 +30,7 @@ from apps.tenant_apps.utils.loan_pdf import (
 )
 
 from ..forms import LoanSelectionForm
-from ..models import Loan
+from ..models import GivenLoan
 
 
 def print_labels(request):
@@ -44,12 +44,12 @@ def print_labels(request):
         print(request.GET)
         filter = LoanFilter(
             request.GET,
-            queryset=Loan.objects.unreleased()
-            .select_related("customer", "release")
+            queryset=GivenLoan.objects.filter(release__isnull=True)
+            .select_related("borrower")
             .prefetch_related("notifications", "loanitems"),
         )
 
-        selected_loans = filter.qs.order_by("customer")
+        selected_loans = filter.qs.order_by("borrower")
         print(f"selected loans: {selected_loans.count()}")
     else:
         print("partially selected")
@@ -57,7 +57,9 @@ def print_labels(request):
         selection = request.POST.getlist("selection")
 
         selected_loans = (
-            Loan.objects.unreleased().filter(id__in=selection).order_by("customer")
+            GivenLoan.objects.filter(release__isnull=True)
+            .filter(id__in=selection)
+            .order_by("borrower")
         )
 
     if selected_loans:
@@ -100,12 +102,12 @@ def notify_print(request):
         print(request.GET)
         filter = LoanFilter(
             request.GET,
-            queryset=Loan.objects.unreleased()
-            .select_related("customer", "release")
+            queryset=GivenLoan.objects.filter(release__isnull=True)
+            .select_related("borrower")
             .prefetch_related("notifications", "loanitems"),
         )
 
-        selected_loans = filter.qs.order_by("customer")
+        selected_loans = filter.qs.order_by("borrower")
         print(f"selected loans: {selected_loans.count()}")
     else:
         print("partially selected")
@@ -113,7 +115,9 @@ def notify_print(request):
         selection = request.POST.getlist("selection")
 
         selected_loans = (
-            Loan.objects.unreleased().filter(id__in=selection).order_by("customer")
+            GivenLoan.objects.filter(release__isnull=True)
+            .filter(id__in=selection)
+            .order_by("borrower")
         )
 
     if selected_loans:
@@ -121,7 +125,7 @@ def notify_print(request):
         ng = NoticeGroup.objects.create(name=datetime.now())
 
         # Get a queryset of customers with selected loans
-        customers = Customer.objects.filter(loan__in=selected_loans).distinct()
+        customers = Customer.objects.filter(givenloan__in=selected_loans).distinct()
 
         # Create a list of Notification objects to create
         notifications_to_create = []
@@ -140,7 +144,7 @@ def notify_print(request):
 
         # Add loans to the notifications
         for notification in notifications:
-            loans = selected_loans.filter(customer=notification.customer)
+            loans = selected_loans.filter(borrower=notification.customer)
             notification.loans.set(loans)
             notification.save()
         return redirect(ng.get_absolute_url())
@@ -153,7 +157,7 @@ import base64
 
 @login_required
 def print_loan(request, pk=None):
-    loan = get_object_or_404(Loan, pk=pk)
+    loan = get_object_or_404(GivenLoan, pk=pk)
     template = LoanTemplate.objects.get_default()
     if not template:
         messages.warning(
@@ -425,7 +429,7 @@ class PageNumCanvas(canvas.Canvas):
 
 @login_required
 def generate_unreleased_pdf(request):
-    numbers = Loan.objects.unreleased().values_list("loan_id", flat=True)
+    numbers = GivenLoan.objects.unreleased().values_list("loan_id", flat=True)
 
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = 'attachment; filename="numbers_report.pdf"'
@@ -453,7 +457,7 @@ def generate_unreleased_pdf(request):
 
 from openpyxl import Workbook
 
-from ..models import Series
+from ..models import GivenLoan, Series
 from ..resources import LedgerResource
 
 
@@ -471,7 +475,7 @@ def export_loans_to_excel(request):
         ws = wb.create_sheet(title=series.name)
 
         # Get loans for the current series
-        loans = Loan.objects.filter(series=series).with_details()
+        loans = GivenLoan.objects.filter(series=series).for_table_display()
 
         # Use LoanResource to export data
         loan_resource = LedgerResource()

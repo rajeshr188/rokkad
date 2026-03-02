@@ -1,3 +1,5 @@
+import http
+import stat
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
@@ -7,7 +9,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 from django_tables2 import RequestConfig
 from django_tables2.export.export import TableExport
-
+from django.shortcuts import render
 from ...utils.htmx_utils import for_htmx, make_get_request
 from ..filters import CustomerFilter
 from ..forms import CustomerForm, CustomerMergeForm
@@ -16,7 +18,6 @@ from ..tables import CustomerTable
 
 
 @login_required
-@for_htmx(use_block_from_params=True)
 def customer_list(request):
     context = {}
     f = CustomerFilter(
@@ -38,25 +39,32 @@ def customer_list(request):
         return exporter.response(f"table.{export_format}")
     context["filter"] = f
     context["table"] = table
+    if request.htmx:
+        print("htmx request")
+        return render(
+            request, "contact/customer_list_improved.html#customer-content", context
+        )
+    return render(request, "contact/customer_list_improved.html", context)
 
-    return TemplateResponse(request, "contact/customer_list.html", context)
 
-
-@for_htmx(use_block="content")
 @login_required
 def customer_detail(request, pk=None):
     context = {}
     cust = get_object_or_404(Customer, pk=pk)
     context["object"] = cust
     context["customer"] = cust
-    loans = cust.loan_set.unreleased().with_details(request.grate, request.srate)
+    loans = cust.loans_received.unreleased().for_table_display()
     context["loans"] = loans
     context["total_loans"] = loans.count()
     context["total_amount"] = sum([i.loan_amount for i in loans])
-    worth = [i.worth for i in loans]
+    worth = [(i.total_current_value or 0) - (i.total_due or 0) for i in loans]
     context["worth"] = sum(worth)
 
-    return TemplateResponse(request, "contact/customer_detail.html", context)
+    if request.htmx:
+        return render(
+            request, "contact/customer_detail_improved.html#customer-detail", context
+        )
+    return render(request, "contact/customer_detail_improved.html", context)
 
 
 @login_required
@@ -66,12 +74,12 @@ def customer_save(request, pk=None):
         form = CustomerForm(
             request.POST or None, instance=customer, customer_id=customer.id
         )
-        verb = "updated"
+
         success_message = f"Customer {customer.name} Info Updated"
     else:
         customer = None
         form = CustomerForm(request.POST or None, instance=customer)
-        verb = "created"
+
         success_message = "Customer created"
 
     if request.method == "POST":
@@ -82,16 +90,11 @@ def customer_save(request, pk=None):
             # action.send(request.user, action_object=f, verb=verb)
 
             messages.success(request, success_message)
-            if "add" in request.POST:
-                response = TemplateResponse(
-                    request,
-                    "contact/customer_detail.html",
-                    {"customer": f, "object": f},
-                )
-                response["HX-Trigger"] = "listChanged"  # Trigger client-side event
-                return response
-            else:
-                return customer_detail(make_get_request(request), f.id)
+
+            response = HttpResponse(status=200)
+            response["HX-Trigger"] = "listChanged"  # Trigger client-side event
+            response["HX-Redirect"] = reverse("contact_customer_detail", args=[f.id])
+            return response
 
         else:
             messages.error(request, "Error saving customer")

@@ -57,7 +57,7 @@ def relationship_detail(request, relationship_id):
 
 def relationship_list(request, from_customer_id):
     from_customer = get_object_or_404(Customer, pk=from_customer_id)
-    relationships = from_customer.relationships.all()
+    relationships = from_customer.relationships_created.all()
     return render(
         request,
         "contact/relationship_list.html",

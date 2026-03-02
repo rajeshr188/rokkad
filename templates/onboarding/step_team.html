@@ -1,0 +1,40 @@
+{% extends "onboarding/base_onboarding.html" %}
+{% load crispy_forms_tags %}
+
+{% block onboarding_content %}
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="mb-4">
+        <p class="lead">Invite your team to collaborate.</p>
+        <div class="alert alert-secondary">
+            <i class="bi bi-people"></i>
+            Team members can help you manage {{ company.name }}. You can always add more later!
+        </div>
+    </div>
+
+    {{ form|crispy }}
+
+    <div class="row g-2 mt-4">
+        <div class="col">
+            <button type="submit" name="skip" class="btn btn-outline-secondary btn-lg w-100">
+                Skip for Now
+            </button>
+        </div>
+        <div class="col">
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+                Send Invites <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+</form>
+
+<div class="mt-4">
+    <h6>What team members can do:</h6>
+    <ul class="small text-muted">
+        <li>View and edit data based on their role</li>
+        <li>Create reports and invoices</li>
+        <li>Collaborate on tasks</li>
+    </ul>
+</div>
+{% endblock %}

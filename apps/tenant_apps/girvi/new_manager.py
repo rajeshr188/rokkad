@@ -1,3 +1,12 @@
+"""
+⚠️  DEPRECATED: This module is archived. Use managers_refactored.py instead.
+
+Historical reference only. Experimental manager - do not use.
+Remove by: September 30, 2026
+
+❌ DO NOT USE for new code. Use GivenLoanManager/TakenLoanManager instead.
+"""
+
 from django.core.cache import cache
 from django.db import models
 from django.db.models import (

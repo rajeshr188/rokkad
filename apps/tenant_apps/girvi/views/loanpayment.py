@@ -10,7 +10,7 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import LoanPaymentFilter
 from ..forms import LoanPaymentForm
-from ..models import Loan, LoanPayment
+from ..models import GivenLoan, LoanPayment
 
 
 @login_required
@@ -44,7 +44,7 @@ def loan_payment_create_view(request, pk=None):
     else:
         initial = {}
         if pk:
-            loan = Loan.objects.get(id=pk)
+            loan = GivenLoan.objects.get(id=pk)
             initial = {"loan": loan, "payment_date": timezone.now()}
         form = LoanPaymentForm(initial=initial)
     return TemplateResponse(

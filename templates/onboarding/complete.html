@@ -1,0 +1,77 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Welcome! - Onboarding Complete{% endblock %}
+
+{% block content %}
+<div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light">
+    <div class="row w-100">
+        <div class="col-lg-6 col-xl-5 mx-auto">
+            <div class="card shadow text-center">
+                <div class="card-body p-5">
+                    <!-- Success Icon -->
+                    <div class="mb-4">
+                        <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                            <i class="bi bi-check-circle" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+
+                    <h2 class="card-title mb-3">🎉 You're All Set!</h2>
+                    <p class="lead text-muted mb-4">
+                        Your workspace <strong>{{ company.name }}</strong> is ready to go.
+                    </p>
+
+                    <div class="alert alert-success text-start mb-4">
+                        <h6><i class="bi bi-check-circle-fill"></i> What's Next?</h6>
+                        <ul class="mb-0 small">
+                            <li>Explore your dashboard</li>
+                            <li>Start creating data</li>
+                            {% if not progress.team_setup_completed %}
+                            <li>Invite team members from settings</li>
+                            {% endif %}
+                            <li>Customize your preferences</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                            Go to Dashboard <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="mt-4">
+                        <p class="small text-muted mb-2">Need help getting started?</p>
+                        <a href="#" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-book"></i> View Documentation
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-question-circle"></i> Get Support
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Tips -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <h6 class="card-title">💡 Quick Tips</h6>
+                    <ul class="small mb-0">
+                        <li>Use the sidebar to navigate between modules</li>
+                        <li>Click your profile icon for account settings</li>
+                        <li>Access help anytime from the menu</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bi {
+        font-size: 1.2rem;
+    }
+    .bi-check-circle {
+        font-size: 3rem !important;
+    }
+</style>
+{% endblock %}

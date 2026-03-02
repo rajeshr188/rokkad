@@ -19,6 +19,11 @@ def noop_reverse(apps, schema_editor):
 
 
 def insertData(apps, schema_editor):
+    """
+    Insert initial data for DEA app.
+    Note: Ledger codes are manually assigned here for initial setup.
+    For new ledgers created after migration, codes will be auto-generated.
+    """
     entity = apps.get_model("dea", "EntityType")
     entity.objects.bulk_create([entity(name="Person"), entity(name="Organisation")])
 
@@ -54,14 +59,17 @@ def insertData(apps, schema_editor):
         ]
     )
 
+    # Updated AccountType creation with code_prefix
     acc_type = apps.get_model("dea", "AccountType")
     acc_type.objects.bulk_create(
         [
-            acc_type(AccountType="Asset", description="Asset"),
-            acc_type(AccountType="Liability", description="Liabilities"),
-            acc_type(AccountType="Equity", description="Equity"),
-            acc_type(AccountType="Income", description="Income"),
-            acc_type(AccountType="Expense", description="Expense"),
+            acc_type(AccountType="Asset", description="Asset", code_prefix="1"),
+            acc_type(
+                AccountType="Liability", description="Liabilities", code_prefix="2"
+            ),
+            acc_type(AccountType="Equity", description="Equity", code_prefix="3"),
+            acc_type(AccountType="Income", description="Income", code_prefix="4"),
+            acc_type(AccountType="Expense", description="Expense", code_prefix="5"),
         ]
     )
 
@@ -73,61 +81,39 @@ def insertData(apps, schema_editor):
         ]
     )
 
+    # Updated ledger creation with new fields
     ledger = apps.get_model("dea", "Ledger")
+
+    # Current Assets (Parent)
     ca = ledger.objects.create(
-        AccountType_id=1, name="Current Assets", lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=1,
+        name="Current Assets",
+        code="1000",
+        sort_order=10,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
+
+    # Fixed Assets (Parent)
     ledger.objects.create(
-        AccountType_id=1, name="Fixed Assets", lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=1,
+        name="Fixed Assets",
+        code="1500",
+        sort_order=20,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
+
+    # Cash In Hand (Parent under Current Assets)
     cih = ledger.objects.create(
         AccountType_id=1,
         name="Cash In Hand",
-        parent=ca,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=1, name="Cash", parent=cih, lft=0, rght=0, level=0, tree_id=0
-    )
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Loans & Advances",
-        parent=ca,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Sundry Debtors",
-        parent=ca,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    inv = ledger.objects.create(
-        AccountType_id=1, name="Inventory", parent=ca, lft=0, rght=0, level=0, tree_id=0
-    )
-    ledger.objects.create(
-        AccountType_id=1, name="GST INV", parent=inv, lft=0, rght=0, level=0, tree_id=0
-    )
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Non-GST INV",
-        parent=inv,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Interest Receivables",
+        code="1100",
+        sort_order=10,
         parent=ca,
         lft=0,
         rght=0,
@@ -135,51 +121,202 @@ def insertData(apps, schema_editor):
         tree_id=0,
     )
 
-    cl = ledger.objects.create(
-        AccountType_id=2, name="Current Liabilities", lft=0, rght=0, level=0, tree_id=0
-    )
+    # Cash (Child of Cash In Hand)
     ledger.objects.create(
-        AccountType_id=2, name="Loans", parent=cl, lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=1,
+        name="Cash",
+        code="1101",
+        sort_order=10,
+        parent=cih,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
+
+    # Loans & Advances
+    ledger.objects.create(
+        AccountType_id=1,
+        name="Loans & Advances",
+        code="1200",
+        sort_order=20,
+        parent=ca,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+
+    # Sundry Debtors
+    ledger.objects.create(
+        AccountType_id=1,
+        name="Sundry Debtors",
+        code="1300",
+        sort_order=30,
+        parent=ca,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+
+    # Inventory (Parent)
+    inv = ledger.objects.create(
+        AccountType_id=1,
+        name="Inventory",
+        code="1400",
+        sort_order=40,
+        parent=ca,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+
+    # GST Inventory
+    ledger.objects.create(
+        AccountType_id=1,
+        name="GST INV",
+        code="1401",
+        sort_order=10,
+        parent=inv,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+
+    # Non-GST Inventory
+    ledger.objects.create(
+        AccountType_id=1,
+        name="Non-GST INV",
+        code="1402",
+        sort_order=20,
+        parent=inv,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+
+    # Interest Receivables
+    ledger.objects.create(
+        AccountType_id=1,
+        name="Interest Receivables",
+        code="1250",
+        sort_order=25,
+        parent=ca,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+
+    # LIABILITIES
+    cl = ledger.objects.create(
+        AccountType_id=2,
+        name="Current Liabilities",
+        code="2000",
+        sort_order=10,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+
+    # Loans
+    ledger.objects.create(
+        AccountType_id=2,
+        name="Loans",
+        code="2100",
+        sort_order=10,
+        parent=cl,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+
+    # Interest Payable
     ledger.objects.create(
         AccountType_id=2,
         name="Interest Payable",
+        code="2200",
+        sort_order=20,
         parent=cl,
         lft=0,
         rght=0,
         level=0,
         tree_id=0,
     )
+
+    # Sundry Creditors
     ledger.objects.create(
         AccountType_id=2,
         name="Sundry Creditors",
+        code="2300",
+        sort_order=30,
         parent=cl,
         lft=0,
         rght=0,
         level=0,
         tree_id=0,
     )
+
+    # Duties & Taxes (Parent)
     dt = ledger.objects.create(
         AccountType_id=2,
         name="Duties & Taxes",
+        code="2400",
+        sort_order=40,
         parent=cl,
         lft=0,
         rght=0,
         level=0,
         tree_id=0,
     )
+
+    # GST Structure
     cgst = ledger.objects.create(
-        AccountType_id=2, name="CGST", parent=dt, lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=2,
+        name="CGST",
+        code="2410",
+        sort_order=10,
+        parent=dt,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
     sgst = ledger.objects.create(
-        AccountType_id=2, name="SGST", parent=dt, lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=2,
+        name="SGST",
+        code="2420",
+        sort_order=20,
+        parent=dt,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
     igst = ledger.objects.create(
-        AccountType_id=2, name="IGST", parent=dt, lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=2,
+        name="IGST",
+        code="2430",
+        sort_order=30,
+        parent=dt,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
+
+    # Input/Output GST accounts
     ledger.objects.create(
         AccountType_id=2,
         name="Input CGST",
+        code="2411",
+        sort_order=10,
         parent=cgst,
         lft=0,
         rght=0,
@@ -189,6 +326,8 @@ def insertData(apps, schema_editor):
     ledger.objects.create(
         AccountType_id=2,
         name="Output CGST",
+        code="2412",
+        sort_order=20,
         parent=cgst,
         lft=0,
         rght=0,
@@ -198,6 +337,8 @@ def insertData(apps, schema_editor):
     ledger.objects.create(
         AccountType_id=2,
         name="Input SGST",
+        code="2421",
+        sort_order=10,
         parent=sgst,
         lft=0,
         rght=0,
@@ -207,6 +348,8 @@ def insertData(apps, schema_editor):
     ledger.objects.create(
         AccountType_id=2,
         name="Output SGST",
+        code="2422",
+        sort_order=20,
         parent=sgst,
         lft=0,
         rght=0,
@@ -216,6 +359,8 @@ def insertData(apps, schema_editor):
     ledger.objects.create(
         AccountType_id=2,
         name="Input IGST",
+        code="2431",
+        sort_order=10,
         parent=igst,
         lft=0,
         rght=0,
@@ -225,27 +370,45 @@ def insertData(apps, schema_editor):
     ledger.objects.create(
         AccountType_id=2,
         name="Output IGST",
+        code="2432",
+        sort_order=20,
         parent=igst,
         lft=0,
         rght=0,
         level=0,
         tree_id=0,
     )
+
+    # Tax Liability
     ledger.objects.create(
         AccountType_id=2,
         name="Tax Liability",
+        code="2500",
+        sort_order=50,
         parent=cl,
         lft=0,
         rght=0,
         level=0,
         tree_id=0,
     )
+
+    # Capital Accounts
     ledger.objects.create(
-        AccountType_id=2, name="Capital", parent=cl, lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=2,
+        name="Capital",
+        code="2600",
+        sort_order=60,
+        parent=cl,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
     ledger.objects.create(
         AccountType_id=2,
         name="Capital A/c",
+        code="2610",
+        sort_order=10,
         parent=cl,
         lft=0,
         rght=0,
@@ -253,25 +416,70 @@ def insertData(apps, schema_editor):
         tree_id=0,
     )
 
+    # INCOME ACCOUNTS
     ledger.objects.create(
-        AccountType_id=4, name="Interest Received", lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=4,
+        name="Interest Received",
+        code="4100",
+        sort_order=10,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
     ledger.objects.create(
-        AccountType_id=4, name="Sales", lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=4,
+        name="Sales",
+        code="4200",
+        sort_order=20,
+        is_operating_revenue=True,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
 
+    # EXPENSE ACCOUNTS
     ledger.objects.create(
-        AccountType_id=5, name="Interest Paid", lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=5,
+        name="Interest Paid",
+        code="5100",
+        sort_order=10,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
     ledger.objects.create(
-        AccountType_id=5, name="Purchase", lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=5,
+        name="Purchase",
+        code="5200",
+        sort_order=20,
+        is_operating_expense=True,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
+
+    # COGS Structure
     cogs = ledger.objects.create(
-        AccountType_id=5, name="COGS", lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=5,
+        name="COGS",
+        code="5300",
+        sort_order=30,
+        is_direct_expense=True,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
     ledger.objects.create(
         AccountType_id=5,
         name="GST COGS",
+        code="5301",
+        sort_order=10,
+        is_direct_expense=True,
         parent=cogs,
         lft=0,
         rght=0,
@@ -281,14 +489,26 @@ def insertData(apps, schema_editor):
     ledger.objects.create(
         AccountType_id=5,
         name="Non-GST COGS",
+        code="5302",
+        sort_order=20,
+        is_direct_expense=True,
         parent=cogs,
         lft=0,
         rght=0,
         level=0,
         tree_id=0,
     )
+
+    # Trading Account
     ledger.objects.create(
-        AccountType_id=4, name="Trading", lft=0, rght=0, level=0, tree_id=0
+        AccountType_id=4,
+        name="Trading",
+        code="4300",
+        sort_order=30,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
     )
 
 

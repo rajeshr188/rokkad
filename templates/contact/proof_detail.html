@@ -1,0 +1,24 @@
+<li class="list-group-item">
+  <div class="mb-2">
+    <strong>{{ i.get_proof_type_display }}</strong>
+    {% if i.is_verified %}
+      <span class="badge bg-success ms-2">{% trans "Verified" %}</span>
+    {% else %}
+      <span class="badge bg-warning ms-2">{% trans "Unverified" %}</span>
+    {% endif %}
+  </div>
+  <small class="text-muted d-block mb-2">
+    {{ i.proof_number }}
+  </small>
+  {% if i.document %}
+  <div class="mb-2">
+    <a href="{{ i.document.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+      <i class="bi bi-download me-1"></i>{% trans "Download" %}
+    </a>
+  </div>
+  {% endif %}
+  <small class="text-muted d-block">
+    {% trans "Created:" %} {{ i.created|date:"SHORT_DATE_FORMAT" }} |
+    {% trans "Updated:" %} {{ i.last_updated|date:"SHORT_DATE_FORMAT" }}
+  </small>
+</li>

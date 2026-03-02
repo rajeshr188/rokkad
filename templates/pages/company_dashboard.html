@@ -1,4 +1,4 @@
-{% extends '_base.html' %}
+{% extends 'layouts/base.html' %}
 {% load static slick_reporting_tags i18n humanize%}
 {% block title %}Company Dashboard{% endblock title %}
 
@@ -9,9 +9,16 @@
   </div>
   <div class="ms-md-auto py-2 py-md-0">
     <a href="#" class="btn btn-label-info btn-round me-2">Manage</a>
-    <a hx-get="{% url 'contact_customer_create'%}" hx-target="#content" class="btn btn-primary btn-round">Add Customer</a>
-    <a class="btn btn-success btn-round" hx-get="{% url 'contact_customer_create' %}" hx-push-url="true"
-      hx-target="#content" hx-swap="innerHTML transition:true" hx-trigger="click, keyup[shiftKey&&key=='N'] from:body"
+    <a hx-get="{% url 'contact_customer_create'%}" 
+          hx-target="#modal-content"
+          hx-trigger="click, keyup[shiftKey&&key=='N'] from:body"
+          _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()"
+             class="btn btn-primary btn-round">Add Customer</a>
+    <a class="btn btn-success btn-round" 
+            hx-get="{% url 'contact_customer_create' %}" 
+            hx-target="#modal-content"
+            _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()"
+            hx-trigger="click, keyup[shiftKey&&key=='N'] from:body"
       role="button">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square"
         viewBox="0 0 16 16">
@@ -58,7 +65,7 @@
 <div class="row">
   <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-stats card-round" hx-get="{% url 'contact_customer_list' %}" hx-target="#content"
-      hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-trigger="click" hx-push-url="true"
+        hx-trigger="click" hx-push-url="true"
       style="cursor:pointer;">
       <div class="card-body">
         <div class="row align-items-center">
@@ -81,7 +88,7 @@
   </div>
   <div class="col-sm-6 col-md-3 g-2 mb-2">
     <div class="card card-stats card-round" href="" hx-get="{% url 'girvi:girvi_loan_list' %}" hx-target="#content"
-      hx-swap="innerHTML" hx-trigger="click" style="cursor: pointer;" hx-vals='{"use_block": "content"}'
+      hx-swap="innerHTML" hx-trigger="click" style="cursor: pointer;" 
       hx-push-url="true">
       <div class="card-body">
         <div class="row align-items-center">

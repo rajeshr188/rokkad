@@ -15,7 +15,7 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import ReleaseFilter
 from ..forms import BulkReleaseForm, ReleaseForm, ReleaseFormSet
-from ..models import Loan, Release
+from ..models import GivenLoan, Release
 from ..tables import ReleaseTable
 
 
@@ -57,13 +57,13 @@ def release_create(request, pk=None):
     else:
         loan = None
         if pk:
-            loan = get_object_or_404(Loan, pk=pk)
+            loan = get_object_or_404(GivenLoan, pk=pk)
             form = ReleaseForm(
                 initial={
                     # "release_id": increlid,
                     "loan": loan,
                     "release_date": timezone.now(),
-                    "released_by": loan.customer,
+                    "released_by": loan.borrower,
                 }
             )
         else:
@@ -180,8 +180,8 @@ def bulk_release(request):
                 {
                     "loan": loan,
                     "release_date": date,
-                    "released_by": loan.customer,
-                    "release_amount": loan.due(),
+                    "released_by": loan.borrower,
+                    "release_amount": loan.total_due,
                 }
                 for loan in loans
             ]
@@ -192,9 +192,9 @@ def bulk_release(request):
                 queryset=Release.objects.none(), initial=formset_initial_data
             )
 
-            total_principal = sum(loan.loan_amount for loan in loans)
-            total_interest = sum(loan.interestdue() for loan in loans)
-            total_amount = sum(loan.due() for loan in loans)
+            total_principal = sum(loan.get_loan_amount for loan in loans)
+            total_interest = sum(loan.interest_due() for loan in loans)
+            total_amount = sum(loan.total_due for loan in loans)
             summary = {
                 "total_loans": len(loans),
                 "total_principal": total_principal,
@@ -214,7 +214,9 @@ def bulk_release(request):
     # if a GET (or any other method) we'll create a blank form
     else:
         selected_loans = request.GET.getlist("selection", "")
-        qs = Loan.unreleased.filter(id__in=selected_loans).values_list("id", flat=True)
+        qs = GivenLoan.objects.filter(
+            release__isnull=True, id__in=selected_loans
+        ).values_list("id", flat=True)
         form = BulkReleaseForm(
             initial={"loans": qs, "date": timezone.now().strftime("%Y-%m-%dT%H:%M")}
         )
@@ -242,5 +244,5 @@ def get_release_details(request):
     loan_ids = request.POST.getlist("loans")  # list of loan ids
     date = request.POST.get("date")
 
-    loans = Loan.objects.filter(id__in=loan_ids).with_details(None, None)
+    loans = GivenLoan.objects.filter(id__in=loan_ids)
     return render(request, "girvi/release/bulk_release_details.html", {"loans": loans})

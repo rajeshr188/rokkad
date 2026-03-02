@@ -1,0 +1,175 @@
+{% comment %}
+Main navigation menu component.
+Renders filtered navigation based on user permissions.
+
+Context:
+  - navigation: Filtered navigation structure from context processor
+  - current_path: Current page/workspace name
+{% endcomment %}
+
+<nav class="sidebar-nav">
+  {% for section, items in navigation.items %}
+    {% if items %}
+      <div class="nav-section" data-section="{{ section }}">
+        
+        {% for item in items %}
+          {% if item.is_header %}
+            <div class="nav-header">{{ item.label }}</div>
+          {% elif item.submenu %}
+            <div class="nav-group">
+              <button class="nav-item has-submenu" data-submenu="{{ item.id }}">
+                <span class="nav-icon">
+                  <i class="bi bi-{{ item.icon }}"></i>
+                </span>
+                <span class="nav-label">{{ item.label }}</span>
+                <i class="bi bi-chevron-right nav-chevron"></i>
+              </button>
+              
+              <div class="nav-submenu" id="submenu-{{ item.id }}">
+                {% for subitem in item.submenu %}
+                  <a href="{{ subitem.url }}" class="nav-sub-item">
+                    <span class="nav-sub-label">{{ subitem.label }}</span>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <a href="{{ item.url }}" class="nav-item">
+              <span class="nav-icon">
+                <i class="bi bi-{{ item.icon }}"></i>
+              </span>
+              <span class="nav-label">{{ item.label }}</span>
+            </a>
+          {% endif %}
+        {% endfor %}
+        
+      </div>
+    {% endif %}
+  {% endfor %}
+</nav>
+
+<style>
+.sidebar-nav {
+  padding: 0.5rem 0;
+}
+
+.nav-section {
+  margin-bottom: 1rem;
+}
+
+.nav-header {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6c757d;
+  letter-spacing: 0.5px;
+}
+
+.nav-item,
+.nav-group > .nav-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: inherent;
+}
+
+.nav-item.active {
+  background-color: rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+}
+
+.nav-icon {
+  min-width: 1.5rem;
+  margin-right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-label {
+  flex: 1;
+}
+
+.nav-group > .nav-item {
+  cursor: pointer;
+  user-select: none;
+}
+
+.nav-group > .nav-item.has-submenu {
+  position: relative;
+}
+
+.nav-chevron {
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+  margin-left: auto;
+}
+
+.nav-group.active > .nav-item .nav-chevron {
+  transform: rotate(90deg);
+}
+
+.nav-submenu {
+  background-color: rgba(0, 0, 0, 0.02);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+
+.nav-group.active > .nav-submenu {
+  max-height: 500px;
+}
+
+.nav-sub-item {
+  display: block;
+  padding: 0.5rem 1rem 0.5rem 3.5rem;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.nav-sub-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding-left: 3.75rem;
+}
+
+.nav-sub-item.active {
+  background-color: rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+  border-left: 3px solid currentColor;
+  padding-left: 3.47rem;
+}
+</style>
+
+<script>
+document.querySelectorAll('.nav-group > .nav-item').forEach(item => {
+  item.addEventListener('click', function(e) {
+    e.preventDefault();
+    const group = this.closest('.nav-group');
+    group.classList.toggle('active');
+  });
+});
+
+// Highlight active nav items based on current URL
+document.querySelectorAll('.nav-item[href], .nav-sub-item[href]').forEach(item => {
+  if (item.href === window.location.href || 
+      item.href === window.location.pathname) {
+    item.classList.add('active');
+    
+    // Also activate parent group
+    const parent = item.closest('.nav-group');
+    if (parent) {
+      parent.classList.add('active');
+    }
+  }
+});
+</script>

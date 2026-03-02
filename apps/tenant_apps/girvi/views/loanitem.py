@@ -11,7 +11,12 @@ from django.urls import reverse
 from django_tables2 import RequestConfig
 
 from apps.tenant_apps.girvi.forms import LoanItemForm, RepledgedLoanItemForm
-from apps.tenant_apps.girvi.models.loan import Loan, RepledgedLoanItem
+from apps.tenant_apps.girvi.models import (
+    BaseLoan,
+    GivenLoan,
+    TakenLoan,
+    RepledgedLoanItem,
+)
 
 from ..filters import LoanItemFilter
 from ..models import LoanItem
@@ -66,20 +71,21 @@ def repledged_loanitem_delete(request, parent_id, id):
 
 @login_required
 def loanitem_create_update(request, parent_id, id=None):
-    parent_obj = get_object_or_404(Loan, id=parent_id)
+    # Try to get as GivenLoan or TakenLoan
+    try:
+        parent_obj = GivenLoan.objects.get(id=parent_id)
+        is_given_loan = True
+    except GivenLoan.DoesNotExist:
+        parent_obj = get_object_or_404(TakenLoan, id=parent_id)
+        is_given_loan = False
+
     instance = None
     message = "Item Created"
-    form_class = (
-        LoanItemForm
-        if parent_obj.loan_type == Loan.LoanType.GIVEN
-        else RepledgedLoanItemForm
-    )
-    model_class = (
-        LoanItem if parent_obj.loan_type == Loan.LoanType.GIVEN else RepledgedLoanItem
-    )
+    form_class = LoanItemForm if is_given_loan else RepledgedLoanItemForm
+    model_class = LoanItem if is_given_loan else RepledgedLoanItem
     template_name = (
         "girvi/partials/item-form.html"
-        if parent_obj.loan_type == Loan.LoanType.GIVEN
+        if is_given_loan
         else "girvi/partials/repledged_item_form.html"
     )
 
@@ -92,9 +98,10 @@ def loanitem_create_update(request, parent_id, id=None):
         if form.is_valid():
             new_obj = form.save(commit=False)
             new_obj.loan = parent_obj
-            if parent_obj.loan_type == Loan.LoanType.TAKEN:
+            if not is_given_loan:
                 new_obj.new_loan = parent_obj
-                new_obj.original_loanitem.is_repledged = True
+                # Use custody status instead of boolean field
+                new_obj.original_loanitem.custody_status = "with_lender"
                 new_obj.original_loanitem.save()
             else:
                 image_data = request.POST.get("image_data")
@@ -102,7 +109,7 @@ def loanitem_create_update(request, parent_id, id=None):
                     image_file = ContentFile(
                         base64.b64decode(image_data.split(",")[1]),
                         name=f"{new_obj.loan.loan_id}_{new_obj.id}.jpg"
-                        if parent_obj.loan_type == Loan.LoanType.GIVEN
+                        if is_given_loan
                         else f"{new_obj.new_loan.loan_id}_{new_obj.id}.jpg",
                     )
                     new_obj.pic = image_file
@@ -113,7 +120,7 @@ def loanitem_create_update(request, parent_id, id=None):
 
             if request.htmx:
                 return HttpResponse(status=204, headers={"HX-Trigger": "loanChanged"})
-            if parent_obj.loan_type == Loan.LoanType.GIVEN:
+            if is_given_loan:
                 return render(request, "girvi/partials/item-inline-new.html", context)
             return render(
                 request, "girvi/partials/repledged_item_inline_new.html", context

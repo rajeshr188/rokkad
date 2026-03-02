@@ -7,13 +7,13 @@ from django.utils import timezone
 
 from apps.tenant_apps.notify.models import NoticeGroup, Notification
 
-from ..models import Customer, Loan
+from ..models import Customer, GivenLoan
 
 
 @login_required
 def create_loan_notification(request, pk=None):
     # get loan instance
-    loan = get_object_or_404(Loan, pk=pk)
+    loan = get_object_or_404(GivenLoan, pk=pk)
     # create a noticegroup
     import random
     import string
@@ -41,10 +41,10 @@ def notice(request):
 
     # get all loans with selected ids
     selected_loans = (
-        Loan.objects.unreleased()
+        GivenLoan.objects.unreleased()
         .filter(loan_date__lt=a_yr_ago)
-        .order_by("customer")
-        .select_related("customer")
+        .order_by("borrower")
+        .select_related("borrower")
     )
 
     # get a list of unique customers for the selected loans

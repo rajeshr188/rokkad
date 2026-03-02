@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render, reverse
 from django.template.response import TemplateResponse
 from django.views.decorators.http import require_http_methods
 
-from apps.tenant_apps.girvi.models import Loan
+from apps.tenant_apps.girvi.models import GivenLoan
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 from apps.tenant_apps.utils.loan_pdf import get_notice_pdf
 
@@ -45,11 +45,15 @@ def noticegroup_detail(request, pk):
         )
         .select_related("group", "customer")
     )
-    loans = Loan.objects.unreleased().filter(notifications__in=items).count()
-    uniquie_customers = (
-        Loan.objects.unreleased()
+    loans = (
+        GivenLoan.objects.filter(release__isnull=True)
         .filter(notifications__in=items)
-        .values("customer")
+        .count()
+    )
+    uniquie_customers = (
+        GivenLoan.objects.filter(release__isnull=True)
+        .filter(notifications__in=items)
+        .values("borrower")
         .distinct()
         .count()
     )
@@ -126,10 +130,10 @@ def noticegroup_print(request, pk):
         for j in i.loans.all():
             selected_loans.append(j.id)
     selected_loans = (
-        Loan.objects.unreleased()
+        GivenLoan.objects.filter(release__isnull=True)
         .filter(id__in=selected_loans)
-        .order_by("customer")
-        .prefetch_related("customer", "loanitems")
+        .order_by("borrower")
+        .prefetch_related("borrower", "loanitems")
     )
     pdf = get_notice_pdf(selection=selected_loans)
     # Create a response object

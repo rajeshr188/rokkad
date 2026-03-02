@@ -1,0 +1,44 @@
+{% comment %}
+Permission-based visibility component.
+Shows/hides content based on user permissions and role.
+
+Usage in templates:
+  {% include "components/permission_check.html" with permission='data_edit' %}
+    <button>Edit</button>
+  {% endinclude %}
+
+Context:
+  - permission: Required permission codename
+  - role: Required role (Owner, Admin, Member)
+  - show_denied: Show "access denied" message (default: false)
+  - fallback_message: Custom message if access denied
+{% endcomment %}
+
+{% if permission and permission not in user_permissions and role %}
+  {% if user_role|lower != role|lower %}
+    {% if show_denied %}
+      <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle"></i>
+        {{ fallback_message|default:"Access denied. This action requires " }}{{ role }} role.
+      </div>
+    {% else %}
+      <!-- Access denied but no UI shown -->
+    {% endif %}
+  {% else %}
+    {% block content %}{% endblock %}
+  {% endif %}
+{% elif permission and permission in user_permissions %}
+  {% block content %}{% endblock %}
+{% elif not permission and not role %}
+  {# No restrictions, show content #}
+  {% block content %}{% endblock %}
+{% elif role and user_role|lower == role|lower %}
+  {% block content %}{% endblock %}
+{% else %}
+  {% if show_denied %}
+    <div class="alert alert-warning" role="alert">
+      <i class="bi bi-info-circle"></i>
+      {{ fallback_message|default:"You don't have permission to perform this action." }}
+    </div>
+  {% endif %}
+{% endif %}

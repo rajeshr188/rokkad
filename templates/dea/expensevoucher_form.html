@@ -1,0 +1,267 @@
+{% extends 'layouts/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if is_update %}Edit{% else %}Create{% endif %} Expense Voucher{% endblock %}
+
+{% block extra_head %}
+<style>
+    .formset-row {
+        border-bottom: 1px solid #dee2e6;
+        padding: 10px 0;
+        margin-bottom: 10px;
+    }
+    .formset-row:last-child {
+        border-bottom: none;
+    }
+    .delete-checkbox {
+        width: 20px;
+        height: 20px;
+    }
+    .totals-card {
+        position: sticky;
+        top: 70px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="display-6">
+                <i class="bi bi-receipt"></i> {% if is_update %}Edit{% else %}New{% endif %} Expense Voucher
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dea_expense_list' %}">Expenses</a></li>
+                    <li class="breadcrumb-item active">{% if is_update %}Edit{% else %}Create{% endif %}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="post" id="expense-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Expense Details</h5>
+                    </div>
+                    <div class="card-body">
+                        {% crispy form %}
+                    </div>
+                </div>
+
+                <!-- Line Items -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Line Items</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ line_items_formset.management_form }}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm" id="line-items-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 15%;">Category</th>
+                                        <th style="width: 25%;">Description</th>
+                                        <th style="width: 12%;">Amount</th>
+                                        <th style="width: 8%;">Taxable</th>
+                                        <th style="width: 10%;">Tax %</th>
+                                        <th style="width: 10%;">TDS %</th>
+                                        <th style="width: 12%;">Line Total</th>
+                                        <th style="width: 8%;">Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for form in line_items_formset %}
+                                    <tr class="formset-row">
+                                        <td>
+                                            {{ form.id }}
+                                            {{ form.category }}
+                                            {% if form.category.errors %}
+                                                <div class="text-danger small">{{ form.category.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.description }}
+                                            {% if form.description.errors %}
+                                                <div class="text-danger small">{{ form.description.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.amount }}
+                                            {% if form.amount.errors %}
+                                                <div class="text-danger small">{{ form.amount.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ form.is_taxable }}
+                                        </td>
+                                        <td>
+                                            {{ form.tax_rate }}
+                                            {% if form.tax_rate.errors %}
+                                                <div class="text-danger small">{{ form.tax_rate.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.tds_rate }}
+                                            {% if form.tds_rate.errors %}
+                                                <div class="text-danger small">{{ form.tds_rate.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm line-total" readonly value="0.00">
+                                        </td>
+                                        <td class="text-center">
+                                            {{ form.DELETE }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-line-item">
+                            <i class="bi bi-plus-circle"></i> Add Line Item
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar: Totals & Actions -->
+            <div class="col-md-4">
+                <div class="card totals-card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-calculator"></i> Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <td>Gross Amount:</td>
+                                <td class="text-end"><strong id="summary-gross">₹0.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Tax (GST):</td>
+                                <td class="text-end"><strong id="summary-tax">₹0.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>TDS:</td>
+                                <td class="text-end"><strong id="summary-tds">₹0.00</strong></td>
+                            </tr>
+                            <tr class="table-active">
+                                <td><strong>Net Payable:</strong></td>
+                                <td class="text-end"><strong id="summary-total" class="text-primary fs-5">₹0.00</strong></td>
+                            </tr>
+                        </table>
+
+                        <hr>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> {% if is_update %}Update{% else %}Create{% endif %} Expense
+                            </button>
+                            <a href="{% url 'dea_expense_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate line totals and summary
+    function calculateTotals() {
+        let grossTotal = 0;
+        let taxTotal = 0;
+        let tdsTotal = 0;
+
+        document.querySelectorAll('.formset-row').forEach(function(row) {
+            const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+            if (deleteCheckbox && deleteCheckbox.checked) {
+                return; // Skip deleted rows
+            }
+
+            const amountInput = row.querySelector('input[name$="-amount"]');
+            const taxRateInput = row.querySelector('input[name$="-tax_rate"]');
+            const tdsRateInput = row.querySelector('input[name$="-tds_rate"]');
+            const isTaxableCheckbox = row.querySelector('input[name$="-is_taxable"]');
+            const lineTotalInput = row.querySelector('.line-total');
+
+            const amount = parseFloat(amountInput.value) || 0;
+            const taxRate = parseFloat(taxRateInput.value) || 0;
+            const tdsRate = parseFloat(tdsRateInput.value) || 0;
+            const isTaxable = isTaxableCheckbox.checked;
+
+            const taxAmount = isTaxable ? (amount * taxRate / 100) : 0;
+            const tdsAmount = amount * tdsRate / 100;
+            const lineTotal = amount + taxAmount - tdsAmount;
+
+            lineTotalInput.value = lineTotal.toFixed(2);
+
+            grossTotal += amount;
+            taxTotal += taxAmount;
+            tdsTotal += tdsAmount;
+        });
+
+        const netPayable = grossTotal + taxTotal - tdsTotal;
+
+        document.getElementById('summary-gross').textContent = '₹' + grossTotal.toFixed(2);
+        document.getElementById('summary-tax').textContent = '₹' + taxTotal.toFixed(2);
+        document.getElementById('summary-tds').textContent = '₹' + tdsTotal.toFixed(2);
+        document.getElementById('summary-total').textContent = '₹' + netPayable.toFixed(2);
+    }
+
+    // Attach event listeners
+    document.querySelectorAll('input[name$="-amount"], input[name$="-tax_rate"], input[name$="-tds_rate"], input[name$="-is_taxable"], input[name$="-DELETE"]').forEach(function(input) {
+        input.addEventListener('change', calculateTotals);
+        input.addEventListener('input', calculateTotals);
+    });
+
+    // Initial calculation
+    calculateTotals();
+
+    // Add line item functionality
+    document.getElementById('add-line-item').addEventListener('click', function() {
+        const totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        const currentFormCount = parseInt(totalForms.value);
+        
+        // Clone the first row as a template
+        const templateRow = document.querySelector('.formset-row');
+        const newRow = templateRow.cloneNode(true);
+        
+        // Update form indices
+        newRow.innerHTML = newRow.innerHTML.replace(/-0-/g, '-' + currentFormCount + '-');
+        newRow.innerHTML = newRow.innerHTML.replace(/_0_/g, '_' + currentFormCount + '_');
+        
+        // Clear values
+        newRow.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => input.value = '');
+        newRow.querySelector('input[type="checkbox"][name$="-is_taxable"]').checked = true;
+        newRow.querySelector('input[name$="-tax_rate"]').value = '18';
+        
+        // Append to table
+        document.querySelector('#line-items-table tbody').appendChild(newRow);
+        
+        // Update form count
+        totalForms.value = currentFormCount + 1;
+        
+        // Attach event listeners to new row
+        newRow.querySelectorAll('input').forEach(function(input) {
+            input.addEventListener('change', calculateTotals);
+            input.addEventListener('input', calculateTotals);
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,9 +1,9 @@
 {%load crispy_forms_tags%}
 {% load i18n%}
 {% load widget_tweaks %}
-
+{{filter.form.media}}
 <div class="position-relative h-20 " id ="filter">
-    {{filter.form.media}}
+    
     {% if filter %}
     <div class="card  text-center">
         <div class="card-header">

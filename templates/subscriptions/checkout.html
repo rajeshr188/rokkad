@@ -1,0 +1,376 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Checkout - {{ plan.name }} - Rokkad{% endblock %}
+
+{% block extra_css %}
+<style>
+    .checkout-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .plan-summary {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+    
+    .summary-row.total {
+        border-top: 2px solid #dee2e6;
+        padding-top: 1rem;
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 0;
+    }
+    
+    .billing-cycle-selector {
+        margin-bottom: 2rem;
+    }
+    
+    .billing-cycle-btn {
+        border: 2px solid #dee2e6;
+        padding: 0.75rem 1.5rem;
+        margin-right: 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .billing-cycle-btn.active {
+        border-color: #007bff;
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .payment-form {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .form-section h5 {
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 0.5rem;
+    }
+    
+    .form-section:first-child h5 {
+        margin-top: 0;
+    }
+    
+    .razorpay-button {
+        width: 100%;
+        padding: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-top: 1rem;
+    }
+    
+    .security-info {
+        color: #666;
+        font-size: 0.85rem;
+        margin-top: 1rem;
+        text-align: center;
+    }
+    
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .loading-spinner.show {
+        display: block;
+    }
+    
+    .error-message {
+        display: none;
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 0.75rem 1.25rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+    
+    .error-message.show {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12 mb-4">
+            <h1>Complete Your Purchase</h1>
+            <p class="text-muted">{{ plan.name }} Plan</p>
+        </div>
+    </div>
+    
+    <div class="checkout-container">
+        <!-- Plan Summary -->
+        <div class="plan-summary">
+            <h5>{{ plan.name }}</h5>
+            <p class="text-muted mb-3">{{ plan.description }}</p>
+            
+            <div class="summary-row">
+                <span>Base Amount:</span>
+                <strong>₹{{ base_amount }}</strong>
+            </div>
+            <div class="summary-row">
+                <span>GST ({{ gst_rate }}%):</span>
+                <strong>₹{{ gst_amount }}</strong>
+            </div>
+            <div class="summary-row total">
+                <span>Total Amount:</span>
+                <strong>₹{{ total_amount }}</strong>
+            </div>
+        </div>
+        
+        <!-- Billing Cycle Selector -->
+        <div class="billing-cycle-selector">
+            <label class="d-block mb-2"><strong>Billing Cycle</strong></label>
+            <button type="button" class="billing-cycle-btn active" data-cycle="monthly">
+                Monthly (₹{{ base_amount }})
+            </button>
+            {% if plan.yearly_price %}
+            <button type="button" class="billing-cycle-btn" data-cycle="yearly">
+                Yearly (₹{{ plan.yearly_price }}) <span class="badge badge-success">Save 20%</span>
+            </button>
+            {% endif %}
+        </div>
+        
+        <!-- Payment Form -->
+        <form id="payment-form" class="payment-form">
+            {% csrf_token %}
+            <input type="hidden" name="plan_id" value="{{ plan.id }}">
+            <input type="hidden" name="billing_cycle" id="billing-cycle-input" value="monthly">
+            
+            <!-- Razorpay Payment Button -->
+            <button type="button" id="razorpay-button" class="btn btn-primary btn-lg razorpay-button">
+                <i class="fas fa-lock"></i> Pay with Razorpay
+            </button>
+            
+            <!-- Hidden inputs for Razorpay -->
+            <input type="hidden" id="razorpay_payment_id" name="razorpay_payment_id">
+            <input type="hidden" id="razorpay_order_id" name="razorpay_order_id">
+            <input type="hidden" id="razorpay_signature" name="razorpay_signature">
+            
+            <!-- Error Message -->
+            <div id="error-message" class="error-message">
+                <strong>Error:</strong> <span id="error-text"></span>
+            </div>
+            
+            <!-- Loading Spinner -->
+            <div id="loading-spinner" class="loading-spinner">
+                <div class="spinner-border" role="status">
+                    <span class="sr-only">Processing...</span>
+                </div>
+                <p class="mt-2">Processing payment...</p>
+            </div>
+        </form>
+        
+        <div class="security-info">
+            <i class="fas fa-shield-alt"></i> Secure payment powered by Razorpay
+        </div>
+        
+        <!-- Frequently Asked Questions -->
+        <div class="mt-5 p-4 bg-light rounded">
+            <h5 class="mb-3">Before You Pay</h5>
+            <div class="accordion" id="faqAccordion">
+                <div class="card">
+                    <div class="card-header" id="faq1">
+                        <h6 class="mb-0">
+                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse1">
+                                Can I upgrade or downgrade anytime?
+                            </button>
+                        </h6>
+                    </div>
+                    <div id="collapse1" class="collapse" data-parent="#faqAccordion">
+                        <div class="card-body">
+                            Yes! You can upgrade or downgrade your plan anytime. Changes will be reflected in your next billing cycle.
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header" id="faq2">
+                        <h6 class="mb-0">
+                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse2">
+                                What payment methods do you accept?
+                            </button>
+                        </h6>
+                    </div>
+                    <div id="collapse2" class="collapse" data-parent="#faqAccordion">
+                        <div class="card-body">
+                            We accept all major credit/debit cards, UPI, and bank transfers through Razorpay.
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header" id="faq3">
+                        <h6 class="mb-0">
+                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse3">
+                                Is there a free trial?
+                            </button>
+                        </h6>
+                    </div>
+                    <div id="collapse3" class="collapse" data-parent="#faqAccordion">
+                        <div class="card-body">
+                            Yes! All plans include a 14-day free trial. We'll ask for payment details, but won't charge until the trial ends.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Razorpay Checkout Script -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('payment-form');
+    const billingCycleInput = document.getElementById('billing-cycle-input');
+    const razorpayBtn = document.getElementById('razorpay-button');
+    const errorMsg = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    
+    // Billing Cycle Selection
+    document.querySelectorAll('.billing-cycle-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.billing-cycle-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            billingCycleInput.value = this.dataset.cycle;
+            // In production, you'd recalculate the total amount
+        });
+    });
+    
+    // Handle Razorpay Payment
+    razorpayBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Show loading spinner
+        loadingSpinner.classList.add('show');
+        razorpayBtn.disabled = true;
+        errorMsg.classList.remove('show');
+        
+        // Create order on backend first
+        fetch('{% url "subscriptions:payment-create" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': form.querySelector('[name="csrfmiddlewaretoken"]').value,
+            },
+            body: JSON.stringify({
+                plan_id: {{ plan.id }},
+                billing_cycle: billingCycleInput.value,
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.order_id) {
+                openRazorpayCheckout(data);
+            } else {
+                showError(data.error || 'Failed to create payment order');
+            }
+        })
+        .catch(error => {
+            showError('Network error: ' + error.message);
+        })
+        .finally(() => {
+            loadingSpinner.classList.remove('show');
+            razorpayBtn.disabled = false;
+        });
+    });
+    
+    function openRazorpayCheckout(orderData) {
+        const options = {
+            key: '{{ razorpay_key_id }}',
+            amount: Math.round({{ total_amount }} * 100), // Amount in paise
+            currency: 'INR',
+            order_id: orderData.order_id,
+            name: 'Rokkad',
+            description: '{{ plan.name }} Subscription',
+            image: '{% static "images/rokkad-logo.png" %}',
+            handler: function(response) {
+                // Store response values
+                document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
+                document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
+                document.getElementById('razorpay_signature').value = response.razorpay_signature;
+                
+                // Submit form
+                submitPayment();
+            },
+            prefill: {
+                email: '{{ request.user.email }}',
+                contact: '{{ request.user.userprofile.phone|default:"" }}',
+            },
+            theme: {
+                color: '#007bff'
+            },
+            modal: {
+                ondismiss: function() {
+                    loadingSpinner.classList.remove('show');
+                    razorpayBtn.disabled = false;
+                }
+            }
+        };
+        
+        const rzp = new Razorpay(options);
+        rzp.open();
+    }
+    
+    function submitPayment() {
+        loadingSpinner.classList.add('show');
+        
+        fetch('{% url "subscriptions:payment-create" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': form.querySelector('[name="csrfmiddlewaretoken"]').value,
+            },
+            body: JSON.stringify({
+                plan_id: form.querySelector('[name="plan_id"]').value,
+                razorpay_payment_id: document.getElementById('razorpay_payment_id').value,
+                razorpay_order_id: document.getElementById('razorpay_order_id').value,
+                razorpay_signature: document.getElementById('razorpay_signature').value,
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Redirect to dashboard
+                window.location.href = data.redirect_url;
+            } else {
+                showError(data.error || 'Payment verification failed');
+            }
+        })
+        .catch(error => {
+            showError('Network error: ' + error.message);
+        })
+        .finally(() => {
+            loadingSpinner.classList.remove('show');
+            razorpayBtn.disabled = false;
+        });
+    }
+    
+    function showError(message) {
+        errorText.textContent = message;
+        errorMsg.classList.add('show');
+    }
+});
+</script>
+{% endblock %}

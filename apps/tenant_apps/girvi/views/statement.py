@@ -3,7 +3,7 @@ from django.db.models import Count, F
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from ..models import Loan, Statement, StatementItem
+from ..models import GivenLoan, Statement, StatementItem
 
 
 def verification_session_list(request):
@@ -43,10 +43,10 @@ def verification_session_detail(request, pk):
             total=Count("pk"),
             discrepancy=Count("pk", filter=F("descrepancy_found")),
         )
-        summary["missing_loans"] = Loan.objects.unreleased().exclude(
-            loan_id__in=statement_items.values_list("loan__loan_id", flat=True)
-        )
-        summary["unreleased"] = Loan.objects.unreleased()
+        summary["missing_loans"] = GivenLoan.objects.filter(
+            release__isnull=True
+        ).exclude(loan_id__in=statement_items.values_list("loan__loan_id", flat=True))
+        summary["unreleased"] = GivenLoan.objects.filter(release__isnull=True)
 
     return render(
         request,
@@ -85,8 +85,8 @@ def statement_item_add(request, pk):
     if request.method == "POST":
         loan_id = request.POST.get("loan_id")
         try:
-            loan = Loan.objects.get(loan_id=loan_id)
-        except Loan.DoesNotExist:
+            loan = GivenLoan.objects.get(loan_id=loan_id)
+        except GivenLoan.DoesNotExist:
             # Handle the error, e.g., log it, return a custom response, etc.
             loan = None
 

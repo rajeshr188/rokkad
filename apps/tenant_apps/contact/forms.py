@@ -12,7 +12,7 @@ from django.urls import reverse
 from django_select2 import forms as s2forms
 from import_export.formats import base_formats
 from slick_reporting.forms import BaseReportForm
-
+from phonenumber_field.formfields import PhoneNumberField
 from .models import (
     Address,
     Contact,
@@ -25,13 +25,6 @@ from .models import (
 
 
 class ExportForm(forms.Form):
-    # model_name = forms.ChoiceField(
-    #     choices=[
-    #         (model.__name__, model.__name__)
-    #         for app in settings.TENANT_APPS
-    #         for model in apps.get_app_config(app.split(".")[-1]).models.values()
-    #     ]
-    # )
     model_names = forms.MultipleChoiceField(
         choices=[
             (model.__name__, model.__name__)
@@ -67,7 +60,8 @@ class ImportForm(forms.Form):
 
 class CustomerWidget(s2forms.ModelSelect2Widget):
     search_fields = [
-        "name__icontains",
+        "firstname__icontains",
+        "lastname__icontains",
         "relatedas__icontains",
         "relatedto__icontains",
         "contactno__phone_number__icontains",
@@ -130,15 +124,17 @@ class CustomerReportForm(BaseReportForm, forms.ModelForm):
 
 class CustomerForm(forms.ModelForm):
     # pricing_tier = forms.ModelChoiceField(queryset=PricingTier.objects.all())
-    name = forms.CharField(
+    firstname = forms.CharField(
         widget=forms.TextInput(attrs={"autofocus": True}),
     )
+    lastname = forms.CharField()
 
     class Meta:
         model = Customer
         fields = [
             "customer_type",
-            "name",
+            "firstname",
+            "lastname",
             "relatedas",
             "relatedto",
             # "pricing_tier",
@@ -158,6 +154,8 @@ class CustomerForm(forms.ModelForm):
         if customer_id:
             self.helper.attrs = {
                 "hx-post": reverse("contact_customer_update", args=[customer_id]),
+                "hx-target": "#modal-content",
+                "hx-swap": "innerHTML",
             }
             cancel_url = reverse("contact_customer_detail", args=[customer_id])
             cancel_button = Button(
@@ -165,15 +163,17 @@ class CustomerForm(forms.ModelForm):
                 "Cancel",
                 css_class="btn btn-danger",
                 **{
-                    "hx-get": cancel_url,
-                    "hx-target": "#content",
+                    "data-bs-dismiss": "modal",
+                    # "hx-get": cancel_url,
+                    # "hx-target": "#modal-content",
                 },
             )
 
         else:
             self.helper.attrs = {
                 "hx-post": reverse("contact_customer_create"),
-                "hx-target": "#content",
+                "hx-target": "#modal-content",
+                "hx-swap": "innerHTML",
             }
             cancel_url = reverse("contact_customer_list")
             cancel_button = Button(
@@ -181,9 +181,9 @@ class CustomerForm(forms.ModelForm):
                 "Cancel",
                 css_class="btn btn-danger",
                 **{
-                    "hx-get": cancel_url,
-                    "hx-target": "#content",
-                    "hx-vals": '{"use_block":"content"}',
+                    "data-bs-dismiss": "modal",
+                    # "hx-get": cancel_url,
+                    # "hx-target": "#modal-content",
                 },
             )
 
@@ -200,24 +200,24 @@ class CustomerPicForm(forms.ModelForm):
 
 
 class AddressForm(forms.ModelForm):
-    doorno = forms.CharField(
+    door_number = forms.CharField(
         required=False, widget=forms.TextInput(attrs={"autofocus": True})
     )
     area = forms.CharField(required=False)
-    zipcode = forms.CharField(required=False)
+    zip_code = forms.CharField(required=False)
 
     class Meta:
         model = Address
         fields = [
             "is_default",
-            "doorno",
+            "door_number",
             "street",
             "area",
-            "zipcode",
+            "zip_code",
         ]
         widgets = {
             "street": forms.Textarea(attrs={"rows": 3}),
-            "doorno": forms.TextInput(attrs={"autofocus": True}),
+            "door_number": forms.TextInput(attrs={"autofocus": True}),
         }
         exclude = [
             "created_at",
@@ -281,19 +281,22 @@ class AddressForm(forms.ModelForm):
 
 
 class ContactForm(forms.ModelForm):
-    # phone_number = PhoneNumberField(region="IN")
+    phone_number = PhoneNumberField(
+        region="IN",
+        widget=forms.TextInput(
+            attrs={"autofocus": True, "placeholder": "+91XXXXXXXXXX or 9876543210"}
+        ),
+    )
 
     class Meta:
         model = Contact
         fields = [
             "is_default",
+            "is_verified",
             "contact_type",
             "phone_number",
             # "customer",
         ]
-        widgets = {
-            "phone_number": forms.TextInput(attrs={"autofocus": True}),
-        }
 
     def __init__(self, *args, **kwargs):
         customer_id = kwargs.pop("customer_id", None)
@@ -338,8 +341,8 @@ class ProofForm(forms.ModelForm):
         model = Proof
         fields = [
             "proof_type",
-            "proof_no",
-            "doc",
+            "proof_number",
+            "document",
             "customer",
         ]
 

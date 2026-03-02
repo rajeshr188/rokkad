@@ -28,14 +28,12 @@ class CustomerFilter(django_filters.FilterSet):
         ]
 
     def universal_search(self, queryset, name, value):
-        # if value.replace(".", "", 1).isdigit():
-        #     value = Decimal(value)
-        #     return Customer.objects.filter(
-        #         Q(price=value) | Q(cost=value)
-        #     )
-
+        """
+        Search across first name, last name, ID, and contact numbers.
+        """
         return Customer.objects.filter(
-            Q(name__icontains=value)
+            Q(firstname__icontains=value)
+            | Q(lastname__icontains=value)
             | Q(id__icontains=value)
             | Q(contactno__phone_number__icontains=value)
         ).distinct()

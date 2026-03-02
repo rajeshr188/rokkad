@@ -66,24 +66,38 @@ class CustomerTable(tables.Table):
     def render_address(self, record):
         addresses = [
             [
-                escape(address.doorno),
+                escape(address.door_number),
                 escape(address.street),
                 escape(address.area),
                 escape(address.city),
-                escape(address.zipcode),
+                escape(address.zip_code),
             ]
             for address in record.address.all()
         ]
-        return mark_safe(format_html_join(",", "{} {} {} {} {}", addresses))
+        address_list = (
+            "<ul class='list-unstyled mb-0'>"
+            + "".join(f"<li>{a}</li>" for a in addresses)
+            + "</ul>"
+        )
+        create_btn = (
+            '<a class="btn btn-sm btn-outline-success ms-2" '
+            f'hx-get="/contact/customer/{record.pk}/address/add" '
+            'hx-target="#modal-content" _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()" hx-trigger="click" title="Add Address">'
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">'
+            '<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>'
+            '<path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg></a>'
+        )
+        return mark_safe(address_list + create_btn)
+        # return mark_safe(format_html_join(",", "{} {} {} {} {}", addresses))
 
     def value_address(self, record):
         addresses = [
             [
-                escape(address.doorno),
+                escape(address.door_number),
                 escape(address.street),
                 escape(address.area),
                 escape(address.city),
-                escape(address.zipcode),
+                escape(address.zip_code),
             ]
             for address in record.address.all()
         ]
@@ -93,7 +107,21 @@ class CustomerTable(tables.Table):
         numbers = [
             str(no.phone_number.national_number) for no in record.contactno.all()
         ]
-        return f"{','.join(numbers)}"
+        # return f"{','.join(numbers)}"
+        phone_list = (
+            "<ul class='list-unstyled mb-0'>"
+            + "".join(f"<li>{n}</li>" for n in numbers)
+            + "</ul>"
+        )
+        create_btn = (
+            '<a class="btn btn-sm btn-outline-success ms-2" '
+            f'hx-get="/contact/customer/{record.pk}/contactno/add/" '
+            'hx-target="#modal-content" _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()" hx-trigger="click" title="Add Phone">'
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">'
+            '<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>'
+            '<path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg></a>'
+        )
+        return mark_safe(phone_list + create_btn)
 
     def value_phonenumber(self, record):
         numbers = [
@@ -117,8 +145,9 @@ class CustomerTable(tables.Table):
     #                 <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
     #                 <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
     #                 </svg> Loan</a></li>
-                    <li><a class="dropdown-item link-info" hx-target="#content" hx-get="/contact/customer/update/{}"
-    #                     hx-target="#form"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                    <li><a class="dropdown-item link-info" _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()"
+          hx-trigger="click" hx-target="#modal-content" hx-get="/contact/customer/update/{}"
+    #                     ><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
     #                 <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
     #                 <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
     #                 </svg> Customer</a></li>

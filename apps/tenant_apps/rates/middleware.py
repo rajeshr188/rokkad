@@ -12,6 +12,19 @@ class RateMiddleware(MiddlewareMixin):
         # Check if the user is authenticated
         if not request.user.is_authenticated:
             return
+
+        # CRITICAL: Check if we're actually in a tenant schema
+        # Rate model only exists in tenant schemas, not in public schema
+        # Use request.tenant (set by django-tenants middleware) to check current schema
+        if (
+            not hasattr(request, "tenant")
+            or request.tenant.schema_name == get_public_schema_name()
+        ):
+            request.grate = None
+            request.srate = None
+            request.brate = None
+            return
+
         # Check if the user's workspace is set to a tenant schema
         company = request.user.profile.workspace
         if (
@@ -23,6 +36,7 @@ class RateMiddleware(MiddlewareMixin):
             request.srate = None
             request.brate = None
             return
+
         grate = cache.get("gold_rate")
         srate = cache.get("silver_rate")
         brate = cache.get("bronze_rate")

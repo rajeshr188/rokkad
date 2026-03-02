@@ -1,6 +1,8 @@
-{% extends "_base.html" %}
+{% extends 'layouts/base.html' %}
 {% load static %}
-{% block content %}
+{% load partials %}
+{% block content%}
+{% partialdef customer-detail inline %}
 <div class="container-lg mt-2 ">
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2">Customer Detail</h1>
@@ -8,8 +10,7 @@
       <div class="btn-group me-2">
         <a hx-get="{% url 'contact_customer_list' %}" 
         hx-target="#content"
-        hx-vals='{"use_block":"content"}'
-        hx-push-url="true" hx-swap="innerHTML transition:true"
+        hx-push-url="true" hx-swap="transition:true"
              class="btn btn-sm btn-outline-secondary">Back</a>
       </div>
     </div>
@@ -368,6 +369,7 @@
   </div>
 </div>
 </div>
+
 <script src="{% static 'js/webcapture.v1.js' %}"></script>
 <script>
   document.addEventListener('htmx:afterSwap', function () {
@@ -375,4 +377,5 @@
     startup();
   });
 </script>
+{% endpartialdef %}
 {% endblock %}

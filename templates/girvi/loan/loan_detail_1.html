@@ -1,4 +1,4 @@
-{% extends "_base.html" %}
+{% extends 'layouts/base.html' %}
 {% load static %}
 {% load l10n %}
 {% block content %}
@@ -500,20 +500,19 @@
                   <div class="card-body">
                     <div class="row mb-2">
                       <div class="col-6 font-weight-bold">Amount</div>
-                      <div class="col-6 text-right ">{{ object.get_loanamount_with_currency }}</div>
+                      <div class="col-6 text-right ">{{ object.get_loan_amount_with_currency|default:"₹0" }}</div>
                     </div>
                     <div class="row mb-2">
                       <div class="col-6 font-weight-bold">Interest Due</div>
-                      <div class="col-6 text-right ">{{object.interest}} * {{object.noofmonths}} = {{object.interestdue}}
-                      </div>
+                      <div class="col-6 text-right ">₹{{ object.interest_due|floatformat:2|default:"0.00" }} ({{ object.months_elapsed }} months)</div>
                     </div>
                     <div class="row mb-2">
                       <div class="col-6 font-weight-bold">Payments</div>
-                      <div class="col-6 text-right ">{{object.get_total_payments}}</div>
+                      <div class="col-6 text-right ">₹{{ object.get_total_payments|floatformat:2|default:"0.00" }}</div>
                     </div>
                     <div class="row mb-2 border-top border-translucent border-dashed">
                       <div class="col-6 font-weight-bold">Total Due</div>
-                      <div class="col-6 text-right ">{{object.due_with_currency}}</div>
+                      <div class="col-6 text-right ">{{ object.total_due_with_currency|default:"₹0" }}</div>
                     </div>
                   </div>
                 </div>
@@ -530,31 +529,25 @@
                       <tbody>
                         <tr>
                           <td class="font-weight-bold">Item</td>
-                          <td>{{object.item}} - {{ object.item_desc }}</td>
+                          <td>{{ object.item_desc|default:"—" }}</td>
                         </tr>
                         <tr>
                           <td class="font-weight-bold">Weight</td>
-                          <td>{{weight}} </td>
+                          <td>{{ weight|default:"—" }}</td>
                         </tr>
                         <tr>
                           <td class="font-weight-bold">Pure</td>
-                          <td>
-                            <!-- {% for k, v in pure.items %}
-                              {{k}}: {{v}} gms
-                              {% endfor %} -->
-                            <!-- / "G:{{loan.pure_gold_weight|floatformat:3}} gms  S:{{loan.pure_silver_weight}} gms" -->
-                            {{pure}}
-                          </td>
+                          <td>{{ pure|default:"—" }}</td>
                         </tr>
                         <tr>
                           <td class="font-weight-bold">Value:</td>
-                          <td>{{value}}</td>
+                          <td>{{ value|default:"₹0" }}</td>
                         </tr>
                         <tr>
                           <td class="font-weight-bold">Amount:Value %:</td>
                           <td>
-                            <meter value="{{lvratio}}" min="0" max="100" low="30" high="70" optimum="50"></meter>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{lvratio|floatformat:2}}%</div>
+                            <meter value="{{ lvratio|default:0 }}" min="0" max="100" low="30" high="70" optimum="50"></meter>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ lvratio|floatformat:2|default:"0.00" }}%</div>
                           </td>
                         </tr>
 

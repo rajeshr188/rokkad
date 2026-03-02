@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django_tenants.utils import get_public_schema_name
 
@@ -45,37 +45,92 @@ def userprofile_update(request, pk):
 
 @login_required
 def switch_workspace(request, workspace_id):
-    tenant = get_object_or_404(Company, id=workspace_id)
-
-    # Check if the user is a member of the company
-    if tenant.members.filter(id=request.user.id).exists():
-        request.user.profile.workspace = tenant
-        request.user.profile.save()
-        return redirect("/")
-    else:
-        raise PermissionDenied
-
-
-# @login_required
-# def switch_workspace(request):
-#     if request.method == "POST":
-#         form = SwitchWorkspaceForm(request.POST)
-#         if form.is_valid():
-#             workspace_id = form.cleaned_data['workspace_id']
-#             tenant = get_object_or_404(Company, id=workspace_id)
-
-#             # Check if the user is a member of the company
-#             if tenant.members.filter(id=request.user.id).exists():
-#                 request.user.workspace = tenant
-#                 request.user.save()
-#                 return redirect("/")
-#             else:
-#                 raise PermissionDenied
+    """
+    Backward-compatible alias for canonical workspace switch view.
+    """
+    return redirect("workspace_select", workspace_id=workspace_id)
 
 
 @login_required
 def clear_workspace(request):
-    public = Company.objects.get(schema_name=get_public_schema_name())
-    request.user.profile.workspace = public
-    request.user.profile.save()
-    return redirect("/")
+    """
+    Clear/reset workspace to public schema.
+
+    Allows user to:
+    - Return to public (root) workspace
+    - Reset workspace selection
+    - Access workspace selector again
+    """
+    try:
+        # Get public schema
+        public = Company.objects.get(schema_name=get_public_schema_name())
+
+        # Store current workspace for logging
+        current_workspace = request.user.profile.workspace
+
+        # Reset to public workspace
+        request.user.profile.set_workspace(public)
+
+        # Log the action
+        from apps.orgs.models import AuditLog
+
+        AuditLog.log(
+            "WORKSPACE_CLEAR",
+            user=request.user,
+            company=current_workspace,
+            description=f'Cleared workspace (was: {current_workspace.name if current_workspace else "None"})',
+            request=request,
+            success=True,
+        )
+
+        messages.success(
+            request, "Workspace cleared. You can now select a different one."
+        )
+        return redirect("workspace_selector")
+
+    except Company.DoesNotExist:
+        messages.error(request, "Unable to clear workspace. Please try again.")
+        return redirect("dashboard")
+
+
+@login_required
+def workspace_management(request):
+    """
+    User workspace management dashboard.
+
+    Allows user to:
+    - View current active workspace
+    - See all available workspaces
+    - Switch between workspaces
+    - Clear/reset workspace selection
+    - View workspace roles/permissions
+    """
+    user = request.user
+    profile = user.profile
+
+    # Get active workspace
+    current_workspace = profile.workspace
+
+    # Get all user's workspaces (memberships)
+    memberships = (
+        user.memberships.select_related("company", "role")
+        .filter(company__is_deleted=False)
+        .order_by("-company__updated_at")
+    )
+
+    context = {
+        "current_workspace": current_workspace,
+        "memberships": memberships,
+        "total_workspaces": memberships.count(),
+        "is_public": current_workspace and current_workspace.schema_name == "public",
+    }
+
+    return render(request, "account/workspace_management.html", context)
+
+
+@login_required
+def reset_workspace(request):
+    """
+    Backward-compatible alias for clear workspace.
+    """
+    return clear_workspace(request)

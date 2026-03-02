@@ -1,17 +1,21 @@
 import os
-from datetime import date
+from datetime import date, timedelta
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, F, Exists, Q, OuterRef
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.generic import TemplateView
 from moneyed import Money
 from openpyxl import load_workbook
 
+from apps.onboarding.decorators import onboarding_required
 from apps.orgs.decorators import roles_required
+from apps.orgs.models import Company, CompanyInvitation, Membership
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.contact.services import (
     active_customers,
@@ -28,7 +32,7 @@ from apps.tenant_apps.dea.models import (
     TransactionType_Ext,
 )
 from apps.tenant_apps.dea.utils.currency import Balance
-from apps.tenant_apps.girvi.models import License, Loan, LoanItem, Release
+from apps.tenant_apps.girvi.models import License, GivenLoan, LoanItem, Release
 from apps.tenant_apps.girvi.services import *
 from apps.tenant_apps.purchase.models import Payment, Purchase
 from apps.tenant_apps.sales.models import Invoice, Receipt
@@ -48,6 +52,79 @@ class HomePageView(TemplateView):
 
 class TenantPageView(TemplateView):
     template_name = "pages/tenant.html"
+
+
+@login_required
+@onboarding_required
+def Dashboard(request):
+    """
+    Smart landing page - routes user to appropriate destination.
+
+    Decision tree:
+    1. Has valid workspace selected → workspace_dashboard
+    2. Has memberships → workspace_selector (choose workspace)
+    3. No memberships → workspace_create (create first workspace)
+    """
+    user = request.user
+    profile = user.profile
+
+    # Check if user has valid selected workspace
+    if profile.workspace and profile.workspace.schema_name != "public":
+        try:
+            # Verify membership still valid
+            user.memberships.get(company=profile.workspace)
+            # Direct to workspace dashboard with workspace_id
+            return redirect("workspace_dashboard", workspace_id=profile.workspace.id)
+        except Membership.DoesNotExist:
+            # Clear invalid workspace
+            profile.workspace = None
+            profile.save()
+
+    # Check if user has any workspaces
+    memberships = user.memberships.filter(company__is_deleted=False)
+
+    if memberships.exists():
+        # Show workspace selector
+        return redirect("workspace_selector")
+    else:
+        # No workspaces - prompt to create
+        messages.info(request, "Let's create your first workspace!")
+        return redirect("workspace_create")
+
+
+# ============================================================================
+# DEPRECATED: company_dashboard has been moved to apps.orgs.views.workspace_dashboard
+# This function remains for backward compatibility only
+# ============================================================================
+
+
+@roles_required(["Owner", "Admin", "Member"])
+def company_dashboard(request):
+    """
+    DEPRECATED: Use workspace_dashboard in apps.orgs.views instead.
+
+    This view redirects to the new workspace_dashboard.
+    Kept for backward compatibility with existing URL references.
+    """
+    if (
+        request.user.profile.workspace
+        and request.user.profile.workspace.schema_name == "public"
+    ):
+        return redirect("dashboard")
+
+    # Redirect to new workspace_dashboard view
+    workspace = request.user.profile.workspace
+    if workspace:
+        return redirect("workspace_dashboard", workspace_id=workspace.id)
+    else:
+        return redirect("workspace_selector")
+
+
+# ============================================================================
+# LEGACY: These views have been moved to apps/orgs/views.py for better organization
+# - workspace_selector(), team_invitations(), workspace_select()
+# - subscription_required() decorator
+# ============================================================================
 
 
 class AboutPageView(TemplateView):
@@ -76,163 +153,6 @@ class HelpPageView(TemplateView):
 
 class FaqPageView(TemplateView):
     template_name = "pages/faq.html"
-
-
-@login_required
-def Dashboard(request):
-    if (
-        request.user.profile.workspace
-        and request.user.profile.workspace.schema_name != "public"
-    ):
-        return redirect("company_dashboard")
-    context = {}
-    return render(request, "pages/dashboard.html", context)
-
-
-@roles_required(["Owner", "Admin", "Member"])
-def company_dashboard(request):
-    if (
-        request.user.profile.workspace
-        and request.user.profile.workspace.schema_name == "public"
-    ):
-        return redirect("dashboard")
-    context = {}
-    company = request.user.profile.workspace
-    context["can_view"] = request.user.memberships.filter(
-        company=company,
-        role__name__in=[
-            "Owner",
-            "Admin",
-        ],
-    ).exists()
-
-    # from purchase.models import Invoice as Pinv
-    # from sales.models import Invoice as Sinv
-
-    # pinv = Pinv.objects
-    # sinv = Sinv.objects
-    # total_pbal = pinv.filter(balancetype="Gold").aggregate(
-    #     net_wt=Coalesce(Cast(Sum("net_wt"), output_field=FloatField()), 0.0),
-    #     gwt=Coalesce(Cast(Sum("gross_wt"), output_field=FloatField()), 0.0),
-    #     bal=Coalesce(Cast(Sum("balance"), output_field=FloatField()), 0.0),
-    # )
-    # total_sbal = sinv.filter(balancetype="Gold").aggregate(
-    #     net_wt=Coalesce(Cast(Sum("net_wt"), output_field=FloatField()), 0.0),
-    #     gwt=Coalesce(Cast(Sum("gross_wt"), output_field=FloatField()), 0.0),
-    #     bal=Coalesce(Cast(Sum("balance"), output_field=FloatField()), 0.0),
-    # )
-    # total_pbal_ratecut = pinv.filter(balancetype="Cash").aggregate(
-    #     net_wt=Coalesce(Cast(Sum("net_wt"), output_field=FloatField()), 0.0),
-    #     gwt=Coalesce(Cast(Sum("gross_wt"), output_field=FloatField()), 0.0),
-    #     bal=Coalesce(Cast(Sum("balance"), output_field=FloatField()), 0.0),
-    # )
-    # total_sbal_ratecut = sinv.filter(balancetype="Cash").aggregate(
-    #     net_wt=Coalesce(Cast(Sum("net_wt"), output_field=FloatField()), 0.0),
-    #     gwt=Coalesce(Cast(Sum("gross_wt"), output_field=FloatField()), 0.0),
-    #     bal=Coalesce(Cast(Sum("balance"), output_field=FloatField()), 0.0),
-    # )
-    # context["total_pbal"] = total_pbal
-    # context["total_sbal"] = total_sbal
-    # context["pbal"] = total_pbal["bal"] - total_sbal["bal"]
-    # context["total_pbal_ratecut"] = total_pbal_ratecut
-    # context["total_sbal_ratecut"] = total_sbal_ratecut
-    # context["sbal"] = total_pbal_ratecut["bal"] - total_sbal_ratecut["bal"]
-    # context["remaining_net_wt"] = (
-    #     total_pbal_ratecut["net_wt"] - total_sbal_ratecut["net_wt"]
-    # )
-    # try:
-    #     context["p_map"] = round(
-    #         total_pbal_ratecut["bal"] / total_pbal_ratecut["net_wt"], 3
-    #     )
-    # except ZeroDivisionError:
-    #     context["p_map"] = 0.0
-    # context['s_map'] = round(total_sbal_ratecut['bal']/total_sbal_ratecut['net_wt'],3)
-    customers = Customer.objects.all()
-    context["total_customers"] = customers.filter(active=True).count()
-    context["item_loanamount_avg"] = get_itemtype_averages()
-    # Optimize the query for new customers
-    context["new_customers"] = customers.only(
-        "id", "name", "customer_type"
-    ).prefetch_related("address")[:5]
-
-    # Optimize the query for customer count
-    context["customer_count"] = customers.values("customer_type").annotate(
-        count=Count("id")
-    )
-
-    loan = Loan.objects.with_details(
-        grate=request.grate, srate=request.srate, brate=request.brate
-    )
-    released = loan.released()
-    unreleased = loan.unreleased()
-    sunken = unreleased.filter(is_overdue="True")
-    today = date.today()
-    today_loan = LoanItem.objects.filter(loan__loan_date__gte=today).aggregate(
-        amount=Sum("loanamount"), interest=Sum("interest")
-    )
-    today_release = Release.objects.filter(release_date__gte=today).aggregate(
-        amount=Sum("loan__loan_amount"), interest=Sum("loan__interest")
-    )
-    context["today_loan"] = today_loan
-    context["loan_count"] = unreleased.count()
-
-    context["due_amount"] = unreleased.aggregate(
-        Sum("loan_amount"), Sum("total_interest"), Sum("total_due")
-    )
-    context["total_loan_amount"] = context["due_amount"]["loan_amount__sum"]
-    context["total_interest"] = context["due_amount"]["total_interest__sum"]
-
-    context[
-        "assets"
-    ] = unreleased.with_itemwise_loanamount().total_itemwise_loanamount()
-    context["loanbyitemtype"] = get_loanamount_by_itemtype()
-    context["weight"] = unreleased.total_weight()
-    context["pure_weight"] = unreleased.total_pure_weight()
-
-    context["current_value"] = unreleased.total_current_value()
-    context["itemwise_value"] = unreleased.itemwise_value()
-    context["total_current_value"] = unreleased.total_current_value()["total"]
-
-    context["sunken"] = {}
-    context["sunken"]["loan_count"] = sunken.count()
-    context["sunken"]["total_loan_amount"] = sunken.total_loanamount()
-    context["sunken"][
-        "assets"
-    ] = sunken.with_itemwise_loanamount().total_itemwise_loanamount()
-    context["sunken"]["weight"] = sunken.total_weight()
-    context["sunken"]["due_amount"] = sunken.aggregate(
-        Sum("loan_amount"), Sum("total_interest"), Sum("total_due")
-    )
-    context["sunken"]["current_value"] = sunken.total_current_value()
-    context["sunken"]["itemwise_value"] = sunken.itemwise_value()
-    context["sunken"]["total_current_value"] = sunken.total_current_value()["total"]
-    context["sunken"]["total_interest"] = sunken.aggregate(total=Sum("total_interest"))
-    context["sunken"]["pure_weight"] = sunken.total_pure_weight()
-
-    try:
-        context["loan_progress"] = round(released.count() / loan.count() * 100, 2)
-    except ZeroDivisionError:
-        context["loan_progress"] = 0.0
-    context["loan_data_by_year"] = get_loans_by_year()
-    context["customer_data_by_year"] = get_customers_by_year()
-    context["customer_data_by_type"] = get_customers_by_type()
-    context["active_customers"] = active_customers()
-    context["avg_loan_per_day"] = get_average_loan_instance_per_day()
-    context["maxloans"] = (
-        Customer.objects.filter(loan__release__isnull=True)
-        .annotate(
-            num_loans=Count("loan"),
-            sum_loans=Sum("loan__loan_amount"),
-            tint=Sum("loan__interest"),
-        )
-        .values("name", "num_loans", "sum_loans", "tint")
-        .order_by("-num_loans", "sum_loans", "tint")
-    )
-    context["loan_cumsum"] = list(get_loan_cumulative_amount())
-    licenses = License.objects.all()
-    license_data = [license.get_unreleased_loan_data() for license in licenses]
-    context["license_data"] = license_data
-    return render(request, "pages/company_dashboard.html", context)
 
 
 def create_purchase_data(file):

@@ -1,25 +1,113 @@
-{% extends '_base.html' %}
+{% extends 'layouts/base.html' %}
+{% load orgs_tags %}
 
-{% block content %}
-<h2>Membership List</h2>
-<div class="table-responsive">
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>Since</th>
-                <th>Company</th>
-                <th>Role</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for membership in user.memberships.all %}
-            <tr>
-                <td>{{ membership.date_joined }}</td>
-                <td><a href="{% url 'orgs_company_detail' membership.company.id%}">{{membership.company}}</a></td>
-                <td>{{membership.role}}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+{% block title %}My Workspaces - Rokkad{% endblock %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="bi bi-briefcase"></i> My Workspaces
+                    </h1>
+                    <p class="text-muted">All workspaces where you are a member</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Memberships List -->
+    <div class="row">
+        <div class="col-12">
+            {% if user.memberships.all %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Workspace</th>
+                                    <th>Your Role</th>
+                                    <th>Member Since</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for membership in user.memberships.all %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                <i class="bi bi-building text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">{{ membership.company.name }}</div>
+                                                <small class="text-muted">{{ membership.company.num_members }} members</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% render_role_badge role=membership.role.name %}
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ membership.date_joined|date:"M d, Y" }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <a href="{% url 'workspace_detail' membership.company.id %}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-box-arrow-in-right"></i> View Details
+                                            </a>
+                                            {% if membership.company == user.profile.workspace %}
+                                            <span class="badge bg-success align-self-center">
+                                                <i class="bi bi-check-circle"></i> Active
+                                            </span>
+                                            {% else %}
+                                            <a href="{% url 'workspace_select' membership.company.id %}" 
+                                               class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-arrow-repeat"></i> Switch
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Empty State -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    {% empty_state title="No Workspace Memberships" message="You're not a member of any workspace yet. Create a workspace or accept an invitation to get started." icon="briefcase" action_url="workspace_create" action_label="Create Your First Workspace" action_icon="plus-circle" %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Helpful Info Card -->
+            <div class="card mt-4 border-info">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle text-info"></i> About Workspaces
+                    </h6>
+                    <ul class="small mb-0">
+                        <li><strong>Owner:</strong> Full control including billing, deletion, and team management</li>
+                        <li><strong>Admin:</strong> Can manage content, team members, and settings</li>
+                        <li><strong>Member:</strong> Can view and edit data based on assigned permissions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+.avatar-sm {
+    width: 42px;
+    height: 42px;
+}
+</style>
 {% endblock %}

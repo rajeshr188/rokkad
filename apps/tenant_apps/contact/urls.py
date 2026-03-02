@@ -145,4 +145,30 @@ urlpatterns = (
         views.customer_pic_set_default,
         name="contact_pic_set_default",
     ),
+    # Proof URLs
+    path(
+        "customer/<int:pk>/proofs/",
+        views.proof_list,
+        name="customer_proofs_list",
+    ),
+    path(
+        "customer/<int:customer_pk>/proof/add/",
+        views.proof_create_or_update,
+        name="customer_proof_create",
+    ),
+    path(
+        "customer/<int:customer_pk>/proof/<int:proof_pk>/edit/",
+        views.proof_create_or_update,
+        name="customer_proof_update",
+    ),
+    path(
+        "customer/proof/<int:pk>/detail/",
+        views.proof_detail,
+        name="customer_proof_detail",
+    ),
+    path(
+        "customer/proof/<int:pk>/delete/",
+        views.proof_delete,
+        name="customer_proof_delete",
+    ),
 )

@@ -5,7 +5,7 @@ import pytz
 from django.utils.html import format_html
 from django.utils.timesince import timesince
 
-from .models import Loan, LoanItem, Release
+from .models import GivenLoan, LoanItem, Release
 
 
 class ImageColumn(tables.Column):
@@ -36,7 +36,7 @@ class LoanTable(tables.Table):
     address = tables.Column(
         verbose_name="Address",
         visible=False,
-        accessor="customer.get_address",
+        accessor="borrower.get_address",
         exclude_from_export=False,
     )
     lic = tables.Column(
@@ -63,31 +63,25 @@ class LoanTable(tables.Table):
     # def render_notified(self, value, record):
     #     return record.created
 
-    def render_customer(self, record):
+    def render_borrower(self, record):
         return format_html(
             """<a href="" hx-get="/contact/customer/detail/{}" hx-push-url="true"
                         hx-target="#content" hx-swap="innerHTML transition:true">
             {}</a>""",
-            record.customer.pk,
-            record.customer.name,
+            record.borrower.pk,
+            record.borrower.name,
         )
 
-    def value_customer(self, record):
-        return f"{record.customer.name} {record.customer.get_relatedas_display()} {record.customer.relatedto}"
+    def value_borrower(self, record):
+        return f"{record.borrower.name} {record.borrower.get_relatedas_display()} {record.borrower.relatedto}"
 
     def render_total_weight(self, record):
-        gold_weight = (
-            f"G:{record.total_gold_weight} gms" if record.total_gold_weight > 0 else ""
-        )
+        gold_weight = f"G:{record.gold_weight} gms" if record.gold_weight > 0 else ""
         silver_weight = (
-            f"S:{record.total_silver_weight} gms"
-            if record.total_silver_weight > 0
-            else ""
+            f"S:{record.silver_weight} gms" if record.silver_weight > 0 else ""
         )
         bronze_weight = (
-            f"B:{record.total_bronze_weight} gms"
-            if record.total_bronze_weight > 0
-            else ""
+            f"B:{record.bronze_weight} gms" if record.bronze_weight > 0 else ""
         )
 
         # Combine the weights, ensuring there are no extra spaces
@@ -95,18 +89,12 @@ class LoanTable(tables.Table):
         return f"{weight}"
 
     def value_total_weight(self, record):
-        gold_weight = (
-            f"G:{record.total_gold_weight} gms" if record.total_gold_weight > 0 else ""
-        )
+        gold_weight = f"G:{record.gold_weight} gms" if record.gold_weight > 0 else ""
         silver_weight = (
-            f"S:{record.total_silver_weight} gms"
-            if record.total_silver_weight > 0
-            else ""
+            f"S:{record.silver_weight} gms" if record.silver_weight > 0 else ""
         )
         bronze_weight = (
-            f"B:{record.total_bronze_weight} gms"
-            if record.total_bronze_weight > 0
-            else ""
+            f"B:{record.bronze_weight} gms" if record.bronze_weight > 0 else ""
         )
 
         # Combine the weights, ensuring there are no extra spaces
@@ -118,7 +106,7 @@ class LoanTable(tables.Table):
             """
             <a href ="" hx-get="/girvi/girvi/loan/detail/{}/"
                         hx-target="#content" hx-swap="innerHTML transition:true"
-                        hx-vals='{{"use_block":"content"}}'
+                        
                         hx-push-url="true">{}</a>
             """,
             record.id,
@@ -145,7 +133,7 @@ class LoanTable(tables.Table):
         return f"{record.months_since_created}/({timesince(record.loan_date, now)})"
 
     def render_total_interest(self, record):
-        return record.interestdue()
+        return record.interest_due()
 
     # def render_total_due(self, record):
     #     return record.total_interest + record.loan_amount
@@ -153,25 +141,25 @@ class LoanTable(tables.Table):
     # def value_total_due(self, record):
     #     return record.total_due
 
-    current_value = tables.Column(verbose_name="Value")
+    total_current_value = tables.Column(verbose_name="Value")
 
-    def value_current_value(self, record):
-        return record.current_value
+    def value_total_current_value(self, record):
+        return record.total_current_value
 
     class Meta:
-        model = Loan
+        model = GivenLoan
         fields = (
             "selection",
             # "id",
             "loan_id",
             "loan_date",
-            "customer",
+            "borrower",
             "item_desc",
             "total_weight",
             "loan_amount",
             "total_interest",
             "total_due",
-            "current_value",
+            "total_current_value",
             "months_since_created",
             # "lic",
             # "is_overdue",
@@ -181,11 +169,12 @@ class LoanTable(tables.Table):
             "lic",
             "loan_id",
             "loan_date",
-            "customer",
+            "borrower",
             "address",
             "item_desc",
             "total_weight",
             "loan_amount",
+            "total_current_value",
         )
         # https://stackoverflow.com/questions/37513463/how-to-change-color-of-django-tables-row
         row_attrs = {
