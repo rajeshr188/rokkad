@@ -1,6 +1,5 @@
 import decimal
 import logging
-from re import T
 
 import pytz
 from django.contrib import messages
@@ -25,7 +24,6 @@ from moneyed import Money
 from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.models.license import Series
-from apps.tenant_apps.utils.htmx_utils import for_htmx, is_htmx, make_get_request
 
 from ..filters import LoanFilter
 from ..flows import LoanFlow
@@ -188,99 +186,6 @@ def get_interestrate(request):
     return render(request, "girvi/partials/field.html", context)
 
 
-# @login_required
-# @for_htmx(use_block_from_params=True)
-# def loan_list(request):
-#     filter = LoanFilter(
-#         request.GET,
-#         request=request,
-#         queryset=Loan.objects.order_by("-id")
-#         .with_details(request.grate, request.srate, request.brate)
-#         .select_related("customer", "release", "created_by")
-#         .prefetch_related("notifications", "loanitems"),
-#     )
-#     table = LoanTable(filter.qs)
-
-#     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-#     export_format = request.GET.get("_export", None)
-#     if TableExport.is_valid_format(export_format):
-#         # TODO speed up the table export using celery
-
-#         exporter = TableExport(
-#             export_format,
-#             table,
-#             exclude_columns=(
-#                 "selection",
-#                 "notified",
-#                 "months_since_created",
-#                 "current_value",
-#                 "total_due",
-#                 "total_interest",
-#             ),
-#             dataset_kwargs={"title": "loans"},
-#         )
-#         return exporter.response(f"table.{export_format}")
-#     context = {
-#         "filter": filter,
-#         "table": table,
-#         "export_formats": ["csv", "xls", "xlsx", "json", "html"],
-#         "total_loan_amount": filter.qs.total_loanamount(),
-#         "total_interest": filter.qs.aggregate(total=Sum("total_interest")),
-#     }
-#     return TemplateResponse(request, "girvi/loan/loan_list.html", context)
-
-
-# @login_required
-# @for_htmx(use_block_from_params=True)
-# def loan_list(request: HttpRequest):
-#     return _loan_list(request)
-
-
-# def _loan_list(request: HttpRequest):
-#     filter = LoanFilter(
-#         request.GET,
-#         request=request,
-#         queryset=Loan.objects.order_by("-id")
-#         .with_details(request.grate, request.srate, request.brate)
-#         .select_related("customer", "release", "created_by")
-#         .prefetch_related("notifications", "loanitems"),
-#     )
-#     table = LoanTable(filter.qs)
-
-#     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-#     export_format = request.GET.get("_export", None)
-#     if TableExport.is_valid_format(export_format):
-#         # TODO speed up the table export using celery
-
-#         exporter = TableExport(
-#             export_format,
-#             table,
-#             exclude_columns=(
-#                 "selection",
-#                 "notified",
-#                 "months_since_created",
-#                 "current_value",
-#                 "total_due",
-#                 "total_interest",
-#             ),
-#             dataset_kwargs={"title": "loans"},
-#         )
-#         return exporter.response(f"table.{export_format}")
-
-#     if request.method == "POST":
-#         if is_htmx(request):
-#             return _loan_list(make_get_request(request))
-
-#     context = {
-#         "filter": filter,
-#         "table": table,
-#         "export_formats": ["csv", "xls", "xlsx", "json", "html"],
-#         "total_loan_amount": filter.qs.total_loanamount(),
-#         "total_interest": filter.qs.aggregate(total=Sum("total_interest")),
-#     }
-#     return TemplateResponse(request, "girvi/loan/loan_list.html", context)
-
-
 @login_required
 def loan_list(request: HttpRequest):
     filter = LoanFilter(
@@ -296,11 +201,9 @@ def loan_list(request: HttpRequest):
         "total_loan_amount": filter.qs.aggregate(total=Sum("loanitems__loanamount")),
         "total_interest": filter.qs.aggregate(total=Sum("loanitems__interest")),
     }
-    if is_htmx(request):
-        return TemplateResponse(
-            request, "girvi/loan/loan_list.html#loan-content", context
-        )
-    return TemplateResponse(request, "girvi/loan/loan_list.html", context)
+    if request.htmx:
+        return render(request, "girvi/loan/loan_list.html#loan-content", context)
+    return render(request, "girvi/loan/loan_list.html", context)
 
 
 @login_required
@@ -320,96 +223,12 @@ def loan_table_partial(request: HttpRequest):
         "total_interest": filter.qs.aggregate(total=Sum("loanitems__interest")),
         "filter": filter,
     }
-    if is_htmx(request):
-        return TemplateResponse(request, "girvi/loan/_loan_table.html", context)
-    else:
-        # If not HTMX, render the full loan list page
-        context["filter"] = filter
-        return TemplateResponse(request, "girvi/loan/loan_list.html", context)
-
-
-# @login_required
-# @for_htmx(use_block="content")
-# def loan_save(request, id=None, pk=None):
-#     obj = get_object_or_404(Loan, id=id) if id else None
-#     form = LoanForm(request.POST or None, instance=obj)
-
-#     if request.method == "POST":
-#         if form.is_valid():
-#             loan = form.save(commit=False)
-#             loan.created_by = request.user
-#             loan.save()
-#             messages.success(
-#                 request, f"{'Updated' if obj else 'Created'} Loan: {loan.loan_id}"
-#             )
-#             return loan_detail(make_get_request(request), loan.id)
-
-#             # response = TemplateResponse(
-#             #     request,
-#             #     "girvi/loan/loan_detail.html",
-#             #     {"loan": loan, "object": loan, "customer": loan.customer},
-#             # )
-#             # response["Hx-Push-Url"] = reverse(
-#             #     "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
-#             # )
-#             # return response
-
-#             # response = TemplateResponse(
-#             #     request,
-#             #     "girvi/loan/loan_detail.html",
-#             #     {"loan": loan, "object": loan, "customer": loan.customer},
-#             # )
-#             # response["HX-Redirect"] = reverse("girvi:girvi_loan_detail", kwargs={"pk": loan.id})
-#             # return response
-
-#         else:
-#             messages.warning(request, "Please correct the error below.")
-#             return TemplateResponse(
-#                 request,
-#                 "girvi/loan/loan_form.html",
-#                 {"form": form, "loan": obj, "object": obj},
-#             )
-
-#     if not obj:
-#         initial = {}
-
-#         try:
-#             latest_loan = Loan.objects.latest("id")
-#             series = latest_loan.series.id
-#         except Loan.DoesNotExist:
-#             print("No loans exist yet.")
-#             series = None
-#         try:
-#             loan_id = generate_loan_id(series_id=series)
-#             initial["loan_id"] = loan_id
-#             initial["loan_date"] = ld(request)
-#             initial["series"] = series
-#             # print(f"Generated loan ID: {loan_id}")
-#         except License.DoesNotExist as e:
-#             print(f"License does not exist: {e}")
-#             messages.error(request, "No License objects in database.")
-#             response = HttpResponse()
-#             response["HX-Redirect"] = reverse("girvi:girvi_license_list")
-#             return response
-#             # Handle the case where no license exists, e.g., log the error, notify the user, etc.
-#         except Exception as e:
-#             print(f"Unexpected error: {e}")
-#             messages.error(request, "Unexpected error: {e}")
-#             response = HttpResponse()
-#             response["HX-Redirect"] = reverse("girvi:girvi_license_list")
-#             return response
-
-#         if pk:
-#             initial["customer"] = get_object_or_404(Customer, pk=pk)
-#         form = LoanForm(initial=initial)
-
-#     return TemplateResponse(
-#         request, "girvi/loan/loan_form.html", {"form": form, "loan": obj, "object": obj}
-#     )
+    if request.htmx:
+        return render(request, "girvi/loan/_loan_table.html", context)
+    return render(request, "girvi/loan/loan_list.html", context)
 
 
 @login_required
-@for_htmx(use_block="content")
 def loan_save(request, id=None, pk=None):
     """
     Create or update a loan instance.
@@ -472,7 +291,7 @@ def loan_save(request, id=None, pk=None):
         )
 
     except Exception as e:
-        logger.warn(f"Error in loan_save: {str(e)}")
+        logger.warning(f"Error in loan_save: {str(e)}")
         messages.error(request, f"An error occurred while saving loan")
         return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
 
@@ -532,7 +351,6 @@ def loan_delete(request, pk=None):
 
 
 @login_required
-@for_htmx(use_block="content")
 def loan_detail(request, pk):
     loan = get_object_or_404(
         GivenLoan.objects.select_related(
@@ -632,17 +450,12 @@ def loan_detail(request, pk):
         "object": loan,
         "loan": loan,
         "customer": loan.borrower,
-        "items": loan.loanitems.all(),
-        "payments": getattr(loan, "loan_payments", []).all()
-        if hasattr(loan, "loan_payments")
-        else [],
         "value": Money(value, "INR"),
         "worth": value - due,
         "lvratio": lvratio,
         "dvratio": dvratio,
         "weight": weight,
         "pure": pure,
-        "je": _get_loan_journal_entries(loan),
         "location": location,
         "position": position,
         "expires": (
@@ -652,16 +465,15 @@ def loan_detail(request, pk):
         ),
         "possible_transitions": possible_transitions,
         "current_status": current_status,
-        "available_transitions": available_transitions,
-        "transitions": transitions,
         "change_log": changelog,
     }
 
-    return TemplateResponse(request, "girvi/loan/loan_detail_1.html", context)
+    if request.htmx:
+        return render(request, "girvi/loan/loan_detail_1.html#loan-detail", context)
+    return render(request, "girvi/loan/loan_detail_1.html", context)
 
 
 @login_required
-@for_htmx(use_block="content")
 def split_loan_items(request, pk):
     from ..services import LoanSplitService
 
@@ -672,7 +484,7 @@ def split_loan_items(request, pk):
         messages.success(
             request, f"Successfully split loan into {len(new_loans)} new loans"
         )
-        return loan_list(make_get_request(request))
+        return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
     except ValidationError as e:
         messages.error(request, str(e))
         return redirect("girvi:girvi_loan_detail", pk=pk)
@@ -731,55 +543,11 @@ def merge_loans(request):
 
 
 @login_required
-@for_htmx(use_block="content")
 def loan_renew(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
 
     messages.error(request, "Loan renewal is not yet supported for refactored loans.")
     return redirect("girvi:girvi_loan_detail", pk=loan.pk)
-
-    if request.method == "POST":
-        # create a form instance and populate it with data from the request:
-        form = LoanRenewForm(request.POST)
-        # check whether it's valid:
-        if form.is_valid():
-            # process the data in form.cleaned_data as required
-            new_loanamount = (
-                loan.due() + form.cleaned_data["amount"] + form.cleaned_data["interest"]
-            )
-            newloan = Loan(
-                series=loan.series,
-                customer=loan.customer,
-                lid=Loan.objects.filter(series=loan.series).latest("lid").lid + 1,
-                loan_amount=new_loanamount,
-            )
-            newloan.save()
-            # copy and create loan.loanitems to newloan.items
-            for item in loan.loanitems.all():
-                newloan.loanitems.add(item)
-            newloan.save()
-            # create a new release object
-            try:
-                releaseid = Release.objects.latest("id").id + 1
-            except Release.DoesNotExist:
-                releaseid = 1  # if no release objects exist
-            Release.objects.create(
-                release_id=releaseid,
-                loan=loan,
-            )
-
-            # redirect to a new URL:
-            messages.success(request, f"Renewed Loan : {newloan.loan_id}")
-            return redirect(newloan)
-
-    # if a GET (or any other method) we'll create a blank form
-    else:
-        form = LoanRenewForm()
-    response = TemplateResponse(
-        request, "girvi/loan/loan_renew.html", {"form": form, "loan": loan}
-    )
-    response["Hx-Push-Url"] = reverse("girvi:girvi_loan_renew", kwargs={"pk": loan.id})
-    return response
 
 
 @require_http_methods("POST")
@@ -790,4 +558,72 @@ def deleteLoan(request):
     for i in loans:
         i.delete()
     messages.error(request, f"Deleted {len(id_list)} loans")
-    return loan_list(request)
+    return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
+
+
+# ---------------------------------------------------------------------------
+# Loan detail tab endpoints (lazy-loaded via HTMX)
+# ---------------------------------------------------------------------------
+
+
+@login_required
+@require_http_methods(["GET"])
+def loan_detail_items_tab(request, pk):
+    loan = get_object_or_404(
+        GivenLoan.objects.prefetch_related("loanitems", "repledgedloanitems"), pk=pk
+    )
+    return render(
+        request,
+        "girvi/loan/partials/tab_items.html",
+        {"loan": loan, "items": loan.loanitems.all()},
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def loan_detail_payments_tab(request, pk):
+    loan = get_object_or_404(GivenLoan, pk=pk)
+    payments = loan.loan_payments.all() if hasattr(loan, "loan_payments") else []
+    return render(
+        request,
+        "girvi/loan/partials/tab_payments.html",
+        {"loan": loan, "payments": payments},
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def loan_detail_transactions_tab(request, pk):
+    loan = get_object_or_404(GivenLoan, pk=pk)
+    return render(
+        request,
+        "girvi/loan/partials/tab_transactions.html",
+        {"loan": loan, "je": _get_loan_journal_entries(loan)},
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def loan_detail_statement_tab(request, pk):
+    loan = get_object_or_404(GivenLoan, pk=pk)
+    return render(request, "girvi/loan/partials/tab_statement.html", {"loan": loan})
+
+
+@login_required
+@require_http_methods(["GET"])
+def loan_detail_notices_tab(request, pk):
+    loan = get_object_or_404(
+        GivenLoan.objects.prefetch_related("notifications"), pk=pk
+    )
+    return render(
+        request,
+        "girvi/loan/partials/tab_notices.html",
+        {"loan": loan, "notifications": loan.notifications.all()},
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def loan_detail_release_tab(request, pk):
+    loan = get_object_or_404(GivenLoan, pk=pk)
+    return render(request, "girvi/loan/partials/tab_release.html", {"loan": loan})

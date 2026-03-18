@@ -1,0 +1,10 @@
+<div class="card mt-3">
+  <div class="card-body">
+    <h3 class="card-title">Transactions</h3>
+    {% for i in je %}
+    {% include 'dea/txns.html' with object=i %}
+    {% empty %}
+    <p class="text-muted">No transactions found.</p>
+    {% endfor %}
+  </div>
+</div>

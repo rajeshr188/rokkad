@@ -3,6 +3,7 @@ from datetime import datetime
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.template.response import TemplateResponse
 from django.urls import reverse_lazy
@@ -11,8 +12,6 @@ from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView
 from django_tables2.config import RequestConfig
 
-from apps.tenant_apps.utils.htmx_utils import for_htmx
-
 from ..filters import ReleaseFilter
 from ..forms import BulkReleaseForm, ReleaseForm, ReleaseFormSet
 from ..models import GivenLoan, Release
@@ -20,9 +19,7 @@ from ..tables import ReleaseTable
 
 
 @login_required
-@for_htmx(use_block_from_params="true")
 def release_list(request):
-    stats = {}
     filter = ReleaseFilter(
         request.GET,
         queryset=Release.objects.order_by("-id").select_related("loan"),
@@ -35,11 +32,12 @@ def release_list(request):
     # if TableExport.is_valid_format(export_format):
     #     exporter = TableExport(export_format, table, exclude_columns=())
     #     return exporter.response(f"table.{export_format}")
+    if request.htmx:
+        return TemplateResponse(request, "girvi/release/release_list.html#content", context)
     return TemplateResponse(request, "girvi/release/release_list.html", context)
 
 
 @login_required
-@for_htmx(use_block="content")
 def release_create(request, pk=None):
     if request.POST:
         form = ReleaseForm(request.POST or None)
@@ -73,15 +71,20 @@ def release_create(request, pk=None):
                     "release_date": datetime.now(),
                 }
             )
-    return TemplateResponse(
-        request, "girvi/release/release_form.html", context={"form": form}
-    )
+    if request.htmx:
+        return TemplateResponse(
+            request, "girvi/release/release_form.html#content", context={"form": form}
+        )
+    return TemplateResponse(request, "girvi/release/release_form.html", context={"form": form})
 
 
 @login_required
-@for_htmx(use_block="content")
 def release_detail(request, pk):
     release = get_object_or_404(Release, pk=pk)
+    if request.htmx:
+        return TemplateResponse(
+            request, "girvi/release/release_detail.html#content", {"object": release}
+        )
     return TemplateResponse(
         request, "girvi/release/release_detail.html", {"object": release}
     )
@@ -111,7 +114,6 @@ class ReleaseDeleteView(LoginRequiredMixin, DeleteView):
     template_name = "girvi/release/release_confirm_delete.html"
 
 
-# @for_htmx(use_block="content")
 # def bulk_release(request):
 #     # if this is a POST request we need to process the form data
 #     if request.method == "POST":
@@ -162,7 +164,6 @@ class ReleaseDeleteView(LoginRequiredMixin, DeleteView):
 #     return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form, "form_g": form_g})
 
 
-@for_htmx(use_block="content")
 def bulk_release(request):
     # if this is a POST request we need to process the form data
     if request.method == "POST":
@@ -220,7 +221,8 @@ def bulk_release(request):
         form = BulkReleaseForm(
             initial={"loans": qs, "date": timezone.now().strftime("%Y-%m-%dT%H:%M")}
         )
-
+    if request.htmx:
+        return TemplateResponse(request, "girvi/release/bulk_release.html#content", {"form": form})
     return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form})
 
 

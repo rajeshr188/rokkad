@@ -57,40 +57,68 @@ def next_loanid(request):
 
 
 # create views to crud series
+@login_required
 def series_list(request):
-    series = Series.objects.all()
-    return render(request, "girvi/series/series_list.html", {"series": series})
+    series = Series.objects.order_by("name")
+    context = {"series_list": series}
+    if request.htmx:
+        return render(request, "girvi/series/series_list.html#series-list", context)
+    return render(request, "girvi/series/series_list.html", context)
 
 
+@login_required
 def series_detail(request, pk):
     series = get_object_or_404(Series, pk=pk)
     return render(request, "girvi/series/series_detail.html", {"series": series})
 
 
+@login_required
 def series_new(request):
     if request.method == "POST":
         form = SeriesForm(request.POST)
         if form.is_valid():
             series = form.save()
+            if request.htmx:
+                return HttpResponse(
+                    headers={
+                        "HX-Redirect": redirect(
+                            "girvi:girvi_series_detail", pk=series.pk
+                        ).url
+                    }
+                )
             return redirect("girvi:girvi_series_detail", pk=series.pk)
     else:
         form = SeriesForm()
     return render(request, "girvi/series/series_edit.html", {"form": form})
 
 
+@login_required
 def series_edit(request, pk):
     series = get_object_or_404(Series, pk=pk)
     if request.method == "POST":
         form = SeriesForm(request.POST, instance=series)
         if form.is_valid():
             series = form.save()
+            if request.htmx:
+                return HttpResponse(
+                    headers={
+                        "HX-Redirect": redirect(
+                            "girvi:girvi_series_detail", pk=series.pk
+                        ).url
+                    }
+                )
             return redirect("girvi:girvi_series_detail", pk=series.pk)
     else:
         form = SeriesForm(instance=series)
     return render(request, "girvi/series/series_edit.html", {"form": form})
 
 
+@login_required
 def series_delete(request, pk):
+    if request.method != "POST":
+        return HttpResponse(status=405)
     series = get_object_or_404(Series, pk=pk)
     series.delete()
-    return redirect("girvi:girvi_license_list")
+    if request.htmx:
+        return HttpResponse(headers={"HX-Redirect": redirect("girvi:girvi_series_list").url})
+    return redirect("girvi:girvi_series_list")

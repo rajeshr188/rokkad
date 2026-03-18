@@ -122,6 +122,13 @@ urlpatterns += (
     path("girvi/loan/<int:pk>/split/", views.split_loan_items, name="split_loan_items"),
     path("girvi/loan/merge/", views.merge_loans, name="merge_loans"),
     path("girvi/loan/", views.loan_list, name="girvi_loan_list"),
+    # Loan detail tab endpoints (HTMX lazy-loaded)
+    path("girvi/loan/detail/<int:pk>/items/", views.loan_detail_items_tab, name="loan_detail_items_tab"),
+    path("girvi/loan/detail/<int:pk>/payments/", views.loan_detail_payments_tab, name="loan_detail_payments_tab"),
+    path("girvi/loan/detail/<int:pk>/transactions/", views.loan_detail_transactions_tab, name="loan_detail_transactions_tab"),
+    path("girvi/loan/detail/<int:pk>/statement/", views.loan_detail_statement_tab, name="loan_detail_statement_tab"),
+    path("girvi/loan/detail/<int:pk>/notices/", views.loan_detail_notices_tab, name="loan_detail_notices_tab"),
+    path("girvi/loan/detail/<int:pk>/release/", views.loan_detail_release_tab, name="loan_detail_release_tab"),
     path("girvi/loan/table/", views.loan_table_partial, name="loan_table_partial"),
     path("girvi/loan/renew/<int:pk>/", views.loan_renew, name="girvi_loan_renew"),
     path("girvi/loan/create/", views.loan_save, name="girvi_loan_create"),

@@ -1,0 +1,31 @@
+<div class="card mt-3">
+  <div class="card-body table-responsive">
+    <table class="table table-sm table-striped">
+      <thead>
+        <tr>
+          <th>Id</th>
+          <th>Created</th>
+          <th>JE</th>
+          <th>Amount</th>
+          <th>Principal</th>
+          <th>Interest</th>
+          <th>With Release</th>
+        </tr>
+      </thead>
+      <tbody id="payment-items" class="table-group-divider">
+        {% for i in payments %}
+        {% include 'girvi/loanpayment/payment-inline.html' with object=i %}
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="text-end">
+      <a class="btn btn-success" href="{% url 'girvi:girvi_loanpayment_create' loan.id %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg"
+          viewBox="0 0 16 16">
+          <path fill-rule="evenodd"
+            d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
+        </svg> Add Payment
+      </a>
+    </div>
+  </div>
+</div>
