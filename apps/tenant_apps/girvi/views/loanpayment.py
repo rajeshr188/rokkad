@@ -1,12 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, reverse
+from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
-
-from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import LoanPaymentFilter
 from ..forms import LoanPaymentForm
@@ -30,7 +28,6 @@ def loan_payment_list_view(request):
 
 
 @login_required
-@for_htmx(use_block="content")
 def loan_payment_create_view(request, pk=None):
     if request.method == "POST":
         form = LoanPaymentForm(request.POST)
@@ -47,6 +44,10 @@ def loan_payment_create_view(request, pk=None):
             loan = GivenLoan.objects.get(id=pk)
             initial = {"loan": loan, "payment_date": timezone.now()}
         form = LoanPaymentForm(initial=initial)
+    if request.htmx:
+        return TemplateResponse(
+            request, "girvi/loanpayment/loanpayment_form.html#content", {"form": form}
+        )
     return TemplateResponse(
         request, "girvi/loanpayment/loanpayment_form.html", {"form": form}
     )
