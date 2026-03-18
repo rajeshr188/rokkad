@@ -21,10 +21,10 @@
                 <tr>
                     <td>{{release.release_id}}</td>
                     <td>{{release.loan.loan_id}}</td>
-                    <td>{{release.loan.customer}}</td>
+                    <td>{{ release.loan.borrower }}</td>
                     <td>{{release.loan.loan_amount}}</td>
-                    <td>{{release.loan.interest}}</td>
-                    <td>{{release.loan.due}}</td>
+                    <td>{{ release.loan.interest_due }}</td>
+                    <td>{{ release.loan.total_due }}</td>
                     <td>
                         <a href="{%url 'girvi:girvi_release_update' release.id%}" class="btn btn-warning btn-sm">Update</a>
                         <a href="{%url 'girvi:girvi_release_delete' release.id%}" class="btn btn-danger btn-sm">Delete</a>
