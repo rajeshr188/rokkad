@@ -175,7 +175,7 @@ class Customer(models.Model):
     def get_default_address(self):
         """Get customer's default address"""
         try:
-            return self.address.get(is_default=True)
+            return self.address.filter(is_default=True).first()
         except Address.DoesNotExist:
             return self.address.first()
 
@@ -186,10 +186,8 @@ class Customer(models.Model):
 
     def get_default_contact(self):
         """Get customer's default contact"""
-        try:
-            return self.contactno.get(is_default=True)
-        except Contact.DoesNotExist:
-            return self.contactno.first()
+        default_contact = self.contactno.filter(is_default=True).first()
+        return default_contact or self.contactno.first()
 
     # Backward compatibility alias
     def get_contactno(self):
@@ -199,13 +197,109 @@ class Customer(models.Model):
     def merge(self, dup):
         """Merge duplicate customer into this customer"""
         with transaction.atomic():
-            # Transfer all related objects to this customer
+            # Transfer simple related objects first.
             dup.loan_set.update(customer=self)
-            dup.contactno.all().update(customer=self)
-            dup.address.all().update(customer=self)
-            dup.proofs.all().update(customer=self)
-            dup.relationships_created.all().update(customer=self)
-            dup.relationships_received.all().update(related_customer=self)
+            dup.pics.all().update(customer=self)
+
+            # Move addresses one-by-one so default enforcement in save() is honored.
+            for dup_address in dup.address.all():
+                dup_address.customer = self
+                dup_address.save(update_fields=["customer"])
+
+            # Contacts have unique_together(customer, phone_number, contact_type).
+            # Merge conflicting duplicates instead of bulk reassigning.
+            for dup_contact in dup.contactno.all():
+                existing_contact = self.contactno.filter(
+                    phone_number=dup_contact.phone_number,
+                    contact_type=dup_contact.contact_type,
+                ).first()
+
+                if existing_contact:
+                    fields_to_update = []
+                    if dup_contact.is_verified and not existing_contact.is_verified:
+                        existing_contact.is_verified = True
+                        fields_to_update.append("is_verified")
+                    if dup_contact.is_default and not existing_contact.is_default:
+                        existing_contact.is_default = True
+                        fields_to_update.append("is_default")
+                    if fields_to_update:
+                        existing_contact.save(update_fields=fields_to_update)
+                    dup_contact.delete()
+                else:
+                    dup_contact.customer = self
+                    dup_contact.save(update_fields=["customer"])
+
+            # Proofs have unique_together(customer, proof_type).
+            for dup_proof in dup.proofs.all():
+                existing_proof = self.proofs.filter(proof_type=dup_proof.proof_type).first()
+                if existing_proof:
+                    fields_to_update = []
+                    if dup_proof.is_verified and not existing_proof.is_verified:
+                        existing_proof.is_verified = True
+                        fields_to_update.append("is_verified")
+                    if not existing_proof.document and dup_proof.document:
+                        existing_proof.document = dup_proof.document
+                        fields_to_update.append("document")
+                    if fields_to_update:
+                        existing_proof.save(update_fields=fields_to_update)
+                    dup_proof.delete()
+                else:
+                    dup_proof.customer = self
+                    dup_proof.save(update_fields=["customer"])
+
+            # Relationships have unique_together(customer, related_customer, relationship).
+            for rel in dup.relationships_created.all():
+                new_related_customer = (
+                    self if rel.related_customer_id == dup.id else rel.related_customer
+                )
+                if new_related_customer == self:
+                    rel.delete()
+                    continue
+
+                exists = CustomerRelationship.objects.filter(
+                    customer=self,
+                    related_customer=new_related_customer,
+                    relationship=rel.relationship,
+                ).exclude(pk=rel.pk).exists()
+                if exists:
+                    rel.delete()
+                else:
+                    rel.customer = self
+                    rel.related_customer = new_related_customer
+                    rel.save(update_fields=["customer", "related_customer"])
+
+            for rel in dup.relationships_received.all():
+                new_customer = self if rel.customer_id == dup.id else rel.customer
+                if new_customer == self:
+                    rel.delete()
+                    continue
+
+                exists = CustomerRelationship.objects.filter(
+                    customer=new_customer,
+                    related_customer=self,
+                    relationship=rel.relationship,
+                ).exclude(pk=rel.pk).exists()
+                if exists:
+                    rel.delete()
+                else:
+                    rel.customer = new_customer
+                    rel.related_customer = self
+                    rel.save(update_fields=["customer", "related_customer"])
+
+            # Final safety pass: keep exactly one default address/contact.
+            default_addresses = self.address.filter(is_default=True).order_by("pk")
+            if default_addresses.count() > 1:
+                keep_address = default_addresses.first()
+                self.address.filter(is_default=True).exclude(pk=keep_address.pk).update(
+                    is_default=False
+                )
+
+            default_contacts = self.contactno.filter(is_default=True).order_by("pk")
+            if default_contacts.count() > 1:
+                keep_contact = default_contacts.first()
+                self.contactno.filter(is_default=True).exclude(pk=keep_contact.pk).update(
+                    is_default=False
+                )
 
             # Delete duplicate customer
             dup.delete()
@@ -584,10 +678,10 @@ class Contact(models.Model):
         self.save(update_fields=["is_verified"])
 
     def set_default(self):
-        """Set this contact as default for its type"""
-        Contact.objects.filter(
-            customer=self.customer, contact_type=self.contact_type, is_default=True
-        ).exclude(pk=self.pk).update(is_default=False)
+        """Set this contact as the default for the customer"""
+        Contact.objects.filter(customer=self.customer, is_default=True).exclude(
+            pk=self.pk
+        ).update(is_default=False)
         self.is_default = True
         self.save(update_fields=["is_default"])
 
@@ -600,9 +694,9 @@ class Contact(models.Model):
         """Save with default handling"""
         self.clean()
         if self.is_default:
-            Contact.objects.filter(
-                customer=self.customer, contact_type=self.contact_type, is_default=True
-            ).exclude(pk=self.pk).update(is_default=False)
+            Contact.objects.filter(customer=self.customer, is_default=True).exclude(
+                pk=self.pk
+            ).update(is_default=False)
         super().save(*args, **kwargs)
 
 

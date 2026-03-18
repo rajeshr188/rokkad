@@ -88,7 +88,7 @@ class AccountingPeriod(models.Model):
         ordering = ["-end_date"]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(end_date__gt=models.F("start_date")),
+                condition=models.Q(end_date__gt=models.F("start_date")),
                 name="period_end_after_start",
             ),
             models.UniqueConstraint(

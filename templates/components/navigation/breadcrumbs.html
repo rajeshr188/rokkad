@@ -1,21 +1,82 @@
-<!-- Breadcrumbs Navigation -->
-{% if breadcrumbs %}
-<nav aria-label="breadcrumb">
+{% comment %}
+Breadcrumbs Navigation Component
+     
+USAGE PATTERNS:
+
+1. With breadcrumb_items context variable (preferred):
+   Pass breadcrumb_items list in context
+   
+   Context should set:
+   breadcrumb_items = [
+       {'label': 'Dashboard', 'url': '/workspace/1/dashboard/'},
+       {'label': 'Settings', 'url': None},  # None for current page
+   ]
+
+2. With explicit items parameter:
+   With items=breadcrumb_list parameter
+
+3. For workspace pages (simple form):
+   With show_home=True, workspace_name=workspace.name, current_page='Dashboard'
+{% endcomment %}
+
+{% if breadcrumb_items or breadcrumbs or items or show_home %}
+<nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
+        <!-- Home Link (always shown unless show_home is False) -->
+        {% if show_home != False %}
         <li class="breadcrumb-item">
-            <a href="{% url 'home' %}"><i class="bi bi-house-door"></i> Home</a>
+            <a href="{% url 'dashboard' %}"><i class="bi bi-house-door me-1"></i>Home</a>
         </li>
-        {% for label, url in breadcrumbs %}
-            {% if url %}
+        {% endif %}
+        
+        <!-- Workspace Link (if in tenant context) -->
+        {% if workspace_name and in_tenant %}
+        <li class="breadcrumb-item">
+            <a href="{% url 'workspace_dashboard' workspace_id=user_workspace.id %}">
+                {{ workspace_name }}
+            </a>
+        </li>
+        {% endif %}
+        
+        <!-- Standard breadcrumb items from breadcrumb_items context -->
+        {% for item in breadcrumb_items %}
+            {% if item.url %}
                 <li class="breadcrumb-item">
-                    <a href="{{ url }}">{{ label }}</a>
+                    <a href="{{ item.url }}">{{ item.label }}</a>
                 </li>
             {% else %}
                 <li class="breadcrumb-item active" aria-current="page">
-                    {{ label }}
+                    {{ item.label }}
                 </li>
             {% endif %}
+        {% empty %}
+            <!-- Fallback for direct breadcrumbs parameter -->
+            {% for label, url in breadcrumbs %}
+                {% if url %}
+                    <li class="breadcrumb-item">
+                        <a href="{{ url }}">{{ label }}</a>
+                    </li>
+                {% else %}
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {{ label }}
+                    </li>
+                {% endif %}
+            {% empty %}
+                <!-- Final fallback for items parameter -->
+                {% for item in items %}
+                    <li class="breadcrumb-item">
+                        <a href="{{ item.url }}">{{ item.label }}</a>
+                    </li>
+                {% endfor %}
+            {% endfor %}
         {% endfor %}
+        
+        <!-- Final item as current page (if provided) -->
+        {% if current_page %}
+        <li class="breadcrumb-item active" aria-current="page">
+            {{ current_page }}
+        </li>
+        {% endif %}
     </ol>
 </nav>
 {% endif %}

@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import time
 from io import BytesIO
@@ -7,6 +8,8 @@ from itertools import groupby
 import fitz
 import qrcode
 import reportlab.rl_config
+
+logger = logging.getLogger(__name__)
 from django.http import HttpResponse
 from num2words import num2words
 from PIL import Image as PILImage
@@ -514,7 +517,7 @@ def merge_pdfs_double_sided(front_template, content, back_template):
         return merged_content
 
     except Exception as e:
-        print(f"Error creating double-sided PDF: {str(e)}")
+        logger.exception("Error creating double-sided PDF: %s", str(e))
         return None
 
 
@@ -553,7 +556,7 @@ def merge_multiple_pdfs(pdf_contents):
         return merged_content
 
     except Exception as e:
-        print(f"Error merging multiple PDFs: {str(e)}")
+        logger.exception("Error merging multiple PDFs: %s", str(e))
         return None
 
 
@@ -598,7 +601,7 @@ def merge_pdfs_side_by_side(left_pdf, right_pdf):
         return merged_content
 
     except Exception as e:
-        print(f"Error merging PDFs side by side: {str(e)}")
+        logger.exception("Error merging PDFs side by side: %s", str(e))
         return None
 
 
@@ -665,6 +668,13 @@ def get_custom_jcl(loan, template_id=None):
         if not template:
             return None
 
+        # Resolve borrower/customer reference for backward compatibility
+        # GivenLoan uses 'borrower', legacy Loan might use 'customer'
+        party = getattr(loan, "borrower", None) or getattr(loan, "customer", None)
+        if not party:
+            logger.error("Loan object has neither 'borrower' nor 'customer' attribute")
+            return None
+
         def has_template(template_file):
             """Check if template file exists and is not None"""
             return bool(template_file and template_file.name)
@@ -684,16 +694,16 @@ def get_custom_jcl(loan, template_id=None):
                 "license_name": lambda: loan.series.license.shopname,
                 "license_address": lambda: loan.series.license.address,
                 "license_propreitor": lambda: f"Prop:{loan.series.license.propreitor}",
-                "customer_pic": lambda: loan.customer.get_default_pic().path
-                if loan.customer.get_default_pic()
+                "customer_pic": lambda: party.get_default_pic().path
+                if party.get_default_pic()
                 else None,
                 "loanitem_pic": lambda: loan.loanitems.first().pic.path
                 if loan.loanitems.first().pic
                 else None,
                 "loan_id": lambda: loan.loan_id,
                 "loan_date": lambda: loan.loan_date.strftime("%d-%m-%Y"),
-                "customer_name": lambda: loan.customer.name,
-                "customer_info": lambda: f"{loan.customer.name}, {loan.customer.get_relatedas_display()} {loan.customer.relatedto}<br/>{loan.customer.get_address()}<br/>Ph: {loan.customer.get_contactno()}",
+                "customer_name": lambda: party.name,
+                "customer_info": lambda: f"{party.name}, {party.get_relatedas_display()} {party.relatedto}<br/>{party.get_address()}<br/>Ph: {party.get_contactno()}",
                 "loan_desc": lambda: "<br/>".join(
                     [
                         f"{i + 1}) {item.itemdesc}, Qty: {item.quantity}"
@@ -707,7 +717,7 @@ def get_custom_jcl(loan, template_id=None):
                 "amount_words": lambda: num2words(loan.loan_amount, lang="en_IN")
                 + " rupees only",
                 "loan_qr": lambda: loan.loan_id,
-                "label": lambda: f"{loan.loan_id} - {loan.loan_date.strftime('%d-%m-%Y')} <br/>{loan.loan_amount} - {loan.weight} <br/>{loan.customer.name} - {loan.item_desc}",
+                "label": lambda: f"{loan.loan_id} - {loan.loan_date.strftime('%d-%m-%Y')} <br/>{loan.loan_amount} - {loan.weight} <br/>{party.name} - {loan.item_desc}",
             }
 
             frame_data = data_mapping.get(frame.frame_name, lambda: None)()
@@ -779,7 +789,7 @@ def get_custom_jcl(loan, template_id=None):
                     )
                     qr_buffer.close()
                 except Exception as e:
-                    print(f"QR Code rendering error: {e}")
+                    logger.exception("QR Code rendering error for frame %s: %s", frame.frame_name, str(e))
 
         def render_page_content_to_canvas(canvas_obj, template_type, x_offset=0):
             """Helper to render content with specific canvas"""
@@ -906,73 +916,181 @@ def get_custom_jcl(loan, template_id=None):
                 return content_pdf
 
             elif template.print_option == "BS":
-                render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
-                c.showPage()
-                render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
-                c.save()
-                content_pdf = content_buffer.getvalue()
-                content_buffer.close()
-                if not (
-                    has_template(template.base_template)
-                    or has_template(template.dup_template)
-                ):
-                    return content_pdf
+                # ============================================================================
+                # OLD APPROACH (BUGGY) - Commented out for reference
+                # ============================================================================
+                # BUG EXPLANATION:
+                # The old code rendered BOTH original and duplicate into ONE multi-page PDF:
+                #   1. c.addFromList(...original...) -> page 0
+                #   2. c.showPage()                  -> start new page
+                #   3. c.addFromList(...duplicate..) -> page 1
+                #   4. c.save()                      -> save 2-page content_pdf
+                #
+                # Then it tried to merge this 2-page content_pdf with templates:
+                #   merge_pdfs(template.base_template.read(), content_pdf)
+                #
+                # BUT merge_pdfs() ONLY uses page 0 of content_pdf (see line 452):
+                #   content_doc[0]  <- HARDCODED TO PAGE 0
+                #
+                # Result: merge_pdfs was called TWICE with the SAME 2-page content_pdf,
+                # both times using only page 0 (original). Page 1 (duplicate) was IGNORED!
+                # This caused duplicate content to be missing/blank when merged with dup_template.
+                #
+                # ---OLD CODE---
+                # elif template.print_option == "BS":
+                #     render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+                #     c.showPage()
+                #     render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+                #     c.save()
+                #     content_pdf = content_buffer.getvalue()
+                #     content_buffer.close()
+                #     if not (has_template(template.base_template) or has_template(template.dup_template)):
+                #         return content_pdf
+                #     return merge_multiple_pdfs([
+                #         merge_pdfs(template.base_template.read(), content_pdf)  # Uses page 0 only
+                #         if has_template(template.base_template) else content_pdf,
+                #         merge_pdfs(template.dup_template.read(), content_pdf)   # ALSO uses page 0 (BUG!)
+                #         if has_template(template.dup_template) else content_pdf,
+                #     ])
+                # ============================================================================
+                #
+                # NEW APPROACH (FIXED)
+                # ============================================================================
+                # FIX: Create TWO separate single-page PDFs instead of one 2-page PDF
+                # This ensures merge_pdfs can use page 0 correctly each time:
+                #   - original_pdf = 1-page PDF with original content
+                #   - duplicate_pdf = 1-page PDF with duplicate content
+                # Then merge each with its own template:
+                #   merge_pdfs(base_template, original_pdf)   <- merges correct page
+                #   merge_pdfs(dup_template, duplicate_pdf)   <- merges correct page
+                #
+                original_buffer_bs = io.BytesIO()
+                c_original_bs = canvas.Canvas(original_buffer_bs, pagesize=(page_width, page_height))
+                render_page_content_to_canvas(c_original_bs, TemplateFrame.TemplateType.ORIGINAL)
+                c_original_bs.save()
+                original_pdf = original_buffer_bs.getvalue()
+                original_buffer_bs.close()
 
-                return merge_multiple_pdfs(
-                    [
-                        merge_pdfs(template.base_template.read(), content_pdf)
-                        if has_template(template.base_template)
-                        else content_pdf,
-                        merge_pdfs(template.dup_template.read(), content_pdf)
-                        if has_template(template.dup_template)
-                        else content_pdf,
-                    ]
+                duplicate_buffer_bs = io.BytesIO()
+                c_duplicate_bs = canvas.Canvas(duplicate_buffer_bs, pagesize=(page_width, page_height))
+                render_page_content_to_canvas(c_duplicate_bs, TemplateFrame.TemplateType.DUPLICATE)
+                c_duplicate_bs.save()
+                duplicate_pdf = duplicate_buffer_bs.getvalue()
+                duplicate_buffer_bs.close()
+
+                # Merge each with respective template
+                merged_original = (
+                    merge_pdfs(template.base_template.read(), original_pdf)
+                    if has_template(template.base_template)
+                    else original_pdf
                 )
+                merged_duplicate = (
+                    merge_pdfs(template.dup_template.read(), duplicate_pdf)
+                    if has_template(template.dup_template)
+                    else duplicate_pdf
+                )
+
+                # Combine as separate pages
+                return merge_multiple_pdfs([merged_original, merged_duplicate])
 
             elif template.print_option == "BD":
-                render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
-                c.showPage()
-                render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
-                c.save()
-                content_pdf = content_buffer.getvalue()
-                content_buffer.close()
+                # ============================================================================
+                # OLD APPROACH (BUGGY) - Commented out for reference
+                # ============================================================================
+                # BUG EXPLANATION (same as BS):
+                # The old code rendered BOTH original and duplicate into ONE multi-page PDF:
+                #   1. render_page_content_to_canvas(...original...) -> page 0
+                #   2. c.showPage()                  -> start new page
+                #   3. render_page_content_to_canvas(...duplicate..) -> page 1
+                #   4. c.save()                      -> save 2-page content_pdf
+                #
+                # Then it called merge_pdfs_double_sided() TWICE with the SAME content_pdf:
+                #   merge_pdfs_double_sided(base_template, content_pdf, terms_template)   # Page 0 used
+                #   merge_pdfs_double_sided(dup_template, content_pdf, form_d3_template)  # Page 0 again (BUG!)
+                #
+                # BUT merge_pdfs_double_sided() ONLY uses page 0 of content_pdf (line 488):
+                #   content_doc[0]  <- HARDCODED TO PAGE 0
+                #
+                # Result: duplicate content in page 1 was never merged, causing output errors.
+                #
+                # ---OLD CODE---
+                # elif template.print_option == "BD":
+                #     render_page_content_to_canvas(c, TemplateFrame.TemplateType.ORIGINAL)
+                #     c.showPage()
+                #     render_page_content_to_canvas(c, TemplateFrame.TemplateType.DUPLICATE)
+                #     c.save()
+                #     content_pdf = content_buffer.getvalue()
+                #     content_buffer.close()
+                #     if not (has_template(template.base_template) or has_template(template.dup_template)):
+                #         return content_pdf
+                #     return merge_multiple_pdfs([
+                #         merge_pdfs_double_sided(template.base_template.read(), content_pdf, ...)
+                #         if (conditions) else content_pdf,
+                #         merge_pdfs_double_sided(template.dup_template.read(), content_pdf, ...)  # ALSO Page 0 (BUG!)
+                #         if (conditions) else content_pdf,
+                #     ])
+                # ============================================================================
+                #
+                # NEW APPROACH (FIXED)
+                # ============================================================================
+                # FIX: Create TWO separate single-page PDFs instead of one 2-page PDF
+                #   - original_pdf = 1-page PDF with original content
+                #   - duplicate_pdf = 1-page PDF with duplicate content
+                # Then merge each with its own template using merge_pdfs_double_sided():
+                #   - merge_pdfs_double_sided(base_template, original_pdf, terms_template)
+                #   - merge_pdfs_double_sided(dup_template, duplicate_pdf, form_d3_template)
+                # This ensures each call merges the CORRECT content page.
+                #
+                original_buffer_bd = io.BytesIO()
+                c_original_bd = canvas.Canvas(original_buffer_bd, pagesize=(page_width, page_height))
+                render_page_content_to_canvas(c_original_bd, TemplateFrame.TemplateType.ORIGINAL)
+                c_original_bd.save()
+                original_pdf = original_buffer_bd.getvalue()
+                original_buffer_bd.close()
 
-                if not (
-                    has_template(template.base_template)
-                    or has_template(template.dup_template)
-                ):
-                    return content_pdf
+                duplicate_buffer_bd = io.BytesIO()
+                c_duplicate_bd = canvas.Canvas(duplicate_buffer_bd, pagesize=(page_width, page_height))
+                render_page_content_to_canvas(c_duplicate_bd, TemplateFrame.TemplateType.DUPLICATE)
+                c_duplicate_bd.save()
+                duplicate_pdf = duplicate_buffer_bd.getvalue()
+                duplicate_buffer_bd.close()
 
-                return merge_multiple_pdfs(
-                    [
-                        merge_pdfs_double_sided(
-                            template.base_template.read(),
-                            content_pdf,
-                            template.terms_template.read(),
-                        )
-                        if (
-                            has_template(template.base_template)
-                            and has_template(template.terms_template)
-                        )
-                        else content_pdf,
-                        merge_pdfs_double_sided(
-                            template.dup_template.read(),
-                            content_pdf,
-                            template.form_d3_template.read(),
-                        )
-                        if (
-                            has_template(template.dup_template)
-                            and has_template(template.form_d3_template)
-                        )
-                        else content_pdf,
-                    ]
+                # Merge original with base + terms (double-sided)
+                merged_original = (
+                    merge_pdfs_double_sided(
+                        template.base_template.read(),
+                        original_pdf,
+                        template.terms_template.read(),
+                    )
+                    if (
+                        has_template(template.base_template)
+                        and has_template(template.terms_template)
+                    )
+                    else original_pdf
                 )
 
+                # Merge duplicate with dup + form D3 (double-sided)
+                merged_duplicate = (
+                    merge_pdfs_double_sided(
+                        template.dup_template.read(),
+                        duplicate_pdf,
+                        template.form_d3_template.read(),
+                    )
+                    if (
+                        has_template(template.dup_template)
+                        and has_template(template.form_d3_template)
+                    )
+                    else duplicate_pdf
+                )
+
+                # Combine into final document
+                return merge_multiple_pdfs([merged_original, merged_duplicate])
+
     except LoanTemplate.DoesNotExist:
-        print("Template not found or inactive")
+        logger.warning("Attempted to generate PDF with non-existent or inactive template (ID: %s)", template_id)
         return None
     except Exception as e:
-        print(f"Error generating PDF: {str(e)}")
+        logger.exception("Error generating PDF for loan (template_id=%s): %s", template_id, str(e))
         return None
 
 

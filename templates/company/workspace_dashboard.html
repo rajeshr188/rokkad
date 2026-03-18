@@ -4,7 +4,7 @@
 {% block title %}{{ workspace.name }} Dashboard{% endblock %}
 
 {% block breadcrumbs %}
-    {% include 'components/breadcrumbs.html' with items='dashboard,workspace_detail' workspace=workspace %}
+{% include "components/navigation/breadcrumbs.html" with show_home=True workspace_name=workspace.name current_page="Dashboard" %}
 {% endblock %}
 
 {% block page_header %}
@@ -109,6 +109,131 @@
         </div>
     </div>
 </div>
+
+<!-- Subscription Status Section (if Owner/Admin) -->
+{% if 'billing_view' in user_permissions %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-credit-card me-2 text-primary"></i>Subscription Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        {% if has_active_subscription %}
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold">Active Subscription</h6>
+                                <p class="mb-1 text-muted small">
+                                    plan: <strong>{{ subscription_plan|default:"Standard" }}</strong>
+                                </p>
+                                {% if days_until_renewal %}
+                                <p class="mb-0 text-muted small">
+                                    Renews in: <strong>{{ days_until_renewal }} days</strong>
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                                <i class="bi bi-exclamation-circle-fill text-warning fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold">Subscription Renewal Needed</h6>
+                                <p class="mb-0 text-muted small">
+                                    Please renew to continue accessing workspace features.
+                                </p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                        <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-credit-card me-1"></i>Manage Subscription
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Workspace Admin Actions Section (if Owner/Admin) -->
+{% if 'workspace_edit' in user_permissions %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h6 class="mb-3 fw-bold text-muted text-uppercase small">Admin Actions</h6>
+        <div class="row g-3">
+            <!-- Invite Team Member -->
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm hover-card" style="cursor: pointer;">
+                    <a href="{% url 'team_invite' workspace_id=workspace.id %}" class="text-decoration-none text-reset stretched-link">
+                        <div class="card-body text-center">
+                            <div class="rounded-circle bg-info bg-opacity-10 d-inline-block p-3 mb-3">
+                                <i class="bi bi-person-plus text-info fs-5"></i>
+                            </div>
+                            <h6 class="card-title mb-2">Invite Team Member</h6>
+                            <p class="card-text text-muted small mb-0">Add a new member to your team</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Manage Team -->
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm hover-card" style="cursor: pointer;">
+                    <a href="{% url 'team_invitations' %}" class="text-decoration-none text-reset stretched-link">
+                        <div class="card-body text-center">
+                            <div class="rounded-circle bg-primary bg-opacity-10 d-inline-block p-3 mb-3">
+                                <i class="bi bi-people text-primary fs-5"></i>
+                            </div>
+                            <h6 class="card-title mb-2">Manage Members</h6>
+                            <p class="card-text text-muted small mb-0">View and manage team members</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Workspace Settings -->
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm hover-card" style="cursor: pointer;">
+                    <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="text-decoration-none text-reset stretched-link">
+                        <div class="card-body text-center">
+                            <div class="rounded-circle bg-warning bg-opacity-10 d-inline-block p-3 mb-3">
+                                <i class="bi bi-gear text-warning fs-5"></i>
+                            </div>
+                            <h6 class="card-title mb-2">Settings</h6>
+                            <p class="card-text text-muted small mb-0">Configure workspace preferences</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-card {
+    transition: all 0.3s ease;
+}
+.hover-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+.hover-card a {
+    text-decoration: none;
+    color: inherit;
+}
+</style>
+{% endif %}
 
 <!-- Main Content Section -->
 <div class="row mb-4">

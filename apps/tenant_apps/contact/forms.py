@@ -229,53 +229,37 @@ class AddressForm(forms.ModelForm):
         address_id = kwargs.pop("address_id", None)
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
-        # self.helper.form_method = 'post'
 
         if address_id:
             self.helper.attrs = {
                 "hx-post": reverse(
                     "customer_address_update", args=[customer_id, address_id]
                 ),
-                "hx-target": "closest li",
-                "hx-swap": "outerHTML",
+                "hx-target": "#modal-content",
+                "hx-swap": "innerHTML",
             }
-            cancel_url = reverse("customer_address_detail", args=[address_id])
             cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
                 **{
-                    "hx-get": cancel_url,
-                    "hx-target": "closest li",
-                    "hx-swap": "outerHTML",
+                    "data-bs-dismiss": "modal",
                 },
             )
         else:
             self.helper.attrs = {
                 "hx-post": reverse("customer_address_create", args=[customer_id]),
-                "hx-target": "this",
-                "hx-swap": "outerHTML",
+                "hx-target": "#modal-content",
+                "hx-swap": "innerHTML",
             }
-            # cancel_button = Button(
-            #     "cancel",
-            #     "Cancel",
-            #     css_class="btn btn-danger",
-            #     onclick="this.closest('form').remove()",
-            # )
             cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
                 **{
-                    "hx-on": 'click: this.closest("form").remove()',
+                    "data-bs-dismiss": "modal",
                 },
             )
-            # cancel_button = Button(
-            #     'cancel', 'Cancel', css_class='btn btn-danger',
-            #     **{
-            #         '_':'on click remove closest form',
-            #     }
-            # )
         self.helper.add_input(Submit("submit", "Save", css_class="btn btn-success"))
         self.helper.add_input(cancel_button)
 
@@ -306,31 +290,30 @@ class ContactForm(forms.ModelForm):
         if contact_id:
             self.helper.attrs = {
                 "hx-post": reverse("contact_update", args=[customer_id, contact_id]),
-                "hx-target": "closest li",
-                "hx-swap": "outerHTML",
+                "hx-target": "#modal-content",
+                "hx-swap": "innerHTML",
             }
-            cancel_url = reverse("customer_contact_detail", args=[contact_id])
             cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
                 **{
-                    "hx-get": cancel_url,
-                    "hx-target": "closest li",
-                    "hx-swap": "outerHTML",
+                    "data-bs-dismiss": "modal",
                 },
             )
         else:
             self.helper.attrs = {
                 "hx-post": reverse("contact_create", args=[customer_id]),
-                "hx-target": "this",
-                "hx-swap": "outerHTML",
+                "hx-target": "#modal-content",
+                "hx-swap": "innerHTML",
             }
             cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
-                onclick="this.closest('form').remove()",
+                **{
+                    "data-bs-dismiss": "modal",
+                },
             )
         self.helper.add_input(Submit("submit", "Save", css_class="btn btn-success"))
         self.helper.add_input(cancel_button)
@@ -343,12 +326,41 @@ class ProofForm(forms.ModelForm):
             "proof_type",
             "proof_number",
             "document",
-            "customer",
+            "is_verified",
         ]
 
     def __init__(self, *args, **kwargs):
-        super(ProofForm, self).__init__(*args, **kwargs)
-        self.fields["Customer"].queryset = Customer.objects.all()
+        customer_id = kwargs.pop("customer_id", None)
+        proof_id = kwargs.pop("proof_id", None)
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = True
+        self.helper.attrs = {
+            "hx-target": "#modal-content",
+            "hx-swap": "innerHTML",
+            "hx-encoding": "multipart/form-data",
+            "enctype": "multipart/form-data",
+        }
+        if proof_id:
+            self.helper.attrs["hx-post"] = reverse(
+                "customer_proof_update", args=[customer_id, proof_id]
+            )
+        else:
+            self.helper.attrs["hx-post"] = reverse(
+                "customer_proof_create", args=[customer_id]
+            )
+
+        self.helper.add_input(Submit("submit", "Save", css_class="btn btn-success"))
+        self.helper.add_input(
+            Button(
+                "cancel",
+                "Cancel",
+                css_class="btn btn-danger",
+                **{
+                    "data-bs-dismiss": "modal",
+                },
+            )
+        )
 
 
 class CustomerMergeForm(forms.Form):
@@ -374,7 +386,8 @@ class CustomerMergeForm(forms.Form):
         self.helper = FormHelper()
         self.helper.attrs = {
             "hx-post": reverse("contact_customer_merge"),
-            "hx-target": "#form",
+            "hx-target": "#modal-content",
+            "hx-swap": "innerHTML",
         }
         self.helper.add_input(Submit("submit", "Merge", css_class="btn btn-success"))
         self.helper.add_input(
@@ -382,7 +395,9 @@ class CustomerMergeForm(forms.Form):
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
-                onclick="this.closest('form').remove()",
+                **{
+                    "data-bs-dismiss": "modal",
+                },
             )
         )
 
@@ -425,31 +440,30 @@ class CustomerRelationshipForm(forms.ModelForm):
                 "hx-post": reverse(
                     "update_relationship", args=[customer.id, self.instance.id]
                 ),
-                "hx-target": "closest li",
-                "hx-swap": "outerHTML",
+                "hx-target": "#modal-content",
+                "hx-swap": "innerHTML",
             }
-            cancel_url = reverse("relationship_detail", args=[self.instance.id])
             cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
                 **{
-                    "hx-get": cancel_url,
-                    "hx-target": "closest li",
-                    "hx-swap": "outerHTML",
+                    "data-bs-dismiss": "modal",
                 },
             )
         else:
             self.helper.attrs = {
                 "hx-post": reverse("create_relationship", args=[customer.id]),
-                "hx-target": "this",
-                "hx-swap": "outerHTML",
+                "hx-target": "#modal-content",
+                "hx-swap": "innerHTML",
             }
             cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
-                onclick="this.closest('form').remove()",
+                **{
+                    "data-bs-dismiss": "modal",
+                },
             )
         self.helper.add_input(Submit("submit", "Save", css_class="btn btn-success"))
         self.helper.add_input(cancel_button)

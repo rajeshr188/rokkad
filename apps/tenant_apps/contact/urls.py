@@ -131,9 +131,14 @@ urlpatterns = (
         name="contact_customer_pics",
     ),
     path(
-        "customer/<int:customer_id>/add_pic/",
-        views.add_customer_pic,
-        name="contact_customer_pic_add",
+        "customer/<int:customer_id>/pics/form/",
+        views.customer_pic_form,
+        name="contact_customer_pic_form",
+    ),
+    path(
+        "customer/<int:customer_id>/pics/save/",
+        views.customer_pic_save,
+        name="contact_customer_pic_save",
     ),
     path(
         "customer/pic/<int:pk>/delete/",
