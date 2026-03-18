@@ -1,0 +1,39 @@
+<div class="card mt-3">
+  <div class="card-body">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>Id</th>
+          <th>Created</th>
+          <th>Group</th>
+          <th>Medium</th>
+          <th>Notification Type</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody class="table-group-divider">
+        {% for i in notifications %}
+        <tr>
+          <td><a href="{% url 'notify_notification_detail' i.id %}">{{i.id}}</a></td>
+          <td>{{i.created}}</td>
+          <td>{{i.group.id}}</td>
+          <td>{{i.get_medium_type_display}}</td>
+          <td>{{i.get_notice_type_display}}</td>
+          <td>{{i.get_status_display}}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-muted text-center">No notifications.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="text-end">
+      <a class="btn btn-success" href="{% url 'girvi:girvi_loan_notice' loan.id %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg"
+          viewBox="0 0 16 16">
+          <path fill-rule="evenodd"
+            d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
+        </svg> Add Notice
+      </a>
+    </div>
+  </div>
+</div>

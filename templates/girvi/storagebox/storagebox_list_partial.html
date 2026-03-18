@@ -1,5 +1,7 @@
 {% for storage_box in storage_boxes %}
-    <div id="storagebox-{{ storage_box.pk }}">
-        {% include 'girvi/storagebox/storagebox_item.html' %}
-    </div>
+<div id="storagebox-{{ storage_box.pk }}" class="mb-2">
+    {% include 'girvi/storagebox/storagebox_item.html' %}
+</div>
+{% empty %}
+<div class="alert alert-light border">No storage boxes added yet.</div>
 {% endfor %}

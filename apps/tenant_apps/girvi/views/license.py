@@ -14,14 +14,11 @@ from django.db.models import Q
 from django.utils import timezone
 from django.contrib import messages
 
-from apps.tenant_apps.utils.htmx_utils import for_htmx
-
 from ..forms import LicenseForm, LicenseDocumentForm
 from ..models import License, LicenseDocument, Series
 
 
 @login_required
-@for_htmx(use_block="content")
 def license_list(request):
     """List all licenses with filtering options"""
     licenses = License.objects.all()
@@ -49,6 +46,12 @@ def license_list(request):
         "business_types": License.BUSINESS_TYPE_CHOICES,
     }
 
+    if request.htmx:
+        return TemplateResponse(
+            request,
+            "girvi/license/license_list.html#content",
+            context=context,
+        )
     return TemplateResponse(request, "girvi/license/license_list.html", context=context)
 
 
