@@ -18,9 +18,40 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from django.urls import reverse
+from django.core.exceptions import PermissionDenied
 
 from .models import Plan, Subscription, Invoice, Payment
 from .razorpay_service import RazorpayService
+
+
+class BillingPermissionMixin:
+    """Require billing_view permission in current workspace for billing pages."""
+
+    required_permission = "billing_view"
+
+    def dispatch(self, request, *args, **kwargs):
+        workspace = getattr(request.user.profile, "workspace", None)
+        if not workspace:
+            messages.error(request, "Please select a workspace first.")
+            return redirect("workspace_selector")
+
+        from apps.orgs.models import Membership
+
+        try:
+            membership = Membership.objects.select_related("role").get(
+                user=request.user,
+                company=workspace,
+            )
+        except Membership.DoesNotExist:
+            raise PermissionDenied("Not a workspace member")
+
+        has_perm = membership.role.permissions.filter(
+            codename=self.required_permission
+        ).exists()
+        if not has_perm:
+            raise PermissionDenied(f"Permission '{self.required_permission}' required")
+
+        return super().dispatch(request, *args, **kwargs)
 
 
 class SubscriptionPlanListView(LoginRequiredMixin, ListView):
@@ -173,7 +204,7 @@ class PaymentView(LoginRequiredMixin, CreateView):
             return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
-class SubscriptionDashboardView(LoginRequiredMixin, TemplateView):
+class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
     """Customer billing dashboard"""
 
     template_name = "subscriptions/dashboard.html"
@@ -227,7 +258,7 @@ class SubscriptionDashboardView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class InvoiceDetailView(LoginRequiredMixin, DetailView):
+class InvoiceDetailView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
     """View invoice details"""
 
     model = Invoice
@@ -253,7 +284,7 @@ class InvoiceDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class InvoicePDFView(LoginRequiredMixin, DetailView):
+class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
     """Download invoice as PDF"""
 
     model = Invoice

@@ -1,35 +1,48 @@
-import http
-import stat
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
-from django_tables2 import RequestConfig
 from django_tables2.export.export import TableExport
 from django.shortcuts import render
-from ...utils.htmx_utils import for_htmx, make_get_request
 from ..filters import CustomerFilter
 from ..forms import CustomerForm, CustomerMergeForm
 from ..models import Customer
 from ..tables import CustomerTable
+from .common import (
+    get_customer_detail_context,
+    get_customer_for_detail,
+    render_customer_detail_fragment,
+)
+
+
+CUSTOMER_LIST_TEMPLATE = "contact/customer_list_improved.html"
+
+
+def _get_customer_list_context(request):
+    customer_queryset = Customer.objects.all().prefetch_related("contactno", "address")
+    customer_filter = CustomerFilter(request.GET, queryset=customer_queryset)
+    filtered_queryset = customer_filter.qs
+    paginator = Paginator(filtered_queryset, 12)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return {
+        "filter": customer_filter,
+        "customers": page_obj.object_list,
+        "page_obj": page_obj,
+        "results_count": paginator.count,
+    }
 
 
 @login_required
 def customer_list(request):
-    context = {}
-    f = CustomerFilter(
-        request.GET,
-        queryset=Customer.objects.all().prefetch_related("contactno", "address"),
-    )
-    table = CustomerTable(f.qs)
-    RequestConfig(request, paginate={"per_page": 10}).configure(table)
+    context = _get_customer_list_context(request)
     export_format = request.GET.get("_export", None)
     if TableExport.is_valid_format(export_format):
-        # TODO speed up the table export using celery
-
+        table = CustomerTable(context["filter"].qs)
         exporter = TableExport(
             export_format,
             table,
@@ -37,33 +50,22 @@ def customer_list(request):
             dataset_kwargs={"title": "loans"},
         )
         return exporter.response(f"table.{export_format}")
-    context["filter"] = f
-    context["table"] = table
+
     if request.htmx:
-        print("htmx request")
-        return render(
-            request, "contact/customer_list_improved.html#customer-content", context
-        )
-    return render(request, "contact/customer_list_improved.html", context)
+        fragment_name = "customer-list-results"
+        if request.headers.get("HX-Target") == "content":
+            fragment_name = "customer-content"
+        return render(request, f"{CUSTOMER_LIST_TEMPLATE}#{fragment_name}", context)
+    return render(request, CUSTOMER_LIST_TEMPLATE, context)
 
 
 @login_required
 def customer_detail(request, pk=None):
-    context = {}
-    cust = get_object_or_404(Customer, pk=pk)
-    context["object"] = cust
-    context["customer"] = cust
-    loans = cust.loans_received.unreleased().for_table_display()
-    context["loans"] = loans
-    context["total_loans"] = loans.count()
-    context["total_amount"] = sum([i.loan_amount for i in loans])
-    worth = [(i.total_current_value or 0) - (i.total_due or 0) for i in loans]
-    context["worth"] = sum(worth)
+    cust = get_customer_for_detail(pk)
+    context = get_customer_detail_context(cust)
 
     if request.htmx:
-        return render(
-            request, "contact/customer_detail_improved.html#customer-detail", context
-        )
+        return render(request, "contact/customer_detail_improved.html#customer-detail", context)
     return render(request, "contact/customer_detail_improved.html", context)
 
 
@@ -87,14 +89,26 @@ def customer_save(request, pk=None):
             f = form.save(commit=False)
             f.created_by = request.user
             f.save()
-            # action.send(request.user, action_object=f, verb=verb)
-
             messages.success(request, success_message)
 
-            response = HttpResponse(status=200)
-            response["HX-Trigger"] = "listChanged"  # Trigger client-side event
-            response["HX-Redirect"] = reverse("contact_customer_detail", args=[f.id])
-            return response
+            if pk:
+                # Update from detail page: refresh hero section, close modal
+                refreshed = get_customer_for_detail(f.id)
+                return render_customer_detail_fragment(
+                    request,
+                    refreshed,
+                    "customer-hero",
+                    headers={
+                        "HX-Retarget": "#customer-hero",
+                        "HX-Reswap": "outerHTML",
+                        "HX-Trigger": "contactModalClose",
+                    },
+                )
+            else:
+                # Create: navigate to the new customer's detail page
+                response = HttpResponse(status=200)
+                response["HX-Redirect"] = reverse("contact_customer_detail", args=[f.id])
+                return response
 
         else:
             messages.error(request, "Error saving customer")
@@ -104,7 +118,7 @@ def customer_save(request, pk=None):
     )
 
 
-@require_http_methods(["DELETE"])
+@require_http_methods(["POST","DELETE"])
 def customer_delete(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     messages.error(request, f"Deleted customer {customer}")
@@ -133,5 +147,5 @@ def customer_merge(request):
             messages.error(request, "Error merging customers")
 
     return TemplateResponse(
-        request, "partials/crispy_form.html", context={"form": form}
+        request, "contact/customer_merge_form.html", context={"form": form}
     )

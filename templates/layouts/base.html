@@ -1,5 +1,5 @@
 {% load static %}
-{% load i18n partials %}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,10 +18,12 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/css/vendor/select2/select2.min.css' %}">
+    <link rel="stylesheet" href="{% static 'django_select2/django_select2.css' %}">
     
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <!-- Main Navigation Bar -->
     {% block navbar %}
         {% include 'components/navigation/main_nav.html' %}
@@ -101,12 +103,18 @@
     
     <!-- jQuery (for compatibility) -->
     <script src="{% static 'js/jquery.js' %}"></script>
+    <script src="{% static 'admin/js/vendor/select2/select2.full.min.js' %}"></script>
+    <script src="{% static 'django_select2/django_select2.js' %}"></script>
     
     <!-- Custom JS -->
     <script src="{% static 'js/base.js' %}"></script>
     
     <!-- Dropdown Submenu Enhancement -->
     <script>
+        document.body.addEventListener('htmx:configRequest', function(event) {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             // Handle dropdown submenus
             const dropdownItems = document.querySelectorAll('.dropdown-submenu > a');
@@ -130,6 +138,48 @@
                     });
                 }
             });
+        });
+
+        function initializeDjangoSelect2(container) {
+            if (!window.jQuery || !jQuery.fn || !jQuery.fn.djangoSelect2) {
+                return;
+            }
+
+            const $container = jQuery(container);
+            $container.find('select.django-select2').each(function() {
+                const $select = jQuery(this);
+                const $modal = $select.closest('.modal');
+
+                if ($select.data('select2')) {
+                    $select.select2('destroy');
+                }
+
+                const options = {
+                    width: '100%'
+                };
+
+                if ($modal.length) {
+                    options.dropdownParent = $modal;
+                }
+
+                $select.djangoSelect2(options);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDjangoSelect2(document.body);
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            window.setTimeout(function() {
+                initializeDjangoSelect2(event.detail.target);
+            }, 0);
+        });
+
+        document.addEventListener('shown.bs.modal', function(event) {
+            window.setTimeout(function() {
+                initializeDjangoSelect2(event.target);
+            }, 0);
         });
     </script>
     
@@ -156,6 +206,18 @@
         }
         .dropdown-submenu.show > .dropdown-menu {
             display: block;
+        }
+
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-container--open {
+            z-index: 2056;
+        }
+
+        .select2-dropdown {
+            z-index: 2056;
         }
     </style>
     

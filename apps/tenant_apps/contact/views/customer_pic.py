@@ -4,88 +4,123 @@ import uuid
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.template.response import TemplateResponse
-from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
 
 from ..forms import CustomerPicForm
 from ..models import Customer, CustomerPic
+from .common import get_customer_for_detail, render_customer_detail_page
 
 
 @login_required
 def customer_pics(request, customer_id):
+    """List all pictures for a customer (HTMX-friendly)"""
     customer = get_object_or_404(Customer, id=customer_id)
     pics = customer.pics.all()
-    return TemplateResponse(
-        request, "contact/customer_pics.html", {"customer": customer, "pics": pics}
+    return render(
+        request,
+        "contact/customer_pics.html",
+        {"customer": customer, "pics": pics},
     )
 
 
 @login_required
-def add_customer_pic(request, customer_id):
+def customer_pic_form(request, customer_id):
+    """Show form to add/capture customer picture"""
     customer = get_object_or_404(Customer, id=customer_id)
-    if request.method == "POST":
-        form = CustomerPicForm(request.POST, request.FILES)
-        if form.is_valid():
-            customer_pic = form.save(commit=False)
-            customer_pic.customer = customer
-            image_data = request.POST.get("image_data")
-
-            if image_data:
-                # Generate a unique identifier
-                unique_id = uuid.uuid4()
-
-                # Create the image file with the UUID as the name
-                image_file = ContentFile(
-                    base64.b64decode(image_data.split(",")[1]),
-                    name=f"{unique_id}.jpg",
-                )
-                customer_pic.image = image_file
-            elif "image" in request.FILES:
-                # Handle image file from local file system
-                uploaded_image = request.FILES["image"]
-                unique_id = uuid.uuid4()
-                uploaded_image.name = f"{unique_id}.jpg"
-                customer_pic.image = uploaded_image
-
-            customer_pic.save()
-            messages.success(request, "Customer Pic added.")
-            return redirect("contact_customer_detail", pk=customer.id)
-    else:
-        form = CustomerPicForm()
+    form = CustomerPicForm()
     return render(
         request,
-        "contact/add_customer_pic.html",
-        {
-            "form": form,
-            "customer": customer,
-            "url": reverse_lazy(
-                "contact_customer_pic_add", kwargs={"customer_id": customer.id}
-            ),
-        },
+        "contact/customer_pic_form.html",
+        {"form": form, "customer": customer},
     )
+
+
+@login_required
+@require_http_methods(["POST"])
+def customer_pic_save(request, customer_id):
+    """Save customer picture from camera capture or file upload"""
+    customer = get_object_or_404(Customer, id=customer_id)
+    form = CustomerPicForm(request.POST, request.FILES)
+
+    if form.is_valid():
+        customer_pic = form.save(commit=False)
+        customer_pic.customer = customer
+
+        # Handle canvas/camera capture (base64 image data)
+        image_data = request.POST.get("image_data")
+        if image_data:
+            try:
+                # Extract base64 data (format: "data:image/jpeg;base64,...")
+                is_data_uri = "," in image_data
+                if is_data_uri:
+                    base64_str = image_data.split(",")[1]
+                else:
+                    base64_str = image_data
+
+                image_file = ContentFile(
+                    base64.b64decode(base64_str),
+                    name=f"{uuid.uuid4()}.jpg",
+                )
+                customer_pic.image = image_file
+            except Exception as e:
+                messages.error(request, f"Failed to process captured image: {str(e)}")
+                return render(
+                    request,
+                    "contact/customer_pic_form.html",
+                    {"form": form, "customer": customer, "error": str(e)},
+                )
+
+        # Handle file upload
+        elif "image" in request.FILES:
+            uploaded_image = request.FILES["image"]
+            uploaded_image.name = f"{uuid.uuid4()}.jpg"
+            customer_pic.image = uploaded_image
+
+        customer_pic.save()
+        messages.success(request, "Customer picture added successfully.")
+        return render_customer_detail_page(
+            request,
+            get_customer_for_detail(customer.id),
+            headers={
+                "HX-Retarget": "#content",
+                "HX-Reswap": "innerHTML",
+                "HX-Trigger": "contactModalClose",
+            },
+        )
+    else:
+        messages.error(request, "Invalid form data. Please try again.")
+        return render(
+            request,
+            "contact/customer_pic_form.html",
+            {"form": form, "customer": customer},
+        )
 
 
 @login_required
 @require_http_methods(["DELETE"])
 def customer_pic_delete(request, pk):
-    instance = get_object_or_404(CustomerPic, pk=pk)
-    instance.delete()
-    messages.error(request, f"Customer Pic {instance} deleted.")
-    return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
+    """Delete a customer picture"""
+    pic = get_object_or_404(CustomerPic, pk=pk)
+    customer_id = pic.customer_id
+    pic.delete()
+    messages.error(request, "Picture deleted.")
+    return render_customer_detail_page(request, get_customer_for_detail(customer_id))
 
 
 @login_required
 @require_http_methods(["POST"])
 def customer_pic_set_default(request, pk):
-    instance = get_object_or_404(CustomerPic, pk=pk)
-    customer = instance.customer
-    # Update all related CustomerPic instances to set is_default to False
+    """Set a picture as the default for a customer"""
+    pic = get_object_or_404(CustomerPic, pk=pk)
+    customer = pic.customer
+
+    # Unset all other defaults
     CustomerPic.objects.filter(customer=customer).update(is_default=False)
-    # Set the selected CustomerPic instance to be the default
-    instance.is_default = True
-    instance.save()
-    messages.success(request, f"Customer Pic {instance} set as default.")
-    return HttpResponse(status=204, headers={"HX-Trigger": "listChanged"})
+
+    # Set this one as default
+    pic.is_default = True
+    pic.save()
+
+    messages.success(request, "Picture set as default.")
+    return render_customer_detail_page(request, get_customer_for_detail(customer.id))

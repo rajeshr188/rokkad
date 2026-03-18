@@ -37,7 +37,8 @@
                     {% endif %}
                 </a>
                 {% if user_workspace %}
-                <a class="nav-link" href="{% url 'team_invite' workspace_id=user_workspace.id %}">
+                <a class="nav-link {% if request.resolver_match.url_name == 'team_invite' %}active{% endif %}" 
+                   href="{% url 'team_invite' workspace_id=user_workspace.id %}">
                     <i class="bi bi-person-plus"></i> Invite Member
                 </a>
                 {% endif %}
@@ -49,21 +50,24 @@
             <div class="nav-section">
                 <h6 class="nav-section-title">Workspace</h6>
                 {% if user_workspace %}
-                <a class="nav-link" href="{% url 'workspace_detail' workspace_id=user_workspace.id %}">
+                <a class="nav-link {% if request.resolver_match.url_name == 'workspace_detail' %}active{% endif %}" 
+                   href="{% url 'workspace_detail' workspace_id=user_workspace.id %}">
                     <i class="bi bi-gear"></i> Settings
                 </a>
-                <a class="nav-link" href="{% url 'workspace_preferences' workspace_id=user_workspace.id %}">
+                <a class="nav-link {% if request.resolver_match.url_name == 'workspace_preferences' %}active{% endif %}" 
+                   href="{% url 'workspace_preferences' workspace_id=user_workspace.id %}">
                     <i class="bi bi-sliders"></i> Preferences
                 </a>
                 {% endif %}
             </div>
             {% endif %}
             
-            <!-- Billing/Subscription (Owner/Admin only) -->
-            {% if user_role in 'Owner,Admin' %}
+            <!-- Billing/Subscription (requires billing_view permission) -->
+            {% if 'billing_view' in user_permissions %}
             <div class="nav-section">
                 <h6 class="nav-section-title">Billing</h6>
-                <a class="nav-link" href="{% url 'subscriptions:dashboard' %}">
+                <a class="nav-link {% if request.resolver_match.url_name == 'subscriptions:dashboard' or request.resolver_match.namespace == 'subscriptions' %}active{% endif %}" 
+                   href="{% url 'subscriptions:dashboard' %}">
                     <i class="bi bi-credit-card"></i> Subscription
                     {% if not has_active_subscription %}
                         <span class="badge bg-danger text-white float-end">Action Needed</span>
@@ -81,35 +85,40 @@
                 
                 <!-- Contacts -->
                 {% if 'contact_view' in user_permissions %}
-                <a class="nav-link" href="{% url 'contact_customer_list' %}">
+                <a class="nav-link {% if request.resolver_match.url_name == 'contact_customer_list' or 'contact' in request.resolver_match.url_name %}active{% endif %}" 
+                   href="{% url 'contact_customer_list' %}">
                     <i class="bi bi-people-fill"></i> Contacts
                 </a>
                 {% endif %}
                 
                 <!-- Girvi (Loans) -->
                 {% if 'girvi_loan_view' in user_permissions %}
-                <a class="nav-link" href="{% url 'girvi:girvi_loan_list' %}">
+                <a class="nav-link {% if request.resolver_match.namespace == 'girvi' %}active{% endif %}" 
+                   href="{% url 'girvi:girvi_loan_list' %}">
                     <i class="bi bi-cash-coin"></i> Girvi (Loans)
                 </a>
                 {% endif %}
                 
                 <!-- Sales -->
                 {% if 'sales_invoice_view' in user_permissions %}
-                <a class="nav-link" href="{% url 'sales:sales_invoice_list' %}">
+                <a class="nav-link {% if request.resolver_match.namespace == 'sales' %}active{% endif %}" 
+                   href="{% url 'sales:sales_invoice_list' %}">
                     <i class="bi bi-receipt"></i> Sales
                 </a>
                 {% endif %}
                 
                 <!-- Purchase -->
                 {% if 'purchase_invoice_view' in user_permissions %}
-                <a class="nav-link" href="{% url 'purchase:purchase_list' %}">
+                <a class="nav-link {% if request.resolver_match.namespace == 'purchase' %}active{% endif %}" 
+                   href="{% url 'purchase:purchase_list' %}">
                     <i class="bi bi-bag"></i> Purchase
                 </a>
                 {% endif %}
                 
                 <!-- Accounting/DEA -->
                 {% if 'dea_journal_view' in user_permissions %}
-                <a class="nav-link" href="{% url 'dea:journal_entry_list' %}">
+                <a class="nav-link {% if request.resolver_match.namespace == 'dea' %}active{% endif %}" 
+                   href="{% url 'dea:journal_entry_list' %}">
                     <i class="bi bi-graph-up"></i> Accounting
                 </a>
                 {% endif %}

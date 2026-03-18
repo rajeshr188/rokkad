@@ -1,9 +1,189 @@
-{% extends 'layouts/base.html' %}
-{% load static i18n partials %}
+{% extends 'layouts/workspace.html' %}
+{% load static i18n %}
 
 {% block title %}{% trans "Customers" %}{% endblock %}
 
-{% block content %}
+{% block workspace_content %}
+{% partialdef customer-filter-panel %}
+<div class="filter-card" id="customer-filter-panel">
+    <h6><i class="bi bi-funnel me-2"></i>{% trans "Filters" %}</h6>
+    <form
+        method="get"
+        hx-get="{% url 'contact_customer_list' %}"
+        hx-target="#customer-list-results"
+        hx-select="#customer-list-results"
+        hx-swap="outerHTML"
+        hx-push-url="true"
+        hx-trigger="change delay:200ms, input delay:300ms from:input[name='query']"
+        class="filter-form"
+    >
+        <div class="mb-3">
+            <label class="form-label small text-muted text-uppercase">{% trans "Search" %}</label>
+            <input
+                type="text"
+                name="query"
+                class="form-control form-control-sm"
+                value="{{ filter.form.query.value|default:'' }}"
+                placeholder="{% trans 'Name, phone, related to...' %}"
+            >
+        </div>
+        {% for field in filter.form %}
+            {% if field.name != 'query' %}
+            <div class="mb-3">
+                <label class="form-label small text-muted text-uppercase">{{ field.label }}</label>
+                {{ field }}
+            </div>
+            {% endif %}
+        {% endfor %}
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">{% trans "Apply" %}</button>
+            <a href="{% url 'contact_customer_list' %}" class="btn btn-outline-secondary btn-sm">{% trans "Clear" %}</a>
+        </div>
+    </form>
+</div>
+{% endpartialdef customer-filter-panel %}
+
+{% partialdef customer-list-results %}
+<main class="col-md-9" id="customer-list-results">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="small text-muted">
+            {% blocktrans count counter=results_count %}
+            {{ counter }} customer found
+            {% plural %}
+            {{ counter }} customers found
+            {% endblocktrans %}
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Export options">
+            <a href="?{% for key, value in request.GET.items %}{% if key != '_export' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}_export=csv" class="btn btn-outline-secondary">CSV</a>
+            <a href="?{% for key, value in request.GET.items %}{% if key != '_export' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}_export=xlsx" class="btn btn-outline-secondary">XLSX</a>
+        </div>
+    </div>
+
+    {% if customers %}
+    <div class="cards-container">
+        {% for customer in customers %}
+        <div class="customer-card">
+            <div class="customer-card-header"
+                 hx-get="{% url 'contact_customer_detail' customer.id %}"
+                 hx-target="#content"
+                 hx-push-url="true"
+                 style="cursor: pointer;">
+                <div class="customer-avatar">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="customer-name">
+                    <h6>{{ customer.name }}</h6>
+                    <p>#{{ customer.id }}</p>
+                </div>
+            </div>
+
+            <div class="customer-card-body">
+                <div class="customer-info-item">
+                    <div class="customer-info-label">{% trans "Type" %}</div>
+                    <div class="customer-info-value">
+                        <span class="badge bg-info-subtle text-info-emphasis">{{ customer.get_customer_type_display }}</span>
+                    </div>
+                </div>
+
+                {% with default_address=customer.get_default_address %}
+                <div class="customer-info-item">
+                    <div class="customer-info-label">{% trans "Address" %}</div>
+                    <div class="customer-info-value">
+                        {% if default_address %}
+                            {{ default_address.city }}{% if default_address.area %}, {{ default_address.area }}{% endif %}
+                        {% else %}
+                            <span class="text-muted">{% trans "No address" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endwith %}
+
+                <div class="customer-info-item">
+                    <div class="customer-info-label">{% trans "Phone" %}</div>
+                    <div class="customer-info-value">
+                        {% if customer.get_default_contact %}
+                            {{ customer.get_default_contact }}
+                        {% else %}
+                            <span class="text-muted">{% trans "No phone" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="customer-info-item">
+                    {% if customer.active %}
+                    <span class="badge bg-success">{% trans "Active" %}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="customer-card-footer">
+                <button class="btn btn-sm btn-primary" hx-get="{% url 'contact_customer_update' customer.id %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal">
+                    {% trans "Edit" %}
+                </button>
+                <a class="btn btn-sm btn-success" href="{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}">
+                    {% trans "Loan" %}
+                </a>
+                <button class="btn btn-sm btn-danger" hx-delete="{% url 'contact_customer_delete' customer.id %}" hx-confirm="{% trans 'Are you sure?' %}" hx-target="closest .customer-card" hx-swap="outerHTML swap:0.5s">
+                    {% trans "Delete" %}
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-4" aria-label="Customer pagination">
+        <ul class="pagination justify-content-center mb-0">
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                {% if page_obj.has_previous %}
+                <a
+                    class="page-link"
+                    href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                    hx-get="{% url 'contact_customer_list' %}?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                    hx-target="#customer-list-results"
+                    hx-select="#customer-list-results"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                >{% trans "Previous" %}</a>
+                {% else %}
+                <span class="page-link">{% trans "Previous" %}</span>
+                {% endif %}
+            </li>
+            <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                {% if page_obj.has_next %}
+                <a
+                    class="page-link"
+                    href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                    hx-get="{% url 'contact_customer_list' %}?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                    hx-target="#customer-list-results"
+                    hx-select="#customer-list-results"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                >{% trans "Next" %}</a>
+                {% else %}
+                <span class="page-link">{% trans "Next" %}</span>
+                {% endif %}
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-inbox"></i>
+        </div>
+        <p class="empty-state-text">{% trans "No customers match the current filters." %}</p>
+        <button class="btn btn-primary" hx-get="{% url 'contact_customer_create' %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal">
+            {% trans "Add Customer" %}
+        </button>
+    </div>
+    {% endif %}
+</main>
+{% endpartialdef customer-list-results %}
+
 {% partialdef customer-content inline %}
     <style>
     :root {
@@ -268,7 +448,8 @@
                 <span class="d-none d-sm-inline">{% trans "Add Customer" %}</span>
             </button>
 
-            <button class="btn btn-info" hx-get="{% url 'contact_customer_merge' %}"
+            <button class="btn btn-info" hx-get="{% url 'contact_customer_merge' %}" hx-target="#modal-content"
+                data-bs-toggle="modal" data-bs-target="#modal"
                 title="{% trans 'Merge duplicate customers' %}">
                 <i class="bi bi-arrows-collapse me-1"></i>
                 <span class="d-none d-sm-inline">{% trans "Merge" %}</span>
@@ -297,171 +478,10 @@
 
         {# FILTERS SIDEBAR #}
         <aside class="col-md-3 d-none d-md-block">
-            <div class="filter-card">
-                <h6><i class="bi bi-funnel me-2"></i>{% trans "Search" %}</h6>
-                <form method="get" class="d-flex gap-2">
-                    <input type="text" name="query" class="form-control form-control-sm"
-                        placeholder="{% trans 'Name, Phone, ID...' %}" value="{{ filter.form.query.value|default:'' }}">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-search"></i>
-                    </button>
-                </form>
-            </div>
-
-            {% if filter.form %}
-            <div class="filter-card">
-                <h6><i class="bi bi-sliders me-2"></i>{% trans "Filters" %}</h6>
-                <form method="get" class="filter-form">
-                    {% for field in filter.form %}
-                    {% if field.name != 'query' %}
-                    <div class="mb-3">
-                        <label class="form-label small text-muted text-uppercase">
-                            {{ field.label }}
-                        </label>
-                        {% if field.field.widget.input_type == 'hidden' %}
-                        {{ field }}
-                        {% elif field.field.widget.input_type == 'checkbox' %}
-                        <div class="form-check">
-                            {{ field }}
-                            <label class="form-check-label" for="{{ field.id_for_label }}">
-                                {{ field.label }}
-                            </label>
-                        </div>
-                        {% else %}
-                        {{ field }}
-                        {% endif %}
-                        {% if field.help_text %}
-                        <small class="form-text text-muted">{{ field.help_text }}</small>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    {% endfor %}
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            {% trans "Apply Filters" %}
-                        </button>
-                        <a href="?query=" class="btn btn-outline-secondary btn-sm">
-                            {% trans "Clear" %}
-                        </a>
-                    </div>
-                </form>
-            </div>
-            {% endif %}
-
-            {# Export Options #}
-            <div class="filter-card">
-                <h6><i class="bi bi-file-earmark-arrow-down me-2"></i>{% trans "Export" %}</h6>
-                <div class="btn-group-vertical w-100" role="group">
-                    <a href="?_export=csv" class="btn btn-outline-primary btn-sm text-start">
-                        <i class="bi bi-filetype-csv me-2"></i>CSV
-                    </a>
-                    <a href="?_export=xlsx" class="btn btn-outline-primary btn-sm text-start">
-                        <i class="bi bi-filetype-xlsx me-2"></i>Excel
-                    </a>
-                    <a href="?_export=json" class="btn btn-outline-primary btn-sm text-start">
-                        <i class="bi bi-file-earmark-json me-2"></i>JSON
-                    </a>
-                </div>
-            </div>
+            {% partial customer-filter-panel %}
         </aside>
 
-        {# CARDS CONTAINER #}
-        <main class="col-md-9">
-            {% if filter.qs %}
-            <div class="cards-container">
-                {% for customer in filter.qs %}
-                <div class="customer-card">
-                    <div class="customer-card-header" hx-get="{% url 'contact_customer_detail' customer.id %}" hx-target="#content" hx-push-url="true" style="cursor: pointer;">
-                        <div class="customer-avatar">
-                            <i class="bi bi-person-circle"></i>
-                        </div>
-                        <div class="customer-name">
-                            <h6>{{ customer.name }}</h6>
-                            <p>#{{ customer.id }}</p>
-                        </div>
-                    </div>
-
-                    <div class="customer-card-body">
-                        {% if customer.customer_type %}
-                        <div class="customer-info-item">
-                            <div class="customer-info-label">{% trans "Type" %}</div>
-                            <div class="customer-info-value">
-                                <span class="badge bg-info">{{ customer.get_customer_type_display }}</span>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% with addresses=customer.address.all %}
-                        {% if addresses %}
-                        <div class="customer-info-item">
-                            <div class="customer-info-label">{% trans "Address" %}</div>
-                            <div class="customer-info-value">
-                                {% for addr in addresses|slice:":1" %}
-                                    {{ addr.street }}, {{ addr.area }}{% if addr.city %}, {{ addr.city }}{% endif %}
-                                {% endfor %}
-                                {% if addresses|length > 1 %}
-                                    <br><small class="text-muted">+{{ addresses|length|add:"-1" }} {% trans "more" %}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% endwith %}
-
-                        {% with phones=customer.contactno.all %}
-                        {% if phones %}
-                        <div class="customer-info-item">
-                            <div class="customer-info-label">{% trans "Phone" %}</div>
-                            <div class="customer-info-value">
-                                {% for phone in phones|slice:":1" %}
-                                    {{ phone.phone_number }}
-                                {% endfor %}
-                                {% if phones|length > 1 %}
-                                    <br><small class="text-muted">+{{ phones|length|add:"-1" }} {% trans "more" %}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% endwith %}
-
-                        {% if customer.active %}
-                        <div class="customer-info-item">
-                            <span class="badge bg-success">{% trans "Active" %}</span>
-                        </div>
-                        {% else %}
-                        <div class="customer-info-item">
-                            <span class="badge bg-secondary">{% trans "Inactive" %}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="customer-card-footer">
-                        <button class="btn btn-sm btn-primary" hx-get="{% url 'contact_customer_update' customer.id %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal" title="{% trans 'Edit customer' %}">
-                            <i class="bi bi-pencil-square me-1"></i>{% trans "Edit" %}
-                        </button>
-                        <a class="btn btn-sm btn-success" href="{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}" title="{% trans 'Create loan' %}">
-                            <i class="bi bi-plus-lg me-1"></i>{% trans "Loan" %}
-                        </a>
-                        <button class="btn btn-sm btn-danger" hx-delete="{% url 'contact_customer_delete' customer.id %}" hx-confirm="{% trans 'Are you sure?' %}" hx-target="closest .customer-card" hx-swap="outerHTML swap:0.5s" title="{% trans 'Delete customer' %}">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="bi bi-inbox"></i>
-                </div>
-                <p class="empty-state-text">
-                    {% trans "No customers found. Try adjusting your filters or " %}<a href="?query=">{% trans "clear filters" %}</a>.
-                </p>
-                <button class="btn btn-primary" hx-get="{% url 'contact_customer_create' %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal">
-                    <i class="bi bi-plus-lg me-1"></i>{% trans "Add First Customer" %}
-                </button>
-            </div>
-            {% endif %}
-        </main>
+        {% partial customer-list-results %}
 
     </div>
 
@@ -474,25 +494,9 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body p-0">
-        {% if filter.form %}
-        <form method="get" class="filter-form p-3">
-            {% for field in filter.form %}
-            {% if field.name != 'query' %}
-            <div class="mb-3">
-                <label class="form-label small text-muted text-uppercase">
-                    {{ field.label }}
-                </label>
-                {{ field }}
-            </div>
-            {% endif %}
-            {% endfor %}
-            <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary btn-sm">
-                    {% trans "Apply Filters" %}
-                </button>
-            </div>
-        </form>
-        {% endif %}
+        <div class="p-3">
+            {% partial customer-filter-panel %}
+        </div>
     </div>
 </div>
 
@@ -505,6 +509,6 @@
 </div>
 
 
-{% endpartialdef %}
+{% endpartialdef customer-content %}
 
 {% endblock %}

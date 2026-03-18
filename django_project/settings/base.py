@@ -62,7 +62,6 @@ SHARED_APPS = [
     "django_htmx",
     "import_export",
     "colorfield",
-    "template_partials",
     "guardian",  # Object-level permissions
     # Local
     "accounts",

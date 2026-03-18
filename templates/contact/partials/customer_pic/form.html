@@ -1,0 +1,363 @@
+<!-- Picture Capture/Upload Form -->
+{% load crispy_forms_tags %}
+
+<form id="pic-upload-form" 
+      hx-post="{% url 'contact_customer_pic_save' customer.id %}"
+    hx-target="#modal-content"
+    hx-swap="innerHTML"
+      enctype="multipart/form-data"
+      class="mt-3">
+    {% csrf_token %}
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" 
+                    id="camera-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#camera-content" 
+                    type="button" 
+                    role="tab">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-camera" viewBox="0 0 16 16">
+                    <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1V2a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1a1 1 0 0 0 1 1h1a1 1 0 0 1 1 1v6zM2 4a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h12a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 1-1-1V2a.5.5 0 0 0-.5-.5H4a.5.5 0 0 0-.5.5v1a.5.5 0 0 1-1 1H2z"/>
+                    <path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zm0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/>
+                </svg>
+                Camera
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" 
+                    id="upload-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#upload-content" 
+                    type="button" 
+                    role="tab">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-arrow-up" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2z"/>
+                    <path d="M4.406 3.759A6.5 6.5 0 1 1 13.153 10H10.5a.5.5 0 0 1 0-1h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-2.379A7.5 7.5 0 1 0 3.5 8H0a.5.5 0 0 1 0-1h4.5a.5.5 0 0 1 0 1H4a6.5 6.5 0 0 1 .406-2.241z"/>
+                </svg>
+                Upload
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Contents -->
+    <div class="tab-content">
+        <!-- Camera Tab -->
+        <div id="camera-content" class="tab-pane fade show active" role="tabpanel">
+            <div class="camera-container">
+                <!-- Video element (hidden by default, used by JS) -->
+                <video id="camera-video" 
+                       autoplay 
+                       playsinline 
+                       class="d-none"
+                       width="320" 
+                       height="240"></video>
+
+                <!-- Canvas (hidden, used for capture) -->
+                <canvas id="capture-canvas" 
+                        width="320" 
+                        height="240" 
+                        class="d-none"></canvas>
+
+                <!-- Display area -->
+                <div class="text-center">
+                    <div id="camera-display" class="mb-3">
+                        <div class="bg-dark rounded p-5" style="min-height: 300px; display: flex; align-items: center; justify-content: center;">
+                            <p class="text-white mb-0">Camera loading...</p>
+                        </div>
+                    </div>
+
+                    <!-- Camera Controls -->
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" 
+                                id="camera-start-btn" 
+                                class="btn btn-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-circle" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
+                            </svg>
+                            Start Camera
+                        </button>
+
+                        <button type="button" 
+                                id="camera-capture-btn" 
+                                class="btn btn-success"
+                                disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-camera-fill" viewBox="0 0 16 16">
+                                <path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
+                                <path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2z"/>
+                            </svg>
+                            Capture
+                        </button>
+
+                        <button type="button" 
+                                id="camera-stop-btn" 
+                                class="btn btn-danger"
+                                disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-circle" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5v-3z"/>
+                            </svg>
+                            Stop
+                        </button>
+                    </div>
+
+                    <!-- Video Source Selection -->
+                    <div class="mt-3">
+                        <label for="camera-select" class="form-label small">Camera Device</label>
+                        <select id="camera-select" class="form-select form-select-sm"></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden input for base64 image data -->
+            <input type="hidden" id="image-data-input" name="image_data">
+        </div>
+
+        <!-- Upload Tab -->
+        <div id="upload-content" class="tab-pane fade" role="tabpanel">
+            <div class="mb-3">
+                <label for="file-input" class="form-label">Choose Image</label>
+                <input type="file" 
+                       id="file-input" 
+                       name="image" 
+                       class="form-control" 
+                       accept="image/*">
+                <small class="form-text text-muted">
+                    Supported formats: JPG, PNG, GIF, WebP
+                </small>
+            </div>
+            <div id="file-preview" class="text-center mb-3 d-none">
+                <img id="file-preview-img" src="" alt="Preview" class="img-fluid rounded" style="max-height: 300px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Errors -->
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger mt-3">
+        {% for error in form.non_field_errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Submit Buttons -->
+    <div class="d-grid gap-2 mt-4">
+        <button type="submit" 
+                class="btn btn-lg btn-primary"
+                id="submit-btn"
+                hx-indicate="#htmx-loading">
+            <span id="submit-text">Upload Picture</span>
+        </button>
+    </div>
+</form>
+
+<!-- Loading Indicator (HTMX) -->
+<div id="htmx-loading" class="d-none">
+    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <span>Uploading...</span>
+</div>
+
+<script>
+(() => {
+    const cameraVideo = document.getElementById('camera-video');
+    const captureCanvas = document.getElementById('capture-canvas');
+    const imageDataInput = document.getElementById('image-data-input');
+    
+    const startBtn = document.getElementById('camera-start-btn');
+    const captureBtn = document.getElementById('camera-capture-btn');
+    const stopBtn = document.getElementById('camera-stop-btn');
+    const cameraSelect = document.getElementById('camera-select');
+    const cameraDisplay = document.getElementById('camera-display');
+    const form = document.getElementById('pic-upload-form');
+
+    if (!cameraVideo || !captureCanvas || !imageDataInput || !startBtn || !captureBtn || !stopBtn || !cameraSelect || !cameraDisplay || !form) {
+        return;
+    }
+    
+    let stream = null;
+    let devices = [];
+
+    async function openCameraStream(selectedDeviceId) {
+        const attempts = [];
+
+        if (selectedDeviceId) {
+            attempts.push({ video: { deviceId: { exact: selectedDeviceId } }, audio: false });
+            attempts.push({ video: { deviceId: { ideal: selectedDeviceId } }, audio: false });
+        }
+
+        attempts.push({ video: { facingMode: 'user' }, audio: false });
+        attempts.push({ video: true, audio: false });
+
+        let lastError = null;
+        for (const constraints of attempts) {
+            try {
+                return await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        throw lastError;
+    }
+
+    function stopCameraStream() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        cameraVideo.srcObject = null;
+        cameraVideo.classList.add('d-none');
+        startBtn.disabled = false;
+        captureBtn.disabled = true;
+        stopBtn.disabled = true;
+        cameraSelect.disabled = false;
+    }
+
+    // Get available camera devices
+    async function getCameraDevices() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+            cameraDisplay.innerHTML = '<div class="bg-light rounded p-5"><p class="text-muted mb-0">Camera access is not supported in this browser or context.</p></div>';
+            startBtn.disabled = true;
+            return;
+        }
+
+        try {
+            const allDevices = await navigator.mediaDevices.enumerateDevices();
+            devices = allDevices.filter(device => device.kind === 'videoinput');
+            
+            cameraSelect.innerHTML = '';
+            devices.forEach((device, index) => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.text = device.label || `Camera ${index + 1}`;
+                cameraSelect.appendChild(option);
+            });
+
+            if (!devices.length) {
+                cameraDisplay.innerHTML = '<div class="bg-light rounded p-5"><p class="text-muted mb-0">No camera devices found.</p></div>';
+                startBtn.disabled = true;
+            }
+        } catch (err) {
+            console.error('Error getting camera devices:', err);
+            cameraDisplay.innerHTML = '<div class="bg-light rounded p-5"><p class="text-danger mb-0">Could not load camera devices.</p></div>';
+        }
+    }
+
+    // Start camera
+    startBtn.addEventListener('click', async function() {
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Camera access is not supported in this browser or context.');
+                return;
+            }
+
+            const selectedDeviceId = cameraSelect.value;
+
+            stopCameraStream();
+            stream = await openCameraStream(selectedDeviceId);
+            cameraVideo.srcObject = stream;
+            
+            // Show video in display area
+            cameraDisplay.innerHTML = '';
+            cameraDisplay.appendChild(cameraVideo);
+            cameraVideo.classList.remove('d-none');
+            cameraVideo.play();
+
+            startBtn.disabled = true;
+            captureBtn.disabled = false;
+            stopBtn.disabled = false;
+            cameraSelect.disabled = true;
+
+            // Refresh labels after permission is granted.
+            getCameraDevices();
+        } catch (err) {
+            console.error('Camera error:', err);
+            cameraDisplay.innerHTML = '<div class="bg-light rounded p-4"><p class="text-danger fw-semibold mb-2">Could not access camera.</p><p class="text-muted mb-0 small">If another app is using the camera, close it and try again. You can also switch camera devices or use file upload instead.</p></div>';
+            alert('Could not access camera: ' + err.message);
+        }
+    });
+
+    // Capture photo
+    captureBtn.addEventListener('click', function() {
+        const context = captureCanvas.getContext('2d');
+        context.drawImage(cameraVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+        
+        // Convert canvas to base64
+        const imageData = captureCanvas.toDataURL('image/jpeg', 0.9);
+        imageDataInput.value = imageData;
+
+        // Show preview
+        cameraDisplay.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = imageData;
+        img.className = 'img-fluid rounded';
+        img.style.maxHeight = '300px';
+        cameraDisplay.appendChild(img);
+
+        // Show success message
+        const successMsg = document.createElement('p');
+        successMsg.className = 'text-success mt-2';
+        successMsg.textContent = '✓ Photo captured! Ready to upload.';
+        cameraDisplay.appendChild(successMsg);
+
+        captureBtn.disabled = true;
+    });
+
+    // Stop camera
+    stopBtn.addEventListener('click', function() {
+        stopCameraStream();
+        cameraDisplay.innerHTML = '<div class="bg-light rounded p-5"><p class="text-muted">Camera stopped</p></div>';
+    });
+
+    // File preview on upload
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('file-preview-img').src = event.target.result;
+                document.getElementById('file-preview').classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Ensure either camera data or file is selected
+    document.getElementById('pic-upload-form').addEventListener('submit', function(e) {
+        const imageData = imageDataInput.value;
+        const fileInput = document.getElementById('file-input');
+        
+        if (!imageData && !fileInput.files.length) {
+            e.preventDefault();
+            alert('Please capture a photo or select a file before uploading.');
+            return false;
+        }
+    });
+
+    // Initialize available cameras on load
+    getCameraDevices();
+
+    document.addEventListener('hidden.bs.modal', function(event) {
+        if (event.target.id === 'modal') {
+            stopCameraStream();
+        }
+    });
+})();
+</script>
+
+<style>
+#camera-video {
+    max-width: 100%;
+    border-radius: 0.375rem;
+    background-color: #000;
+}
+
+.camera-container {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.375rem;
+}
+</style>
