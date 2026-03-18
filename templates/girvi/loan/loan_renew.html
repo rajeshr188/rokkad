@@ -1,4 +1,4 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load static %}
 {% block content %}
 <div class="row container mt-3">
@@ -8,11 +8,11 @@
         <h5 class="card-title">Loan Status</h5>
       </div>
       <ul class="list-group">
-        <li class="list-group-item">{{loan.loanid}} {{loan.created|date}}</li>
-        <li class="list-group-item">{{loan.customer}}</li>
-        <li class="list-group-item">{{loan.loanamount}} + {{loan.interestdue}}</li>
-        <li class="list-group-item">{{loan.get_total_adjustments}}</li>
-        <li class="list-group-item">{{loan.total}}</li>
+        <li class="list-group-item">{{ loan.loan_id }} {{ loan.loan_date|date }}</li>
+        <li class="list-group-item">{{ loan.borrower }}</li>
+        <li class="list-group-item">{{ loan.get_loan_amount }} + {{ loan.interest_due }}</li>
+        <li class="list-group-item">{{ loan.get_total_payments }}</li>
+        <li class="list-group-item">{{ loan.total_due }}</li>
       </ul>
     </div>
   </div>

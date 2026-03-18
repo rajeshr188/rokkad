@@ -1,7 +1,6 @@
-﻿{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load static %}
 {% load l10n %}
-{% load partials %}
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
   <h1 class="h2">Loan Detail</h1>
@@ -44,14 +43,14 @@
       <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_previous.pk %}"
         hx-target="#loan-detail-container" hx-swap="outerHTML transition:true"
         hx-push-url="true" type="button" class="btn btn-outline-primary">
-        Previous {{loan.get_previous.loanid}}
+        Previous {{ loan.get_previous.loan_id }}
       </a>
       {% endif %}
       {% if loan.get_next %}
       <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_next.id %}"
         hx-target="#loan-detail-container" hx-swap="outerHTML transition:true"
         hx-push-url="true" type="button" class="btn btn-outline-primary">
-        Next {{loan.get_next.loanid}}
+        Next {{ loan.get_next.loan_id }}
       </a>
       {% endif %}
     </div>
@@ -105,8 +104,8 @@
     <!-- Left sidebar -->
     <div class="col-md-3">
       <div class="card border-primary mb-3">
-        {% if loan.customer.get_default_pic %}
-        <img src="{{ loan.customer.get_default_pic.url }}" alt="{{ loan.customer.name }}'s Profile Picture"
+        {% if customer.get_default_pic %}
+        <img src="{{ customer.get_default_pic.url }}" alt="{{ customer.name }}'s Profile Picture"
           class="avatar-img card-img-top">
         {% else %}
         <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture" class="avatar-img card-img-top">
@@ -135,7 +134,7 @@
           </li>
           <li class="list-group-item">
             <span class="font-weight-bold">Months Since:</span>
-            <span class="badge bg-info">{{object.noofmonths}} ({{object.loan_date|timesince}})</span>
+            <span class="badge bg-info">{{object.months_elapsed}} ({{object.loan_date|timesince}})</span>
           </li>
           <li class="list-group-item">
             <span class="font-weight-bold">Expires:</span>

@@ -1,4 +1,4 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load static %}
 {%block content%}
 <p><a href="{% url 'girvi:loan_archive' %}">Loans Archive</a> </p>
@@ -19,7 +19,7 @@
 
 <!-- <ul>
     {% for loan in object_list %}
-        <li><a href="{%url 'girvi:girvi_loan_detail' loan.id %}">{{ loan.created|date:"F j, Y" }}: {{ loan.loanid }} {{loan.loanamount}}</a></li>
+        <li><a href="{%url 'girvi:girvi_loan_detail' loan.id %}">{{ loan.loan_date|date:"F j, Y" }}: {{ loan.loan_id }} {{ loan.loan_amount }}</a></li>
     {% endfor %}
 </ul> -->
 

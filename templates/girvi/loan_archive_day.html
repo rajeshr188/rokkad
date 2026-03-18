@@ -1,17 +1,17 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load static %}
 {% block content %}
 <h1>{{ day }}</h1>
 
 <!-- <ul>
     {% for article in object_list %}
-        <li>{{ article.created|date:"F j, Y" }}: {{ article.loanid }}</li>
+        <li>{{ article.loan_date|date:"F j, Y" }}: {{ article.loan_id }}</li>
     {% endfor %}
 </ul> -->
 {% if object_list%}
 <ul>
     {% for loan in object_list %}
-        <li><a href="{%url 'girvi:girvi_loan_detail' loan.id %}">{{ loan.loan_date|date:"F j, Y" }}: {{ loan.loanid }} {{loan.loanamount}}</a></li>
+        <li><a href="{%url 'girvi:girvi_loan_detail' loan.id %}">{{ loan.loan_date|date:"F j, Y" }}: {{ loan.loan_id }} {{ loan.loan_amount }}</a></li>
     {% endfor %}
 </ul>
 {%endif%}

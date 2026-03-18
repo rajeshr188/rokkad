@@ -213,7 +213,8 @@ def loan_table_partial(request: HttpRequest):
         request=request,
         queryset=GivenLoan.objects.order_by("-id")
         .select_related("borrower", "series", "created_by")
-        .prefetch_related("notifications", "loanitems"),
+        .prefetch_related("notifications", "loanitems")
+        .with_metal_weights(),
     )
     table = LoanTable(filter.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
@@ -569,9 +570,7 @@ def deleteLoan(request):
 @login_required
 @require_http_methods(["GET"])
 def loan_detail_items_tab(request, pk):
-    loan = get_object_or_404(
-        GivenLoan.objects.prefetch_related("loanitems", "repledgedloanitems"), pk=pk
-    )
+    loan = get_object_or_404(GivenLoan.objects.prefetch_related("loanitems"), pk=pk)
     return render(
         request,
         "girvi/loan/partials/tab_items.html",

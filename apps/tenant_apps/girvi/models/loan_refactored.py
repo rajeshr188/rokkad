@@ -155,6 +155,24 @@ class BaseLoan(BusinessDoc):
 
         super().save(*args, **kwargs)
 
+    @property
+    def get_next(self):
+        """Return the next loan in the same series for this concrete loan type."""
+        return (
+            self.__class__.objects.filter(series=self.series, loan_id__gt=self.loan_id)
+            .order_by("loan_id")
+            .first()
+        )
+
+    @property
+    def get_previous(self):
+        """Return the previous loan in the same series for this concrete loan type."""
+        return (
+            self.__class__.objects.filter(series=self.series, loan_id__lt=self.loan_id)
+            .order_by("loan_id")
+            .last()
+        )
+
     # ========================================================================
     # Abstract methods - must be implemented by subclasses
     # ========================================================================
@@ -242,11 +260,6 @@ class BaseLoan(BusinessDoc):
         return self.loan_payments.aggregate(Sum("interest_payment"))[
             "interest_payment__sum"
         ] or Decimal(0)
-
-    @property
-    def outstanding_balance(self) -> Decimal:
-        """Remaining balance after payments."""
-        return self.total_due - self.get_total_payments()
 
     @property
     def current_value(self) -> Decimal:
@@ -425,30 +438,6 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         )
 
     @property
-    def gold_weight(self) -> float:
-        """Total gold weight in grams."""
-        for item in self.get_weight_summary:
-            if item["itemtype"] == "Gold":
-                return float(item["total_weight"] or 0)
-        return 0.0
-
-    @property
-    def silver_weight(self) -> float:
-        """Total silver weight in grams."""
-        for item in self.get_weight_summary:
-            if item["itemtype"] == "Silver":
-                return float(item["total_weight"] or 0)
-        return 0.0
-
-    @property
-    def bronze_weight(self) -> float:
-        """Total bronze/other weight in grams."""
-        for item in self.get_weight_summary:
-            if item["itemtype"] == "Bronze":
-                return float(item["total_weight"] or 0)
-        return 0.0
-
-    @property
     def get_item_description(self) -> str:
         """Comma-separated item descriptions."""
         return ", ".join(self.loanitems.values_list("itemdesc", flat=True))
@@ -468,24 +457,9 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         return self.get_loan_amount
 
     @property
-    def total_weight(self) -> float:
-        """Total weight in grams."""
-        return self.gold_weight + self.silver_weight + self.bronze_weight
-
-    @property
     def total_interest(self) -> Decimal:
         """Total interest due (alias for interest_due for table display)."""
         return self.interest_due()
-
-    @property
-    def total_current_value(self) -> Decimal:
-        """Total current value (alias for current_value for table display)."""
-        return self.current_value
-
-    @property
-    def months_since_created(self) -> int:
-        """Months since loan was created (alias for months_elapsed for table display)."""
-        return self.months_elapsed
 
     @property
     def current_value(self) -> Decimal:

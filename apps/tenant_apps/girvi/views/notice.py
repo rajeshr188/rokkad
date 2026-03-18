@@ -25,7 +25,7 @@ def create_loan_notification(request, pk=None):
     )
     notification = Notification.objects.create(
         group=ng,
-        customer=loan.customer,
+        customer=loan.borrower,
     )
     # add the loan to the notification
     notification.loans.add(loan)
@@ -50,9 +50,9 @@ def notice(request):
     # get a list of unique customers for the selected loans
     # customers = selected_loans.values('customer').distinct().count()
     customers = (
-        Customer.objects.filter(loan__in=selected_loans)
+        Customer.objects.filter(loans_received__in=selected_loans)
         .distinct()
-        .prefetch_related("loan_set", "address", "contactno")
+        .prefetch_related("loans_received", "address", "contactno")
     )
 
     data = {}

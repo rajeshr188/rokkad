@@ -19,10 +19,10 @@
           <tr>
             <td>{{forloop.counter}}</td>
             <td>{{ loan.loan_id }}</td>
-            <td>{{ loan.customer }}</td>
+            <td>{{ loan.borrower }}</td>
             <td>{{ loan.loan_amount }}</td>
-            <td>{{ loan.interest }}</td>
-            <td>{{ loan.due }}</td>
+            <td>{{ loan.interest_due }}</td>
+            <td>{{ loan.total_due }}</td>
 
           </tr>
           {% endfor %}

@@ -1,11 +1,11 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load static %}
 {%block content%}
 <h1>Week {{ week|date:'W' }}</h1>
 
 <ul>
     {% for loan in object_list %}
-        <li>{{ loan.created|date:"F j, Y" }}: {{ loan.loanid }}</li>
+        <li>{{ loan.loan_date|date:"F j, Y" }}: {{ loan.loan_id }}</li>
     {% endfor %}
 </ul>
 

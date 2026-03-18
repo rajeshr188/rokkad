@@ -1,4 +1,4 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load static %}
 {% load l10n %}
 {% block content %}
@@ -48,7 +48,7 @@
           <path fill-rule="evenodd"
             d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5z" />
         </svg>
-        Previous {{loan.get_previous.loanid}}
+        Previous {{ loan.get_previous.loan_id }}
       </a>
       {% endif %}
       {% if loan.get_next %}
@@ -60,7 +60,7 @@
           <path fill-rule="evenodd"
             d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5z" />
         </svg>
-        Next {{loan.get_next.loanid}}
+        Next {{ loan.get_next.loan_id }}
       </a>
       {% endif %}
     </div>
@@ -174,8 +174,8 @@
             <!-- Customer Info -->
             <div class="col-md-4 text-center">
               <!-- Profile Picture -->
-              {% if loan.customer.get_default_pic %}
-              <img src="{{ loan.customer.get_default_pic.url }}" alt="{{ loan.customer.name }}'s Profile Picture"
+              {% if customer.get_default_pic %}
+              <img src="{{ customer.get_default_pic.url }}" alt="{{ customer.name }}'s Profile Picture"
               class="card-img-top" style="width: 80px; height: 80px;">
               {% else %}
               <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture" 
@@ -195,7 +195,7 @@
                   <p class="mb-1"><strong>Date:</strong> {{ object.loan_date|date:"F j, Y" }}</p>
                   <p class="mb-1"><strong>Created By:</strong> {{ object.created_by }}</p>
                   <p class="mb-1"><strong>Months Since:</strong> 
-                    <span class="badge bg-info">{{ object.noofmonths }} ({{ object.loan_date|timesince }})</span>
+                    <span class="badge bg-info">{{ object.months_elapsed }} ({{ object.loan_date|timesince }})</span>
                   </p>
                   <p class="mb-1"><strong>Expires:</strong> 
                     {% if worth %}
@@ -207,10 +207,10 @@
                   <p class="mb-1"><strong>Location:</strong> {{ location }}:{{ position }}th item</p>
                 </div>
                 <div class="col-6">
-                  <p class="mb-1"><strong>Amount:</strong> {{ object.get_loanamount_with_currency }}</p>
-                  <p class="mb-1"><strong>Interest Due:</strong> {{ object.interest }} * {{ object.noofmonths }} = {{ object.interestdue }}</p>
+                  <p class="mb-1"><strong>Amount:</strong> {{ object.get_loan_amount_with_currency }}</p>
+                  <p class="mb-1"><strong>Interest Due:</strong> &#x20b9;{{ object.interest_due|floatformat:2 }} ({{ object.months_elapsed }} months)</p>
                   <p class="mb-1"><strong>Payments:</strong> {{ object.get_total_payments }}</p>
-                  <p class="mb-1 border-top border-dashed mt-1"><strong>Total Due:</strong> {{ object.due_with_currency }}</p>
+                  <p class="mb-1 border-top border-dashed mt-1"><strong>Total Due:</strong> {{ object.total_due_with_currency }}</p>
                 </div>
               </div>
             </div>
