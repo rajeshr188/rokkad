@@ -103,40 +103,25 @@ class LicenseDocumentForm(forms.ModelForm):
 class SeriesForm(forms.ModelForm):
     class Meta:
         model = Series
-        fields = ["name", "license", "prefix", "is_active", "loan_type"]
-
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.helper = FormHelper()
-    #     self.helper.layout = Layout(
-    #         Row(
-    #             Column("name", css_class="form-group col-md-6 mb-0"),
-    #             Column("license", css_class="form-group col-md-6 mb-0"),
-    #             css_class="form-row",
-    #         ),
-    #         Row(
-    #             Column("is_active", css_class="form-group col-md-6 mb-0"),
-    #             css_class="form-row",
-    #         ),
-    #     )
-    #     self.helper.attrs = {
-    #         "hx-post": reverse("girvi:girvi_series_create"),
-    #         "hx-target": "#content",
-    #         "hx-swap":"innerHTML",
-    #     }
-    #     self.helper.add_input(Submit("submit", "Save"))
-    #     self.helper.add_input(
-    #         Button(
-    #             "cancel",
-    #             "Cancel",
-    #             css_class="btn btn-danger",
-    #             **{
-    #                 "hx-get": reverse("girvi:girvi_license_list"),
-    #                 "hx-target": "#content",
-    #                 "hx-vals": '{"use_block":"content"}',
-    #             },
-    #         )
-    #     )
+        fields = [
+            "name", 
+            "license", 
+            "prefix", 
+            "is_active", 
+            "loan_type",
+            "loan_count_threshold",
+            "loan_amount_threshold",
+            "deactivation_rule",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "loan_amount_threshold": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0"}
+            ),
+            "loan_count_threshold": forms.NumberInput(
+                attrs={"min": "1"}
+            ),
+        }
 
 
 class LoanReportForm(forms.Form):
@@ -234,7 +219,7 @@ class LoanForm(forms.ModelForm):
     # )
 
     series = forms.ModelChoiceField(
-        queryset=Series.objects.filter(is_active=True),
+        queryset=Series.objects.active_for_loans(),
         widget=forms.Select(
             attrs={
                 "hx-get": reverse_lazy("girvi:girvi_series_next_loanid"),
@@ -267,12 +252,12 @@ class LoanForm(forms.ModelForm):
             "loan_id",
             "borrower",
             "loan_date",
+            "tenure",
+            "interest_type",
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # if customer_id:
-        #     self.fields["customer"].initial = customer_id
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
@@ -281,12 +266,17 @@ class LoanForm(forms.ModelForm):
                 css_class="form-row",
             ),
             Row(
-                Column("borrower", css_class="form-group col-md-6 mb-0"),
-                Column("loan_date", css_class="form-group col-md-6 mb-0"),
+                Column("borrower", css_class="form-group col-md-8 mb-0"),
+                Column("loan_date", css_class="form-group col-md-4 mb-0"),
                 css_class="form-row",
             ),
             HTML(
-                '<div ><a href="" hx-get="{% url \'contact_customer_create\'%}">Add Customer</a></div>'
+                '<div class="mb-2"><a class="small" hx-get="{% url \'contact_customer_create\'%}" hx-target="#modal-content">+ Add Customer</a></div>'
+            ),
+            Row(
+                Column("tenure", css_class="form-group col-md-6 mb-0"),
+                Column("interest_type", css_class="form-group col-md-6 mb-0"),
+                css_class="form-row",
             ),
             HTML("<br/>"),
         )
@@ -295,36 +285,24 @@ class LoanForm(forms.ModelForm):
                 "hx-post": reverse(
                     "girvi:girvi_loan_update", kwargs={"id": self.instance.id}
                 ),
-                "hx-target": "#content",
+                "hx-target": "#modal-content",
             }
-            cancel_url = reverse(
-                "girvi:girvi_loan_detail", kwargs={"pk": self.instance.id}
-            )
             cancel_button = Button(
                 "cancel",
                 "Cancel",
-                css_class="btn btn-danger",
-                **{
-                    "hx-get": cancel_url,
-                    "hx-target": "#content",
-                    "data-bs-dismiss": "modal",
-                },
+                css_class="btn btn-secondary",
+                **{"data-bs-dismiss": "modal"},
             )
         else:
             self.helper.attrs = {
                 "hx-post": reverse("girvi:girvi_loan_create"),
-                "hx-target": "#content",
+                "hx-target": "#modal-content",
             }
-            cancel_url = reverse("girvi:girvi_loan_list")
             cancel_button = Button(
                 "cancel",
                 "Cancel",
-                css_class="btn btn-danger",
-                **{
-                    "hx-get": cancel_url,
-                    "hx-target": "#content",
-                    "data-bs-dismiss": "modal",
-                },
+                css_class="btn btn-secondary",
+                **{"data-bs-dismiss": "modal"},
             )
 
         self.helper.add_input(Submit("submit", "Save"))
@@ -424,6 +402,36 @@ class LoanItemForm(forms.ModelForm):
             "interestrate",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Row(
+                Column("item", css_class="col-md-6"),
+                Column("itemtype", css_class="col-md-3"),
+                Column("interestrate", css_class="col-md-3"),
+            ),
+            Row(
+                Column("itemdesc", css_class="col-12"),
+            ),
+            Row(
+                Column("quantity", css_class="col-md-3"),
+                Column("weight", css_class="col-md-3"),
+                Column("purity", css_class="col-md-3"),
+                Column("loanamount", css_class="col-md-3"),
+            ),
+            Row(
+                Column("pic", css_class="col-12"),
+            ),
+            HTML('<div class="d-flex gap-2 mt-2">'),
+            Submit("save", "Save", css_class="btn btn-success"),
+            HTML(
+                '<button class="btn btn-outline-secondary" type="button" {% if object %}hx-get="{{ object.get_absolute_url }}" hx-target="closest li" hx-swap="outerHTML"{% else %}_="on click transition opacity to 0 then remove #item-form"{% endif %}>Cancel</button>'
+            ),
+            HTML("</div>"),
+        )
+
     def clean_loan(self):
         loan = self.cleaned_data["loan"]
         if loan.is_released:
@@ -506,7 +514,10 @@ class ReleaseForm(forms.ModelForm):
     )
     loan = forms.ModelChoiceField(
         widget=LoansWidget,
-        queryset=GivenLoan.objects.filter(release__isnull=True),
+        queryset=GivenLoan.objects.filter(
+            release__isnull=True,
+            series__in=Series.objects.active_for_releases()
+        ),
     )
     released_by = forms.ModelChoiceField(
         required=False,
@@ -524,10 +535,14 @@ class ReleaseForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.loan_preview = self._resolve_loan_preview()
         if self.instance and self.instance.pk:
-            self.fields["loan"].queryset = GivenLoan.objects.filter(
-                release__isnull=True
-            ) | GivenLoan.objects.filter(pk=self.instance.loan.pk)
+            self.fields["loan"].queryset = (
+                GivenLoan.objects.filter(
+                    release__isnull=True,
+                    series__in=Series.objects.active_for_releases()
+                ) | GivenLoan.objects.filter(pk=self.instance.loan.pk)
+            )
             self.fields["loan"].initial = self.instance.loan
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -539,6 +554,23 @@ class ReleaseForm(forms.ModelForm):
                 css_class="form-row",
             )
         )
+
+    def _resolve_loan_preview(self):
+        loan = self.initial.get("loan")
+        if isinstance(loan, GivenLoan):
+            return loan
+
+        if self.instance and self.instance.pk:
+            return self.instance.loan
+
+        raw_loan_id = self.data.get(self.add_prefix("loan")) if self.is_bound else loan
+        if not raw_loan_id:
+            return None
+
+        try:
+            return GivenLoan.objects.select_related("borrower").get(pk=raw_loan_id)
+        except (GivenLoan.DoesNotExist, TypeError, ValueError):
+            return None
 
     def clean_loan(self):
         loan = self.cleaned_data["loan"]
@@ -570,12 +602,21 @@ class ReleaseForm(forms.ModelForm):
         if not release_amount:
             return release_amount
 
-        if release_amount > loan.due():
+        due_amount = getattr(loan, "total_due", None)
+        if callable(due_amount):
+            due_amount = due_amount()
+        if due_amount is None and hasattr(loan, "due"):
+            due_amount = loan.due()
+
+        if due_amount is None:
+            return release_amount
+
+        if release_amount > due_amount:
             self.add_error(
                 "release_amount",
-                f"Release amount {release_amount} cannot be > due amount {loan.due()}.",
+                f"Release amount {release_amount} cannot be > due amount {due_amount}.",
             )
-            # raise ValidationError(f"Release amount {release_amount} cannot be > due amount {loan.due()}.")
+            # raise ValidationError(f"Release amount {release_amount} cannot be > due amount {due_amount}.")
 
         return release_amount
 
@@ -585,21 +626,84 @@ class ReleaseForm(forms.ModelForm):
         # Get the value of release_amount
         release_amount = self.cleaned_data.get("release_amount")
 
-        # Create a new object in OtherModel with release_amount
-        if release_amount is not None and release_amount > 0:
-            payment = LoanPayment.objects.create(
-                loan=instance.loan,
-                payment_amount=release_amount,
-                payment_date=instance.release_date,
-                with_release=True,
-            )
-
         if commit:
             instance.save()
+
+            # Create payment only when the release itself is committed.
+            if release_amount is not None and release_amount > 0:
+                LoanPayment.objects.create(
+                    loan=instance.loan,
+                    payment_amount=release_amount,
+                    payment_date=instance.release_date,
+                    with_release=True,
+                )
         return instance
 
 
-ReleaseFormSet = forms.modelformset_factory(Release, form=ReleaseForm, extra=1)
+class BaseReleaseFormSet(forms.BaseModelFormSet):
+    def clean(self):
+        super().clean()
+
+        if any(self.errors):
+            return
+
+        seen_ids = set()
+        loan_ids = []
+
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+            if not form.cleaned_data:
+                continue
+            if form.cleaned_data.get("DELETE"):
+                continue
+
+            loan = form.cleaned_data.get("loan")
+            if not loan:
+                continue
+
+            if loan.id in seen_ids:
+                form.add_error("loan", "Duplicate loan selected in bulk release.")
+            else:
+                seen_ids.add(loan.id)
+
+            loan_ids.append(loan.id)
+
+        if not loan_ids:
+            raise forms.ValidationError("Please select at least one loan.")
+
+        released_ids = set(
+            GivenLoan.objects.filter(id__in=loan_ids, release__isnull=False).values_list(
+                "id", flat=True
+            )
+        )
+
+        if released_ids:
+            for form in self.forms:
+                if not hasattr(form, "cleaned_data"):
+                    continue
+                loan = form.cleaned_data.get("loan") if form.cleaned_data else None
+                if loan and loan.id in released_ids:
+                    form.add_error(
+                        "loan", "This loan was already released. Refresh and try again."
+                    )
+
+            raise forms.ValidationError(
+                "Some loans are already released. Please review highlighted rows."
+            )
+
+
+def build_release_formset(extra=0):
+    return forms.modelformset_factory(
+        Release,
+        form=ReleaseForm,
+        formset=BaseReleaseFormSet,
+        extra=extra,
+        can_delete=True,
+    )
+
+
+ReleaseFormSet = build_release_formset()
 
 
 class BulkReleaseForm(forms.Form):

@@ -52,3 +52,36 @@ def update_loan(sender, instance, **kwargs):
         # logger.warning(f"Loan with id {loan.loan_id} updated")
     except Exception as e:
         logger.warning(f"Error: {e}")
+
+
+# ============================================================================
+# Series Guardrail Signals - Check and apply deactivation rules
+# ============================================================================
+
+@receiver(post_save, sender=GivenLoan)
+@receiver(post_save, sender=TakenLoan)
+@receiver(post_delete, sender=GivenLoan)
+@receiver(post_delete, sender=TakenLoan)
+def check_series_guardrails(sender, instance, **kwargs):
+    """
+    Check if any guardrail thresholds have been exceeded after loan operations.
+    Automatically applies deactivation rules if thresholds are breached.
+    """
+    try:
+        series = instance.series
+        if not series:
+            return
+        
+        # Check if thresholds have been exceeded and apply deactivation
+        was_deactivated, reason = series.check_and_apply_deactivation()
+        
+        if was_deactivated:
+            logger.warning(
+                f"Series '{series}' (ID: {series.pk}) automatically deactivated. "
+                f"Rule: {series.deactivation_rule}. Reason: {reason}"
+            )
+    except Exception as e:
+        logger.exception(
+            f"Error checking series guardrails for loan {instance.loan_id}: {e}"
+        )
+

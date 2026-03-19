@@ -26,6 +26,7 @@ from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.models.license import Series
 
 from ..filters import LoanFilter
+from ..filters import TakenLoanFilter
 from ..flows import LoanFlow
 from ..forms import (
     ApproveLoanForm,
@@ -46,10 +47,11 @@ from ..models import (
     LoanChangeLog,
     LoanStatus,
     Release,
+    TakenLoan,
 )
 from apps.tenant_apps.dea.models import Voucher
 from ..services import LoanIDGenerator
-from ..tables import LoanTable
+from ..tables import LoanTable, TakenLoanTable, UnifiedLoanTable
 
 form_classes = {
     "approve": ApproveLoanForm,
@@ -61,6 +63,24 @@ form_classes = {
     "mark_sold": MarkSoldLoanForm,
 }
 logger = logging.getLogger(__name__)
+
+
+def _parse_selected_ids(raw_ids):
+    """Return cleaned integer IDs and count of invalid tokens."""
+    cleaned = []
+    invalid_count = 0
+    for raw_id in raw_ids:
+        try:
+            parsed = int(raw_id)
+            if parsed > 0:
+                cleaned.append(parsed)
+            else:
+                invalid_count += 1
+        except (TypeError, ValueError):
+            invalid_count += 1
+    # Preserve order, remove duplicates
+    cleaned = list(dict.fromkeys(cleaned))
+    return cleaned, invalid_count
 
 
 def _get_loan_journal_entries(loan):
@@ -188,18 +208,64 @@ def get_interestrate(request):
 
 @login_required
 def loan_list(request: HttpRequest):
-    filter = LoanFilter(
-        request.GET,
-        request=request,
-        queryset=GivenLoan.objects.order_by("-id")
-        .select_related("borrower", "series", "created_by")
-        .prefetch_related("notifications", "loanitems"),
-    )
+    loan_kind = request.GET.get("loan_kind", "given")
+
+    def get_given_qs():
+        return (
+            GivenLoan.objects.get_queryset()
+            .for_table_display()
+            .order_by("-id")
+            .select_related("borrower", "series", "created_by")
+            .prefetch_related("notifications", "loanitems")
+        )
+
+    def get_taken_qs():
+        # TakenLoan does not have a release relation; avoid for_table_display()
+        # because shared duration annotations reference release__release_date.
+        return (
+            TakenLoan.objects.get_queryset()
+            .with_metal_weights()
+            .with_itemwise_amounts()
+            .with_current_value()
+            .order_by("-id")
+            .select_related("lender", "series", "created_by")
+            .prefetch_related("repledgedloanitems")
+        )
+
+    if loan_kind == "taken":
+        taken_qs = get_taken_qs()
+        filter = TakenLoanFilter(request.GET, request=request, queryset=taken_qs)
+    elif loan_kind == "all":
+        filter = None
+    else:
+        loan_kind = "given"
+        given_qs = get_given_qs()
+        filter = LoanFilter(request.GET, request=request, queryset=given_qs)
+
+    if loan_kind == "given":
+        total_loan_amount = filter.qs.aggregate(total=Sum("loanitems__loanamount"))
+        total_interest = filter.qs.aggregate(total=Sum("loanitems__interest"))
+    elif loan_kind == "taken":
+        total_loan_amount = filter.qs.aggregate(
+            total=Sum("repledgedloanitems__repledged_loanamount")
+        )
+        total_interest = filter.qs.aggregate(total=Sum("repledgedloanitems__interest"))
+    else:
+        given_qs = get_given_qs()
+        taken_qs = get_taken_qs()
+        given_total = given_qs.aggregate(total=Sum("loanitems__loanamount"))["total"] or 0
+        taken_total = taken_qs.aggregate(total=Sum("repledgedloanitems__repledged_loanamount"))["total"] or 0
+        given_interest = given_qs.aggregate(total=Sum("loanitems__interest"))["total"] or 0
+        taken_interest = taken_qs.aggregate(total=Sum("repledgedloanitems__interest"))["total"] or 0
+        total_loan_amount = {"total": given_total + taken_total}
+        total_interest = {"total": given_interest + taken_interest}
+
     context = {
         "filter": filter,
+        "loan_kind": loan_kind,
         "export_formats": ["csv", "xls", "xlsx", "json", "html"],
-        "total_loan_amount": filter.qs.aggregate(total=Sum("loanitems__loanamount")),
-        "total_interest": filter.qs.aggregate(total=Sum("loanitems__interest")),
+        "total_loan_amount": total_loan_amount,
+        "total_interest": total_interest,
     }
     if request.htmx:
         return render(request, "girvi/loan/loan_list.html#loan-content", context)
@@ -208,24 +274,119 @@ def loan_list(request: HttpRequest):
 
 @login_required
 def loan_table_partial(request: HttpRequest):
-    filter = LoanFilter(
-        request.GET,
-        request=request,
-        queryset=GivenLoan.objects.order_by("-id")
-        .select_related("borrower", "series", "created_by")
-        .prefetch_related("notifications", "loanitems")
-        .with_metal_weights(),
-    )
-    table = LoanTable(filter.qs)
+    loan_kind = request.GET.get("loan_kind", "given")
+
+    def get_given_qs():
+        return (
+            GivenLoan.objects.get_queryset()
+            .for_table_display()
+            .order_by("-id")
+            .select_related("borrower", "series", "created_by")
+            .prefetch_related("notifications", "loanitems")
+        )
+
+    def get_taken_qs():
+        # TakenLoan does not have a release relation; avoid for_table_display()
+        # because shared duration annotations reference release__release_date.
+        return (
+            TakenLoan.objects.get_queryset()
+            .with_metal_weights()
+            .with_itemwise_amounts()
+            .with_current_value()
+            .order_by("-id")
+            .select_related("lender", "series", "created_by")
+            .prefetch_related("repledgedloanitems")
+        )
+
+    if loan_kind == "taken":
+        taken_qs = get_taken_qs()
+        filter = TakenLoanFilter(request.GET, request=request, queryset=taken_qs)
+        table = TakenLoanTable(filter.qs)
+        total_loan_amount = filter.qs.aggregate(
+            total=Sum("repledgedloanitems__repledged_loanamount")
+        )
+        total_interest = filter.qs.aggregate(total=Sum("repledgedloanitems__interest"))
+    elif loan_kind == "all":
+        given_qs = get_given_qs()
+        taken_qs = get_taken_qs()
+        query = request.GET.get("query", "").strip()
+        status = request.GET.get("status", "All")
+        if query:
+            given_qs = given_qs.filter(
+                Q(id__icontains=query)
+                | Q(loan_id__icontains=query)
+                | Q(borrower__firstname__icontains=query)
+                | Q(borrower__lastname__icontains=query)
+            )
+            taken_qs = taken_qs.filter(
+                Q(id__icontains=query)
+                | Q(loan_id__icontains=query)
+                | Q(lender__firstname__icontains=query)
+                | Q(lender__lastname__icontains=query)
+            )
+        if status == "Released":
+            given_qs = given_qs.filter(release__isnull=False)
+            taken_qs = taken_qs.filter(status=LoanStatus.RELEASED)
+        elif status == "UnReleased":
+            given_qs = given_qs.filter(release__isnull=True)
+            taken_qs = taken_qs.exclude(status=LoanStatus.RELEASED)
+
+        all_rows = [
+            {
+                "id": row.id,
+                "loan_type": "Given",
+                "loan_id": row.loan_id,
+                "loan_date": row.loan_date,
+                "party": row.borrower.name,
+                "status": row.status,
+                "loan_amount": row.get_loan_amount,
+            }
+            for row in given_qs
+        ] + [
+            {
+                "id": row.id,
+                "loan_type": "Taken",
+                "loan_id": row.loan_id,
+                "loan_date": row.loan_date,
+                "party": row.lender.name,
+                "status": row.status,
+                "loan_amount": row.get_loan_amount,
+            }
+            for row in taken_qs
+        ]
+        all_rows.sort(key=lambda row: row["loan_date"], reverse=True)
+
+        filter = None
+        table = UnifiedLoanTable(all_rows)
+        total_loan_amount = {
+            "total": (given_qs.aggregate(total=Sum("loanitems__loanamount"))["total"] or 0)
+            + (
+                taken_qs.aggregate(total=Sum("repledgedloanitems__repledged_loanamount"))["total"]
+                or 0
+            )
+        }
+        total_interest = {
+            "total": (given_qs.aggregate(total=Sum("loanitems__interest"))["total"] or 0)
+            + (taken_qs.aggregate(total=Sum("repledgedloanitems__interest"))["total"] or 0)
+        }
+    else:
+        loan_kind = "given"
+        given_qs = get_given_qs()
+        filter = LoanFilter(request.GET, request=request, queryset=given_qs)
+        table = LoanTable(filter.qs)
+        total_loan_amount = filter.qs.aggregate(total=Sum("loanitems__loanamount"))
+        total_interest = filter.qs.aggregate(total=Sum("loanitems__interest"))
+
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
     context = {
         "table": table,
-        "total_loan_amount": filter.qs.aggregate(total=Sum("loanitems__loanamount")),
-        "total_interest": filter.qs.aggregate(total=Sum("loanitems__interest")),
+        "loan_kind": loan_kind,
+        "total_loan_amount": total_loan_amount,
+        "total_interest": total_interest,
         "filter": filter,
     }
     if request.htmx:
-        return render(request, "girvi/loan/_loan_table.html", context)
+        return render(request, "girvi/loan/loan_list.html#loan-table", context)
     return render(request, "girvi/loan/loan_list.html", context)
 
 
@@ -295,6 +456,24 @@ def loan_save(request, id=None, pk=None):
         logger.warning(f"Error in loan_save: {str(e)}")
         messages.error(request, f"An error occurred while saving loan")
         return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
+
+
+@login_required
+def loan_create(request):
+    """Create loan endpoint wrapper for unambiguous route semantics."""
+    return loan_save(request)
+
+
+@login_required
+def loan_create_for_customer(request, customer_pk):
+    """Create loan endpoint wrapper with borrower preselection."""
+    return loan_save(request, pk=customer_pk)
+
+
+@login_required
+def loan_update(request, pk):
+    """Update loan endpoint wrapper for unambiguous route semantics."""
+    return loan_save(request, id=pk)
 
 
 def _get_initial_loan_data(request, customer_pk=None):
@@ -497,26 +676,41 @@ def merge_loans(request):
     """Handle loan merge action"""
     from ..services import LoanMergeService
 
-    loan_ids = request.POST.getlist("selection")
+    loan_kind = request.POST.get("loan_kind", "given")
+    if loan_kind != "given":
+        messages.error(request, "Merge is available only for Given loans")
+        return HttpResponse(status=400)
+
+    raw_loan_ids = request.POST.getlist("selection")
+    loan_ids, invalid_count = _parse_selected_ids(raw_loan_ids)
+    if invalid_count:
+        logger.warning("merge_loans rejected invalid IDs: %s", raw_loan_ids)
+        messages.error(request, "Invalid loan selection.")
+        return HttpResponse(status=400, content="Invalid loan selection.")
+
     if len(loan_ids) < 2:
         messages.error(request, "Please select at least 2 loans to merge")
-        return redirect("girvi:loan_list")
+        return HttpResponse(status=400, content="Please select at least 2 loans to merge")
 
     try:
         loans = GivenLoan.objects.filter(id__in=loan_ids)
+        if loans.count() != len(loan_ids):
+            messages.error(request, "Some selected loans no longer exist")
+            return HttpResponse(status=400, content="Some selected loans no longer exist")
+
         if loans.count() < 2:
             messages.error(request, "Please select at least 2 loans to merge")
-            return HttpResponse(status=400)
+            return HttpResponse(status=400, content="Please select at least 2 loans to merge")
 
         base_loan = loans.earliest("loan_date")
         borrowers = set(loans.values_list("borrower_id", flat=True))
         if len(borrowers) > 1:
             messages.error(request, "Selected loans must belong to the same borrower")
-            return HttpResponse(status=400)
+            return HttpResponse(status=400, content="Selected loans must belong to the same borrower")
 
-        if loans.filter(status=LoanStatus.RELEASED).exists():
+        if loans.filter(Q(release__isnull=False) | Q(status=LoanStatus.RELEASED)).exists():
             messages.error(request, "Cannot merge released loans")
-            return HttpResponse(status=400)
+            return HttpResponse(status=400, content="Cannot merge released loans")
 
         loans_to_merge = loans.exclude(id=base_loan.id)
 
@@ -535,12 +729,12 @@ def merge_loans(request):
 
     except ValidationError as e:
         messages.error(request, str(e))
-        return HttpResponse(status=400)
+        return HttpResponse(status=400, content=str(e))
 
     except Exception as e:
         logger.error(f"Error in merge_loans: {str(e)}")
         messages.error(request, "An error occurred while merging loans")
-        return HttpResponse(status=500)
+        return HttpResponse(status=500, content="An error occurred while merging loans")
 
 
 @login_required
@@ -554,12 +748,47 @@ def loan_renew(request, pk):
 @require_http_methods("POST")
 @login_required
 def deleteLoan(request):
-    id_list = request.POST.getlist("selection")
-    loans = GivenLoan.objects.filter(id__in=id_list)
-    for i in loans:
-        i.delete()
-    messages.error(request, f"Deleted {len(id_list)} loans")
-    return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
+    loan_kind = request.POST.get("loan_kind", "given")
+    raw_ids = request.POST.getlist("selection")
+    id_list, invalid_count = _parse_selected_ids(raw_ids)
+
+    if invalid_count:
+        logger.warning("deleteLoan rejected invalid IDs: %s", raw_ids)
+        messages.error(request, "Invalid loan selection.")
+        return HttpResponse(status=400, content="Invalid loan selection.")
+
+    if not id_list:
+        messages.error(request, "Please select at least one loan to delete.")
+        return HttpResponse(status=400, content="Please select at least one loan to delete.")
+
+    if loan_kind == "taken":
+        loans = TakenLoan.objects.filter(id__in=id_list)
+        if loans.count() != len(id_list):
+            messages.error(request, "Some selected taken loans no longer exist")
+            return HttpResponse(status=400, content="Some selected taken loans no longer exist")
+        if loans.filter(status=LoanStatus.RELEASED).exists():
+            messages.error(request, "Cannot bulk delete released taken loans")
+            return HttpResponse(status=400, content="Cannot bulk delete released taken loans")
+    elif loan_kind == "all":
+        messages.error(request, "Delete from All tab is disabled. Use Given or Taken tab.")
+        return HttpResponse(status=400, content="Delete from All tab is disabled. Use Given or Taken tab.")
+    else:
+        loans = GivenLoan.objects.filter(id__in=id_list)
+        if loans.count() != len(id_list):
+            messages.error(request, "Some selected given loans no longer exist")
+            return HttpResponse(status=400, content="Some selected given loans no longer exist")
+        if loans.filter(release__isnull=False).exists():
+            messages.error(request, "Cannot bulk delete released given loans")
+            return HttpResponse(status=400, content="Cannot bulk delete released given loans")
+
+    deleted_count = loans.count()
+    loans.delete()
+    messages.success(request, f"Deleted {deleted_count} loans")
+    return HttpResponse(
+        headers={
+            "HX-Redirect": f"{reverse('girvi:girvi_loan_list')}?loan_kind={loan_kind}"
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -573,7 +802,7 @@ def loan_detail_items_tab(request, pk):
     loan = get_object_or_404(GivenLoan.objects.prefetch_related("loanitems"), pk=pk)
     return render(
         request,
-        "girvi/loan/partials/tab_items.html",
+        "girvi/loan/loan_detail_1.html#items-tab",
         {"loan": loan, "items": loan.loanitems.all()},
     )
 
@@ -585,7 +814,7 @@ def loan_detail_payments_tab(request, pk):
     payments = loan.loan_payments.all() if hasattr(loan, "loan_payments") else []
     return render(
         request,
-        "girvi/loan/partials/tab_payments.html",
+        "girvi/loan/loan_detail_1.html#payments-tab",
         {"loan": loan, "payments": payments},
     )
 
@@ -596,7 +825,7 @@ def loan_detail_transactions_tab(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
     return render(
         request,
-        "girvi/loan/partials/tab_transactions.html",
+        "girvi/loan/loan_detail_1.html#transactions-tab",
         {"loan": loan, "je": _get_loan_journal_entries(loan)},
     )
 
@@ -605,7 +834,7 @@ def loan_detail_transactions_tab(request, pk):
 @require_http_methods(["GET"])
 def loan_detail_statement_tab(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
-    return render(request, "girvi/loan/partials/tab_statement.html", {"loan": loan})
+    return render(request, "girvi/loan/loan_detail_1.html#statement-tab", {"loan": loan})
 
 
 @login_required
@@ -616,7 +845,7 @@ def loan_detail_notices_tab(request, pk):
     )
     return render(
         request,
-        "girvi/loan/partials/tab_notices.html",
+        "girvi/loan/loan_detail_1.html#notices-tab",
         {"loan": loan, "notifications": loan.notifications.all()},
     )
 
@@ -625,4 +854,4 @@ def loan_detail_notices_tab(request, pk):
 @require_http_methods(["GET"])
 def loan_detail_release_tab(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
-    return render(request, "girvi/loan/partials/tab_release.html", {"loan": loan})
+    return render(request, "girvi/loan/loan_detail_1.html#release-tab", {"loan": loan})

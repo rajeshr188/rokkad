@@ -2,6 +2,7 @@ from django.urls import path
 from django.views.generic.dates import ArchiveIndexView
 
 from . import views
+from .views import custody_views
 from .models import GivenLoan
 
 app_name = "girvi"
@@ -119,6 +120,7 @@ urlpatterns += (
 
 # urls for Loan
 urlpatterns += (
+    path("", views.girvi_dashboard, name="girvi_dashboard"),
     path("girvi/loan/<int:pk>/split/", views.split_loan_items, name="split_loan_items"),
     path("girvi/loan/merge/", views.merge_loans, name="merge_loans"),
     path("girvi/loan/", views.loan_list, name="girvi_loan_list"),
@@ -131,17 +133,17 @@ urlpatterns += (
     path("girvi/loan/detail/<int:pk>/release/", views.loan_detail_release_tab, name="loan_detail_release_tab"),
     path("girvi/loan/table/", views.loan_table_partial, name="loan_table_partial"),
     path("girvi/loan/renew/<int:pk>/", views.loan_renew, name="girvi_loan_renew"),
-    path("girvi/loan/create/", views.loan_save, name="girvi_loan_create"),
+    path("girvi/loan/create/", views.loan_create, name="girvi_loan_create"),
     path(
-        "girvi/loan/create/<int:pk>",
-        views.loan_save,
-        name="girvi_loan_create",
+        "girvi/loan/create/customer/<int:customer_pk>/",
+        views.loan_create_for_customer,
+        name="girvi_loan_create_for_customer",
     ),
     path("girvi/loan/detail/<int:pk>/", views.loan_detail, name="girvi_loan_detail"),
     path("girvi/loan/detail/<int:pk>/pdf", views.print_loan, name="loan_pdf"),
     path(
-        "girvi/loan/update/<int:id>/",
-        views.loan_save,
+        "girvi/loan/update/<int:pk>/",
+        views.loan_update,
         name="girvi_loan_update",
     ),
     path(
@@ -326,6 +328,75 @@ urlpatterns += (
         name="submit_release_formset",
     ),
     path("girvi/release/<int:pk>/form_h/", views.form_h, name="release_form_h"),
+)
+
+# urls for custody/repledge workflows
+urlpatterns += (
+    path(
+        "girvi/custody/items/<int:item_id>/custody/",
+        custody_views.item_custody_status,
+        name="item_custody_status",
+    ),
+    path(
+        "girvi/custody/loans/<int:loan_id>/custody/",
+        custody_views.loan_custody_summary,
+        name="loan_custody_summary",
+    ),
+    path(
+        "girvi/custody/items/<int:item_id>/return-from-lender/",
+        custody_views.return_item_from_lender,
+        name="return_item_from_lender",
+    ),
+    path(
+        "girvi/custody/loans/<int:loan_id>/return-from/<int:taken_loan_id>/",
+        custody_views.return_all_items_from_lender,
+        name="return_all_items_from_lender",
+    ),
+    path(
+        "girvi/custody/loans/<int:loan_id>/release/check/",
+        custody_views.release_loan_check_custody,
+        name="release_loan_check_custody",
+    ),
+    path(
+        "girvi/custody/loans/<int:loan_id>/release/with-return/",
+        custody_views.release_loan_with_return,
+        name="release_loan_with_return",
+    ),
+    path(
+        "girvi/custody/repledge/create/",
+        custody_views.create_repledge_select_items,
+        name="create_repledge_select_items",
+    ),
+    path(
+        "girvi/custody/repledge/create/with-items/",
+        custody_views.create_repledge_with_items,
+        name="create_repledge_with_items",
+    ),
+    path(
+        "girvi/custody/taken-loans/<int:loan_id>/collateral/",
+        custody_views.taken_loan_collateral_detail,
+        name="taken_loan_collateral_detail",
+    ),
+    path(
+        "girvi/custody/taken-loans/<int:loan_id>/return-collateral/",
+        custody_views.return_taken_loan_collateral,
+        name="return_taken_loan_collateral",
+    ),
+    path(
+        "girvi/custody/reports/repledge-history/",
+        custody_views.repledge_history_report,
+        name="repledge_history_report",
+    ),
+    path(
+        "girvi/custody/api/loans/<int:loan_id>/check-custody/",
+        custody_views.api_check_release_custody,
+        name="api_check_release_custody",
+    ),
+    path(
+        "girvi/custody/api/items/<int:item_id>/custody/",
+        custody_views.api_item_custody_status,
+        name="api_item_custody_status",
+    ),
 )
 # urls for forms
 urlpatterns += (

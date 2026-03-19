@@ -1,6 +1,6 @@
 # Girvi PR-1 Compatibility Plan and Progress
 
-Last updated: 2026-03-18
+Last updated: 2026-03-18 (post-push sweep + validation)
 Scope: Refactored `GivenLoan` model/view/template API compatibility alignment.
 
 ## Goal
@@ -62,7 +62,7 @@ Stabilize loan/release/notice/archive flows by replacing legacy field usage with
   - Legacy-token sweeps now mostly clean; remaining hits are canonical uses or commented examples
 
 ### In Progress
-- Preparing focused PR-1 commit from current dirty worktree
+- Browser-level end-to-end functional pass for key PR-1 flows
 
 ### Pending
 - End-to-end functional pass in browser for:
@@ -70,6 +70,42 @@ Stabilize loan/release/notice/archive flows by replacing legacy field usage with
   - Loan archive pages
   - Release flows including custody check
   - Notice generation path
+
+- Test hygiene in legacy girvi test module:
+  - `apps/tenant_apps/girvi/tests.py` raises `NameError: TestCase is not defined` during Django test discovery.
+  - This is a pre-existing blocker unrelated to PR-1 compatibility templates/views.
+
+## 2026-03-18 Delta Update (After Commit Push)
+### Remote status
+- Focused PR-1 compatibility commit pushed to origin:
+  - Branch: `dea-kiss`
+  - Commit: `c87e3e8`
+  - Message: `girvi: align templates/views with refactored loan API and track PR1 progress`
+
+### Compatibility sweep result
+- Broad legacy token sweep re-run across:
+  - `templates/girvi/**`
+  - `apps/tenant_apps/girvi/views/**`
+
+- Outcome:
+  - No active legacy contract mismatches found in target runtime paths.
+  - Residual hits were benign only:
+    - Canonical fields (for example `total_due_with_currency`)
+    - JavaScript parameter naming (`loanId`)
+    - Commented legacy snippets in non-runtime comments
+
+### Validation run result
+- `python manage.py check`:
+  - Passed with no system issues.
+
+- `python manage.py test apps.tenant_apps.girvi.tests`:
+  - Blocked by pre-existing issue in `apps/tenant_apps/girvi/tests.py`:
+    - `NameError: name 'TestCase' is not defined`
+  - This prevented full automated functional assertion at app test-suite level.
+
+### Current assessment
+- PR-1 compatibility slice is stable at static/diagnostic level and published to remote.
+- Remaining work for full sign-off is browser E2E flow validation (loan detail/archive/release/custody/notice) and optional cleanup of legacy `tests.py` so test discovery can run end-to-end.
 
 ## Files Included in PR-1 Compatibility Slice
 - `apps/tenant_apps/girvi/views/loan.py`

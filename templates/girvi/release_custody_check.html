@@ -58,14 +58,16 @@
                                     </table>
                                     
                                     <!-- Option to return from specific lender -->
-                                    <form method="post" 
-                                          action="{% url 'girvi:return_all_items_from_lender' loan.id item.repledged_to.id %}"
+                                    {% with taken_loan_id=items.0.repledged_to.id %}
+                                    <form method="post"
+                                          action="{% url 'girvi:return_all_items_from_lender' loan.id taken_loan_id %}"
                                           class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-undo"></i> Return Items from {{ lender_name }}
                                         </button>
                                     </form>
+                                    {% endwith %}
                                 </div>
                             </div>
                         {% endfor %}
@@ -121,7 +123,7 @@
                                     <button type="submit" class="btn btn-warning btn-lg">
                                         <i class="fas fa-exchange-alt"></i> Release with Auto-Return
                                     </button>
-                                    <a href="{% url 'girvi:loan_detail' loan.id %}" class="btn btn-secondary btn-lg">
+                                    <a href="{% url 'girvi:girvi_loan_detail' loan.id %}" class="btn btn-secondary btn-lg">
                                         Cancel
                                     </a>
                                 </form>
@@ -134,7 +136,7 @@
                             <i class="fas fa-check-circle"></i> All items are in vault. Ready to release!
                         </div>
                         
-                        <a href="{% url 'girvi:loan_release_create' loan.id %}" class="btn btn-success btn-lg">
+                        <a href="{% url 'girvi:girvi_release_create' loan.id %}" class="btn btn-success btn-lg">
                             <i class="fas fa-hand-holding"></i> Proceed to Release
                         </a>
                     {% endif %}
@@ -149,7 +151,7 @@
 <script>
 // Optional: AJAX check before release
 function checkCustodyStatus(loanId) {
-    fetch(`/girvi/api/loans/${loanId}/check-custody/`)
+    fetch(`{% url 'girvi:api_check_release_custody' loan.id %}`)
         .then(response => response.json())
         .then(data => {
             if (data.needs_return) {

@@ -1,55 +1,44 @@
-{%block content%}
+{% load crispy_forms_tags %}
 {{ form.media.js }}
 <style>
-  .select2-dropdown-modal {
-  z-index: 1056 !important; /* Higher than modal's z-index */
-}
-
-.select2-container--open {
-  z-index: 1056 !important;
-}
+  .select2-dropdown-modal { z-index: 1056 !important; }
+  .select2-container--open { z-index: 1056 !important; }
 </style>
-<div class="container" id="form" hx-history="false">
-  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-    {% if loan%}
-    <h1 class="h2">Update Loan</h1>
-    {%else%}
-    <h1 class="h2">Create Loan</h1>
-    {%endif%}
-  </div>
-  <div class="card">
-    <div class="card-body overflow-hidden">
-      {% include 'partials/crispy_form.html' with form=form%}
-    </div>
-    <div 
-        hx-get="{% url 'get_customer_balance' %}" 
-        hx-trigger="change from:select[name='customer']"
-        hx-target="this"
-        hx-swap="innerHTML"
-        hx-include="[name='customer']">
 
-    </div>
+<div class="modal-header">
+  <h5 class="modal-title">{% if loan %}Update Loan{% else %}Create Loan{% endif %}</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+  {% crispy form %}
+  <div
+    hx-get="{% url 'get_customer_balance' %}"
+    hx-trigger="change from:select[name='borrower']"
+    hx-target="this"
+    hx-swap="innerHTML"
+    hx-include="[name='borrower']">
   </div>
 </div>
 
-
 <script>
-  
-  document.addEventListener('DOMContentLoaded', function () {
-  
-      // Bind HTMX trigger to Select2 change event
-      $('#id_series').on('select2:select', function () {
-          this.dispatchEvent(new Event('change', { bubbles: true }));
+  (function () {
+    // Re-run after HTMX swaps the modal content
+    function initSelect2Triggers() {
+      $('#id_series').off('select2:select.loanform').on('select2:select.loanform', function () {
+        this.dispatchEvent(new Event('change', { bubbles: true }));
       });
-  });
-</script>
-<script>
-  // Ensure the HTMX request is triggered when the django-select2 widget changes
-  $(document).ready(function() {
-    $('select[name="customer"]').on('change', function() {
-      this.dispatchEvent(new Event('change', { bubbles: true }));
+      $('select[name="borrower"]').off('change.loanform').on('change.loanform', function () {
+        this.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+    if (window.jQuery) {
+      $(document).ready(initSelect2Triggers);
+    }
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+      if (e.detail.target && e.detail.target.id === 'modal-content') {
+        if (window.jQuery) initSelect2Triggers();
+      }
     });
-  });
+  })();
 </script>
-
-{%endblock%}

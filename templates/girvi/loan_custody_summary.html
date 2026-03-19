@@ -1,0 +1,82 @@
+{% extends 'layouts/workspace.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Custody Summary - {{ loan.loan_id }}</h2>
+    <div class="btn-group">
+      <a class="btn btn-outline-secondary" hx-get="{% url 'girvi:girvi_loan_detail' loan.id %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true">Back to Loan</a>
+      <a class="btn btn-outline-dark" hx-get="{% url 'girvi:create_repledge_select_items' %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true">Create Repledge</a>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    Total items: <strong>{{ total_items }}</strong>
+    {% if can_release %}
+      <span class="badge bg-success ms-2">Release Ready</span>
+    {% else %}
+      <span class="badge bg-warning text-dark ms-2">Needs Return</span>
+      <span class="ms-2">{{ release_message }}</span>
+    {% endif %}
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">In Vault ({{ items_by_custody.in_vault|length }})</div>
+        <ul class="list-group list-group-flush">
+          {% for item in items_by_custody.in_vault %}
+            <li class="list-group-item">{{ item.itemdesc }}</li>
+          {% empty %}
+            <li class="list-group-item text-muted">No items</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">With Lender ({{ items_by_custody.with_lender|length }})</div>
+        <ul class="list-group list-group-flush">
+          {% for item in items_by_custody.with_lender %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ item.itemdesc }}</span>
+              <a class="btn btn-sm btn-outline-primary" hx-post="{% url 'girvi:return_item_from_lender' item.id %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-confirm="Return this item from lender?">Return</a>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No items</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">With Customer ({{ items_by_custody.with_customer|length }})</div>
+        <ul class="list-group list-group-flush">
+          {% for item in items_by_custody.with_customer %}
+            <li class="list-group-item">{{ item.itemdesc }}</li>
+          {% empty %}
+            <li class="list-group-item text-muted">No items</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {% if items_by_lender %}
+  <div class="card mt-4">
+    <div class="card-header">Grouped by Lender</div>
+    <div class="card-body">
+      {% for lender_name, items in items_by_lender.items %}
+        <h6 class="mb-2">{{ lender_name }} ({{ items|length }})</h6>
+        <ul>
+          {% for item in items %}
+            <li>{{ item.itemdesc }}</li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -87,7 +87,7 @@
     {% include "toasts.html" %}
     {% partialdef modal inline %}
     <div class="modal fade" id="modal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content" id="modal-content">
                 <!-- Modal content loaded here -->
             </div>
@@ -100,7 +100,10 @@
     
     <!-- HTMX -->
     <script src="{% static 'js/htmx.min.js' %}"></script>
-    
+
+    <!-- Hyperscript -->
+    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+
     <!-- jQuery (for compatibility) -->
     <script src="{% static 'js/jquery.js' %}"></script>
     <script src="{% static 'admin/js/vendor/select2/select2.full.min.js' %}"></script>

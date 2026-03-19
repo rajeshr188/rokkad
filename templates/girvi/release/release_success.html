@@ -1,8 +1,23 @@
 <div class="card">
+    <div class="card-header bg-success-subtle border-success">
+        <h5 class="mb-1">Step 3: Confirmed</h5>
+        <div class="d-flex flex-wrap gap-2 small">
+            <span class="badge bg-secondary">1. Select</span>
+            <span class="badge bg-secondary">2. Review</span>
+            <span class="badge bg-success">3. Confirm</span>
+        </div>
+        <p class="mb-0 mt-2">Bulk release completed successfully for {{ instances|length }} loan{{ instances|length|pluralize }}.</p>
+    </div>
     <div class="card-header">
         <h3 class="card-title">Released Loans</h3>
     </div>
     <div class="card-body">
+        {% if skipped_released_count %}
+        <div class="alert alert-warning" role="alert">
+            {{ skipped_released_count }} loan{{ skipped_released_count|pluralize }} skipped because they were already released during submit.
+            {% if commit_policy %}Policy: {{ commit_policy }}.{% endif %}
+        </div>
+        {% endif %}
         <div class="table-responsive">
             <table class="table table-bordered table-striped table-hover">
                 <thead>

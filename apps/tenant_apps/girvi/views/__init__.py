@@ -1,4 +1,5 @@
 from .archives import *
+from .dashboard import *
 from .forms import *
 from .license import *
 from .loan import *

@@ -1,7 +1,8 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {%load static%}
 {%load django_tables2%}
 {%block content%}
+{% partialdef release-list-content inline %}
 
 <div class="container">
   <div
@@ -47,4 +48,5 @@
   </div>
 </div>
 
+{% endpartialdef %}
 {%endblock%}

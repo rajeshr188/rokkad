@@ -8,6 +8,7 @@ var startbutton = null;
 var imageDataInput = null;
 var mediaStream = null;
 var videoSelect = null;
+var webcaptureInitialized = false;
 
 function initializeCamera(deviceId) {
   video = document.getElementById('video');
@@ -17,8 +18,11 @@ function initializeCamera(deviceId) {
   imageDataInput = document.getElementById('image-data');
   videoSelect = document.getElementById('videoSource');
   if (!video || !canvas || !photo || !startbutton || !imageDataInput || !videoSelect) {
-    console.error("One or more required HTML elements are missing.");
-    return;
+    return false;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return false;
   }
 
   const constraints = {
@@ -43,7 +47,7 @@ function initializeCamera(deviceId) {
       console.log("An error occurred: " + err);
     });
 
-  video.addEventListener('canplay', function(ev){
+  video.oncanplay = function(ev){
     if (!streaming) {
       height = video.videoHeight / (video.videoWidth / width);
       if (isNaN(height)) {
@@ -55,14 +59,15 @@ function initializeCamera(deviceId) {
       canvas.setAttribute('height', height);
       streaming = true;
     }
-  }, false);
+  };
 
-  startbutton.addEventListener('click', function(ev){
+  startbutton.onclick = function(ev){
     takepicture();
     ev.preventDefault();
-  }, false);
+  };
 
   clearphoto();
+  return true;
 }
 
 function clearphoto() {
@@ -92,7 +97,17 @@ function takepicture() {
 
 function startup() {
   // Initialize camera and other stuff
-  initializeCamera();
+  var initialized = initializeCamera();
+  if (!initialized) {
+    return;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    return;
+  }
+
+  videoSelect.innerHTML = '';
+
   // List available video input devices
   navigator.mediaDevices.enumerateDevices()
     .then(function(devices) {
@@ -130,16 +145,35 @@ function stopCamera() {
 //   // On htmx page transition
 //   document.addEventListener('htmx:afterSwap', stopCamera);
 // });
-// Ensure the DOM is fully loaded before running the script
-document.addEventListener('DOMContentLoaded', function() {
-  // On initial page load
-  document.addEventListener('htmx:load', startup);
-  // On htmx page transition
-  document.addEventListener('htmx:afterSwap', function() {
+function initWebCaptureListeners() {
+  if (webcaptureInitialized) {
+    return;
+  }
+
+  webcaptureInitialized = true;
+
+  document.addEventListener('htmx:afterSwap', function(event) {
+    var target = event && event.detail ? event.detail.target : null;
+    if (!target) {
+      return;
+    }
+    if (!target.closest || !target.closest('#item-form')) {
+      return;
+    }
     stopCamera();
     startup();
   });
-});
+
+  if (document.getElementById('item-form')) {
+    startup();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initWebCaptureListeners);
+} else {
+  initWebCaptureListeners();
+}
 
 // modular
 // Camera configuration object

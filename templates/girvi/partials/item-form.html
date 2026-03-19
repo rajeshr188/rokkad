@@ -1,89 +1,18 @@
 {% load static %}
 {%load crispy_forms_tags%}
 
-<form id="item-form" enctype="multipart/form-data">
+<form id="item-form" enctype="multipart/form-data" hx-post="{% if url %}{{ url }}{% else %}.{% endif%}" hx-target="{% if object %}closest li{% else %}#form{% endif %}" hx-swap="innerHTML">
     {% csrf_token %}
     <script src="{% static 'js/webcapture.v1.js' %}"></script>
-    <script>
-        document.addEventListener('htmx:afterSwap', function () {
-            stopCamera();
-            startup();
-        });
-    </script>
     {%if not object%}
-    <h1>Add Item</h1> 
+    <h5 class="mb-3">Add Item</h5>
     {%else%}
-    <h1>Edit Item</h1>
+    <h5 class="mb-3">Edit Item</h5>
     {%endif%}
     {{form.media}}
             {{ form|as_crispy_errors }}
             <div class="container-fluid">
-
-                <div class="row">
-                    <div class="col-12 col-sm-3 col-lg-3">
-                        <div class="form-group">
-                            {{form.item|as_crispy_field}}
-                            {{form.item.errors}}
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-3 col-lg-3">
-                        <div class="form-group">
-                            {{form.itemdesc|as_crispy_field}}
-                            {{form.itemdesc.errors}}
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-3 col-lg-3">
-                        <div class="form-group">
-                            {{form.itemtype|as_crispy_field}}
-                            {{form.itemtype.errors}}
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-3 col-lg-3">
-                        <div class="form-group">
-                            {{form.interestrate|as_crispy_field}}
-                            {{form.interestrate.errors}}
-                        </div>
-                    </div>
-
-                </div>
-                <div class="row">
-                    <div class="col-12 col-sm-3 col-lg-3">
-                        <div class="form-group">
-                            {{form.quantity|as_crispy_field}}
-                            {{form.quantity.errors}}
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-3 col-lg-3">
-                        <div class="form-group">
-                            {{form.weight|as_crispy_field}}
-                            {{form.weight.errors}}
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-3 col-lg-3">
-                        <div class="form-group">
-                            {{form.purity|as_crispy_field}}
-                            {{form.purity.errors}}
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-3 col-lg-3">
-                        <div class="form-group">
-                            {{form.loanamount|as_crispy_field}}
-                            {{form.loanamount.errors}}
-                        </div>
-                    </div>
-                </div>
-                <div class="row justify-content-center mb-3">
-                    <div class="col-auto">
-                        <div class="form-group">
-                            <button class="btn btn-success btn" hx-post="{% if url %}{{ url }}{% else %}.{% endif%}"
-                                hx-include="closest form">Save</button>
-                            <button class="btn btn-danger btn" 
-                                {%if object%} hx-get="{{object.get_absolute_url}}"
-                                {%else%} _="on click transition opacity to 0 then remove #item-form"
-                                {%endif%}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
+                {% crispy form %}
                 <div class="row">
                     <input type="hidden" id="image-data" name="image_data">
                     <select id="videoSource"></select>

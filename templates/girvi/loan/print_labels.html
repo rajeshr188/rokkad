@@ -1,6 +1,8 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {%load crispy_forms_tags%}
 {% block content %}
+
+{% partialdef content inline %}
 
 <div class="container-fluid">
   <div class="row">
@@ -17,4 +19,5 @@
     </div>
     </div>
 </div>
+{% endpartialdef %}
 {% endblock %}

@@ -1,263 +1,222 @@
-{% extends 'layouts/base.html' %}
-
-{% block content %}
+{% extends 'layouts/workspace.html' %}
 {% load static %}
-{% load partials%}
-{% load i18n %}
-{%load django_tables2%}
+{% load i18n static django_tables2 %}
 {% load crispy_forms_tags %}
-{%partialdef loan-content inline%}
-<div id="loan-content" class="container-lg">
-  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-    <h1 class="h2">{%trans "Loans" %}</h1>
 
-    <div class="btn-toolbar gap-2 mb-2 mb-md-0">
-      <!-- Primary Actions Group -->
-      <div class="btn-group btn-group-sm mb-2 mb-sm-0">
-        <a class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}" hx-target="#modal-content"
-          _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()"
-          hx-trigger="click,keyup[shiftKey&&key=='N'] from:body">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle"
-            viewBox="0 0 16 16">
-            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-            <path
-              d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
-          </svg>
-        </a>
-      </div>
+{% block workspace_content %}
+{% partialdef loan-content inline %}
+<div id="loan-content" class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-2 mb-3 border-bottom">
+    <h1 class="h3 mb-0">{% trans "Loans" %}</h1>
+    <div class="btn-group btn-group-sm" role="group">
+      <a class="btn btn-success" hx-get="{% url 'girvi:girvi_loan_create' %}" hx-target="#modal-content"
+        _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()"
+        hx-trigger="click,keyup[shiftKey&&key=='N'] from:body">
+        {% trans "New Loan" %}
+      </a>
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:bulk_release' %}">{% trans "Bulk Release" %}</a>
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:girvi_ledger' %}">{% trans "Ledger" %}</a>
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:storage_boxes' %}">{% trans "Storage" %}</a>
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:loanitem_list' %}">{% trans "Items" %}</a>
+    </div>
+  </div>
 
-      <!-- Secondary Actions Group -->
-      <div class="btn-group btn-group-sm mb-2 mb-sm-0">
-        <a class="btn btn-primary" href="{% url 'girvi:bulk_release' %}">Bulk Release</a>
-        <a class="btn btn-primary" href="{% url 'girvi:girvi_ledger' %}">Ledger</a>
-        <a class="btn btn-primary" href="{% url 'girvi:storage_boxes' %}">Storage</a>
-        <a class="btn btn-primary" href="{% url 'girvi:loanitem_list' %}">Items <svg xmlns="http://www.w3.org/2000/svg"
-            width="16" height="16" fill="currentColor" class="bi bi-cart-check-fill" viewBox="0 0 16 16">
-            <path
-              d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-1.646-7.646-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708" />
-          </svg></a> <!-- New Link -->
-      </div>
+  <ul class="nav nav-pills nav-fill mb-3">
+    <li class="nav-item">
+      <a class="nav-link {% if loan_kind == 'given' %}active{% endif %}" href="{% url 'girvi:girvi_loan_list' %}?loan_kind=given">{% trans "Given" %}</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if loan_kind == 'taken' %}active{% endif %}" href="{% url 'girvi:girvi_loan_list' %}?loan_kind=taken">{% trans "Taken" %}</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if loan_kind == 'all' %}active{% endif %}" href="{% url 'girvi:girvi_loan_list' %}?loan_kind=all">{% trans "All" %}</a>
+    </li>
+  </ul>
 
-      <!-- Archive Button -->
-      <div class="btn-group btn-group-sm mb-2 mb-sm-0">
-        <a class="btn btn-primary" href="{% url 'girvi:loan_archive'%}">
-          {%trans "Archive"%}
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-archive"
-            viewBox="0 0 16 16">
-            <path
-              d="M0 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 1 12.5V5a1 1 0 0 1-1-1V2zm2 3v7.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V5H2zm13-3H1v2h14V2zM5 7.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z" />
-          </svg>
-        </a>
-      </div>
-
-      <!-- Export Dropdown -->
-      <div class="btn-group btn-group-sm mb-2 mb-sm-0">
-        <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
-            aria-expanded="false">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download"
-              viewBox="0 0 16 16">
-              <path
-                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
-              <path
-                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
-            </svg>
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form id="quick-filter-form" class="row g-2 align-items-end" hx-get="{% url 'girvi:loan_table_partial' %}" hx-target="#loan-table-container" hx-push-url="true" hx-trigger="change,submit">
+        <input type="hidden" name="loan_kind" value="{{ loan_kind }}">
+        <div class="col-12 col-md-5">
+          <label class="form-label small text-muted mb-1">{% trans "Search" %}</label>
+          <input type="text" class="form-control form-control-sm" name="query" value="{{ request.GET.query|default:'' }}" placeholder="{% trans 'Loan ID / party name' %}">
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label small text-muted mb-1">{% trans "Status" %}</label>
+          <select name="status" class="form-select form-select-sm">
+            <option value="All" {% if request.GET.status == 'All' or not request.GET.status %}selected{% endif %}>{% trans "All" %}</option>
+            <option value="Released" {% if request.GET.status == 'Released' %}selected{% endif %}>{% trans "Released" %}</option>
+            <option value="UnReleased" {% if request.GET.status == 'UnReleased' %}selected{% endif %}>{% trans "Not Released" %}</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <button class="btn btn-sm btn-primary w-100" type="submit">{% trans "Apply" %}</button>
+        </div>
+        <div class="col-12 col-md-2 text-md-end">
+          <button class="btn btn-sm btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilterPanel" aria-expanded="false" aria-controls="advancedFilterPanel">
+            {% trans "Advanced" %}
           </button>
-          <ul class="dropdown-menu">
-            {% for format in export_formats %}
-            <li>
-              <a class="dropdown-item" href="{% export_url format %}">
-                <code>.{{format}}</code>
-              </a>
-            </li>
-            {% endfor %}
-          </ul>
         </div>
-      </div>
-
-      <!-- Verify Button -->
-      <div class="btn-group btn-group-sm mb-2 mb-sm-0">
-        <a class="btn btn-success" href="{%url 'girvi:statement_list'%}">
-          Verify
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-            class="bi bi-card-checklist" viewBox="0 0 16 16">
-            <path
-              d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z" />
-            <path
-              d="M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0zM7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 0 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0z" />
-          </svg>
-        </a>
-      </div>
+      </form>
     </div>
   </div>
-  <div class="progress">
-    <div class="indeterminate"></div>
+
+  <div class="collapse mb-3" id="advancedFilterPanel">
+    <div class="card card-body">
+      {% if filter %}
+      <form id="advanced-filter-form" hx-get="{% url 'girvi:loan_table_partial' %}" hx-target="#loan-table-container" hx-push-url="true" hx-trigger="submit">
+        <input type="hidden" name="loan_kind" value="{{ loan_kind }}">
+        {% crispy filter.form %}
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-sm btn-primary">{% trans "Apply Advanced Filters" %}</button>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'girvi:girvi_loan_list' %}?loan_kind={{ loan_kind }}">{% trans "Reset" %}</a>
+        </div>
+      </form>
+      {% else %}
+      <div class="alert alert-info mb-0">{% trans "Advanced filters are not available in All mode. Use Given or Taken tab for full filters." %}</div>
+      {% endif %}
+    </div>
   </div>
-  <div class="row">
-    <div class="col-md-3" id="filter">
-      <!-- Filter Toggle Button (Mobile Only) -->
-      <div class="d-md-none mb-3">
-        <button class="btn btn-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel"
-          aria-expanded="false" aria-controls="filterPanel">
-          <i class="bi bi-funnel"></i>
-          <span>Filters</span>
-          <i class="bi bi-chevron-down ms-2"></i>
-        </button>
-      </div>
 
-      <!-- Filter Panel -->
-      <div class="collapse d-md-block" id="filterPanel">
-        <div class="card card-body border-0">
-          <form id="loan-filter-form" hx-get="{% url 'girvi:loan_table_partial' %}" hx-target="#loan-table-container"
-            hx-trigger="input,select,keyup,change,submit" hx-push-url="true">
-            {% crispy filter.form %}
-            <button type="submit" class="btn btn-primary">Filter</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-9 " id="table">
-
-      <div class="table-responsive">
-        <div class="row">
-          <div class="col">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" value="selected" id="selectall" name="selectall"
-                onclick="toggle(this)">
-              <label class="form-check-label" for="flexCheckDefault">
-                Select All
-              </label>
-            </div>
-
-          </div>
-          <div class="col">
-            <p>
-              Selected: <span id="text"></span> /{{table.paginator.count}}
-            </p>
-          </div>
-          <div class="col">
-            <div hx-include="#checked-items" hx-target="#loan-content">
-              <!-- Example split danger button -->
-              <div class="btn-group" role="group">
-                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown"
-                  aria-expanded="false">
-                  {%trans "Actions"%}
-                </button>
-                <ul class="dropdown-menu">
-                  <li>
-                    <a class="dropdown-item link-info" hx-post="{% url 'girvi:print_labels'%}?{{request.GET.urlencode}}"
-                      hx-include="[name='selection'],[name='selectall']">Print Labels <svg
-                        xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-tags"
-                        viewBox="0 0 16 16">
-                        <path
-                          d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586z" />
-                        <path
-                          d="M5.5 5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m0 1a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M1 7.086a1 1 0 0 0 .293.707L8.75 15.25l-.043.043a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 0 7.586V3a1 1 0 0 1 1-1z" />
-                      </svg></a>
-                  </li>
-                  <li>
-                    <a class="dropdown-item link-success" hx-get="{% url 'girvi:bulk_release'%}"
-                      hx-include="[name='selection']" hx-push-url="true">
-                      {%trans "Release"%}
-                    </a>
-                  </li>
-                  <li>
-                    <a class="dropdown-item" hx-post="{% url 'girvi:girvi_create_notice'%}?{{request.GET.urlencode}}"
-                      hx-include="[name='selection'],[name='selectall']">{%trans "Notify"%}
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                        class="bi bi-file-medical" viewBox="0 0 16 16">
-                        <path
-                          d="M8.5 4.5a.5.5 0 0 0-1 0v.634l-.549-.317a.5.5 0 1 0-.5.866L7 6l-.549.317a.5.5 0 1 0 .5.866l.549-.317V7.5a.5.5 0 1 0 1 0v-.634l.549.317a.5.5 0 1 0 .5-.866L9 6l.549-.317a.5.5 0 1 0-.5-.866l-.549.317V4.5zM5.5 9a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 2a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z" />
-                        <path
-                          d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z" />
-                      </svg></a>
-                  </li>
-                  <li>
-                    <a class="dropdown-item dropdown-item-info link-info" hx-post="{% url 'girvi:merge_loans' %}"
-                      hx-confirm="Are you sure you want to merge selected loans?" hx-include="[name='selection']"
-                      hx-target="#table" hx-vals='{"use_block":"table"}'>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                        class="bi bi-intersect" viewBox="0 0 16 16">
-                        <path
-                          d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z" />
-                      </svg>{%trans "Merge"%}
-                    </a>
-                  </li>
-                  <li>
-                    <hr class="dropdown-divider">
-                  </li>
-                  <li>
-                    <a class="dropdown-item dropdown-item-danger link-danger"
-                      hx-post="{% url 'girvi:girvi_loan_deletemultiple'%}" hx-include="[name='selection']"
-                      hx-target="#table" hx-vals='{"use_block":"table"}'
-                      hx-confirm="Are you sure to delete selected items?">
-                      {%trans "Delete"%}
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                        class="bi bi-trash" viewBox="0 0 16 16">
-                        <path
-                          d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z" />
-                        <path
-                          d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z" />
-                      </svg>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <details>
-          <summary>
-            Stats
-          </summary>
-          <ul>
-            <li>Total Loan Amount: {{total_loan_amount.total}}</li>
-            <li>Total Interest :{{total_interest.total}}</li>
-            <li>Results :{{table.paginator.count}}</li>
-          </ul>
-        </details>
-
-        <div id="loan-table-container" hx-get="{% url 'girvi:loan_table_partial' %}?{{ request.GET.urlencode }}"
-          hx-trigger="load">
-          <!-- Table will be loaded here via HTMX -->
-        </div>
-
-      </div>
-
-    </div>
-
+  <div id="loan-table-container" hx-get="{% url 'girvi:loan_table_partial' %}?{{ request.GET.urlencode }}" hx-trigger="load">
   </div>
 </div>
+{% endpartialdef %}
 
-<script language="JavaScript">
+{% partialdef loan-table %}
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+      <div class="d-flex align-items-center gap-3">
+        <div class="form-check m-0">
+          <input class="form-check-input" type="checkbox" value="selected" id="selectall" name="selectall" onclick="toggle(this)">
+          <label class="form-check-label" for="selectall">{% trans "Select all on page" %}</label>
+        </div>
+        <small class="text-muted">{% trans "Selected" %}: <span id="selected-count">0</span></small>
+      </div>
 
-  // Attach a change event handler to all input elements of type "checkbox"
-  $('input[type=checkbox]').change(function () {
-    // Get the element with the ID "selectall"
-    var all = document.getElementById("selectall");
+      {% if loan_kind == 'given' %}
+      <div class="btn-group btn-group-sm" role="group" id="bulk-action-group">
+        <input type="hidden" id="loan-kind-hidden" name="loan_kind" value="{{ loan_kind }}">
+        <button id="bulk-action-toggle" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" disabled>
+          {% trans "Bulk Actions" %}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" hx-post="{% url 'girvi:print_labels' %}?{{ request.GET.urlencode }}"
+               hx-include="#loan-table-container input[name='selection']:checked,#selectall,#loan-kind-hidden">
+              {% trans "Print Labels" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" hx-get="{% url 'girvi:bulk_release' %}"
+               hx-include="#loan-table-container input[name='selection']:checked"
+               hx-push-url="true">
+              {% trans "Release Selected" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" hx-post="{% url 'girvi:girvi_create_notice' %}?{{ request.GET.urlencode }}"
+               hx-include="#loan-table-container input[name='selection']:checked,#selectall,#loan-kind-hidden">
+              {% trans "Notify Selected" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" hx-post="{% url 'girvi:merge_loans' %}" hx-confirm="Are you sure you want to merge selected loans?"
+               hx-include="#loan-table-container input[name='selection']:checked,#loan-kind-hidden" hx-target="#loan-content">
+              {% trans "Merge Selected" %}
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item text-danger" hx-post="{% url 'girvi:girvi_loan_deletemultiple' %}" hx-confirm="Are you sure you want to delete selected loans?"
+               hx-include="#loan-table-container input[name='selection']:checked,#loan-kind-hidden" hx-target="#loan-content">
+              {% trans "Delete Selected" %}
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% elif loan_kind == 'taken' %}
+      <div class="btn-group btn-group-sm" role="group" id="bulk-action-group">
+        <input type="hidden" id="loan-kind-hidden" name="loan_kind" value="{{ loan_kind }}">
+        <button id="bulk-action-toggle" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" disabled>
+          {% trans "Bulk Actions" %}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item text-danger" hx-post="{% url 'girvi:girvi_loan_deletemultiple' %}" hx-confirm="Are you sure you want to delete selected taken loans?"
+               hx-include="#loan-table-container input[name='selection']:checked,#loan-kind-hidden" hx-target="#loan-content">
+              {% trans "Delete Selected Taken Loans" %}
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% else %}
+      <small class="text-muted">{% trans "Bulk actions are disabled in All mode. Switch to Given or Taken tab." %}</small>
+      {% endif %}
+    </div>
 
-    // If the checkbox with ID "selectall" is checked
-    if (all.checked) {
-      // Set the text content of the element with ID "text" to {{table.paginator.count}}
-      // Note: This part contains an expression {{table.paginator.count}} which looks like template language,
-      //       but it's not valid JavaScript. This might be part of some templating engine or framework.
-      //       In JavaScript, you would typically use template literals with backticks (``) for similar purposes.
-      $('#text').text({{ table.paginator.count }})
-      } else {
-    // If the "selectall" checkbox is not checked,
-    // set the text content of the element with ID "text" to the number of checked checkboxes with name "selection"
-    $('#text').text($('input[name=selection]:checked').length)
+    <div class="table-responsive">
+      {% render_table table %}
+    </div>
+
+    <details class="mt-2">
+      <summary>{% trans "Stats" %}</summary>
+      <ul class="mb-0">
+        <li>{% trans "Total Loan Amount" %}: {{ total_loan_amount.total|default:0 }}</li>
+        <li>{% trans "Total Interest" %}: {{ total_interest.total|default:0 }}</li>
+        <li>{% trans "Results" %}: {{ table.paginator.count|default:0 }}</li>
+      </ul>
+    </details>
+  </div>
+</div>
+{% endpartialdef %}
+
+<script>
+  function getSelectionCheckboxes() {
+    return Array.from(document.querySelectorAll('#loan-table-container input[name="selection"]'));
   }
-    });
 
-  // Function to toggle the state of all checkboxes based on a source checkbox
+  function updateSelectionSummary() {
+    const checkboxes = getSelectionCheckboxes();
+    const selectedCount = checkboxes.filter((cb) => cb.checked).length;
+    const selectedNode = document.getElementById('selected-count');
+    const actionButton = document.getElementById('bulk-action-toggle');
+    const selectAll = document.getElementById('selectall');
+
+    if (selectedNode) {
+      selectedNode.textContent = selectedCount;
+    }
+
+    if (actionButton) {
+      actionButton.disabled = selectedCount === 0;
+    }
+
+    if (selectAll) {
+      selectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+    }
+  }
+
   function toggle(source) {
-    checkboxes = document.getElementsByName('selection');
-    for (var i in checkboxes)
-      checkboxes[i].checked = source.checked;
+    const checkboxes = getSelectionCheckboxes();
+    checkboxes.forEach((cb) => {
+      cb.checked = source.checked;
+    });
+    updateSelectionSummary();
   }
+
+  document.addEventListener('change', function (event) {
+    if (event.target && (event.target.name === 'selection' || event.target.id === 'selectall')) {
+      if (event.target.id !== 'selectall') {
+        updateSelectionSummary();
+      }
+    }
+  });
+
+  document.addEventListener('htmx:afterSwap', function (event) {
+    if (event.target && event.target.id === 'loan-table-container') {
+      updateSelectionSummary();
+    }
+  });
 </script>
-{%endpartialdef%}
 {% endblock %}
