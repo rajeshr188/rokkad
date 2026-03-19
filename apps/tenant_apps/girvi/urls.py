@@ -40,6 +40,7 @@ urlpatterns += (
         ArchiveIndexView.as_view(
             model=GivenLoan,
             date_field="loan_date",
+            template_name="girvi/loan_archive.html",
             allow_empty=True,
             paginate_by=10,
             allow_future=True,
