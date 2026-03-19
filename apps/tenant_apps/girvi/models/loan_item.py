@@ -4,8 +4,6 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import reverse
 from django.utils import timezone
 from .custody_tracking import LoanItemWithCustody
-from apps.tenant_apps.dea.models import JournalEntry
-from django.contrib.contenttypes.fields import GenericRelation
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,7 +24,6 @@ class LoanItem(LoanItemWithCustody):
     item = models.ForeignKey(
         "product.ProductVariant", on_delete=models.SET_NULL, null=True, blank=True
     )
-    pic = models.ImageField(upload_to="loan_pics/", null=True, blank=True)
     itemtype = models.CharField(
         max_length=30, choices=ItemType.choices, default=ItemType.GOLD
     )
@@ -43,7 +40,6 @@ class LoanItem(LoanItemWithCustody):
     itemdesc = models.TextField(
         max_length=100, blank=True, null=True, verbose_name="Item"
     )
-    journal_entries = GenericRelation(JournalEntry, related_query_name="loanitem_doc")
 
     class Meta:
         ordering = (

@@ -20,6 +20,11 @@
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'admin/css/vendor/select2/select2.min.css' %}">
     <link rel="stylesheet" href="{% static 'django_select2/django_select2.css' %}">
+
+    <!-- Core JS needed by inline widget scripts in page content -->
+    <script src="{% static 'js/jquery.js' %}"></script>
+    <script src="{% static 'admin/js/vendor/select2/select2.full.min.js' %}"></script>
+    <script src="{% static 'django_select2/django_select2.js' %}"></script>
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -104,11 +109,6 @@
     <!-- Hyperscript -->
     <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
 
-    <!-- jQuery (for compatibility) -->
-    <script src="{% static 'js/jquery.js' %}"></script>
-    <script src="{% static 'admin/js/vendor/select2/select2.full.min.js' %}"></script>
-    <script src="{% static 'django_select2/django_select2.js' %}"></script>
-    
     <!-- Custom JS -->
     <script src="{% static 'js/base.js' %}"></script>
     

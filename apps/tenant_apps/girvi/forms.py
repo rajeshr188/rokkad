@@ -344,7 +344,7 @@ class LoanForm(forms.ModelForm):
         if self.instance and self.instance.id:
             self.helper.attrs = {
                 "hx-post": reverse(
-                    "girvi:girvi_loan_update", kwargs={"id": self.instance.id}
+                    "girvi:girvi_loan_update", kwargs={"pk": self.instance.id}
                 ),
                 "hx-target": "#modal-content",
             }
