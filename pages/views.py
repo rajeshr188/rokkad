@@ -1,12 +1,10 @@
-import os
 from datetime import date, timedelta
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, Sum, F, Exists, Q, OuterRef
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.generic import TemplateView
@@ -617,28 +615,3 @@ def maxx_files_upload(request):
 #         print(f"lts:{len(lts)} , ats:{len(ats)}")
 
 
-def download_template_pack(request):
-    """Download the template pack zip file"""
-    try:
-        file_path = os.path.join(settings.BASE_DIR, "template_pack.zip")
-        if not os.path.exists(file_path):
-            raise Http404("Template pack not found")
-
-        # Open file and create response
-        file = open(file_path, "rb")
-        response = FileResponse(
-            file,
-            content_type="application/zip",
-            as_attachment=True,
-            filename="template_pack.zip",
-        )
-
-        # Add file size header
-        response["Content-Length"] = os.path.getsize(file_path)
-
-        return response
-
-    except Exception as e:
-        if "file" in locals():
-            file.close()
-        raise Http404(f"Error downloading template pack: {str(e)}")

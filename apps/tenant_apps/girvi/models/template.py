@@ -2,6 +2,7 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+from django.urls import reverse
 
 
 class LoanTemplateManager(models.Manager):
@@ -57,6 +58,15 @@ class LoanTemplate(models.Model):
     def __str__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return reverse("girvi:girvi_template_detail", args=(self.pk,))
+
+    def get_update_url(self):
+        return reverse("girvi:girvi_template_update", args=(self.pk,))
+
+    def get_preview_url(self):
+        return reverse("girvi:girvi_template_preview", args=(self.pk,))
+
     def save(self, *args, **kwargs):
         if self.is_default:
             with transaction.atomic():
@@ -92,6 +102,7 @@ class TemplateFrame(models.Model):
         ("loanitem_pic", "Loan Item Photo"),
         ("loan_desc", "Loan Description"),
         ("weight", "Weight"),
+        ("pure", "Pure Weight"),
         ("value", "Value"),
         ("address", "Address"),
         ("phone", "Phone Number"),

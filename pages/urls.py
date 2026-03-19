@@ -1,5 +1,7 @@
 from django.urls import path
 
+from apps.tenant_apps.girvi.views import download_template_pack
+
 from .views import (
     HomePageView,
     TenantPageView,
@@ -13,7 +15,6 @@ from .views import (
     Dashboard,
     company_dashboard,  # DEPRECATED - kept for backward compatibility
     maxx_files_upload,
-    download_template_pack,
 )
 
 # Import workspace views from apps.orgs
@@ -55,5 +56,6 @@ urlpatterns = [
     ),  # Select workspace
     # Utility views
     path("maxxupload/", maxx_files_upload, name="maxx_upload"),
+    # DEPRECATED: keep legacy starter-pack URL working while Girvi owns the feature
     path("download-templates/", download_template_pack, name="download_template_pack"),
 ]
