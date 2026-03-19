@@ -1,0 +1,25 @@
+digraph {
+	subgraph cluster_girvi_Loan_status {
+		graph [label="girvi.Loan.status"]
+		"girvi.loan.status.Released" [label=Released shape=doublecircle]
+		"girvi.loan.status.Cancelled" [label=Cancelled shape=doublecircle]
+		"girvi.loan.status.Auctioned" [label=Auctioned shape=doublecircle]
+		"girvi.loan.status.Sold" [label=Sold shape=doublecircle]
+		"girvi.loan.status.Disbursed" [label=Disbursed shape=circle]
+		"girvi.loan.status.Approved" [label=Approved shape=circle]
+		"girvi.loan.status.Defaulted" [label=Defaulted shape=circle]
+		"girvi.loan.status.Repledged" [label=Repledged shape=circle]
+		"girvi.loan.status.Created" [label=Created shape=circle]
+		"girvi.loan.status._initial" [label="" shape=point]
+		"girvi.loan.status._initial" -> "girvi.loan.status.Created"
+		"girvi.loan.status.Disbursed" -> "girvi.loan.status.Sold" [label=mark_sold]
+		"girvi.loan.status.Approved" -> "girvi.loan.status.Cancelled" [label=cancel]
+		"girvi.loan.status.Created" -> "girvi.loan.status.Cancelled" [label=cancel]
+		"girvi.loan.status.Approved" -> "girvi.loan.status.Disbursed" [label=disburse]
+		"girvi.loan.status.Disbursed" -> "girvi.loan.status.Released" [label=release]
+		"girvi.loan.status.Disbursed" -> "girvi.loan.status.Defaulted" [label=mark_defaulted]
+		"girvi.loan.status.Repledged" -> "girvi.loan.status.Released" [label=release]
+		"girvi.loan.status.Created" -> "girvi.loan.status.Approved" [label=approve]
+		"girvi.loan.status.Defaulted" -> "girvi.loan.status.Auctioned" [label=mark_auctioned]
+	}
+}

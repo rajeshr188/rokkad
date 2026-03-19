@@ -148,6 +148,26 @@ class SeriesAdminForm(forms.ModelForm):
     class Meta:
         model = Series
         fields = "__all__"
+        fieldsets = (
+            ("Basic Information", {
+                "fields": ("license", "name", "prefix", "loan_type")
+            }),
+            ("Configuration", {
+                "fields": ("max_limit", "is_active")
+            }),
+            ("Guardrails & Thresholds", {
+                "classes": ("collapse",),
+                "fields": (
+                    "loan_count_threshold",
+                    "loan_amount_threshold",
+                    "deactivation_rule",
+                    "deactivated_for_loans",
+                    "deactivated_for_releases",
+                    "deactivation_date",
+                    "threshold_exceeded_reason",
+                )
+            }),
+        )
 
 
 class SeriesAdmin(admin.TabularInline):
@@ -156,9 +176,24 @@ class SeriesAdmin(admin.TabularInline):
         "id",
         "name",
         "created",
+        "guardrail_status",
     ]
     model = Series
     extra = 1
+    
+    def guardrail_status(self, obj):
+        """Display guardrail status indicator"""
+        if obj.deactivated_for_loans and obj.deactivated_for_releases:
+            return "🔒 Locked (loans & releases)"
+        elif obj.deactivated_for_loans:
+            return "🔒 Loans disabled"
+        elif obj.deactivated_for_releases:
+            return "🔒 Releases disabled"
+        elif obj.is_any_threshold_exceeded():
+            return "⚠️ Threshold exceeded"
+        else:
+            return "✓ Active"
+    guardrail_status.short_description = "Status"
 
 
 class LicenseAdminForm(forms.ModelForm):

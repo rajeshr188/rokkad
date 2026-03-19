@@ -14,6 +14,7 @@ import logging
 from django.core.cache import cache
 from django.db import models
 from django.db.models import (
+    BooleanField,
     Case,
     Count,
     DecimalField,
@@ -57,8 +58,8 @@ class BaseLoanQuerySet(models.QuerySet):
         return self.filter(status__in=["Created", "Approved", "Disbursed"]).unreleased()
 
     def overdue(self):
-        """Loans where collateral value < amount due."""
-        return self.for_table_display().filter(is_overdue=True)
+        """Loans in non-performing states."""
+        return self.with_overdue_status().filter(is_overdue=True)
 
     def by_status(self, status):
         """Filter by specific status."""
@@ -260,13 +261,18 @@ class GivenLoanQuerySet(BaseLoanQuerySet):
 
     def with_overdue_status(self):
         """
-        Determine if loan is overdue.
-        REQUIRES: with_interest_metrics() and with_current_value()!
-        """
-        from .services import LoanMetalWeightService
+        Determine if loan is overdue using lifecycle status.
 
-        annotations = LoanMetalWeightService.get_overdue_annotation()
-        return self.annotate(**annotations)
+        In the refactored models, overdue/non-performing state is represented
+        by status rather than collateral-vs-due annotations.
+        """
+        return self.annotate(
+            is_overdue=Case(
+                When(status__in=["Defaulted", "Auctioned"], then=True),
+                default=False,
+                output_field=BooleanField(),
+            )
+        )
 
     def total_loan_amount(self):
         """Total principal from all LoanItems."""
@@ -457,11 +463,14 @@ class TakenLoanQuerySet(BaseLoanQuerySet):
         return self.annotate(**annotations)
 
     def with_overdue_status(self):
-        """Determine if loan is overdue."""
-        from .services import LoanMetalWeightService
-
-        annotations = LoanMetalWeightService.get_overdue_annotation()
-        return self.annotate(**annotations)
+        """Determine if loan is overdue using lifecycle status."""
+        return self.annotate(
+            is_overdue=Case(
+                When(status__in=["Defaulted", "Auctioned"], then=True),
+                default=False,
+                output_field=BooleanField(),
+            )
+        )
 
     def total_loan_amount(self):
         """Total principal from all RepledgedLoanItems."""

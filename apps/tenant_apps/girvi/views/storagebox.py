@@ -10,7 +10,7 @@ def _render_storagebox_list(request):
     storage_boxes = LoanItemStorageBox.objects.order_by("name")
     return render(
         request,
-        "girvi/storagebox/storagebox_list_partial.html",
+        "girvi/storagebox/storagebox_list.html#storagebox-list",
         {"storage_boxes": storage_boxes},
     )
 
@@ -21,7 +21,7 @@ def list_storage_boxes(request):
     storage_boxes = LoanItemStorageBox.objects.order_by("name")
     context = {"storage_boxes": storage_boxes}
     if request.htmx:
-        return render(request, "girvi/storagebox/storagebox_list_partial.html", context)
+        return render(request, "girvi/storagebox/storagebox_list.html#storagebox-list", context)
     return render(request, "girvi/storagebox/storagebox_list.html", context)
 
 

@@ -94,8 +94,8 @@
                 <!-- Girvi (Loans) -->
                 {% if 'girvi_loan_view' in user_permissions %}
                 <a class="nav-link {% if request.resolver_match.namespace == 'girvi' %}active{% endif %}" 
-                   href="{% url 'girvi:girvi_loan_list' %}">
-                    <i class="bi bi-cash-coin"></i> Girvi (Loans)
+                   href="{% url 'girvi:girvi_dashboard' %}">
+                    <i class="bi bi-cash-coin"></i> Girvi
                 </a>
                 {% endif %}
                 

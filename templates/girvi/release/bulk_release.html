@@ -1,7 +1,8 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load static %}
 {%load crispy_forms_filters%}
 {% block content %}
+{% partialdef bulk-release-content inline %}
  {{form.media}}
 
 <div class="container">
@@ -9,58 +10,29 @@
     <div class="card-body">
       <div class="alert alert-info" role="alert">
         <h4 class="alert-heading">Bulk Release</h4>
-        <p>Release multiple loans at once</p>
+        <p class="mb-2">Release multiple loans with a clear 3-step flow.</p>
+        <div class="d-flex flex-wrap gap-2 small">
+          <span class="badge bg-primary">1. Select</span>
+          <span class="badge bg-secondary">2. Review</span>
+          <span class="badge bg-secondary">3. Confirm</span>
+        </div>
       </div>
-     
+
+      <h5 class="mb-3">Step 1: Select Loans</h5>
       <form id="bulk-release-form" 
           hx-post="{% url 'girvi:bulk_release' %}" hx-target="#formset-container" hx-swap="innerHTML"
           _="on htmx:afterRequest reset() me">
         {% csrf_token %}
         {{form|crispy}}
-        <button class="btn btn-info" type="submit">Generate Release Forms</button>
+        <button class="btn btn-info" type="submit">Continue To Review</button>
         <button class="btn btn-danger" type="reset" onclick="resetForm(this)">Clear</button>
       </form>
     </div>
   </div>
-  <div class="" id="formset-container">
-    {% if formset %}
-    <div class="card">
-      <div class="card-header">Summary</div>
-      <div class="card-body">
-        <p class="card-text">
-          Total Loans: {{ summary.total_loans }} Principal: {{ summary.total_principal }} Interest: {{summary.total_interest }} Total: {{ summary.total_amount }}
-        </p>
-      </div>
+  <div class="mt-3" id="formset-container">
+    <div class="alert alert-light border" role="alert">
+      <strong>Step 2: Review</strong> will appear here after you select loans.
     </div>
-    
-    <div class="card" >
-      <div class="card-header">Release Forms</div>
-      <div class="card-body" style="height: 400px; overflow-y: auto;">
-        <form method="post">
-          {% csrf_token %}
-          {{ formset.management_form }}
-          <div class="table-responsive">
-            <table class="table table-sm">
-
-              <tbody>
-                {% for form in formset %}
-                <tr>
-                  <td>{{ form.loan|as_crispy_field }}</td>
-                  <td>{{ form.release_date|as_crispy_field }}</td>
-                  <td>{{ form.released_by|as_crispy_field }}</td>
-                  <td>{{ form.release_amount|as_crispy_field }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-
-          <button class="btn btn-success" type="submit" hx-post="{% url 'girvi:submit_release_formset' %}"
-            hx-target="#formset-container" hx-swap="innerHTML">Submit All Forms</button>
-        </form>
-      </div>
-    </div>
-    {%endif%}
   </div>
 </div>
 <script>
@@ -85,4 +57,5 @@
       resetForm(document.querySelector('button[type="reset"]'));
   });
 </script>
+{% endpartialdef %}
 {% endblock %}

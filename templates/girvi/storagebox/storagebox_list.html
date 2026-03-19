@@ -1,5 +1,5 @@
-﻿{% extends 'layouts/base.html' %}
-{% block content %}
+{% extends 'layouts/workspace.html' %}
+{% block workspace_content %}
 <div class="container">
   <div class="row">
     <div class="col-md-12">
@@ -12,7 +12,7 @@
         </div>
         <div class="card-body">
           <div id="storagebox-list">
-            {% include 'girvi/storagebox/storagebox_list_partial.html' %}
+            {% partial storagebox-list %}
           </div>
           <div id="storagebox-form" class="mt-3"></div>
         </div>
@@ -20,4 +20,14 @@
     </div>
   </div>
 </div>
+
+{% partialdef storagebox-list %}
+{% for storage_box in storage_boxes %}
+<div id="storagebox-{{ storage_box.pk }}" class="mb-2">
+    {% include 'girvi/storagebox/storagebox_item.html' %}
+</div>
+{% empty %}
+<div class="alert alert-light border">No storage boxes added yet.</div>
+{% endfor %}
+{% endpartialdef %}
 {% endblock %}

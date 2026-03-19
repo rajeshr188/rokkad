@@ -18,7 +18,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from apps.tenant_apps.girvi.models.loan import GivenLoan, TakenLoan, LoanItem
+from apps.tenant_apps.girvi.models import GivenLoan, TakenLoan, LoanItem
 from apps.tenant_apps.girvi.models.custody_tracking import (
     ItemCustodyStatus,
     RepledgeHistory,
@@ -118,7 +118,7 @@ def return_item_from_lender(request, item_id):
     # Redirect back to loan or item detail
     if "next" in request.POST:
         return redirect(request.POST["next"])
-    return redirect("girvi:loanitem_detail", pk=item_id)
+    return redirect("girvi:girvi_loanitem_detail", pk=item_id)
 
 
 @login_required
@@ -179,7 +179,7 @@ def release_loan_check_custody(request, loan_id):
 
     if loan.is_released:
         messages.info(request, "Loan already released")
-        return redirect("girvi:loan_detail", pk=loan_id)
+        return redirect("girvi:girvi_loan_detail", pk=loan_id)
 
     items_by_custody = {
         status: list(loan.loanitems.filter(custody_status=status))
@@ -213,7 +213,7 @@ def release_loan_check_custody(request, loan_id):
         return render(request, "girvi/release_custody_check.html", context)
 
     # All items in vault - proceed to normal release
-    return redirect("girvi:loan_release_create", loan_id=loan_id)
+    return redirect("girvi:girvi_release_create", pk=loan_id)
 
 
 @login_required
@@ -233,7 +233,7 @@ def release_loan_with_return(request, loan_id):
 
     if loan.is_released:
         messages.error(request, "Loan already released")
-        return redirect("girvi:loan_detail", pk=loan_id)
+        return redirect("girvi:girvi_loan_detail", pk=loan_id)
 
     release_date = request.POST.get("release_date")
     released_by = request.POST.get("released_by")
@@ -278,11 +278,11 @@ def release_loan_with_return(request, loan_id):
             f"Loan {loan.loan_id} released successfully. "
             f"All items returned from lenders and released to customer.",
         )
-        return redirect("girvi:release_detail", pk=release.id)
+        return redirect("girvi:girvi_release_detail", pk=release.id)
 
     except ValidationError as e:
         messages.error(request, f"Release failed: {e}")
-        return redirect("girvi:loan_detail", pk=loan_id)
+        return redirect("girvi:girvi_loan_detail", pk=loan_id)
 
 
 # ============================================================================
@@ -387,7 +387,7 @@ def create_repledge_with_items(request):
             request,
             f"TakenLoan {taken_loan.loan_id} created with {len(items)} collateral item(s)",
         )
-        return redirect("girvi:loan_detail", pk=taken_loan.id)
+        return redirect("girvi:taken_loan_collateral_detail", loan_id=taken_loan.id)
 
     except (ValidationError, ValueError) as e:
         messages.error(request, f"Repledge failed: {e}")
@@ -473,7 +473,7 @@ def return_taken_loan_collateral(request, loan_id):
         messages.success(
             request, f"All collateral returned from TakenLoan {loan.loan_id}"
         )
-        return redirect("girvi:loan_detail", pk=loan_id)
+        return redirect("girvi:taken_loan_collateral_detail", loan_id=loan_id)
 
     except ValidationError as e:
         messages.error(request, f"Return failed: {e}")

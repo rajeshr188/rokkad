@@ -1,3 +1,5 @@
+from django.test import TestCase
+
 class LoanModelTest(TestCase):
     def setUp(self):
         # Set up initial data for tests

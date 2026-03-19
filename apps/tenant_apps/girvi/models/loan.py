@@ -719,7 +719,15 @@ class LoanPayment(BusinessDoc):
 
     def save(self, *args, **kwargs):
         # Calculate principal and interest breakdown
-        interest_payment = min(self.payment_amount, self.loan.interestdue())
+        interest_due = getattr(self.loan, "interest_due", None)
+        if callable(interest_due):
+            interest_due = interest_due()
+        elif hasattr(self.loan, "interestdue"):
+            interest_due = self.loan.interestdue()
+        else:
+            interest_due = 0
+
+        interest_payment = min(self.payment_amount, interest_due)
         principal_payment = self.payment_amount - interest_payment
         self.principal_payment = principal_payment
         self.interest_payment = interest_payment
@@ -728,10 +736,14 @@ class LoanPayment(BusinessDoc):
         super().save(*args, **kwargs)
 
         # Post-save processing
-        self.loan.update()
+        if hasattr(self.loan, "update"):
+            self.loan.update()
         if self.with_release and not self.loan.is_released:
+            released_by = getattr(self.loan, "borrower", None) or getattr(
+                self.loan, "customer", None
+            )
             self.loan.create_release(
-                self.payment_date, self.loan.customer, self.created_by
+                self.payment_date, released_by, self.created_by
             )
 
     def delete(self, *args, **kwargs):

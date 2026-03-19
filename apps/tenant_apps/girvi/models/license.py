@@ -1,10 +1,11 @@
 from datetime import timedelta
+from decimal import Decimal
 from django.db import models
 from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.shortcuts import reverse
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
-from django.core.validators import URLValidator
 
 
 class License(models.Model):
@@ -332,6 +333,32 @@ class LicenseDocument(models.Model):
         return None
 
 
+class SeriesManager(models.Manager):
+    """Custom manager for Series with guardrail-aware filtering"""
+    
+    def active_for_loans(self):
+        """Get active series that allow new loan creation"""
+        return self.filter(
+            is_active=True,
+            deactivated_for_loans=False
+        )
+    
+    def active_for_releases(self):
+        """Get active series that allow new release creation"""
+        return self.filter(
+            is_active=True,
+            deactivated_for_releases=False
+        )
+    
+    def active_for_both(self):
+        """Get active series that allow both loans and releases"""
+        return self.filter(
+            is_active=True,
+            deactivated_for_loans=False,
+            deactivated_for_releases=False
+        )
+
+
 class Series(models.Model):
     license = models.ForeignKey(
         License, on_delete=models.CASCADE, verbose_name=_("License")
@@ -368,16 +395,78 @@ class Series(models.Model):
         blank=True,
     )
     is_active = models.BooleanField(default=True, verbose_name=_("Is Active"))
+    
+    # Guardrail Fields
+    class DeactivationRule(models.TextChoices):
+        NONE = "NONE", "No Deactivation"
+        LOANS_ONLY = "LOANS", "Disable Loans Only"
+        RELEASES_ONLY = "RELEASES", "Disable Releases Only"
+        BOTH = "BOTH", "Disable Loans & Releases"
+    
+    # Threshold configuration
+    loan_count_threshold = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Loan Count Threshold"),
+        help_text="Max number of active loans allowed in this series. Leave blank for unlimited.",
+    )
+    loan_amount_threshold = models.DecimalField(
+        null=True,
+        blank=True,
+        max_digits=15,
+        decimal_places=2,
+        verbose_name=_("Loan Amount Threshold (₹)"),
+        help_text="Max total loan amount allowed in this series. Leave blank for unlimited.",
+    )
+    deactivation_rule = models.CharField(
+        max_length=10,
+        choices=DeactivationRule.choices,
+        default=DeactivationRule.NONE,
+        verbose_name=_("Deactivation Rule"),
+        help_text="What to disable when threshold is exceeded",
+    )
+    
+    # Deactivation status tracking
+    deactivated_for_loans = models.BooleanField(
+        default=False,
+        verbose_name=_("Deactivated for Loans"),
+        help_text="Series cannot create new loans",
+    )
+    deactivated_for_releases = models.BooleanField(
+        default=False,
+        verbose_name=_("Deactivated for Releases"),
+        help_text="Series cannot create new releases",
+    )
+    deactivation_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Deactivation Date"),
+        help_text="When the series was deactivated due to threshold breach",
+    )
+    threshold_exceeded_reason = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Threshold Exceeded Reason"),
+        help_text="Which threshold was exceeded and triggered deactivation",
+    )
+
+    # Add custom manager
+    objects = SeriesManager()
 
     class Meta:
         ordering = ("created",)
         unique_together = ["license", "name"]
+        indexes = [
+            models.Index(fields=["is_active", "deactivated_for_loans"]),
+            models.Index(fields=["is_active", "deactivated_for_releases"]),
+        ]
 
     def __str__(self):
         return f"{self.prefix}-{self.name}"
 
     def get_absolute_url(self):
         return reverse("girvi:girvi_license_series_detail", args=(self.pk,))
+
 
     def get_update_url(self):
         return reverse("girvi:girvi_license_series_update", args=(self.pk,))
@@ -397,6 +486,155 @@ class Series(models.Model):
     def activate(self):
         self.is_active = not self.is_active
         self.save(update_fields=["is_active"])
+
+    # ========================================================================
+    # Guardrail Methods - Threshold Checking & Deactivation Logic
+    # ========================================================================
+
+    def get_current_loan_count(self):
+        """Get count of active (unreleased) loans in this series"""
+        return self.loan_set.unreleased().count() if hasattr(self, 'loan_set') else 0
+
+    def get_current_loan_amount(self):
+        """Get total amount of active (unreleased) loans in this series"""
+        result = self.loan_set.unreleased().aggregate(
+            total=Coalesce(Sum("loan_amount"), Decimal("0"))
+        )
+        return result.get("total", Decimal("0")) if hasattr(self, 'loan_set') else Decimal("0")
+
+    def is_loan_count_exceeded(self) -> bool:
+        """Check if loan count threshold has been exceeded"""
+        if not self.loan_count_threshold:
+            return False
+        return self.get_current_loan_count() >= self.loan_count_threshold
+
+    def is_loan_amount_exceeded(self) -> bool:
+        """Check if loan amount threshold has been exceeded"""
+        if not self.loan_amount_threshold:
+            return False
+        return self.get_current_loan_amount() >= self.loan_amount_threshold
+
+    def is_any_threshold_exceeded(self) -> bool:
+        """Check if any configured threshold has been exceeded"""
+        return self.is_loan_count_exceeded() or self.is_loan_amount_exceeded()
+
+    def can_create_loan(self) -> bool:
+        """Check if new loans can be created in this series"""
+        if not self.is_active:
+            return False
+        if self.deactivated_for_loans:
+            return False
+        # Check thresholds and apply deactivation if needed
+        if self.is_any_threshold_exceeded():
+            if self.deactivation_rule in [
+                self.DeactivationRule.LOANS_ONLY,
+                self.DeactivationRule.BOTH
+            ]:
+                return False
+        return True
+
+    def can_create_release(self) -> bool:
+        """Check if new releases can be created from loans in this series"""
+        if not self.is_active:
+            return False
+        if self.deactivated_for_releases:
+            return False
+        # Check thresholds and apply deactivation if needed
+        if self.is_any_threshold_exceeded():
+            if self.deactivation_rule in [
+                self.DeactivationRule.RELEASES_ONLY,
+                self.DeactivationRule.BOTH
+            ]:
+                return False
+        return True
+
+    def check_and_apply_deactivation(self):
+        """
+        Check thresholds and apply deactivation rules automatically.
+        This should be called after loan creation or updates.
+        
+        Returns:
+            tuple: (was_deactivated: bool, reason: str)
+        """
+        if not self.deactivation_rule or self.deactivation_rule == self.DeactivationRule.NONE:
+            return False, ""
+        
+        if not self.is_any_threshold_exceeded():
+            return False, ""
+        
+        reason_parts = []
+        
+        # Build reason message
+        if self.is_loan_count_exceeded():
+            reason_parts.append(
+                f"Loan count ({self.get_current_loan_count()}) "
+                f"reached threshold ({self.loan_count_threshold})"
+            )
+        
+        if self.is_loan_amount_exceeded():
+            reason_parts.append(
+                f"Loan amount (₹{self.get_current_loan_amount()}) "
+                f"reached threshold (₹{self.loan_amount_threshold})"
+            )
+        
+        reason = " | ".join(reason_parts)
+        
+        # Apply deactivation based on rule
+        was_updated = False
+        if self.deactivation_rule in [self.DeactivationRule.LOANS_ONLY, self.DeactivationRule.BOTH]:
+            if not self.deactivated_for_loans:
+                self.deactivated_for_loans = True
+                self.deactivation_date = timezone.now()
+                self.threshold_exceeded_reason = reason
+                was_updated = True
+        
+        if self.deactivation_rule == self.DeactivationRule.RELEASES_ONLY:
+            if not self.deactivated_for_releases:
+                self.deactivated_for_releases = True
+                self.deactivation_date = timezone.now()
+                self.threshold_exceeded_reason = reason
+                was_updated = True
+        
+        if self.deactivation_rule == self.DeactivationRule.BOTH:
+            if not self.deactivated_for_releases:
+                self.deactivated_for_releases = True
+                was_updated = True
+        
+        if was_updated:
+            self.save(update_fields=[
+                "deactivated_for_loans",
+                "deactivated_for_releases",
+                "deactivation_date",
+                "threshold_exceeded_reason"
+            ])
+            return True, reason
+        
+        return False, reason
+
+    def get_guardrail_status(self) -> dict:
+        """
+        Get detailed status of guardrails and thresholds for this series.
+        Useful for admin/monitoring interfaces.
+        """
+        return {
+            "series_id": self.pk,
+            "series_name": str(self),
+            "is_active": self.is_active,
+            "deactivation_rule": self.deactivation_rule,
+            "deactivated_for_loans": self.deactivated_for_loans,
+            "deactivated_for_releases": self.deactivated_for_releases,
+            "deactivation_date": self.deactivation_date,
+            "reason": self.threshold_exceeded_reason,
+            "loan_count_threshold": self.loan_count_threshold,
+            "loan_amount_threshold": self.loan_amount_threshold,
+            "current_loan_count": self.get_current_loan_count(),
+            "current_loan_amount": float(self.get_current_loan_amount()),
+            "is_loan_count_exceeded": self.is_loan_count_exceeded(),
+            "is_loan_amount_exceeded": self.is_loan_amount_exceeded(),
+            "can_create_loan": self.can_create_loan(),
+            "can_create_release": self.can_create_release(),
+        }
+
 
     def loan_count(self):
         return self.loan_set.unreleased().count()

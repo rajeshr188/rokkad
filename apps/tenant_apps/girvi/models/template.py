@@ -1,4 +1,5 @@
 # models.py
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 
@@ -68,9 +69,6 @@ class LoanTemplate(models.Model):
         self.save()
         return True
 
-    def get_default():
-        return LoanTemplate.objects.filter(is_default=True).first()
-
 
 class TemplateFrame(models.Model):
     class TemplateType(models.TextChoices):
@@ -138,3 +136,41 @@ class TemplateFrame(models.Model):
 
     class Meta:
         unique_together = ["template", "frame_name", "template_type"]
+
+    def clean(self):
+        """Validate frame geometry against template dimensions."""
+        errors = {}
+
+        # Validate frame dimensions are positive
+        if self.width <= 0:
+            errors["width"] = "Width must be greater than 0 cm."
+        if self.height <= 0:
+            errors["height"] = "Height must be greater than 0 cm."
+
+        # Validate positions are non-negative
+        if self.x_pos < 0:
+            errors["x_pos"] = "X position cannot be negative."
+        if self.y_pos < 0:
+            errors["y_pos"] = "Y position cannot be negative."
+
+        # Validate bounds against template dimensions if template exists
+        if self.template and self.template.page_width and self.template.page_height:
+            page_width = float(self.template.page_width)
+            page_height = float(self.template.page_height)
+
+            if self.x_pos + self.width > page_width:
+                errors["x_pos"] = (
+                    f"Frame extends beyond page width. X position ({self.x_pos}) "
+                    f"+ width ({self.width}) exceeds page width ({page_width})."
+                )
+            if self.y_pos + self.height > page_height:
+                errors["y_pos"] = (
+                    f"Frame extends beyond page height. Y position ({self.y_pos}) "
+                    f"+ height ({self.height}) exceeds page height ({page_height})."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.template.name} - {self.get_frame_name_display()}"

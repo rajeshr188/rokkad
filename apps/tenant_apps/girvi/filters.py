@@ -6,22 +6,58 @@ from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 
 from .forms import LoansWidget
-from .models import ItemType, GivenLoan, LoanItem, LoanPayment, Release
+from .models import (
+    ItemType,
+    GivenLoan,
+    LoanItem,
+    LoanPayment,
+    Release,
+    TakenLoan,
+    LoanStatus,
+)
 
 
-class LoanFilter(django_filters.FilterSet):
+class BaseLoanFilter(django_filters.FilterSet):
     query = django_filters.CharFilter(method="universal_search", label="Search")
-    borrower = django_filters.ModelChoiceFilter(
-        queryset=Customer.objects.all(),
-        widget=CustomerWidget(),
-    )
-
     loan_date_range = django_filters.DateFromToRangeFilter(
         field_name="loan_date",
         label="Loan Date Range",
         widget=RangeWidget(attrs={"type": "date"}),
     )
     date = django_filters.DateRangeFilter(field_name="loan_date", label="Loan Date")
+
+    sunk = django_filters.BooleanFilter(method="sunken", label="sunken")
+
+    STATUS_CHOICES = [
+        ("All", "All"),
+        ("Released", "Released"),
+        ("UnReleased", "Not Released"),
+    ]
+
+    status = django_filters.ChoiceFilter(
+        choices=STATUS_CHOICES,
+        method="filter_status",
+        label="Status",
+    )
+
+    def universal_search(self, queryset, name, value):
+        return queryset.filter(
+            Q(id__icontains=value)
+            | Q(loan_id__icontains=value)
+            | Q(series__name__icontains=value)
+        )
+
+    # Filter for sunken/overdue loans - adds annotation first
+    def sunken(self, queryset, name, value):
+        queryset = queryset.with_overdue_status()
+        return queryset.filter(is_overdue=value)
+
+
+class LoanFilter(BaseLoanFilter):
+    borrower = django_filters.ModelChoiceFilter(
+        queryset=Customer.objects.all(),
+        widget=CustomerWidget(),
+    )
 
     # notice = django_filters.CharFilter(
     #     field_name="notifications__notice_type", lookup_expr="icontains"
@@ -35,19 +71,6 @@ class LoanFilter(django_filters.FilterSet):
         choices=ItemType.choices,
         empty_label="Select Item Type",
         label="Item Type",
-    )
-    sunk = django_filters.BooleanFilter(method="sunken", label="sunken")
-
-    STATUS_CHOICES = [
-        ("All", "All"),
-        ("Released", "Released"),
-        ("UnReleased", "Not Released"),
-    ]
-
-    status = django_filters.ChoiceFilter(
-        choices=STATUS_CHOICES,
-        method="filter_status",
-        label="Status",
     )
 
     def filter_status(self, queryset, name, value):
@@ -70,31 +93,43 @@ class LoanFilter(django_filters.FilterSet):
         ]
 
     def universal_search(self, queryset, name, value):
-        # if value.replace(".", "", 1).isdigit():
-        #     value = Decimal(value)
-        #     return (
-        #         Loan.objects.with_details(None, None,None)
-        #         .prefetch_related("notifications", "loanitems")
-        #         .filter(Q(id=value) | Q(loan_amount=value))
-        #     )
-
-        return (
-            GivenLoan.objects.for_table_display()
-            .prefetch_related("notifications", "loanitems")
-            .filter(
-                Q(id__icontains=value)
-                | Q(borrower__firstname__icontains=value)
-                | Q(borrower__lastname__icontains=value)
-                | Q(loan_id__icontains=value)
-                | Q(item_desc__icontains=value)
-            )
+        return queryset.filter(
+            Q(id__icontains=value)
+            | Q(borrower__firstname__icontains=value)
+            | Q(borrower__lastname__icontains=value)
+            | Q(loan_id__icontains=value)
         )
 
-    # Filter for sunken/overdue loans - adds annotation first
-    def sunken(self, queryset, name, value):
-        # Add the overdue annotation before filtering
-        queryset = queryset.with_overdue_status()
-        return queryset.filter(is_overdue=value)
+
+class TakenLoanFilter(BaseLoanFilter):
+    lender = django_filters.ModelChoiceFilter(
+        queryset=Customer.objects.all(),
+        widget=CustomerWidget(),
+    )
+
+    def filter_status(self, queryset, name, value):
+        if value == "Released":
+            return queryset.filter(status=LoanStatus.RELEASED)
+        elif value == "UnReleased":
+            return queryset.exclude(status=LoanStatus.RELEASED)
+        return queryset
+
+    class Meta:
+        model = TakenLoan
+        fields = [
+            "query",
+            "series",
+            "lender",
+            "loan_date_range",
+        ]
+
+    def universal_search(self, queryset, name, value):
+        return queryset.filter(
+            Q(id__icontains=value)
+            | Q(lender__firstname__icontains=value)
+            | Q(lender__lastname__icontains=value)
+            | Q(loan_id__icontains=value)
+        )
 
 
 class LoanItemFilter(django_filters.FilterSet):
@@ -127,12 +162,6 @@ class LoanItemFilter(django_filters.FilterSet):
             "interest": ["gte", "lte"],
             "custody_status": ["exact"],
         }
-
-
-class LoanPaymentFilter(django_filters.FilterSet):
-    class Meta:
-        model = LoanPayment
-        fields = ["loan"]
 
 
 class LoanPaymentFilter(django_filters.FilterSet):

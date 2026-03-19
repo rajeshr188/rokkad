@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseNotAllowed
@@ -13,8 +12,9 @@ from django.views.generic import DeleteView
 from django_tables2.config import RequestConfig
 
 from ..filters import ReleaseFilter
-from ..forms import BulkReleaseForm, ReleaseForm, ReleaseFormSet
+from ..forms import BulkReleaseForm, ReleaseForm
 from ..models import GivenLoan, Release
+from ..services import BulkReleaseService
 from ..tables import ReleaseTable
 
 
@@ -33,7 +33,7 @@ def release_list(request):
     #     exporter = TableExport(export_format, table, exclude_columns=())
     #     return exporter.response(f"table.{export_format}")
     if request.htmx:
-        return TemplateResponse(request, "girvi/release/release_list.html#content", context)
+        return TemplateResponse(request, "girvi/release/release_list.html#release-list-content", context)
     return TemplateResponse(request, "girvi/release/release_list.html", context)
 
 
@@ -42,9 +42,8 @@ def release_create(request, pk=None):
     if request.POST:
         form = ReleaseForm(request.POST or None)
         if form.is_valid():
-            release = form.save(commit=False)
-            release.created_by = request.user
-            release.save()
+            form.instance.created_by = request.user
+            form.save(commit=True)
 
             # return HttpResponse(status = 200,headers={"HX-Trigger":loanChanged})
             response = redirect("girvi:girvi_loan_detail", pk=form.instance.loan.pk)
@@ -73,7 +72,7 @@ def release_create(request, pk=None):
             )
     if request.htmx:
         return TemplateResponse(
-            request, "girvi/release/release_form.html#content", context={"form": form}
+            request, "girvi/release/release_form.html#release-form-content", context={"form": form}
         )
     return TemplateResponse(request, "girvi/release/release_form.html", context={"form": form})
 
@@ -83,7 +82,7 @@ def release_detail(request, pk):
     release = get_object_or_404(Release, pk=pk)
     if request.htmx:
         return TemplateResponse(
-            request, "girvi/release/release_detail.html#content", {"object": release}
+            request, "girvi/release/release_detail.html#release-detail-content", {"object": release}
         )
     return TemplateResponse(
         request, "girvi/release/release_detail.html", {"object": release}
@@ -165,78 +164,50 @@ class ReleaseDeleteView(LoginRequiredMixin, DeleteView):
 
 
 def bulk_release(request):
-    # if this is a POST request we need to process the form data
     if request.method == "POST":
-        # create a form instance and populate it with data from the request:
         form = BulkReleaseForm(request.POST)
-        # check whether it's valid:
         if form.is_valid():
             date = form.cleaned_data["date"]
-            loans = form.cleaned_data["loans"]
+            loans = list(form.cleaned_data["loans"])
 
             if not date:
                 date = timezone.now().date()
 
-            formset_initial_data = [
-                {
-                    "loan": loan,
-                    "release_date": date,
-                    "released_by": loan.borrower,
-                    "release_amount": loan.total_due,
-                }
-                for loan in loans
-            ]
-            ReleaseFormSet = forms.modelformset_factory(
-                Release, form=ReleaseForm, extra=len(formset_initial_data)
-            )
-            formset = ReleaseFormSet(
-                queryset=Release.objects.none(), initial=formset_initial_data
-            )
-
-            total_principal = sum(loan.get_loan_amount for loan in loans)
-            total_interest = sum(loan.interest_due() for loan in loans)
-            total_amount = sum(loan.total_due for loan in loans)
-            summary = {
-                "total_loans": len(loans),
-                "total_principal": total_principal,
-                "total_interest": total_interest,
-                "total_amount": total_amount,
-            }
             return TemplateResponse(
                 request,
                 "girvi/release/release_formset.html",
-                {"formset": formset, "summary": summary},
+                BulkReleaseService.build_preview_context(loans, date),
             )
         else:
-            # If the form is invalid, return the form with errors
             return TemplateResponse(
                 request, "girvi/release/bulk_release.html", {"form": form}
             )
-    # if a GET (or any other method) we'll create a blank form
-    else:
-        selected_loans = request.GET.getlist("selection", "")
-        qs = GivenLoan.objects.filter(
-            release__isnull=True, id__in=selected_loans
-        ).values_list("id", flat=True)
-        form = BulkReleaseForm(
-            initial={"loans": qs, "date": timezone.now().strftime("%Y-%m-%dT%H:%M")}
-        )
+    form = BulkReleaseService.build_bulk_form(request.GET.getlist("selection"))
     if request.htmx:
-        return TemplateResponse(request, "girvi/release/bulk_release.html#content", {"form": form})
+        return TemplateResponse(request, "girvi/release/bulk_release.html#bulk-release-content", {"form": form})
     return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form})
 
 
 def submit_release_formset(request):
     if request.method == "POST":
-        formset = ReleaseFormSet(request.POST)
-        if formset.is_valid():
-            instances = formset.save()
-            return render(
-                request, "girvi/release/release_success.html", {"instances": instances}
-            )
-        return render(
-            request, "girvi/release/release_formset.html", {"formset": formset}
+        formset = BulkReleaseService.bind_submit_formset(request.POST)
+        commit_policy = request.POST.get(
+            "commit_policy", BulkReleaseService.DEFAULT_COMMIT_POLICY
         )
+        result = BulkReleaseService.commit_formset_with_policy(
+            formset, request.user, commit_policy=commit_policy
+        )
+        if result["success"]:
+            return render(
+                request,
+                "girvi/release/release_success.html",
+                {
+                    "instances": result["instances"],
+                    "commit_policy": result.get("commit_policy"),
+                    "skipped_released_count": result.get("skipped_released_count", 0),
+                },
+            )
+        return render(request, "girvi/release/release_formset.html", result)
     return HttpResponseNotAllowed(["POST"])
 
 
@@ -244,7 +215,6 @@ def submit_release_formset(request):
 def get_release_details(request):
     # get the loans from request
     loan_ids = request.POST.getlist("loans")  # list of loan ids
-    date = request.POST.get("date")
 
     loans = GivenLoan.objects.filter(id__in=loan_ids)
     return render(request, "girvi/release/bulk_release_details.html", {"loans": loans})

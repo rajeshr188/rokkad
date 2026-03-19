@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -22,7 +23,6 @@ from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.filters import LoanFilter
 from apps.tenant_apps.girvi.models.template import LoanTemplate
 from apps.tenant_apps.notify.models import NoticeGroup, Notification
-from apps.tenant_apps.utils.htmx_utils import for_htmx
 from apps.tenant_apps.utils.loan_pdf import (
     get_custom_jcl,
     grid_template,
@@ -33,15 +33,34 @@ from ..forms import LoanSelectionForm
 from ..models import GivenLoan
 
 
+logger = logging.getLogger(__name__)
+
+
+def _parse_selected_ids(raw_ids):
+    cleaned = []
+    invalid_count = 0
+    for raw_id in raw_ids:
+        try:
+            parsed = int(raw_id)
+            if parsed > 0:
+                cleaned.append(parsed)
+            else:
+                invalid_count += 1
+        except (TypeError, ValueError):
+            invalid_count += 1
+    return list(dict.fromkeys(cleaned)), invalid_count
+
+
 def print_labels(request):
+    loan_kind = request.POST.get("loan_kind", "given")
+    if loan_kind != "given":
+        return HttpResponse(status=400, content="Print labels is available only for Given loans.")
+
     # check if user wanted all rows to be selected
     all = request.POST.get("selectall")
     selected_loans = None
 
     if all == "selected":
-        print("all selected")
-        # get query parameters if all row selected and retrive queryset
-        print(request.GET)
         filter = LoanFilter(
             request.GET,
             queryset=GivenLoan.objects.filter(release__isnull=True)
@@ -50,11 +69,13 @@ def print_labels(request):
         )
 
         selected_loans = filter.qs.order_by("borrower")
-        print(f"selected loans: {selected_loans.count()}")
     else:
-        print("partially selected")
-        # get the selected loan ids from the request
-        selection = request.POST.getlist("selection")
+        selection, invalid_count = _parse_selected_ids(request.POST.getlist("selection"))
+        if invalid_count:
+            logger.warning("print_labels rejected invalid IDs: %s", request.POST.getlist("selection"))
+            return HttpResponse(status=400, content="Invalid loan selection.")
+        if not selection:
+            return HttpResponse(status=400, content="Please select at least one unreleased given loan.")
 
         selected_loans = (
             GivenLoan.objects.filter(release__isnull=True)
@@ -62,20 +83,17 @@ def print_labels(request):
             .order_by("borrower")
         )
 
+        if selected_loans.count() != len(selection):
+            return HttpResponse(status=400, content="Some selected loans are not eligible for printing.")
+
     if selected_loans:
         form = LoanSelectionForm(initial={"loans": selected_loans})
-        from render_block import render_block_to_string
-
-        response = render_block_to_string(
-            "girvi/loan/print_labels.html", "content", {"form": form}, request
-        )
-        return HttpResponse(content=response)
-        # return render(request, 'girvi/loan/print_labels.html', {'form': form})
+        template_name = "girvi/loan/print_labels.html#content" if request.htmx else "girvi/loan/print_labels.html"
+        return render(request, template_name, {"form": form})
 
     return HttpResponse(status=200, content="No unreleased loans selected.")
 
 
-@for_htmx(use_block="content")
 def print_label(request):
     if request.method == "POST":
         form = LoanSelectionForm(request.POST)
@@ -83,23 +101,26 @@ def print_label(request):
             loans = form.cleaned_data["loans"]
             return print_labels_pdf(loans)
 
-        return render(request, "girvi/loan/print_labels.html", {"form": form})
+        template_name = "girvi/loan/print_labels.html#content" if request.htmx else "girvi/loan/print_labels.html"
+        return render(request, template_name, {"form": form})
 
     else:
         form = LoanSelectionForm()
-        return render(request, "girvi/loan/print_labels.html", {"form": form})
+        template_name = "girvi/loan/print_labels.html#content" if request.htmx else "girvi/loan/print_labels.html"
+        return render(request, template_name, {"form": form})
 
 
 @login_required
 def notify_print(request):
+    loan_kind = request.POST.get("loan_kind", "given")
+    if loan_kind != "given":
+        return HttpResponse(status=400, content="Notifications can be created only for Given loans.")
+
     # check if user wanted all rows to be selected
     all = request.POST.get("selectall")
     selected_loans = None
 
     if all == "selected":
-        print("all selected")
-        # get query parameters if all row selected and retrive queryset
-        print(request.GET)
         filter = LoanFilter(
             request.GET,
             queryset=GivenLoan.objects.filter(release__isnull=True)
@@ -108,17 +129,22 @@ def notify_print(request):
         )
 
         selected_loans = filter.qs.order_by("borrower")
-        print(f"selected loans: {selected_loans.count()}")
     else:
-        print("partially selected")
-        # get the selected loan ids from the request
-        selection = request.POST.getlist("selection")
+        selection, invalid_count = _parse_selected_ids(request.POST.getlist("selection"))
+        if invalid_count:
+            logger.warning("notify_print rejected invalid IDs: %s", request.POST.getlist("selection"))
+            return HttpResponse(status=400, content="Invalid loan selection.")
+        if not selection:
+            return HttpResponse(status=400, content="Please select at least one unreleased given loan.")
 
         selected_loans = (
             GivenLoan.objects.filter(release__isnull=True)
             .filter(id__in=selection)
             .order_by("borrower")
         )
+
+        if selected_loans.count() != len(selection):
+            return HttpResponse(status=400, content="Some selected loans are not eligible for notifications.")
 
     if selected_loans:
         # Create a new NoticeGroup
@@ -137,10 +163,12 @@ def notify_print(request):
                 )
             )
         # Use bulk_create to create the notifications
+        notifications = []
         try:
             notifications = Notification.objects.bulk_create(notifications_to_create)
         except IntegrityError:
-            print("Error adding notifications.")
+            logger.exception("Error adding notifications.")
+            return HttpResponse(status=500, content="Error creating notifications.")
 
         # Add loans to the notifications
         for notification in notifications:
@@ -157,18 +185,29 @@ import base64
 
 @login_required
 def print_loan(request, pk=None):
-    loan = get_object_or_404(GivenLoan, pk=pk)
+    loan = get_object_or_404(
+        GivenLoan.objects.select_related(
+            "borrower", "series", "series__license"
+        ).prefetch_related(
+            "loanitems", "borrower__address_set", "borrower__contactno_set"
+        ),
+        pk=pk
+    )
     template = LoanTemplate.objects.get_default()
     if not template:
         messages.warning(
             request, "No default template configured. Please set a default template."
         )
         return redirect("girvi:girvi_loan_detail", pk=loan.pk)
+    
     pdf = get_custom_jcl(loan=loan, template_id=template.pk)
-    # template = request.user.profile.workspace.preferences["Loan__LoanPDFTemplate"]
-    # Create a response object
+    if pdf is None:
+        messages.error(
+            request, "Failed to generate loan PDF. Please check template configuration and try again."
+        )
+        return redirect("girvi:girvi_loan_detail", pk=loan.pk)
+    
     response = HttpResponse(pdf, content_type="application/pdf")
-    # response["Content-Disposition"] = 'attachment; filename="pledge.pdf"'
     response["Content-Disposition"] = f"inline; filename='{loan.loan_id}.pdf'"
     response["Content-Transfer-Encoding"] = "binary"
     return response
