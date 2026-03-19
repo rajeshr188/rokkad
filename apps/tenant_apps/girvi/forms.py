@@ -20,6 +20,7 @@ from .models import (
     License,
     LicenseDocument,
     LoanItem,
+    LoanItemPic,
     LoanItemStorageBox,
     LoanTemplate,
     LoanPayment,
@@ -451,7 +452,6 @@ class LoanItemForm(forms.ModelForm):
     class Meta:
         model = LoanItem
         fields = [
-            "pic",
             "item",
             "itemdesc",
             "itemtype",
@@ -480,9 +480,6 @@ class LoanItemForm(forms.ModelForm):
                 Column("weight", css_class="col-md-3"),
                 Column("purity", css_class="col-md-3"),
                 Column("loanamount", css_class="col-md-3"),
-            ),
-            Row(
-                Column("pic", css_class="col-12"),
             ),
             HTML('<div class="d-flex gap-2 mt-2">'),
             Submit("save", "Save", css_class="btn btn-success"),
@@ -1061,3 +1058,31 @@ class MarkSoldLoanForm(forms.Form):
         super().__init__(*args, **kwargs)
         if user:
             self.fields["sold_by"].initial = user.username
+
+
+class LoanItemPicForm(forms.ModelForm):
+    """Form for managing individual loan item pictures."""
+
+    class Meta:
+        model = LoanItemPic
+        fields = ["pic", "description", "is_default"]
+        widgets = {
+            "pic": forms.FileInput(attrs={"accept": "image/*"}),
+            "description": forms.Textarea(attrs={"rows": 2, "cols": 40}),
+            "is_default": forms.CheckboxInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Row(
+                Column("pic", css_class="col-md-6"),
+                Column("is_default", css_class="col-md-3"),
+                css_class="mb-3",
+            ),
+            Row(
+                Column("description", css_class="col-12"),
+            ),
+        )

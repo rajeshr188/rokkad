@@ -3,32 +3,14 @@
 
 <form id="item-form" enctype="multipart/form-data" hx-post="{% if url %}{{ url }}{% else %}.{% endif%}" hx-target="{% if object %}closest li{% else %}#form{% endif %}" hx-swap="innerHTML">
     {% csrf_token %}
-    <script src="{% static 'js/webcapture.v1.js' %}"></script>
     {%if not object%}
     <h5 class="mb-3">Add Item</h5>
     {%else%}
     <h5 class="mb-3">Edit Item</h5>
     {%endif%}
     {{form.media}}
-            {{ form|as_crispy_errors }}
-            <div class="container-fluid">
-                {% crispy form %}
-                <div class="row">
-                    <input type="hidden" id="image-data" name="image_data">
-                    <select id="videoSource"></select>
-                    <div class="col-12 col-lg-6">
-
-                        <div class="camera">
-                            <video id="video">Video stream not available.</video>
-                            <button id="startbutton">Take photo</button>
-                        </div>
-                        <canvas id="canvas"></canvas>
-                    </div>
-                    <div class="col-12  col-lg-6">
-                        <div class="output">
-                            <img id="photo" alt="The screen capture will appear in this box." />
-                        </div>
-                    </div>
-                </div>
-            </div>
+    {{ form|as_crispy_errors }}
+    <div class="container-fluid">
+        {% crispy form %}
+    </div>
 </form>

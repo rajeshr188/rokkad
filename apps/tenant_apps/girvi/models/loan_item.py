@@ -111,7 +111,13 @@ class LoanItem(LoanItemWithCustody):
         # loan.update()
 
     def get_item_pic(self):
-        return self.pic.url if self.pic and self.pic else None
+        """Get the default picture for this loan item."""
+        default_pic = self.get_default_picture()
+        return default_pic.pic.url if default_pic and default_pic.pic else None
+
+    def get_default_picture(self):
+        """Get the default LoanItemPic for this item, or fall back to the first picture."""
+        return self.pictures.filter(is_default=True).first() or self.pictures.first()
 
     @property
     def is_available_for_repledge(self):
@@ -157,14 +163,34 @@ class RepledgedLoanItem(models.Model):
 
 
 class LoanItemPic(models.Model):
+    """
+    Picture for a specific loan item.
+    A loan item can have multiple pictures, with one marked as default.
+    """
+    loan_item = models.ForeignKey(
+        "girvi.LoanItem", on_delete=models.CASCADE, related_name="pictures", null=True, blank=True
+    )
     loan = models.ForeignKey(
         "girvi.GivenLoan", on_delete=models.CASCADE, related_name="loanitem_pics"
     )
     pic = models.ImageField(upload_to="loan_item_pics/", null=True, blank=True)
     description = models.TextField(max_length=255, blank=True, null=True)
+    is_default = models.BooleanField(
+        default=False, help_text="Only one picture per loan item should be marked as default."
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["loan_item"],
+                condition=models.Q(is_default=True),
+                name="only_one_default_pic_per_item"
+            )
+        ]
 
     def __str__(self):
-        return f"Picture for {self.loan.loan_id}"
+        default_indicator = " (default)" if self.is_default else ""
+        return f"Picture for {self.loan_item.itemdesc}{default_indicator}"
 
     def get_absolute_url(self):
         return reverse("loanitempic_detail", args=[str(self.id)])
@@ -174,6 +200,14 @@ class LoanItemPic(models.Model):
 
     def get_delete_url(self):
         return reverse("loanitempic_delete", args=[str(self.id)])
+
+    def save(self, *args, **kwargs):
+        # If marking as default, unmark any existing default for this loan item
+        if self.is_default and self.loan_item:
+            LoanItemPic.objects.filter(
+                loan_item=self.loan_item, is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
 
 
 class LoanItemStorageBox(models.Model):
