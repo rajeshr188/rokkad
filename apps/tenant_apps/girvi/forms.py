@@ -21,11 +21,13 @@ from .models import (
     LicenseDocument,
     LoanItem,
     LoanItemStorageBox,
+    LoanTemplate,
     LoanPayment,
     Release,
     RepledgedLoanItem,
     Series,
     TakenLoan,
+    TemplateFrame,
 )
 
 
@@ -122,6 +124,64 @@ class SeriesForm(forms.ModelForm):
                 attrs={"min": "1"}
             ),
         }
+
+
+class LoanTemplateForm(forms.ModelForm):
+    class Meta:
+        model = LoanTemplate
+        fields = [
+            "name",
+            "print_option",
+            "base_template",
+            "dup_template",
+            "terms_template",
+            "form_d3_template",
+            "page_width",
+            "page_height",
+            "is_active",
+            "is_default",
+        ]
+        widgets = {
+            "page_width": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "page_height": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+        }
+
+
+class TemplateFrameForm(forms.ModelForm):
+    class Meta:
+        model = TemplateFrame
+        fields = [
+            "frame_name",
+            "template_type",
+            "field_type",
+            "x_pos",
+            "y_pos",
+            "width",
+            "height",
+            "font_size",
+            "font_name",
+            "show_boundary",
+        ]
+        widgets = {
+            "x_pos": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "y_pos": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "width": forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
+            "height": forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
+            "font_size": forms.NumberInput(attrs={"min": "1"}),
+            "show_boundary": forms.NumberInput(attrs={"min": "0", "max": "1"}),
+        }
+
+    def __init__(self, *args, template=None, **kwargs):
+        self.template = template or getattr(kwargs.get("instance"), "template", None)
+        super().__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.template is not None:
+            instance.template = self.template
+        if commit:
+            instance.save()
+        return instance
 
 
 class LoanReportForm(forms.Form):

@@ -288,6 +288,71 @@ urlpatterns += (
     ),
 )
 
+# urls for loan templates
+urlpatterns += (
+    path("girvi/templates/", views.LoanTemplateListView.as_view(), name="girvi_template_list"),
+    path(
+        "girvi/templates/download-pack/",
+        views.download_template_pack,
+        name="girvi_template_download_pack",
+    ),
+    path(
+        "girvi/templates/create/",
+        views.LoanTemplateCreateView.as_view(),
+        name="girvi_template_create",
+    ),
+    path(
+        "girvi/templates/<int:pk>/",
+        views.LoanTemplateDetailView.as_view(),
+        name="girvi_template_detail",
+    ),
+    path(
+        "girvi/templates/<int:pk>/edit/",
+        views.LoanTemplateUpdateView.as_view(),
+        name="girvi_template_update",
+    ),
+    path(
+        "girvi/templates/<int:pk>/delete/",
+        views.LoanTemplateDeleteView.as_view(),
+        name="girvi_template_delete",
+    ),
+    path(
+        "girvi/templates/<int:pk>/preview/",
+        views.LoanTemplatePreviewView.as_view(),
+        name="girvi_template_preview",
+    ),
+    path(
+        "girvi/templates/<int:pk>/set-default/",
+        views.template_set_default,
+        name="girvi_template_set_default",
+    ),
+    path(
+        "girvi/templates/<int:pk>/toggle-active/",
+        views.template_toggle_active,
+        name="girvi_template_toggle_active",
+    ),
+    path(
+        "girvi/templates/<int:pk>/create-starter-frames/",
+        views.template_create_starter_frames,
+        name="girvi_template_create_starter_frames",
+    ),
+    path(
+        "girvi/templates/<int:template_pk>/frames/create/",
+        views.template_frame_create,
+        name="girvi_template_frame_create",
+    ),
+    path(
+        "girvi/templates/<int:template_pk>/frames/<int:pk>/edit/",
+        views.template_frame_update,
+        name="girvi_template_frame_update",
+    ),
+    path(
+        "girvi/templates/<int:template_pk>/frames/<int:pk>/delete/",
+        views.template_frame_delete,
+        name="girvi_template_frame_delete",
+    ),
+)
+
 # urls for Release
 urlpatterns += (
     path("girvi/release/", views.release_list, name="girvi_release_list"),
