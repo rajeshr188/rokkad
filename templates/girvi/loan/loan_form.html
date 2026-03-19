@@ -23,21 +23,27 @@
 
 <script>
   (function () {
+    const jq = window.jQuery || window.$;
+
     // Re-run after HTMX swaps the modal content
     function initSelect2Triggers() {
-      $('#id_series').off('select2:select.loanform').on('select2:select.loanform', function () {
+      if (!jq) return;
+
+      jq('#id_series').off('select2:select.loanform').on('select2:select.loanform', function () {
         this.dispatchEvent(new Event('change', { bubbles: true }));
       });
-      $('select[name="borrower"]').off('change.loanform').on('change.loanform', function () {
+      jq('select[name="borrower"]').off('change.loanform').on('change.loanform', function () {
         this.dispatchEvent(new Event('change', { bubbles: true }));
       });
     }
-    if (window.jQuery) {
-      $(document).ready(initSelect2Triggers);
+
+    if (jq) {
+      jq(document).ready(initSelect2Triggers);
     }
+
     document.body.addEventListener('htmx:afterSwap', function (e) {
       if (e.detail.target && e.detail.target.id === 'modal-content') {
-        if (window.jQuery) initSelect2Triggers();
+        initSelect2Triggers();
       }
     });
   })();

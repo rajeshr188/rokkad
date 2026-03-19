@@ -3,7 +3,7 @@ import re
 from decimal import Decimal
 
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericRelation, GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
@@ -17,7 +17,6 @@ from moneyed import Money
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import (
     AccountTransaction,
-    JournalEntry,
     LedgerTransaction,
 )
 from apps.tenant_apps.dea.models import BusinessDoc
@@ -700,9 +699,6 @@ class LoanPayment(BusinessDoc):
     )
     principal_payment = models.DecimalField(max_digits=10, decimal_places=2)
     interest_payment = models.DecimalField(max_digits=10, decimal_places=2)
-    journal_entries = GenericRelation(
-        JournalEntry, related_query_name="loan_payment_doc"
-    )
     with_release = models.BooleanField(default=False)
 
     class Meta:

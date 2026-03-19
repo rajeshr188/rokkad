@@ -16,25 +16,25 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-@receiver(pre_save, sender=LoanPayment)
-@receiver(pre_save, sender=GivenLoan)
-@receiver(pre_save, sender=TakenLoan)
-@receiver(post_delete, sender=LoanPayment)
-@receiver(post_delete, sender=GivenLoan)
-@receiver(post_delete, sender=TakenLoan)
-def reverse_journal_entry(sender, instance, **kwargs):
-    # print(" in pre_save:reverse journal entry")
-    if instance.pk:  # If journal is being updated
-        # Retrieve the old data from the database
-        try:
-            old_instance = sender.objects.get(pk=instance.pk)
-        except ObjectDoesNotExist:
-            # Handle the case where the instance does not exist in the database
-            return
-        # Compare the old and new instances
-        if old_instance.is_changed(instance):
-            old_instance.reverse_transactions()
-            instance.create_transactions()
+# @receiver(pre_save, sender=LoanPayment)
+# @receiver(pre_save, sender=GivenLoan)
+# @receiver(pre_save, sender=TakenLoan)
+# @receiver(post_delete, sender=LoanPayment)
+# @receiver(post_delete, sender=GivenLoan)
+# @receiver(post_delete, sender=TakenLoan)
+# def reverse_journal_entry(sender, instance, **kwargs):
+#     # print(" in pre_save:reverse journal entry")
+#     if instance.pk:  # If journal is being updated
+#         # Retrieve the old data from the database
+#         try:
+#             old_instance = sender.objects.get(pk=instance.pk)
+#         except ObjectDoesNotExist:
+#             # Handle the case where the instance does not exist in the database
+#             return
+#         # Compare the old and new instances
+#         if old_instance.is_changed(instance):
+#             old_instance.reverse_transactions()
+#             instance.create_transactions()
 
 
 @receiver([post_delete, post_save], sender=LoanItem)

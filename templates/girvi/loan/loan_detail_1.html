@@ -78,7 +78,10 @@
 
     <div class="btn-group" role="group">
       <a class="btn btn-outline-info" hx-get="{% url 'girvi:girvi_loan_update' object.id %}"
-        hx-target="#content" hx-swap="innerHTML transition:true">Edit</a>
+        hx-target="#modal .modal-content"
+        hx-swap="innerHTML"
+        data-bs-toggle="modal"
+        data-bs-target="#modal">Edit</a>
       <a class="btn btn-outline-danger" hx-confirm="Are you sure you want to delete this loan?"
         hx-delete="{% url 'girvi:girvi_loan_delete' object.id %}">Delete</a>
     </div>
