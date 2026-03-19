@@ -14,12 +14,14 @@ class LoanYearArchiveView(LoginRequiredMixin, YearArchiveView):
     queryset = GivenLoan.objects.all()
     date_field = "loan_date"
     make_object_list = True
+    template_name = "girvi/loan_archive_year.html"
 
 
 class LoanMonthArchiveView(LoginRequiredMixin, MonthArchiveView):
     queryset = GivenLoan.objects.filter(release__isnull=True)
     date_field = "loan_date"
     make_object_list = True
+    template_name = "girvi/loan_archive_month.html"
 
     def get_context_data(self, *args, **kwargs):
         data = super().get_context_data(**kwargs)
@@ -31,16 +33,18 @@ class LoanWeekArchiveView(LoginRequiredMixin, WeekArchiveView):
     queryset = GivenLoan.objects.filter(release__isnull=True)
     date_field = "loan_date"
     week_format = "%W"
+    template_name = "girvi/loan_archive_week.html"
 
 
 class LoanDayArchiveView(LoginRequiredMixin, DayArchiveView):
     queryset = GivenLoan.objects.filter(release__isnull=True)
     date_field = "loan_date"
     allow_empty = True
+    template_name = "girvi/loan_archive_day.html"
 
 
 class LoanTodayArchiveView(TodayArchiveView):
     queryset = GivenLoan.objects.filter(release__isnull=True)
     date_field = "loan_date"
     allow_empty = True
-    # template_name = "girvi/loan/loan_archive_day.html"
+    template_name = "girvi/loan_archive_day.html"
