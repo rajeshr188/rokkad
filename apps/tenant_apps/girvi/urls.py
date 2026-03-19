@@ -224,6 +224,21 @@ urlpatterns += (
         views.loanitem_create_update,
         name="loanitem_create_update",
     ),
+    path(
+        "loanitem/<int:item_id>/pictures/",
+        views.loanitem_picture_modal,
+        name="loanitem_picture_modal",
+    ),
+    path(
+        "loanitem/<int:item_id>/picture/add/",
+        views.loanitem_picture_add,
+        name="loanitem_picture_add",
+    ),
+    path(
+        "loanitem/<int:item_id>/picture/<int:pic_id>/delete/",
+        views.loanitem_picture_delete,
+        name="loanitem_picture_delete",
+    ),
 )
 
 # urls for LoanPayment

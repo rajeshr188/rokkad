@@ -1,21 +1,23 @@
 # views.py
-import base64
 from email import message
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.files.base import ContentFile
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django_tables2 import RequestConfig
 
-from apps.tenant_apps.girvi.forms import LoanItemForm, RepledgedLoanItemForm
+from apps.tenant_apps.girvi.forms import (
+    LoanItemForm,
+    RepledgedLoanItemForm,
+)
 from apps.tenant_apps.girvi.models import (
     BaseLoan,
     GivenLoan,
     TakenLoan,
     RepledgedLoanItem,
+    LoanItemPic,
 )
 
 from ..filters import LoanItemFilter
@@ -95,6 +97,7 @@ def loanitem_create_update(request, parent_id, id=None):
 
     if request.method == "POST":
         form = form_class(request.POST, request.FILES, instance=instance)
+        
         if form.is_valid():
             new_obj = form.save(commit=False)
             new_obj.loan = parent_obj
@@ -103,18 +106,9 @@ def loanitem_create_update(request, parent_id, id=None):
                 # Use custody status instead of boolean field
                 new_obj.original_loanitem.custody_status = "with_lender"
                 new_obj.original_loanitem.save()
-            else:
-                image_data = request.POST.get("image_data")
-                if image_data:
-                    image_file = ContentFile(
-                        base64.b64decode(image_data.split(",")[1]),
-                        name=f"{new_obj.loan.loan_id}_{new_obj.id}.jpg"
-                        if is_given_loan
-                        else f"{new_obj.new_loan.loan_id}_{new_obj.id}.jpg",
-                    )
-                    new_obj.pic = image_file
 
             new_obj.save()
+            
             messages.success(request, f"{message} : {new_obj.id}")
             context = {"object": new_obj, "i": new_obj}
 
@@ -134,3 +128,50 @@ def loanitem_create_update(request, parent_id, id=None):
 
     context = {"url": url, "form": form, "object": instance}
     return render(request, template_name, context)
+
+
+@login_required
+def loanitem_picture_modal(request, item_id):
+    """Display modal for adding pictures to a loan item."""
+    item = get_object_or_404(LoanItem, pk=item_id)
+    pictures = item.pictures.all()
+    context = {
+        "item": item,
+        "pictures": pictures,
+    }
+    return render(request, "girvi/partials/item-picture-modal.html", context)
+
+
+@login_required
+def loanitem_picture_add(request, item_id):
+    """Add a picture to a loan item via form submission."""
+    item = get_object_or_404(LoanItem, pk=item_id)
+    
+    if request.method == "POST":
+        pic_file = request.FILES.get("pic")
+        description = request.POST.get("description", "")
+        is_default = request.POST.get("is_default") == "on"
+        
+        if pic_file:
+            # Create picture record
+            LoanItemPic.objects.create(
+                loan_item=item,
+                loan=item.loan,
+                pic=pic_file,
+                description=description,
+                is_default=is_default,
+            )
+            messages.success(request, "Picture added successfully")
+            return HttpResponse(status=204, headers={"HX-Trigger": "pictureAdded"})
+    
+    return HttpResponse(status=400)
+
+
+@login_required
+def loanitem_picture_delete(request, item_id, pic_id):
+    """Delete a picture from a loan item."""
+    item = get_object_or_404(LoanItem, pk=item_id)
+    pic = get_object_or_404(LoanItemPic, pk=pic_id, loan_item=item)
+    pic.delete()
+    messages.success(request, "Picture deleted")
+    return HttpResponse(status=204, headers={"HX-Trigger": "pictureDeleted"})
