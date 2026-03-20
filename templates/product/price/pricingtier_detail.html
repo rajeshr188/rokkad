@@ -1,5 +1,13 @@
-{% extends 'layouts/base.html' %}
-{%block content%}
+{% extends 'layouts/workspace.html' %}
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Product' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
 <h1>Pricing Tier : <b>{{obj.name}}</b></h1>
 <div>
     <table class="table">
@@ -13,4 +21,5 @@
     </table>
     <a href="{% url 'product_pricingtier_productprice_create' obj.id%}"class="btn btn-outline btn-primary">Add Product Price</a>
 </div>
-{%endblock%}
+{% endblock %}
+

@@ -1,6 +1,14 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 {% load crispy_forms_tags %}
-{% block content %}
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Product' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
     <p><a class="btn btn-default" href="{% url 'product_stock_list' %}">Stock Listing</a></p>
     <form method="post">
         {% csrf_token %}
@@ -8,3 +16,5 @@
         <button class="btn btn-primary" type="submit">Submit</button>
     </form>
 {% endblock %}
+
+

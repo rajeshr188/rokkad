@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse_lazy
@@ -12,14 +13,45 @@ from ..forms import ProductVariantForm
 from ..models import Product, ProductVariant
 
 
+PRODUCT_VARIANT_SORTS = {
+    "sku": "sku",
+    "code": "product_code",
+    "name": "name",
+    "product": "product__name",
+    "type": "product__product_type__name",
+}
+
+
+def _apply_sorting(queryset, sort_key, direction, allowed_sorts):
+    sort_field = allowed_sorts.get(sort_key, allowed_sorts["name"])
+    if direction == "desc":
+        sort_field = f"-{sort_field}"
+    return queryset.order_by(sort_field)
+
+
 @login_required
-@for_htmx(use_block="content")
+@for_htmx(use_block_from_params=True)
 def productvariant_list(request):
-    variants = ProductVariant.objects.all().select_related("product")
+    variants = ProductVariant.objects.select_related(
+        "product", "product__product_type"
+    ).prefetch_related("attributes__values")
     filter = ProductVariantFilter(request.GET, queryset=variants)
-    return TemplateResponse(
-        request, "product/productvariant_list.html", {"filter": filter}
-    )
+    sort_key = request.GET.get("sort", "name")
+    direction = request.GET.get("dir", "asc")
+    view_mode = request.GET.get("view", "table")
+    sorted_qs = _apply_sorting(filter.qs, sort_key, direction, PRODUCT_VARIANT_SORTS)
+    paginator = Paginator(sorted_qs, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    ctx = {
+        "filter": filter,
+        "page_obj": page_obj,
+        "object_list": page_obj.object_list,
+        "page_title": "Product Variants",
+        "sort_key": sort_key,
+        "sort_dir": direction,
+        "view_mode": view_mode,
+    }
+    return TemplateResponse(request, "product/productvariant_list.html", ctx)
 
 
 @login_required

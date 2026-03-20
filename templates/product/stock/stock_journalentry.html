@@ -1,8 +1,16 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/workspace.html' %}
 
 {% load crispy_forms_tags %}
 
-{% block content %}
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Product' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
     
     <div class="container col-md-8 mt-3">
         <div class="row">
@@ -20,3 +28,4 @@
     </div>
 
 {% endblock %}
+

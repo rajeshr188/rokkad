@@ -1,0 +1,123 @@
+{% extends 'layouts/workspace.html' %}
+
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Product' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+  <div>
+    <h2 class="mb-1">Product Dashboard</h2>
+    <p class="text-muted mb-0">Create products in the right order to avoid setup mistakes.</p>
+  </div>
+  <div>
+    <a class="btn btn-primary" href="{% url 'product_producttype_create' %}">Create Product Type</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-2 col-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Product Types</div>
+        <div class="fs-4 fw-semibold">{{ stats.product_types }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2 col-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Products</div>
+        <div class="fs-4 fw-semibold">{{ stats.products }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2 col-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Variants</div>
+        <div class="fs-4 fw-semibold">{{ stats.variants }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Attributes</div>
+        <div class="fs-4 fw-semibold">{{ stats.attributes }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Attribute Values</div>
+        <div class="fs-4 fw-semibold">{{ stats.attribute_values }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-info" role="alert">
+  <strong>Recommended order:</strong> Categories -> Attributes -> Attribute Values -> Product Types -> Products -> Variants.
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Step 1: Define Master Data</div>
+      <div class="card-body">
+        <p class="text-muted">Create categories and attribute options that your product team will reuse.</p>
+        <div class="d-grid gap-2">
+          <a class="btn btn-outline-secondary" href="{% url 'product_category_create' %}">Create Category</a>
+          <a class="btn btn-outline-secondary" href="{% url 'product_attribute_create' %}">Create Attribute</a>
+          <a class="btn btn-outline-secondary" href="{% url 'product_attributevalue_create' %}">Create Attribute Value</a>
+        </div>
+      </div>
+      <div class="card-footer bg-white">
+        <a href="{% url 'product_category_list' %}">View Categories</a> |
+        <a href="{% url 'product_attribute_list' %}">View Attributes</a> |
+        <a href="{% url 'product_attributevalue_list' %}">View Attribute Values</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Step 2: Configure Product Type</div>
+      <div class="card-body">
+        <p class="text-muted">Assign product-level and variant-level attributes. This controls every create form.</p>
+        <div class="d-grid gap-2">
+          <a class="btn btn-outline-primary" href="{% url 'product_producttype_create' %}">Create Product Type</a>
+          <a class="btn btn-outline-primary" href="{% url 'product_producttype_list' %}">Manage Product Types</a>
+        </div>
+      </div>
+      <div class="card-footer bg-white">
+        Tip: For apparel, keep <em>Brand/Fabric</em> as product attributes and <em>Size/Color</em> as variant attributes.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Step 3: Create Catalog Records</div>
+      <div class="card-body">
+        <p class="text-muted">Create products and variants manually or generate combinations in bulk.</p>
+        <div class="d-grid gap-2">
+          <a class="btn btn-outline-success" href="{% url 'product_product_list' %}">Open Products</a>
+          <a class="btn btn-outline-success" href="{% url 'product_productvariant_list' %}">Open Variants</a>
+        </div>
+      </div>
+      <div class="card-footer bg-white">
+        Bulk generation starts from each Product Type detail page via <em>Generate Products</em>.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

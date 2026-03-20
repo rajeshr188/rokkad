@@ -1,6 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.test import RequestFactory
 from django_tenants.test.cases import TenantTestCase
+from django.urls import reverse
 
+from . import views
 from .forms import ProductForm, ProductVariantForm
 from .models import (
 	AssignedProductAttribute,
@@ -85,6 +88,8 @@ class NormalizedAttributesRegressionTests(TenantTestCase):
 		field_name = self.variant_attribute.get_formfield_name()
 		form = ProductVariantForm(
 			data={
+				"sku": "SKU-ATTR-REG",
+				"product_code": "PC-ATTR-REG",
 				"name": "Variant Final",
 				field_name: self.variant_attribute_value.pk,
 			},
@@ -123,14 +128,24 @@ class NormalizedAttributesRegressionTests(TenantTestCase):
 
 		first_field_name = self.variant_attribute.get_formfield_name()
 		first_form = ProductVariantForm(
-			data={"name": "Variant Update", first_field_name: self.variant_attribute_value.pk},
+			data={
+				"sku": "SKU-ATTR-UPD",
+				"product_code": "PC-ATTR-UPD",
+				"name": "Variant Update",
+				first_field_name: self.variant_attribute_value.pk,
+			},
 			instance=variant,
 		)
 		self.assertTrue(first_form.is_valid(), first_form.errors)
 		first_form.save()
 
 		second_form = ProductVariantForm(
-			data={"name": "Variant Update", first_field_name: second_value.pk},
+			data={
+				"sku": "SKU-ATTR-UPD",
+				"product_code": "PC-ATTR-UPD",
+				"name": "Variant Update",
+				first_field_name: second_value.pk,
+			},
 			instance=variant,
 		)
 		self.assertTrue(second_form.is_valid(), second_form.errors)
@@ -141,3 +156,92 @@ class NormalizedAttributesRegressionTests(TenantTestCase):
 			list(assigned.values.values_list("pk", flat=True)),
 			[second_value.pk],
 		)
+
+
+class ProductUserFlowIntegrationTests(TenantTestCase):
+	@classmethod
+	def get_test_schema_name(cls):
+		return "testflow"
+
+	@classmethod
+	def get_test_tenant_domain(cls):
+		return "flow.tenant.test.com"
+
+	@classmethod
+	def setup_tenant(cls, tenant):
+		user = User.objects.create_user(
+			username="tenant_flow_owner",
+			email="tenant_flow_owner@example.com",
+			password="testpass123",
+		)
+		tenant.name = "tenant-flow-company"
+		tenant.owner = user
+		tenant.creator = user
+
+	def setUp(self):
+		self.user = User.objects.create_user(
+			username="flow_user",
+			email="flow_user@example.com",
+			password="testpass123",
+		)
+		self.factory = RequestFactory()
+		self.category = Category.objects.create(name="Flow Category")
+		self.product_type = ProductType.objects.create(
+			name="Flow Type",
+			has_variants=False,
+		)
+
+	def test_product_create_posts_product_and_prefixed_variant_form(self):
+		request = self.factory.post(
+			reverse("product_product_create", kwargs={"type_pk": self.product_type.pk}),
+			{
+				"description": "Flow create description",
+				"category": self.category.pk,
+				"variant-sku": "FLOW-SKU-001",
+				"variant-product_code": "FLOW-PC-001",
+				"variant-name": "Flow Variant",
+			},
+		)
+		request.user = self.user
+		response = views.product_create(request, type_pk=self.product_type.pk)
+
+		self.assertEqual(response.status_code, 302)
+		product = Product.objects.get(product_type=self.product_type)
+		self.assertEqual(product.variants.count(), 1)
+		variant = product.variants.first()
+		self.assertEqual(variant.sku, "FLOW-SKU-001")
+		self.assertEqual(variant.product_code, "FLOW-PC-001")
+
+	def test_product_edit_posts_product_and_prefixed_variant_form(self):
+		product = Product.objects.create(
+			product_type=self.product_type,
+			name="Flow Product",
+			description="Old",
+			category=self.category,
+		)
+		ProductVariant.objects.create(
+			product=product,
+			sku="FLOW-SKU-OLD",
+			product_code="FLOW-PC-OLD",
+			name="Flow Variant Old",
+		)
+
+		request = self.factory.post(
+			reverse("product_product_update", kwargs={"pk": product.pk}),
+			{
+				"description": "Flow edit description",
+				"category": self.category.pk,
+				"variant-sku": "FLOW-SKU-NEW",
+				"variant-product_code": "FLOW-PC-NEW",
+				"variant-name": "Flow Variant New",
+			},
+		)
+		request.user = self.user
+		response = views.product_edit(request, pk=product.pk)
+
+		self.assertEqual(response.status_code, 302)
+		product.refresh_from_db()
+		self.assertEqual(product.variants.count(), 1)
+		variant = product.variants.first()
+		self.assertEqual(variant.sku, "FLOW-SKU-NEW")
+		self.assertEqual(variant.product_code, "FLOW-PC-NEW")

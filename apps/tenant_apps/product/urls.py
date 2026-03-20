@@ -45,7 +45,7 @@ urlpatterns += (
         name="product_producttype_detail",
     ),
     path(
-        "producttype/<int:pk>/update//",
+        "producttype/<int:pk>/update/",
         views.producttype_update,
         name="product_producttype_update",
     ),

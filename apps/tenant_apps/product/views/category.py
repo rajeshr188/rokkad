@@ -50,5 +50,11 @@ def category_update(request, slug):
 @login_required
 def category_delete(request, slug):
     category = get_object_or_404(Category, slug=slug)
+    if request.method != "POST":
+        return TemplateResponse(
+            request,
+            "product/category_confirm_delete.html",
+            {"object": category},
+        )
     category.delete()
     return redirect("product_category_list")
