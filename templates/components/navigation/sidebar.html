@@ -81,13 +81,21 @@
             <!-- Tenant App Features (only in workspace context) -->
             {% if user_workspace and user_workspace.schema_name != 'public' %}
             <div class="nav-section">
-                <h6 class="nav-section-title">Features</h6>
+                <h6 class="nav-section-title">Apps</h6>
                 
                 <!-- Contacts -->
                 {% if 'contact_view' in user_permissions %}
                 <a class="nav-link {% if request.resolver_match.url_name == 'contact_customer_list' or 'contact' in request.resolver_match.url_name %}active{% endif %}" 
                    href="{% url 'contact_customer_list' %}">
                     <i class="bi bi-people-fill"></i> Contacts
+                </a>
+                {% endif %}
+
+                <!-- Product/Catalog -->
+                {% if 'data_view' in user_permissions %}
+                <a class="nav-link {% if 'product_' in request.resolver_match.url_name %}active{% endif %}"
+                   href="{% url 'product_product_home' %}">
+                    <i class="bi bi-grid-1x2-fill"></i> Product
                 </a>
                 {% endif %}
                 

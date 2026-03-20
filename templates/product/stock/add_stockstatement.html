@@ -1,20 +1,35 @@
+{% extends 'layouts/workspace.html' %}
 
+{% load crispy_forms_tags %}
 {% load static %}
-{% block content %}
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Product' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
 <script src="{% static 'js/jquery.formset.js' %}"></script>
 {{form.media}}
-<h1>Add a new stockstatement</h1>
-<form id="form-container" method="POST">
-    {% csrf_token %}
-    {{stockstatement_formset.management_form}}
-    {% for form in stockstatement_formset %}
-    <div class="inline {{stockstatement_formset.prefix}}">
-        {{form.as_p}}
+<div class="container col-lg-9 mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h1 class="h5 mb-3">Add a new stock statement</h1>
+            <form id="form-container" method="POST">
+                {% csrf_token %}
+                {{stockstatement_formset.management_form}}
+                {% for form in stockstatement_formset %}
+                <div class="inline {{stockstatement_formset.prefix}} mb-3 border rounded p-3 bg-light-subtle">
+                    {{form|crispy}}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">Create Stock Statement</button>
+            </form>
+        </div>
     </div>
-    {% endfor %}
-    
-    <button type="submit">Create Stock Statement</button>
-</form>
+</div>
 <script type="text/javascript">
     $(".inline.{{ stockstatement_formset.prefix }}").formset({
             prefix: "{{ stockstatement_formset.prefix }}",
@@ -35,4 +50,4 @@
 </script>
 
 
-{%endblock%}
+{% endblock %}

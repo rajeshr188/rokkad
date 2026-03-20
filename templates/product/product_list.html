@@ -1,57 +1,270 @@
-{% extends 'layouts/base.html' %}
-{%load crispy_forms_tags%}
-{% block content %}
-<div class="container mt-5 mb-5">{{form.media}}
-  <p><a class="btn btn-default" href="{% url 'product_product_list' %}">Product Listing</a></p>
-  <div class="row">
-    <div class="col-9">
-      <table class="table table-sm table-striped table-hover">
-        <thead class="thead-light">
-        <tr>
-          <th>Name</th>
-          <th>category</th>
-          <th>product type</th>
-          <th>description</th>
-          <th>attributes</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-        <tbody>
-          {% for object in filter.qs %}
-          <tr>
-              <td><a href="{{object.get_absolute_url}}">{{object.name}}</a></td>
-              <td>{{object.category}}</td>
-              <td>{{object.product_type}}</td>
-              <td>{{ object.description }}</td>
-              <td>
-                {% for attr, val in object.get_attributes.items %}
-                  {{ attr.name }}: {{ val.name }}{% if not forloop.last %}, {% endif %}
-                {% empty %}
-                  -
-                {% endfor %}
-              </td>
-              <td><a class="btn btn-danger" href="{% url 'product_product_delete' object.id%}">Delete</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="col-3">
-      <div class="sticky-top">
-  
-        {% if filter %}
-          <div class="card  bg-light mb-3 text-center">
-            <div class="card-header">
-              Filter
-            </div>
+{% extends 'layouts/workspace.html' %}
+{% load crispy_forms_tags %}
+
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page='Products' %}
+{% endblock %}
+
+{% block page_header %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <div>
+    <h1 class="h4 mb-1">Products</h1>
+    <p class="text-muted mb-0">Browse and manage catalog products with attribute-aware filters.</p>
+  </div>
+  <div>
+    <a class="btn btn-outline-primary" href="{% url 'product_product_home' %}">Dashboard</a>
+  </div>
+</div>
+{% endblock %}
+
+{% partialdef product-filter-panel inline %}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-0 pb-0">
+    <h2 class="h6 mb-0">Filters</h2>
+  </div>
+  <div class="card-body pt-3">
+    <form id="product-filter-form"
+          method="get"
+          hx-get="{% url 'product_product_list' %}"
+          hx-target="#product-list-results"
+          hx-select="#product-list-results"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          hx-trigger="submit, change delay:250ms, keyup changed delay:400ms from:input[name='query']">
+      <input type="hidden" name="sort" value="{{ sort_key }}">
+      <input type="hidden" name="dir" value="{{ sort_dir }}">
+      <input type="hidden" name="view" value="{{ view_mode }}">
+      {{ filter.form|crispy }}
+      <div class="d-flex gap-2 mt-2">
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        <a class="btn btn-light btn-sm"
+           href="{% url 'product_product_list' %}"
+           hx-get="{% url 'product_product_list' %}"
+           hx-target="#product-list-results"
+           hx-select="#product-list-results"
+           hx-swap="outerHTML"
+           hx-push-url="true">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endpartialdef %}
+
+{% partialdef product-list-results inline %}
+<div id="product-list-results">
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+          <h2 class="h6 mb-0">Results</h2>
+          <span class="badge bg-light text-dark">{{ page_obj.paginator.count }} total</span>
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
+          <a class="btn {% if view_mode == 'table' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+             href="{% querystring page=None view='table' %}"
+             hx-get="{% querystring page=None view='table' %}"
+             hx-target="#product-list-results"
+             hx-select="#product-list-results"
+             hx-swap="outerHTML"
+             hx-push-url="true">Table</a>
+          <a class="btn {% if view_mode == 'cards' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+             href="{% querystring page=None view='cards' %}"
+             hx-get="{% querystring page=None view='cards' %}"
+             hx-target="#product-list-results"
+             hx-select="#product-list-results"
+             hx-swap="outerHTML"
+             hx-push-url="true">Cards</a>
+        </div>
+      </div>
+
+      {% if view_mode == 'cards' %}
+      <div class="row g-3">
+        {% for object in object_list %}
+        <div class="col-12 col-md-6">
+          <div class="card h-100 border-light-subtle">
             <div class="card-body">
-              <form action="" method="get" class="form-horizontal">
-                  {{filter.form|crispy}}
-              </form>
+              <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                  <a class="fw-semibold text-decoration-none d-block" href="{{ object.get_absolute_url }}">{{ object.name }}</a>
+                  <div class="small text-muted">{{ object.product_type }} · {{ object.category }}</div>
+                </div>
+                <div class="d-flex gap-2">
+                  <a class="btn btn-sm btn-outline-secondary" href="{{ object.get_update_url }}">Edit</a>
+                  <a class="btn btn-sm btn-outline-danger" href="{% url 'product_product_delete' object.id %}">Delete</a>
+                </div>
+              </div>
+              <p class="text-muted small mt-3 mb-3">{{ object.description|default:'No description.' }}</p>
+              <div class="d-flex flex-wrap gap-2">
+                {% for attr, val in object.get_attributes.items %}
+                  <span class="badge text-bg-light border">{{ attr.name }}: {{ val.name }}</span>
+                {% empty %}
+                  <span class="text-muted">No attributes assigned.</span>
+                {% endfor %}
+              </div>
+            </div>
           </div>
         </div>
-        {% endif %}
+        {% empty %}
+        <div class="col-12">
+          <div class="text-center text-muted py-4">No products found for current filters.</div>
+        </div>
+        {% endfor %}
       </div>
+      {% else %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>
+                {% if sort_key == 'name' and sort_dir == 'asc' %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='name' dir='desc' %}" hx-get="{% querystring page=None sort='name' dir='desc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Name <i class="bi bi-arrow-up text-primary small"></i></a>
+                {% elif sort_key == 'name' and sort_dir == 'desc' %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='name' dir='asc' %}" hx-get="{% querystring page=None sort='name' dir='asc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Name <i class="bi bi-arrow-down text-primary small"></i></a>
+                {% else %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='name' dir='asc' %}" hx-get="{% querystring page=None sort='name' dir='asc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Name <i class="bi bi-arrow-down-up text-muted small"></i></a>
+                {% endif %}
+              </th>
+              <th>
+                {% if sort_key == 'category' and sort_dir == 'asc' %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='category' dir='desc' %}" hx-get="{% querystring page=None sort='category' dir='desc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Category <i class="bi bi-arrow-up text-primary small"></i></a>
+                {% elif sort_key == 'category' and sort_dir == 'desc' %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='category' dir='asc' %}" hx-get="{% querystring page=None sort='category' dir='asc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Category <i class="bi bi-arrow-down text-primary small"></i></a>
+                {% else %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='category' dir='asc' %}" hx-get="{% querystring page=None sort='category' dir='asc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Category <i class="bi bi-arrow-down-up text-muted small"></i></a>
+                {% endif %}
+              </th>
+              <th>
+                {% if sort_key == 'type' and sort_dir == 'asc' %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='type' dir='desc' %}" hx-get="{% querystring page=None sort='type' dir='desc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Type <i class="bi bi-arrow-up text-primary small"></i></a>
+                {% elif sort_key == 'type' and sort_dir == 'desc' %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='type' dir='asc' %}" hx-get="{% querystring page=None sort='type' dir='asc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Type <i class="bi bi-arrow-down text-primary small"></i></a>
+                {% else %}
+                <a class="link-dark text-decoration-none" href="{% querystring page=None sort='type' dir='asc' %}" hx-get="{% querystring page=None sort='type' dir='asc' %}" hx-target="#product-list-results" hx-select="#product-list-results" hx-swap="outerHTML" hx-push-url="true">Type <i class="bi bi-arrow-down-up text-muted small"></i></a>
+                {% endif %}
+              </th>
+              <th>Attributes</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for object in object_list %}
+            <tr>
+              <td>
+                <a class="fw-semibold text-decoration-none" href="{{ object.get_absolute_url }}">{{ object.name }}</a>
+                <div class="small text-muted text-truncate" style="max-width: 360px;">{{ object.description|default:'-' }}</div>
+              </td>
+              <td>{{ object.category }}</td>
+              <td>{{ object.product_type }}</td>
+              <td>
+                {% for attr, val in object.get_attributes.items %}
+                  <span class="badge text-bg-light border">{{ attr.name }}: {{ val.name }}</span>
+                {% empty %}
+                  <span class="text-muted">-</span>
+                {% endfor %}
+              </td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ object.get_update_url }}">Edit</a>
+                <a class="btn btn-sm btn-outline-danger" href="{% url 'product_product_delete' object.id %}">Delete</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">No products found for current filters.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if page_obj.paginator.num_pages > 1 %}
+      <nav aria-label="Products pagination" class="mt-3">
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link"
+               href="{% querystring page=page_obj.previous_page_number %}"
+               hx-get="{% querystring page=page_obj.previous_page_number %}"
+               hx-target="#product-list-results"
+               hx-select="#product-list-results"
+               hx-swap="outerHTML"
+               hx-push-url="true">Previous</a>
+          </li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link"
+            href="{% querystring page=page_obj.next_page_number %}"
+            hx-get="{% querystring page=page_obj.next_page_number %}"
+               hx-target="#product-list-results"
+              hx-select="#product-list-results"
+               hx-swap="outerHTML"
+               hx-push-url="true">Next</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
     </div>
-  </div></div>
+  </div>
+</div>
+{% endpartialdef %}
+
+{% block workspace_content %}
+{{ filter.form.media }}
+
+<!-- Mobile filter offcanvas -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="productFilterOffcanvas" aria-labelledby="productFilterOffcanvasLabel">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title" id="productFilterOffcanvasLabel"><i class="bi bi-funnel"></i> Filters</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="product-filter-form-mobile"
+          method="get"
+          hx-get="{% url 'product_product_list' %}"
+          hx-target="#product-list-results"
+          hx-select="#product-list-results"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          hx-trigger="submit, change delay:250ms, keyup changed delay:400ms from:input[name='query']">
+      <input type="hidden" name="sort" value="{{ sort_key }}">
+      <input type="hidden" name="dir" value="{{ sort_dir }}">
+      <input type="hidden" name="view" value="{{ view_mode }}">
+      {{ filter.form|crispy }}
+      <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary btn-sm" data-bs-dismiss="offcanvas">Apply</button>
+        <a class="btn btn-light btn-sm"
+           href="{% url 'product_product_list' %}"
+           hx-get="{% url 'product_product_list' %}"
+           hx-target="#product-list-results"
+           hx-select="#product-list-results"
+           hx-swap="outerHTML"
+           hx-push-url="true"
+           data-bs-dismiss="offcanvas">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Mobile filter FAB (shown only on small screens) -->
+<div class="d-lg-none position-fixed bottom-0 start-0 p-3" style="z-index: 999;">
+  <button class="btn btn-primary rounded-pill shadow px-3"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#productFilterOffcanvas"
+          aria-controls="productFilterOffcanvas">
+    <i class="bi bi-funnel"></i> Filters
+  </button>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-3 d-none d-lg-block">
+    {% partial product-filter-panel %}
+  </div>
+  <div class="col-12 col-lg-9">
+    {% partial product-list-results %}
+  </div>
+</div>
 {% endblock %}

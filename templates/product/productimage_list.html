@@ -1,3 +1,14 @@
+{% extends 'layouts/workspace.html' %}
+
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Product' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
 <p><a class="btn btn-default" href="{% url 'product_productimage_list' %}">ProductImage Listing</a></p>
 <table class="table">
 <tr>
@@ -15,3 +26,4 @@
 {% endfor %}
 </table><a class="btn btn-primary" href="{% url 'product_productimage_create' %}">Create new ProductImage</a>
 {% endblock %}
+
