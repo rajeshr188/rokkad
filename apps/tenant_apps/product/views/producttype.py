@@ -7,9 +7,44 @@ from django.template.response import TemplateResponse
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..forms import AttributeValueSelectionForm, ProductTypeForm
-from ..models import Category, Product, ProductType, ProductVariant
+from ..models import (
+    AssignedProductAttribute,
+    AssignedVariantAttribute,
+    AttributeProduct,
+    AttributeVariant,
+    Category,
+    Product,
+    ProductType,
+    ProductVariant,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _set_product_attributes(product_obj, attr_values):
+    for attr_value in attr_values:
+        assignment, _ = AttributeProduct.objects.get_or_create(
+            product_type=product_obj.product_type,
+            attribute=attr_value.attribute,
+        )
+        assigned, _ = AssignedProductAttribute.objects.get_or_create(
+            product=product_obj,
+            assignment=assignment,
+        )
+        assigned.values.set([attr_value])
+
+
+def _set_variant_attributes(variant_obj, attr_values):
+    for attr_value in attr_values:
+        assignment, _ = AttributeVariant.objects.get_or_create(
+            product_type=variant_obj.product.product_type,
+            attribute=attr_value.attribute,
+        )
+        assigned, _ = AssignedVariantAttribute.objects.get_or_create(
+            variant=variant_obj,
+            assignment=assignment,
+        )
+        assigned.values.set([attr_value])
 
 
 @login_required
@@ -166,17 +201,10 @@ def generate_products_and_variants(request, product_type_id):
                         name=f"{product_type.name} {' '.join([attr_value.name for attr_value in product_attr_comb])}",
                         defaults={
                             "description": "Generated product",
-                            "category": Category.objects.first(),  # Assuming product_type has a category field
-                            "attributes": {
-                                str(attr_value.attribute.id): str(attr_value.id)
-                                for attr_value in product_attr_comb
-                            },
-                            "jattributes": {
-                                attr_value.attribute.name: attr_value.name
-                                for attr_value in product_attr_comb
-                            },
+                            "category": Category.objects.first(),
                         },
                     )
+                    _set_product_attributes(product_g, product_attr_comb)
                     if created:
                         logger.error(f"Product created: {product_g.name}")
                     else:
@@ -192,20 +220,13 @@ def generate_products_and_variants(request, product_type_id):
                     ]  # Remove hyphens and truncate to 32 characters
                     try:
                         # Create a new ProductVariant instance
-                        ProductVariant.objects.create(
+                        variant_obj = ProductVariant.objects.create(
                             product=product_g,
                             product_code=product_code,
                             sku=f"{product_g.name} {' '.join([attr_value.name for attr_value in variant_attr_comb])}",
                             name=f"{product_g.name} {' '.join([attr_value.name for attr_value in variant_attr_comb])}",
-                            attributes={
-                                str(attr_value.attribute.id): str(attr_value.id)
-                                for attr_value in variant_attr_comb
-                            },
-                            jattributes={
-                                attr_value.attribute.name: attr_value.name
-                                for attr_value in variant_attr_comb
-                            },
                         )
+                        _set_variant_attributes(variant_obj, variant_attr_comb)
                     except IntegrityError as e:
                         logger.error(f"IntegrityError while creating variant: {e}")
                         # Skip variant creation if unique constraint exception occurs

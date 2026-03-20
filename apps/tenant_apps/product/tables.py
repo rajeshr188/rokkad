@@ -27,8 +27,6 @@ class ProductTable(tables.Table):
             "name",
             "description",
             "category",
-            "attributes",
-            "jattributes",
         )
 
 
@@ -36,7 +34,7 @@ class ProductVariantTable(tables.Table):
     class Meta:
         model = ProductVariant
         template_name = "django_tables2/bootstrap.html"
-        fields = ("sku", "name", "product", "product_code", "attributes", "jattributes")
+        fields = ("sku", "name", "product", "product_code")
 
 
 class StockTable(tables.Table):

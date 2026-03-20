@@ -1,11 +1,18 @@
-from django.contrib.postgres.fields import HStoreField
 from django.db import models
 from django.shortcuts import reverse
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField
 from mptt.models import MPTTModel, TreeForeignKey
 
-from ..attributes import get_product_attributes_data
+from ..attributes import get_product_attributes_data, get_variant_attributes_data
+
+
+ATTRIBUTE_INPUT_TYPE_DROPDOWN = "dropdown"
+ATTRIBUTE_INPUT_TYPE_MULTISELECT = "multiselect"
+ATTRIBUTE_INPUT_TYPE_CHOICES = (
+    (ATTRIBUTE_INPUT_TYPE_DROPDOWN, "Dropdown"),
+    (ATTRIBUTE_INPUT_TYPE_MULTISELECT, "Multiselect"),
+)
 
 
 class Category(MPTTModel):
@@ -20,7 +27,7 @@ class Category(MPTTModel):
         upload_to="category-backgrounds", blank=True, null=True
     )
 
-    class MPPTMeta:
+    class MPTTMeta:
         order_insertion_by = ["name"]
 
     def __str__(self):
@@ -38,10 +45,18 @@ class ProductType(models.Model):
     name = models.CharField(max_length=128)
     has_variants = models.BooleanField(default=True)
     product_attributes = models.ManyToManyField(
-        "Attribute", related_name="product_types", blank=True
+        "Attribute",
+        related_name="product_types",
+        blank=True,
+        through="AttributeProduct",
+        through_fields=("product_type", "attribute"),
     )
     variant_attributes = models.ManyToManyField(
-        "Attribute", related_name="product_variant_types", blank=True
+        "Attribute",
+        related_name="product_variant_types",
+        blank=True,
+        through="AttributeVariant",
+        through_fields=("product_type", "attribute"),
     )
 
     class Meta:
@@ -77,8 +92,6 @@ class Product(models.Model):
     category = models.ForeignKey(
         Category, related_name="products", on_delete=models.CASCADE
     )
-    attributes = HStoreField(default=dict, blank=True, null=True)
-    jattributes = models.JSONField(default=dict, blank=True, null=True)
 
     class Meta:
         app_label = "product"
@@ -125,8 +138,6 @@ class ProductVariant(models.Model):
         Product, related_name="variants", on_delete=models.CASCADE
     )
     product_code = models.CharField(max_length=100, unique=True)
-    attributes = HStoreField(default=dict, blank=True)
-    jattributes = models.JSONField(default=dict)
     images = models.ManyToManyField("ProductImage", through="VariantImage")
 
     class Meta:
@@ -136,7 +147,7 @@ class ProductVariant(models.Model):
         return f"{self.name} {self.product_code}"
 
     def get_attributes(self):
-        return get_product_attributes_data(self.product)
+        return get_variant_attributes_data(self)
 
     def get_bal(self):
         # total = self.stocks.annotate(
@@ -181,6 +192,15 @@ class ProductVariant(models.Model):
 class Attribute(models.Model):
     name = models.CharField(max_length=50)
     slug = AutoSlugField(populate_from="name", blank=True)
+    input_type = models.CharField(
+        max_length=50,
+        choices=ATTRIBUTE_INPUT_TYPE_CHOICES,
+        default=ATTRIBUTE_INPUT_TYPE_DROPDOWN,
+    )
+    value_required = models.BooleanField(default=False, blank=True)
+    visible_in_storefront = models.BooleanField(default=True, blank=True)
+    filterable_in_storefront = models.BooleanField(default=True, blank=True)
+    filterable_in_dashboard = models.BooleanField(default=True, blank=True)
 
     class Meta:
         ordering = ("id",)
@@ -205,6 +225,7 @@ class AttributeValue(models.Model):
     name = models.CharField(max_length=100)
     value = models.CharField(max_length=100, default="")
     slug = AutoSlugField(populate_from="name", blank=True)
+    sort_order = models.PositiveIntegerField(blank=True, null=True)
     attribute = models.ForeignKey(
         Attribute, related_name="values", on_delete=models.CASCADE
     )
@@ -261,3 +282,91 @@ class VariantImage(models.Model):
 
     def get_update_url(self):
         return reverse("product_variantimage_update", args=(self.pk,))
+
+
+class BaseAssignedAttribute(models.Model):
+    assignment = None
+    values = models.ManyToManyField("AttributeValue")
+
+    class Meta:
+        abstract = True
+
+    @property
+    def attribute(self):
+        return self.assignment.attribute
+
+    @property
+    def attribute_pk(self):
+        return self.assignment.attribute_id
+
+
+class AssignedProductAttribute(BaseAssignedAttribute):
+    product = models.ForeignKey(
+        Product, related_name="attributes", on_delete=models.CASCADE
+    )
+    assignment = models.ForeignKey(
+        "AttributeProduct", on_delete=models.CASCADE, related_name="productassignments"
+    )
+
+    class Meta:
+        unique_together = (("product", "assignment"),)
+
+
+class AssignedVariantAttribute(BaseAssignedAttribute):
+    variant = models.ForeignKey(
+        ProductVariant, related_name="attributes", on_delete=models.CASCADE
+    )
+    assignment = models.ForeignKey(
+        "AttributeVariant", on_delete=models.CASCADE, related_name="variantassignments"
+    )
+
+    class Meta:
+        unique_together = (("variant", "assignment"),)
+
+
+class AttributeProduct(models.Model):
+    attribute = models.ForeignKey(
+        "Attribute", related_name="attributeproduct", on_delete=models.CASCADE
+    )
+    product_type = models.ForeignKey(
+        ProductType, related_name="attributeproduct", on_delete=models.CASCADE
+    )
+    sort_order = models.PositiveIntegerField(blank=True, null=True)
+    assigned_products = models.ManyToManyField(
+        Product,
+        blank=True,
+        through=AssignedProductAttribute,
+        through_fields=("assignment", "product"),
+        related_name="attributesrelated",
+    )
+
+    class Meta:
+        unique_together = (("attribute", "product_type"),)
+        ordering = ("sort_order", "pk")
+
+    def get_ordering_queryset(self):
+        return self.product_type.attributeproduct.all()
+
+
+class AttributeVariant(models.Model):
+    attribute = models.ForeignKey(
+        "Attribute", related_name="attributevariant", on_delete=models.CASCADE
+    )
+    product_type = models.ForeignKey(
+        ProductType, related_name="attributevariant", on_delete=models.CASCADE
+    )
+    sort_order = models.PositiveIntegerField(blank=True, null=True)
+    assigned_variants = models.ManyToManyField(
+        ProductVariant,
+        blank=True,
+        through=AssignedVariantAttribute,
+        through_fields=("assignment", "variant"),
+        related_name="attributesrelated",
+    )
+
+    class Meta:
+        unique_together = (("attribute", "product_type"),)
+        ordering = ("sort_order", "pk")
+
+    def get_ordering_queryset(self):
+        return self.product_type.attributevariant.all()
