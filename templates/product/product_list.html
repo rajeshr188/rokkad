@@ -215,7 +215,7 @@
 {{ filter.form.media }}
 
 <!-- Mobile filter offcanvas -->
-<div class="offcanvas offcanvas-start" tabindex="-1" id="productFilterOffcanvas" aria-labelledby="productFilterOffcanvasLabel">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="productFilterOffcanvas" aria-labelledby="productFilterOffcanvasLabel">
   <div class="offcanvas-header border-bottom">
     <h5 class="offcanvas-title" id="productFilterOffcanvasLabel"><i class="bi bi-funnel"></i> Filters</h5>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -249,8 +249,8 @@
 </div>
 
 <!-- Mobile filter FAB (shown only on small screens) -->
-<div class="d-lg-none position-fixed bottom-0 start-0 p-3" style="z-index: 999;">
-  <button class="btn btn-primary rounded-pill shadow px-3"
+<div class="d-lg-none position-fixed bottom-0 end-0 p-3" style="z-index: 999; padding-bottom: 4.5rem !important;">
+  <button class="btn btn-secondary rounded-pill shadow px-3"
           type="button"
           data-bs-toggle="offcanvas"
           data-bs-target="#productFilterOffcanvas"
