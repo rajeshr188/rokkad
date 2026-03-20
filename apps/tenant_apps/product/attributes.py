@@ -3,11 +3,21 @@ def get_product_attributes_data(product):
     as dict of Attribute: AttributeValue values.
     """
     attributes = product.product_type.product_attributes.all()
-    print(f"attributes: {attributes}")
     attributes_map = {attribute.pk: attribute for attribute in attributes}
-    print(f"attributes_map: {attributes_map}")
     values_map = get_attributes_display_map(product, attributes)
-    print(f"values_map: {values_map}")
+    return {
+        attributes_map[attr_pk]: value_obj
+        for (attr_pk, value_obj) in values_map.items()
+    }
+
+
+def get_variant_attributes_data(variant):
+    """Returns attributes associated with the variant,
+    as dict of Attribute: AttributeValue values.
+    """
+    attributes = variant.product.product_type.variant_attributes.all()
+    attributes_map = {attribute.pk: attribute for attribute in attributes}
+    values_map = get_attributes_display_map(variant, attributes)
     return {
         attributes_map[attr_pk]: value_obj
         for (attr_pk, value_obj) in values_map.items()
@@ -22,21 +32,33 @@ def get_name_from_attributes(variant, attributes):
 
 def get_attributes_display_map(obj, attributes):
     """Returns attributes associated with an object,
-    as dict of Attribute: AttributeValue values.
+    as dict of Attribute pk: AttributeValue instance.
 
     Args:
         attributes: Attribute Iterable
     """
+    attributes = list(attributes)
+    attr_ids = {attribute.pk for attribute in attributes}
+    return _get_normalized_display_map(obj, attr_ids)
+
+
+def _get_normalized_display_map(obj, attr_ids):
     display_map = {}
-    print(f"obj: {obj},attributes: {attributes}")
-    for attribute in attributes:
-        value = obj.attributes.get(str(attribute.pk))
-        print(f"value: {value}")
-        if value:
-            choices = {str(a.pk): a for a in attribute.values.all()}
-            print(f"choices: {choices}")
-            display_map[attribute.pk] = choices[value]
-    print(f"display_map: {display_map}")
+    if not getattr(obj, "pk", None):
+        return display_map
+
+    assignments = obj.attributes.select_related("assignment__attribute").prefetch_related(
+        "values"
+    )
+    for assigned in assignments:
+        attr_id = assigned.assignment.attribute_id
+        if attr_id not in attr_ids:
+            continue
+        values = list(assigned.values.all())
+        if not values:
+            continue
+        values.sort(key=lambda v: ((v.sort_order is None), v.sort_order or 0, v.pk))
+        display_map[attr_id] = values[0]
     return display_map
 
 

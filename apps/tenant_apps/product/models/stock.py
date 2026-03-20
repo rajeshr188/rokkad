@@ -134,7 +134,7 @@ class Stock(models.Model):
         cb_qty = ls_qty + (stock_in["qty"] - stock_out["qty"])
 
         return StockStatement.objects.create(
-            stock=self.stock,
+            stock=self,
             stock_batch=self,
             Closing_wt=cb_wt,
             Closing_qty=cb_qty,
@@ -203,7 +203,7 @@ class Stock(models.Model):
         """
         returns age of stock in days
         """
-        return (self.created - self.updated_on).days
+        return (self.created - self.updated).days
 
     def transact(self, weight, quantity, movement_type, journal_entry):
         """

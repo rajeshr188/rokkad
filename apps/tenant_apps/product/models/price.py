@@ -15,7 +15,7 @@ class PricingTier(MPTTModel):
     )
     minimum_quantity = models.PositiveIntegerField()
 
-    class MPPTMeta:
+    class MPTTMeta:
         order_insertion_by = ["name"]
 
     def __str__(self):

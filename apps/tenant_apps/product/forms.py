@@ -91,7 +91,7 @@ class AttributesMixin:
 
     available_attributes = Attribute.objects.none()
 
-    # Name of a field in self.instance that hold attributes HStore
+    # Keep explicit subclass configuration to avoid accidental misuse.
     model_attributes_field = None
 
     def __init__(self, *args, **kwargs):
@@ -102,12 +102,12 @@ class AttributesMixin:
             )
 
     def prepare_fields_for_attributes(self):
-        initial_attrs = getattr(self.instance, self.model_attributes_field)
+        initial_values = self.get_initial_attribute_values()
         for attribute in self.available_attributes:
             field_defaults = {
                 "label": attribute.name,
                 "required": False,
-                "initial": initial_attrs.get(str(attribute.pk)),
+                "initial": initial_values.get(attribute.pk),
             }
             if attribute.has_values():
                 field = ModelChoiceOrCreationField(
@@ -117,14 +117,38 @@ class AttributesMixin:
                 field = forms.CharField(**field_defaults)
             self.fields[attribute.get_formfield_name()] = field
 
+    def get_initial_attribute_values(self):
+        initial_values = {}
+
+        if getattr(self.instance, "pk", None):
+            if isinstance(self.instance, ProductVariant):
+                assignments = (
+                    AssignedVariantAttribute.objects.filter(variant=self.instance)
+                    .select_related("assignment__attribute")
+                    .prefetch_related("values")
+                )
+            else:
+                assignments = (
+                    AssignedProductAttribute.objects.filter(product=self.instance)
+                    .select_related("assignment__attribute")
+                    .prefetch_related("values")
+                )
+
+            for assigned in assignments:
+                values = list(assigned.values.all())
+                if not values:
+                    continue
+                values.sort(key=lambda v: ((v.sort_order is None), v.sort_order or 0, v.pk))
+                initial_values[assigned.assignment.attribute_id] = values[0]
+
+        return initial_values
+
     def iter_attribute_fields(self):
         for attr in self.available_attributes:
             yield self[attr.get_formfield_name()]
 
     def get_saved_attributes(self):
-        data = {}
-        attributes = {}
-        ja = {}
+        values_by_attribute = {}
         for attr in self.available_attributes:
             value = self.cleaned_data.pop(attr.get_formfield_name())
             if value:
@@ -135,23 +159,58 @@ class AttributesMixin:
                         attribute_id=attr.pk, name=value, slug=slugify(value)
                     )
                     value.save()
-                attributes[attr.pk] = value.pk
+                values_by_attribute[attr.pk] = value
+        return {"values_by_attribute": values_by_attribute}
 
-                ja[attr.name] = value.value
-        data["attributes"] = attributes
-        data["ja"] = ja
-        return data
+    def save_normalized_attributes(self, values_by_attribute):
+        instance = self.instance
+        if not getattr(instance, "pk", None):
+            return
+
+        if isinstance(instance, ProductVariant):
+            assignment_model = AttributeVariant
+            assigned_model = AssignedVariantAttribute
+            subject_filter = {"variant": instance}
+            subject_field = "variant"
+            product_type = instance.product.product_type
+        else:
+            assignment_model = AttributeProduct
+            assigned_model = AssignedProductAttribute
+            subject_filter = {"product": instance}
+            subject_field = "product"
+            product_type = instance.product_type
+
+        existing_assignments = {
+            assigned.assignment.attribute_id: assigned
+            for assigned in assigned_model.objects.filter(**subject_filter).select_related(
+                "assignment__attribute"
+            )
+        }
+        keep_attr_ids = set(values_by_attribute.keys())
+
+        for attr_id, assigned in existing_assignments.items():
+            if attr_id not in keep_attr_ids:
+                assigned.delete()
+
+        for attr_id, value in values_by_attribute.items():
+            assignment, _ = assignment_model.objects.get_or_create(
+                product_type=product_type,
+                attribute_id=attr_id,
+            )
+            payload = {subject_field: instance, "assignment": assignment}
+            assigned, _ = assigned_model.objects.get_or_create(**payload)
+            assigned.values.set([value])
 
 
 class ProductForm(forms.ModelForm, AttributesMixin):
     category = TreeNodeChoiceField(
         queryset=Category.objects.all(), label=pgettext_lazy("Category", "Category")
     )
-    model_attributes_field = "attributes"
+    model_attributes_field = "normalized_attributes"
 
     class Meta:
         model = Product
-        exclude = ["attributes", "jattributes", "product_type", "name"]
+        exclude = ["product_type", "name"]
 
     def __init__(self, *args, **kwargs):
         super(ProductForm, self).__init__(*args, **kwargs)
@@ -163,21 +222,24 @@ class ProductForm(forms.ModelForm, AttributesMixin):
 
     def save(self, commit=True):
         attributes = self.get_saved_attributes()
-        self.instance.attributes = attributes["attributes"]
-        self.instance.jattributes = attributes["ja"]
-        # attrs = self.instance.product_type.product_attributes.all()
-        # attrs = get_product_attributes_data(self.instance)
         self.instance.name = (
             self.instance.product_type.name
             + " "
-            + generate_name_from_values(self.instance.jattributes)
+            + generate_name_from_values(
+                {
+                    attr_id: value
+                    for attr_id, value in attributes["values_by_attribute"].items()
+                }
+            )
         )
         instance = super().save(commit=commit)
+        if commit:
+            self.save_normalized_attributes(attributes["values_by_attribute"])
         return instance
 
 
 class ProductVariantForm(forms.ModelForm, AttributesMixin):
-    model_attributes_field = "attributes"
+    model_attributes_field = "normalized_attributes"
 
     class Meta:
         model = ProductVariant
@@ -200,15 +262,20 @@ class ProductVariantForm(forms.ModelForm, AttributesMixin):
 
     def save(self, commit=True):
         data = self.get_saved_attributes()
-        self.instance.attributes = data["attributes"]
-        self.instance.jattributes = data["ja"]
-        attrs = self.instance.product.product_type.variant_attributes.all()
         self.instance.name = (
             self.instance.product.name
             + " "
-            + generate_name_from_values(self.instance.jattributes)
+            + generate_name_from_values(
+                {
+                    attr_id: value
+                    for attr_id, value in data["values_by_attribute"].items()
+                }
+            )
         )
-        return super().save(commit=commit)
+        instance = super().save(commit=commit)
+        if commit:
+            self.save_normalized_attributes(data["values_by_attribute"])
+        return instance
 
 
 class AttributeForm(forms.ModelForm):
