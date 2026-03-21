@@ -25,11 +25,10 @@ class Stock(models.Model):
     reorder_level = models.IntegerField(default=1)
     quantity = models.IntegerField(default=0)
     weight = models.DecimalField(max_digits=10, decimal_places=3)
-    sku = models.CharField(max_length=4, blank=True, null=True)
+    sku = models.CharField(max_length=20, blank=True, null=True)
     lot_no = models.CharField(max_length=20, blank=True, null=True)
     serial_no = models.CharField(max_length=8, blank=True, null=True, unique=True)
     huid = models.CharField(max_length=7, null=True, blank=True, unique=True)
-    sku = models.CharField(max_length=20, blank=True, null=True)
     purchase_touch = models.DecimalField(max_digits=10, decimal_places=3)
     purchase_rate = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True
@@ -73,7 +72,7 @@ class Stock(models.Model):
 
     def __str__(self):
         cb = self.current_balance()
-        return f"{self.huid or self.serial_no or ''} | {self.lot_no} |{self.variant} | {self.current_balance()} | {self.status}"
+        return f"{self.huid or self.serial_no or ''} | {self.lot_no} |{self.variant} | {cb} | {self.status}"
 
     def get_absolute_url(self):
         return reverse("product_stock_detail", args=(self.pk,))
@@ -82,7 +81,7 @@ class Stock(models.Model):
         return reverse("product_stock_update", args=(self.pk,))
 
     def get_pure_by_cost(self):
-        return self.get_weight * self.purchase_touch
+        return self.get_weight() * self.purchase_touch
 
     def get_weight(self):
         return self.stockbalance.get_wt_bal()
@@ -135,7 +134,6 @@ class Stock(models.Model):
 
         return StockStatement.objects.create(
             stock=self,
-            stock_batch=self,
             Closing_wt=cb_wt,
             Closing_qty=cb_qty,
             total_wt_in=stock_in["wt"] if stock_in["wt"] else 0.0,
@@ -254,34 +252,36 @@ class Stock(models.Model):
         )
 
     @transaction.atomic
-    def merge(self, lot: int):
+    def merge(self, lot: "Stock"):
         """
-        a lots qty and weight remains same troughout its life,
+        a lots qty and weight remains same throughout its life,
         any add/remove/merge/split on a lot is performed via transactions,
         and current balance of a lot is derived from transaction.
 
-        Return : new_lot:StockLot
+        Return : new_lot:Stock
         """
 
-        if self.variant != lot.variant or self.stock != lot.stock:
+        if self.variant != lot.variant:
             raise Exception(
-                "cannot merge lots from different variant or associated with different stock"
+                "cannot merge lots from different variant"
             )
 
         new_lot = Stock(
             variant=self.variant,
-            weight=lot.weight + self.eight,
+            weight=lot.weight + self.weight,
             quantity=lot.quantity + self.quantity,
         )
+        new_lot.save()
+        
         self.transact(
-            self.weight, self.quantity, journal_entry=None, movement_type="RM"
+            self.weight, self.quantity, movement_type="RM", journal_entry=None
         )
-        lot.transact(lot.weight, lot.quantity, journal_entry=None, movement_type="RM")
+        lot.transact(lot.weight, lot.quantity, movement_type="RM", journal_entry=None)
         new_lot.transact(
             self.weight + lot.weight,
             self.quantity + lot.quantity,
-            journal_entry=None,
             movement_type="AD",
+            journal_entry=None,
         )
         return new_lot
 
@@ -300,9 +300,9 @@ class Stock(models.Model):
                 sku=self.sku,
                 is_unique=is_unique,
             )
-            new_lot.transact(weight=wt, quantity=qty, movement_type="AD")
+            new_lot.transact(weight=wt, quantity=qty, movement_type="AD", journal_entry=None)
 
-            self.transact(weight=wt, quantity=qty, movement_type="SS")
+            self.transact(weight=wt, quantity=qty, movement_type="SS", journal_entry=None)
 
             return new_lot
         raise Exception("Unique lots cant be split")
@@ -331,7 +331,7 @@ class StockTransaction(models.Model):
     movement_type = models.ForeignKey(Movement, on_delete=models.CASCADE, default="P")
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
     journal_entry = models.ForeignKey(
-        JournalEntry, on_delete=models.CASCADE, related_name="stxns"
+        JournalEntry, on_delete=models.CASCADE, related_name="stxns", null=True, blank=True
     )
 
     def __str__(self):
@@ -348,7 +348,7 @@ class StockStatement(models.Model):
     )
     method = models.CharField(max_length=20, choices=ss_method, default="Auto")
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
-    created = models.DateTimeField(auto_now=True)
+    created = models.DateTimeField(auto_now_add=True)
     Closing_wt = models.DecimalField(max_digits=14, decimal_places=3)
     Closing_qty = models.IntegerField()
     total_wt_in = models.DecimalField(max_digits=14, decimal_places=3, default=0.0)
@@ -382,22 +382,3 @@ class StockBalance(models.Model):
 
     def get_wt_bal(self):
         return self.closing_wt + self.in_wt - self.out_wt
-
-
-def merge_lots(variant):
-    """
-    merges all lots in to individual lots representing this stock of its product variant.
-    single operation to merge lots blindly.
-    merge only non huid/non-unique lots
-
-    """
-    all_lots = variant.stocks.exclude(is_unique=True)
-    current = all_lots.current_balance()
-    new_lot = StockLot.objects.create(
-        wt=current.wt, qty=current.qty, stock=current.stock
-    )
-    new_lot.transact(wt=current.wt, qty=current.qty, movement_type="AD")
-    # optimize this by bulk_create
-    for i in all_lots:
-        i.transact(wt=current.wt, qty=current.qty, movement_type="RM")
-    return new_lot
