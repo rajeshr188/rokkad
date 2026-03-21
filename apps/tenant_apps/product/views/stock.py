@@ -1,3 +1,7 @@
+import csv
+from decimal import Decimal, InvalidOperation
+from io import TextIOWrapper
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,13 +23,14 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..forms import (
     InventoryListFilterForm,
+    StockOpeningBalanceImportForm,
     StockInForm,
     StockOutForm,
     StockStatementForm,
     UniqueForm,
 )
 from ..inventory.services import InventoryMovementService
-from ..models import Stock, StockItem, StockStatement, StockTransaction
+from ..models import ProductVariant, Stock, StockItem, StockStatement, StockTransaction
 from ..tables import InventoryTable
 
 
@@ -65,9 +70,8 @@ def merge_lot(request, pk):
 @login_required
 @for_htmx(use_block="content")
 def stock_list(request):
-    form = InventoryListFilterForm(request.GET or None)
-    if not form.is_valid():
-        form = InventoryListFilterForm()
+    form = InventoryListFilterForm(request.GET)
+    form.is_valid()  # all fields are required=False; always succeeds, populates cleaned_data
 
     mode = form.cleaned_data.get("mode") or "lots"
     query = (form.cleaned_data.get("query") or "").strip()
@@ -241,19 +245,20 @@ def stock_select(request, q):
     )
 
 
-def stockin_journalentry(request):
+@login_required
+def stock_in_direct(request):
     # Check if journal_entry_id is provided in the request
     journal_entry_id = request.GET.get("journal_entry_id", None)
     # Initialize the form with the journal_entry_id
     form = StockInForm(request.POST or None)
     if request.method == "POST":
+        journal_entry = None
         if journal_entry_id:
-            # Fetch the existing JournalEntry
+            # Attach to an existing JournalEntry (e.g. from a purchase voucher flow)
             journal_entry = get_object_or_404(JournalEntry, id=journal_entry_id)
-        else:
-            # Create a new JournalEntry
-            journal_entry = JournalEntry.objects.create(desc="Stock In Entry")
-            journal_entry_id = journal_entry.id
+        # When no journal_entry_id is given, journal_entry stays None.
+        # StockTransaction.journal_entry is nullable so this is valid for
+        # direct / non-accounting stock-in operations.
         if form.is_valid():
             stock_transaction = form.save(commit=False)
             stock_transaction.journal_entry = journal_entry
@@ -261,8 +266,129 @@ def stockin_journalentry(request):
             return redirect("product_stock_list")
 
     return render(
-        request, "product/stock/stock_journalentry.html", context={"form": form}
+        request,
+        "product/stock/stock_journalentry.html",
+        context={
+            "form": form,
+            "page_title": "Direct Stock In",
+        },
     )
+
+
+@login_required
+def stock_opening_balance_import(request):
+    form = StockOpeningBalanceImportForm(request.POST or None, request.FILES or None)
+
+    if request.method == "POST" and form.is_valid():
+        csv_file = form.cleaned_data["csv_file"]
+        rows_created = 0
+        errors = []
+
+        try:
+            reader = csv.DictReader(TextIOWrapper(csv_file, encoding="utf-8-sig"))
+            required_columns = {"variant_id", "quantity", "weight"}
+            headers = set(reader.fieldnames or [])
+            missing_columns = required_columns - headers
+            if missing_columns:
+                messages.error(
+                    request,
+                    f"Missing required CSV columns: {', '.join(sorted(missing_columns))}",
+                )
+                return render(
+                    request,
+                    "product/stock/stock_opening_balance_import.html",
+                    {"form": form, "page_title": "Import Opening Balances"},
+                )
+
+            for idx, row in enumerate(reader, start=2):
+                if not any((value or "").strip() for value in row.values()):
+                    continue
+
+                try:
+                    variant_id = int((row.get("variant_id") or "").strip())
+                    quantity = int((row.get("quantity") or "").strip())
+                    weight = Decimal((row.get("weight") or "").strip())
+                    touch_raw = (row.get("touch") or "").strip()
+                    rate_raw = (row.get("rate") or "").strip()
+                    lot_no = (row.get("lot_no") or "").strip() or None
+                    description = (
+                        (row.get("description") or "").strip()
+                        or "Opening balance import"
+                    )
+
+                    variant = get_object_or_404(ProductVariant, pk=variant_id)
+                    stock = Stock.objects.create(
+                        variant=variant,
+                        quantity=quantity,
+                        weight=weight,
+                        lot_no=lot_no,
+                        purchase_touch=Decimal(touch_raw) if touch_raw else None,
+                        purchase_rate=Decimal(rate_raw) if rate_raw else None,
+                        is_unique=False,
+                    )
+                    InventoryMovementService.record_movement(
+                        subject=stock,
+                        movement_type_id="OB",
+                        quantity=quantity,
+                        weight=weight,
+                        description=description,
+                    )
+                    rows_created += 1
+                except (ValueError, InvalidOperation) as exc:
+                    errors.append(f"Row {idx}: {exc}")
+                except Exception as exc:  # keep import resilient and continue
+                    errors.append(f"Row {idx}: {exc}")
+
+        except UnicodeDecodeError:
+            messages.error(request, "CSV must be UTF-8 encoded.")
+            return render(
+                request,
+                "product/stock/stock_opening_balance_import.html",
+                {"form": form, "page_title": "Import Opening Balances"},
+            )
+
+        if rows_created:
+            messages.success(request, f"Imported {rows_created} opening balance rows.")
+        if errors:
+            preview = " | ".join(errors[:5])
+            suffix = "" if len(errors) <= 5 else f" (+{len(errors) - 5} more)"
+            messages.warning(request, f"Some rows failed: {preview}{suffix}")
+
+        return redirect("product_stock_list")
+
+    return render(
+        request,
+        "product/stock/stock_opening_balance_import.html",
+        {"form": form, "page_title": "Import Opening Balances"},
+    )
+
+
+@login_required
+def stock_opening_balance_template_csv(request):
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = (
+        'attachment; filename="opening_balance_template.csv"'
+    )
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "variant_id",
+        "quantity",
+        "weight",
+        "touch",
+        "rate",
+        "lot_no",
+        "description",
+    ])
+    writer.writerow(["101", "1", "10.500", "91.600", "7200.000", "OB-001", "Opening balance lot"]) 
+
+    return response
+
+
+@login_required
+def stockin_journalentry(request):
+    """Backward-compatible alias for deprecated view name."""
+    return stock_in_direct(request)
 
 
 @for_htmx(use_block="content")
