@@ -103,10 +103,7 @@ class Stock(models.Model):
 
         # Now self.pk is not None
         if self.huid:
-            self.is_unique = True
             self.serial_no = self.huid
-        if not self.serial_no and self.is_unique:
-            self.serial_no = "JE" + encode(self.pk)
         if not self.lot_no:
             if self.purchase_item is not None:
                 self.lot_no = "-".join(
@@ -297,9 +294,6 @@ class Stock(models.Model):
         Returns:
             New Stock or StockItem instance
         """
-        if self.is_unique:
-            raise ValueError("Cannot split a unique item; only split lots")
-
         from ..inventory.services import InventoryMovementService
 
         splits = InventoryMovementService.split_lot(

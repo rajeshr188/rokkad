@@ -33,8 +33,6 @@ from ..tables import InventoryTable
 @for_htmx(use_block="content")
 def split_lot(request, pk):
     stock = get_object_or_404(Stock, pk=pk)
-    if stock.is_unique:
-        messages.error(request, "Cannot split unique stock")
 
     if request.method == "POST":
         form = UniqueForm(request.POST or None)
@@ -233,7 +231,10 @@ def audit_stock(request):
 
 def stock_select(request, q):
     objects = Stock.objects.filter(
-        Q(variant__name__icontains=q) | Q(barcode__icontains=q) | Q(huid__contains=q)
+        Q(variant__name__icontains=q)
+        | Q(lot_no__icontains=q)
+        | Q(serial_no__icontains=q)
+        | Q(huid__icontains=q)
     )
     return render(
         request, "product/stock/stock_select.html", context={"result": objects}

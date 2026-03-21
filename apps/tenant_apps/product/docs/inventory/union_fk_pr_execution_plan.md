@@ -326,7 +326,7 @@ Remove old branching and obsolete artifacts after cutover stability.
 - [x] PR-6 implemented on `dea-kiss` (working tree, not yet committed)
 - [x] PR-7 implemented on `dea-kiss`
 - [x] PR-8 implemented on `dea-kiss`
-- [ ] PR-9 merged
+- [x] PR-9 implemented on `dea-kiss`
 
 ### Progress Notes (as of 2026-03-21)
 - PR-1 through PR-3 are complete on feature branch `dea-kiss` and ready for PR creation/review.
@@ -339,6 +339,8 @@ Remove old branching and obsolete artifacts after cutover stability.
 - Physical audit now records system vs physical counts on `StockStatement` and reconciles via explicit `AD`/`R` stock transactions.
 - Stock statement screens now expose status and variance for physical counts.
 - Stock listing now supports lots-only, items-only, and unified inventory modes with shared filters for variant, non-zero balance, and audit age.
+- `is_unique` write-path branching is retired; it remains as a legacy data flag pending future column cleanup.
+- Added inventory integrity management command `check_inventory_data_quality` and lock-path hardening for movement posting.
 
 ## Notes
 - Keep PRs focused; avoid combining schema, service, and UI in one PR.

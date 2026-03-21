@@ -28,6 +28,14 @@ class InventoryMovementService:
             raise ValueError(f"Subject must be Stock or StockItem, got {type(subject)}")
 
     @staticmethod
+    def _lock_subject(subject):
+        """Lock subject row for write-side consistency under concurrent posting."""
+        if isinstance(subject, Stock):
+            Stock.objects.select_for_update().filter(pk=subject.pk).exists()
+        elif isinstance(subject, StockItem):
+            StockItem.objects.select_for_update().filter(pk=subject.pk).exists()
+
+    @staticmethod
     def _statement_queryset(subject):
         InventoryMovementService._validate_subject(subject)
         if isinstance(subject, Stock):
@@ -115,6 +123,7 @@ class InventoryMovementService:
             Movement.DoesNotExist: If movement_type_id is not found
         """
         InventoryMovementService._validate_subject(subject)
+        InventoryMovementService._lock_subject(subject)
 
         if quantity == 0 and weight == Decimal(0):
             raise ValueError("At least one of quantity or weight must be non-zero")
@@ -160,7 +169,7 @@ class InventoryMovementService:
         Split a parent lot into child lots/items with movements recorded.
 
         Args:
-            parent_stock: Stock instance (must not be is_unique=True)
+            parent_stock: Stock instance (lot)
             splits: List of dicts:
                 {
                     'quantity': int,
@@ -175,11 +184,8 @@ class InventoryMovementService:
             List of created (Stock or StockItem) instances (same order as splits)
 
         Raises:
-            ValueError: If parent is unique, balances don't match, or splits invalid
+            ValueError: If balances don't match or split specs are invalid
         """
-        if parent_stock.is_unique:
-            raise ValueError("Cannot split a unique item; only split lots")
-
         # Validate splits sum to parent balance
         current_balance = parent_stock.current_balance()
         splits_qty = sum(s.get('quantity', 0) for s in splits)
@@ -227,7 +233,6 @@ class InventoryMovementService:
                     quantity=split_qty,
                     purchase_touch=parent_stock.purchase_touch,
                     purchase_rate=parent_stock.purchase_rate,
-                    is_unique=False,
                     parent_stock=parent_stock,
                     sku=parent_stock.sku,
                 )
@@ -265,20 +270,17 @@ class InventoryMovementService:
         Merge multiple lots into a single new lot with movements recorded.
 
         Args:
-            lots: List of Stock instances (cannot include unique items)
+            lots: List of Stock instances
             reason: Optional reason code
 
         Returns:
             New Stock instance (merged lot)
 
         Raises:
-            ValueError: If any lot is_unique or list is empty
+            ValueError: If list is empty or variants mismatch
         """
         if not lots:
             raise ValueError("Must provide at least one lot to merge")
-
-        if any(lot.is_unique for lot in lots):
-            raise ValueError("Cannot merge unique items; merge only Stock lots")
 
         # Get variant from first lot (validate all match)
         variant = lots[0].variant
@@ -300,7 +302,6 @@ class InventoryMovementService:
             weight=total_wt,
             purchase_touch=lots[0].purchase_touch,
             purchase_rate=lots[0].purchase_rate,
-            is_unique=False,
             sku=lots[0].sku,
         )
 
