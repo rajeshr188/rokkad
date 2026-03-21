@@ -29,7 +29,7 @@ class Stock(models.Model):
     lot_no = models.CharField(max_length=20, blank=True, null=True)
     serial_no = models.CharField(max_length=8, blank=True, null=True, unique=True)
     huid = models.CharField(max_length=7, null=True, blank=True, unique=True)
-    purchase_touch = models.DecimalField(max_digits=10, decimal_places=3)
+    purchase_touch = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
     purchase_rate = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True
     )
@@ -448,7 +448,7 @@ class StockItem(models.Model):
     huid = models.CharField(max_length=7, null=True, blank=True, unique=True)
     
     # Sourcing
-    purchase_touch = models.DecimalField(max_digits=10, decimal_places=3)
+    purchase_touch = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
     purchase_rate = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True
     )

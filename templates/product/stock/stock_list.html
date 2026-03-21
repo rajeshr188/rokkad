@@ -13,7 +13,8 @@
   <h1 class="h2">Inventory List ({{ inventory_mode|title }})</h1>
   <div class="btn-toolbar mb-2 mb-md-0">
     <div class="btn-group mr-2">
-        <a class="btn btn-primary mr-2" href="{% url 'stock_in_journalentry' %}" role="button">Add Stock</a>
+        <a class="btn btn-primary mr-2" href="{% url 'stock_in_direct' %}" role="button">Add Stock</a>
+        <a class="btn btn-primary mr-2" href="{% url 'stock_opening_balance_import' %}" role="button">Import Opening CSV</a>
         <a class="btn btn-primary" href="{% url 'stock_journalentry' %}" role="button">Remove stock</a>
         <a class="btn btn-primary" href="{% export_url 'ods' %}" role="button">export</a>
     </div>
