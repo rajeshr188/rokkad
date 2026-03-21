@@ -53,7 +53,27 @@ Behavior:
 - Aggregates in/out movements by movement direction.
 - Writes one statement row for subject.
 
-### 5) `get_balance(subject)`
+### 5) `record_physical_count(subject, physical_qty, physical_wt)`
+Creates a physical `StockStatement` without mutating movement history.
+
+Behavior:
+- Snapshots system quantity/weight at count time.
+- Stores physical counted quantity/weight.
+- Stores variance quantity/weight.
+- Marks the statement `Reconciled` when variance is zero, otherwise `Discrepancy`.
+
+### 6) `reconcile_statement(statement)`
+Closes a physical discrepancy by posting an explicit inventory adjustment movement.
+
+Behavior:
+- Uses `AD` when physical is above system.
+- Uses `R` when physical is below system.
+- Marks the physical statement `Reconciled` and timestamps it.
+
+### 7) `perform_physical_audit(subject, physical_qty, physical_wt, reconcile=False)`
+Convenience wrapper to record a physical count and optionally reconcile it immediately.
+
+### 8) `get_balance(subject)`
 Returns current quantity/weight balance for a lot/item.
 
 ## Invariants (Do Not Break)
@@ -106,6 +126,12 @@ Implications:
 - Compatibility lot view: `stock_balance` now selects lot rows from `inventory_balance`
 - `Stock.current_balance()` and `StockItem.current_balance()` read from the canonical SQL view with Python fallback
 - Movement direction is derived from `Movement.direction`; no hardcoded in/out movement lists remain in the SQL read model
+
+## Physical Audit Rules
+- Physical statements preserve both system values and counted values.
+- Reconciliation posts a new stock movement instead of editing historical transactions.
+- Physical statements keep `Closing_qty` and `Closing_wt` at the pre-reconciliation system balance so later adjustment transactions remain visible in the audit trail.
+- Zero-variance counts are closed without posting an adjustment movement.
 
 ## Test Expectations
 At minimum, each integrating domain must cover:

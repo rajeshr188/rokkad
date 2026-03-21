@@ -11,6 +11,7 @@ StockTransaction and StockStatement records with proper status management.
 from decimal import Decimal
 from django.db import models, transaction
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from ...models import Stock, StockItem, StockTransaction, StockStatement, Movement
 
@@ -20,6 +21,68 @@ class InventoryMovementService:
     Centralized service for recording inventory movements.
     All direct StockTransaction creation should go through this service.
     """
+
+    @staticmethod
+    def _validate_subject(subject):
+        if not isinstance(subject, (Stock, StockItem)):
+            raise ValueError(f"Subject must be Stock or StockItem, got {type(subject)}")
+
+    @staticmethod
+    def _statement_queryset(subject):
+        InventoryMovementService._validate_subject(subject)
+        if isinstance(subject, Stock):
+            return subject.stockstatement_set.all()
+        return subject.statements.all()
+
+    @staticmethod
+    def _transaction_queryset(subject):
+        InventoryMovementService._validate_subject(subject)
+        if isinstance(subject, Stock):
+            return subject.stocktransaction_set.all()
+        return subject.transactions.all()
+
+    @staticmethod
+    def _build_checkpoint_snapshot(subject):
+        stmt_qs = InventoryMovementService._statement_queryset(subject)
+        txn_qs = InventoryMovementService._transaction_queryset(subject)
+
+        try:
+            last_stmt = stmt_qs.latest()
+            ls_wt = last_stmt.Closing_wt
+            ls_qty = last_stmt.Closing_qty
+        except StockStatement.DoesNotExist:
+            last_stmt = None
+            ls_wt = Decimal("0.000")
+            ls_qty = 0
+
+        if last_stmt:
+            txn_qs = txn_qs.filter(created__gte=last_stmt.created)
+
+        in_txns = txn_qs.filter(movement_type__direction='+').aggregate(
+            qty=Coalesce(models.Sum('quantity', output_field=models.IntegerField()), 0),
+            wt=Coalesce(
+                models.Sum('weight', output_field=models.DecimalField()),
+                Decimal('0.000')
+            ),
+        )
+        out_txns = txn_qs.filter(movement_type__direction='-').aggregate(
+            qty=Coalesce(models.Sum('quantity', output_field=models.IntegerField()), 0),
+            wt=Coalesce(
+                models.Sum('weight', output_field=models.DecimalField()),
+                Decimal('0.000')
+            ),
+        )
+
+        closing_qty = ls_qty + (in_txns['qty'] - out_txns['qty'])
+        closing_wt = ls_wt + (in_txns['wt'] - out_txns['wt'])
+
+        return {
+            'last_stmt': last_stmt,
+            'in_txns': in_txns,
+            'out_txns': out_txns,
+            'closing_qty': closing_qty,
+            'closing_wt': closing_wt,
+        }
 
     @staticmethod
     @transaction.atomic
@@ -51,8 +114,7 @@ class InventoryMovementService:
             ValueError: If subject is invalid or movement parameters are invalid
             Movement.DoesNotExist: If movement_type_id is not found
         """
-        if not isinstance(subject, (Stock, StockItem)):
-            raise ValueError(f"Subject must be Stock or StockItem, got {type(subject)}")
+        InventoryMovementService._validate_subject(subject)
 
         if quantity == 0 and weight == Decimal(0):
             raise ValueError("At least one of quantity or weight must be non-zero")
@@ -288,58 +350,21 @@ class InventoryMovementService:
         Raises:
             ValueError: If subject is invalid
         """
-        if not isinstance(subject, (Stock, StockItem)):
-            raise ValueError(f"Subject must be Stock or StockItem, got {type(subject)}")
-
-        # Get last checkpoint
-        try:
-            last_stmt = subject.statements.latest()
-            ls_wt = last_stmt.Closing_wt
-            ls_qty = last_stmt.Closing_qty
-        except StockStatement.DoesNotExist:
-            last_stmt = None
-            ls_wt = Decimal(0)
-            ls_qty = 0
-
-        # Get transactions since last checkpoint
-        txn_qs = StockTransaction.objects.all()
-        if isinstance(subject, Stock):
-            txn_qs = txn_qs.filter(stock=subject)
-        else:  # StockItem
-            txn_qs = txn_qs.filter(stock_item=subject)
-
-        if last_stmt:
-            txn_qs = txn_qs.filter(created__gte=last_stmt.created)
-
-        # Separate in and out movements
-        in_txns = txn_qs.filter(movement_type__direction='+').aggregate(
-            qty=Coalesce(models.Sum('quantity', output_field=models.IntegerField()), 0),
-            wt=Coalesce(
-                models.Sum('weight', output_field=models.DecimalField()),
-                Decimal('0.0')
-            ),
-        )
-        out_txns = txn_qs.filter(movement_type__direction='-').aggregate(
-            qty=Coalesce(models.Sum('quantity', output_field=models.IntegerField()), 0),
-            wt=Coalesce(
-                models.Sum('weight', output_field=models.DecimalField()),
-                Decimal('0.0')
-            ),
-        )
-
-        # Compute closing balance
-        closing_qty = ls_qty + (in_txns['qty'] - out_txns['qty'])
-        closing_wt = ls_wt + (in_txns['wt'] - out_txns['wt'])
+        InventoryMovementService._validate_subject(subject)
+        snapshot = InventoryMovementService._build_checkpoint_snapshot(subject)
 
         # Create statement with union FK semantics
         stmt_kwargs = {
             'method': method,
-            'Closing_qty': closing_qty,
-            'Closing_wt': closing_wt,
-            'total_qty_in': in_txns['qty'],
-            'total_wt_in': in_txns['wt'],
-            'total_qty_out': out_txns['qty'],
-            'total_wt_out': out_txns['wt'],
+            'status': StockStatement.StatusChoices.RECORDED,
+            'Closing_qty': snapshot['closing_qty'],
+            'Closing_wt': snapshot['closing_wt'],
+            'total_qty_in': snapshot['in_txns']['qty'],
+            'total_wt_in': snapshot['in_txns']['wt'],
+            'total_qty_out': snapshot['out_txns']['qty'],
+            'total_wt_out': snapshot['out_txns']['wt'],
+            'system_qty': snapshot['closing_qty'],
+            'system_wt': snapshot['closing_wt'],
         }
 
         if isinstance(subject, Stock):
@@ -350,6 +375,105 @@ class InventoryMovementService:
         stmt = StockStatement.objects.create(**stmt_kwargs)
 
         return stmt
+
+    @staticmethod
+    @transaction.atomic
+    def record_physical_count(subject, physical_qty, physical_wt):
+        InventoryMovementService._validate_subject(subject)
+
+        physical_wt = Decimal(str(physical_wt))
+        if physical_qty < 0 or physical_wt < 0:
+            raise ValueError("Physical counts cannot be negative")
+
+        snapshot = InventoryMovementService._build_checkpoint_snapshot(subject)
+        variance_qty = physical_qty - snapshot['closing_qty']
+        variance_wt = physical_wt - snapshot['closing_wt']
+        status = (
+            StockStatement.StatusChoices.RECONCILED
+            if variance_qty == 0 and variance_wt == Decimal('0.000')
+            else StockStatement.StatusChoices.DISCREPANCY
+        )
+
+        stmt_kwargs = {
+            'method': 'Physical',
+            'status': status,
+            'Closing_qty': snapshot['closing_qty'],
+            'Closing_wt': snapshot['closing_wt'],
+            'total_qty_in': snapshot['in_txns']['qty'],
+            'total_wt_in': snapshot['in_txns']['wt'],
+            'total_qty_out': snapshot['out_txns']['qty'],
+            'total_wt_out': snapshot['out_txns']['wt'],
+            'system_qty': snapshot['closing_qty'],
+            'system_wt': snapshot['closing_wt'],
+            'physical_qty': physical_qty,
+            'physical_wt': physical_wt,
+            'variance_qty': variance_qty,
+            'variance_wt': variance_wt,
+        }
+
+        if status == StockStatement.StatusChoices.RECONCILED:
+            stmt_kwargs['reconciled_at'] = timezone.now()
+
+        if isinstance(subject, Stock):
+            stmt_kwargs['stock'] = subject
+        else:
+            stmt_kwargs['stock_item'] = subject
+
+        return StockStatement.objects.create(**stmt_kwargs)
+
+    @staticmethod
+    @transaction.atomic
+    def reconcile_statement(statement):
+        if statement.method != 'Physical':
+            raise ValueError('Only physical statements can be reconciled')
+
+        if statement.status == StockStatement.StatusChoices.RECONCILED:
+            return []
+
+        variance = statement.get_variance_balance()
+        variance_qty = variance['qty']
+        variance_wt = Decimal(str(variance['wt']))
+
+        if variance_qty == 0 and variance_wt == Decimal('0.000'):
+            statement.status = StockStatement.StatusChoices.RECONCILED
+            statement.reconciled_at = timezone.now()
+            statement.save(update_fields=['status', 'reconciled_at'])
+            return []
+
+        signs = set()
+        if variance_qty:
+            signs.add(1 if variance_qty > 0 else -1)
+        if variance_wt:
+            signs.add(1 if variance_wt > 0 else -1)
+        if len(signs) > 1:
+            raise ValueError('Quantity and weight variance must move in the same direction')
+
+        movement_type_id = 'AD' if 1 in signs else 'R'
+        txn = InventoryMovementService.record_movement(
+            subject=statement.subject,
+            movement_type_id=movement_type_id,
+            quantity=abs(variance_qty),
+            weight=abs(variance_wt),
+            reason='PHYSICAL_RECONCILIATION',
+            description=f'Physical reconciliation for statement #{statement.pk}',
+        )
+        statement.status = StockStatement.StatusChoices.RECONCILED
+        statement.reconciled_at = timezone.now()
+        statement.save(update_fields=['status', 'reconciled_at'])
+        return [txn]
+
+    @staticmethod
+    @transaction.atomic
+    def perform_physical_audit(subject, physical_qty, physical_wt, reconcile=False):
+        statement = InventoryMovementService.record_physical_count(
+            subject=subject,
+            physical_qty=physical_qty,
+            physical_wt=physical_wt,
+        )
+        adjustments = []
+        if reconcile and statement.has_variance:
+            adjustments = InventoryMovementService.reconcile_statement(statement)
+        return statement, adjustments
 
     @staticmethod
     def get_balance(subject):

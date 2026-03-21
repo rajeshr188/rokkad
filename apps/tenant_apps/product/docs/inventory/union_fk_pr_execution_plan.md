@@ -324,7 +324,7 @@ Remove old branching and obsolete artifacts after cutover stability.
 - [ ] PR-4 merged
 - [x] PR-5 implemented on `dea-kiss` (working tree, not yet committed)
 - [x] PR-6 implemented on `dea-kiss` (working tree, not yet committed)
-- [ ] PR-7 merged
+- [x] PR-7 implemented on `dea-kiss`
 - [ ] PR-8 merged
 - [ ] PR-9 merged
 
@@ -336,6 +336,8 @@ Remove old branching and obsolete artifacts after cutover stability.
 - Sales lines now support union-subject deduction via `Stock` or `StockItem`.
 - Canonical read path now uses SQL views `inventory_txn_projection` and `inventory_balance`.
 - Legacy `stock_balance` view is now a compatibility projection sourced from `inventory_balance` for lot rows.
+- Physical audit now records system vs physical counts on `StockStatement` and reconciles via explicit `AD`/`R` stock transactions.
+- Stock statement screens now expose status and variance for physical counts.
 
 ## Notes
 - Keep PRs focused; avoid combining schema, service, and UI in one PR.

@@ -14,7 +14,8 @@ from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import StockFilter
-from ..forms import StockInForm, StockOutForm, UniqueForm
+from ..forms import StockInForm, StockOutForm, StockStatementForm, UniqueForm
+from ..inventory.services import InventoryMovementService
 from ..models import Stock, StockStatement, StockTransaction
 from ..tables import StockTable
 
@@ -89,21 +90,44 @@ class StockStatementListView(LoginRequiredMixin, ListView):
     template_name = "product/stock/stockstatement_list.html"
     model = StockStatement
 
+    def get_queryset(self):
+        return (
+            StockStatement.objects.select_related(
+                "stock",
+                "stock__variant",
+                "stock_item",
+                "stock_item__variant",
+            )
+            .order_by("-created")
+        )
+
 
 class StockStatementView(TemplateView):
     template_name = "product/stock/add_stockstatement.html"
 
     def get(self, *args, **kwargs):
-        formset = stockstatement_formset(queryset=StockStatement.objects.none())
-        return self.render_to_response({"stockstatement_formset": formset})
+        form = StockStatementForm()
+        return self.render_to_response({"form": form})
 
     def post(self, *args, **kwargs):
-        formset = stockstatement_formset(data=self.request.POST)
-        if formset.is_valid():
-            formset.save()
-            return redirect(reverse_lazy("stockstatement_list"))
+        form = StockStatementForm(data=self.request.POST)
+        if form.is_valid():
+            subject = form.cleaned_data["stock"] or form.cleaned_data["stock_item"]
+            statement, adjustments = InventoryMovementService.perform_physical_audit(
+                subject=subject,
+                physical_qty=form.cleaned_data["physical_qty"],
+                physical_wt=form.cleaned_data["physical_wt"],
+                reconcile=form.cleaned_data["reconcile_now"],
+            )
+            if adjustments:
+                messages.success(self.request, f"Physical audit recorded and reconciled for statement #{statement.pk}.")
+            elif statement.has_variance:
+                messages.warning(self.request, f"Physical audit recorded with discrepancy for statement #{statement.pk}.")
+            else:
+                messages.success(self.request, f"Physical audit recorded for statement #{statement.pk}.")
+            return redirect(reverse_lazy("product_stockstatement_list"))
 
-        return self.render_to_response({"stockstatement_formset": formset})
+        return self.render_to_response({"form": form})
 
 
 @login_required

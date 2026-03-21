@@ -231,6 +231,21 @@ class StockStatementAdminForm(forms.ModelForm):
 
 class StockStatementAdmin(admin.ModelAdmin):
     form = StockStatementAdminForm
+    list_display = [
+        "id",
+        "created",
+        "method",
+        "status",
+        "stock",
+        "stock_item",
+        "Closing_qty",
+        "Closing_wt",
+        "physical_qty",
+        "physical_wt",
+        "variance_qty",
+        "variance_wt",
+        "reconciled_at",
+    ]
 
 
 admin.site.register(StockStatement, StockStatementAdmin)

@@ -447,15 +447,39 @@ class UniqueForm(CrispyFormMixin, forms.Form):
 
 
 class StockStatementForm(CrispyFormMixin, forms.Form):
-    stock = forms.ModelChoiceField(queryset=Stock.objects.all(), widget=Select2Widget)
+    stock = forms.ModelChoiceField(
+        queryset=Stock.objects.all(),
+        widget=Select2Widget,
+        required=False,
+    )
+    stock_item = forms.ModelChoiceField(
+        queryset=StockItem.objects.all(),
+        widget=Select2Widget,
+        required=False,
+    )
+    physical_qty = forms.IntegerField(min_value=0)
+    physical_wt = forms.DecimalField(max_digits=14, decimal_places=3, min_value=0)
+    reconcile_now = forms.BooleanField(required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setup_form_helper()
+        self.setup_form_helper(
+            Layout(
+                Row(Column("stock", css_class="col-md-6"), Column("stock_item", css_class="col-md-6")),
+                Row(Column("physical_qty", css_class="col-md-6"), Column("physical_wt", css_class="col-md-6")),
+                "reconcile_now",
+            )
+        )
 
-    class Meta:
-        model = StockStatement
-        fields = ["stock", "Closing_wt", "Closing_qty"]
+    def clean(self):
+        cleaned_data = super().clean()
+        stock = cleaned_data.get("stock")
+        stock_item = cleaned_data.get("stock_item")
+
+        if bool(stock) == bool(stock_item):
+            raise forms.ValidationError("Select exactly one inventory subject: stock or stock item.")
+
+        return cleaned_data
 
 
 class PricingTierForm(CrispyFormMixin, forms.ModelForm):
