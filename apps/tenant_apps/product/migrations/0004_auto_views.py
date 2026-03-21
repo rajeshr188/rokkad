@@ -68,14 +68,14 @@ class Migration(migrations.Migration):
             FROM product_stocktransaction
             WHERE 
                 product_stocktransaction.stock_id = product_stock.id 
-                AND ((stock_st.created isnull) or product_stocktransaction.created >= stock_st.created or 1>0)
+                AND ((stock_st.created isnull) or product_stocktransaction.created >= stock_st.created)
                 AND (product_stocktransaction.movement_type_id::text = ANY (ARRAY['P'::character varying::text, 'SR'::character varying::text, 'AD'::character varying::text, 'AR'::character varying::text]))) AS in_qty,
             
             ( SELECT COALESCE(sum(product_stocktransaction.quantity), 0::bigint) AS sum
             FROM product_stocktransaction
             WHERE 
             product_stocktransaction.stock_id = product_stock.id 
-                AND ((stock_st.created isnull) or product_stocktransaction.created >= stock_st.created or 1>0)
+                AND ((stock_st.created isnull) or product_stocktransaction.created >= stock_st.created)
                 AND (product_stocktransaction.movement_type_id::text <> ALL (ARRAY['P'::character varying::text, 'SR'::character varying::text, 'AD'::character varying::text, 'AR'::character varying::text]))) AS out_qty,
             
             ( SELECT COALESCE(sum(product_stocktransaction.weight), 0.0) AS sum
