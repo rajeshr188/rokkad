@@ -100,6 +100,13 @@ Implications:
 - Sales `InvoiceItem` supports either `Stock` or `StockItem` as the inventory subject.
 - Internal approval handoff remains non-accounting and may use null `journal_entry`.
 
+## Current Read Model Status
+- Canonical transaction projection view: `inventory_txn_projection`
+- Canonical balance view: `inventory_balance`
+- Compatibility lot view: `stock_balance` now selects lot rows from `inventory_balance`
+- `Stock.current_balance()` and `StockItem.current_balance()` read from the canonical SQL view with Python fallback
+- Movement direction is derived from `Movement.direction`; no hardcoded in/out movement lists remain in the SQL read model
+
 ## Test Expectations
 At minimum, each integrating domain must cover:
 - Post and unpost parity.

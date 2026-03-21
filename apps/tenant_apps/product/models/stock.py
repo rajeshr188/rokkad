@@ -92,10 +92,10 @@ class Stock(models.Model):
         return self.get_weight() * self.purchase_touch
 
     def get_weight(self):
-        return self.stockbalance.get_wt_bal()
+        return self.current_balance()["wt"]
 
     def get_quantity(self):
-        return self.stockbalance.get_qty_bal()
+        return self.current_balance()["qty"]
 
     def save(self, *args, **kwargs):
         # Save without lot_no and serial_no
@@ -164,9 +164,12 @@ class Stock(models.Model):
         )
 
     def current_balance(self):
-        """
-        compute balance from last audit and append following
-        """
+        from ..inventory.services.balances import get_subject_balance
+
+        return get_subject_balance(self, self._current_balance_from_transactions)
+
+    def _current_balance_from_transactions(self):
+        """Fallback balance computation when SQL view is unavailable."""
         bal = {}
         Closing_wt: Decimal = 0
         Closing_qty: int = 0
@@ -262,6 +265,8 @@ class Stock(models.Model):
         Raises:
             ValueError: If variants don't match
         """
+        from ..inventory.services import InventoryMovementService
+
         return InventoryMovementService.merge_lots(
             lots=[self, lot],
             reason='MERGE'
@@ -283,6 +288,8 @@ class Stock(models.Model):
         """
         if self.is_unique:
             raise ValueError("Cannot split a unique item; only split lots")
+
+        from ..inventory.services import InventoryMovementService
 
         splits = InventoryMovementService.split_lot(
             parent_stock=self,
@@ -438,12 +445,17 @@ class StockItem(models.Model):
         Create a checkpoint (StockStatement) for this unique item.
         Delegates to inventory service layer.
         """
+        from ..inventory.services import InventoryMovementService
+
         return InventoryMovementService.create_checkpoint(self, method='Auto')
 
     def current_balance(self):
-        """
-        Compute balance from transactions for unique item.
-        """
+        from ..inventory.services.balances import get_subject_balance
+
+        return get_subject_balance(self, self._current_balance_from_transactions)
+
+    def _current_balance_from_transactions(self):
+        """Fallback balance computation when SQL view is unavailable."""
         try:
             ls = self.statements.latest()
             Closing_wt = ls.Closing_wt
@@ -499,6 +511,8 @@ class StockItem(models.Model):
         Returns:
             StockTransaction instance
         """
+        from ..inventory.services import InventoryMovementService
+
         return InventoryMovementService.record_movement(
             subject=self,
             movement_type_id=movement_type,
