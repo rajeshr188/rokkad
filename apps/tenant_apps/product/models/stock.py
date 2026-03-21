@@ -123,32 +123,12 @@ class Stock(models.Model):
         super().save(update_fields=["lot_no", "serial_no"])
 
     def audit(self):
-        try:
-            last_statement = self.stockstatement_set.latest()
-        except StockStatement.DoesNotExist:
-            last_statement = None
-
-        if last_statement is not None:
-            ls_wt = last_statement.Closing_wt
-            ls_qty = last_statement.Closing_qty
-        else:
-            ls_wt = 0
-            ls_qty = 0
-
-        stock_in = self.stock_in_txns(last_statement)
-        stock_out = self.stock_out_txns(last_statement)
-        cb_wt = ls_wt + (stock_in["wt"] - stock_out["wt"])
-        cb_qty = ls_qty + (stock_in["qty"] - stock_out["qty"])
-
-        return StockStatement.objects.create(
-            stock=self,
-            Closing_wt=cb_wt,
-            Closing_qty=cb_qty,
-            total_wt_in=stock_in["wt"] if stock_in["wt"] else 0.0,
-            total_qty_in=stock_in["qty"] if stock_in["qty"] else 0,
-            total_wt_out=stock_out["wt"] if stock_out["wt"] else 0.0,
-            total_qty_out=stock_out["qty"] if stock_out["qty"] else 0,
-        )
+        """
+        Create a checkpoint (StockStatement) for this lot.
+        Delegates to inventory service layer.
+        """
+        from ..inventory.services import InventoryMovementService
+        return InventoryMovementService.create_checkpoint(self, method='Auto')
 
     def stock_in_txns(self, ls):
         """
@@ -211,20 +191,28 @@ class Stock(models.Model):
         """
         return (self.created - self.updated).days
 
-    def transact(self, weight, quantity, movement_type, journal_entry):
+    def transact(self, weight, quantity, movement_type, journal_entry=None):
         """
-        Modifies weight and quantity associated with the stock based on movement type
-        Returns none
+        Record a movement for this stock.
+        Delegates to inventory service layer.
+
+        Args:
+            weight: Decimal weight
+            quantity: Integer quantity
+            movement_type: Movement.id string (e.g., 'P', 'S', 'AD')
+            journal_entry: Optional JournalEntry for accounting
+
+        Returns:
+            StockTransaction instance
         """
-        t = StockTransaction.objects.create(
-            stock=self,
-            weight=weight,
-            quantity=quantity,
+        from ..inventory.services import InventoryMovementService
+        return InventoryMovementService.record_movement(
+            subject=self,
             movement_type_id=movement_type,
+            quantity=quantity,
+            weight=weight,
             journal_entry=journal_entry,
         )
-        self.update_status()
-        return t
 
     # @classmethod
     # def with_balance(cls):
@@ -262,58 +250,50 @@ class Stock(models.Model):
     @transaction.atomic
     def merge(self, lot: "Stock"):
         """
-        a lots qty and weight remains same throughout its life,
-        any add/remove/merge/split on a lot is performed via transactions,
-        and current balance of a lot is derived from transaction.
+        Merge another lot into a new combined lot.
+        Delegates to inventory service layer.
 
-        Return : new_lot:Stock
+        Args:
+            lot: Stock instance to merge with self
+
+        Returns:
+            New Stock instance (merged lot)
+
+        Raises:
+            ValueError: If variants don't match
         """
-
-        if self.variant != lot.variant:
-            raise Exception(
-                "cannot merge lots from different variant"
-            )
-
-        new_lot = Stock(
-            variant=self.variant,
-            weight=lot.weight + self.weight,
-            quantity=lot.quantity + self.quantity,
+        return InventoryMovementService.merge_lots(
+            lots=[self, lot],
+            reason='MERGE'
         )
-        new_lot.save()
-        
-        self.transact(
-            self.weight, self.quantity, movement_type="RM", journal_entry=None
-        )
-        lot.transact(lot.weight, lot.quantity, movement_type="RM", journal_entry=None)
-        new_lot.transact(
-            self.weight + lot.weight,
-            self.quantity + lot.quantity,
-            movement_type="AD",
-            journal_entry=None,
-        )
-        return new_lot
 
     @transaction.atomic
     def split(self, wt: Decimal, qty: int, is_unique: bool = False):
         """
-        split a lot by creating a new lot and transfering the wt & qty to new lot
+        Split this lot into a child lot/item.
+        Delegates to inventory service layer.
+
+        Args:
+            wt: Decimal weight for split
+            qty: Integer quantity for split
+            is_unique: If True, creates StockItem; if False, creates Stock
+
+        Returns:
+            New Stock or StockItem instance
         """
-        if not self.is_unique and self.quantity > qty and self.weight > wt:
-            new_lot = Stock.objects.create(
-                variant=self.variant,
-                weight=wt,
-                quantity=qty,
-                purchase_touch=self.purchase_touch,
-                purchase_rate=self.purchase_rate,
-                sku=self.sku,
-                is_unique=is_unique,
-            )
-            new_lot.transact(weight=wt, quantity=qty, movement_type="AD", journal_entry=None)
+        if self.is_unique:
+            raise ValueError("Cannot split a unique item; only split lots")
 
-            self.transact(weight=wt, quantity=qty, movement_type="SS", journal_entry=None)
-
-            return new_lot
-        raise Exception("Unique lots cant be split")
+        splits = InventoryMovementService.split_lot(
+            parent_stock=self,
+            splits=[{
+                'quantity': qty,
+                'weight': wt,
+                'is_unique': is_unique,
+            }],
+            reason='SPLIT'
+        )
+        return splits[0] if splits else None
 
 
 class Movement(models.Model):
@@ -453,6 +433,13 @@ class StockItem(models.Model):
     def get_absolute_url(self):
         return reverse("product_stockitem_detail", args=(self.pk,))
 
+    def audit(self):
+        """
+        Create a checkpoint (StockStatement) for this unique item.
+        Delegates to inventory service layer.
+        """
+        return InventoryMovementService.create_checkpoint(self, method='Auto')
+
     def current_balance(self):
         """
         Compute balance from transactions for unique item.
@@ -500,17 +487,25 @@ class StockItem(models.Model):
 
     def transact(self, weight, quantity, movement_type, journal_entry=None):
         """
-        Record movement for this unique item.
+        Record a movement for this unique item.
+        Delegates to inventory service layer.
+
+        Args:
+            weight: Decimal weight
+            quantity: Integer quantity (typically 1 for unique items)
+            movement_type: Movement.id string (e.g., 'P', 'S', 'AD')
+            journal_entry: Optional JournalEntry for accounting
+
+        Returns:
+            StockTransaction instance
         """
-        t = StockTransaction.objects.create(
-            stock_item=self,
-            weight=weight,
-            quantity=quantity,
+        return InventoryMovementService.record_movement(
+            subject=self,
             movement_type_id=movement_type,
+            quantity=quantity,
+            weight=weight,
             journal_entry=journal_entry,
         )
-        self.update_status()
-        return t
 
     def update_status(self):
         """Update status based on current balance."""
