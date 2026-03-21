@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.db import models, transaction
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
@@ -16,9 +17,31 @@ from moneyed import Money
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import AccountStatement  # , JournalTypes
 from apps.tenant_apps.dea.models import JournalEntry
+from apps.tenant_apps.dea.models import Voucher, VoucherStatus
 from apps.tenant_apps.dea.utils.currency import Balance
-from apps.tenant_apps.product.models import ProductVariant, Stock
+from apps.tenant_apps.product.models import ProductVariant, Stock, StockItem
 from apps.tenant_apps.terms.models import PaymentTerm
+
+
+def _resolve_posted_journal_entry(doc):
+    """Return the latest journal entry from the currently posted voucher for a doc."""
+    if not getattr(doc, "pk", None):
+        return None
+
+    content_type = ContentType.objects.get_for_model(doc, for_concrete_model=False)
+    voucher = (
+        Voucher.objects.filter(
+            doc_content_type=content_type,
+            doc_object_id=doc.pk,
+            status=VoucherStatus.POSTED,
+        )
+        .order_by("-last_posted_at", "-id")
+        .first()
+    )
+    if not voucher:
+        return None
+
+    return voucher.journal_entries.order_by("-id").first()
 
 
 class PurchaseQueryset(models.QuerySet):
@@ -217,21 +240,27 @@ class Purchase(models.Model):
             self._create_currency_balances()
 
     def _calculate_ratecut_total(self):
-        cash = self.purchase_items.aggregate(total=Coalesce(Sum("cash_balance"), 0))[
-            "total"
-        ]
-        gold = (
-            self.purchase_items.filter(metal_balance_currency="USD").aggregate(
-                total=Coalesce(Sum("metal_balance"), 0)
-            )["total"]
-            * self.gold_rate
+        cash_balance = sum(
+            (item.cash_balance for item in self.purchase_items.all()),
+            Money(0, "INR"),
         )
-        silver = (
-            self.purchase_items.filter(metal_balance_currency="EUR").aggregate(
-                total=Coalesce(Sum("metal_balance"), 0)
-            )["total"]
-            * self.silver_rate
+        gold_balance = sum(
+            (
+                item.metal_balance
+                for item in self.purchase_items.filter(metal_balance_currency="USD")
+            ),
+            Money(0, "USD"),
         )
+        silver_balance = sum(
+            (
+                item.metal_balance
+                for item in self.purchase_items.filter(metal_balance_currency="EUR")
+            ),
+            Money(0, "EUR"),
+        )
+        cash = cash_balance.amount
+        gold = gold_balance.amount * self.gold_rate
+        silver = silver_balance.amount * self.silver_rate
 
         total = cash + gold + silver
         if self.is_gst:
@@ -239,27 +268,36 @@ class Purchase(models.Model):
         return total
 
     def _create_currency_balances(self):
-        aggregates = self.purchase_items.aggregate(
-            cash=Coalesce(Sum("cash_balance"), 0),
-            gold=Coalesce(
-                Sum("metal_balance", filter=Q(metal_balance_currency="USD")), 0
+        cash_total = sum(
+            (item.cash_balance for item in self.purchase_items.all()),
+            Money(0, "INR"),
+        )
+        gold_total = sum(
+            (
+                item.metal_balance
+                for item in self.purchase_items.filter(metal_balance_currency="USD")
             ),
-            silver=Coalesce(
-                Sum("metal_balance", filter=Q(metal_balance_currency="EUR")), 0
+            Money(0, "USD"),
+        )
+        silver_total = sum(
+            (
+                item.metal_balance
+                for item in self.purchase_items.filter(metal_balance_currency="EUR")
             ),
+            Money(0, "EUR"),
         )
 
-        if aggregates["cash"]:
+        if cash_total.amount:
             PurchaseBalance.objects.create(
-                purchase=self, amount=Money(aggregates["cash"], "INR")
+                purchase=self, amount=cash_total
             )
-        if aggregates["gold"]:
+        if gold_total.amount:
             PurchaseBalance.objects.create(
-                purchase=self, amount=Money(aggregates["gold"], "USD")
+                purchase=self, amount=gold_total
             )
-        if aggregates["silver"]:
+        if silver_total.amount:
             PurchaseBalance.objects.create(
-                purchase=self, amount=Money(aggregates["silver"], "EUR")
+                purchase=self, amount=silver_total
             )
 
     def get_balance(self):
@@ -457,19 +495,15 @@ class Purchase(models.Model):
         return lt, at
 
     def get_journal_entry(self, desc=None):
-        if self.journal_entries.exists():
-            return self.journal_entries.latest()
-        else:
-            return JournalEntry.objects.create(
-                content_object=self, desc=self.__class__.__name__
-            )
+        return _resolve_posted_journal_entry(self)
 
     def delete_journal_entry(self):
-        for entry in self.journal_entries.all():
-            entry.delete()
+        return None
 
     def delete_txns(self):
         je = self.get_journal_entry()
+        if je is None:
+            return
         at = je.atxns.all()
         lt = je.ltxns.all()
 
@@ -477,33 +511,12 @@ class Purchase(models.Model):
         lt.delete()
 
     def create_transactions(self):
-        # if no je or je older than statement create je and txns else update txns
-        # if not self.journal_entries.exists() or self.journal_entries.latest().created < self.supplier.account.accountstatements.latest('created').created:
-
-        # je = self.journal_entries.latest('created') or None
-        # statement = self.supplier.account.accountstatements.latest('created') or None
-        # if je and (statement is None or statement.created < je.created):
-        #     self.delete_journal_entry()
-
-        lt, at = self.get_transactions()
-        if lt and at:
-            journal_entry = self.get_journal_entry()
-            journal_entry.transact(lt, at)
+        # Accounting is voucher-driven now. Purchase no longer creates JournalEntry directly.
+        return self.get_journal_entry()
 
     def reverse_transactions(self):
-        # i.e if je is older than the latest statement then reverse the transactions else do nothing
-        try:
-            statement = self.supplier.account.accountstatements.latest("created")
-        except AccountStatement.DoesNotExist:
-            statement = None
-        journal_entry = self.get_journal_entry()
-
-        if journal_entry and statement and journal_entry.created < statement.created:
-            lt, at = self.get_transactions()
-            if lt and at:
-                journal_entry.untransact(lt, at)
-        else:
-            self.delete_txns()
+        # Accounting reversal is voucher-driven now. Keep legacy signal path harmless.
+        return self.get_journal_entry()
 
     def is_changed(self, old_instance):
         # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
@@ -624,35 +637,85 @@ class PurchaseItem(models.Model):
         ) != model_to_dict(old_instance, fields=["product", "quantity", "weight"])
 
     def get_journal_entry(self, desc=None):
-        if self.invoice.journal_entries.exists():
-            return self.invoice.journal_entries.latest()
-        else:
-            return JournalEntry.objects.create(
-                content_object=self.invoice,
-                desc=self.invoice.__class__.__name__,
+        return self.invoice.get_journal_entry(desc=desc)
+
+    def is_unique_unit(self):
+        return bool(self.huid)
+
+    def get_inventory_subject(self):
+        if self.is_unique_unit():
+            return self.stock_items.order_by("-id").first()
+        return getattr(self, "stock_item", None)
+
+    def _get_purchase_rate(self):
+        if self.product.product.category.name == "Gold":
+            return self.invoice.gold_rate
+        return self.invoice.silver_rate
+
+    def _sync_inventory_subject(self):
+        purchase_rate = self._get_purchase_rate()
+
+        if self.is_unique_unit():
+            subject = self.stock_items.order_by("-id").first()
+            if subject is None:
+                subject = StockItem.objects.create(
+                    purchase_item=self,
+                    variant=self.product,
+                    weight=self.weight,
+                    quantity=1,
+                    purchase_touch=self.touch,
+                    purchase_rate=purchase_rate,
+                    huid=self.huid,
+                    serial_no=self.huid,
+                )
+            else:
+                subject.purchase_item = self
+                subject.variant = self.product
+                subject.weight = self.weight
+                subject.quantity = 1
+                subject.purchase_touch = self.touch
+                subject.purchase_rate = purchase_rate
+                subject.huid = self.huid
+                subject.serial_no = self.huid
+                subject.save()
+            return subject
+
+        subject = getattr(self, "stock_item", None)
+        if subject is None:
+            subject = Stock.objects.create(
+                purchase_item=self,
+                variant=self.product,
+                weight=self.weight,
+                quantity=self.quantity,
+                purchase_touch=self.touch,
+                purchase_rate=purchase_rate,
+                is_unique=False,
             )
+        else:
+            subject.purchase_item = self
+            subject.variant = self.product
+            subject.weight = self.weight
+            subject.quantity = self.quantity
+            subject.purchase_touch = self.touch
+            subject.purchase_rate = purchase_rate
+            subject.is_unique = False
+            subject.save()
+        return subject
 
     @transaction.atomic()
     def post(self):
-        print("Posting the purchase item")
-        stock, created = Stock.objects.get_or_create(
-            purchase_item=self,
-            variant=self.product,
+        from apps.tenant_apps.product.inventory.services import InventoryMovementService
+
+        subject = self._sync_inventory_subject()
+        quantity = 1 if isinstance(subject, StockItem) else self.quantity
+
+        return InventoryMovementService.record_movement(
+            subject=subject,
+            movement_type_id="P",
+            quantity=quantity,
             weight=self.weight,
-            quantity=self.quantity,
-            purchase_touch=self.touch,
-            purchase_rate=self.invoice.gold_rate
-            if self.product.product.category.name == "Gold"
-            else self.invoice.silver_rate,
-            huid=self.huid,
-        )
-        je = self.get_journal_entry()
-        print(f"je:{je}")
-        stock.transact(
-            weight=self.weight,
-            quantity=self.quantity,
-            movement_type="P",
-            journal_entry=je,
+            journal_entry=self.get_journal_entry(),
+            description=f"Purchase item {self.pk}",
         )
 
     @transaction.atomic()
@@ -660,27 +723,28 @@ class PurchaseItem(models.Model):
         """
         add lot back to stock lot if item is_return,
         remove lot from stocklot if item is not return item"""
-        print("Unposting the purchase item")
-        je = self.get_journal_entry()
-        print(f"je:{je}")
-        try:
-            # self.stock_item.delete()
-            lot = self.stock_item
-            x = lot.transact(
-                journal_entry=je,
-                weight=lot.weight,
-                quantity=lot.quantity,
-                movement_type="PR",
-            )
-            print(x)
+        from apps.tenant_apps.product.inventory.services import InventoryMovementService
 
-        except Stock.DoesNotExist:
-            print("Oops!while Unposting there was no said stock.  Try again...")
+        subject = self.get_inventory_subject()
+        if subject is None:
+            return None
+
+        quantity = 1 if isinstance(subject, StockItem) else subject.quantity
+        return InventoryMovementService.record_movement(
+            subject=subject,
+            movement_type_id="PR",
+            quantity=quantity,
+            weight=subject.weight,
+            journal_entry=self.get_journal_entry(),
+            description=f"Purchase item reversal {self.pk}",
+        )
 
     def delete(self, delete_stock=False, *args, **kwargs):
         purchase = self.invoice
-        if delete_stock and hasattr(self, "stock_item"):
-            self.stock_item.delete()
+        if delete_stock:
+            subject = self.get_inventory_subject()
+            if subject is not None:
+                subject.delete()
         super().delete(*args, **kwargs)
         purchase.save()
 

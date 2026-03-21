@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
@@ -37,29 +38,8 @@ def reverse_stock_entry(sender, instance, **kwargs):
         # Retrieve the old data from the database
         old_instance = sender.objects.get(pk=instance.pk)
         if old_instance.is_changed(instance):
-            if old_instance.stock_item.stockstatement_set.exists():
-                old_instance.unpost()
-                instance.post()
-            else:
-                old_instance.stock_item.stocktransaction_set.all().delete()
-                stock_item = old_instance.stock_item
-                stock_item.purchase_item = instance
-                stock_item.variant = instance.product
-                stock_item.weight = instance.weight
-                stock_item.quantity = instance.quantity
-                stock_item.purchase_touch = instance.touch
-                stock_item.purchase_rate = (
-                    instance.invoice.gold_rate
-                    if instance.product.product.category.name == "Gold"
-                    else instance.invoice.silver_rate
-                )
-                stock_item.huid = instance.huid
-                stock_item.save()
-                stock_item.transact(
-                    weight=instance.weight,
-                    quantity=instance.quantity,
-                    movement_type="P",
-                )
+            old_instance.unpost()
+            instance.post()
 
 
 @receiver(post_save, sender=PurchaseItem)
