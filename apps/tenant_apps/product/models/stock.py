@@ -65,6 +65,14 @@ class Stock(models.Model):
         null=True,
         blank=True,
     )
+    parent_stock = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="children",
+        help_text="Parent lot if this was created via merge/split operation"
+    )
     objects = StockManager()
 
     class Meta:
@@ -329,13 +337,19 @@ class StockTransaction(models.Model):
     weight = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     description = models.TextField(null=True, blank=True)
     movement_type = models.ForeignKey(Movement, on_delete=models.CASCADE, default="P")
-    stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, null=True, blank=True)
+    stock_item = models.ForeignKey(
+        'StockItem', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='transactions',
+        help_text="Union FK: either stock_id or stock_item_id must be set"
+    )
     journal_entry = models.ForeignKey(
         JournalEntry, on_delete=models.CASCADE, related_name="stxns", null=True, blank=True
     )
 
     def __str__(self):
-        return f"{self.stock} {self.movement_type} {self.quantity} {self.weight}"
+        subject = self.stock or self.stock_item
+        return f"{subject} {self.movement_type} {self.quantity} {self.weight}"
 
     def get_update_url(self):
         return reverse("product_stocktransaction_update", args=(self.pk,))
@@ -347,7 +361,12 @@ class StockStatement(models.Model):
         ("Physical", "Physical"),
     )
     method = models.CharField(max_length=20, choices=ss_method, default="Auto")
-    stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, null=True, blank=True)
+    stock_item = models.ForeignKey(
+        'StockItem', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='statements',
+        help_text="Union FK: either stock_id or stock_item_id must be set"
+    )
     created = models.DateTimeField(auto_now_add=True)
     Closing_wt = models.DecimalField(max_digits=14, decimal_places=3)
     Closing_qty = models.IntegerField()
@@ -361,7 +380,146 @@ class StockStatement(models.Model):
         get_latest_by = ["created"]
 
     def __str__(self):
-        return f"{self.stock} - qty:{self.Closing_qty} wt:{self.Closing_wt}"
+        subject = self.stock or self.stock_item
+        return f"{subject} - qty:{self.Closing_qty} wt:{self.Closing_wt}"
+
+
+class StockItem(models.Model):
+    """
+    Represents a unique/trackable stock unit for high-value items.
+    Each StockItem is a single unit with its own lineage and transaction history.
+    """
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    quantity = models.IntegerField(default=1)  # Always 1 for unique units
+    weight = models.DecimalField(max_digits=10, decimal_places=3)
+    
+    # Identification
+    serial_no = models.CharField(max_length=8, blank=True, null=True, unique=True)
+    huid = models.CharField(max_length=7, null=True, blank=True, unique=True)
+    
+    # Sourcing
+    purchase_touch = models.DecimalField(max_digits=10, decimal_places=3)
+    purchase_rate = models.DecimalField(
+        max_digits=10, decimal_places=3, null=True, blank=True
+    )
+    purchase_item = models.ForeignKey(
+        "purchase.PurchaseItem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stock_items",
+        help_text="Original purchase source if applicable"
+    )
+    
+    # Variant and lineage
+    variant = models.ForeignKey(
+        "product.ProductVariant",
+        on_delete=models.CASCADE,
+        related_name="stock_items",
+        null=True,
+        blank=True,
+    )
+    parent_stock = models.ForeignKey(
+        Stock,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="split_items",
+        help_text="Parent lot if created via split operation"
+    )
+    
+    # Status
+    class StockItemStatusChoices(models.TextChoices):
+        AVAILABLE = "Available", "Available"
+        SOLD = "Sold", "Sold"
+        DAMAGED = "Damaged", "Damaged"
+        LOST = "Lost", "Lost"
+        RESERVED = "Reserved", "Reserved"
+
+    status = models.CharField(
+        max_length=10,
+        choices=StockItemStatusChoices.choices,
+        default=StockItemStatusChoices.AVAILABLE,
+    )
+    
+    class Meta:
+        ordering = ("-created",)
+
+    def __str__(self):
+        cb = self.current_balance()
+        return f"{self.huid or self.serial_no or f'Item#{self.pk}'} | {self.variant} | qty:{cb['qty']} wt:{cb['wt']} | {self.status}"
+
+    def get_absolute_url(self):
+        return reverse("product_stockitem_detail", args=(self.pk,))
+
+    def current_balance(self):
+        """
+        Compute balance from transactions for unique item.
+        """
+        try:
+            ls = self.statements.latest()
+            Closing_wt = ls.Closing_wt
+            Closing_qty = ls.Closing_qty
+        except StockStatement.DoesNotExist:
+            Closing_wt = 0
+            Closing_qty = 0
+
+        in_txns = self.stock_in_txns(ls if 'ls' in locals() else None)
+        out_txns = self.stock_out_txns(ls if 'ls' in locals() else None)
+        return {
+            'wt': Closing_wt + (in_txns['wt'] - out_txns['wt']),
+            'qty': Closing_qty + (in_txns['qty'] - out_txns['qty'])
+        }
+
+    def stock_in_txns(self, ls=None):
+        """Return all in transactions since last audit."""
+        st = self.transactions.all()
+        if ls:
+            st = st.filter(created__gte=ls.created)
+        st = st.filter(movement_type__direction="+")
+        return st.aggregate(
+            qty=Coalesce(models.Sum("quantity", output_field=models.IntegerField()), 0),
+            wt=Coalesce(
+                models.Sum("weight", output_field=models.DecimalField()), Decimal(0.0)
+            ),
+        )
+
+    def stock_out_txns(self, ls=None):
+        """Return all out transactions since last audit."""
+        st = self.transactions.all()
+        if ls:
+            st = st.filter(created__gte=ls.created)
+        st = st.filter(movement_type__direction="-")
+        return st.aggregate(
+            qty=Coalesce(models.Sum("quantity", output_field=models.IntegerField()), 0),
+            wt=Coalesce(
+                models.Sum("weight", output_field=models.DecimalField()), Decimal(0.0)
+            ),
+        )
+
+    def transact(self, weight, quantity, movement_type, journal_entry=None):
+        """
+        Record movement for this unique item.
+        """
+        t = StockTransaction.objects.create(
+            stock_item=self,
+            weight=weight,
+            quantity=quantity,
+            movement_type_id=movement_type,
+            journal_entry=journal_entry,
+        )
+        self.update_status()
+        return t
+
+    def update_status(self):
+        """Update status based on current balance."""
+        cb = self.current_balance()
+        if cb['wt'] <= 0.0 or cb['qty'] <= 0:
+            self.status = 'Sold'
+        else:
+            self.status = 'Available'
+        self.save(update_fields=['status'])
 
 
 class StockBalance(models.Model):
