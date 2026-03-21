@@ -11,43 +11,17 @@
 {% endblock %}
 
 {% block workspace_content %}
-<script src="{% static 'js/jquery.formset.js' %}"></script>
 {{form.media}}
 <div class="container col-lg-9 mt-4">
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
-            <h1 class="h5 mb-3">Add a new stock statement</h1>
-            <form id="form-container" method="POST">
+            <h1 class="h5 mb-3">Record a physical stock count</h1>
+            <form method="POST">
                 {% csrf_token %}
-                {{stockstatement_formset.management_form}}
-                {% for form in stockstatement_formset %}
-                <div class="inline {{stockstatement_formset.prefix}} mb-3 border rounded p-3 bg-light-subtle">
-                    {{form|crispy}}
-                </div>
-                {% endfor %}
-                <button type="submit" class="btn btn-primary">Create Stock Statement</button>
+                {{form|crispy}}
+                <button type="submit" class="btn btn-primary">Record Physical Count</button>
             </form>
         </div>
     </div>
 </div>
-<script type="text/javascript">
-    $(".inline.{{ stockstatement_formset.prefix }}").formset({
-            prefix: "{{ stockstatement_formset.prefix }}",
-            //formTemplate: $("#formset-template").clone(),
-            // initialize newly created heavy fields on the added callback
-            added: function ($row) {
-                // $row.find('.stock select').select2();
-                $row.find('.delete-row').addClass('btn-sm btn-danger');
-            },
-            removed: function ($row) {
-            },
-
-        });
-
-        $('.stock select').select2();
-        $('.add-row').addClass('btn-sm btn-success');
-        $('.delete-row').addClass('btn-sm btn-danger');
-</script>
-
-
 {% endblock %}

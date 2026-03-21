@@ -130,6 +130,17 @@ class Stock(models.Model):
         from ..inventory.services import InventoryMovementService
         return InventoryMovementService.create_checkpoint(self, method='Auto')
 
+    def physical_audit(self, physical_qty, physical_wt, reconcile=False):
+        from ..inventory.services import InventoryMovementService
+
+        statement, _ = InventoryMovementService.perform_physical_audit(
+            subject=self,
+            physical_qty=physical_qty,
+            physical_wt=physical_wt,
+            reconcile=reconcile,
+        )
+        return statement
+
     def stock_in_txns(self, ls):
         """
         return all the In transactions since last audit"""
@@ -347,7 +358,18 @@ class StockStatement(models.Model):
         ("Auto", "Auto"),
         ("Physical", "Physical"),
     )
+
+    class StatusChoices(models.TextChoices):
+        RECORDED = "Recorded", "Recorded"
+        DISCREPANCY = "Discrepancy", "Discrepancy"
+        RECONCILED = "Reconciled", "Reconciled"
+
     method = models.CharField(max_length=20, choices=ss_method, default="Auto")
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.RECORDED,
+    )
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE, null=True, blank=True)
     stock_item = models.ForeignKey(
         'StockItem', on_delete=models.CASCADE, null=True, blank=True,
@@ -361,14 +383,60 @@ class StockStatement(models.Model):
     total_wt_out = models.DecimalField(max_digits=14, decimal_places=3, default=0.0)
     total_qty_in = models.IntegerField(default=0.0)
     total_qty_out = models.IntegerField(default=0.0)
+    system_wt = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True)
+    system_qty = models.IntegerField(null=True, blank=True)
+    physical_wt = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True)
+    physical_qty = models.IntegerField(null=True, blank=True)
+    variance_wt = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True)
+    variance_qty = models.IntegerField(null=True, blank=True)
+    reconciled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ("created",)
         get_latest_by = ["created"]
 
     def __str__(self):
-        subject = self.stock or self.stock_item
-        return f"{subject} - qty:{self.Closing_qty} wt:{self.Closing_wt}"
+        return f"{self.subject} - {self.method}/{self.status} qty:{self.Closing_qty} wt:{self.Closing_wt}"
+
+    @property
+    def subject(self):
+        return self.stock or self.stock_item
+
+    def get_system_balance(self):
+        return {
+            "qty": self.system_qty if self.system_qty is not None else self.Closing_qty,
+            "wt": self.system_wt if self.system_wt is not None else self.Closing_wt,
+        }
+
+    def get_physical_balance(self):
+        if self.physical_qty is None and self.physical_wt is None:
+            return None
+        return {
+            "qty": self.physical_qty,
+            "wt": self.physical_wt,
+        }
+
+    def get_variance_balance(self):
+        if self.variance_qty is not None or self.variance_wt is not None:
+            return {
+                "qty": self.variance_qty or 0,
+                "wt": self.variance_wt or Decimal("0.000"),
+            }
+
+        physical = self.get_physical_balance()
+        if not physical:
+            return {"qty": 0, "wt": Decimal("0.000")}
+
+        system = self.get_system_balance()
+        return {
+            "qty": physical["qty"] - system["qty"],
+            "wt": physical["wt"] - system["wt"],
+        }
+
+    @property
+    def has_variance(self):
+        variance = self.get_variance_balance()
+        return variance["qty"] != 0 or variance["wt"] != Decimal("0.000")
 
 
 class StockItem(models.Model):
@@ -448,6 +516,17 @@ class StockItem(models.Model):
         from ..inventory.services import InventoryMovementService
 
         return InventoryMovementService.create_checkpoint(self, method='Auto')
+
+    def physical_audit(self, physical_qty, physical_wt, reconcile=False):
+        from ..inventory.services import InventoryMovementService
+
+        statement, _ = InventoryMovementService.perform_physical_audit(
+            subject=self,
+            physical_qty=physical_qty,
+            physical_wt=physical_wt,
+            reconcile=reconcile,
+        )
+        return statement
 
     def current_balance(self):
         from ..inventory.services.balances import get_subject_balance
