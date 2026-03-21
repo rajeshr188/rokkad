@@ -4,6 +4,15 @@
   <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
     {%render_field field|add_class:"form-control"%}
 
+    {% if helper_text %}
+      <div class="form-text d-flex align-items-center gap-2">
+        {% if helper_badge %}
+          <span class="badge {{ helper_badge_class|default:'bg-secondary' }}">{{ helper_badge }}</span>
+        {% endif %}
+        <span>{{ helper_text }}</span>
+      </div>
+    {% endif %}
+
     {% for error in field.errors %}
       <div class="invalid-feedback">
         {{ error }}

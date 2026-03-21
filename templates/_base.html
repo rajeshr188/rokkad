@@ -92,6 +92,8 @@ See templates/layouts/base.html for the current base template.
                   hx-swap="innerHTML" hx-push-url="true">Stock Statement</a></li>
               <li><a class="dropdown-item" href="" hx-get="{%url 'product_pricingtier_list' %}" hx-target="#content"
                   hx-swap="innerHTML" hx-push-url="true">Pricing Tier</a></li>
+                <li><a class="dropdown-item" href="" hx-get="{%url 'product_price_override_list' %}" hx-target="#content"
+                  hx-swap="innerHTML" hx-push-url="true">Price Overrides</a></li>
             </ul>
           </li>
           <!-- <li class="nav-item dropdown">

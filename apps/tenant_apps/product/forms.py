@@ -7,6 +7,8 @@ from django_select2 import forms as s2forms
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 from mptt.forms import TreeNodeChoiceField
 
+from apps.tenant_apps.contact.models import Customer
+
 from .attributes import *
 from .models import *
 
@@ -489,15 +491,47 @@ class InventoryListFilterForm(CrispyFormMixin, forms.Form):
         ("unified", "Unified"),
     )
 
-    mode = forms.ChoiceField(choices=MODE_CHOICES, initial="lots", required=False)
-    query = forms.CharField(required=False)
+    mode = forms.ChoiceField(
+        choices=MODE_CHOICES,
+        initial="lots",
+        required=False,
+        label="View Mode",
+        help_text=(
+            "Lots — bulk batches; "
+            "Items — individual serialised units (HUID/barcode); "
+            "Unified — both together."
+        ),
+    )
+    query = forms.CharField(
+        required=False,
+        label="Search",
+        help_text=(
+            "Case-insensitive match against: HUID, lot number, serial number, "
+            "variant SKU, and variant name. Works across both lots and items."
+        ),
+    )
     variant = forms.ModelChoiceField(
         queryset=ProductVariant.objects.all(),
         widget=Select2Widget,
         required=False,
+        label="Variant",
+        help_text="Filter to a single product variant. Leave blank to show all variants.",
     )
-    non_zero_only = forms.BooleanField(required=False, initial=False)
-    audit_age_days = forms.IntegerField(required=False, min_value=0)
+    non_zero_only = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Non-zero balance only",
+        help_text="Hide lots/items whose current quantity and weight are both zero.",
+    )
+    audit_age_days = forms.IntegerField(
+        required=False,
+        min_value=0,
+        label="Unaudited for ≥ N days",
+        help_text=(
+            "Show only lots/items whose last physical statement is older than N days, "
+            "or that have never been audited. Leave blank to show all."
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -530,12 +564,78 @@ class PricingTierForm(CrispyFormMixin, forms.ModelForm):
 
 class PricingTierProductPriceForm(CrispyFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        pricing_tier = kwargs.pop("pricing_tier", None)
         super().__init__(*args, **kwargs)
         self.setup_form_helper()
+        self.pricing_tier = pricing_tier
+
+        if pricing_tier is not None and self.instance.pk is None:
+            self.fields["pricing_tier"].initial = pricing_tier
+            self.fields["pricing_tier"].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pricing_tier = cleaned_data.get("pricing_tier") or self.pricing_tier
+        product = cleaned_data.get("product")
+
+        if pricing_tier and product:
+            qs = PricingTierProductPrice.objects.filter(
+                pricing_tier=pricing_tier,
+                product=product,
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError(
+                    "A price already exists for this tier and product. Please edit the existing entry."
+                )
+        return cleaned_data
 
     class Meta:
         model = PricingTierProductPrice
         fields = "__all__"
+
+
+class PriceOverrideForm(CrispyFormMixin, forms.ModelForm):
+    contact = forms.ModelChoiceField(
+        queryset=Customer.objects.all(),
+        widget=Select2Widget,
+    )
+    product = forms.ModelChoiceField(
+        queryset=ProductVariant.objects.all(),
+        widget=Select2Widget,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setup_form_helper(
+            Layout(
+                Row(Column("contact", css_class="col-md-6"), Column("product", css_class="col-md-6")),
+                Row(
+                    Column("purchase_price", css_class="col-md-4"),
+                    Column("selling_price", css_class="col-md-4"),
+                    Column("price_tier", css_class="col-md-4"),
+                ),
+            )
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        contact = cleaned_data.get("contact")
+        product = cleaned_data.get("product")
+        if contact and product:
+            qs = Price.objects.filter(contact=contact, product=product)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError(
+                    "A contact override already exists for this contact and product."
+                )
+        return cleaned_data
+
+    class Meta:
+        model = Price
+        fields = ["contact", "product", "purchase_price", "selling_price", "price_tier"]
 
 
 class StockInForm(CrispyFormMixin, forms.ModelForm):
@@ -544,7 +644,7 @@ class StockInForm(CrispyFormMixin, forms.ModelForm):
         queryset=ProductVariant.objects.all(), widget=Select2Widget
     )
     rate = forms.DecimalField(max_digits=10, decimal_places=3)
-    touch = forms.DecimalField(max_digits=10, decimal_places=3)
+    touch = forms.DecimalField(max_digits=10, decimal_places=3, required=False)
     description = forms.CharField(widget=forms.Textarea(attrs={"rows": 2, "cols": 15}))
     stock = forms.ModelChoiceField(
         queryset=Stock.objects.all(), widget=StockWidget, required=False
@@ -605,6 +705,7 @@ class StockInForm(CrispyFormMixin, forms.ModelForm):
                 variant=variant,
                 sku=sku,
                 purchase_touch=touch,
+                purchase_rate=rate,
             )
             print(f"stock: {stock}")
             cleaned_data["stock"] = stock
@@ -649,6 +750,23 @@ class StockOutForm(CrispyFormMixin, forms.ModelForm):
 
         instance.stock.update()
         return instance
+
+
+class StockOpeningBalanceImportForm(CrispyFormMixin, forms.Form):
+    csv_file = forms.FileField(
+        help_text=(
+            "CSV columns: variant_id,quantity,weight and optional "
+            "touch,rate,lot_no,description"
+        )
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setup_form_helper(
+            Layout(
+                "csv_file",
+            )
+        )
 
 
 class AttributeValueSelectionForm(CrispyFormMixin, forms.Form):

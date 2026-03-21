@@ -6,7 +6,8 @@ from django.urls import reverse
 from django_tables2.config import RequestConfig
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.product.models import PricingTierProductPrice, ProductVariant
+from apps.tenant_apps.product.models import ProductVariant
+from apps.tenant_apps.product.services import resolve_effective_price
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import PurchaseFilter
@@ -212,27 +213,28 @@ def get_product_price(request):
     product = ProductVariant.objects.get(id=request.GET.get("product", ""))
     contact = Customer.objects.get(id=request.GET.get("supplier", ""))
 
-    # Traverse the pricing tier hierarchy to get the effective selling price for the customer and product
-    pricing_tier = contact.pricing_tier
-    purchase_price = 0
-    while pricing_tier:
-        pricing_tier_price = PricingTierProductPrice.objects.filter(
-            pricing_tier=pricing_tier, product=product
-        ).first()
-        if pricing_tier_price:
-            purchase_price = pricing_tier_price.purchase_price
-            break
-        else:
-            pricing_tier = pricing_tier.parent
-
-    # Fallback to individual price for customer and product
-    # if not pricing_tier:
-    #     price = Price.objects.filter(product=product, customer=customer).first()
-    #     selling_price = price.selling_price if price else None
+    effective_price = resolve_effective_price(contact=contact, product=product)
+    purchase_price = effective_price.purchase_price if effective_price else 0
+    helper_text = "No pricing rule found. Defaulted to 0."
+    helper_badge = "Fallback"
+    helper_badge_class = "bg-secondary"
+    if effective_price:
+        if effective_price.source == "contact_override":
+            helper_text = "Resolved from contact override after tier lookup."
+            helper_badge = "Override"
+            helper_badge_class = "bg-success"
+        elif effective_price.source == "tier":
+            tier_name = effective_price.tier.name if effective_price.tier else "-"
+            helper_text = f"Resolved from tier '{tier_name}'."
+            helper_badge = "Tier"
+            helper_badge_class = "bg-primary"
 
     form = PurchaseItemForm(initial={"touch": purchase_price})
     context = {
         "field": form["touch"],
+        "helper_text": helper_text,
+        "helper_badge": helper_badge,
+        "helper_badge_class": helper_badge_class,
     }
     return render(request, "girvi/partials/field.html", context)
 
