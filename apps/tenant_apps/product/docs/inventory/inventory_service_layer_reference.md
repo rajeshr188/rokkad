@@ -134,6 +134,23 @@ Implications:
 - Physical statements keep `Closing_qty` and `Closing_wt` at the pre-reconciliation system balance so later adjustment transactions remain visible in the audit trail.
 - Zero-variance counts are closed without posting an adjustment movement.
 
+## Cleanup and Hardening Notes
+- `is_unique` is now treated as a legacy data flag on `Stock`; write-time behavior no longer branches on it.
+- Movement posting now acquires row-level locks on the target `Stock`/`StockItem` before writing transactions.
+- `stock_select` now queries real `Stock` identifiers (`lot_no`, `serial_no`, `huid`) and no longer references removed fields.
+- Added operational data quality command: `manage.py check_inventory_data_quality`
+
+Recommended operational usage:
+- `manage.py check_inventory_data_quality --sample-size 200`
+- `manage.py check_inventory_data_quality --sample-size 500 --strict`
+
+The command checks:
+- Union-FK integrity (`StockTransaction`/`StockStatement` dual-null/dual-set)
+- Legacy `Stock.is_unique` footprint
+- HUID placement across `Stock` vs `StockItem`
+- `stock_balance` projection parity sampling
+- Pending physical discrepancy statement counts
+
 ## Test Expectations
 At minimum, each integrating domain must cover:
 - Post and unpost parity.
