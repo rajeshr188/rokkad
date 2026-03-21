@@ -323,7 +323,7 @@ Remove old branching and obsolete artifacts after cutover stability.
 - [x] PR-3 implemented on `dea-kiss` (commit: `63f1de5`)
 - [ ] PR-4 merged
 - [x] PR-5 implemented on `dea-kiss` (working tree, not yet committed)
-- [ ] PR-6 merged
+- [x] PR-6 implemented on `dea-kiss` (working tree, not yet committed)
 - [ ] PR-7 merged
 - [ ] PR-8 merged
 - [ ] PR-9 merged
@@ -334,6 +334,8 @@ Remove old branching and obsolete artifacts after cutover stability.
 - `StockTransaction.journal_entry` is nullable, enabling non-accounting/internal movements.
 - Purchase and sales business docs now resolve JournalEntry from posted Voucher instead of creating JournalEntry directly.
 - Sales lines now support union-subject deduction via `Stock` or `StockItem`.
+- Canonical read path now uses SQL views `inventory_txn_projection` and `inventory_balance`.
+- Legacy `stock_balance` view is now a compatibility projection sourced from `inventory_balance` for lot rows.
 
 ## Notes
 - Keep PRs focused; avoid combining schema, service, and UI in one PR.
