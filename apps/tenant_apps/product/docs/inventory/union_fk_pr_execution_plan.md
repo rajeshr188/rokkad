@@ -5,6 +5,7 @@ This document breaks the Union FK inventory refactor into small, mergeable PRs w
 
 Related reference:
 - `union_fk_refactor_plan.md` (architecture and phased roadmap)
+- `inventory_service_layer_reference.md` (service contracts, usage rules, and voucher integration)
 
 ## PR Strategy
 - Keep each PR deployable and reversible.
@@ -128,7 +129,11 @@ Route purchase posting through unified movement API with lot/item target support
 - Support purchase lines producing:
   - lot (`Stock`) default
   - unique unit (`StockItem`) where applicable
-- Ensure journal linkage optional for internal moves, preserved for accounting moves
+- Move to voucher-first accounting flow:
+  - purchase business document creates/updates Voucher
+  - Voucher posting creates JournalEntry
+  - inventory movement links JournalEntry when accounting trail is required
+  - internal/non-accounting movements may leave `journal_entry` null
 
 ### Suggested migration files
 - None unless purchase model needs optional `stock_item` relation fields
@@ -155,7 +160,11 @@ Route sales posting/unposting through unified movement API and support item-leve
 ### Changes
 - Refactor sales posting/unposting to use `record_movement`
 - Ensure sales item can consume lot or specific unique item as per policy
-- Preserve journal behavior
+- Move to voucher-first accounting flow:
+  - sales business document creates/updates Voucher
+  - Voucher posting creates JournalEntry
+  - inventory movement links JournalEntry when accounting trail is required
+  - internal/non-accounting movements may leave `journal_entry` null
 
 ### Suggested migration files
 - Optional if sales item needs extra nullable relation for `StockItem`
@@ -309,15 +318,22 @@ Remove old branching and obsolete artifacts after cutover stability.
 - Migration forward+backward smoke tests
 
 ## Tracking Board
-- [ ] PR-1 merged
-- [ ] PR-2 merged
-- [ ] PR-3 merged
+- [x] PR-1 implemented on `dea-kiss` (commit: `31395fa`)
+- [x] PR-2 implemented on `dea-kiss` (commit: `cab91d8`)
+- [x] PR-3 implemented on `dea-kiss` (commit: `63f1de5`)
 - [ ] PR-4 merged
-- [ ] PR-5 merged
+- [x] PR-5 implemented on `dea-kiss` (working tree, not yet committed)
 - [ ] PR-6 merged
 - [ ] PR-7 merged
 - [ ] PR-8 merged
 - [ ] PR-9 merged
+
+### Progress Notes (as of 2026-03-21)
+- PR-1 through PR-3 are complete on feature branch `dea-kiss` and ready for PR creation/review.
+- Inventory writes are now centralized through `InventoryMovementService`.
+- `StockTransaction.journal_entry` is nullable, enabling non-accounting/internal movements.
+- Purchase and sales business docs now resolve JournalEntry from posted Voucher instead of creating JournalEntry directly.
+- Sales lines now support union-subject deduction via `Stock` or `StockItem`.
 
 ## Notes
 - Keep PRs focused; avoid combining schema, service, and UI in one PR.
