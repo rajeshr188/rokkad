@@ -126,6 +126,7 @@ Implications:
 - Compatibility lot view: `stock_balance` now selects lot rows from `inventory_balance`
 - `Stock.current_balance()` and `StockItem.current_balance()` read from the canonical SQL view with Python fallback
 - Movement direction is derived from `Movement.direction`; no hardcoded in/out movement lists remain in the SQL read model
+- Inventory listing now supports `lots`, `items`, and `unified` modes with shared filters for variant, non-zero balance, and audit age
 
 ## Physical Audit Rules
 - Physical statements preserve both system values and counted values.

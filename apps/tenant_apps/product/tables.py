@@ -117,3 +117,37 @@ class StockTable(tables.Table):
             "purchase_rate",
             "status",
         )  # Specify the fields to display in the table
+
+
+class InventoryTable(tables.Table):
+    subject_type = tables.Column(verbose_name="Type")
+    subject_id = tables.Column(verbose_name="ID")
+    created = tables.Column()
+    variant = tables.Column()
+    lot_no = tables.Column(verbose_name="Lot#")
+    serial_no = tables.Column(verbose_name="Serial#")
+    huid = tables.Column(verbose_name="HUID")
+    quantity = tables.Column(verbose_name="Qty")
+    weight = tables.Column(verbose_name="Weight")
+    status = tables.Column()
+    last_audit_at = tables.Column(verbose_name="Last Audit")
+    audit_age_days = tables.Column(verbose_name="Audit Age (days)")
+
+    class Meta:
+        attrs = {"class": "table table-striped table-bordered"}
+        empty_text = "No inventory rows found matching your filters..."
+        template_name = "table_htmx.html"
+        fields = (
+            "subject_type",
+            "subject_id",
+            "created",
+            "variant",
+            "lot_no",
+            "serial_no",
+            "huid",
+            "quantity",
+            "weight",
+            "status",
+            "last_audit_at",
+            "audit_age_days",
+        )

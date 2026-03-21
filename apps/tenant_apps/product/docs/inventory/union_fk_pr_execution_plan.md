@@ -325,7 +325,7 @@ Remove old branching and obsolete artifacts after cutover stability.
 - [x] PR-5 implemented on `dea-kiss` (working tree, not yet committed)
 - [x] PR-6 implemented on `dea-kiss` (working tree, not yet committed)
 - [x] PR-7 implemented on `dea-kiss`
-- [ ] PR-8 merged
+- [x] PR-8 implemented on `dea-kiss`
 - [ ] PR-9 merged
 
 ### Progress Notes (as of 2026-03-21)
@@ -338,6 +338,7 @@ Remove old branching and obsolete artifacts after cutover stability.
 - Legacy `stock_balance` view is now a compatibility projection sourced from `inventory_balance` for lot rows.
 - Physical audit now records system vs physical counts on `StockStatement` and reconciles via explicit `AD`/`R` stock transactions.
 - Stock statement screens now expose status and variance for physical counts.
+- Stock listing now supports lots-only, items-only, and unified inventory modes with shared filters for variant, non-zero balance, and audit age.
 
 ## Notes
 - Keep PRs focused; avoid combining schema, service, and UI in one PR.
