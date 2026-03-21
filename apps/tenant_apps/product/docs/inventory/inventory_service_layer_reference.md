@@ -157,3 +157,6 @@ At minimum, each integrating domain must cover:
 - Correct subject side (`stock` vs `stock_item`) on movement rows.
 - Behavior with and without `journal_entry` linkage.
 - Reversal paths preserving final balances.
+
+manage.py check_inventory_data_quality --sample-size 200
+manage.py check_inventory_data_quality --sample-size 500 --strict
