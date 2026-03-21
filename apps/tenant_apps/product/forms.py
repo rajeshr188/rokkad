@@ -482,6 +482,36 @@ class StockStatementForm(CrispyFormMixin, forms.Form):
         return cleaned_data
 
 
+class InventoryListFilterForm(CrispyFormMixin, forms.Form):
+    MODE_CHOICES = (
+        ("lots", "Lots"),
+        ("items", "Items"),
+        ("unified", "Unified"),
+    )
+
+    mode = forms.ChoiceField(choices=MODE_CHOICES, initial="lots", required=False)
+    query = forms.CharField(required=False)
+    variant = forms.ModelChoiceField(
+        queryset=ProductVariant.objects.all(),
+        widget=Select2Widget,
+        required=False,
+    )
+    non_zero_only = forms.BooleanField(required=False, initial=False)
+    audit_age_days = forms.IntegerField(required=False, min_value=0)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setup_form_helper(
+            Layout(
+                "mode",
+                "query",
+                "variant",
+                "non_zero_only",
+                "audit_age_days",
+            )
+        )
+
+
 class PricingTierForm(CrispyFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

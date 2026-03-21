@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
@@ -9,15 +10,23 @@ from django.views.decorators.http import require_http_methods  # new
 from django.views.generic import DetailView, ListView
 from django.views.generic.base import TemplateView
 from django_tables2.config import RequestConfig
+from types import SimpleNamespace
+from datetime import timedelta
+from django.utils import timezone
 
 from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
-from ..filters import StockFilter
-from ..forms import StockInForm, StockOutForm, StockStatementForm, UniqueForm
+from ..forms import (
+    InventoryListFilterForm,
+    StockInForm,
+    StockOutForm,
+    StockStatementForm,
+    UniqueForm,
+)
 from ..inventory.services import InventoryMovementService
-from ..models import Stock, StockStatement, StockTransaction
-from ..tables import StockTable
+from ..models import Stock, StockItem, StockStatement, StockTransaction
+from ..tables import InventoryTable
 
 
 @login_required
@@ -58,13 +67,98 @@ def merge_lot(request, pk):
 @login_required
 @for_htmx(use_block="content")
 def stock_list(request):
-    filter = StockFilter(
-        request.GET,
-        queryset=Stock.objects.all().select_related("variant", "stockbalance"),
-    )
-    table = StockTable(filter.qs)
+    form = InventoryListFilterForm(request.GET or None)
+    if not form.is_valid():
+        form = InventoryListFilterForm()
+
+    mode = form.cleaned_data.get("mode") or "lots"
+    query = (form.cleaned_data.get("query") or "").strip()
+    variant = form.cleaned_data.get("variant")
+    non_zero_only = bool(form.cleaned_data.get("non_zero_only"))
+    audit_age_days = form.cleaned_data.get("audit_age_days")
+
+    lots_qs = Stock.objects.select_related("variant")
+    items_qs = StockItem.objects.select_related("variant")
+
+    if variant:
+        lots_qs = lots_qs.filter(variant=variant)
+        items_qs = items_qs.filter(variant=variant)
+
+    if query:
+        lots_qs = lots_qs.filter(
+            Q(huid__icontains=query)
+            | Q(lot_no__icontains=query)
+            | Q(serial_no__icontains=query)
+            | Q(variant__sku__icontains=query)
+            | Q(variant__name__icontains=query)
+        )
+        items_qs = items_qs.filter(
+            Q(huid__icontains=query)
+            | Q(serial_no__icontains=query)
+            | Q(variant__sku__icontains=query)
+            | Q(variant__name__icontains=query)
+        )
+
+    def build_row(subject, subject_type):
+        balance = subject.current_balance()
+        if isinstance(subject, Stock):
+            last_stmt = subject.stockstatement_set.order_by("-created").first()
+            lot_no = subject.lot_no
+        else:
+            last_stmt = subject.statements.order_by("-created").first()
+            lot_no = ""
+
+        last_audit_at = last_stmt.created if last_stmt else None
+        if last_audit_at:
+            audit_age = (timezone.now() - last_audit_at).days
+        else:
+            audit_age = None
+
+        return {
+            "subject_type": subject_type,
+            "subject_id": subject.pk,
+            "created": subject.created,
+            "variant": subject.variant,
+            "lot_no": lot_no,
+            "serial_no": subject.serial_no,
+            "huid": getattr(subject, "huid", None),
+            "quantity": balance["qty"],
+            "weight": balance["wt"],
+            "status": subject.status,
+            "last_audit_at": last_audit_at,
+            "audit_age_days": audit_age,
+        }
+
+    rows = []
+    if mode in ("lots", "unified"):
+        rows.extend(build_row(stock, "LOT") for stock in lots_qs)
+    if mode in ("items", "unified"):
+        rows.extend(build_row(item, "ITEM") for item in items_qs)
+
+    if non_zero_only:
+        rows = [
+            row
+            for row in rows
+            if row["quantity"] > 0 or row["weight"] > 0
+        ]
+
+    if audit_age_days is not None:
+        cutoff = timezone.now() - timedelta(days=audit_age_days)
+        rows = [
+            row
+            for row in rows
+            if row["last_audit_at"] is None or row["last_audit_at"] <= cutoff
+        ]
+
+    rows.sort(key=lambda row: row["created"], reverse=True)
+
+    table = InventoryTable(rows)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-    context = {"filter": filter, "table": table}
+    context = {
+        "filter": SimpleNamespace(form=form),
+        "table": table,
+        "inventory_mode": mode,
+    }
     return TemplateResponse(request, "product/stock/stock_list.html", context)
 
 
@@ -136,10 +230,6 @@ def audit_stock(request):
     for i in stocks:
         i.audit()
     return HttpResponseRedirect(reverse("product_stock_list"))
-
-
-from django.db.models import Q
-
 
 def stock_select(request, q):
     objects = Stock.objects.filter(
