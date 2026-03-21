@@ -222,15 +222,10 @@ class ApprovalLine(models.Model):
         return self.returnitem_set.aggregate(Sum("quantity"))["quantity_sum"]
 
     def create_journal(self):
-        jrnl = Journal.objects.create(
-            # journal_type="SJ",
-            content_object=self,
-            desc=f"Approval {self.approval.id} - {self.product.barcode}",
-        )
-        return jrnl
+        return None
 
     def get_journal(self):
-        return self.journal.first() if self.journal.exists() else create_journal()
+        return None
 
     def delete_journals(self):
         # delete journals for this approvalline
@@ -241,8 +236,8 @@ class ApprovalLine(models.Model):
         self.product.transact(
             weight=self.weight,
             quantity=self.quantity,
-            journal=self.get_journal(),
             movement_type="A",
+            journal_entry=journal,
         )
 
     @transaction.atomic
@@ -251,4 +246,9 @@ class ApprovalLine(models.Model):
         # for i in self.returnitem_set.all():
         #     i.unpost(journal)
         #     i.delete()
-        self.product.transact(self.weight, self.quantity, journal, "AR")
+        self.product.transact(
+            weight=self.weight,
+            quantity=self.quantity,
+            movement_type="AR",
+            journal_entry=journal,
+        )

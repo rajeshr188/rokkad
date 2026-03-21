@@ -79,21 +79,27 @@ class ReturnItem(models.Model):
         return reverse("approval:approval_returnitem_update", kwargs=kwargs)
 
     def create_journal(self):
-        return Journal.objects.create(
-            journal_type=JournalTypes.SJ,
-            desc="Approval Return",
-            content_object=self,
-        )
+        return None
 
     def get_journal(self):
-        return self.journal.first()
+        return None
 
     @transaction.atomic
     def post(self, journal):
-        self.line_item.product.transact(self.weight, self.quantity, journal, "AR")
+        self.line_item.product.transact(
+            weight=self.weight,
+            quantity=self.quantity,
+            movement_type="AR",
+            journal_entry=journal,
+        )
         self.line_item.update_status()
 
     @transaction.atomic
     def unpost(self, journal):
-        self.line_item.product.transact(self.weight, self.quantity, journal, "A")
+        self.line_item.product.transact(
+            weight=self.weight,
+            quantity=self.quantity,
+            movement_type="A",
+            journal_entry=journal,
+        )
         self.line_item.update_status()

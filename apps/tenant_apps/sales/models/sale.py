@@ -3,9 +3,12 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.db.models import F, Func, Q, Sum, Count
+from django.db.models.functions import Coalesce
 from django.forms import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
@@ -15,9 +18,30 @@ from moneyed import Money
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import AccountStatement  # , JournalTypes
 from apps.tenant_apps.dea.models import JournalEntry
+from apps.tenant_apps.dea.models import Voucher, VoucherStatus
 from apps.tenant_apps.dea.utils.currency import Balance
-from apps.tenant_apps.product.models import Stock
+from apps.tenant_apps.product.models import Stock, StockItem
 from apps.tenant_apps.terms.models import PaymentTerm
+
+
+def _resolve_posted_journal_entry(doc):
+    if not getattr(doc, "pk", None):
+        return None
+
+    content_type = ContentType.objects.get_for_model(doc, for_concrete_model=False)
+    voucher = (
+        Voucher.objects.filter(
+            doc_content_type=content_type,
+            doc_object_id=doc.pk,
+            status=VoucherStatus.POSTED,
+        )
+        .order_by("-last_posted_at", "-id")
+        .first()
+    )
+    if not voucher:
+        return None
+
+    return voucher.journal_entries.order_by("-id").first()
 
 
 class Month(Func):
@@ -274,21 +298,28 @@ class Invoice(models.Model):
             self._create_currency_balances()
 
     def _calculate_ratecut_total(self):
-        cash = self.sale_items.aggregate(total=Coalesce(Sum("cash_balance"), 0))[
-            "total"
-        ]
-        gold = (
-            self.sale_items.filter(metal_balance_currency="USD").aggregate(
-                total=Coalesce(Sum("metal_balance"), 0)
-            )["total"]
-            * self.gold_rate
+        cash_balance = sum(
+            (item.cash_balance for item in self.sale_items.all()),
+            Money(0, "INR"),
         )
-        silver = (
-            self.sale_items.filter(metal_balance_currency="EUR").aggregate(
-                total=Coalesce(Sum("metal_balance"), 0)
-            )["total"]
-            * self.silver_rate
+        gold_balance = sum(
+            (
+                item.metal_balance
+                for item in self.sale_items.filter(metal_balance_currency="USD")
+            ),
+            Money(0, "USD"),
         )
+        silver_balance = sum(
+            (
+                item.metal_balance
+                for item in self.sale_items.filter(metal_balance_currency="EUR")
+            ),
+            Money(0, "EUR"),
+        )
+
+        cash = cash_balance.amount
+        gold = gold_balance.amount * self.gold_rate
+        silver = silver_balance.amount * self.silver_rate
 
         total = cash + gold + silver
         if self.is_gst:
@@ -296,28 +327,31 @@ class Invoice(models.Model):
         return total
 
     def _create_currency_balances(self):
-        aggregates = self.sale_items.aggregate(
-            cash=Coalesce(Sum("cash_balance"), 0),
-            gold=Coalesce(
-                Sum("metal_balance", filter=Q(metal_balance_currency="USD")), 0
+        cash_total = sum(
+            (item.cash_balance for item in self.sale_items.all()),
+            Money(0, "INR"),
+        )
+        gold_total = sum(
+            (
+                item.metal_balance
+                for item in self.sale_items.filter(metal_balance_currency="USD")
             ),
-            silver=Coalesce(
-                Sum("metal_balance", filter=Q(metal_balance_currency="EUR")), 0
+            Money(0, "USD"),
+        )
+        silver_total = sum(
+            (
+                item.metal_balance
+                for item in self.sale_items.filter(metal_balance_currency="EUR")
             ),
+            Money(0, "EUR"),
         )
 
-        if aggregates["cash"]:
-            Balance.objects.create(
-                invoice=self, amount=Money(aggregates["cash"], "INR")
-            )
-        if aggregates["gold"]:
-            Balance.objects.create(
-                invoice=self, amount=Money(aggregates["gold"], "USD")
-            )
-        if aggregates["silver"]:
-            Balance.objects.create(
-                invoice=self, amount=Money(aggregates["silver"], "EUR")
-            )
+        if cash_total.amount:
+            Balance.objects.create(invoice=self, amount=cash_total)
+        if gold_total.amount:
+            Balance.objects.create(invoice=self, amount=gold_total)
+        if silver_total.amount:
+            Balance.objects.create(invoice=self, amount=silver_total)
 
     def update_status(self):
         """Update payment status based on outstanding balance"""
@@ -485,19 +519,15 @@ class Invoice(models.Model):
         return lt, at
 
     def get_journal_entry(self, desc=None):
-        if self.journal_entries.exists():
-            return self.journal_entries.latest()
-        else:
-            return JournalEntry.objects.create(
-                content_object=self, desc=self.__class__.__name__
-            )
+        return _resolve_posted_journal_entry(self)
 
     def delete_journal_entry(self):
-        for entry in self.journal_entries.all():
-            entry.delete()
+        return None
 
     def delete_txns(self):
         je = self.get_journal_entry()
+        if je is None:
+            return
         at = je.atxns.all()
         lt = je.ltxns.all()
 
@@ -505,28 +535,10 @@ class Invoice(models.Model):
         lt.delete()
 
     def create_transactions(self):
-        print("Creating transactions")
-        lt, at = self.get_transactions()
-        if lt and at:
-            journal_entry = self.get_journal_entry()
-            journal_entry.transact(lt, at)
+        return self.get_journal_entry()
 
     def reverse_transactions(self):
-        # i.e if je is older than the latest statement then reverse the transactions else do nothing
-        print("Reversing transactions")
-        try:
-            statement = self.customer.account.accountstatements.latest("created")
-        except AccountStatement.DoesNotExist:
-            statement = None
-        journal_entry = self.get_journal_entry()
-
-        if journal_entry and statement and journal_entry.created < statement.created:
-            lt, at = self.get_transactions()
-            if lt and at:
-                journal_entry.untransact(lt, at)
-        else:
-            # self.delete_journal_entry()
-            self.delete_txns()
+        return self.get_journal_entry()
 
     def is_changed(self, old_instance):
         # https://stackoverflow.com/questions/31286330/django-compare-two-objects-using-fields-dynamically
@@ -563,7 +575,14 @@ class InvoiceItem(models.Model):
 
     # Relationship Fields
     product = models.ForeignKey(
-        Stock, on_delete=models.CASCADE, related_name="sold_items"
+        Stock, on_delete=models.CASCADE, related_name="sold_items", null=True, blank=True
+    )
+    stock_item = models.ForeignKey(
+        StockItem,
+        on_delete=models.CASCADE,
+        related_name="sold_items",
+        null=True,
+        blank=True,
     )
     invoice = models.ForeignKey(
         "sales.Invoice", on_delete=models.CASCADE, related_name="sale_items"
@@ -601,10 +620,34 @@ class InvoiceItem(models.Model):
     def get_nettwt(self):
         return (self.weight * self.touch) / 100
 
+    def get_inventory_subject(self):
+        return self.stock_item or self.product
+
+    def get_inventory_variant(self):
+        subject = self.get_inventory_subject()
+        return subject.variant if subject else None
+
+    def get_inventory_quantity(self):
+        return 1 if self.stock_item_id else self.quantity
+
+    def clean(self):
+        has_stock = bool(self.product_id)
+        has_stock_item = bool(self.stock_item_id)
+
+        if has_stock == has_stock_item:
+            raise ValidationError("InvoiceItem must reference exactly one of product or stock_item")
+
+        if has_stock_item and self.quantity != 1:
+            raise ValidationError("InvoiceItem using stock_item must have quantity 1")
+
     def save(self, *args, **kwargs):
+        subject_variant = self.get_inventory_variant()
+        if subject_variant is None:
+            raise ValueError("InvoiceItem requires a stock or stock_item subject")
+
         self.net_wt = self.get_nettwt()
         self.metal_balance_currency = (
-            "USD" if self.product.variant.product.category.name == "Gold" else "EUR"
+            "USD" if subject_variant.product.category.name == "Gold" else "EUR"
         )
         self.cash_balance = self.making_charge + self.hallmark_charge
         self.metal_balance = self.net_wt
@@ -630,51 +673,63 @@ class InvoiceItem(models.Model):
         ) != model_to_dict(old_instance, fields=["product", "quantity", "weight"])
 
     def get_journal_entry(self, desc=None):
-        if self.invoice.journal_entries.exists():
-            return self.invoice.journal_entries.latest()
-        else:
-            return JournalEntry.objects.create(
-                content_object=self.invoice,
-                desc=self.invoice.__class__.__name__,
-            )
+        return self.invoice.get_journal_entry(desc=desc)
 
     @transaction.atomic()
     def post(self):
+        from apps.tenant_apps.product.inventory.services import InventoryMovementService
+
+        subject = self.get_inventory_subject()
         je = self.get_journal_entry()
-        print(f"je:{je}")
         if not self.is_return:
-            print("not return")
             if self.approval_line:
-                # unpost the approval line to return the stocklot from approvalline
-                stock_journal_entry = self.approval_line.get_journal_entry()
-                self.approval_line.unpost(stock_journal)
+                self.approval_line.unpost(None)
                 self.approval_line.update_status()
-            # post the invoice item to deduct the stock from stocklot
-            x = self.product.transact(self.weight, self.quantity, "S", journal_entry=je)
-            print(f"posting:{x}")
-        else:
-            print("return")
-            x = self.product.transact(
-                self.weight, self.quantity, "SR", journal_entry=je
+            return InventoryMovementService.record_movement(
+                subject=subject,
+                movement_type_id="S",
+                quantity=self.get_inventory_quantity(),
+                weight=self.weight,
+                journal_entry=je,
+                description=f"Invoice item {self.pk}",
             )
-            print(f"posting:{x}")
+        else:
+            return InventoryMovementService.record_movement(
+                subject=subject,
+                movement_type_id="SR",
+                quantity=self.get_inventory_quantity(),
+                weight=self.weight,
+                journal_entry=je,
+                description=f"Invoice return item {self.pk}",
+            )
 
     @transaction.atomic()
     def unpost(self):
+        from apps.tenant_apps.product.inventory.services import InventoryMovementService
+
+        subject = self.get_inventory_subject()
         je = self.get_journal_entry()
-        print(f"je:{je}")
         if self.is_return:
-            self.product.transact(self.weight, self.quantity, "S", journal_entry=je)
+            return InventoryMovementService.record_movement(
+                subject=subject,
+                movement_type_id="S",
+                quantity=self.get_inventory_quantity(),
+                weight=self.weight,
+                journal_entry=je,
+                description=f"Invoice return reversal {self.pk}",
+            )
         else:
             if self.approval_line:
-                # post the approval line to deduct the stock from invoiceitem
-                stock_journal_entry = self.approval_line.get_journal()
-                self.approval_line.post(stock_journal_entry)
+                self.approval_line.post(None)
                 self.approval_line.update_status()
-            x = self.product.transact(
-                self.weight, self.quantity, "SR", journal_entry=je
+            return InventoryMovementService.record_movement(
+                subject=subject,
+                movement_type_id="SR",
+                quantity=self.get_inventory_quantity(),
+                weight=self.weight,
+                journal_entry=je,
+                description=f"Invoice item reversal {self.pk}",
             )
-            print(f"unposting:{x}")
 
 
 class Balance(models.Model):
