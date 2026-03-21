@@ -11,11 +11,15 @@
 
 {% block workspace_content %}
 <div class="container col-md mt-4">
-	<h2 class="h5 mb-3">Create Product Price</h2>
+	<h2 class="h5 mb-2">{% if obj %}Update{% else %}Create{% endif %} Product Price</h2>
+	{% if pricing_tier %}
+	<p class="text-muted">Tier: <strong>{{ pricing_tier.name }}</strong></p>
+	{% endif %}
 	<form method="post">
 		{% csrf_token %}
 		{{ form|crispy }}
 		<button type="submit" class="btn btn-primary">Save</button>
+		<a href="{% if pricing_tier %}{% url 'product_pricingtier_detail' pricing_tier.id %}{% else %}{% url 'product_pricingtier_list' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
 	</form>
 </div>
 {% endblock %}

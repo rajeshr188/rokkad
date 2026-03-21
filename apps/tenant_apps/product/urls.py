@@ -219,7 +219,18 @@ urlpatterns += (
     path("stock/merge/<int:pk>", views.merge_lot, name="product_stock_merge"),
     path("stock/audit/", views.audit_stock, name="product_stock_audit"),
     path("stock/search/", views.stock_select, name="stock_select"),
+    path("stock/create/", views.stock_in_direct, name="stock_in_direct"),
     path("stock/create/", views.stockin_journalentry, name="stock_in_journalentry"),
+    path(
+        "stock/opening-balance/import/",
+        views.stock_opening_balance_import,
+        name="stock_opening_balance_import",
+    ),
+    path(
+        "stock/opening-balance/template.csv",
+        views.stock_opening_balance_template_csv,
+        name="stock_opening_balance_template_csv",
+    ),
     path("stock/transaction/", views.stockout_journalentry, name="stock_journalentry"),
     path(
         "stock/transaction/<int:pk>/",
@@ -283,5 +294,25 @@ urlpatterns += (
         "pricingtier/productprice/<int:pk>/delete",
         views.pricing_tier_product_price_delete,
         name="product_pricingtier_productprice_delete",
+    ),
+    path(
+        "price-override/",
+        views.price_override_list,
+        name="product_price_override_list",
+    ),
+    path(
+        "price-override/create/",
+        views.price_override_create,
+        name="product_price_override_create",
+    ),
+    path(
+        "price-override/<int:pk>/update/",
+        views.price_override_update,
+        name="product_price_override_update",
+    ),
+    path(
+        "price-override/<int:pk>/delete/",
+        views.price_override_delete,
+        name="product_price_override_delete",
     ),
 )
