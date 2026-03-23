@@ -640,19 +640,9 @@ def get_itemtype_averages():
 
 
 def get_interest_paid():
-    from .models import LoanPayment  # Import here to avoid circular imports
-
-    data = (
-        LoanPayment.objects.annotate(year=ExtractYear("payment_date"))
-        .values("year")
-        .annotate(total_interest=Sum("interest_payment"))
-        .order_by("year")
-    )
-
-    labels = [entry["year"] for entry in data]
-    interest_paid = [float(entry["total_interest"]) for entry in data]
-
-    return data
+    # DEPRECATED: LoanPayment interest data is no longer collected.
+    # New interest data flows through PaymentVoucher/DEA system.
+    return []
 
 
 def notify_customer(customer: Customer):

@@ -4,6 +4,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Taken Loan Collateral - {{ loan.loan_id }}</h2>
     <div class="btn-group">
+      <a class="btn btn-primary" href="{% url 'girvi:takenloan_payment_create' loan.id %}">Record Repayment</a>
       <a class="btn btn-outline-secondary" hx-get="{% url 'girvi:girvi_loan_list' %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true">Loan List</a>
       <a class="btn btn-outline-dark" hx-get="{% url 'girvi:create_repledge_select_items' %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true">Create Repledge</a>
     </div>

@@ -236,14 +236,11 @@ class PaymentVoucher(BusinessDoc):
         """Validate payment before saving"""
         super().clean()
 
-        # Validate direction makes sense with payment_type
-        if (
-            self.payment_type == PaymentType.DISBURSAL
-            and self.direction == CashFlowDirection.RECEIPT
-        ):
-            raise ValidationError(
-                "DISBURSAL type should have PAYMENT direction (money going out)"
-            )
+        # DISBURSAL can be either cash out or cash in depending on the source doc.
+        # Examples:
+        # - GivenLoan disbursal  -> DISBURSAL + PAYMENT
+        # - TakenLoan disbursal  -> DISBURSAL + RECEIPT
+        # Direction-specific accounting is handled by posting rules.
 
         # Validate amount is positive
         if self.total_amount and self.total_amount.amount <= 0:
@@ -253,7 +250,7 @@ class PaymentVoucher(BusinessDoc):
         self._validate_component_sum()
 
         # Validate source document is provided
-        if not self.source_content_type or not self.source_object_id:
+        if not self.source_content_type_id or not self.source_object_id:
             raise ValidationError(
                 "Source document (loan, sales, purchase, etc) is required"
             )
@@ -282,15 +279,20 @@ class PaymentVoucher(BusinessDoc):
         Determine the posting rule key based on source type and direction.
 
         Returns strings like:
-        - GIVENLOAN_DISBURSAL
         - GIVENLOAN_RECEIPT
+        - GIVENLOAN_PAYMENT
         - TAKENLOAN_RECEIPT
         - TAKENLOAN_PAYMENT
-        - SALES_RECEIPT
-        - PURCHASE_PAYMENT
+        - SALESINVOICE_RECEIPT
+        - PURCHASEINVOICE_PAYMENT
+
+        Raises ValueError if source_content_type is not set (misconfigured voucher).
         """
-        if not self.source_content_type:
-            return "PAYMENT_OTHER"
+        if not self.source_content_type_id:
+            raise ValueError(
+                f"PaymentVoucher(pk={self.pk}).get_voucher_type(): "
+                "source_content_type is null \u2014 cannot determine voucher type."
+            )
 
         source_type = self.source_content_type.model.upper()
         return f"{source_type}_{self.direction}"

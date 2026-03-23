@@ -1,0 +1,96 @@
+{% extends 'layouts/workspace.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+
+      {# Loan summary card #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title mb-1">Record Payment</h5>
+          <p class="text-muted mb-0">
+            Loan <strong>{{ loan.loan_id }}</strong> &middot;
+            {{ loan.borrower }} &middot;
+            Outstanding: <strong>{{ loan.outstanding_principal }}</strong>
+          </p>
+        </div>
+      </div>
+
+      {# Payment form #}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                {{ form.total_amount|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.payment_date|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.payment_method|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.reference_number|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.interest_amount|as_crispy_field }}
+              </div>
+              <div class="col-12">
+                {{ form.description|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.is_final_payment|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.create_release|as_crispy_field }}
+              </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-cash-coin me-1"></i> Record Payment
+              </button>
+              <a href="{% url 'girvi:girvi_loan_detail' loan.pk %}" class="btn btn-outline-secondary">
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% partialdef content %}
+<div class="modal-body">
+  <form method="post" id="repayment-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="row g-3">
+      <div class="col-md-6">{{ form.total_amount|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.payment_date|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.payment_method|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.reference_number|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.interest_amount|as_crispy_field }}</div>
+      <div class="col-12">{{ form.description|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.is_final_payment|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.create_release|as_crispy_field }}</div>
+    </div>
+  </form>
+</div>
+<div class="modal-footer">
+  <button type="submit" form="repayment-form" class="btn btn-success">
+    <i class="bi bi-cash-coin me-1"></i> Record Payment
+  </button>
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+</div>
+{% endpartialdef %}

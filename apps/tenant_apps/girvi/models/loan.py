@@ -688,7 +688,12 @@ class LoanChangeLog(models.Model):
 
 
 class LoanPayment(BusinessDoc):
-    """Loan payment document - automatically posts to accounting on save."""
+    """
+    DEPRECATED — do not use in new code.
+    Legacy loan payment model superseded by apps.tenant_apps.dea.models.PaymentVoucher.
+    Table is kept read-only for historical data access (managed=False prevents accidental
+    schema changes). Use PaymentVoucher for all new payment recording.
+    """
 
     loan = models.ForeignKey(
         "girvi.GivenLoan", on_delete=models.CASCADE, related_name="loan_payments"
@@ -703,6 +708,7 @@ class LoanPayment(BusinessDoc):
 
     class Meta:
         ordering = ("-id",)
+        managed = False  # DEPRECATED: table kept for historical reads only
 
     def __str__(self):
         return f"{self.loan.loan_id} - {self.payment_date} - {self.payment_amount}"
@@ -711,7 +717,8 @@ class LoanPayment(BusinessDoc):
         return self.loan.get_absolute_url()
 
     def get_update_url(self):
-        return reverse("girvi:girvi_loanpayment_update", args=(self.pk,))
+        # DEPRECATED: update URL no longer exists; LoanPayment is read-only
+        return self.loan.get_absolute_url()
 
     def save(self, *args, **kwargs):
         # Calculate principal and interest breakdown

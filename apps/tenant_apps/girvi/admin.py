@@ -14,7 +14,6 @@ from .models import (
     LicenseDocument,
     LoanItem,
     LoanItemStorageBox,
-    LoanPayment,
     LoanTemplate,
     Release,
     Series,
@@ -23,7 +22,6 @@ from .models import (
 )
 from .resources import (
     LicenseResource,
-    LoanPaymentResource,
     LoanResource,
     ReleaseResource,
 )
@@ -327,29 +325,6 @@ class LicenseAdmin(admin.ModelAdmin):
     expiry_status.short_description = "Expiry Status"
 
 
-class LoanPaymentAdminForm(forms.ModelForm):
-    class Meta:
-        model = LoanPayment
-        fields = "__all__"
-
-
-class LoanPaymentAdmin(admin.TabularInline):
-    model = LoanPayment
-    extra = 1
-    form = LoanPaymentAdminForm
-    resource_class = LoanPaymentResource
-    list_display = [
-        "id",
-        "loan",
-        "payment_date",
-        "payment_amount",
-        # "payment_mode",
-        # "payment_status",
-    ]
-    search_fields = ["loan__loan_id"]
-    # autocomplete_fields = ["loan"]
-
-
 class LoanItemAdminForm(forms.ModelForm):
     class Meta:
         model = LoanItem
@@ -408,7 +383,6 @@ class GivenLoanAdmin(admin.ModelAdmin):
     inlines = [
         LoanItemAdmin,
         # ReleaseAdmin,  # Removed: Release only applies to GivenLoan, configured separately
-        # LoanPaymentAdmin,  # Removed: LoanPayment FK needs updating to support GivenLoan/TakenLoan
     ]
     list_display = [
         "id",

@@ -9,7 +9,6 @@ from .models import (
     GivenLoan,
     TakenLoan,
     LoanItem,
-    LoanPayment,
     RepledgedLoanItem,
 )
 

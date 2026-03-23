@@ -318,11 +318,12 @@ class BasePostingEngine(ABC):
                 ]
             )
 
-    def _get_transaction_type_id(self, side: Side) -> int:
-        """Helper to get TransactionType_DE ID for FK"""
+    def _get_transaction_type_id(self, side: Side) -> str:
+        """Return the XactTypeCode PK (str) for the TransactionType_DE FK.
+        XactTypeCode is the primary_key CharField on TransactionType_DE, so .pk == side."""
         from ..models.account import TransactionType_DE
 
-        return TransactionType_DE.objects.get(XactTypeCode=side).id
+        return TransactionType_DE.objects.get(XactTypeCode=side).pk
 
     def _reverse_journal_entry(
         self, original: JournalEntry, ctx: PostingContext
