@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.services import ReleaseIDGenerator
+from apps.tenant_apps.girvi.payment_service import record_loan_release
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,12 @@ class Release(models.Model):
             logger.error(f"IntegrityError while transitioning loan status: {e}")
         except Exception as e:
             logger.error(f"Unexpected error while transitioning loan status: {e}")
+
+        # Non-blocking accounting hook for release event.
+        try:
+            record_loan_release(self, created_by=self.created_by)
+        except Exception as e:
+            logger.error(f"Release accounting post failed for {self.release_id}: {e}")
 
 
 # with schema_context(jcl):

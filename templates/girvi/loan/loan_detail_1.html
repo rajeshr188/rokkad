@@ -348,18 +348,19 @@
     <table class="table table-sm table-striped">
       <thead>
         <tr>
-          <th>Id</th>
-          <th>Created</th>
-          <th>JE</th>
-          <th>Amount</th>
+          <th>Payment ID</th>
+          <th>Date</th>
+          <th>Method</th>
+          <th>Total</th>
           <th>Principal</th>
           <th>Interest</th>
-          <th>With Release</th>
+          <th>Status</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="payment-items" class="table-group-divider">
         {% for i in payments %}
-        {% include 'girvi/loanpayment/payment-inline.html' with object=i %}
+        {% include 'girvi/loanpayment/payment-inline.html' with i=i %}
         {% endfor %}
       </tbody>
     </table>

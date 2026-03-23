@@ -23,7 +23,6 @@ from .models import (
     LoanItemPic,
     LoanItemStorageBox,
     LoanTemplate,
-    LoanPayment,
     Release,
     RepledgedLoanItem,
     Series,
@@ -685,15 +684,8 @@ class ReleaseForm(forms.ModelForm):
 
         if commit:
             instance.save()
-
-            # Create payment only when the release itself is committed.
-            if release_amount is not None and release_amount > 0:
-                LoanPayment.objects.create(
-                    loan=instance.loan,
-                    payment_amount=release_amount,
-                    payment_date=instance.release_date,
-                    with_release=True,
-                )
+            # Note: release accounting (DEA PaymentVoucher) is handled by
+            # Release.save() → record_loan_release() hook (PR-4). No LoanPayment here.
         return instance
 
 
@@ -859,61 +851,6 @@ class StatementItemForm(forms.ModelForm):
 
         self.helper.add_input(Submit("submit", "Save"))
         self.helper.add_input(cancel_button)
-
-
-class LoanPaymentForm(forms.ModelForm):
-    payment_date = forms.DateTimeField(
-        widget=forms.DateTimeInput(
-            attrs={
-                "type": "datetime-local",
-                "data-date-format": "DD MMMM YYYY",
-            }
-        )
-    )
-    loan = forms.ModelChoiceField(
-        queryset=GivenLoan.objects.filter(release__isnull=True),
-        widget=ModelSelect2Widget(
-            model=GivenLoan,
-            queryset=GivenLoan.objects.filter(release__isnull=True),
-            search_fields=["loan_id__icontains"],
-            # dependent_fields={'customer':'customer'}
-        ),
-    )
-    payment_amount = forms.DecimalField()
-    with_release = forms.BooleanField(
-        required=False, initial=False, widget=forms.CheckboxInput()
-    )
-
-    class Meta:
-        model = LoanPayment
-        fields = ["payment_date", "loan", "payment_amount", "with_release"]
-
-    def clean_loan(self):
-        loan = self.cleaned_data.get("loan")
-        if loan.is_released:
-            raise forms.ValidationError("Loan already has a release.")
-        return loan
-
-    def clean(self):
-        payment_amount = self.cleaned_data["payment_amount"]
-        loan = self.cleaned_data["loan"]
-
-        if payment_amount < 0:
-            self.add_error("payment_amount", "Payment amount cannot be negative.")
-            # raise forms.ValidationError("Payment amount cannot be negative.")
-
-        if (
-            payment_amount is not None
-            and loan is not None
-            and payment_amount > loan.due()
-        ):
-            self.add_error(
-                "payment_amount",
-                f"Payment amount {payment_amount} cannot be > due amount {loan.due()}.",
-            )
-            # raise ValidationError(f"Payment amount {payment_amount} cannot be > due amount {loan.due()}.")
-
-        return self.cleaned_data
 
 
 class LoanItemStorageBoxForm(forms.ModelForm):
@@ -1086,3 +1023,130 @@ class LoanItemPicForm(forms.ModelForm):
                 Column("description", css_class="col-12"),
             ),
         )
+
+
+class GivenLoanRepaymentForm(forms.Form):
+    """
+    Form for recording a repayment against a GivenLoan via PaymentVoucher.
+    Replaces the old LoanPaymentForm (ModelForm for LoanPayment).
+    """
+
+    PAYMENT_METHOD_CHOICES = [
+        ("CASH", "Cash"),
+        ("BANK", "Bank Transfer"),
+        ("CHEQUE", "Cheque"),
+        ("UPI", "UPI"),
+        ("CARD", "Card"),
+        ("OTHER", "Other"),
+    ]
+
+    total_amount = forms.DecimalField(
+        label="Total Amount Received",
+        min_value=Decimal("0.01"),
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={"step": "0.01", "class": "form-control"}),
+    )
+    payment_date = forms.DateTimeField(
+        label="Payment Date",
+        widget=forms.DateTimeInput(
+            attrs={"type": "datetime-local", "class": "form-control"}
+        ),
+    )
+    payment_method = forms.ChoiceField(
+        label="Payment Method",
+        choices=PAYMENT_METHOD_CHOICES,
+        initial="CASH",
+    )
+    reference_number = forms.CharField(
+        label="Reference / Cheque / UTR No.",
+        max_length=100,
+        required=False,
+    )
+    interest_amount = forms.DecimalField(
+        label="Interest Portion",
+        required=False,
+        min_value=Decimal("0"),
+        decimal_places=2,
+        help_text="Leave blank if not splitting principal and interest.",
+    )
+    description = forms.CharField(
+        label="Notes",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+    )
+    is_final_payment = forms.BooleanField(
+        label="Final payment (closes loan)",
+        required=False,
+        initial=False,
+    )
+    create_release = forms.BooleanField(
+        label="Also create Release record",
+        required=False,
+        initial=False,
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        total = cleaned_data.get("total_amount")
+        interest = cleaned_data.get("interest_amount")
+        if total is not None and interest is not None and interest > total:
+            self.add_error(
+                "interest_amount", "Interest portion cannot exceed total amount."
+            )
+        return cleaned_data
+
+
+class TakenLoanRepaymentForm(forms.Form):
+    """Form for recording a repayment against a TakenLoan via PaymentVoucher."""
+
+    PAYMENT_METHOD_CHOICES = GivenLoanRepaymentForm.PAYMENT_METHOD_CHOICES
+
+    total_amount = forms.DecimalField(
+        label="Total Amount Paid",
+        min_value=Decimal("0.01"),
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={"step": "0.01", "class": "form-control"}),
+    )
+    payment_date = forms.DateTimeField(
+        label="Payment Date",
+        widget=forms.DateTimeInput(
+            attrs={"type": "datetime-local", "class": "form-control"}
+        ),
+    )
+    payment_method = forms.ChoiceField(
+        label="Payment Method",
+        choices=PAYMENT_METHOD_CHOICES,
+        initial="CASH",
+    )
+    reference_number = forms.CharField(
+        label="Reference / Cheque / UTR No.",
+        max_length=100,
+        required=False,
+    )
+    interest_amount = forms.DecimalField(
+        label="Interest Portion",
+        required=False,
+        min_value=Decimal("0"),
+        decimal_places=2,
+        help_text="Leave blank if not splitting principal and interest.",
+    )
+    description = forms.CharField(
+        label="Notes",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+    )
+    is_final_payment = forms.BooleanField(
+        label="Final payment (closes taken loan)",
+        required=False,
+        initial=False,
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        total = cleaned_data.get("total_amount")
+        interest = cleaned_data.get("interest_amount")
+        if total is not None and interest is not None and interest > total:
+            self.add_error(
+                "interest_amount", "Interest portion cannot exceed total amount."
+            )
+        return cleaned_data

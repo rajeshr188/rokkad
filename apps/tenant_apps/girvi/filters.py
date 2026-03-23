@@ -10,7 +10,6 @@ from .models import (
     ItemType,
     GivenLoan,
     LoanItem,
-    LoanPayment,
     Release,
     TakenLoan,
     LoanStatus,
@@ -162,12 +161,6 @@ class LoanItemFilter(django_filters.FilterSet):
             "interest": ["gte", "lte"],
             "custody_status": ["exact"],
         }
-
-
-class LoanPaymentFilter(django_filters.FilterSet):
-    class Meta:
-        model = LoanPayment
-        fields = ["loan"]
 
 
 class ReleaseFilter(django_filters.FilterSet):

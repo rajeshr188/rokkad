@@ -116,8 +116,8 @@ class AccountingPeriod(models.Model):
             overlapping = AccountingPeriod.objects.filter(
                 start_date__lte=self.end_date, end_date__gte=self.start_date
             )
-            if self.workspace:
-                overlapping = overlapping.filter(workspace=self.workspace)
+            # if self.workspace:
+            #     overlapping = overlapping.filter(workspace=self.workspace)
             if self.pk:
                 overlapping = overlapping.exclude(pk=self.pk)
             if overlapping.exists():

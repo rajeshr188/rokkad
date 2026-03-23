@@ -23,7 +23,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_http_methods
 
 from ..models import PaymentVoucher
-from ..forms import PaymentVoucherForm, LoanPaymentCreateForm
+from ..forms import PaymentVoucherForm
 from ..posting.engine import DjangoPostingEngine
 from ..services.post_doc import create_and_post_voucher_for_doc
 
@@ -215,76 +215,6 @@ class PaymentVoucherDeleteView(LoginRequiredMixin, DeleteView):
             return redirect(payment.get_absolute_url())
 
         return super().delete(request, *args, **kwargs)
-
-
-class CreateLoanPaymentView(LoginRequiredMixin, View):
-    """
-    AJAX view to create a payment from loan detail page.
-    Used via modal form in loan detail template.
-    """
-
-    @require_http_methods(["POST"])
-    def post(self, request, *args, **kwargs):
-        """Handle payment creation from loan."""
-        loan_id = kwargs.get("loan_id")
-
-        # Determine source type from URL pattern
-        source_type = kwargs.get("source_type")  # 'givenloan' or 'takenloan'
-
-        # Get the loan object
-        if source_type == "givenloan":
-            from apps.tenant_apps.girvi.models import GivenLoan
-
-            loan = get_object_or_404(GivenLoan, pk=loan_id)
-        elif source_type == "takenloan":
-            from apps.tenant_apps.girvi.models import TakenLoan
-
-            loan = get_object_or_404(TakenLoan, pk=loan_id)
-        else:
-            return render(
-                request, "error.html", {"error": "Invalid loan type"}, status=400
-            )
-
-        form = LoanPaymentCreateForm(request.POST)
-
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    # Create payment
-                    payment = loan.create_payment(
-                        amount=form.cleaned_data["amount"],
-                        payment_date=form.cleaned_data["payment_date"],
-                        payment_method=form.cleaned_data["payment_method"],
-                        reference_number=form.cleaned_data["reference_number"],
-                        description=form.cleaned_data["description"],
-                        is_final=form.cleaned_data["is_final"],
-                        created_by=request.user,
-                    )
-
-                    # Auto-post to accounting
-                    voucher, je = create_and_post_voucher_for_doc(
-                        doc=payment,
-                        user=request.user,
-                        voucher_type_input=payment.get_voucher_type(),
-                        engine=DjangoPostingEngine(),
-                    )
-                    payment.posted = True
-                    payment.save()
-
-                    messages.success(
-                        request,
-                        f"Payment {payment.payment_id} created and posted. Voucher: {voucher.voucher_no}",
-                    )
-
-                    return redirect(loan.get_absolute_url())
-
-            except Exception as e:
-                messages.error(request, f"Error creating payment: {str(e)}")
-                return redirect(loan.get_absolute_url())
-
-        else:
-            messages.error(request, "Invalid payment form. Please check the data.")
-            return redirect(loan.get_absolute_url())
 
 
 # Import models and utilities

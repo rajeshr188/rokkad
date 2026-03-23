@@ -242,32 +242,18 @@ urlpatterns += (
     ),
 )
 
-# urls for LoanPayment
+# LoanPayment list/update/delete URLs removed (PR-5: legacy model deprecated).
+# GivenLoan payment creation is at girvi/loanpayment/<pk>/create/
 urlpatterns += (
-    path(
-        "girvi/loanpayment/",
-        views.loan_payment_list_view,
-        name="girvi_loanpayment_list",
-    ),
-    path(
-        "girvi/loanpayment/create/",
-        views.loan_payment_create_view,
-        name="girvi_loanpayment_create",
-    ),
     path(
         "girvi/loanpayment/<int:pk>/create/",
         views.loan_payment_create_view,
         name="girvi_loanpayment_create",
     ),
     path(
-        "girvi/loanpayment/update/<int:pk>/",
-        views.loan_payment_update_view,
-        name="girvi_loanpayment_update",
-    ),
-    path(
-        "girvi/loanpayment/<int:pk>/delete",
-        views.loan_payment_delete_view,
-        name="girvi_loanpayment_delete",
+        "girvi/takenloan/<int:pk>/payment/create/",
+        views.taken_loan_payment_create_view,
+        name="takenloan_payment_create",
     ),
 )
 

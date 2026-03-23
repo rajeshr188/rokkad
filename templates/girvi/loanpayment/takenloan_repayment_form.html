@@ -1,0 +1,74 @@
+{% extends 'layouts/workspace.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title mb-1">Record Taken Loan Repayment</h5>
+          <p class="text-muted mb-0">
+            Loan <strong>{{ loan.loan_id }}</strong> &middot;
+            Lender: <strong>{{ loan.lender }}</strong> &middot;
+            Outstanding: <strong>{{ loan.outstanding_balance }}</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <div class="row g-3">
+              <div class="col-md-6">{{ form.total_amount|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.payment_date|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.payment_method|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.reference_number|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.interest_amount|as_crispy_field }}</div>
+              <div class="col-12">{{ form.description|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.is_final_payment|as_crispy_field }}</div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-cash-stack me-1"></i> Record Repayment
+              </button>
+              <a href="{{ loan.get_absolute_url }}" class="btn btn-outline-secondary">
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% partialdef content %}
+<div class="modal-body">
+  <form method="post" id="taken-repayment-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="row g-3">
+      <div class="col-md-6">{{ form.total_amount|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.payment_date|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.payment_method|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.reference_number|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.interest_amount|as_crispy_field }}</div>
+      <div class="col-12">{{ form.description|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.is_final_payment|as_crispy_field }}</div>
+    </div>
+  </form>
+</div>
+<div class="modal-footer">
+  <button type="submit" form="taken-repayment-form" class="btn btn-primary">
+    <i class="bi bi-cash-stack me-1"></i> Record Repayment
+  </button>
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+</div>
+{% endpartialdef %}

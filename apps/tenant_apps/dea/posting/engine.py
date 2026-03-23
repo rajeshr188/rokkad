@@ -11,7 +11,7 @@ from ..models import (
 )
 
 from abc import ABC
-from datetime import timezone
+from django.utils import timezone
 from django.db import transaction
 import logging
 
@@ -273,11 +273,11 @@ class BasePostingEngine(ABC):
                 ]
             )
 
-    def _get_transaction_type_id(self, side: Side) -> int:
-        """Helper to get TransactionType_DE ID for FK"""
+    def _get_transaction_type_id(self, side: Side) -> str:
+        """Return the XactTypeCode PK (str) — XactTypeCode IS the primary_key on TransactionType_DE."""
         from ..models.account import TransactionType_DE
 
-        return TransactionType_DE.objects.get(XactTypeCode=side).id
+        return TransactionType_DE.objects.get(XactTypeCode=side).pk
 
     def _reverse_journal_entry(
         self, original: JournalEntry, ctx: PostingContext

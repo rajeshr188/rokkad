@@ -1,11 +1,13 @@
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 from apps.tenant_apps.dea.posting.commands import PostVoucherCommand
 from apps.tenant_apps.dea.posting.context import PostingContext, compute_fingerprint
 from apps.tenant_apps.dea.posting.registry import registry
 from apps.tenant_apps.dea.posting.types import PostingError
 from apps.tenant_apps.dea.models import Voucher, VoucherStatus, VoucherType
+from apps.tenant_apps.dea.services.voucher_numbering import generate_date_based_voucher_number
 
 
 def _resolve_voucher_type(voucher_type_input):
@@ -92,16 +94,25 @@ def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
 
     # create new voucher and post it
     with transaction.atomic():
-        voucher = Voucher.objects.create(
-            voucher_no="",
+        voucher_date = (
+            getattr(doc, "created_at", None) or timezone.now()
+        )
+        voucher_no = generate_date_based_voucher_number(
             voucher_type=voucher_type,
-            voucher_date=getattr(doc, "created_at", None) or None,
+            transaction_date=voucher_date,
+        )
+
+        voucher = Voucher.objects.create(
+            voucher_no=voucher_no,
+            voucher_type=voucher_type,
+            voucher_date=voucher_date,
             status=VoucherStatus.DRAFT,
             created_by_id=user_id,
+            updated_by_id=user_id,
             doc_content_type=ct,
             doc_object_id=doc.pk,
             corrected_from=prev_voucher if prev_voucher else None,
-            fingerprint="",
+            fingerprint=new_fp,
         )
 
     je = PostVoucherCommand(engine).execute(voucher, user)

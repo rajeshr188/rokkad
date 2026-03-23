@@ -288,6 +288,10 @@ class BaseLoan(BusinessDoc):
 
     def get_absolute_url(self):
         """Detail view URL."""
+        if self.__class__.__name__ == "TakenLoan":
+            return reverse(
+                "girvi:taken_loan_collateral_detail", kwargs={"loan_id": self.pk}
+            )
         return reverse("girvi:girvi_loan_detail", args=(self.pk,))
 
     def get_update_url(self):

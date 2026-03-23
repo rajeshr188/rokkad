@@ -50,6 +50,7 @@ from ..models import (
     TakenLoan,
 )
 from apps.tenant_apps.dea.models import Voucher
+from ..payment_service import record_loan_disbursal
 from ..services import LoanIDGenerator
 from ..tables import LoanTable, TakenLoanTable, UnifiedLoanTable
 
@@ -133,6 +134,36 @@ def loan_transition_view(request, pk):
             transition_method = getattr(flow, transition_name, None)
             if transition_method and transition_method.can_proceed():
                 transition_method(**form.cleaned_data)
+
+                if transition_name == "disburse" and loan.status == LoanStatus.DISBURSED:
+                    try:
+                        payment, created = record_loan_disbursal(loan, request.user)
+                        if created:
+                            messages.success(
+                                request,
+                                _(
+                                    f"Loan status updated successfully. Disbursal voucher {payment.payment_id} posted."
+                                ),
+                            )
+                        else:
+                            messages.success(
+                                request,
+                                _(
+                                    f"Loan status updated successfully. Disbursal already recorded as {payment.payment_id}."
+                                ),
+                            )
+                    except Exception as exc:
+                        logger.exception(
+                            "Disbursal posting failed for loan %s", loan.pk
+                        )
+                        messages.warning(
+                            request,
+                            _(
+                                f"Loan status updated successfully, but disbursal posting failed: {exc}"
+                            ),
+                        )
+                    return redirect(loan.get_absolute_url())
+
                 messages.success(request, _("Loan status updated successfully."))
             else:
                 messages.error(
@@ -811,7 +842,7 @@ def loan_detail_items_tab(request, pk):
 @require_http_methods(["GET"])
 def loan_detail_payments_tab(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
-    payments = loan.loan_payments.all() if hasattr(loan, "loan_payments") else []
+    payments = loan.payments.order_by("-payment_date")
     return render(
         request,
         "girvi/loan/loan_detail_1.html#payments-tab",

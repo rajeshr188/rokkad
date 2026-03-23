@@ -219,12 +219,6 @@ urlpatterns += [
         views.PaymentVoucherDeleteView.as_view(),
         name="dea_payment_delete",
     ),
-    # Loan payment creation (AJAX)
-    path(
-        "loans/<str:source_type>/<int:loan_id>/payment/create/",
-        views.CreateLoanPaymentView.as_view(),
-        name="dea_create_loan_payment",
-    ),
 ]
 
 # Expense Voucher URLs

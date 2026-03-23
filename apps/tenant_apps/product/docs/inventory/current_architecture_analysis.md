@@ -720,3 +720,376 @@ If you want, next I can draft:
 1. exact SQL view shape for unified balances
 2. exact statement table fields for physical audit
 3. the reconciliation flow (scan -> variance -> adjustment posting) as service methods.
+
+
+
+Let me read the view and the relevant form/signal code. 
+
+Searched for text `stockin_journalentry` (`**/apps/tenant_apps/product/views/stock.py`), 1 result
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/product/views/stock.py#225-225), lines 225 to 284
+
+Searched for text `create` (`**/apps/tenant_apps/product/views/stock.py`), 9 results
+
+Searched for text `stock/create` (`**/apps/tenant_apps/product/urls.py`), 2 results
+
+So `/product/stock/create/` maps to `stockin_journalentry`. The error is `JournalEntry has no voucher`. Let me find where `.voucher` is accessed after creating the `JournalEntry`.  
+
+Searched for text `.voucher` (`**/apps/tenant_apps/product/**/*.py`), no results
+
+Searched for regex `post_save.*JournalEntry|JournalEntry.*post_save|journal_entry.*voucher|voucher.*journal` (`**/apps/**/*.py`), 20 results
+
+Searched for text `voucher` (`**/apps/tenant_apps/dea/signals.py`), no results
+
+Searched for text `StockInForm` (`**/apps/tenant_apps/product/forms.py`), 1 result
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/product/forms.py#573-573), lines 573 to 640
+
+Searched for regex `class JournalEntry|voucher.*FK|FK.*voucher|OneToOne.*voucher` (`**/apps/tenant_apps/dea/models/*.py`), 4 results
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/models/journal.py#1-1), lines 1 to 90
+
+Now the problem is clear. `JournalEntry.voucher` is a **NOT NULL FK** to `Voucher` — but `stockin_journalentry` does `JournalEntry.objects.create(desc="Stock In Entry")` with no `voucher`, which will raise an `IntegrityError` or, if there's a signal or the `__str__` is called on the result, the `RelatedObjectDoesNotExist` shown. 
+
+This means the stock-in flow was written before `JournalEntry` gained its mandatory `voucher` FK. The form's `clean()` creates a `Stock` record without a journal entry, and the view tries to create a bare `JournalEntry`. Let me check how other parts of the system create a `JournalEntry` to understand the required `Voucher` path.  
+
+Searched for regex `class Voucher|class VoucherStatus|VoucherType|objects.create` (`**/apps/tenant_apps/dea/models/voucher.py`), 4 results
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/services/post_doc.py#1-1), lines 1 to 100
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/models/voucher.py#1-1), lines 1 to 80
+
+Now I have the full picture. Here is the diagnosis:
+
+---
+
+## Root Cause
+
+`JournalEntry.voucher` is a **NOT NULL FK** to `Voucher`. The `stockin_journalentry` view does:
+
+```python
+journal_entry = JournalEntry.objects.create(desc="Stock In Entry")
+```
+
+This will fail at the DB level with an `IntegrityError` since `voucher_id` is required. The exception you see (`JournalEntry has no voucher`) is Django's descriptor complaint when something tries to access `journal_entry.voucher` on an object that was constructed in memory but couldn't actually be saved — or was fetched and the FK IS NULL.
+
+**The real architectural issue:** The Stock-In flow predates the DEA voucher system. When `JournalEntry` was refactored to require a `Voucher` (which itself requires a `VoucherType`, `voucher_date`, and a `business_doc` generic FK pointing to a real object), the stock-in path was never updated.
+
+## How Other Modules Do It
+
+Every other module (purchase, sales, girvi) that creates a `JournalEntry` goes through `create_and_post_voucher_for_doc()` in post_doc.py. That function:
+1. Creates a `Voucher` (DRAFT) with `voucher_type` + `voucher_date` + `business_doc` pointing to the source document
+2. Posts the voucher, which creates the `JournalEntry` linked to it
+
+## What This Means for Stock-In Without a Purchase Doc
+
+Without a business document to hang the `Voucher` on, you have two paths:
+
+**Option A — Use `StockTransaction` itself as the business doc**  
+This is the cleanest: `StockTransaction` becomes the business document. After saving it, call `create_and_post_voucher_for_doc(stock_transaction, user, "Stock In", engine)`. Requires a `"Stock In"` `VoucherType` to exist in the DB, and a posting rule registered for it.
+
+**Option B — Make `StockTransaction.journal_entry` nullable (was already on the roadmap as P0 fix)**  
+Stock movements that aren't double-entry financially (internal adjustments, opening balance loads) simply don't need a `JournalEntry`. The field should be `null=True, blank=True`. This unblocks the form immediately while the proper voucher flow is wired up later.
+
+## Immediate Fix
+
+The P0 fix from the roadmap — make `journal_entry` nullable — is the right unblock. Let me check the current field definition before touching it: 
+
+Searched for text `journal_entry` (`**/apps/tenant_apps/product/models/stock.py`), 9 results
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/product/models/stock.py#330-330), lines 330 to 355
+
+`journal_entry` is **already** `null=True, blank=True` on `StockTransaction`. The problem is not there. The error happens because the view tries to **create** a `JournalEntry` object without a `voucher` — which is now a NOT NULL FK on `JournalEntry` itself.
+
+The fix is simple: **stop creating a bare `JournalEntry` in the view**. Since `StockTransaction.journal_entry` is already nullable, just skip creating one entirely when posting a stock-in without a backing financial document. 
+
+Replacing 22 lines with 22 lines in [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/product/views/stock.py)
+
+
+```
+
+```
+
+
+Checked [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/product/views/stock.py), no problems found
+
+Fixed. Here's the full picture:
+
+**What broke:** The view was trying `JournalEntry.objects.create(desc="Stock In Entry")` — but `JournalEntry.voucher` is a NOT NULL FK (added when the DEA voucher system was refactored). A bare `JournalEntry` can no longer be created standalone; it must be attached to a `Voucher` which in turn requires a `VoucherType` and a `business_doc`.
+
+**The fix:** `StockTransaction.journal_entry` is already `null=True, blank=True`, so the field was always designed to be optional. The view now simply leaves `journal_entry = None` when no `journal_entry_id` is passed via GET. The transaction saves cleanly without a double-entry link.
+
+**When it's appropriate (and when it isn't):**
+- ✅ Direct stock-in without financial backing — opening balance loads, manual adjustments, testing — `journal_entry = None` is correct
+- ⚠️ Stock-in from a purchase invoice — should pass `?journal_entry_id=<id>` so the transaction is linked to the purchase voucher's JE. That path still works as before.
+
+For the long term, whenever a stock movement needs to generate an accounting entry (e.g. recording the cost of goods received), use `create_and_post_voucher_for_doc()` from `dea/services/post_doc.py` with the `StockTransaction` as the business doc and a `"Stock In"` `VoucherType`. That's the proper integration point but requires a `VoucherType` seed and a posting rule, which is a separate PR.
+
+Let me look at both systems together before answering.  
+
+Searched for text `StockTransaction` (`**/apps/tenant_apps/dea/models/journal.py`), no results
+
+Searched for text `JournalEntry` (`**/apps/tenant_apps/product/models/stock.py`), 4 results
+
+Compacted conversation
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/product/models/stock.py#1-1), lines 1 to 60
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/models/journal.py#1-1), lines 1 to 80
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/product/models/stock.py#60-60), lines 60 to 270
+
+Searched for text `VoucherType` (`**/apps/tenant_apps/dea/models/voucher.py`), 2 results
+
+Searched for text `stockin_journalentry\|def stock_in\|def stockin` (`**/apps/tenant_apps/product/views/stock.py`), no results
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/models/voucher.py#1-1), lines 1 to 80
+
+Searched for regex `def stock` (`**/apps/tenant_apps/product/views/stock.py`), 5 results
+
+Searched for regex `stock|StockTransaction|journal_entry` (`**/apps/tenant_apps/purchase/**`), 20 results
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/product/views/stock.py#243-243), lines 243 to 284
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/purchase/views/purchase.py#1-1), lines 1 to 80
+
+Searched for regex `def post|stock|journal_entry|StockTransaction` (`**/apps/tenant_apps/purchase/models/**`), 20 results
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/purchase/models/purchase.py#635-635), lines 635 to 720
+
+Now I have enough context. Here is a clear, opinionated answer.
+
+---
+
+## Stock-In Flow Design
+
+### The three distinct stock-in origins
+
+| Scenario | DEA side | Inventory side |
+|---|---|---|
+| **Purchase** | Purchase invoice is the business doc; `PurchaseItem.post()` calls `record_movement("P")` linking to the purchase's JournalEntry. Already works correctly. | `Stock` or `StockItem` created by `_sync_inventory_subject()` |
+| **Opening balance** | "Opening Balance" voucher type; Dr Inventory / Cr Capital or Opening-Stock equity account | `StockTransaction(movement_type="OB")` |
+| **Manual adjustment / found stock** | "Adjustment" voucher type; Dr Inventory / Cr Stock-Adjustment P&L account — or no accounting entry at all if the business doesn't track it | `StockTransaction(movement_type="AD")` |
+
+---
+
+### Are the two systems independent?
+
+**They should be — and your code already mostly expresses this correctly:**
+
+```
+StockTransaction.journal_entry = ForeignKey(JournalEntry, null=True, blank=True)
+```
+
+That nullable FK is the right architecture. It says:
+
+> Every physical movement **must** have a `StockTransaction`. A `JournalEntry` is **optionally attached** when there is also a financial effect to record.
+
+The inventory book (weight/qty ledger) and the accounts book (value ledger) are two separate journals that happen to reference the same events. Jewellery businesses have always maintained them separately — a traditional *maalthi* keeps only weight, the *khaata* keeps money. Neither waits for the other.
+
+The broken design you hit was the opposite: `JournalEntry.voucher` is **NOT NULL**, so if you try to create a JournalEntry without a proper Voucher+VoucherType setup, it crashes. The inventory system must never be gated by the DEA system being ready.
+
+---
+
+### Should there be an independent "Stock Journal Entry"?
+
+**No — not as a model. But yes as a pattern.** Here is what "independent" actually means:
+
+A `StockTransaction` **is** the stock journal entry. It records:
+- which subject (lot or item)
+- movement type (direction: `+` or `-`)
+- weight and quantity
+- when
+- optionally: which financial event caused it (`journal_entry`)
+
+You don't need a parallel "StockJournalEntry" model. What you need is a clean **service-level API** that has three modes:
+
+```python
+# 1. Pure inventory move (opening balance, adjustment, split, merge)
+InventoryMovementService.record_movement(
+    subject=stock,
+    movement_type_id="OB",  # or "AD"
+    weight=Decimal("10.500"),
+    quantity=1,
+    journal_entry=None,  # no accounting entry yet
+)
+
+# 2. Purchase-linked move (already works via PurchaseItem.post())
+InventoryMovementService.record_movement(
+    subject=stock,
+    movement_type_id="P",
+    weight=...,
+    quantity=...,
+    journal_entry=purchase_item.get_journal_entry(),  # linked to purchase voucher
+)
+
+# 3. Accounting-posted adjustment (when user wants DEA for the adjustment too)
+#    — post the voucher first, then call record_movement with the JE
+voucher = create_and_post_voucher_for_doc(stock_txn, user, "Stock Adjustment", engine)
+je = voucher.journal_entries.get()
+txn.journal_entry = je
+txn.save()
+```
+
+---
+
+### Concrete missing pieces
+
+1. **`"OB"` Movement type** — Opening Balance — doesn't exist in your fixture. Add it with direction `"+"`. Semantically distinct from `"AD"` (which is an adjustment, not initial entry).
+
+2. **`purchase_touch` is NOT NULL** — blocks the opening balance form because old stock doesn't always have a "purchase touch". Make it nullable or give it a sensible default like `0.000`.
+
+3. **`stockin_journalentry` view is misnamed** — it's actually a direct stock-in form. Rename it to `stock_in_direct` or `stock_adjust_in`. The name implies a JE which it no longer creates.
+
+4. **Opening balance as a batch workflow** — when a user first sets up the system, they'll have 100+ lots to enter. A CSV/bulk import form scoped to `movement_type="OB"` would be more practical than entering one by one.
+
+---
+
+### Summary
+
+- Inventory system is **primary and always runs** — every physical movement gets a `StockTransaction`.
+- DEA system is **secondary and optionally linked** — attach a `JournalEntry` when there's a financial posting to make.
+- `StockTransaction.journal_entry = None` is valid and intentional for internal moves, opening balances (until posted), splits, merges, and any scenario where the accounts side isn't ready.
+- The models already express this correctly; the gap is just missing `"OB"` movement type + nullable `purchase_touch` + cleaner view naming.
+
+Let me read the actual service code so the answer is grounded in what exists.  
+
+Searched for regex `posting.*rule|PostingRule|registry|VoucherType.*seed|fixtures` (`**/apps/tenant_apps/dea/**`), 20 results
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/services/post_doc.py#1-1), lines 1 to 120
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/posting/rules)
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/posting/registry.py)
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/posting/rules/purchase_invoice.py#1-1), lines 1 to 80
+
+Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/dea/posting/rules/base.py)
+
+Now the full picture is clear. Here's the concrete answer:
+
+---
+
+## Yes — a three-mode service API is exactly the right solution
+
+Let me explain what the DEA pipeline actually *is* before connecting it to stock movements.
+
+### The DEA pipeline in your system today
+
+```
+Business Doc (PurchaseInvoice / StockTransaction / etc.)
+    │
+    ├── Voucher  (created by create_and_post_voucher_for_doc)
+    │       voucher_type → "PURCHASE_GOODS" / "Stock In" / etc.
+    │       business_doc = GenericFK → the doc that triggered it
+    │
+    ├── JournalEntry  (created by PostVoucherCommand)
+    │       voucher → FK above
+    │
+    └── LedgerTransaction(s)  (created by the PostingRule.build_posting())
+            DR: Inventory Ledger  ₹10,000
+            CR: Opening Equity    ₹10,000
+```
+
+The `registry` maps a `VoucherType.name` string → a `PostingRule` class. The rule has one method: `build_posting(ctx)` → `PostingBundle` → list of ledger lines. That's all. The engine runs the rule, writes the ledger movements, and stamps the voucher as POSTED.
+
+**The missing piece for stock-in** is just two things: a `VoucherType` row named `"Stock In"` in the DB, and a `StockInRule` file in `posting/rules/`.
+
+---
+
+### What each of the three modes means in code
+
+**Mode 1 — Pure inventory, no accounting (today's fix)**
+```python
+# User enters opening balance
+txn = InventoryMovementService.record_movement(
+    subject=stock, movement_type_id="OB",
+    weight=Decimal("10.500"), quantity=1,
+    journal_entry=None,   # ← no DEA involvement
+)
+# StockTransaction saved. Inventory book updated. Done.
+```
+
+**Mode 2 — Inventory triggered by purchase (already works)**
+```python
+# PurchaseItem.post() does this internally
+txn = InventoryMovementService.record_movement(
+    subject=stock, movement_type_id="P",
+    weight=item.weight, quantity=item.quantity,
+    journal_entry=item.get_journal_entry(),  # ← the purchase invoice's JE
+)
+# StockTransaction.journal_entry points to the purchase invoice's JE
+# The accounting was posted when the purchase was posted — not here
+```
+Note: in this mode the `StockTransaction` borrows the purchase invoice's `JournalEntry`. The stock movement doesn't own its own voucher — it's a side-effect of the purchase posting.
+
+**Mode 3 — Inventory movement that needs its own accounting entry**
+
+This is what "use `create_and_post_voucher_for_doc`" means:
+
+```python
+# 1. Save the StockTransaction first (inventory book)
+txn = InventoryMovementService.record_movement(
+    subject=stock, movement_type_id="AD",
+    weight=Decimal("5.000"), quantity=1,
+    journal_entry=None,  # temporarily None
+)
+
+# 2. Now post a voucher where the StockTransaction IS the business doc
+voucher, je = create_and_post_voucher_for_doc(
+    doc=txn,               # ← StockTransaction is the business doc
+    user=request.user,
+    voucher_type_input="Stock In",   # must exist in VoucherType table
+    engine=posting_engine,
+)
+
+# 3. Link the JE back to the transaction
+txn.journal_entry = je
+txn.save(update_fields=["journal_entry"])
+```
+
+For this to work, `StockTransaction` must implement `get_economic_payload()` (used for idempotency fingerprinting) and there must be a `StockInRule.build_posting()` that says what the ledger entries are. For example:
+
+```python
+# posting/rules/stock_in.py
+@register_rule("Stock In")
+class StockInRule(BasePostingRule):
+    def build_posting(self, ctx) -> PostingBundle:
+        txn = ctx.doc  # the StockTransaction
+        cost = txn.weight * txn.stock.purchase_touch * current_gold_rate
+        return PostingBundle(lines=[
+            DualLedgerLine(
+                ledger_dr=get_ledger_id_by_key("INVENTORY"),
+                ledger_cr=get_ledger_id_by_key("OPENING_STOCK_EQUITY"),
+                amount=cost,
+                memo=f"Stock in {txn.pk}",
+            )
+        ])
+```
+
+---
+
+### When you actually need Mode 3 (and when you don't)
+
+| Use case | Mode | Reason |
+|---|---|---|
+| Opening balance entry | Mode 1 now → Mode 3 later if auditors need a balanced entry | Opening stock has equity counterpart but small businesses often skip the DEA entry |
+| Manual adjustment (+) | Mode 1 typically | Corrections are internal; DEA only if stock variance is being written up |
+| Purchase receipt | Mode 2 | The purchase invoice already posts `DR Inventory / CR AP`; duplicating it in Mode 3 would double-count |
+| Foundry return (goods received from manufacturer) | Mode 3 | This is a real goods receipt with a cost — needs its own voucher |
+| Approval return (goods returned by customer) | Mode 3 | Reverses the earlier sale entry |
+
+The key rule: **one economic event → one posted voucher**. If the purchase invoice already covers the DR Inventory, the stock transaction from `PurchaseItem.post()` should NOT also own a voucher.
+
+---
+
+### Summary
+
+The three-mode service API is right. The code already supports all three structurally. The only work remaining for Mode 3 to be usable is:
+
+1. Seed a `VoucherType` row: `name="Stock In"` (migration or fixture)
+2. Write `posting/rules/stock_in.py` with a `StockInRule`
+3. Register it in apps.py alongside the other rules
+4. Add `get_economic_payload()` to `StockTransaction` for idempotency
+
+That's a self-contained PR. Nothing about the current model needs to change.

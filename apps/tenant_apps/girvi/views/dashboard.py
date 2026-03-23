@@ -4,8 +4,9 @@ from django.shortcuts import render
 
 from ..models import (
     GivenLoan, Release, License, Series, LoanItemStorageBox,
-    LoanPayment, StatementItem
+    StatementItem
 )
+from apps.tenant_apps.dea.models import PaymentVoucher
 from apps.tenant_apps.notify.models import Notification
 
 
@@ -39,9 +40,9 @@ def girvi_dashboard(request):
     # Storage box counts
     total_boxes = LoanItemStorageBox.objects.count()
     
-    # Payment counts
-    total_payments = LoanPayment.objects.count()
-    pending_payments = LoanPayment.objects.filter(with_release=False).count()
+    # Payment counts (PaymentVoucher replaces legacy LoanPayment)
+    total_payments = PaymentVoucher.objects.count()
+    pending_payments = PaymentVoucher.objects.filter(posted=False).count()
     
     # Statement counts
     total_statements = StatementItem.objects.count()
