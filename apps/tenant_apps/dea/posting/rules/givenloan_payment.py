@@ -10,7 +10,6 @@ When we give out a loan (disburse it):
 
 from decimal import Decimal
 from django.core.exceptions import ValidationError
-from moneyed import Money
 
 from ..types import PostingBundle, DualLedgerLine, AccountLine
 from .base import BasePostingRule
@@ -53,19 +52,20 @@ class GivenLoanDisbursalRule(BasePostingRule):
         if principal_decimal <= 0:
             raise ValidationError("Disbursal amount must be positive")
 
-        # Get source loan to access customer
+        # Get source loan to access borrower/customer account
         source_loan = payment.source_loan
         if not source_loan:
             raise ValidationError("Cannot find source GivenLoan")
 
-        if not hasattr(source_loan, "customer") or not source_loan.customer:
-            raise ValidationError("Loan has no customer")
+        # Current GivenLoan model uses borrower; keep customer as legacy fallback.
+        party = getattr(source_loan, "borrower", None) or getattr(
+            source_loan, "customer", None
+        )
+        if not party:
+            raise ValidationError("Loan has no borrower/customer")
 
-        if (
-            not hasattr(source_loan.customer, "account")
-            or not source_loan.customer.account
-        ):
-            raise ValidationError(f"Customer {source_loan.customer} has no account")
+        if not hasattr(party, "account") or not party.account:
+            raise ValidationError(f"Borrower/customer {party} has no account")
 
         # Resolve ledgers
         cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
@@ -87,11 +87,11 @@ class GivenLoanDisbursalRule(BasePostingRule):
             )
         ]
 
-        # Account line for customer (DEBIT side - they now owe us)
+        # Account line for borrower/customer (DEBIT side - they now owe us)
         account_lines = [
             AccountLine(
                 ledger_id=loan_receivable_id,
-                account_id=source_loan.customer.account.id,
+            account_id=party.account.id,
                 side="Dr",
                 currency=str(payment.total_amount.currency),
                 amount=principal_decimal,
