@@ -22,7 +22,7 @@ from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_http_methods
 
-from ..models import PaymentVoucher, CashFlowDirection
+from ..models import PaymentVoucher, CashFlowDirection, PaymentMethod
 from ..forms import PaymentVoucherForm
 from ..posting.engine import DjangoPostingEngine
 from ..services.post_doc import create_and_post_voucher_for_doc
@@ -69,7 +69,7 @@ class PaymentVoucherListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["directions"] = CashFlowDirection.choices
-        context["methods"] = PaymentVoucher.PaymentMethod.choices
+        context["methods"] = PaymentMethod.choices
         context["current_direction"] = self.request.GET.get("direction", "")
         context["current_method"] = self.request.GET.get("method", "")
         return context
