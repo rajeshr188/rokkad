@@ -1,4 +1,5 @@
 import django_tables2 as tables
+from django.utils.html import format_html
 
 from .models import (
     Account,
@@ -104,21 +105,21 @@ class AccountStatementTable(tables.Table):
 
 class JournalEntriesTable(tables.Table):
     id = tables.Column(verbose_name="ID", linkify=True)
-    desc = tables.Column(
-        verbose_name="Description", linkify=lambda record: record.get_voucher_url()
-    )
-    content_object = tables.Column(
-        linkify=lambda record: record.get_voucher_url(),
-        verbose_name="Voucher",
-    )
+    desc = tables.Column(verbose_name="Description")
+    voucher = tables.Column(verbose_name="Voucher", accessor="voucher", linkify=True)
+    posted_at = tables.DateTimeColumn(verbose_name="Posted At", format="Y-m-d H:i")
+    balance_status = tables.Column(empty_values=(), verbose_name="Balance")
+    imbalance = tables.Column(empty_values=(), verbose_name="Difference")
 
     class Meta:
         model = JournalEntry
         fields = (
             "id",
-            "created",
-            "updated",
+            "posted_at",
+            "voucher",
             "desc",
+            "balance_status",
+            "imbalance",
         )
         attrs = {
             "class": "table table-sm table-bordered table-striped-columns table-hover"
@@ -126,6 +127,44 @@ class JournalEntriesTable(tables.Table):
         empty_text = "There are no loans matching the search criteria..."
         template_name = "django_tables2/bootstrap.html"  # Use Bootstrap styling
         # template_name = "table_htmx.html"
+
+    def _get_balance_data(self, record):
+        if not hasattr(record, "_balance_validation_cache"):
+            is_balanced, _, _, imbalances = record.validate_balanced()
+            imbalance_text = ", ".join(
+                str(amount) for amount in imbalances.values()
+            )
+            record._balance_validation_cache = {
+                "is_balanced": is_balanced,
+                "imbalance_text": imbalance_text,
+            }
+        return record._balance_validation_cache
+
+    def render_balance_status(self, record):
+        balance_data = self._get_balance_data(record)
+        if balance_data["is_balanced"]:
+            return format_html(
+                '<span class="badge bg-success">{}</span>',
+                "Balanced",
+            )
+
+        return format_html(
+            '<span class="badge bg-danger">{}</span>',
+            "Unbalanced",
+        )
+
+    def render_imbalance(self, record):
+        balance_data = self._get_balance_data(record)
+        if balance_data["is_balanced"]:
+            return format_html(
+                '<span class="text-muted">{}</span>',
+                "-",
+            )
+
+        return format_html(
+            '<span class="text-danger fw-semibold">{}</span>',
+            balance_data["imbalance_text"] or "Check lines",
+        )
 
 
 class PeriodTable(tables.Table):
@@ -164,7 +203,11 @@ class PeriodTable(tables.Table):
         badge_class = {"OPEN": "success", "CLOSED": "warning", "LOCKED": "danger"}.get(
             value, "secondary"
         )
-        return f'<span class="badge bg-{badge_class}">{value}</span>'
+        return format_html(
+            '<span class="badge bg-{}">{}</span>',
+            badge_class,
+            value,
+        )
 
 
 # ============================================================================
@@ -251,7 +294,11 @@ class VoucherTable(tables.Table):
             "REVERSED": "↩️ Reversed",
         }.get(value, value)
 
-        return f'<span class="badge bg-{badge_class}">{status_text}</span>'
+        return format_html(
+            '<span class="badge bg-{}">{}</span>',
+            badge_class,
+            status_text,
+        )
 
     def render_created_by(self, value):
         """Render user name with fallback"""

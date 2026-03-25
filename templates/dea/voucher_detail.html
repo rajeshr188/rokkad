@@ -80,10 +80,10 @@
                     {% endif %}
                     {% if voucher.business_doc %}
                     <div class="mb-3">
-                        <label class="form-label text-muted">Reference Document</label>
+                        <label class="form-label text-muted">Business Doc</label>
                         <p class="h6">
                             <a href="{{ voucher.business_doc.get_absolute_url }}">
-                                {{ voucher.business_doc.__class__.__name__ }} #{{ voucher.business_doc.id }}
+                                {{ voucher.business_doc }}
                             </a>
                         </p>
                     </div>

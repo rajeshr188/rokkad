@@ -69,29 +69,37 @@ class GivenLoanDisbursalRule(BasePostingRule):
 
         # Resolve ledgers
         cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
-        loan_receivable_id = get_ledger_id_by_key(
-            "LOAN_RECEIVABLE", tenant_id=tenant_id
+        # LT target: internal principal flow control ledger
+        loan_principal_ctrl_id = get_ledger_id_by_key(
+            "LOAN_PRINCIPAL_CTRL", tenant_id=tenant_id
+        )
+        # AT target: party attribution control ledger (separate from LT target)
+        borrower_loan_ctrl_id = get_ledger_id_by_key(
+            "BORROWER_LOAN_CTRL", tenant_id=tenant_id
         )
 
-        if not cash_id or not loan_receivable_id:
-            raise ValidationError("Required ledgers (CASH, LOAN_RECEIVABLE) not found")
+        if not cash_id or not loan_principal_ctrl_id or not borrower_loan_ctrl_id:
+            raise ValidationError(
+                "Required ledgers (CASH, LOAN_PRINCIPAL_CTRL, BORROWER_LOAN_CTRL) not found"
+            )
 
         # Build posting - dual-leg ledger entry
-        # Dr LOAN_RECEIVABLE, Cr CASH
+        # Dr LOAN_PRINCIPAL_CTRL (internal fund flow), Cr CASH
         ledger_lines = [
             DualLedgerLine(
-                debit_ledger_id=loan_receivable_id,
+                debit_ledger_id=loan_principal_ctrl_id,
                 credit_ledger_id=cash_id,
+                currency=str(payment.total_amount.currency),
                 amount=principal_decimal,
                 amount_base=principal_decimal,
             )
         ]
 
-        # Account line for borrower/customer (DEBIT side - they now owe us)
+        # Account line for borrower against BORROWER_LOAN_CTRL (DEBIT - they owe us)
         account_lines = [
             AccountLine(
-                ledger_id=loan_receivable_id,
-            account_id=party.account.id,
+                ledger_id=borrower_loan_ctrl_id,
+                account_id=party.account.id,
                 side="Dr",
                 currency=str(payment.total_amount.currency),
                 amount=principal_decimal,

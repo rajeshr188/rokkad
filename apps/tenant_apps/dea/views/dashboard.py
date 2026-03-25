@@ -24,6 +24,20 @@ from ..models import (
 from ..utils.currency import Balance
 
 
+def _attach_balance_review_data(entries):
+    reviewed_entries = []
+
+    for entry in entries:
+        is_balanced, _, _, imbalances = entry.validate_balanced()
+        entry.balance_review = {
+            "is_balanced": is_balanced,
+            "imbalance_text": ", ".join(str(amount) for amount in imbalances.values()),
+        }
+        reviewed_entries.append(entry)
+
+    return reviewed_entries
+
+
 @login_required
 def dashboard(request):
     """
@@ -55,9 +69,11 @@ def dashboard(request):
         "voucher_type", "created_by"
     ).order_by("-created_at")[:10]
 
-    recent_entries = JournalEntry.objects.select_related(
-        "voucher", "period", "posted_by"
-    ).order_by("-posted_at")[:10]
+    recent_entries = _attach_balance_review_data(
+        JournalEntry.objects.select_related("voucher", "period", "posted_by")
+        .prefetch_related("ltxns", "atxns", "atxns__XactTypeCode")
+        .order_by("-posted_at")[:10]
+    )
 
     # Quick stats
     stats = {
@@ -324,28 +340,39 @@ def _get_dashboard_alerts():
         )
 
     # Check for unbalanced journal entries
-    recent_entries = JournalEntry.objects.filter(
-        voucher__status=VoucherStatus.POSTED,
-        posted_at__gte=timezone.now() - timedelta(days=30),
-    )[
-        :50
-    ]  # Check last 50 entries
+    recent_entries = (
+        JournalEntry.objects.filter(
+            voucher__status=VoucherStatus.POSTED,
+            posted_at__gte=timezone.now() - timedelta(days=30),
+        )
+        .select_related("voucher")
+        .prefetch_related("ltxns", "atxns", "atxns__XactTypeCode")[:50]
+    )  # Check last 50 entries
 
     unbalanced = []
     for je in recent_entries:
-        is_balanced, _, _, imbalances = je.validate_balanced()
+        is_balanced, _, _, _ = je.validate_balanced()
         if not is_balanced:
             unbalanced.append(je)
 
     if unbalanced:
+        if len(unbalanced) == 1:
+            review_link = unbalanced[0].get_absolute_url()
+            review_text = "Review Entry"
+            review_message = f"Journal entry #{unbalanced[0].pk} is not balanced"
+        else:
+            review_link = "/dea/journal_entries/?balance_status=unbalanced"
+            review_text = "Review Entries"
+            review_message = f"{len(unbalanced)} journal entry(ies) are not balanced"
+
         alerts.append(
             {
                 "type": "danger",
                 "icon": "alert-triangle",
                 "title": "Unbalanced Entries Found",
-                "message": f"{len(unbalanced)} journal entry(ies) are not balanced",
-                "link": "/dea/journal_entries/",
-                "link_text": "Review Entries",
+                "message": review_message,
+                "link": review_link,
+                "link_text": review_text,
             }
         )
 

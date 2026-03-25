@@ -14,11 +14,13 @@ from .models import NoticeGroup, Notification
 # Create your views here.
 
 
+@login_required
 def noticegroup_list(request):
     ng = NoticeGroup.objects.all().prefetch_related("notifications")
     return render(request, "notify/noticegroup_list.html", context={"objects": ng})
 
 
+@login_required
 def noticegroup_create(request):
     form = NoticeGroupForm(request.POST or None)
     if request.method == "POST":
@@ -102,6 +104,7 @@ def notification_list(request):
     return render(request, "notify/notification_list.html", context={"objects": ng})
 
 
+@login_required
 def notification_create(request):
     form = NotificationForm(request.POST or None)
     if request.method == "POST":
@@ -113,9 +116,14 @@ def notification_create(request):
     return render(request, "notify/notification_form.html", context={"form": form})
 
 
+@login_required
 def notification_detail(request, pk):
-    ng = get_object_or_404(Notification, pk=pk)
-
+    ng = get_object_or_404(
+        Notification.objects.select_related(
+            "group", "customer", "notice_type_config"
+        ).prefetch_related("items__content_type", "loans"),
+        pk=pk,
+    )
     return render(request, "notify/notification_detail.html", context={"object": ng})
 
 

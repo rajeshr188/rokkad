@@ -1,41 +1,75 @@
-{% extends 'layouts/base.html' %}
-{%load static%}
-{%block content%}
-<div class="container-fluid" id="notification_list">
-    <h2>Notification List</h2><br/>
-    <a class="btn btn-secondary" href="{% url 'notify_notification_create'%}">Create New</a>
-    <table class="table table-hover">
-        <thead class="table-group-divider">
-          <tr>
-            <th scope="col">Id</th>
-            <th scope="col">To</th>
-            <th scope="col">Loans</th>
-            <th scope="col">medium</th>
-            <th scope="col">Group</th>
-            <th scope="col">Printed</th>
-            <th scope="col">Action</th>
-          </tr>
-        </thead>
-        <tbody class="table-group-divider">
-        {%for i in objects%}
-         <tr>
-            <td><a href="{% url 'notify_notification_detail' i.id%}">{{i}}</a></td>
-            <td>{{i.customer}}</td><td>{{i.loans.count}}</td>
-            <td>{{i.medium_type}}</td><td><a href="{% url 'notify_noticegroup_detail' i.group.id%}">{{i.group.id}}</a></td>
-            <td>{{i.is_printed}}</td>
-            <td><div class="btn-group" role="group">
-              <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                Notify
-              </button>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#">Print</a></li>
-                <li><a class="dropdown-item" href="#">MSG</a></li>
-              </ul>
-            </div></td>
-         </tr> 
-         {%endfor%}
-        </tbody>
-      </table>
-    
+{% extends 'layouts/workspace.html' %}
+{% block title %}Notifications{% endblock %}
+{% block page_header %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Notifications <span class="badge bg-secondary">{{ objects.count }}</span></h4>
+  <a class="btn btn-primary btn-sm" href="{% url 'notify_notification_create' %}">
+    <i class="bi bi-plus-circle me-1"></i>New Notification
+  </a>
 </div>
-{%endblock%}
+{% endblock %}
+{% block workspace_content %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Customer</th>
+          <th>Type</th>
+          <th>Medium</th>
+          <th>Group</th>
+          <th>Status</th>
+          <th>Printed</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in objects %}
+        <tr>
+          <td><a href="{% url 'notify_notification_detail' i.id %}">{{ i.id }}</a></td>
+          <td>{{ i.customer }}</td>
+          <td class="text-muted small">
+            {% if i.notice_type_config %}{{ i.notice_type_config.name }}{% elif i.notice_type %}{{ i.get_notice_type_display }}{% else %}—{% endif %}
+          </td>
+          <td>{{ i.get_medium_type_display }}</td>
+          <td>
+            {% if i.group %}
+              <a href="{% url 'notify_noticegroup_detail' i.group.id %}">{{ i.group.name }}</a>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            <span class="badge {% if i.status == 'S' %}bg-success{% elif i.status == 'D' %}bg-secondary{% elif i.status == 'Z' %}bg-info{% elif i.status == 'A' %}bg-primary{% else %}bg-warning text-dark{% endif %}">
+              {{ i.get_status_display }}
+            </span>
+          </td>
+          <td>
+            {% if i.is_printed %}
+              <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+              <i class="bi bi-circle text-muted"></i>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ i.created|date:"d M Y" }}</td>
+          <td class="text-end">
+            <a href="{% url 'notify_notification_print' i.id %}" class="btn btn-sm btn-outline-secondary" title="Print">
+              <i class="bi bi-printer"></i>
+            </a>
+            <button class="btn btn-sm btn-outline-danger"
+              hx-delete="{% url 'notify_notification_delete' i.id %}"
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              hx-confirm="Delete this notification?">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-4">No notifications found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

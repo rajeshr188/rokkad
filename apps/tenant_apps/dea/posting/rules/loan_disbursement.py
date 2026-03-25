@@ -13,8 +13,13 @@ class LoanDisbursementRule(BasePostingRule):
     """
     Loan disbursement posting with two scenarios:
 
-    LOAN_GIVEN: Dr LOAN_RECEIVABLE, Cr CASH (we lend money)
-    LOAN_RECEIVED: Dr CASH, Cr LOAN_PAYABLE (we borrow money)
+        LOAN_GIVEN:
+            LT Dr LOAN_PRINCIPAL_CTRL, Cr CASH
+            AT Dr BORROWER_LOAN_CTRL
+
+        LOAN_RECEIVED:
+            LT Dr CASH, Cr BORROWING_PRINCIPAL_CTRL
+            AT Cr LENDER_ACCOUNT_CTRL
     """
 
     voucher_type = "LOAN_DISBURSE"
@@ -48,30 +53,30 @@ class LoanDisbursementRule(BasePostingRule):
             )
 
         # Resolve ledgers based on loan type
+        # Returns (debit_ledger_id, credit_ledger_id, at_ledger_id, account_side, xact_ext)
         (
             debit_ledger_id,
             credit_ledger_id,
+            at_ledger_id,
             account_side,
             xact_ext,
         ) = self._get_ledger_config(loan_type, tenant_id)
 
-        # Build posting - dual-leg ledger entry
+        # Build posting - dual-leg ledger entry (LT: internal fund flow control)
         ledger_lines = [
             DualLedgerLine(
                 debit_ledger_id=debit_ledger_id,
                 credit_ledger_id=credit_ledger_id,
+                currency="INR",
                 amount=principal_amount,
                 amount_base=principal_amount,
             )
         ]
 
-        # Account line uses the receivable/payable ledger
-        account_ledger_id = (
-            debit_ledger_id if loan_type == "Given" else credit_ledger_id
-        )
+        # Account line uses the party attribution control ledger (AT target, distinct from LT)
         account_lines = [
             AccountLine(
-                ledger_id=account_ledger_id,
+                ledger_id=at_ledger_id,
                 account_id=disbursement.customer.account.id,
                 side=account_side,
                 currency="INR",
@@ -85,28 +90,29 @@ class LoanDisbursementRule(BasePostingRule):
 
     def _get_ledger_config(self, loan_type, tenant_id):
         """
-        Returns (debit_ledger_id, credit_ledger_id, account_side, xact_ext) based on loan type.
+        Returns (debit_ledger_id, credit_ledger_id, at_ledger_id, account_side, xact_ext).
 
-        loan_type can be:
-        - "Given" (we lend out): Dr Loan Receivable, Cr Cash
-        - "Taken" (we borrow): Dr Cash, Cr Loan Payable
+        LT target and AT target are intentionally DIFFERENT ledgers to prevent balance
+        double-counting under the DEA split-control pattern:
+
+        - "Given" (we lend out):
+            LT: Dr LOAN_PRINCIPAL_CTRL, Cr CASH  (internal fund flow)
+            AT: BORROWER_LOAN_CTRL, Dr           (party attribution)
+        - "Taken" (we borrow):
+            LT: Dr CASH, Cr BORROWING_PRINCIPAL_CTRL  (internal fund flow)
+            AT: LENDER_ACCOUNT_CTRL, Cr               (party attribution)
         """
         cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
 
         if loan_type == "Given":
-            # We lend: Dr Loan Receivable, Cr Cash
-            receivable_id = get_ledger_id_by_key("LOAN_RECEIVABLE", tenant_id=tenant_id)
-            return (
-                receivable_id,
-                cash_id,
-                "Dr",
-                "LG",
-            )  # Customer owes us (Dr in receivable)
+            lt_ledger_id = get_ledger_id_by_key("LOAN_PRINCIPAL_CTRL", tenant_id=tenant_id)
+            at_ledger_id = get_ledger_id_by_key("BORROWER_LOAN_CTRL", tenant_id=tenant_id)
+            return (lt_ledger_id, cash_id, at_ledger_id, "Dr", "LG")
 
         elif loan_type == "Taken":
-            # We borrow: Dr Cash, Cr Loan Payable
-            payable_id = get_ledger_id_by_key("LOAN_PAYABLE", tenant_id=tenant_id)
-            return cash_id, payable_id, "Cr", "LR"  # We owe lender (Cr in payable)
+            lt_ledger_id = get_ledger_id_by_key("BORROWING_PRINCIPAL_CTRL", tenant_id=tenant_id)
+            at_ledger_id = get_ledger_id_by_key("LENDER_ACCOUNT_CTRL", tenant_id=tenant_id)
+            return (cash_id, lt_ledger_id, at_ledger_id, "Cr", "LR")
 
         else:
             raise ValidationError(

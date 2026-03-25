@@ -45,13 +45,23 @@ class BaseLoanQuerySet(models.QuerySet):
     Contains annotation chains that work identically for GivenLoan and TakenLoan.
     """
 
+    def _supports_release_relation(self):
+        """Return True when the model exposes a release relation usable in filters."""
+        return any(
+            field.name == "release" for field in self.model._meta.get_fields()
+        )
+
     def released(self):
         """Filter to loans that have been released."""
-        return self.filter(release__isnull=False)
+        if self._supports_release_relation():
+            return self.filter(release__isnull=False)
+        return self.filter(status="Released")
 
     def unreleased(self):
         """Filter to loans that have NOT been released."""
-        return self.filter(release__isnull=True)
+        if self._supports_release_relation():
+            return self.filter(release__isnull=True)
+        return self.exclude(status="Released")
 
     def active(self):
         """Filter to loans in active status."""
@@ -404,9 +414,7 @@ class GivenLoanManager(models.Manager):
         from django.utils import timezone
 
         cutoff_date = timezone.now() - timedelta(days=threshold_months * 30)
-        return self.get_queryset().filter(
-            release__isnull=True, loan_date__lt=cutoff_date
-        )
+        return self.get_queryset().unreleased().filter(loan_date__lt=cutoff_date)
 
 
 # ============================================================================
@@ -594,6 +602,4 @@ class TakenLoanManager(models.Manager):
         from django.utils import timezone
 
         cutoff_date = timezone.now() - timedelta(days=threshold_months * 30)
-        return self.get_queryset().filter(
-            release__isnull=True, loan_date__lt=cutoff_date
-        )
+        return self.get_queryset().unreleased().filter(loan_date__lt=cutoff_date)

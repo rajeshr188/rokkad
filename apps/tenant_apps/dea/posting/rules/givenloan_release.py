@@ -1,7 +1,15 @@
-"""
+﻿"""
 GivenLoan Release Posting Rule
 
-Posts a write-off style entry when a GivenLoan is released with outstanding amount.
+When a GivenLoan is released (collateral returned, loan repaid):
+  Principal:  Dr CASH / Cr LOAN_PRINCIPAL_CTRL
+  Interest:   Dr CASH / Cr INTEREST_INCOME  (if interest_amount > 0)
+  Subledger:  AT -- Cr BORROWER_LOAN_CTRL (borrower's receivable closes)
+
+This records the cash receipt from the borrower at the moment of release, closing
+the loan receivable and recognising interest income.  Replaces the legacy write-off
+entry (Dr SERVICES_EXPENSE / Cr LOAN_RECEIVABLE) which was semantically wrong for a
+normal cash repayment.
 """
 
 from decimal import Decimal
@@ -17,73 +25,94 @@ from .base import BasePostingRule
 @register_rule("GIVENLOAN_RELEASE")
 class GivenLoanReleaseRule(BasePostingRule):
     voucher_type = "GIVENLOAN_RELEASE"
-    rule_version = "1"
+    rule_version = "2"
 
     def build_posting(self, ctx) -> PostingBundle:
         payment = ctx.doc
         tenant_id = getattr(ctx, "tenant_id", None)
+        currency = str(payment.total_amount.currency)
 
         source_loan = payment.source_loan
         if not source_loan:
             raise ValidationError("Cannot find source GivenLoan for release posting")
 
-        if not getattr(source_loan, "borrower", None):
+        party = getattr(source_loan, "borrower", None) or getattr(source_loan, "customer", None)
+        if not party:
             raise ValidationError("GivenLoan has no borrower")
 
-        if not getattr(source_loan.borrower, "account", None):
+        if not hasattr(party, "account") or not party.account:
             raise ValidationError(
-                f"Borrower {source_loan.borrower} has no account for release posting"
+                f"Borrower {party} has no account for release posting"
             )
 
-        amount = Decimal(str(payment.total_amount.amount))
-        if amount <= 0:
+        # Split principal and interest from the voucher (set by record_loan_release).
+        # Fall back to total_amount as principal if components are not set.
+        principal_decimal = Decimal(
+            str(payment.principal_amount.amount)
+            if payment.principal_amount
+            else str(payment.total_amount.amount)
+        )
+        interest_decimal = Decimal(
+            str(payment.interest_amount.amount) if payment.interest_amount else "0"
+        )
+        total_decimal = principal_decimal + interest_decimal
+
+        if total_decimal <= 0:
             raise ValidationError("Release posting amount must be positive")
 
-        def _resolve_with_fallback(primary_key, fallbacks):
-            keys = [primary_key] + list(fallbacks)
-            for key in keys:
-                try:
-                    return get_ledger_id_by_key(key, tenant_id=tenant_id)
-                except ValidationError:
-                    continue
+        # Resolve required ledgers
+        cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
+        loan_principal_ctrl_id = get_ledger_id_by_key("LOAN_PRINCIPAL_CTRL", tenant_id=tenant_id)
+        borrower_loan_ctrl_id = get_ledger_id_by_key("BORROWER_LOAN_CTRL", tenant_id=tenant_id)
+
+        if not cash_id or not loan_principal_ctrl_id or not borrower_loan_ctrl_id:
             raise ValidationError(
-                f"Required ledger not found. Tried: {', '.join(keys)}"
+                "Required ledgers (CASH, LOAN_PRINCIPAL_CTRL, BORROWER_LOAN_CTRL) not found"
             )
 
-        # Prefer canonical semantic keys; fall back to seeded CoA labels used in this project.
-        loan_receivable_id = _resolve_with_fallback(
-            "LOAN_RECEIVABLE",
-            ["Loans & Advances", "Loans"],
-        )
-        writeoff_expense_id = _resolve_with_fallback(
-            "SERVICES_EXPENSE",
-            ["Interest Paid", "COGS"],
-        )
+        ledger_lines = []
 
-        # Release write-off policy:
-        #   Dr SERVICES_EXPENSE, Cr LOAN_RECEIVABLE
-        # This records unrecovered principal as an expense and closes receivable.
-        ledger_lines = [
-            DualLedgerLine(
-                debit_ledger_id=writeoff_expense_id,
-                credit_ledger_id=loan_receivable_id,
-                currency=str(payment.total_amount.currency),
-                amount=amount,
-                amount_base=amount,
+        # Principal receipt: Dr CASH / Cr LOAN_PRINCIPAL_CTRL
+        if principal_decimal > 0:
+            ledger_lines.append(
+                DualLedgerLine(
+                    debit_ledger_id=cash_id,
+                    credit_ledger_id=loan_principal_ctrl_id,
+                    currency=currency,
+                    amount=principal_decimal,
+                    amount_base=principal_decimal,
+                )
             )
-        ]
 
-        account_lines = [
-            AccountLine(
-                ledger_id=loan_receivable_id,
-                account_id=source_loan.borrower.account.id,
-                side="Cr",
-                currency=str(payment.total_amount.currency),
-                amount=amount,
-                amount_base=amount,
-                xact_type_ext="LG",
+        # Interest receipt: Dr CASH / Cr INTEREST_INCOME
+        if interest_decimal > 0:
+            interest_income_id = get_ledger_id_by_key("INTEREST_INCOME", tenant_id=tenant_id)
+            if not interest_income_id:
+                raise ValidationError("Required ledger INTEREST_INCOME not found")
+            ledger_lines.append(
+                DualLedgerLine(
+                    debit_ledger_id=cash_id,
+                    credit_ledger_id=interest_income_id,
+                    currency=currency,
+                    amount=interest_decimal,
+                    amount_base=interest_decimal,
+                )
             )
-        ]
+
+        # Subledger AT: close borrower receivable against BORROWER_LOAN_CTRL
+        account_lines = []
+        if principal_decimal > 0:
+            account_lines.append(
+                AccountLine(
+                    ledger_id=borrower_loan_ctrl_id,
+                    account_id=party.account.id,
+                    side="Cr",
+                    currency=currency,
+                    amount=principal_decimal,
+                    amount_base=principal_decimal,
+                    xact_type_ext="RP",  # Repayment
+                )
+            )
 
         return PostingBundle(ledger_lines=ledger_lines, account_lines=account_lines)
 
@@ -96,6 +125,8 @@ class GivenLoanReleaseRule(BasePostingRule):
             "source_loan_id": source_loan.id if source_loan else None,
             "payment_id": payment.payment_id,
             "payment_date": payment.payment_date.isoformat() if payment.payment_date else None,
-            "amount": str(payment.total_amount.amount),
+            "total_amount": str(payment.total_amount.amount),
+            "principal_amount": str(payment.principal_amount.amount) if payment.principal_amount else None,
+            "interest_amount": str(payment.interest_amount.amount) if payment.interest_amount else None,
             "currency": str(payment.total_amount.currency),
         }

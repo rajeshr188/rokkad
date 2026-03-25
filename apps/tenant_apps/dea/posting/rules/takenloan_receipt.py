@@ -4,7 +4,8 @@ Generated: February 26, 2026
 
 When we receive a loan (money from lender):
 - Dr CASH (we receive money)
-- Cr LOAN_PAYABLE (we now owe the lender)
+- Cr BORROWING_PRINCIPAL_CTRL (internal principal liability control)
+- AT Cr LENDER_ACCOUNT_CTRL (lender subledger attribution)
 """
 
 from decimal import Decimal
@@ -24,10 +25,10 @@ class TakenLoanReceiptRule(BasePostingRule):
 
     When we receive a loan from a lender:
     - Dr CASH (money coming in)
-    - Cr LOAN_PAYABLE (we now owe the lender)
+    - Cr BORROWING_PRINCIPAL_CTRL (internal liability control)
 
     Plus subledger entry:
-    - Lender account: CREDIT (we owe them)
+    - Lender account: CREDIT against LENDER_ACCOUNT_CTRL (we owe them)
     """
 
     voucher_type = "TAKENLOAN_RECEIPT"
@@ -65,26 +66,35 @@ class TakenLoanReceiptRule(BasePostingRule):
 
         # Resolve ledgers
         cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
-        loan_payable_id = get_ledger_id_by_key("LOAN_PAYABLE", tenant_id=tenant_id)
+        # LT target: internal borrowing fund flow control ledger
+        borrowing_principal_ctrl_id = get_ledger_id_by_key(
+            "BORROWING_PRINCIPAL_CTRL", tenant_id=tenant_id
+        )
+        # AT target: party attribution control ledger (separate from LT target)
+        lender_account_ctrl_id = get_ledger_id_by_key(
+            "LENDER_ACCOUNT_CTRL", tenant_id=tenant_id
+        )
 
-        if not cash_id or not loan_payable_id:
-            raise ValidationError("Required ledgers (CASH, LOAN_PAYABLE) not found")
+        if not cash_id or not borrowing_principal_ctrl_id or not lender_account_ctrl_id:
+            raise ValidationError(
+                "Required ledgers (CASH, BORROWING_PRINCIPAL_CTRL, LENDER_ACCOUNT_CTRL) not found"
+            )
 
         # Build posting - dual-leg ledger entry
-        # Dr CASH, Cr LOAN_PAYABLE
+        # Dr CASH, Cr BORROWING_PRINCIPAL_CTRL (internal fund flow)
         ledger_lines = [
             DualLedgerLine(
                 debit_ledger_id=cash_id,
-                credit_ledger_id=loan_payable_id,
+                credit_ledger_id=borrowing_principal_ctrl_id,
                 amount=principal_decimal,
                 amount_base=principal_decimal,
             )
         ]
 
-        # Account line for lender (CREDIT side - we owe them)
+        # Account line for lender against LENDER_ACCOUNT_CTRL (CREDIT - we owe them)
         account_lines = [
             AccountLine(
-                ledger_id=loan_payable_id,
+                ledger_id=lender_account_ctrl_id,
                 account_id=source_loan.lender.account.id,
                 side="Cr",
                 currency=str(payment.total_amount.currency),

@@ -422,7 +422,7 @@ def period_balances(request, pk):
     account_statements = (
         AccountStatement.objects.filter(period=period, is_opening_statement=False)
         .select_related("AccountNo", "AccountNo__contact", "AccountNo__AccountType_Ext")
-        .order_by("AccountNo__contact__name")
+        .order_by("AccountNo__contact__firstname", "AccountNo__contact__lastname")
     )
 
     # Group by account type

@@ -132,7 +132,7 @@ class JournalEntryVoucherCreateView(LoginRequiredMixin, CreateView):
     model = JournalEntryVoucher
     form_class = JournalEntryVoucherForm
     template_name = "dea/journalentryvoucher_form.html"
-    success_url = reverse_lazy("dea_journal_entry_list")
+    success_url = reverse_lazy("dea_journal_entry_voucher_list")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -208,7 +208,7 @@ class JournalEntryVoucherUpdateView(LoginRequiredMixin, UpdateView):
     model = JournalEntryVoucher
     form_class = JournalEntryVoucherForm
     template_name = "dea/journalentryvoucher_form.html"
-    success_url = reverse_lazy("dea_journal_entry_list")
+    success_url = reverse_lazy("dea_journal_entry_voucher_list")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -279,7 +279,7 @@ class JournalEntryVoucherDeleteView(LoginRequiredMixin, DeleteView):
 
     model = JournalEntryVoucher
     template_name = "dea/journalentryvoucher_confirm_delete.html"
-    success_url = reverse_lazy("dea_journal_entry_list")
+    success_url = reverse_lazy("dea_journal_entry_voucher_list")
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, f"Journal entry deleted successfully!")

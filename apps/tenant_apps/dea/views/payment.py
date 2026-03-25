@@ -22,7 +22,7 @@ from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_http_methods
 
-from ..models import PaymentVoucher, CashFlowDirection, PaymentMethod
+from ..models import PaymentVoucher, CashFlowDirection, PaymentMethod, JournalEntry
 from ..forms import PaymentVoucherForm
 from ..posting.engine import DjangoPostingEngine
 from ..services.post_doc import create_and_post_voucher_for_doc
@@ -93,10 +93,10 @@ class PaymentVoucherDetailView(LoginRequiredMixin, DetailView):
 
         # Get journal entry if posted
         if payment.posted:
-            from .models import JournalEntry
-
+            payment_ct = ContentType.objects.get_for_model(payment, for_concrete_model=False)
             context["journal_entries"] = JournalEntry.objects.filter(
-                vouchers__paymentvouchers=payment.id
+                voucher__doc_content_type=payment_ct,
+                voucher__doc_object_id=payment.id,
             )
 
         return context

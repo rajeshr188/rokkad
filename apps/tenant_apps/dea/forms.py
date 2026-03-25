@@ -21,7 +21,8 @@ from .models import (
 
 class AccountWidget(s2forms.ModelSelect2Widget):
     search_fields = [
-        "contact__name__icontains",
+        "contact__firstname__icontains",
+        "contact__lastname__icontains",
         "contact__relatedas__icontains",
         "contact__relatedto__icontains",
         "contact__contactno__phone_number__icontains",

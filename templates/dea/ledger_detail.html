@@ -2,7 +2,7 @@
 
 {% block title %}Ledger detail{% endblock %}
 
-{% block content %}
+{% block workspace_content %}
 <h1 class="display-6">{{object}} Details</h1>
 <div class="card">
     <div class="card-body">
@@ -23,10 +23,24 @@
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     {% for i in dtxns%}
-                    <li class="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
+                    <li class="list-group-item">
+                        {{ i.created|date }}
+                        <a href="{{ i.journal_entry.get_absolute_url }}">JE-{{ i.journal_entry.id }}</a>
+                        {% if i.journal_entry.voucher %}
+                        | <a href="{{ i.journal_entry.voucher.get_absolute_url }}">{{ i.journal_entry.voucher }}</a>
+                        {% endif %}
+                        | {{ i.amount }}
+                    </li>
                     {%endfor%}
                     {% for i in dr_aleg_txns%}
-                    <li class="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
+                    <li class="list-group-item">
+                        {{ i.created|date }}
+                        <a href="{{ i.journal_entry.get_absolute_url }}">JE-{{ i.journal_entry.id }}</a>
+                        {% if i.journal_entry.voucher %}
+                        | <a href="{{ i.journal_entry.voucher.get_absolute_url }}">{{ i.journal_entry.voucher }}</a>
+                        {% endif %}
+                        | {{ i.amount }}
+                    </li>
                     {%endfor%}
 
                 </ul>
@@ -43,10 +57,24 @@
             <div class="card-body">     
                 <ul class="list-group list-group-flush">
                     {% for i in ctxns%}
-                    <li class ="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
+                    <li class="list-group-item">
+                        {{ i.created|date }}
+                        <a href="{{ i.journal_entry.get_absolute_url }}">JE-{{ i.journal_entry.id }}</a>
+                        {% if i.journal_entry.voucher %}
+                        | <a href="{{ i.journal_entry.voucher.get_absolute_url }}">{{ i.journal_entry.voucher }}</a>
+                        {% endif %}
+                        | {{ i.amount }}
+                    </li>
                     {%endfor%}
                     {% for i in cr_aleg_txns%}
-                    <li class="list-group-item">{{i.created|date}} {{i.journal_entry.content_type}} {{i.amount}}</li>
+                    <li class="list-group-item">
+                        {{ i.created|date }}
+                        <a href="{{ i.journal_entry.get_absolute_url }}">JE-{{ i.journal_entry.id }}</a>
+                        {% if i.journal_entry.voucher %}
+                        | <a href="{{ i.journal_entry.voucher.get_absolute_url }}">{{ i.journal_entry.voucher }}</a>
+                        {% endif %}
+                        | {{ i.amount }}
+                    </li>
                     {%endfor%}
                 </ul>
                 <a href="#" class="btn btn-primary">Add</a>
