@@ -76,7 +76,7 @@ class LoanTable(tables.Table):
     def render_borrower(self, record):
         return format_html(
             """<a href="" hx-get="/contact/customer/detail/{}" hx-push-url="true"
-                        hx-target="#content" hx-swap="innerHTML transition:true">
+                        hx-target="#workspace_content" hx-swap="innerHTML transition:true">
             {}</a>""",
             record.borrower.pk,
             record.borrower.name,

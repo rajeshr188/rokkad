@@ -254,14 +254,13 @@ class Account(models.Model):
             self.accounttransactions.all()
             .select_related(
                 "journal_entry",
-                # "journal_entry__content_object",not possible in django for gfks
-                "journal_entry__content_type",
+                "journal_entry__voucher",
+                "journal_entry__voucher__voucher_type",
                 "Account",
                 "XactTypeCode",
                 "XactTypeCode_ext",
                 "ledgerno",
             )
-            .prefetch_related("journal_entry__content_object")
             # .order_by("id") breaks current_balance
         )
         if since:

@@ -402,8 +402,12 @@ def ledger_detail(request, pk):
         if ledger.ledgerstatements.exists()
         else None
     )
-    dtxns = ledger.dtxns(since=ls_created).select_related("journal_entry__content_type")
-    ctxns = ledger.ctxns(since=ls_created).select_related("journal_entry__content_type")
+    dtxns = ledger.dtxns(since=ls_created).select_related(
+        "journal_entry", "journal_entry__voucher"
+    )
+    ctxns = ledger.ctxns(since=ls_created).select_related(
+        "journal_entry", "journal_entry__voucher"
+    )
     logger.warn(f" in views:ledger_detail: {ledger} {dtxns} {ctxns}")
     cr_aleg_txns = ledger.aleg_txns(xacttypecode="Cr", since=ls_created)
     dr_aleg_txns = ledger.aleg_txns(xacttypecode="Dr", since=ls_created)

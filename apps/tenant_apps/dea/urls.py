@@ -257,26 +257,26 @@ urlpatterns += [
     path(
         "journal-entry-vouchers/",
         views.journal_entry_voucher.JournalEntryVoucherListView.as_view(),
-        name="dea_journal_entry_list",
+        name="dea_journal_entry_voucher_list",
     ),
     path(
         "journal-entry-vouchers/<int:pk>/",
         views.journal_entry_voucher.JournalEntryVoucherDetailView.as_view(),
-        name="dea_journal_entry_detail",
+        name="dea_journal_entry_voucher_detail",
     ),
     path(
         "journal-entry-vouchers/create/",
         views.journal_entry_voucher.JournalEntryVoucherCreateView.as_view(),
-        name="dea_journal_entry_create",
+        name="dea_journal_entry_voucher_create",
     ),
     path(
         "journal-entry-vouchers/<int:pk>/update/",
         views.journal_entry_voucher.JournalEntryVoucherUpdateView.as_view(),
-        name="dea_journal_entry_update",
+        name="dea_journal_entry_voucher_update",
     ),
     path(
         "journal-entry-vouchers/<int:pk>/delete/",
         views.journal_entry_voucher.JournalEntryVoucherDeleteView.as_view(),
-        name="dea_journal_entry_delete",
+        name="dea_journal_entry_voucher_delete",
     ),
 ]

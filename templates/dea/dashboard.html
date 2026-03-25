@@ -383,6 +383,7 @@
                                 <th>ID</th>
                                 <th>Voucher</th>
                                 <th>Period</th>
+                                <th>Balance</th>
                                 <th>Posted</th>
                             </tr>
                         </thead>
@@ -397,6 +398,13 @@
                                 <td>{{ entry.voucher.voucher_number|truncatechars:15 }}</td>
                                 <td>{{ entry.period.name|truncatechars:10 }}</td>
                                 <td>
+                                    {% if entry.balance_review.is_balanced %}
+                                    <span class="badge bg-success">Balanced</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Unbalanced</span>
+                                    {% endif %}
+                                </td>
+                                <td>
                                     {% if entry.is_posted %}
                                     <i class="fa fa-check text-success"></i>
                                     {% else %}
@@ -406,7 +414,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted">No recent entries</td>
+                                <td colspan="5" class="text-center text-muted">No recent entries</td>
                             </tr>
                             {% endfor %}
                         </tbody>

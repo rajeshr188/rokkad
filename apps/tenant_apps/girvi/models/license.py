@@ -471,14 +471,31 @@ class Series(models.Model):
     def get_update_url(self):
         return reverse("girvi:girvi_license_series_update", args=(self.pk,))
 
+    def _base_loans_queryset(self):
+        """Prefer refactored GivenLoan relation; fall back to legacy Loan relation."""
+        if hasattr(self, "given_loans"):
+            return self.given_loans.all()
+        if hasattr(self, "loan_set"):
+            return self.loan_set.all()
+        from .loan_refactored import GivenLoan
+
+        return GivenLoan.objects.filter(series=self)
+
+    def _active_loans_queryset(self):
+        """Return currently active/unreleased loans for this series."""
+        queryset = self._base_loans_queryset()
+        if hasattr(queryset, "unreleased"):
+            return queryset.unreleased()
+        return queryset.exclude(status="Released")
+
     def get_earliest_date(self):
-        earliest_loan_date = self.loan_set.aggregate(models.Min("loan_date"))[
+        earliest_loan_date = self._base_loans_queryset().aggregate(models.Min("loan_date"))[ 
             "loan_date__min"
         ]
         return earliest_loan_date
 
     def get_latest_date(self):
-        latest_loan_date = self.loan_set.aggregate(models.Max("loan_date"))[
+        latest_loan_date = self._base_loans_queryset().aggregate(models.Max("loan_date"))[ 
             "loan_date__max"
         ]
         return latest_loan_date
@@ -493,14 +510,16 @@ class Series(models.Model):
 
     def get_current_loan_count(self):
         """Get count of active (unreleased) loans in this series"""
-        return self.loan_set.unreleased().count() if hasattr(self, 'loan_set') else 0
+        return self._active_loans_queryset().count()
 
     def get_current_loan_amount(self):
         """Get total amount of active (unreleased) loans in this series"""
-        result = self.loan_set.unreleased().aggregate(
-            total=Coalesce(Sum("loan_amount"), Decimal("0"))
-        )
-        return result.get("total", Decimal("0")) if hasattr(self, 'loan_set') else Decimal("0")
+        unreleased_loans = self._active_loans_queryset()
+        if hasattr(unreleased_loans, "total_loan_amount"):
+            return unreleased_loans.total_loan_amount() or Decimal("0")
+
+        result = unreleased_loans.aggregate(total=Coalesce(Sum("loan_amount"), Decimal("0")))
+        return result.get("total", Decimal("0"))
 
     def is_loan_count_exceeded(self) -> bool:
         """Check if loan count threshold has been exceeded"""
@@ -637,26 +656,32 @@ class Series(models.Model):
 
 
     def loan_count(self):
-        return self.loan_set.unreleased().count()
+        return self._active_loans_queryset().count()
 
     def total_loan_amount(self):
-        return self.loan_set.unreleased().aggregate(t=Sum("loan_amount"))
+        unreleased_loans = self._active_loans_queryset()
+        if hasattr(unreleased_loans, "total_loan_amount"):
+            return {"t": unreleased_loans.total_loan_amount() or Decimal("0")}
+        return unreleased_loans.aggregate(t=Coalesce(Sum("loan_amount"), Decimal("0")))
 
     def get_itemwise_loanamount(self):
         return (
-            self.loan_set.unreleased()
+            self._active_loans_queryset()
             .for_table_display()
             .with_itemwise_amounts()
             .total_itemwise_loanamount()
         )
 
     def get_itemwise_pure_weight(self):
-        return self.loan_set.unreleased().for_table_display().total_pure_weight()
+        return self._active_loans_queryset().for_table_display().total_pure_weight()
 
     def get_unreleased_loan_data(self):
-        unreleased_loans = self.loan_set.unreleased()
+        unreleased_loans = self._active_loans_queryset()
         loan_count = unreleased_loans.count()
-        loan_amount = unreleased_loans.aggregate(total=Sum("loan_amount"))["total"] or 0
+        if hasattr(unreleased_loans, "total_loan_amount"):
+            loan_amount = unreleased_loans.total_loan_amount() or 0
+        else:
+            loan_amount = unreleased_loans.aggregate(total=Sum("loan_amount"))["total"] or 0
 
         return {
             "series_name": self.name,
@@ -673,7 +698,7 @@ class Series(models.Model):
         Thread-safe using select_for_update within LoanIDGenerator.
         """
         # Get last loan in this series
-        last_loan = self.loan_set.order_by("-loan_id").first()
+        last_loan = self._base_loans_queryset().order_by("-loan_id").first()
 
         if last_loan:
             # Extract number from formatted ID (e.g., "A00123" -> 123)

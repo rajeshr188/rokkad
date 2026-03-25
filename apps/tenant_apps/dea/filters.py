@@ -8,6 +8,7 @@ from .models import (
     Account,
     AccountingPeriod,
     AccountType_Ext,
+    JournalEntry,
     Ledger,
     Voucher,
     VoucherType,
@@ -45,12 +46,35 @@ class AccountFilter(django_filters.FilterSet):
 
 
 class JournalEntryFilter(django_filters.FilterSet):
-    created = django_filters.DateFromToRangeFilter()
+    posted_at = django_filters.DateFromToRangeFilter()
     desc = django_filters.CharFilter(lookup_expr="icontains")
+    balance_status = django_filters.ChoiceFilter(
+        choices=(
+            ("balanced", "Balanced only"),
+            ("unbalanced", "Unbalanced only"),
+        ),
+        label="Balance Status",
+        empty_label="All Entries",
+        method="filter_balance_status",
+    )
 
     class Meta:
-        model = Ledger
-        fields = ["created", "desc"]
+        model = JournalEntry
+        fields = ["posted_at", "desc", "balance_status"]
+
+    def filter_balance_status(self, queryset, name, value):
+        if value not in {"balanced", "unbalanced"}:
+            return queryset
+
+        target_balanced = value == "balanced"
+        matching_ids = []
+
+        for entry in queryset:
+            is_balanced, _, _, _ = entry.validate_balanced()
+            if is_balanced == target_balanced:
+                matching_ids.append(entry.pk)
+
+        return queryset.filter(pk__in=matching_ids)
 
 
 class PeriodFilter(django_filters.FilterSet):

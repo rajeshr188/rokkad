@@ -6,10 +6,17 @@ from .models import NoticeGroup, Notification
 class NoticeGroupForm(forms.ModelForm):
     class Meta:
         model = NoticeGroup
-        fields = "__all__"
+        fields = ["name", "description"]
 
 
 class NotificationForm(forms.ModelForm):
     class Meta:
         model = Notification
-        fields = "__all__"
+        fields = [
+            "group",
+            "customer",
+            "notice_type_config",
+            "medium_type",
+            "status",
+            "message",
+        ]

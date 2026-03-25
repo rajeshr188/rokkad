@@ -121,10 +121,13 @@ class VoucherDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         voucher = self.get_object()
 
+        if voucher.business_doc:
+            context["business_doc_type"] = voucher.business_doc.__class__.__name__
+
         # Get journal entries for this voucher
         journal_entries = (
             voucher.journal_entries.select_related("period", "posted_by")
-            .prefetch_related("ltxns__ledgerno", "ltxns__ledgerno_dr", "atxns__account")
+            .prefetch_related("ltxns__ledgerno", "ltxns__ledgerno_dr", "atxns__Account")
             .order_by("posted_at")
         )
 

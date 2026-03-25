@@ -3,8 +3,9 @@ TakenLoan Payment Posting Rule
 Generated: February 26, 2026
 
 When we repay a loan (money to lender):
-- Dr LOAN_PAYABLE (our liability reduces)
+- Dr BORROWING_PRINCIPAL_CTRL (internal principal liability control reduces)
 - Cr CASH (money goes out)
+- AT Dr LENDER_ACCOUNT_CTRL (lender subledger attribution reduces)
 """
 
 from decimal import Decimal
@@ -23,11 +24,11 @@ class TakenLoanPaymentRule(BasePostingRule):
     Posting rule for TakenLoan repayments.
 
     When we repay a loan to the lender:
-    - Dr LOAN_PAYABLE (our liability reduces)
+    - Dr BORROWING_PRINCIPAL_CTRL (internal liability control reduces)
     - Cr CASH (money goes out)
 
     Plus subledger entry:
-    - Lender account: DEBIT (our debt to them reduces)
+    - Lender account: DEBIT against LENDER_ACCOUNT_CTRL (our debt to them reduces)
     """
 
     voucher_type = "TAKENLOAN_PAYMENT"
@@ -70,34 +71,63 @@ class TakenLoanPaymentRule(BasePostingRule):
 
         # Resolve ledgers
         cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
-        loan_payable_id = get_ledger_id_by_key("LOAN_PAYABLE", tenant_id=tenant_id)
+        # LT target: internal borrowing fund flow control ledger
+        borrowing_principal_ctrl_id = get_ledger_id_by_key(
+            "BORROWING_PRINCIPAL_CTRL", tenant_id=tenant_id
+        )
+        # AT target: party attribution control ledger (separate from LT target)
+        lender_account_ctrl_id = get_ledger_id_by_key(
+            "LENDER_ACCOUNT_CTRL", tenant_id=tenant_id
+        )
 
-        if not cash_id or not loan_payable_id:
-            raise ValidationError("Required ledgers (CASH, LOAN_PAYABLE) not found")
-
-        # Build posting - dual-leg ledger entry
-        # Dr LOAN_PAYABLE, Cr CASH
-        ledger_lines = [
-            DualLedgerLine(
-                debit_ledger_id=loan_payable_id,
-                credit_ledger_id=cash_id,
-                amount=total_decimal,
-                amount_base=total_decimal,
+        if not cash_id or not borrowing_principal_ctrl_id or not lender_account_ctrl_id:
+            raise ValidationError(
+                "Required ledgers (CASH, BORROWING_PRINCIPAL_CTRL, LENDER_ACCOUNT_CTRL) not found"
             )
-        ]
 
-        # Account line for lender (DEBIT side - our debt reduces)
-        account_lines = [
-            AccountLine(
-                ledger_id=loan_payable_id,
-                account_id=source_loan.lender.account.id,
-                side="Dr",
-                currency=str(payment.total_amount.currency),
-                amount=total_decimal,
-                amount_base=total_decimal,
-                xact_type_ext="LR",  # Loan Received
+        ledger_lines = []
+
+        # Principal: Dr BORROWING_PRINCIPAL_CTRL (internal fund flow), Cr CASH
+        if principal_decimal > 0:
+            ledger_lines.append(
+                DualLedgerLine(
+                    debit_ledger_id=borrowing_principal_ctrl_id,
+                    credit_ledger_id=cash_id,
+                    amount=principal_decimal,
+                    amount_base=principal_decimal,
+                )
             )
-        ]
+
+        # Interest: Dr INTEREST_EXPENSE, Cr CASH (no subledger attribution)
+        if interest_decimal > 0:
+            interest_expense_id = get_ledger_id_by_key(
+                "INTEREST_EXPENSE", tenant_id=tenant_id
+            )
+            if not interest_expense_id:
+                raise ValidationError("Required ledger INTEREST_EXPENSE not found")
+            ledger_lines.append(
+                DualLedgerLine(
+                    debit_ledger_id=interest_expense_id,
+                    credit_ledger_id=cash_id,
+                    amount=interest_decimal,
+                    amount_base=interest_decimal,
+                )
+            )
+
+        # Account line: principal reduces our debt to lender against LENDER_ACCOUNT_CTRL
+        account_lines = []
+        if principal_decimal > 0:
+            account_lines.append(
+                AccountLine(
+                    ledger_id=lender_account_ctrl_id,
+                    account_id=source_loan.lender.account.id,
+                    side="Dr",
+                    currency=str(payment.total_amount.currency),
+                    amount=principal_decimal,
+                    amount_base=principal_decimal,
+                    xact_type_ext="LP",  # Loan Payment
+                )
+            )
 
         return PostingBundle(ledger_lines=ledger_lines, account_lines=account_lines)
 

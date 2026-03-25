@@ -9,7 +9,7 @@
             <h1 class="display-6"><i class="bi bi-journal-text"></i> Journal Entry Vouchers</h1>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{% url 'dea_journal_entry_create' %}" class="btn btn-primary">
+            <a href="{% url 'dea_journal_entry_voucher_create' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Create Journal Entry
             </a>
         </div>
@@ -87,7 +87,7 @@
                     <button type="submit" class="btn btn-primary me-2">
                         <i class="bi bi-search"></i> Filter
                     </button>
-                    <a href="{% url 'dea_journal_entry_list' %}" class="btn btn-outline-secondary">
+                    <a href="{% url 'dea_journal_entry_voucher_list' %}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-circle"></i> Clear
                     </a>
                 </div>
@@ -120,7 +120,7 @@
                         {% for je in object_list %}
                         <tr>
                             <td>
-                                <a href="{% url 'dea_journal_entry_detail' je.pk %}">
+                                <a href="{% url 'dea_journal_entry_voucher_detail' je.pk %}">
                                     <strong>{{ je.je_number }}</strong>
                                 </a>
                             </td>
@@ -137,13 +137,13 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{% url 'dea_journal_entry_detail' je.pk %}" class="btn btn-sm btn-outline-info" title="View">
+                                <a href="{% url 'dea_journal_entry_voucher_detail' je.pk %}" class="btn btn-sm btn-outline-info" title="View">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{% url 'dea_journal_entry_update' je.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                <a href="{% url 'dea_journal_entry_voucher_update' je.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="{% url 'dea_journal_entry_delete' je.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <a href="{% url 'dea_journal_entry_voucher_delete' je.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </td>
@@ -184,7 +184,7 @@
             {% else %}
             <div class="alert alert-info text-center" role="alert">
                 <i class="bi bi-info-circle"></i> No journal entries found.
-                <a href="{% url 'dea_journal_entry_create' %}" class="alert-link">Create your first journal entry</a>.
+                <a href="{% url 'dea_journal_entry_voucher_create' %}" class="alert-link">Create your first journal entry</a>.
             </div>
             {% endif %}
         </div>

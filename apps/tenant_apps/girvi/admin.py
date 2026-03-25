@@ -313,14 +313,20 @@ class LicenseAdmin(admin.ModelAdmin):
     def expiry_status(self, obj):
         """Display expiry status"""
         if obj.is_expired():
-            return format_html('<span class="badge bg-danger">Expired</span>')
+            return format_html(
+                '<span class="badge bg-danger">{}</span>',
+                "Expired",
+            )
         elif obj.is_expiring_soon(days=30):
             days = obj.days_until_expiry()
             return format_html(
                 '<span class="badge bg-warning">Expires in {} days</span>',
                 days,
             )
-        return format_html('<span class="badge bg-success">Active</span>')
+        return format_html(
+            '<span class="badge bg-success">{}</span>',
+            "Active",
+        )
 
     expiry_status.short_description = "Expiry Status"
 

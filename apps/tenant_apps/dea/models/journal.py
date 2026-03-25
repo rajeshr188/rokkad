@@ -143,18 +143,27 @@ class JournalEntry(models.Model):
         - ledgerno (credit ledger)
         - amount (same amount posted to both sides)
 
-        This method aggregates ALL debits and credits across the journal entry
-        to ensure total DR = total CR.
+                Primary rule:
+                - If ledger transactions exist, validate balance from ledger legs only.
+                    Account transactions are subledger attribution and should not re-enter
+                    the GL balancing equation.
+
+                Fallback rule:
+                - If no ledger transactions exist, validate using account transactions
+                    so account-only entries (if any) are still checked.
 
         Returns (is_balanced, debit_total, credit_total, imbalance_by_currency)
         """
         from djmoney.money import Money
 
+        ledger_txns = list(self.ltxns.all())
+        account_txns = list(self.atxns.all())
+
         # Aggregate ledger transactions
         ledger_debits = {}
         ledger_credits = {}
 
-        for txn in self.ltxns.all():
+        for txn in ledger_txns:
             currency = txn.amount.currency
             amount = txn.amount.amount
 
@@ -165,11 +174,11 @@ class JournalEntry(models.Model):
                 ledger_credits.get(currency, Decimal("0")) + amount
             )
 
-        # Aggregate account transactions
+        # Aggregate account transactions (used as fallback only)
         account_debits = {}
         account_credits = {}
 
-        for txn in self.atxns.all():
+        for txn in account_txns:
             currency = txn.amount.currency
             if txn.XactTypeCode.XactTypeCode == "Dr":
                 account_debits[currency] = (
@@ -180,31 +189,29 @@ class JournalEntry(models.Model):
                     account_credits.get(currency, Decimal("0")) + txn.amount.amount
                 )
 
-        # Combine all currencies
-        all_currencies = (
-            set(ledger_debits.keys())
-            | set(ledger_credits.keys())
-            | set(account_debits.keys())
-            | set(account_credits.keys())
-        )
+        use_ledger_basis = bool(ledger_txns)
+        if use_ledger_basis:
+            all_currencies = set(ledger_debits.keys()) | set(ledger_credits.keys())
+            basis_debits = ledger_debits
+            basis_credits = ledger_credits
+        else:
+            all_currencies = set(account_debits.keys()) | set(account_credits.keys())
+            basis_debits = account_debits
+            basis_credits = account_credits
 
         imbalances = {}
         is_balanced = True
 
         for currency in all_currencies:
-            total_dr = ledger_debits.get(currency, Decimal("0")) + account_debits.get(
-                currency, Decimal("0")
-            )
-            total_cr = ledger_credits.get(currency, Decimal("0")) + account_credits.get(
-                currency, Decimal("0")
-            )
+            total_dr = basis_debits.get(currency, Decimal("0"))
+            total_cr = basis_credits.get(currency, Decimal("0"))
 
             diff = abs(total_dr - total_cr)
             if diff > Decimal("0.01"):  # Allow for rounding tolerance
                 is_balanced = False
                 imbalances[currency] = Money(diff, currency)
 
-        return is_balanced, ledger_debits, ledger_credits, imbalances
+        return is_balanced, basis_debits, basis_credits, imbalances
 
     def get_total_debit(self):
         """Get total debit amount from all transactions"""

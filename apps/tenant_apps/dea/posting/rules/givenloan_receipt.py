@@ -74,36 +74,65 @@ class GivenLoanReceiptRule(BasePostingRule):
 
         # Resolve ledgers
         cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
-        loan_receivable_id = get_ledger_id_by_key(
-            "LOAN_RECEIVABLE", tenant_id=tenant_id
+        # LT target: internal principal flow control ledger
+        loan_principal_ctrl_id = get_ledger_id_by_key(
+            "LOAN_PRINCIPAL_CTRL", tenant_id=tenant_id
+        )
+        # AT target: party attribution control ledger (separate from LT target)
+        borrower_loan_ctrl_id = get_ledger_id_by_key(
+            "BORROWER_LOAN_CTRL", tenant_id=tenant_id
         )
 
-        if not cash_id or not loan_receivable_id:
-            raise ValidationError("Required ledgers (CASH, LOAN_RECEIVABLE) not found")
-
-        # Build posting - dual-leg ledger entry
-        # Dr CASH, Cr LOAN_RECEIVABLE
-        ledger_lines = [
-            DualLedgerLine(
-                debit_ledger_id=cash_id,
-                credit_ledger_id=loan_receivable_id,
-                amount=total_decimal,
-                amount_base=total_decimal,
+        if not cash_id or not loan_principal_ctrl_id or not borrower_loan_ctrl_id:
+            raise ValidationError(
+                "Required ledgers (CASH, LOAN_PRINCIPAL_CTRL, BORROWER_LOAN_CTRL) not found"
             )
-        ]
 
-        # Account line for borrower/customer (CREDIT side - reduces their debt)
-        account_lines = [
-            AccountLine(
-                ledger_id=loan_receivable_id,
-                account_id=party.account.id,
-                side="Cr",
-                currency=str(payment.total_amount.currency),
-                amount=total_decimal,
-                amount_base=total_decimal,
-                xact_type_ext="LG",  # Loan Given
+        ledger_lines = []
+
+        # Principal: Dr CASH, Cr LOAN_PRINCIPAL_CTRL
+        if principal_decimal > 0:
+            ledger_lines.append(
+                DualLedgerLine(
+                    debit_ledger_id=cash_id,
+                    credit_ledger_id=loan_principal_ctrl_id,
+                    currency=str(payment.total_amount.currency),
+                    amount=principal_decimal,
+                    amount_base=principal_decimal,
+                )
             )
-        ]
+
+        # Interest: Dr CASH, Cr INTEREST_INCOME (no subledger attribution)
+        if interest_decimal > 0:
+            interest_income_id = get_ledger_id_by_key(
+                "INTEREST_INCOME", tenant_id=tenant_id
+            )
+            if not interest_income_id:
+                raise ValidationError("Required ledger INTEREST_INCOME not found")
+            ledger_lines.append(
+                DualLedgerLine(
+                    debit_ledger_id=cash_id,
+                    credit_ledger_id=interest_income_id,
+                    currency=str(payment.total_amount.currency),
+                    amount=interest_decimal,
+                    amount_base=interest_decimal,
+                )
+            )
+
+        # Account line: principal reduces borrower's debt against BORROWER_LOAN_CTRL
+        account_lines = []
+        if principal_decimal > 0:
+            account_lines.append(
+                AccountLine(
+                    ledger_id=borrower_loan_ctrl_id,
+                    account_id=party.account.id,
+                    side="Cr",
+                    currency=str(payment.total_amount.currency),
+                    amount=principal_decimal,
+                    amount_base=principal_decimal,
+                    xact_type_ext="RP",  # Repayment Principal
+                )
+            )
 
         return PostingBundle(ledger_lines=ledger_lines, account_lines=account_lines)
 

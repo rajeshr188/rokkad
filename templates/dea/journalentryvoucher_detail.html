@@ -11,16 +11,16 @@
             </h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dea_journal_entry_list' %}">Journal Entries</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'dea_journal_entry_voucher_list' %}">Journal Entries</a></li>
                     <li class="breadcrumb-item active">{{ je.je_number }}</li>
                 </ol>
             </nav>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{% url 'dea_journal_entry_update' je.pk %}" class="btn btn-outline-primary">
+            <a href="{% url 'dea_journal_entry_voucher_update' je.pk %}" class="btn btn-outline-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
-            <a href="{% url 'dea_journal_entry_list' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'dea_journal_entry_voucher_list' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

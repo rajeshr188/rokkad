@@ -5,6 +5,7 @@ Run after migrations: python manage.py seed_core_ledgers
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django_tenants.utils import schema_context, get_tenant_model
 
 from apps.tenant_apps.dea.models import Ledger, AccountType
 
@@ -16,12 +17,25 @@ class Command(BaseCommand):
         parser.add_argument(
             '--schema',
             type=str,
-            help='Specific tenant schema to seed (optional)',
+            help='Specific tenant schema to seed. If omitted, seeds all non-public tenant schemas.',
         )
 
     def handle(self, *args, **options):
-        with transaction.atomic():
-            self._seed_ledgers()
+        schema = options.get('schema')
+        if schema:
+            schemas = [schema]
+        else:
+            TenantModel = get_tenant_model()
+            schemas = list(
+                TenantModel.objects.exclude(schema_name='public')
+                .values_list('schema_name', flat=True)
+            )
+
+        for s in schemas:
+            self.stdout.write(f"\n--- Seeding schema: {s} ---")
+            with schema_context(s):
+                with transaction.atomic():
+                    self._seed_ledgers()
 
     def _seed_ledgers(self):
         """Create core ledgers if they don't exist"""
@@ -35,16 +49,38 @@ class Command(BaseCommand):
             AccountType="Liability",
             defaults={"description": "Liability Account", "code_prefix": "2"}
         )
+        income_type, _ = AccountType.objects.get_or_create(
+            AccountType="Income",
+            defaults={"description": "Income Account", "code_prefix": "4"}
+        )
+        expense_type, _ = AccountType.objects.get_or_create(
+            AccountType="Expense",
+            defaults={"description": "Expense Account", "code_prefix": "5"}
+        )
         
         # Core ledgers required by posting rules
         ledger_configs = [
             ("CASH", asset_type, "1001"),
+            # Legacy keys retained - historical data may reference these
             ("LOAN_RECEIVABLE", asset_type, "1201"),
             ("LOAN_PAYABLE", liability_type, "2201"),
-            ("INVENTORY", asset_type, "1111"),  # Changed from 1101 to avoid conflicts
-            ("GST_INPUT_CREDIT", asset_type, "1502"),  # Changed from 1501
-            ("ACCOUNTS_PAYABLE", liability_type, "2102"),  # Changed from 2101
-            ("TDS_PAYABLE", liability_type, "2302"),  # Changed from 2301
+            # Split-control asset ledgers (Given loan side)
+            # LOAN_PRINCIPAL_CTRL: LT target - tracks internal principal fund flow
+            ("LOAN_PRINCIPAL_CTRL", asset_type, "1203"),
+            # BORROWER_LOAN_CTRL: AT target - party attribution for borrowers
+            ("BORROWER_LOAN_CTRL", asset_type, "1204"),
+            # Split-control liability ledgers (Taken loan side)
+            # BORROWING_PRINCIPAL_CTRL: LT target - tracks internal borrowing fund flow
+            ("BORROWING_PRINCIPAL_CTRL", liability_type, "2202"),
+            # LENDER_ACCOUNT_CTRL: AT target - party attribution for lenders
+            ("LENDER_ACCOUNT_CTRL", liability_type, "2203"),
+            # Interest ledgers
+            ("INTEREST_INCOME", income_type, "4001"),
+            ("INTEREST_EXPENSE", expense_type, "5001"),
+            ("INVENTORY", asset_type, "1111"),
+            ("GST_INPUT_CREDIT", asset_type, "1502"),
+            ("ACCOUNTS_PAYABLE", liability_type, "2102"),
+            ("TDS_PAYABLE", liability_type, "2302"),
         ]
         
         created_count = 0
