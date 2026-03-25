@@ -208,14 +208,15 @@ class BasePostingEngine(ABC):
                 raise PostingError(f"Posting failed: {str(e)}") from e
 
     def reverse_voucher(self, voucher_id, user):
-        voucher = Voucher.objects.select_related("journal_entries").get(pk=voucher_id)
+        voucher = Voucher.objects.get(pk=voucher_id)
         last_je = voucher.journal_entries.order_by("-id").first()
         if not last_je:
             return None
 
         ctx = PostingContext(voucher=voucher, doc=voucher.business_doc, user_id=user.id)
         rev = self._reverse_journal_entry(last_je, ctx)
-        self._set_status(voucher, "REVERSED")
+        voucher.status = VoucherStatus.REVERSED.value
+        voucher.save(update_fields=["status"])
         return rev
 
     def _validate_business_rules(self, ctx: PostingContext):
@@ -311,7 +312,7 @@ class BasePostingEngine(ABC):
                         XactTypeCode_id=self._get_transaction_type_id(
                             a.side
                         ),  # FK to TransactionType_DE
-                        XactTypeCode_ext_id="TXN",  # Default ext type
+                        XactTypeCode_ext_id=a.xact_type_ext,
                         amount=a.amount,  # MoneyField
                     )
                     for a in bundle.account_lines

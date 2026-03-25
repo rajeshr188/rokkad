@@ -926,6 +926,17 @@ class ApproveLoanForm(forms.Form):
         super().__init__(*args, **kwargs)
         if user:
             self.fields["approved_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "approved_by",
+            HTML(
+                '<div class="alert alert-success">'
+                '<strong>Approving this loan</strong> advances it to <em>Approved</em> status. '
+                'No accounting entry is created at this stage — disbursement triggers that.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Approve Loan", css_class="btn btn-success"))
 
 
 class DisburseLoanForm(forms.Form):
@@ -936,6 +947,17 @@ class DisburseLoanForm(forms.Form):
         super().__init__(*args, **kwargs)
         if user:
             self.fields["disbursed_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "disbursed_by",
+            HTML(
+                '<div class="alert alert-warning">'
+                '<strong>Disbursing this loan</strong> records cash as paid out to the borrower. '
+                'A <code>LOAN_DISBURSE</code> accounting entry will be created automatically.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Confirm Disbursement", css_class="btn btn-primary"))
 
 
 class DeliverLoanForm(forms.Form):
@@ -943,51 +965,202 @@ class DeliverLoanForm(forms.Form):
     released_by = forms.ModelChoiceField(
         queryset=Customer.objects.all(),
         widget=CustomerWidget,
+        label="Released To",
+        required=False,
+        help_text="Person receiving the collateral back (leave blank if same as borrower)",
     )
-    release_date = forms.DateTimeField(required=False)
+    release_date = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+        help_text="Date/time of release (defaults to now)",
+    )
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         if user:
             self.fields["created_by"].initial = user
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "created_by",
+            Row(
+                Column("released_by", css_class="col-md-6"),
+                Column("release_date", css_class="col-md-6"),
+            ),
+            HTML(
+                '<div class="alert alert-info">'
+                '<strong>Releasing this loan</strong> marks the collateral as returned. '
+                'Ensure all outstanding dues are settled before releasing.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Release Collateral", css_class="btn btn-info"))
 
 
 class CancelLoanForm(forms.Form):
     cancelled_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
-    reason = forms.CharField(widget=forms.Textarea)
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "State the reason for cancellation..."}),
+        label="Cancellation Reason",
+    )
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         if user:
             self.fields["cancelled_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "cancelled_by",
+            "reason",
+            HTML(
+                '<div class="alert alert-danger">'
+                '<strong>Cancelling this loan</strong> is irreversible. '
+                'The loan must be in <em>Created</em> or <em>Approved</em> status. '
+                'No accounting entry is created.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Cancel Loan", css_class="btn btn-danger"))
+
+
+class UndoDisburseLoanForm(forms.Form):
+    undone_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "State why the disbursal is being reversed..."}),
+        label="Reason for Reversal",
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["undone_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "undone_by",
+            "reason",
+            HTML(
+                '<div class="alert alert-warning">'
+                '<strong>Undo Disbursal</strong> reverses the cash-out accounting entry '
+                '(GIVENLOAN_DISBURSAL) and returns the loan to <em>Approved</em> status. '
+                'This is only permitted if no repayment or release vouchers have been posted. '
+                'Use this to correct an entry made by mistake.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Undo Disbursal", css_class="btn btn-warning"))
+
+
+class UndoReleaseLoanForm(forms.Form):
+    undone_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "State why the release is being reversed..."}),
+        label="Reason for Reversal",
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["undone_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "undone_by",
+            "reason",
+            HTML(
+                '<div class="alert alert-warning">'
+                '<strong>Undo Release</strong> reverses the cash-in accounting entry '
+                '(GIVENLOAN_RELEASE), deletes the Release document, and returns the loan to '
+                '<em>Disbursed</em> status. '
+                'Use this to correct a release entered by mistake. '
+                'The Release ID and accounting trail are preserved in the audit log.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Undo Release", css_class="btn btn-warning"))
 
 
 class MarkDefaultedLoanForm(forms.Form):
     marked_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
-    reason = forms.CharField(widget=forms.Textarea)
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Describe the default circumstances..."}),
+        label="Default Reason",
+    )
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         if user:
             self.fields["marked_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "marked_by",
+            "reason",
+            HTML(
+                '<div class="alert alert-warning">'
+                '<strong>Marking as defaulted</strong> records that the borrower has not repaid. '
+                'No immediate GL entry — you can proceed to auction or sell the collateral.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Mark as Defaulted", css_class="btn btn-warning"))
 
 
 class MarkAuctionedLoanForm(forms.Form):
     auctioned_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
-    amount = forms.DecimalField(max_digits=10, decimal_places=2)
+    amount = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        label="Auction Amount (₹)",
+        help_text="Amount realised from the auction of the collateral",
+    )
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         if user:
             self.fields["auctioned_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "auctioned_by",
+            "amount",
+            HTML(
+                '<div class="alert alert-danger">'
+                '<strong>Recording an auction</strong> will create an accounting entry for the recovered amount. '
+                'This action cannot be undone.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Confirm Auction", css_class="btn btn-dark"))
 
 
 class MarkSoldLoanForm(forms.Form):
     sold_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    amount = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        label="Sale Amount (₹)",
+        help_text="Amount realised from the sale of the collateral",
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["sold_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "sold_by",
+            "amount",
+            HTML(
+                '<div class="alert alert-secondary">'
+                '<strong>Recording a sale</strong> will create an accounting entry for the sale amount. '
+                'This action cannot be undone.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Confirm Sale", css_class="btn btn-secondary"))
     amount = forms.DecimalField(max_digits=10, decimal_places=2)
 
     def __init__(self, *args, **kwargs):
