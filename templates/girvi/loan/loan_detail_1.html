@@ -87,24 +87,107 @@
     </div>
   </div>
 
-  <!-- Status transitions breadcrumb -->
-  <div class="alert alert-info mt-2" role="alert">
-    <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
-      <ol class="breadcrumb">
-        <li><strong>Status: </strong></li>
-        {% for transition in change_log %}
-        <li class="breadcrumb-item active" aria-current="page">
-          <a href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">{{ transition|capfirst }}</a>
-        </li>
-        {% endfor %}
-        <li class="breadcrumb-item">{{current_status}}</li>
-        {% for transition in possible_transitions %}
-        <li class="breadcrumb-item active" aria-current="page">
-          <a href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">{{ transition|capfirst }}</a>
-        </li>
-        {% endfor %}
-      </ol>
-    </nav>
+  <!-- Loan Status & Lifecycle Panel -->
+  <div class="card mb-3 border-0 shadow-sm">
+    <div class="card-body py-2">
+      <div class="d-flex flex-wrap align-items-center gap-3">
+
+        <!-- Current status badge -->
+        <div>
+          <span class="text-muted small me-1">Status:</span>
+          {% if current_status == "Disbursed" %}
+            <span class="badge bg-primary fs-6">{{ current_status }}</span>
+          {% elif current_status == "Approved" %}
+            <span class="badge bg-success fs-6">{{ current_status }}</span>
+          {% elif current_status == "Released" %}
+            <span class="badge bg-info fs-6">{{ current_status }}</span>
+          {% elif current_status == "Cancelled" %}
+            <span class="badge bg-danger fs-6">{{ current_status }}</span>
+          {% elif current_status == "Defaulted" %}
+            <span class="badge bg-warning text-dark fs-6">{{ current_status }}</span>
+          {% elif current_status == "Auctioned" or current_status == "Sold" %}
+            <span class="badge bg-dark fs-6">{{ current_status }}</span>
+          {% else %}
+            <span class="badge bg-secondary fs-6">{{ current_status }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Status history mini-timeline -->
+        {% if change_log %}
+        <div class="d-flex align-items-center gap-1 flex-wrap small text-muted">
+          <span class="me-1">History:</span>
+          {% for entry in change_log %}
+            <span class="badge bg-light text-dark border"
+                  title="{{ entry.changed|date:'d M Y H:i' }} by {{ entry.author }}{% if entry.metadata %} — {{ entry.metadata }}{% endif %}">
+              {{ entry.source }} → {{ entry.target }}
+            </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Available transition action buttons -->
+        {% if possible_transitions %}
+        <div class="ms-auto d-flex flex-wrap gap-2">
+          <span class="text-muted small align-self-center">Actions:</span>
+          {% for transition in possible_transitions %}
+            {% if transition == "approve" %}
+              <a class="btn btn-sm btn-success"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                ✓ Approve
+              </a>
+            {% elif transition == "disburse" %}
+              <a class="btn btn-sm btn-primary"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                💳 Disburse
+              </a>
+            {% elif transition == "deliver" %}
+              <a class="btn btn-sm btn-info"
+                 hx-get="{% url 'girvi:release_loan_check_custody' loan.id %}"
+                 hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">
+                📦 Release
+              </a>
+            {% elif transition == "cancel" %}
+              <a class="btn btn-sm btn-danger"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                ✕ Cancel
+              </a>
+            {% elif transition == "mark_defaulted" %}
+              <a class="btn btn-sm btn-warning"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                ⚠ Mark Defaulted
+              </a>
+            {% elif transition == "mark_auctioned" %}
+              <a class="btn btn-sm btn-dark"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                🔨 Auction
+              </a>
+            {% elif transition == "mark sold" or transition == "mark_sold" %}
+              <a class="btn btn-sm btn-secondary"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                💰 Sell
+              </a>
+            {% elif transition == "undo_disburse" %}
+              <a class="btn btn-sm btn-outline-warning"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                ↩ Undo Disbursal
+              </a>
+            {% elif transition == "undo_release" %}
+              <a class="btn btn-sm btn-outline-secondary"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                ↩ Undo Release
+              </a>
+            {% else %}
+              <a class="btn btn-sm btn-outline-secondary"
+                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                {{ transition|capfirst }}
+              </a>
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
   </div>
 
   <!-- Main two-column layout -->

@@ -39,6 +39,8 @@ from ..forms import (
     MarkAuctionedLoanForm,
     MarkDefaultedLoanForm,
     MarkSoldLoanForm,
+    UndoDisburseLoanForm,
+    UndoReleaseLoanForm,
 )
 from ..models import (
     GivenLoan,
@@ -50,18 +52,22 @@ from ..models import (
     TakenLoan,
 )
 from apps.tenant_apps.dea.models import Voucher
-from ..payment_service import record_loan_disbursal
+from ..payment_service import record_loan_disbursal, reverse_loan_disbursal, reverse_loan_release
 from ..services import LoanIDGenerator
 from ..tables import LoanTable, TakenLoanTable, UnifiedLoanTable
 
 form_classes = {
     "approve": ApproveLoanForm,
     "disburse": DisburseLoanForm,
-    "deliver": DeliverLoanForm,
+    # "deliver" is intentionally absent: releasing a loan MUST go through the
+    # Release create form (which runs the custody check and posts accounting).
+    # flow.deliver() is fired internally by Release.save(), not as a standalone action.
     "cancel": CancelLoanForm,
     "mark_defaulted": MarkDefaultedLoanForm,
     "mark_auctioned": MarkAuctionedLoanForm,
     "mark_sold": MarkSoldLoanForm,
+    "undo_disburse": UndoDisburseLoanForm,
+    "undo_release": UndoReleaseLoanForm,
 }
 logger = logging.getLogger(__name__)
 
@@ -133,6 +139,34 @@ def loan_transition_view(request, pk):
             flow = LoanFlow(loan, request.user, request.tenant)
             transition_method = getattr(flow, transition_name, None)
             if transition_method and transition_method.can_proceed():
+                if transition_name == "undo_disburse":
+                    try:
+                        with transaction.atomic():
+                            transition_method(**form.cleaned_data)
+                            reverse_loan_disbursal(loan, request.user)
+                        messages.success(
+                            request,
+                            _("Disbursal reversed successfully. Loan returned to Approved."),
+                        )
+                    except (ValueError, ValidationError) as exc:
+                        messages.error(request, str(exc))
+                    return redirect(loan.get_absolute_url())
+
+                elif transition_name == "undo_release":
+                    try:
+                        with transaction.atomic():
+                            release = loan.release
+                            transition_method(**form.cleaned_data)
+                            reverse_loan_release(loan, request.user)
+                            release.delete()
+                        messages.success(
+                            request,
+                            _("Release reversed successfully. Loan returned to Disbursed."),
+                        )
+                    except (ValueError, ValidationError) as exc:
+                        messages.error(request, str(exc))
+                    return redirect(loan.get_absolute_url())
+
                 transition_method(**form.cleaned_data)
 
                 if transition_name == "disburse" and loan.status == LoanStatus.DISBURSED:
@@ -570,33 +604,21 @@ def loan_detail(request, pk):
         pk=pk,
     )
 
-    # transitions = list(transition.name for transition in loan.get_all_status_transitions())
-    # possible_transitions = loan.get_possible_transitions(user,request.tenant)
     flow = LoanFlow(loan, request.user, request.tenant)
     current_status = flow.status
 
-    # Use ContentType to filter LoanChangeLog for this GivenLoan
+    # Full changelog objects for timeline display
     changelog = (
         LoanChangeLog.objects.filter(
             content_type=ContentType.objects.get_for_model(GivenLoan), object_id=loan.id
         )
+        .select_related("author")
         .order_by("changed")
-        .values_list("source", flat=True)
     )
 
-    transitions = flow.get_transitions()
-    available_transitions = (
-        [
-            transition.label
-            for transition in LoanFlow.status.get_available_transitions(
-                flow, current_status, request.user
-            )
-        ],
-    )
     possible_transitions = [
         transition.label for transition in flow.get_outgoing_transitions()
     ]
-    # possible_transitions = [transition.label for method,transitions in LoanFlow.status.get_transitions().items() for transition in transitions]
 
     weight_summary = {item["itemtype"]: item for item in loan.get_weight_summary}
     gold_weight = (

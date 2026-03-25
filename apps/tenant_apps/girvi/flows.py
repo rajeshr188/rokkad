@@ -1,12 +1,41 @@
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from viewflow import fsm, this
+from viewflow import fsm
 
 from apps.orgs.models import Membership
-from apps.orgs.views import has_permission
 
 from .models import BaseLoan, LoanChangeLog, LoanStatus
+
+# ─── Transition metadata ────────────────────────────────────────────────────
+
+# True = this transition triggers voucher creation in the view
+TRANSITION_ACCOUNTING_IMPACT = {
+    "approve": False,
+    "disburse": True,
+    "deliver": False,
+    "cancel": False,
+    "mark_defaulted": False,
+    "mark_auctioned": True,
+    "mark_sold": True,
+    # Reversal transitions
+    "undo_disburse": True,   # reverses the GIVENLOAN_DISBURSAL voucher
+    "undo_release": True,    # reverses the GIVENLOAN_RELEASE voucher + deletes Release
+}
+
+TRANSITION_DESCRIPTIONS = {
+    "approve": "Loan reviewed and approved for disbursement. No accounting impact.",
+    "disburse": "Cash disbursed to borrower. Creates a LOAN_DISBURSE accounting entry.",
+    "deliver": "Collateral released to the loan holder. No immediate accounting impact.",
+    "cancel": "Loan cancelled before disbursement. No accounting impact.",
+    "mark_defaulted": "Borrower has defaulted. Event recorded; no immediate GL impact.",
+    "mark_auctioned": "Collateral auctioned to recover the loan amount. Creates an accounting entry.",
+    "mark_sold": "Collateral sold. Creates an accounting entry.",
+    "undo_disburse": "Reverses the disbursal — returns loan to Approved. Reverses GIVENLOAN_DISBURSAL voucher.",
+    "undo_release": "Reverses the release — returns loan to Disbursed. Reverses GIVENLOAN_RELEASE voucher and deletes the Release record.",
+}
+
+# ─── Permission helper ───────────────────────────────────────────────────────
 
 
 def has_permission(user, permission_codename):
@@ -18,11 +47,22 @@ def has_permission(user, permission_codename):
     return membership.role.permissions.filter(codename=permission_codename).exists()
 
 
-class LoanFlow(object):
-    """Loan process definition"""
+# ─── Flow ────────────────────────────────────────────────────────────────────
 
-    # TODO: Add permissions
-    # TODO: determine the extra fields needed for each state
+
+class LoanFlow(object):
+    """
+    Loan lifecycle FSM — liaison layer between BusinessDoc and Voucher.
+
+    Responsibilities:
+    - Advance loan.status via FSM transitions
+    - Record transition metadata in LoanChangeLog
+    - Signal accounting impact to the calling view
+
+    The flow does NOT create vouchers itself. For accounting transitions
+    (disburse, mark_auctioned, mark_sold), the calling view creates and
+    posts the corresponding Voucher after the transition succeeds.
+    """
 
     status = fsm.State(LoanStatus, default=LoanStatus.CREATED)
 
@@ -49,21 +89,22 @@ class LoanFlow(object):
         with transaction.atomic():
             self.loan.save()
 
-            # Create change log with additional data
             log_data = {
                 "loan": self.loan,
-                "source": source,
-                "target": target,
+                "source": str(source),
+                "target": str(target),
                 "author": self.user,
                 "ip_address": self.ip_address,
+                "diff": "",
             }
 
-            # Add any additional data stored during transition
             if hasattr(self, "_additional_data"):
                 log_data["metadata"] = self._additional_data
                 delattr(self, "_additional_data")
 
             LoanChangeLog.objects.create(**log_data)
+
+    # ── Helpers ──────────────────────────────────────────────────────────────
 
     def get_transitions(self):
         return [
@@ -86,19 +127,24 @@ class LoanFlow(object):
             for transition in LoanFlow.status.get_outgoing_transitions(self.status)
         ]
 
+    def requires_accounting(self, transition_name):
+        """Return True if this transition should trigger voucher creation."""
+        return TRANSITION_ACCOUNTING_IMPACT.get(transition_name, False)
+
+    # ── Transitions ──────────────────────────────────────────────────────────
+
     @status.transition(
         source=LoanStatus.CREATED,
         target=LoanStatus.APPROVED,
         label=_("approve"),
-        permission=lambda flow, user: has_permission(
-            user, "can_approve_loan"
-        ),  # either this or a function that returns a boolean
+        permission=lambda flow, user: has_permission(user, "can_approve_loan"),
     )
     def approve(self, approved_by):
-        """Approve a loan"""
-        pass
-        # self.approved_at = timezone.now()
-        # self.approved_by = self.user
+        """Approve a loan — no accounting impact."""
+        self._additional_data = {
+            "approved_by": str(approved_by),
+            "approved_at": timezone.now().isoformat(),
+        }
 
     @status.transition(
         source=LoanStatus.APPROVED,
@@ -107,11 +153,11 @@ class LoanFlow(object):
         permission=lambda flow, user: has_permission(user, "can_disburse_loan"),
     )
     def disburse(self, disbursed_by):
-        """Disburse an approved loan"""
-        # self.disbursed_at = timezone.now()
-        # self.disbursed_by = self.user
-        pass
-        # self.create_transactions()
+        """Disburse an approved loan — LOAN_DISBURSE voucher created by the view."""
+        self._additional_data = {
+            "disbursed_by": str(disbursed_by),
+            "disbursed_at": timezone.now().isoformat(),
+        }
 
     @status.transition(
         source={LoanStatus.DISBURSED, LoanStatus.REPLEDGED},
@@ -120,18 +166,12 @@ class LoanFlow(object):
         permission=lambda flow, user: has_permission(user, "can_release_loan"),
     )
     def deliver(self, created_by, released_by, release_date=None):
-        print("delivering")
-        """Release a disbursed loan"""
-        # if not release_date:
-        #     release_date = timezone.now()
-        # return self.loan.create_release(
-        #     release_date=release_date,
-        #     released_by=released_by,
-        #     created_by=self.user
-        # )
-        # self.released_at = timezone.now()
-        # self.released_by = released_by
-        pass
+        """Release a disbursed loan — collateral returned to borrower."""
+        self._additional_data = {
+            "created_by": str(created_by) if created_by else None,
+            "released_by": str(released_by) if released_by else None,
+            "release_date": (release_date or timezone.now()).isoformat(),
+        }
 
     @status.transition(
         label=_("cancel"),
@@ -140,11 +180,40 @@ class LoanFlow(object):
         permission=lambda flow, user: has_permission(user, "can_cancel_loan"),
     )
     def cancel(self, cancelled_by, reason):
-        """Cancel a loan"""
-        # self.cancelled_at = timezone.now()
-        # self.cancelled_by = cancelled_by
-        # self.cancellation_reason = reason
-        self._additional_data = {"reason": reason}
+        """Cancel a loan before disbursement — no accounting impact."""
+        self._additional_data = {
+            "cancelled_by": str(cancelled_by),
+            "cancelled_at": timezone.now().isoformat(),
+            "reason": reason,
+        }
+
+    @status.transition(
+        source=LoanStatus.DISBURSED,
+        target=LoanStatus.APPROVED,
+        label=_("undo_disburse"),
+        permission=lambda flow, user: has_permission(user, "can_disburse_loan"),
+    )
+    def undo_disburse(self, undone_by, reason):
+        """Revert a disbursed loan back to Approved — reverses GIVENLOAN_DISBURSAL voucher."""
+        self._additional_data = {
+            "undone_by": str(undone_by),
+            "undone_at": timezone.now().isoformat(),
+            "reason": reason,
+        }
+
+    @status.transition(
+        source=LoanStatus.RELEASED,
+        target=LoanStatus.DISBURSED,
+        label=_("undo_release"),
+        permission=lambda flow, user: has_permission(user, "can_release_loan"),
+    )
+    def undo_release(self, undone_by, reason):
+        """Revert a released loan back to Disbursed — reverses GIVENLOAN_RELEASE voucher and deletes Release."""
+        self._additional_data = {
+            "undone_by": str(undone_by),
+            "undone_at": timezone.now().isoformat(),
+            "reason": reason,
+        }
 
     @status.transition(
         source=LoanStatus.DISBURSED,
@@ -153,11 +222,12 @@ class LoanFlow(object):
         permission=lambda flow, user: has_permission(user, "can_mark_defaulted"),
     )
     def mark_defaulted(self, marked_by, reason):
-        """Mark a loan as defaulted"""
-        # self.defaulted_at = timezone.now()
-        # self.defaulted_by = marked_by
-        # self.default_reason = reason
-        self._additional_data = {"reason": reason}
+        """Mark a disbursed loan as defaulted — event recorded, no immediate GL impact."""
+        self._additional_data = {
+            "marked_by": str(marked_by),
+            "defaulted_at": timezone.now().isoformat(),
+            "reason": reason,
+        }
 
     @status.transition(
         source=LoanStatus.DEFAULTED,
@@ -166,23 +236,22 @@ class LoanFlow(object):
         permission=lambda flow, user: has_permission(user, "can_mark_auctioned"),
     )
     def mark_auctioned(self, auctioned_by, amount):
-        """Mark a defaulted loan as auctioned"""
+        """Auction collateral — auction voucher created by the view."""
         self._additional_data = {
-            "auctioned_at": timezone.now(),
-            "auctioned_by": auctioned_by,
-            "auction_amount": amount,
+            "auctioned_at": timezone.now().isoformat(),
+            "auctioned_by": str(auctioned_by),
+            "auction_amount": str(amount),
         }
 
     @status.transition(
         source=LoanStatus.DISBURSED,
         target=LoanStatus.SOLD,
         label=_("mark sold"),
-        # permission=lambda self: has_permission(self.user, self.tenant,'can_mark_sold')
     )
     def mark_sold(self, sold_by, amount):
-        """Mark a loan as sold"""
+        """Mark collateral as sold — sale voucher created by the view."""
         self._additional_data = {
-            "sold_at": timezone.now(),
-            "sold_by": sold_by,
-            "sold_amount": amount,
+            "sold_at": timezone.now().isoformat(),
+            "sold_by": str(sold_by),
+            "sold_amount": str(amount),
         }

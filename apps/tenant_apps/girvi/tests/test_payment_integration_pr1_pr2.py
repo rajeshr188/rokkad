@@ -319,6 +319,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
             loan = FakeGivenLoan()
             loan.pk = 20
             loan.outstanding_principal = Money(250, "INR")
+            loan.interest_due = lambda: 0
 
             release = SimpleNamespace(
                 pk=31,
@@ -351,6 +352,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
         loan.pk = 21
         loan.loan_id = "GL-21"
         loan.outstanding_principal = Money(500, "INR")
+        loan.interest_due = lambda: 25
 
         created_payment = MagicMock()
         mock_content_type.objects.get_for_model.return_value = object()
@@ -375,7 +377,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
         mock_payment_voucher.objects.create.assert_called_once()
         create_kwargs = mock_payment_voucher.objects.create.call_args.kwargs
         self.assertEqual(create_kwargs["direction"], "RECEIPT")
-        self.assertEqual(create_kwargs["payment_type"], "OTHER")
+        self.assertEqual(create_kwargs["payment_type"], "RECEIPT")
         self.assertEqual(create_kwargs["reference_number"], "RELEASE-32")
         mock_post.assert_called_once()
         created_payment.save.assert_called_once_with(update_fields=["posted"])
@@ -394,6 +396,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
         loan.pk = 22
         loan.loan_id = "GL-22"
         loan.outstanding_principal = Money(0, "INR")
+        loan.interest_due = lambda: 0
 
         release = SimpleNamespace(
             pk=33,
