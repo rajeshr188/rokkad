@@ -9,7 +9,8 @@ from django.forms import inlineformset_factory
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Button, Fieldset, Row, Column, HTML
 from django_select2 import forms as s2forms
-from djmoney.forms import MoneyField as DjangoMoneyField
+from djmoney.forms.fields import MoneyField as DjangoMoneyField
+from djmoney.forms.widgets import MoneyWidget
 
 from .models import (
     ExpenseVoucher,
@@ -95,6 +96,7 @@ class ExpenseVoucherForm(forms.ModelForm):
 class ExpenseLineItemForm(forms.ModelForm):
     """Form for individual expense line items"""
 
+
     class Meta:
         model = ExpenseLineItem
         fields = [
@@ -109,9 +111,6 @@ class ExpenseLineItemForm(forms.ModelForm):
             "category": forms.Select(attrs={"class": "form-select form-select-sm"}),
             "description": forms.TextInput(
                 attrs={"class": "form-control form-control-sm"}
-            ),
-            "amount": forms.NumberInput(
-                attrs={"class": "form-control form-control-sm", "step": "0.01"}
             ),
             "is_taxable": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "tax_rate": forms.NumberInput(

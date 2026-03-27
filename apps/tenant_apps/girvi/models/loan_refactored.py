@@ -332,6 +332,61 @@ class BaseLoan(BusinessDoc):
 
 
 class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
+
+    def create_release_payment(
+        self,
+        principal=None,
+        interest=None,
+        payment_date=None,
+        payment_method="CASH",
+        reference_number="",
+        description="",
+        created_by=None,
+    ):
+        """
+        Create a PaymentVoucher for releasing this loan (cash in on closure).
+        Ensures direction is 'RECEIPT', payment_type is 'RECEIPT', and principal/interest are set.
+        """
+        from decimal import Decimal
+        from moneyed import Money
+        from apps.tenant_apps.dea.models import PaymentVoucher
+
+        if not created_by:
+            raise ValidationError("created_by user is required")
+
+        # Compute principal and interest if not provided
+        if principal is None:
+            principal = self.outstanding_principal
+        if interest is None:
+            interest = self.interest_due()
+        if isinstance(principal, Decimal):
+            principal = Money(principal, "INR")
+        elif not isinstance(principal, Money):
+            principal = Money(Decimal(str(principal)), "INR")
+        if isinstance(interest, Decimal):
+            interest = Money(interest, "INR")
+        elif not isinstance(interest, Money):
+            interest = Money(Decimal(str(interest)), "INR")
+
+        total = principal + interest
+
+        payment = PaymentVoucher.objects.create(
+            source_document=self,
+            total_amount=total,
+            principal_amount=principal,
+            interest_amount=interest,
+            direction="RECEIPT",  # Cash in
+            payment_type="RECEIPT",
+            payment_method=payment_method,
+            reference_number=reference_number,
+            description=description,
+            payment_date=payment_date or timezone.now(),
+            created_by=created_by,
+            updated_by=created_by,
+        )
+        return payment
+
+        
     """
     Loan given TO a customer (pawn/pledge loan).
 
@@ -521,7 +576,49 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
     # ========================================================================
     # Payment Management (PaymentVoucher Integration)
     # ========================================================================
+    def create_disbursal_payment(
+        self,
+        amount=None,
+        payment_date=None,
+        payment_method="CASH",
+        reference_number="",
+        description="",
+        created_by=None,
+    ):
+        """
+        Create a PaymentVoucher for disbursing this loan (cash out).
+        Ensures direction is 'PAYMENT' and payment_type is 'DISBURSAL',
+        so DEA posting engine uses 'GIVENLOAN_PAYMENT' as voucher type.
+        """
+        from decimal import Decimal
+        from moneyed import Money
+        from apps.tenant_apps.dea.models import PaymentVoucher
 
+        if not created_by:
+            raise ValidationError("created_by user is required")
+
+        # Default to full loan amount if not specified
+        if amount is None:
+            amount = self.get_loan_amount_with_currency
+        elif isinstance(amount, Decimal):
+            amount = Money(amount, "INR")
+        elif not isinstance(amount, Money):
+            amount = Money(Decimal(str(amount)), "INR")
+
+        payment = PaymentVoucher.objects.create(
+            source_document=self,
+            total_amount=amount,
+            principal_amount=amount,
+            direction="PAYMENT",  # Cash out
+            payment_type="DISBURSAL",
+            payment_method=payment_method,
+            reference_number=reference_number,
+            description=description,
+            payment_date=payment_date or timezone.now(),
+            created_by=created_by,
+            updated_by=created_by,
+        )
+        return payment
     def create_payment(
         self,
         amount,

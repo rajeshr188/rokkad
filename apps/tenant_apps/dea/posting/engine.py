@@ -133,13 +133,43 @@ class BasePostingEngine(ABC):
                         prev_voucher.status = VoucherStatus.REVERSED.value
                         prev_voucher.save(update_fields=["status"])
 
-                # build lines via rule for current voucher
-                bundle: PostingBundle = rule.build_posting(ctx)
 
-                # validations
-                assert_non_empty(bundle)
-                assert_currency_fields(bundle)
-                assert_balanced(bundle)
+                # build lines via rule for current voucher, with robust error handling
+                try:
+                    bundle: PostingBundle = rule.build_posting(ctx)
+                    # Log the resulting posting bundle for audit/debug
+                    logger.info(
+                        "Posting bundle for voucher_id=%s, doc=%s, rule=%s: %r",
+                        getattr(ctx.voucher, 'id', None),
+                        getattr(ctx, 'doc', None),
+                        getattr(rule, '__class__', type(rule)).__name__,
+                        bundle
+                    )
+                    # validations
+                    assert_non_empty(bundle)
+                    assert_currency_fields(bundle)
+                    assert_balanced(bundle)
+                except Exception as e:
+                    import django.db
+                    if isinstance(e, django.db.IntegrityError):
+                        logger.critical(
+                            "Database integrity error during posting: voucher_id=%s, doc=%s, rule=%s, error=%s",
+                            getattr(ctx.voucher, 'id', None),
+                            getattr(ctx, 'doc', None),
+                            getattr(rule, '__class__', type(rule)).__name__,
+                            str(e),
+                            exc_info=True
+                        )
+                        raise PostingError(f"Database integrity error during posting: {str(e)}") from e
+                    logger.error(
+                        "Posting rule failed: voucher_id=%s, doc=%s, rule=%s, error=%s",
+                        getattr(ctx.voucher, 'id', None),
+                        getattr(ctx, 'doc', None),
+                        getattr(rule, '__class__', type(rule)).__name__,
+                        str(e),
+                        exc_info=True
+                    )
+                    raise PostingError(f"Posting rule or validation failed: {str(e)}") from e
 
                 # write JE and lines onto current voucher
                 je = self._write_journal_entry(ctx, bundle)

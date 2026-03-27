@@ -1,6 +1,8 @@
 from django.urls import path
 
+
 from . import views
+from .views import dashboard_enhanced
 
 urlpatterns = [
     # for common views
@@ -13,6 +15,7 @@ urlpatterns = [
 # Dashboard and Analytics URLs
 urlpatterns += [
     path("dashboard/", views.dashboard, name="dea_dashboard"),
+    path("dashboard/enhanced/", dashboard_enhanced.dashboard_enhanced, name="dea_dashboard_enhanced"),
     path(
         "dashboard/metrics/ajax/",
         views.dashboard_metrics_ajax,
@@ -223,7 +226,7 @@ urlpatterns += [
 
 # Expense Voucher URLs
 urlpatterns += [
-    # Expense Voucher list and detail views
+    # Expense Voucher list, detail, and post views
     path(
         "expenses/",
         views.expense.ExpenseVoucherListView.as_view(),
@@ -233,6 +236,11 @@ urlpatterns += [
         "expenses/<int:pk>/",
         views.expense.ExpenseVoucherDetailView.as_view(),
         name="dea_expense_detail",
+    ),
+    path(
+        "expenses/<int:pk>/post/",
+        views.expense.post_expense_voucher,
+        name="dea_expense_post",
     ),
     path(
         "expenses/create/",
@@ -248,6 +256,12 @@ urlpatterns += [
         "expenses/<int:pk>/delete/",
         views.expense.ExpenseVoucherDeleteView.as_view(),
         name="dea_expense_delete",
+    ),
+    # Sales Invoice Voucher URLs
+    path(
+        "sales-invoices/create/",
+        views.sales_invoice.SalesInvoiceCreateView.as_view(),
+        name="dea_sales_invoice_create",
     ),
 ]
 

@@ -8,6 +8,7 @@ from itertools import groupby
 import fitz
 import qrcode
 import reportlab.rl_config
+from requests import request
 
 logger = logging.getLogger(__name__)
 from django.http import HttpResponse
@@ -85,10 +86,12 @@ def get_frame_definitions(is_original=True):
 
 def get_frame_content(loan, styles):
     """Map loan data to frame content"""
+    # Use 'borrower' for GivenLoan, fallback to 'customer' for legacy
+    party = getattr(loan, "borrower", None) or getattr(loan, "customer", None)
     customer_text = f"""
-    {loan.customer.name} {loan.customer.get_relatedas_display()} {loan.customer.relatedto}
-    {loan.customer.address.first()}
-    Ph: {loan.customer.contactno.first()}
+    {party.name} {party.get_relatedas_display()} {party.relatedto}
+    {party.address.first()}
+    Ph: {party.contactno.first()}
     """.strip()
 
     customer_style = ParagraphStyle(
@@ -121,9 +124,9 @@ def get_frame_content(loan, styles):
         "summary": [
             Paragraph(
                 f"{loan.loan_id} {loan.loan_date.strftime('%d/%m/%y')} "
-                f"{loan.loan_amount} {weight} {loan.customer.name}",
+                f"{loan.loan_amount} {weight} {getattr(loan, 'borrower', getattr(loan, 'customer', None)).name}",
                 styles["Normal"],
-            )
+            ),
         ],
     }
 
@@ -1495,7 +1498,7 @@ def generate_form_a():
     """
 
     # Create a Paragraph object
-    paragraph = Paragraph(content, styles["Normal"])
+    paragraph = Paragraph(form_a_content, styles["Normal"])
 
     # List of flowable elements
     elements = [paragraph, Spacer(1, 12)]
@@ -2069,7 +2072,11 @@ def get_notice_pdf(selection=None):
     )
 
     # Iterate over selected loans
-    for customer, loans in groupby(selection, key=lambda x: x.customer):
+    # Use 'borrower' for GivenLoan, fallback to 'customer' for legacy
+    def get_party(obj):
+        return getattr(obj, "borrower", None) or getattr(obj, "customer", None)
+
+    for customer, loans in groupby(selection, key=get_party):
         # Grouped loans
         loans = list(loans)
 
@@ -2106,7 +2113,7 @@ def get_notice_pdf(selection=None):
                     i + 1,
                     loan.loan_id,
                     loan.loan_date.date(),
-                    loan.get_weight[0],
+                    loan.formatted_weight(),
                     item.itemdesc,
                 ]
                 for i, (loan, item) in enumerate(
@@ -2139,11 +2146,9 @@ def print_noticegroup(selection=None):
     return response
 
 
-from reportlab.graphics import renderPM
-
-
 def generate_qr_code(data):
     # Generate QR code using ReportLab's QRCodeWidget
+    from reportlab.graphics import renderPM
     qr_code = qr.QrCodeWidget(data)
     qr_code.barWidth = 2 * inch  # Width of the QR code
     qr_code.barHeight = 2 * inch  # Height of the QR code

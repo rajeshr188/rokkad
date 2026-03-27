@@ -80,8 +80,8 @@ class ExpenseVoucherListView(LoginRequiredMixin, ListView):
 
         # Total amounts
         totals = all_expenses.aggregate(
-            total_amount=Sum("net_payable_currency"),
-            paid_amount=Sum("paid_amount_currency"),
+            total_amount=Sum("net_payable"),
+            paid_amount=Sum("paid_amount"),
         )
         context["total_amount"] = totals["total_amount"] or Decimal("0")
         context["total_paid"] = totals["paid_amount"] or Decimal("0")
@@ -115,20 +115,40 @@ class ExpenseVoucherDetailView(LoginRequiredMixin, DetailView):
         context["total_tax"] = sum(item.tax_amount.amount for item in line_items)
         context["total_tds"] = sum(item.tds_amount.amount for item in line_items)
 
-        # Get related journal entries if posted
-        from ..models import JournalEntry, Voucher
-
-        try:
-            voucher = Voucher.objects.filter(
-                business_doc=expense, status="POSTED"
-            ).first()
-            if voucher:
-                context["voucher"] = voucher
-                context["journal_entries"] = voucher.journal_entries.all()
-        except:
-            pass
-
+        # Find any related voucher (posted or not) using GenericForeignKey fields
+        from django.contrib.contenttypes.models import ContentType
+        from ..models.voucher import Voucher
+        expense_ct = ContentType.objects.get_for_model(expense)
+        related_voucher = Voucher.objects.filter(doc_content_type=expense_ct, doc_object_id=expense.pk).first()
+        context["related_voucher"] = related_voucher
+        context["voucher"] = related_voucher  # always set for template logic
+        if related_voucher and related_voucher.status == "POSTED":
+            context["journal_entries"] = related_voucher.journal_entries.all()
         return context
+
+# --- New view to post ExpenseVoucher ---
+from django.contrib import messages
+from django.shortcuts import redirect, get_object_or_404
+from ..services.post_doc import create_and_post_voucher_for_doc
+from ..posting.engine import DjangoPostingEngine
+
+def post_expense_voucher(request, pk):
+    """Post an ExpenseVoucher to the ledger (creates Voucher and entries)"""
+    expense = get_object_or_404(ExpenseVoucher, pk=pk)
+    try:
+        # Use the voucher type from the expense voucher
+        voucher_type = expense.get_voucher_type()
+        engine = DjangoPostingEngine()
+        voucher, je = create_and_post_voucher_for_doc(
+            doc=expense,
+            user=request.user,
+            voucher_type_input=voucher_type,
+            engine=engine,
+        )
+        messages.success(request, f"Expense voucher {expense.expense_number} posted to ledger.")
+    except Exception as e:
+        messages.error(request, f"Error posting expense voucher: {e}")
+    return redirect("dea_expense_detail", pk=expense.pk)
 
 
 class ExpenseVoucherCreateView(LoginRequiredMixin, CreateView):

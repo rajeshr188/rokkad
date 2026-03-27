@@ -342,13 +342,15 @@ class ExpenseLineItem(models.Model):
 
     def clean(self):
         """Validate line item"""
+        if self.amount is None:
+            raise ValidationError("Amount is required for each expense line item.")
         if self.amount.amount < 0:
             raise ValidationError("Amount must be positive")
 
-        if self.tax_rate < 0:
+        if self.tax_rate is not None and self.tax_rate < 0:
             raise ValidationError("Tax rate cannot be negative")
 
-        if self.tds_rate < 0:
+        if self.tds_rate is not None and self.tds_rate < 0:
             raise ValidationError("TDS rate cannot be negative")
 
     def save(self, *args, **kwargs):

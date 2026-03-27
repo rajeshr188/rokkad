@@ -56,6 +56,8 @@ def insertData(apps, schema_editor):
             transactiontype_ext(
                 XactTypeCode_ext="CXC", description="Currency Exchange"
             ),
+            transactiontype_ext(
+                XactTypeCode_ext="RP", description="Repayment"),
         ]
     )
 
@@ -510,6 +512,42 @@ def insertData(apps, schema_editor):
         level=0,
         tree_id=0,
     )
+
+    # EXPENSE LEDGERS (add missing standard categories)
+    expense_parent = ledger.objects.create(
+        AccountType_id=5,
+        name="Expenses",
+        code="5999",
+        sort_order=99,
+        lft=0,
+        rght=0,
+        level=0,
+        tree_id=0,
+    )
+    expense_ledgers = [
+        ("Travel & Transportation", "5901"),
+        ("Food & Meals", "5902"),
+        ("Accommodation", "5903"),
+        ("Professional Services", "5904"),
+        ("Office & Supplies", "5905"),
+        ("Utilities & Communications", "5906"),
+        ("Maintenance & Repair", "5907"),
+        ("Marketing & Advertising", "5908"),
+        ("Other Expense", "5998"),
+    ]
+    for name, code in expense_ledgers:
+        ledger.objects.create(
+            AccountType_id=5,
+            name=name,
+            code=code,
+            sort_order=10,
+            parent=expense_parent,
+            is_operating_expense=True,
+            lft=0,
+            rght=0,
+            level=0,
+            tree_id=0,
+        )
 
 
 class Migration(migrations.Migration):

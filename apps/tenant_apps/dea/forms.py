@@ -695,7 +695,11 @@ class ReverseVoucherForm(forms.Form):
 
 class PaymentVoucherForm(forms.ModelForm):
     """Form for creating and editing payment vouchers."""
-
+    from djmoney.forms import MoneyField
+    total_amount = MoneyField(max_digits=13, decimal_places=2, default_currency="INR")
+    principal_amount = MoneyField(max_digits=13, decimal_places=2, default_currency="INR", required=False)
+    interest_amount = MoneyField(max_digits=13, decimal_places=2, default_currency="    INR", required=False)
+    fee_amount = MoneyField(max_digits=13, decimal_places=2, default_currency="INR", required=False)
     class Meta:
         from .models import PaymentVoucher
 
@@ -719,30 +723,30 @@ class PaymentVoucherForm(forms.ModelForm):
                     "type": "datetime-local",
                 }
             ),
-            "total_amount": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Enter amount in INR",
-                }
-            ),
-            "principal_amount": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Principal portion (optional)",
-                }
-            ),
-            "interest_amount": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Interest portion (optional)",
-                }
-            ),
-            "fee_amount": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Fees/charges (optional)",
-                }
-            ),
+            # "total_amount": forms.TextInput(
+            #     attrs={
+            #         "class": "form-control",
+            #         "placeholder": "Enter amount in INR",
+            #     }
+            # ),
+            # "principal_amount": forms.TextInput(
+            #     attrs={
+            #         "class": "form-control",
+            #         "placeholder": "Principal portion (optional)",
+            #     }
+            # ),
+            # "interest_amount": forms.TextInput(
+            #     attrs={
+            #         "class": "form-control",
+            #         "placeholder": "Interest portion (optional)",
+            #     }
+            # ),
+            # "fee_amount": forms.TextInput(
+            #     attrs={
+            #         "class": "form-control",
+            #         "placeholder": "Fees/charges (optional)",
+            #     }
+            # ),
             "payment_method": forms.Select(
                 attrs={
                     "class": "form-select",
@@ -786,5 +790,3 @@ class PaymentVoucherForm(forms.ModelForm):
         }
 
 
-# Import timezone for datetime defaults
-from django.utils import timezone
