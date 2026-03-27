@@ -4,7 +4,7 @@ from email import message
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_tables2 import RequestConfig
 
@@ -80,6 +80,10 @@ def loanitem_create_update(request, parent_id, id=None):
     except GivenLoan.DoesNotExist:
         parent_obj = get_object_or_404(TakenLoan, id=parent_id)
         is_given_loan = False
+
+    if parent_obj.status not in ["Created", "Approved"]:
+        messages.error(request, "Cannot add or edit items after loan is disbursed or closed.")
+        return redirect(parent_obj.get_absolute_url())
 
     instance = None
     message = "Item Created"

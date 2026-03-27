@@ -56,7 +56,7 @@ class LoanTable(tables.Table):
         exclude_from_export=True,
     )
     # notified = tables.Column(accessor="last_notified", exclude_from_export=True)
-    total_interest = tables.Column(verbose_name="Interest", localize=True)
+    total_interest = tables.Column(verbose_name="Interest", localize=True, empty_values=())
     months_since_created = tables.Column(
         verbose_name="Months", exclude_from_export=True
     )
@@ -115,7 +115,7 @@ class LoanTable(tables.Table):
         return format_html(
             """
             <a href ="" hx-get="/girvi/girvi/loan/detail/{}/"
-                        hx-target="#content" hx-swap="innerHTML transition:true"
+                        hx-target="#workspace_content" hx-swap="innerHTML transition:true"
                         
                         hx-push-url="true">{}</a>
             """,
@@ -140,10 +140,15 @@ class LoanTable(tables.Table):
         timezone = pytz.timezone("Asia/Kolkata")
         now = timezone.localize(now)
 
-        return f"{record.months_since_created}/({timesince(record.loan_date, now)})"
+        months = getattr(record, "months_since_created", record.months_elapsed)
+        return f"{months}/({timesince(record.loan_date, now)})"
 
     def render_total_interest(self, record):
-        return record.interest_due()
+        # Prefer annotated/property value when present, fallback to runtime calculation.
+        total_interest = getattr(record, "total_interest", None)
+        if total_interest is None:
+            total_interest = record.interest_due()
+        return total_interest
 
     # def render_total_due(self, record):
     #     return record.total_interest + record.loan_amount
@@ -151,7 +156,14 @@ class LoanTable(tables.Table):
     # def value_total_due(self, record):
     #     return record.total_due
 
-    total_current_value = tables.Column(verbose_name="Value")
+    total_current_value = tables.Column(verbose_name="Value", empty_values=())
+
+    def render_total_current_value(self, record):
+        # Annotation may be missing for some queryset paths; fallback to model property.
+        value = getattr(record, "total_current_value", None)
+        if value is None:
+            value = getattr(record, "current_value", None)
+        return value if value is not None else 0
 
     def value_total_current_value(self, record):
         return record.total_current_value

@@ -647,9 +647,8 @@ class Loan(BusinessDoc):
         return self.loanchangelog_set.all().order_by("-changed")
 
     def get_voucher_type(self) -> str:
-        if self.hasattr("voucher"):
-            return self.voucher.voucher_type
-        return "LOAN_DISBURSE"
+        # Always return the correct posting rule key for disbursal
+        return "GIVENLOAN_PAYMENT"
 
     def get_economic_payload(self):
         return {

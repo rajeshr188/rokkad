@@ -3,7 +3,7 @@
 {% load static%}
 {% block title %}Ledger List{% endblock %}
 
-{% block content %}
+{% block workspace_content %}
 
 <div class="card">
     <div class="card-header">
@@ -16,6 +16,7 @@
                 <a type="button" class="btn btn-outline-primary" href="">Add txn</a>
                 <a type="button" class="btn btn-outline-info" href="{% url 'dea_ledger_audit' %}">Audit</a>
             </div>
+        <div id="form"></div>
         <table class="table table-hover">
             <thead>
                 <tr>

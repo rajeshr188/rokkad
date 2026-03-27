@@ -15,9 +15,8 @@ EXPENSE POSTING PATTERNS:
   CR: TDS Payable + Cash/Bank
 """
 
-from decimal import Decimal
 from django.core.exceptions import ValidationError
-from ..types import PostingBundle, DualLedgerLine, AccountLine
+from ..types import PostingBundle, DualLedgerLine
 from .base import BasePostingRule
 from ..registry import register_rule
 
@@ -55,10 +54,11 @@ class EmployeeExpenseClaimRule(BasePostingRule):
             expense_ledger_key = self._get_expense_ledger_key(line.category)
             lines.append(
                 DualLedgerLine(
-                    ledger_dr=self._resolve_ledger(expense_ledger_key),
-                    ledger_cr=None,
+                    debit_ledger_id=self._resolve_ledger(expense_ledger_key),
+                    credit_ledger_id=None,
+                    currency=line.amount.currency,
                     amount=line.amount.amount,
-                    memo=f"{line.get_category_display()}: {line.description}",
+                    amount_base=line.amount.amount,
                 )
             )
 
@@ -66,10 +66,11 @@ class EmployeeExpenseClaimRule(BasePostingRule):
             if line.is_taxable and line.tax_amount.amount > 0:
                 lines.append(
                     DualLedgerLine(
-                        ledger_dr=self._resolve_ledger("GST_INPUT_CREDIT"),
-                        ledger_cr=None,
+                        debit_ledger_id=self._resolve_ledger("GST_INPUT_CREDIT"),
+                        credit_ledger_id=None,
+                        currency=line.tax_amount.currency,
                         amount=line.tax_amount.amount,
-                        memo=f"GST Input - {line.category}",
+                        amount_base=line.tax_amount.amount,
                     )
                 )
 
@@ -77,20 +78,22 @@ class EmployeeExpenseClaimRule(BasePostingRule):
         if doc.tds_amount.amount > 0:
             lines.append(
                 DualLedgerLine(
-                    ledger_dr=None,
-                    ledger_cr=self._resolve_ledger("TDS_PAYABLE"),
+                    debit_ledger_id=None,
+                    credit_ledger_id=self._resolve_ledger("TDS_PAYABLE"),
+                    currency=doc.tds_amount.currency,
                     amount=doc.tds_amount.amount,
-                    memo="TDS Withheld - Employee Claim",
+                    amount_base=doc.tds_amount.amount,
                 )
             )
 
         # CR: Employee Payable (net of TDS)
         lines.append(
             DualLedgerLine(
-                ledger_dr=None,
-                ledger_cr=self._resolve_ledger("EMPLOYEE_PAYABLE"),
+                debit_ledger_id=None,
+                credit_ledger_id=self._resolve_ledger("EMPLOYEE_PAYABLE"),
+                currency=doc.net_payable.currency,
                 amount=doc.net_payable.amount,
-                memo=f"Reimbursement due to {doc.party_name}",
+                amount_base=doc.net_payable.amount,
             )
         )
 
@@ -156,10 +159,11 @@ class VendorBillRule(BasePostingRule):
             expense_ledger_key = self._get_expense_ledger_key(line.category)
             lines.append(
                 DualLedgerLine(
-                    ledger_dr=self._resolve_ledger(expense_ledger_key),
-                    ledger_cr=None,
+                    debit_ledger_id=self._resolve_ledger(expense_ledger_key),
+                    credit_ledger_id=None,
+                    currency=line.amount.currency,
                     amount=line.amount.amount,
-                    memo=f"{line.get_category_display()}: {line.description}",
+                    amount_base=line.amount.amount,
                 )
             )
 
@@ -167,10 +171,11 @@ class VendorBillRule(BasePostingRule):
             if line.is_taxable and line.tax_amount.amount > 0:
                 lines.append(
                     DualLedgerLine(
-                        ledger_dr=self._resolve_ledger("GST_INPUT_CREDIT"),
-                        ledger_cr=None,
+                        debit_ledger_id=self._resolve_ledger("GST_INPUT_CREDIT"),
+                        credit_ledger_id=None,
+                        currency=line.tax_amount.currency,
                         amount=line.tax_amount.amount,
-                        memo=f"GST Input - {line.category}",
+                        amount_base=line.tax_amount.amount,
                     )
                 )
 
@@ -178,20 +183,22 @@ class VendorBillRule(BasePostingRule):
         if doc.tds_amount.amount > 0:
             lines.append(
                 DualLedgerLine(
-                    ledger_dr=None,
-                    ledger_cr=self._resolve_ledger("TDS_PAYABLE"),
+                    debit_ledger_id=None,
+                    credit_ledger_id=self._resolve_ledger("TDS_PAYABLE"),
+                    currency=doc.tds_amount.currency,
                     amount=doc.tds_amount.amount,
-                    memo="TDS Withheld - Vendor Payment",
+                    amount_base=doc.tds_amount.amount,
                 )
             )
 
         # CR: Accounts Payable
         lines.append(
             DualLedgerLine(
-                ledger_dr=None,
-                ledger_cr=self._resolve_ledger("ACCOUNTS_PAYABLE"),
+                debit_ledger_id=None,
+                credit_ledger_id=self._resolve_ledger("ACCOUNTS_PAYABLE"),
+                currency=doc.net_payable.currency,
                 amount=doc.net_payable.amount,
-                memo=f"Bill from {doc.party_name}",
+                amount_base=doc.net_payable.amount,
             )
         )
 
@@ -253,12 +260,14 @@ class DirectExpensePaymentRule(BasePostingRule):
         for line in doc.line_items.all():
             # DR: Expense account
             expense_ledger_key = self._get_expense_ledger_key(line.category)
+            # Both debit and credit ledger IDs must be set; use a suspense/clearing account for credit
             lines.append(
                 DualLedgerLine(
-                    ledger_dr=self._resolve_ledger(expense_ledger_key),
-                    ledger_cr=None,
+                    debit_ledger_id=self._resolve_ledger(expense_ledger_key),
+                    credit_ledger_id=self._resolve_ledger("EXPENSE_SUSPENSE"),
+                    currency=str(line.amount.currency),
                     amount=line.amount.amount,
-                    memo=f"{line.get_category_display()}: {line.description}",
+                    amount_base=line.amount.amount,
                 )
             )
 
@@ -266,47 +275,50 @@ class DirectExpensePaymentRule(BasePostingRule):
             if line.is_taxable and line.tax_amount.amount > 0:
                 lines.append(
                     DualLedgerLine(
-                        ledger_dr=self._resolve_ledger("GST_INPUT_CREDIT"),
-                        ledger_cr=None,
+                        debit_ledger_id=self._resolve_ledger("GST_INPUT_CREDIT"),
+                        credit_ledger_id=self._resolve_ledger("EXPENSE_SUSPENSE"),
+                        currency=str(line.tax_amount.currency),
                         amount=line.tax_amount.amount,
-                        memo=f"GST Input - {line.category}",
+                        amount_base=line.tax_amount.amount,
                     )
                 )
 
         # CR: TDS Payable (deferred if contractor)
-        if doc.tds_amount.amount > 0:
+        if hasattr(doc.tds_amount, 'amount') and doc.tds_amount.amount > 0:
             lines.append(
                 DualLedgerLine(
-                    ledger_dr=None,
-                    ledger_cr=self._resolve_ledger("TDS_PAYABLE"),
+                    debit_ledger_id=self._resolve_ledger("EXPENSE_SUSPENSE"),
+                    credit_ledger_id=self._resolve_ledger("TDS_PAYABLE"),
+                    currency=str(doc.tds_amount.currency),
                     amount=doc.tds_amount.amount,
-                    memo="TDS Deferred",
+                    amount_base=doc.tds_amount.amount,
                 )
             )
 
         # CR: Cash/Bank (direct payment)
         lines.append(
             DualLedgerLine(
-                ledger_dr=None,
-                ledger_cr=self._resolve_ledger("CASH_BANK"),
+                debit_ledger_id=self._resolve_ledger("EXPENSE_SUSPENSE"),
+                credit_ledger_id=self._resolve_ledger("Cash"),
+                currency=str(doc.net_payable.currency),
                 amount=doc.net_payable.amount,
-                memo=f"Direct payment: {doc.party_name}",
+                amount_base=doc.net_payable.amount,
             )
         )
 
         return PostingBundle(
-            voucher_type="EXPENSE_DIRECT_PAYMENT",
-            voucher_number=doc.expense_number,
-            voucher_date=doc.expense_date,
-            description=f"Direct expense payment: {doc.description}",
-            lines=lines,
+            # voucher_type="EXPENSE_DIRECT_PAYMENT",
+            # voucher_number=doc.expense_number,
+            # voucher_date=doc.expense_date,
+            # description=f"Direct expense payment: {doc.description}",
+            ledger_lines=lines,
             account_lines=[],
         )
 
     def _get_expense_ledger_key(self, category: str) -> str:
         """Map expense category to GL account"""
         mapping = {
-            "TRAVEL": "TRAVEL_EXPENSE",
+            "TRAVEL & TRANSPORTATION": "TRAVEL_EXPENSE",
             "FOOD": "FOOD_EXPENSE",
             "ACCOMMODATION": "ACCOMMODATION_EXPENSE",
             "PROFESSIONAL": "PROFESSIONAL_SERVICE_EXPENSE",
@@ -314,9 +326,9 @@ class DirectExpensePaymentRule(BasePostingRule):
             "UTILITIES": "UTILITIES_EXPENSE",
             "MAINTENANCE": "MAINTENANCE_EXPENSE",
             "MARKETING": "MARKETING_EXPENSE",
-            "OTHER": "MISCELLANEOUS_EXPENSE",
+            "Other Expense": "MISCELLANEOUS_EXPENSE",
         }
-        return mapping.get(category, "MISCELLANEOUS_EXPENSE")
+        return mapping.get(category, "Other Expense")
 
     def _resolve_ledger(self, ledger_key: str) -> int:
         """Resolve ledger key to ID"""
