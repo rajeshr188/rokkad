@@ -4,6 +4,10 @@ Date: 2026-03-28
 
 **TL;DR**: Make membership creation idempotent; remove duplicate-write race condition; enforce signal as single source of truth; add email normalization; add regression tests for edge cases.
 
+## Reference Documentation
+
+For a comprehensive end-to-end guide to the invitation flow, including lifecycle diagrams, data models, URL routing, signal contracts, and troubleshooting, see [INVITATION_FLOW_REFERENCE.md](./INVITATION_FLOW_REFERENCE.md).
+
 ## Steps
 
 ### Phase 1: Idempotency & Race Condition Removal
