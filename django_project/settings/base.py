@@ -153,6 +153,7 @@ TEMPLATES = [
                 "django_project.context_processors.navigation_config",
                 "django_project.context_processors.workspace_context",
                 "django_project.context_processors.subscription_context",
+                "django_project.context_processors.google_oauth_context",
             ],
         },
     },
@@ -308,8 +309,9 @@ GUARDIAN_TEMPLATE_403 = "403.html"
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 # ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_LOGIN_METHOD = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "username*" "password1*"]
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*"]
 ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_EMAIL_VERIFICATION = "optional"  # optional: unverified users can still login; mandatory: requires email confirmation
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
 INVITATIONS_INVITATION_MODEL = "orgs.CompanyInvitation"
@@ -382,6 +384,7 @@ SOCIALACCOUNT_PROVIDERS = {
         },
         "OAUTH_PKCE_ENABLED": True,
         "FETCH_USERINFO": True,
+        "CLIENT_ID": env("GOOGLE_CLIENT_ID", default=""),  # Read from .env; empty string in dev
     }
 }
 

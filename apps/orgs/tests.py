@@ -6,6 +6,7 @@ from django.test import SimpleTestCase
 from django_tenants.utils import get_public_schema_name
 
 from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
+from apps.orgs import signals as org_signals
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
@@ -324,3 +325,102 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 		self.assertIsNone(profile.workspace)
 		self.assertTrue(save_calls)
 		mock_msgs.error.assert_called_once()
+
+
+class InvitationSignalHandlerTests(SimpleTestCase):
+	def test_invite_accepted_existing_user_is_idempotent(self):
+		user = SimpleNamespace(id=7)
+		role = SimpleNamespace(name="Member")
+		invitation = SimpleNamespace(company=SimpleNamespace(id=9), role=role)
+
+		fake_qs = SimpleNamespace(first=lambda: user)
+		with patch.object(org_signals.User.objects, "filter", return_value=fake_qs), \
+			 patch.object(org_signals.Membership.objects, "get_or_create") as mock_get_or_create, \
+			 patch.object(org_signals.PendingInvitation.objects, "get_or_create") as mock_pending:
+			org_signals.create_membership(
+				sender=object(), email="User@Example.com", invitation=invitation
+			)
+
+		mock_get_or_create.assert_called_once_with(
+			user=user,
+			company=invitation.company,
+			defaults={"role": invitation.role},
+		)
+		mock_pending.assert_not_called()
+
+	def test_invite_accepted_unknown_user_creates_pending(self):
+		invitation = SimpleNamespace(
+			company=SimpleNamespace(id=9),
+			role=SimpleNamespace(name="Member"),
+		)
+		fake_qs = SimpleNamespace(first=lambda: None)
+
+		with patch.object(org_signals.User.objects, "filter", return_value=fake_qs), \
+			 patch.object(org_signals.Membership.objects, "get_or_create") as mock_get_or_create, \
+			 patch.object(org_signals.PendingInvitation.objects, "get_or_create") as mock_pending:
+			org_signals.create_membership(
+				sender=object(), email="new@example.com", invitation=invitation
+			)
+
+		mock_get_or_create.assert_not_called()
+		mock_pending.assert_called_once_with(
+			email="new@example.com",
+			company=invitation.company,
+			defaults={"role": invitation.role},
+		)
+
+	def test_invite_accepted_without_invitation_is_noop(self):
+		with patch.object(org_signals.Membership.objects, "get_or_create") as mock_get_or_create, \
+			 patch.object(org_signals.PendingInvitation.objects, "get_or_create") as mock_pending:
+			org_signals.create_membership(sender=object(), email="x@example.com")
+
+		mock_get_or_create.assert_not_called()
+		mock_pending.assert_not_called()
+
+	def test_user_signed_up_consumes_all_pending_invites(self):
+		user = SimpleNamespace(email="user@example.com")
+		pending_1 = SimpleNamespace(
+			company=SimpleNamespace(id=1),
+			role=SimpleNamespace(name="Member"),
+			delete=lambda: None,
+		)
+		pending_2 = SimpleNamespace(
+			company=SimpleNamespace(id=2),
+			role=SimpleNamespace(name="Admin"),
+			delete=lambda: None,
+		)
+
+		class PendingQS:
+			def select_related(self, *_args):
+				return [pending_1, pending_2]
+
+		with patch.object(
+			org_signals.PendingInvitation.objects,
+			"filter",
+			return_value=PendingQS(),
+		), patch.object(
+			org_signals.transaction,
+			"atomic",
+			return_value=contextlib.nullcontext(),
+		), patch.object(
+			org_signals.Membership.objects,
+			"get_or_create",
+		) as mock_get_or_create, patch.object(
+			pending_1,
+			"delete",
+		) as delete_1, patch.object(
+			pending_2,
+			"delete",
+		) as delete_2:
+			org_signals.create_membership_on_signup(sender=object(), user=user)
+
+		self.assertEqual(mock_get_or_create.call_count, 2)
+		delete_1.assert_called_once()
+		delete_2.assert_called_once()
+
+	def test_user_signed_up_without_email_is_noop(self):
+		with patch.object(org_signals.PendingInvitation.objects, "filter") as mock_filter:
+			org_signals.create_membership_on_signup(
+				sender=object(), user=SimpleNamespace(email="")
+			)
+		mock_filter.assert_not_called()

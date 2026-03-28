@@ -297,24 +297,6 @@ def invite_success(request):
     return render(request, "company/invite_success.html")
 
 
-class CustomAcceptInvite(AcceptInvite):
-    def get(self, *args, **kwargs):
-        logger.info("CustomAcceptInvite get")
-        invite = self.get_object()
-        email = invite.email
-        user = User.objects.filter(email=email).first()
-
-        if user:
-            # If the user is already registered, create a Membership instance
-            print(f"role: {invite.role}")
-
-            Membership.objects.create(
-                user=user, company=invite.company, role=invite.role
-            )
-
-        return super().get(*args, **kwargs)
-
-
 @method_decorator(login_required, name="dispatch")
 @method_decorator(permission_required("workspace_settings"), name="dispatch")
 class CompanyPreferenceBuilder(PreferenceFormView):

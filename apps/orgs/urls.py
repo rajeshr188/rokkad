@@ -52,7 +52,7 @@ urlpatterns = [
     path("team/invitations/", views.team_invitations, name="team_invitations"),
     path(
         "team/invitations/accept/<str:key>/",
-        views.CustomAcceptInvite.as_view(),
+        views.AcceptInvite.as_view(),
         name="team_accept_invitation",
     ),
     path(
@@ -108,7 +108,7 @@ urlpatterns = [
     ),  # DEPRECATED
     path(
         "invitations/accept-invite/<str:key>/",
-        views.CustomAcceptInvite.as_view(),
+        views.AcceptInvite.as_view(),
         name="accept-invite",
     ),  # DEPRECATED
     path(
