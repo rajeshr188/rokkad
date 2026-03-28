@@ -12,6 +12,11 @@ from guardian.shortcuts import get_perms
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import Membership
+from apps.orgs.tenant_context import resolve_request_workspace
+
+
+def _resolve_workspace(request):
+    return resolve_request_workspace(request)
 
 
 def permission_required(perm, raise_exception=True, log_denial=True):
@@ -34,11 +39,7 @@ def permission_required(perm, raise_exception=True, log_denial=True):
         @login_required
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
-            workspace = (
-                getattr(user.profile, "workspace", None)
-                if hasattr(user, "profile")
-                else None
-            )
+            workspace = _resolve_workspace(request)
 
             if not workspace:
                 if log_denial:
@@ -115,11 +116,7 @@ def any_permission_required(perms, raise_exception=True):
         @login_required
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
-            workspace = (
-                getattr(user.profile, "workspace", None)
-                if hasattr(user, "profile")
-                else None
-            )
+            workspace = _resolve_workspace(request)
 
             if not workspace:
                 if raise_exception:
@@ -190,11 +187,7 @@ def object_permission_required(
             if perm not in user_perms:
                 # Also check global permission from role if accept_global_perms
                 if accept_global_perms:
-                    workspace = (
-                        getattr(request.user.profile, "workspace", None)
-                        if hasattr(request.user, "profile")
-                        else None
-                    )
+                    workspace = _resolve_workspace(request)
                     if workspace:
                         try:
                             membership = Membership.objects.select_related("role").get(
@@ -234,3 +227,68 @@ def object_permission_required(
 def role_based_permission(perm):
     """Alias for permission_required for clarity"""
     return permission_required(perm)
+
+
+def roles_required(allowed_roles):
+    """
+    Coarse role-name gate.  Checks that the authenticated user has a
+    Membership whose role.name is in `allowed_roles`.
+
+    Use permission_required for fine-grained per-permission checks.
+    Use this only where you need a simple role-name guard (e.g. "Owner only").
+    """
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        @login_required
+        def _wrapped_view(request, *args, **kwargs):
+            from apps.orgs.tenant_context import is_public_workspace
+
+            user = request.user
+            workspace = _resolve_workspace(request)
+
+            if not workspace:
+                raise PermissionDenied("No workspace selected")
+
+            if is_public_workspace(workspace):
+                # Public-schema context: company must be supplied via URL kwarg
+                company_id = kwargs.get("company_id")
+                if not company_id:
+                    raise PermissionDenied("Company ID required")
+                from apps.orgs.models import Company
+                try:
+                    workspace = Company.objects.get(id=company_id)
+                except Company.DoesNotExist:
+                    raise Http404("Company not found")
+
+            try:
+                membership = Membership.objects.select_related("role").get(
+                    user=user, company=workspace
+                )
+            except Membership.DoesNotExist:
+                raise PermissionDenied("Not a workspace member")
+
+            if membership.role.name not in allowed_roles:
+                raise PermissionDenied(
+                    f"Role '{membership.role.name}' is not in {allowed_roles}"
+                )
+
+            return view_func(request, *args, **kwargs)
+
+        return _wrapped_view
+
+    return decorator
+
+
+def workspace_required(view_func):
+    """
+    Ensures an authenticated user has a resolved (non-None) workspace.
+    Raises PermissionDenied if not.  Use as the lightest membership gate.
+    """
+    @functools.wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        workspace = _resolve_workspace(request)
+        if request.user.is_authenticated and workspace:
+            return view_func(request, *args, **kwargs)
+        raise PermissionDenied("Workspace required")
+
+    return _wrapped_view

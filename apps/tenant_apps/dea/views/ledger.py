@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 
 from apps.tenant_apps.dea.models import ledger
 from apps.tenant_apps.utils.htmx_utils import for_htmx
@@ -219,7 +220,11 @@ def balance_sheet(request, as_of=None):
             )
             statement["equity"]["total"] += Balance([money])
 
-    return TemplateResponse(request, "dea/balance_sheet.html", {"statement": statement})
+    return TemplateResponse(request, "dea/balance_sheet.html", {
+        "statement": statement,
+        "as_of": as_of,
+        "today": timezone.now().date(),
+    })
 
 
 # @login_required

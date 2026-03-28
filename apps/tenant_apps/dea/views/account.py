@@ -12,7 +12,7 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import AccountFilter
 from ..forms import AccountStatementForm, AccountTransactionForm
-from ..models import Account, AccountStatement, AccountTransaction, JournalEntry
+from ..models import Account, AccountStatement, AccountTransaction, JournalEntry, AccountStatus
 from ..tables import AccountTable
 
 
@@ -69,6 +69,33 @@ def account_list(request):
         return exporter.response(f"table.{export_format}")
     context["filter"] = f
     context["table"] = table
+
+    enhanced_accounts = []
+    for account in f.qs[:24]:
+        balance = account.get_current_balance()
+        available_credit = account.get_available_credit()
+        is_over_limit = account.is_over_credit_limit()
+        txn_count = account.accounttransactions.count()
+
+        status_class = {
+            AccountStatus.ACTIVE: "success",
+            AccountStatus.INACTIVE: "secondary",
+            AccountStatus.SUSPENDED: "warning",
+            AccountStatus.CLOSED: "dark",
+        }.get(account.status, "secondary")
+
+        enhanced_accounts.append(
+            {
+                "account": account,
+                "balance": balance,
+                "available_credit": available_credit,
+                "is_over_limit": is_over_limit,
+                "txn_count": txn_count,
+                "status_class": status_class,
+            }
+        )
+
+    context["enhanced_accounts"] = enhanced_accounts
     return render(request, "dea/account_list.html", context)
 
 

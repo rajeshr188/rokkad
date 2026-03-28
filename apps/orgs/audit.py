@@ -11,6 +11,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from apps.orgs.tenant_context import resolve_request_workspace
+
 
 class AuditLogManager(models.Manager):
     """Custom manager for AuditLog with common query methods"""
@@ -91,6 +93,7 @@ class AuditLog(models.Model):
         ("PAYMENT_FAILED", "Payment Failed"),
         # Settings
         ("SETTINGS_UPDATE", "Settings Updated"),
+        # Preferences
         ("PREFERENCES_UPDATE", "Preferences Updated"),
         # Ownership
         ("OWNERSHIP_TRANSFER", "Ownership Transferred"),
@@ -267,12 +270,11 @@ def audit_log(action, description="", log_args=False):
                 if hasattr(arg, "user") and hasattr(arg, "META"):
                     request = arg
                     user = request.user if request.user.is_authenticated else None
-                    if (
-                        hasattr(user, "profile")
-                        and user
-                        and hasattr(user.profile, "workspace")
-                    ):
-                        company = user.profile.workspace
+                    if user:
+                        company = resolve_request_workspace(
+                            request,
+                            include_public=True,
+                        )
                     break
 
             # Execute the function

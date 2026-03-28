@@ -25,18 +25,6 @@ class RateMiddleware(MiddlewareMixin):
             request.brate = None
             return
 
-        # Check if the user's workspace is set to a tenant schema
-        company = request.user.profile.workspace
-        if (
-            not company
-            or company == ""
-            or company.schema_name == get_public_schema_name()
-        ):
-            request.grate = None
-            request.srate = None
-            request.brate = None
-            return
-
         grate = cache.get("gold_rate")
         srate = cache.get("silver_rate")
         brate = cache.get("bronze_rate")

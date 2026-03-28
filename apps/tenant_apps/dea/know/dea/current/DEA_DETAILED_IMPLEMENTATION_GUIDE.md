@@ -1,466 +1,158 @@
 # DEA System UI/UX Enhancement - Detailed Implementation Guide
 
-**Version**: 1.0  
-**Date**: March 25, 2026  
-**Status**: Ready for Development
+**Version**: 1.1 — Updated Mar 27, 2026  
+**Date**: March 25, 2026 (updated Mar 27)  
+**Status**: Phase 1 ✅ COMPLETE — Ready to implement Phase 2
+
+> **UPDATE (Mar 27)**: Phase 1 has been completed. Do NOT recreate the dashboard.
+> See [DEA_DASHBOARD_GUIDE.md](../DEA_DASHBOARD_GUIDE.md) for full details on what is implemented.
+> This guide now starts at Phase 2.
 
 ---
 
-## PHASE 1: FOUNDATION & DASHBOARD (Weeks 1-2)
+## PHASE 1: FOUNDATION & DASHBOARD ✅ COMPLETE (as of Mar 27)
 
-### 1.1 Dashboard Home Page Enhancement
+### 1.1 Dashboard Implementation — DONE
 
-#### Current State
-- Basic metrics display
-- Limited actionable elements
-- No workflow guidance
+#### What Was Implemented
 
-#### Target Design
+**`views/dashboard.py`** (650 lines, production-ready):
+- Full metrics: Cash, AR, AP, Working Capital
+- Period P&L summary: Revenue → COGS → Gross Profit → Net Profit → Margin %
+- 5 alert types: credit limit exceeded, draft vouchers, unbalanced JE, old periods, inactive accounts
+- Top 5 Debtors / Top 5 Creditors tables
+- Recent Activity: 10 vouchers + 10 journal entries
+- AJAX refresh at `/dea/dashboard/metrics/ajax/`
 
-**Layout Structure**:
-```
-┌─ Header Section ──────────────────────────────────────┐
-│ "Accounting Dashboard" | Current Period Info          │
-│ Quick Actions: [Invoice] [Expense] [Payment] [Journal]│
-└───────────────────────────────────────────────────────┘
+**`views/dashboard_enhanced.py`** (skeleton, ~150 lines):
+- Quick actions (4 types) wired
+- 5 guided workflow accordions — all content done
+- COA preview slot — slot exists, needs real data
+- Report links — all wired
 
-┌─ Key Metrics Row ─────┬─ Financial Health ─┬ Period Info ─┐
-│ • Vouchers Count      │ • AR Balance       │ • Status     │
-│ • Draft vs Posted     │ • AP Balance       │ • Days Left  │
-│ • Total Accounts      │ • Cash Position    │ • Actions    │
-│ • Ledgers Count       │ • Net P&L          │              │
-└───────────────────────┴─ Financial Health ─┴──────────────┘
+**Aging & Ratios** (separate pages):
+- `/dea/reports/receivables/aging/` — 4-bucket AR aging
+- `/dea/reports/payables/aging/` — 4-bucket AP aging
+- `/dea/reports/ratios/` — Liquidity + Leverage ratios
 
-┌─ Guided Workflows Section (Collapsible) ──────────────┐
-│ Step-by-step guides for common tasks                 │
-│ (Setup accounts, Record transactions, Period-end)    │
-└───────────────────────────────────────────────────────┘
+#### ONLY REMAINING TASK: Wire `dashboard_enhanced.py` placeholder functions
 
-┌─ Three Column Section ────────────────────────────────┐
-│ • Recent Vouchers    │ • COA Preview      │ • Key Info │
-│ • Latest Entries     │ • Account Classes  │ • Balances │
-│ • Status Summary     │ • Drill-down Links │ • Alerts   │
-└───────────────────────────────────────────────────────┘
-
-┌─ Reports Quick Links ─────────────────────────────────┐
-│ [Trial Balance] [Balance Sheet] [P&L] [Cash Flow]    │
-│ [View All Reports →]                                 │
-└───────────────────────────────────────────────────────┘
-```
-
-#### Implementation Tasks
-
-**Backend (`dashboard.py`)**:
+These 5 functions currently return `0` or `[]`. Replace with real queries mirroring patterns already used by `dashboard.py`:
 
 ```python
-def dashboard(request):
-    """Enhanced dashboard with unified UX"""
-    context = {
-        # Period & Status
-        'current_period': get_current_period(),
-        'period_status': calculate_period_status(),
-        'days_in_period': calculate_days_remaining(),
-        
-        # Quick Action Links
-        'quick_actions': [
-            {
-                'label': 'Create Invoice',
-                'url': reverse('sales_invoice_create'),
-                'icon': 'fa-file-invoice-dollar',
-                'description': 'Record customer sale'
-            },
-            # ... more actions
-        ],
-        
-        # Key Metrics Section
-        'metrics': {
-            'total_vouchers': Voucher.objects.count(),
-            'posted_vouchers': Voucher.objects.filter(status=VoucherStatus.POSTED).count(),
-            'draft_vouchers': Voucher.objects.filter(status=VoucherStatus.DRAFT).count(),
-            'active_accounts': Account.objects.filter(status=AccountStatus.ACTIVE).count(),
-            'total_ledgers': Ledger.objects.count(),
-        },
-        
-        # Financial Health
-        'financial_health': {
-            'ar_balance': calculate_ar_balance(),  # Sum of receivables
-            'ap_balance': calculate_ap_balance(),  # Sum of payables
-            'cash_position': calculate_cash_balance(),
-            'net_pl': calculate_period_pl(),
-        },
-        
-        # Guided Workflows
-        'workflows': [
-            {
-                'title': 'Set Up Account Structure',
-                'steps': [
-                    {'text': 'View Chart of Accounts', 'url': '/dea/chart-of-accounts/'},
-                    {'text': 'Set Opening Balances', 'url': '/dea/opening-balance/create/'},
-                    {'text': 'Create Business Accounts', 'url': '/dea/accounts/create/'},
-                ]
-            },
-            # ... more workflows
-        ],
-        
-        # COA Preview (Top 5 account classes with balances)
-        'coa_preview': get_coa_summary(),
-        
-        # Recent Activity
-        'recent_vouchers': Voucher.objects.select_related('voucher_type', 'created_by')[:8],
-        'recent_entries': JournalEntry.objects.select_related('voucher')[:8],
-        
-        # Reports Hub
-        'report_links': [
-            {'name': 'Trial Balance', 'url': reverse('trial_balance')},
-            {'name': 'Balance Sheet', 'url': reverse('balance_sheet')},
-            # ... more reports
-        ],
-    }
-    return render(request, 'dea/dashboard.html', context)
-```
-
-**Template (`dashboard.html`)**:
-
-```html
-{% extends 'layouts/workspace.html' %}
-{% load static %}
-
-{% block title %}Accounting Dashboard{% endblock %}
-
-{% block content %}
-<!-- Header Section -->
-<div class="dashboard-header mb-4">
-    <div class="row">
-        <div class="col-md-8">
-            <h1><i class="fas fa-chart-line"></i> Accounting Dashboard</h1>
-            <p class="text-muted">{{ current_period.name }} ({{ current_period.start_date|date:"M d" }} - {{ current_period.end_date|date:"M d, Y" }})</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-sm btn-outline-primary" onclick="refreshDashboard()">
-                <i class="fas fa-sync"></i> Refresh
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Quick Actions Section -->
-<div class="quick-actions-section mb-4">
-    <h5 class="mb-3"><i class="fas fa-lightning-bolt"></i> Quick Actions</h5>
-    <div class="row g-2">
-        {% for action in quick_actions %}
-        <div class="col-md-6 col-lg-3">
-            <a href="{{ action.url }}" class="btn btn-outline-primary btn-block d-flex flex-column align-items-center p-3">
-                <i class="fas {{ action.icon }} fa-2x mb-2"></i>
-                <strong>{{ action.label }}</strong>
-                <small class="text-muted">{{ action.description }}</small>
-            </a>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- Key Metrics & Financial Health -->
-<div class="metrics-section mb-4">
-    <div class="row">
-        <!-- Volume Metrics -->
-        <div class="col-md-4">
-            <div class="card metric-card border-start border-primary">
-                <div class="card-body">
-                    <h6 class="card-title text-uppercase small">Transaction Volume</h6>
-                    <div class="metric-item d-flex justify-content-between py-2 border-bottom">
-                        <span>Posted Vouchers</span>
-                        <strong>{{ metrics.posted_vouchers }}</strong>
-                    </div>
-                    <div class="metric-item d-flex justify-content-between py-2 border-bottom">
-                        <span>Draft Vouchers</span>
-                        <strong>{{ metrics.draft_vouchers }}</strong>
-                    </div>
-                    <div class="metric-item d-flex justify-content-between py-2">
-                        <span>Active Accounts</span>
-                        <strong>{{ metrics.active_accounts }}</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Financial Health -->
-        <div class="col-md-4">
-            <div class="card metric-card border-start border-success">
-                <div class="card-body">
-                    <h6 class="card-title text-uppercase small">Financial Health</h6>
-                    <div class="metric-item d-flex justify-content-between py-2 border-bottom">
-                        <span>A/R Balance</span>
-                        <strong class="text-success">{{ financial_health.ar_balance|floatformat:0 }}</strong>
-                    </div>
-                    <div class="metric-item d-flex justify-content-between py-2 border-bottom">
-                        <span>A/P Balance</span>
-                        <strong class="text-danger">{{ financial_health.ap_balance|floatformat:0 }}</strong>
-                    </div>
-                    <div class="metric-item d-flex justify-content-between py-2">
-                        <span>Net P&L</span>
-                        <strong class="text-info">{{ financial_health.net_pl|floatformat:0 }}</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Period Status -->
-        <div class="col-md-4">
-            <div class="card metric-card border-start border-warning">
-                <div class="card-body">
-                    <h6 class="card-title text-uppercase small">Period Status</h6>
-                    <div class="metric-item d-flex justify-content-between py-2 border-bottom">
-                        <span>Status</span>
-                        <span class="badge bg-{{ period_status.color }}">{{ period_status.text }}</span>
-                    </div>
-                    <div class="metric-item d-flex justify-content-between py-2 border-bottom">
-                        <span>Days Remaining</span>
-                        <strong>{{ days_in_period }}</strong>
-                    </div>
-                    <div class="metric-item d-flex justify-content-between py-2">
-                        <span>Action</span>
-                        <a href="#" class="text-decoration-none">{{ period_status.action }}</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Guided Workflows (Collapsible Accordion) -->
-<div class="workflows-section mb-4">
-    <h5 class="mb-3"><i class="fas fa-graduation-cap"></i> Guided Workflows</h5>
-    <div class="accordion" id="workflowAccordion">
-        {% for workflow in workflows %}
-        <div class="accordion-item">
-            <h2 class="accordion-header">
-                <button class="accordion-button{% if not forloop.first %} collapsed{% endif %}" 
-                        type="button" data-bs-toggle="collapse" 
-                        data-bs-target="#workflow{{ forloop.counter }}">
-                    <i class="fas fa-circle-{{ forloop.counter }} me-2"></i>
-                    {{ workflow.title }}
-                </button>
-            </h2>
-            <div id="workflow{{ forloop.counter }}" class="accordion-collapse collapse{% if forloop.first %} show{% endif %}" 
-                 data-bs-parent="#workflowAccordion">
-                <div class="accordion-body">
-                    <ol>
-                    {% for step in workflow.steps %}
-                        <li class="mb-2">
-                            <a href="{{ step.url }}" class="text-decoration-none">
-                                {{ step.text }} <i class="fas fa-arrow-right ms-2"></i>
-                            </a>
-                        </li>
-                    {% endfor %}
-                    </ol>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- COA Preview + Recent Activity + Key Info -->
-<div class="row mb-4">
-    <!-- COA Preview -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="fas fa-sitemap"></i> Chart of Accounts</h5>
-            </div>
-            <div class="card-body">
-                {% for class in coa_preview %}
-                <div class="coa-item mb-2">
-                    <strong>{{ class.name }}</strong>
-                    <span class="badge bg-secondary float-end">{{ class.balance }}</span>
-                    <div class="small text-muted">{{ class.count }} accounts</div>
-                </div>
-                {% endfor %}
-                <a href="{% url 'dea_chart_of_accounts' %}" class="btn btn-sm btn-outline-primary w-100 mt-3">
-                    View Full COA
-                </a>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Recent Vouchers -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="fas fa-receipt"></i> Recent Vouchers</h5>
-            </div>
-            <div class="card-body">
-                <div class="recent-list">
-                {% for voucher in recent_vouchers %}
-                    <div class="recent-item d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                        <div>
-                            <div class="small"><strong>{{ voucher.voucher_type.name }}</strong></div>
-                            <div class="text-muted small">{{ voucher.created_at|date:"M d H:i" }}</div>
-                        </div>
-                        <span class="badge bg-{{ voucher.status|lower }}">{{ voucher.status }}</span>
-                    </div>
-                {% endfor %}
-                </div>
-                <a href="{% url 'dea_voucher_list' %}" class="btn btn-sm btn-outline-primary w-100 mt-3">
-                    View All Vouchers
-                </a>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Key Alerts -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="fas fa-bell"></i> Alerts & Warnings</h5>
-            </div>
-            <div class="card-body">
-                <div class="alerts-section">
-                {% if alerts %}
-                    {% for alert in alerts %}
-                    <div class="alert alert-{{ alert.severity }} alert-dismissible fade show mb-2" role="alert">
-                        <i class="fas fa-{{ alert.icon }} me-2"></i>
-                        <strong>{{ alert.title }}</strong>
-                        <p class="mb-0 small">{{ alert.message }}</p>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i> No alerts
-                    </div>
-                {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Reports Hub -->
-<div class="reports-section">
-    <h5 class="mb-3"><i class="fas fa-chart-bar"></i> Financial Reports</h5>
-    <div class="row g-2">
-        {% for report in report_links %}
-        <div class="col-md-6 col-lg-2">
-            <a href="{{ report.url }}" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                <i class="fas fa-file-alt me-2"></i>{{ report.name }}
-            </a>
-        </div>
-        {% endfor %}
-        <div class="col-md-6 col-lg-2">
-            <a href="{% url 'dea_reports_hub' %}" class="btn btn-primary btn-sm w-100">
-                View All Reports <i class="fas fa-arrow-right ms-1"></i>
-            </a>
-        </div>
-    </div>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function refreshDashboard() {
-    location.reload();
-}
-</script>
-{% endblock %}
-```
-
-### 1.2 Database Optimization Queries
-
-**New helper functions for dashboard**:
-
-```python
-# dea/utils/dashboard.py
+# File: apps/tenant_apps/dea/views/dashboard_enhanced.py
 
 def calculate_ar_balance():
-    """Calculate total accounts receivable balance"""
-    from django.db.models import Sum, Q
-    from .models import Ledger
-    
-    # Find all receivable accounts
-    receivables = Ledger.objects.filter(
-        AccountType__description__icontains='receivable'
-    )
-    
-    total = receivables.aggregate(
-        total=Sum('ledgerbalance__balance_amount')
-    )['total'] or 0
-    
-    return total
+    """Replace with: sum of open receivable account balances
+    Mirror: receivables_aging() in dashboard.py for account query pattern"""
+    return 0  # ← REPLACE THIS
 
 def calculate_ap_balance():
-    """Calculate total accounts payable balance"""
-    from django.db.models import Sum, Q
-    from .models import Ledger
-    
-    payables = Ledger.objects.filter(
-        AccountType__description__icontains='payable'
-    )
-    
-    total = payables.aggregate(
-        total=Sum('ledgerbalance__balance_amount')
-    )['total'] or 0
-    
-    return abs(total)  # Return as positive
+    """Replace with: sum of open payable account balances
+    Mirror: payables_aging() in dashboard.py for account query pattern"""
+    return 0  # ← REPLACE THIS
 
 def calculate_cash_balance():
-    """Calculate total cash position"""
-    from django.db.models import Sum
-    from .models import Ledger
-    
-    cash_accounts = Ledger.objects.filter(
-        name__icontains='cash'
-    ) | Ledger.objects.filter(
-        name__icontains='bank'
-    )
-    
-    total = cash_accounts.aggregate(
-        total=Sum('ledgerbalance__balance_amount')
-    )['total'] or 0
-    
-    return total
+    """Replace with: sum of cash/bank ledger balances
+    Mirror: _calculate_key_metrics() in dashboard.py"""
+    return 0  # ← REPLACE THIS
 
 def calculate_period_pl():
-    """Calculate net P&L for current period"""
+    """Replace with: current period net profit/loss
+    Mirror: _get_period_summary() in dashboard.py"""
+    return 0  # ← REPLACE THIS
+
+def get_coa_preview():
+    """Replace with: top accounts by class (Asset/Liability/Equity/Revenue/Expense)
+    Returns list of dicts: [{name, balance, account_class}, ...]"""
+    return []  # ← REPLACE THIS
+```
+
+Once wired, swap `/dea/dashboard/enhanced/` to be the primary landing page.
+
+---
+
+## PHASE 1.5: Wire Enhanced Dashboard Data (1-2 days — START HERE)
+
+> This is the only remaining Phase 1 task. The main dashboard is done. The enhanced dashboard
+> skeleton is done. All that remains is replacing 5 placeholder functions with real data.
+
+**File to edit**: `apps/tenant_apps/dea/views/dashboard_enhanced.py`
+
+The `get_coa_summary()` and balance helper functions below are the EXACT implementations needed
+for `dashboard_enhanced.py`. Use them as starting points — do **not** create a new dashboard view.
+
+```python
+# apps/tenant_apps/dea/views/dashboard_enhanced.py
+# Replace placeholder functions as follows:
+
+def calculate_ar_balance():
+    """Sum of open receivable account balances"""
     from django.db.models import Sum
-    from .models import Ledger, AccountingPeriod
-    
-    current_period = AccountingPeriod.objects.get_current_period()
-    
-    # Revenue accounts (negative balance = income)
+    from ..models import Ledger, AccountStatus
+    return Ledger.objects.filter(
+        AccountType__name__icontains='receivable'
+    ).aggregate(
+        total=Sum('ledgerbalance__balance_amount')
+    )['total'] or 0
+
+def calculate_ap_balance():
+    """Sum of open payable account balances"""
+    from django.db.models import Sum
+    from ..models import Ledger
+    return Ledger.objects.filter(
+        AccountType__name__icontains='payable'
+    ).aggregate(
+        total=Sum('ledgerbalance__balance_amount')
+    )['total'] or 0
+
+def calculate_cash_balance():
+    """Sum of cash/bank account balances"""
+    from django.db.models import Sum
+    from ..models import Ledger
+    return Ledger.objects.filter(
+        AccountType__name__icontains='cash'
+    ).aggregate(
+        total=Sum('ledgerbalance__balance_amount')
+    )['total'] or 0
+
+def calculate_period_pl():
+    """Current period net profit/loss (mirror _get_period_summary in dashboard.py)"""
+    from django.db.models import Sum
+    from ..models import Ledger, AccountStatus
+
     revenue = Ledger.objects.filter(
         AccountType__name__icontains='revenue'
     ).aggregate(
         total=Sum('ledgerbalance__balance_amount')
     )['total'] or 0
-    
-    # Expense accounts (positive balance = expense)
+
     expense = Ledger.objects.filter(
         AccountType__name__icontains='expense'
     ).aggregate(
         total=Sum('ledgerbalance__balance_amount')
     )['total'] or 0
-    
+
     return -revenue + expense  # Net result
 
-def get_coa_summary():
-    """Get summary of chart of accounts by class"""
+def get_coa_preview():
+    """Top accounts by class for dashboard COA preview slot"""
     from django.db.models import Count, Sum
-    from .models import Ledger
-    
+    from ..models import Ledger, AccountStatus
+
     summary = Ledger.objects.filter(
         status=AccountStatus.ACTIVE
     ).values('AccountType__description').annotate(
         count=Count('id'),
         balance=Sum('ledgerbalance__balance_amount')
     ).order_by('AccountType__description')
-    
+
     return summary
 ```
 
 ---
 
-## PHASE 2: CHART OF ACCOUNTS NAVIGATOR (Weeks 3-4)
+## PHASE 2: CHART OF ACCOUNTS NAVIGATOR (Weeks 1-2 from now)
 
 ### 2.1 New View: Chart of Accounts
 
@@ -947,13 +639,19 @@ document.getElementById('voucherSearch').addEventListener('keyup', function(e) {
 
 ## SUMMARY OF FILES TO CREATE/MODIFY
 
-### Files to Create (Phase 1-3)
+### Phase 1.5 (START HERE — wire existing skeleton)
+```
+MODIFY (do NOT create new dashboard files):
+└── apps/tenant_apps/dea/views/dashboard_enhanced.py
+    (replace 5 placeholder functions with real queries)
+```
+
+### Phase 2-3 New Files
 ```
 NEW FILES:
 ├── apps/tenant_apps/dea/views/chart_of_accounts.py
 ├── apps/tenant_apps/dea/views/voucher_creation.py
 ├── apps/tenant_apps/dea/views/reports_hub.py
-├── apps/tenant_apps/dea/utils/dashboard.py
 ├── templates/dea/chart_of_accounts.html
 ├── templates/dea/voucher_creation_hub.html
 ├── templates/dea/reports_hub.html
@@ -962,21 +660,23 @@ NEW FILES:
 ├── templates/dea/components/guided_workflows.html
 └── static/dea/css/enhanced_ui.css
 
-MODIFIED FILES:
-├── apps/tenant_apps/dea/views/dashboard.py (enhance with new metrics)
+MODIFIED FILES (Phase 2+):
 ├── apps/tenant_apps/dea/urls.py (add new routes)
-├── templates/dea/dashboard.html (complete redesign)
 ├── apps/tenant_apps/dea/views/__init__.py (import new views)
 └── django_project/urls.py (include dea routes if needed)
+
+DO NOT MODIFY (already production-ready):
+├── apps/tenant_apps/dea/views/dashboard.py  ← 650 lines, fully working
+└── templates/dea/dashboard.html             ← fully working template
 ```
 
 ---
 
-**Status**: This guide is ready for development upon stakeholder approval of design.
+**Status**: Phase 1 complete. Start with Phase 1.5 (wire `dashboard_enhanced.py`), then Phase 2 (COA Navigator).
 
-**Next Step**: Create wireframes and finalize design system before implementation begins.
+**Next Step**: Replace the 5 placeholder functions in `dashboard_enhanced.py` with real queries (see Phase 1.5 above).
 
 ---
 
 *Document prepared for DEA System UI/UX Enhancement Project*  
-*Version: 1.0 | Date: March 25, 2026 | Status: DRAFT - READY FOR REVIEW*
+*Version: 1.1 | Date: March 27, 2026 | Status: IN PROGRESS — Phase 1 Complete*

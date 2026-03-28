@@ -12,9 +12,18 @@ urlpatterns = [
     path("daybook/", views.daybook, name="dea_daybook"),
 ]
 
+# Phase 2: Navigator + Hub URLs
+urlpatterns += [
+    path("chart-of-accounts/", views.chart_of_accounts, name="dea_chart_of_accounts"),
+    path("create/", views.voucher_hub, name="dea_voucher_hub"),
+    path("transactions/", views.transaction_list, name="dea_transaction_list"),
+    path("reports/", views.reports_hub, name="dea_reports_hub"),
+]
+
 # Dashboard and Analytics URLs
 urlpatterns += [
     path("dashboard/", views.dashboard, name="dea_dashboard"),
+    path("dashboard/legacy/", views.dashboard, name="dea_dashboard_legacy"),
     path("dashboard/enhanced/", dashboard_enhanced.dashboard_enhanced, name="dea_dashboard_enhanced"),
     path(
         "dashboard/metrics/ajax/",

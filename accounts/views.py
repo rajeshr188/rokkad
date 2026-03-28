@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django_tenants.utils import get_public_schema_name
 
 from apps.orgs.models import Company
+from apps.orgs.tenant_context import resolve_request_workspace
 
 from .forms import UserProfileForm
 from .models import UserProfile
@@ -66,7 +67,11 @@ def clear_workspace(request):
         public = Company.objects.get(schema_name=get_public_schema_name())
 
         # Store current workspace for logging
-        current_workspace = request.user.profile.workspace
+        current_workspace = resolve_request_workspace(
+            request,
+            include_public=True,
+            allow_profile_fallback=True,
+        )
 
         # Reset to public workspace
         request.user.profile.set_workspace(public)
@@ -109,7 +114,11 @@ def workspace_management(request):
     profile = user.profile
 
     # Get active workspace
-    current_workspace = profile.workspace
+    current_workspace = resolve_request_workspace(
+        request,
+        include_public=True,
+        allow_profile_fallback=True,
+    )
 
     # Get all user's workspaces (memberships)
     memberships = (

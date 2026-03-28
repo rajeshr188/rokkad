@@ -93,6 +93,13 @@ TENANT_MODEL = "orgs.Company"  # app.Model
 
 TENANT_DOMAIN_MODEL = "orgs.Domain"  # app.Model
 
+# Performance: avoid repeated search_path SET calls when tenant is unchanged.
+TENANT_LIMIT_SET_CALLS = True
+
+# Optional shared schemas visible to all tenants (for reference/master data).
+# Configure via .env, e.g. PG_EXTRA_SEARCH_PATHS=shared_data
+PG_EXTRA_SEARCH_PATHS = env.list("PG_EXTRA_SEARCH_PATHS", default=[])
+
 SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
 # in case using domain to set tenants us this to persist sessions.for localhost search for workaround hint:edit hosts file
 # SESSION_COOKIE_DOMAIN = '.rokkad.com'
@@ -110,7 +117,6 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # 🔒 SECURITY FIX: Using secure middleware with membership validation
-    # OLD (VULNERABLE): "apps.orgs.middleware.WorkspaceMiddleware",
     "apps.orgs.middleware_v2.SecureWorkspaceMiddleware",
     "apps.tenant_apps.rates.middleware.RateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

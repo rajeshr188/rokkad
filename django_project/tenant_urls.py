@@ -1,22 +1,12 @@
 from django.conf import settings
-from django.conf.urls import i18n
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from django_project.shared_urlpatterns import shared_urlpatterns
+
 urlpatterns = [
-    path("i18n/", include(i18n)),
     path("admin/", admin.site.urls),
-    path("select2/", include("django_select2.urls")),
-    path("", include("pages.urls")),
-    path("onboarding/", include("apps.onboarding.urls")),
-    path("orgs/", include("apps.orgs.urls")),
-    path("subscriptions/", include("apps.subscriptions.urls")),
-    path("profile/", include("accounts.urls")),
-    path("accounts/", include("allauth.urls")),
-    path("accounts/", include("allauth.socialaccount.urls")),
-    # path("activity/", include("actstream.urls")),
-    path("dynamic_preferences/", include("dynamic_preferences.urls")),
     path("contact/", include("apps.tenant_apps.contact.urls")),
     path("girvi/", include("apps.tenant_apps.girvi.urls")),
     path("rates/", include("apps.tenant_apps.rates.urls")),
@@ -26,8 +16,7 @@ urlpatterns = [
     path("purchase/", include("apps.tenant_apps.purchase.urls")),
     path("sales/", include("apps.tenant_apps.sales.urls")),
     path("approval/", include("apps.tenant_apps.approval.urls")),
-    path("invitations/", include("invitations.urls")),
-]
+] + shared_urlpatterns
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

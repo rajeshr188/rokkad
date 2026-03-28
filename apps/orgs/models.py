@@ -54,7 +54,8 @@ class Company(TenantMixin):
     is_deleted = models.BooleanField(default=False)  # Soft delete flag
 
     auto_create_schema = True
-    auto_drop_schema = True
+    # Guard destructive schema drops behind explicit hard-delete flow.
+    auto_drop_schema = False
 
     objects = CompanyManager()  # Use custom manager
     all_objects = models.Manager()  # Include soft-deleted instances
@@ -78,16 +79,43 @@ class Company(TenantMixin):
     def get_absolute_url(self):
         return reverse("orgs_company_detail", args=[str(self.id)])
 
-    def delete(self, *args, **kwargs):
+    def archive(self):
+        """Soft-delete workspace while preserving schema/data for recovery."""
+        if self.is_deleted:
+            return
         self.is_deleted = True
-        self.save()
+        self.save(update_fields=["is_deleted", "updated_at"])
 
-    def hard_delete(self):
-        super(Company, self).delete()
+    def delete(self, *args, hard=False, **kwargs):
+        """Default delete path archives the workspace unless hard=True is passed."""
+        if hard:
+            return self.hard_delete()
+        self.archive()
+
+    def hard_delete(self, force=False):
+        """Permanently remove workspace row and schema when explicitly allowed."""
+        if self.schema_name == "public":
+            raise ValueError("Public workspace cannot be hard deleted")
+
+        hard_delete_enabled = force or getattr(
+            settings,
+            "ALLOW_COMPANY_HARD_DELETE",
+            False,
+        )
+        if not hard_delete_enabled:
+            raise ValueError(
+                "Hard delete is disabled. Set ALLOW_COMPANY_HARD_DELETE=True to enable."
+            )
+
+        self.auto_drop_schema = True
+        return super(Company, self).delete()
 
     def restore(self):
+        """Restore archived workspace."""
+        if not self.is_deleted:
+            return
         self.is_deleted = False
-        self.save()
+        self.save(update_fields=["is_deleted", "updated_at"])
 
 
 class Domain(DomainMixin):

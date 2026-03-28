@@ -1,0 +1,54 @@
+{% extends 'layouts/workspace.html' %}
+{% block title %}Create Voucher{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Create Voucher</h4>
+    <a href="{% url 'dea_dashboard' %}" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+</div>
+
+{% if not open_period %}
+<div class="alert alert-warning">
+    <strong>No open accounting period.</strong>
+    You must <a href="{% url 'dea_period_create' %}">create and open an accounting period</a>
+    before posting vouchers.
+</div>
+{% else %}
+<div class="alert alert-light border small mb-4">
+    Active period: <strong>{{ open_period }}</strong>
+</div>
+{% endif %}
+
+{% regroup voucher_types by category as categories %}
+
+{% for category in categories %}
+<h6 class="text-uppercase text-muted small fw-bold mt-3 mb-2">{{ category.grouper }}</h6>
+<div class="row g-3 mb-2">
+    {% for vt in category.list %}
+    <div class="col-md-6  col-lg-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <div class="mb-2 fs-3">{{ vt.icon }}</div>
+                <h6 class="card-title mb-1">{{ vt.label }}</h6>
+                <p class="card-text text-muted small flex-grow-1">{{ vt.description }}</p>
+                <a href="{% url vt.url_name %}"
+                   class="btn btn-primary btn-sm mt-auto {% if not open_period %}disabled{% endif %}"
+                   {% if not open_period %}aria-disabled="true"{% endif %}>
+                    Create →
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+<hr class="my-4">
+<div class="text-muted small">
+    Need to review existing vouchers?
+    <a href="{% url 'dea_voucher_list' %}">View all vouchers</a> ·
+    <a href="{% url 'dea_journal_entry_voucher_list' %}">Journal entry vouchers</a> ·
+    <a href="{% url 'dea_expense_list' %}">Expense vouchers</a> ·
+    <a href="{% url 'dea_payment_list' %}">Payments</a>
+</div>
+{% endblock %}
