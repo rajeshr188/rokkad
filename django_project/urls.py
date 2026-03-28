@@ -1,28 +1,15 @@
 import environ
 from django.conf import settings
-from django.conf.urls import i18n
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from django_project.shared_urlpatterns import shared_urlpatterns
+
 env = environ.Env()
 environ.Env.read_env()
 
-urlpatterns = [
-    path("i18n/", include(i18n)),
-    path(env("SECRET_ADMIN_URL") + "/", admin.site.urls),
-    path("accounts/", include("allauth.urls")),
-    path("accounts/", include("allauth.socialaccount.urls")),
-    # path("activity/", include("actstream.urls")),
-    path("dynamic_preferences/", include("dynamic_preferences.urls")),
-    path("select2/", include("django_select2.urls")),
-    path("", include("pages.urls")),
-    path("invitations/", include("invitations.urls")),
-    path("onboarding/", include("apps.onboarding.urls")),  # New onboarding flow
-    path("orgs/", include("apps.orgs.urls")),
-    path("profile/", include("accounts.urls")),
-    path("subscriptions/", include("apps.subscriptions.urls")),
-]
+urlpatterns = [path(env("SECRET_ADMIN_URL") + "/", admin.site.urls)] + shared_urlpatterns
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

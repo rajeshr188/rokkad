@@ -22,6 +22,7 @@ from django.core.exceptions import PermissionDenied
 
 from .models import Plan, Subscription, Invoice, Payment
 from .razorpay_service import RazorpayService
+from apps.orgs.tenant_context import resolve_request_workspace
 
 
 class BillingPermissionMixin:
@@ -30,7 +31,7 @@ class BillingPermissionMixin:
     required_permission = "billing_view"
 
     def dispatch(self, request, *args, **kwargs):
-        workspace = getattr(request.user.profile, "workspace", None)
+        workspace = resolve_request_workspace(request)
         if not workspace:
             messages.error(request, "Please select a workspace first.")
             return redirect("workspace_selector")
@@ -68,7 +69,7 @@ class SubscriptionPlanListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         # Get current subscription if exists (subscription is linked to workspace)
-        workspace = self.request.user.profile.workspace
+        workspace = resolve_request_workspace(self.request)
         try:
             if workspace:
                 context["current_subscription"] = workspace.subscription
@@ -213,7 +214,7 @@ class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, Temp
         context = super().get_context_data(**kwargs)
 
         # Get workspace (subscription is linked to workspace, not user)
-        workspace = self.request.user.profile.workspace
+        workspace = resolve_request_workspace(self.request)
         if not workspace:
             context["subscription"] = None
             context["message"] = "Please select a workspace first."
@@ -267,7 +268,7 @@ class InvoiceDetailView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
 
     def get_object(self):
         # Get workspace (subscription is linked to workspace, not user)
-        workspace = self.request.user.profile.workspace
+        workspace = resolve_request_workspace(self.request)
         if not workspace:
             raise Http404("No workspace selected")
 
@@ -291,7 +292,7 @@ class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
 
     def get_object(self):
         # Get workspace (subscription is linked to workspace, not user)
-        workspace = self.request.user.profile.workspace
+        workspace = resolve_request_workspace(self.request)
         if not workspace:
             raise Http404("No workspace selected")
 

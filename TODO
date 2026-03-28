@@ -18,6 +18,8 @@ Amazon RDS: AWS's managed database service.
 
 bring loan templates into public schema or create templates on tenant creation and allow edit per tenant and let users select the template from preferences
 
+pixelview or similar for loan status tracking per series
+
 archived views of dea on/as dashboard
 
 

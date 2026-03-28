@@ -5,7 +5,9 @@ from django.shortcuts import redirect
 from django.urls import resolve
 from django.utils import timezone
 from django.contrib import messages
+from django_tenants.utils import get_public_schema_name
 from apps.subscriptions.models import Subscription
+from apps.orgs.tenant_context import resolve_request_workspace
 
 
 class HtmxMessagesMiddleware(MiddlewareMixin):
@@ -85,6 +87,9 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
         "subscriptions:invoice-pdf",  # download invoice PDF
     ]
 
+    def _resolve_workspace(self, request):
+        return resolve_request_workspace(request, include_public=True)
+
     def process_request(self, request):
         """Check subscription before processing request"""
 
@@ -95,9 +100,11 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
         # Skip for exempt URLs
         try:
             current_url = resolve(request.path).url_name
-            if current_url in self.EXEMPT_URLS or current_url.startswith("admin:"):
+            if current_url in self.EXEMPT_URLS or (
+                current_url and current_url.startswith("admin:")
+            ):
                 return None
-        except:
+        except Exception:
             pass
 
         # Skip static/media files
@@ -105,12 +112,12 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
             return None
 
         # Check if user has a workspace selected
-        workspace = request.user.profile.workspace
+        workspace = self._resolve_workspace(request)
         if not workspace:
             return None
 
         # Skip public schema
-        if workspace.schema_name == "public":
+        if workspace.schema_name == get_public_schema_name():
             return None
 
         # Check subscription
@@ -147,7 +154,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
             # Only block tenant-specific features
             try:
                 current_url = resolve(request.path).url_name
-            except:
+            except Exception:
                 return None
 
             # If accessing tenant-specific data (not billing/plan pages), redirect

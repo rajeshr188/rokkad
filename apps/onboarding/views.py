@@ -4,14 +4,18 @@ Onboarding Views - Step-by-step guided user onboarding
 
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import redirect, render
+from django_tenants.clone import CloneSchema
 from django_tenants.utils import get_public_schema_name, remove_www, schema_context
+from django_tenants.utils import schema_exists
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import CompanyInvitation, Domain, Membership, Role
+from apps.orgs.tenant_context import resolve_request_workspace
 
 from .forms import (
     CompanySetupForm,
@@ -22,6 +26,40 @@ from .forms import (
 from .models import OnboardingChoice, OnboardingProgress
 
 logger = logging.getLogger(__name__)
+
+
+def _provision_company_schema(company):
+    """Provision tenant schema, cloning from a template when configured."""
+    template_schema = getattr(settings, "ONBOARDING_TEMPLATE_SCHEMA", "")
+    template_schema = template_schema.strip() if template_schema else ""
+
+    # Default behavior: normal tenant save with auto_create_schema=True.
+    if not template_schema:
+        company.save()
+        return "fresh"
+
+    # Safety fallback for misconfiguration: proceed with fresh schema.
+    if not schema_exists(template_schema):
+        logger.warning(
+            "ONBOARDING_TEMPLATE_SCHEMA '%s' not found; falling back to fresh schema",
+            template_schema,
+        )
+        company.save()
+        return "fresh"
+
+    if template_schema == company.schema_name:
+        logger.warning(
+            "ONBOARDING_TEMPLATE_SCHEMA equals target schema '%s'; falling back to fresh schema",
+            company.schema_name,
+        )
+        company.save()
+        return "fresh"
+
+    # Clone path: save tenant row without auto schema creation, then clone from template.
+    company.auto_create_schema = False
+    company.save()
+    CloneSchema().clone_schema(template_schema, company.schema_name, clone_mode="DATA")
+    return "cloned"
 
 
 def get_or_create_progress(user):
@@ -113,7 +151,7 @@ def onboarding_company(request):
                     company.schema_name = company.name.lower().replace(" ", "_")
                     company.creator = request.user
                     company.owner = request.user
-                    company.save()
+                    provisioning_mode = _provision_company_schema(company)
 
                     # Create domain
                     domain = remove_www(request.get_host().split(":")[0]).lower()
@@ -163,7 +201,11 @@ def onboarding_company(request):
                         description=f"Created workspace: {company.name}",
                         request=request,
                         success=True,
-                        data={"industry": industry, "company_size": company_size},
+                        data={
+                            "industry": industry,
+                            "company_size": company_size,
+                            "provisioning_mode": provisioning_mode,
+                        },
                     )
 
                     messages.success(
@@ -198,7 +240,7 @@ def onboarding_team(request):
     if progress.team_setup_completed or progress.skipped_team:
         return redirect(progress.next_step_url)
 
-    company = request.user.profile.workspace
+    company = resolve_request_workspace(request)
 
     if request.method == "POST":
         if "skip" in request.POST:
@@ -333,7 +375,7 @@ def onboarding_complete(request):
     if not progress.is_complete:
         progress.complete_onboarding()
 
-    company = request.user.profile.workspace
+    company = resolve_request_workspace(request)
 
     # Log completion
     AuditLog.log(

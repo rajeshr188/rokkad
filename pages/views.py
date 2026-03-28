@@ -12,8 +12,9 @@ from moneyed import Money
 from openpyxl import load_workbook
 
 from apps.onboarding.decorators import onboarding_required
-from apps.orgs.decorators import roles_required
+from apps.orgs.decorators_v2 import roles_required
 from apps.orgs.models import Company, CompanyInvitation, Membership
+from apps.orgs.tenant_context import resolve_request_workspace
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.contact.services import (
     active_customers,
@@ -64,19 +65,23 @@ def Dashboard(request):
     3. No memberships → workspace_create (create first workspace)
     """
     user = request.user
-    profile = user.profile
-
     # Check if user has valid selected workspace
-    if profile.workspace and profile.workspace.schema_name != "public":
+    selected_workspace = resolve_request_workspace(
+        request,
+        include_public=True,
+        allow_profile_fallback=True,
+    )
+    if selected_workspace and selected_workspace.schema_name != "public":
         try:
             # Verify membership still valid
-            user.memberships.get(company=profile.workspace)
+            user.memberships.get(company=selected_workspace)
             # Direct to workspace dashboard with workspace_id
-            return redirect("workspace_dashboard", workspace_id=profile.workspace.id)
+            return redirect("workspace_dashboard", workspace_id=selected_workspace.id)
         except Membership.DoesNotExist:
             # Clear invalid workspace
-            profile.workspace = None
-            profile.save()
+            if hasattr(user, "profile"):
+                user.profile.workspace = None
+                user.profile.save(update_fields=["workspace"])
 
     # Check if user has any workspaces
     memberships = user.memberships.filter(company__is_deleted=False)
@@ -104,14 +109,15 @@ def company_dashboard(request):
     This view redirects to the new workspace_dashboard.
     Kept for backward compatibility with existing URL references.
     """
-    if (
-        request.user.profile.workspace
-        and request.user.profile.workspace.schema_name == "public"
-    ):
+    workspace = resolve_request_workspace(
+        request,
+        include_public=True,
+        allow_profile_fallback=True,
+    )
+    if workspace and workspace.schema_name == "public":
         return redirect("dashboard")
 
     # Redirect to new workspace_dashboard view
-    workspace = request.user.profile.workspace
     if workspace:
         return redirect("workspace_dashboard", workspace_id=workspace.id)
     else:

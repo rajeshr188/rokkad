@@ -61,6 +61,12 @@ class Ledger(MPTTModel):
     is_operating_expense = models.BooleanField(
         default=False, help_text="Indicates if this is an operating expense account"
     )
+    is_current_asset = models.BooleanField(
+        default=True, help_text="Asset accounts: True = current, False = fixed/non-current"
+    )
+    is_current_liability = models.BooleanField(
+        default=True, help_text="Liability accounts: True = current, False = long-term"
+    )
 
     # objects = LedgerManager()
 

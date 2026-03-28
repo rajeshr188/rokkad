@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django_tenants.utils import get_public_schema_name, remove_www, schema_context
+from django_tenants.utils import get_public_schema_name, remove_www
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
@@ -25,6 +25,7 @@ from .forms import (
 )
 from .models import Company, CompanyInvitation, Domain, Membership, Role
 from .registries import company_preference_registry
+from .tenant_context import resolve_request_workspace
 
 # Create your views here.
 logger = logging.getLogger(__name__)
@@ -221,20 +222,19 @@ def workspace_delete(request, workspace_id=None, company_id=None):
             "COMPANY_DELETE",
             user=request.user,
             company=company,
-            description=f"Deleted company: {company.name}",
+            description=f"Archived workspace: {company.name}",
             request=request,
             success=True,
         )
 
-        # Switch to the public schema before deleting the company
-        with schema_context(company.schema_name):
-            company.delete()
+        company.archive()
 
-            # Reset the user's workspace to the public schema
+        # Reset the user's workspace to the public schema if needed
+        if getattr(request.user.profile, "workspace", None) == company:
             request.user.profile.workspace = Company.objects.get(
-                name=get_public_schema_name()
+                schema_name=get_public_schema_name()
             )
-            request.user.profile.save()
+            request.user.profile.save(update_fields=["workspace"])
 
         return redirect("workspace_list")
 
@@ -342,7 +342,7 @@ class CompanyPreferenceBuilder(PreferenceFormView):
                 preferences = list(registry[section].values())
 
         return company_preference_form_builder(
-            instance=self.request.user.profile.workspace, Preferences=preferences
+            instance=resolve_request_workspace(self.request), Preferences=preferences
         )
 
     def get_context_data(self, **kwargs):
@@ -535,11 +535,16 @@ def workspace_selector(request):
     )
 
     # If user has a valid selected workspace, take them directly to workspace dashboard
-    if profile.workspace and profile.workspace.schema_name != "public":
+    selected_workspace = resolve_request_workspace(
+        request,
+        include_public=True,
+        allow_profile_fallback=True,
+    )
+    if selected_workspace and selected_workspace.schema_name != "public":
         try:
             # Verify membership still active
-            memberships.get(company=profile.workspace)
-            return redirect("workspace_dashboard", workspace_id=profile.workspace.id)
+            memberships.get(company=selected_workspace)
+            return redirect("workspace_dashboard", workspace_id=selected_workspace.id)
         except Membership.DoesNotExist:
             # Workspace is no longer valid, clear it
             profile.workspace = None
@@ -561,7 +566,7 @@ def workspace_selector(request):
     context = {
         "workspaces": memberships,
         "pending_invitations": valid_invitations,
-        "current_workspace": profile.workspace,
+        "current_workspace": selected_workspace,
         "workspace_count": memberships.count(),
         "invitation_count": len(valid_invitations),
         "has_workspaces": memberships.exists(),
@@ -701,7 +706,7 @@ def subscription_required(view_func):
         if not request.user.is_authenticated:
             return redirect("account_login")
 
-        workspace = request.user.profile.workspace
+        workspace = resolve_request_workspace(request)
         if not workspace:
             return redirect("workspace_list")
 
@@ -756,7 +761,6 @@ def workspace_dashboard(request, workspace_id):
     Requires: User must be a member of the workspace (Owner/Admin/Member)
 
     """
-    from apps.orgs.decorators import roles_required
     from apps.tenant_apps.contact.models import Customer
     from apps.tenant_apps.contact.services import (
         active_customers,

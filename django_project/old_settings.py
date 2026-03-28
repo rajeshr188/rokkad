@@ -101,7 +101,7 @@ MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",  # Django Debug Toolbar
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "apps.orgs.middleware.WorkspaceMiddleware",
+    "apps.orgs.middleware_v2.SecureWorkspaceMiddleware",
     "apps.tenant_apps.rates.middleware.RateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

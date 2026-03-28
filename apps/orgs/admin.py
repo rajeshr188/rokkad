@@ -2,6 +2,7 @@
 # admin.py
 from django import forms
 from django.contrib import admin
+from django.contrib import messages
 from django_tenants.admin import TenantAdminMixin
 from django_tenants.utils import get_public_schema_name
 
@@ -72,13 +73,47 @@ class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
         return self.model.all_objects.all()
 
     def restore_companies(self, request, queryset):
-        queryset.update(is_deleted=False)
+        restored_count = 0
+        for company in queryset:
+            if company.is_deleted:
+                company.restore()
+                restored_count += 1
+
+        self.message_user(
+            request,
+            f"Restored {restored_count} workspace(s).",
+            level=messages.SUCCESS,
+        )
 
     restore_companies.short_description = "Restore selected companies"
 
     def hard_delete_companies(self, request, queryset):
+        deleted_count = 0
+        blocked_count = 0
         for company in queryset:
-            company.hard_delete()
+            try:
+                company.hard_delete()
+                deleted_count += 1
+            except ValueError as exc:
+                blocked_count += 1
+                self.message_user(
+                    request,
+                    f"Skipped hard delete for {company.name}: {exc}",
+                    level=messages.WARNING,
+                )
+
+        if deleted_count:
+            self.message_user(
+                request,
+                f"Hard-deleted {deleted_count} workspace(s).",
+                level=messages.SUCCESS,
+            )
+        if blocked_count and not deleted_count:
+            self.message_user(
+                request,
+                "No workspaces were hard-deleted.",
+                level=messages.WARNING,
+            )
 
     hard_delete_companies.short_description = "Permanently delete selected companies"
 

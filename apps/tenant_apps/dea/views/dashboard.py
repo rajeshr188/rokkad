@@ -8,6 +8,7 @@ from django.db.models import Count, Q
 from django.shortcuts import render
 from django.utils import timezone
 from django.http import JsonResponse
+from django.urls import reverse
 from djmoney.money import Money
 
 from ..models import (
@@ -51,6 +52,11 @@ def dashboard(request):
     """
     current_period = AccountingPeriod.objects.get_current_period()
 
+    if current_period and current_period.end_date:
+        days_in_period = max(0, (current_period.end_date - timezone.now().date()).days)
+    else:
+        days_in_period = 0
+
     # Calculate key metrics
     metrics = _calculate_key_metrics(current_period)
 
@@ -87,9 +93,85 @@ def dashboard(request):
         ).count(),
     }
 
+    quick_actions = [
+        {
+            "label": "Create Invoice",
+            "url": reverse("dea_sales_invoice_create"),
+            "icon": "fa-file-invoice-dollar",
+            "description": "Record customer sale",
+        },
+        {
+            "label": "Create Expense",
+            "url": reverse("dea_expense_create"),
+            "icon": "fa-receipt",
+            "description": "Record business expense",
+        },
+        {
+            "label": "Record Payment",
+            "url": reverse("dea_payment_create"),
+            "icon": "fa-money-bill-wave",
+            "description": "Record cash/bank movement",
+        },
+        {
+            "label": "Journal Entry Voucher",
+            "url": reverse("dea_journal_entry_voucher_create"),
+            "icon": "fa-book",
+            "description": "Manual GL adjustment",
+        },
+        {
+            "label": "Manage Periods",
+            "url": reverse("dea_period_list"),
+            "icon": "fa-calendar-alt",
+            "description": "Open, close, and lock periods",
+        },
+    ]
+
+    workflows = [
+        {
+            "title": "Set Up Account Structure",
+            "steps": [
+                {"text": "View Chart of Accounts", "url": reverse("dea_chart_of_accounts")},
+                {"text": "Create Business Accounts", "url": reverse("dea_account_list")},
+                {"text": "Manage Accounting Periods", "url": reverse("dea_period_list")},
+            ],
+        },
+        {
+            "title": "Record Customer Transactions",
+            "steps": [
+                {"text": "View Customers", "url": reverse("dea_account_list")},
+                {"text": "Create Invoice", "url": reverse("dea_sales_invoice_create")},
+                {"text": "Record Payment", "url": reverse("dea_payment_create")},
+            ],
+        },
+        {
+            "title": "Record Expenses",
+            "steps": [
+                {"text": "Create Expense Voucher", "url": reverse("dea_expense_create")},
+                {"text": "Review Expenses", "url": reverse("dea_expense_list")},
+                {"text": "View All Vouchers", "url": reverse("dea_voucher_list")},
+            ],
+        },
+        {
+            "title": "Period-End Activities",
+            "steps": [
+                {"text": "Review General Ledger", "url": reverse("dea_ledger_list")},
+                {"text": "Review Journal Entries", "url": reverse("dea_journal_entries_list")},
+                {"text": "Open/Close Periods", "url": reverse("dea_period_list")},
+            ],
+        },
+    ]
+
     context = {
         "current_period": current_period,
+        "period_status": "Open" if current_period else "No Period",
+        "days_in_period": days_in_period,
         "metrics": metrics,
+        "financial_health": {
+            "ar_balance": metrics.get("total_receivables", Balance()),
+            "ap_balance": metrics.get("total_payables", Balance()),
+            "cash_position": metrics.get("total_cash", Balance()),
+            "net_pl": metrics.get("net_profit", Balance()),
+        },
         "period_summary": period_summary,
         "alerts": alerts,
         "top_debtors": top_debtors,
@@ -97,6 +179,18 @@ def dashboard(request):
         "recent_vouchers": recent_vouchers,
         "recent_entries": recent_entries,
         "stats": stats,
+        "quick_actions": quick_actions,
+        "workflows": workflows,
+        "report_links": [
+            {"name": "Reports Hub", "url": reverse("dea_reports_hub")},
+            {"name": "Trial Balance", "url": reverse("trial_balance")},
+            {"name": "Balance Sheet", "url": reverse("balance_sheet")},
+            {"name": "P&L", "url": reverse("profit_loss")},
+            {"name": "Cash Flow", "url": reverse("cash_flow")},
+            {"name": "A/R Aging", "url": reverse("ar_aging")},
+            {"name": "A/P Aging", "url": reverse("ap_aging")},
+            {"name": "Ratios", "url": reverse("financial_ratios")},
+        ],
         "title": "Accounting Dashboard",
     }
 

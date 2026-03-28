@@ -4,6 +4,11 @@ These provide global context to all templates.
 """
 
 from django.contrib.auth.models import Permission
+from apps.orgs.tenant_context import resolve_request_workspace
+
+
+def _resolve_workspace(request):
+    return resolve_request_workspace(request, include_public=True)
 
 
 def user_permissions(request):
@@ -22,7 +27,7 @@ def user_permissions(request):
             "user_workspace": None,
         }
 
-    workspace = request.user.profile.workspace
+    workspace = _resolve_workspace(request)
     if not workspace:
         return {
             "user_permissions": set(),
@@ -145,9 +150,7 @@ def workspace_context(request):
     - workspace_theme: Theme color from workspace settings
     """
     # Get workspace from request.tenant or user profile (if authenticated)
-    workspace = getattr(request, "tenant", None)
-    if not workspace and request.user.is_authenticated:
-        workspace = request.user.profile.workspace
+    workspace = _resolve_workspace(request)
 
     in_tenant = workspace and workspace.schema_name != "public"
 
@@ -178,7 +181,7 @@ def subscription_context(request):
             "subscription_expired": False,
         }
 
-    workspace = request.user.profile.workspace
+    workspace = _resolve_workspace(request)
     if not workspace:
         return {
             "has_active_subscription": False,
