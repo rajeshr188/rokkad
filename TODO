@@ -48,15 +48,11 @@ stock:private
 
 using cups or win32print
 
-pg schema clone 
-
-improve company creation and tenant setting 
 
 backup of database is a task handled by celery
 
 when storage backend is r2 cloudflare image.path will break so use image.url
 
-validate loanitems for loan  taken should not be in other loan taken and on  loan taken released they become available for other loan taken
 # Follow logs in real-time (like tail -f)
 journalctl -fu gunicorn
 

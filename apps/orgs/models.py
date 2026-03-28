@@ -298,6 +298,9 @@ class PendingInvitation(models.Model):
     )
     created = models.DateTimeField(auto_now_add=True, verbose_name=_("created"))
 
+    class Meta:
+        unique_together = ("email", "company")
+
     def __str__(self):
         return f"Pending invitation for {self.email} to {self.company}"
 

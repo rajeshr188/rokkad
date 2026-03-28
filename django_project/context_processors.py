@@ -2,13 +2,22 @@
 Context processors for common template variables.
 These provide global context to all templates.
 """
-
+from django.conf import settings
 from django.contrib.auth.models import Permission
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
 def _resolve_workspace(request):
     return resolve_request_workspace(request, include_public=True)
+
+
+def google_oauth_context(request):
+    """
+    Expose Google OAuth client ID from settings to templates.
+    Prevents hardcoding secrets in template files.
+    """
+    google_client_id = settings.SOCIALACCOUNT_PROVIDERS.get('google', {}).get('CLIENT_ID', '')
+    return {'GOOGLE_CLIENT_ID': google_client_id}
 
 
 def user_permissions(request):
