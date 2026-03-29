@@ -102,8 +102,13 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         # Unauthenticated requests can still be served in the resolved tenant schema.
         if not request.user.is_authenticated:
             if workspace and workspace.schema_name != get_public_schema_name():
-                self._set_tenant_context(request, workspace)
-                return None
+                # self._set_tenant_context(request, workspace)
+                # return None
+                # For ERP SaaS: no public content on tenant domains — force login
+                self._set_public_context(request)
+                return HttpResponseRedirect(
+                    f"{reverse('account_login')}?next={request.path}"
+                )
 
             if self._requires_workspace(request.path):
                 # Safety reset: explicitly clear any stale tenant schema/urlconf before

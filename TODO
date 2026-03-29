@@ -16,7 +16,33 @@ member-specific landing page in tenant
 move postgres to managed gcloud postgres or neon postgres Heroku Postgres: A managed PostgreSQL service that's easy to set up and use.
 Amazon RDS: AWS's managed database service.
 
-bring loan templates into public schema or create templates on tenant creation and allow edit per tenant and let users select the template from preferences
+🔐 3. Authentication vs Authorization (CRITICAL DESIGN)
+Authentication → PUBLIC
+
+Handled globally:
+
+User (global)
+Authorization → TENANT
+
+Inside tenant:
+
+Membership
+Role
+Permission
+Why this split?
+
+Because:
+
+A user belongs to multiple companies
+Each company has different permissions
+Example
+User: Rajesh
+
+Company A → Admin
+Company B → Accountant
+Company C → Viewer
+
+👉 This MUST live in tenant context.
 
 pixelview or similar for loan status tracking per series
 
