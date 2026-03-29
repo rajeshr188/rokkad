@@ -7,6 +7,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.management import call_command
 from django.db import transaction
 from django.shortcuts import redirect, render
 from django_tenants.clone import CloneSchema
@@ -32,6 +33,8 @@ def _provision_company_schema(company):
     """Provision tenant schema, cloning from a template when configured."""
     template_schema = getattr(settings, "ONBOARDING_TEMPLATE_SCHEMA", "")
     template_schema = template_schema.strip() if template_schema else ""
+    clone_mode = getattr(settings, "ONBOARDING_TEMPLATE_CLONE_MODE", "NODATA")
+    clone_mode = (clone_mode or "NODATA").upper().strip()
 
     # Default behavior: normal tenant save with auto_create_schema=True.
     if not template_schema:
@@ -58,8 +61,13 @@ def _provision_company_schema(company):
     # Clone path: save tenant row without auto schema creation, then clone from template.
     company.auto_create_schema = False
     company.save()
-    CloneSchema().clone_schema(template_schema, company.schema_name, clone_mode="DATA")
+    CloneSchema().clone_schema(template_schema, company.schema_name, clone_mode=clone_mode)
     return "cloned"
+
+
+def _seed_company_schema_defaults(company):
+    """Run explicit tenant seed for onboarding-created workspace."""
+    call_command("seed_tenant_defaults", schema=company.schema_name)
 
 
 def get_or_create_progress(user):
@@ -152,6 +160,7 @@ def onboarding_company(request):
                     company.creator = request.user
                     company.owner = request.user
                     provisioning_mode = _provision_company_schema(company)
+                    _seed_company_schema_defaults(company)
 
                     # Create domain
                     domain = remove_www(request.get_host().split(":")[0]).lower()

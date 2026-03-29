@@ -1,6 +1,11 @@
 from django.db import migrations
 
 
+def noop_forward(apps, schema_editor):
+    # Seed moved to apps.orgs.management.commands.seed_tenant_defaults.
+    pass
+
+
 def seed_girvi_payment_vouchertypes(apps, schema_editor):
     VoucherType = apps.get_model("dea", "VoucherType")
 
@@ -49,8 +54,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(
-            seed_girvi_payment_vouchertypes,
-            reverse_code=unseed_girvi_payment_vouchertypes,
-        ),
+        migrations.RunPython(noop_forward, reverse_code=migrations.RunPython.noop),
     ]

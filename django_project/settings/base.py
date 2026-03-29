@@ -93,6 +93,16 @@ TENANT_MODEL = "orgs.Company"  # app.Model
 
 TENANT_DOMAIN_MODEL = "orgs.Domain"  # app.Model
 
+# Controlled rollout flag for automatic tenant baseline seeding on workspace create.
+TENANT_AUTO_SEED_ON_CREATE = env.bool("TENANT_AUTO_SEED_ON_CREATE", default=False)
+
+# Clone mode for onboarding template provisioning.
+# Recommended for clone+seed workflow: NODATA (clone structure, seed via commands).
+ONBOARDING_TEMPLATE_CLONE_MODE = env(
+    "ONBOARDING_TEMPLATE_CLONE_MODE",
+    default="NODATA",
+)
+
 # Performance: avoid repeated search_path SET calls when tenant is unchanged.
 TENANT_LIMIT_SET_CALLS = True
 

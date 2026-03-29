@@ -57,7 +57,11 @@ class Command(BaseCommand):
             AccountType="Expense",
             defaults={"description": "Expense Account", "code_prefix": "5"}
         )
-        
+        AccountType.objects.get_or_create(
+            AccountType="Equity",
+            defaults={"description": "Equity Account", "code_prefix": "3"}
+        )
+
         # Core ledgers required by posting rules
         ledger_configs = [
             ("CASH", asset_type, "1001"),
