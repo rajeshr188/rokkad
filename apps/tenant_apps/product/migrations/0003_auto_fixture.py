@@ -6,6 +6,11 @@ import mptt.managers
 from django.db import migrations
 
 
+def noop_forward(apps, schema_editor):
+    # Seed moved to apps.orgs.management.commands.seed_tenant_defaults.
+    pass
+
+
 def rebuild_category(apps, schema_editor):
     manager = mptt.managers.TreeManager()
     Category = apps.get_model("product", "Category")
@@ -186,6 +191,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(insertData),
-        migrations.RunPython(rebuild_category, noop_reverse),
+        migrations.RunPython(noop_forward, reverse_code=migrations.RunPython.noop),
     ]

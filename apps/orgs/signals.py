@@ -1,10 +1,17 @@
+import logging
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.db import transaction
 from django.dispatch import receiver
+from django.db.models.signals import post_save
 from invitations.signals import invite_accepted
 from invitations.utils import get_invitation_model
+from allauth.account.signals import user_signed_up
+from .models import Company, Membership, PendingInvitation
 
-from .models import Membership, PendingInvitation
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 Invitation = get_invitation_model()
@@ -35,9 +42,6 @@ def create_membership(sender, **kwargs):
     )
 
 
-from allauth.account.signals import user_signed_up
-
-
 @receiver(user_signed_up)
 def create_membership_on_signup(sender, **kwargs):
     user = kwargs.get("user")
@@ -60,3 +64,33 @@ def create_membership_on_signup(sender, **kwargs):
                 defaults={"role": pending_invitation.role},
             )
             pending_invitation.delete()
+
+
+@receiver(post_save, sender=Company)
+def seed_tenant_on_company_create(sender, instance, created, **kwargs):
+    """Optionally seed tenant defaults after workspace schema creation."""
+    if not created:
+        return
+
+    if instance.schema_name == "public":
+        return
+
+    if not getattr(settings, "TENANT_AUTO_SEED_ON_CREATE", False):
+        return
+
+    def _run_seed():
+        try:
+            call_command("seed_tenant_defaults", schema=instance.schema_name)
+            logger.info(
+                "Seeded tenant defaults for company_id=%s schema=%s",
+                instance.id,
+                instance.schema_name,
+            )
+        except Exception:
+            logger.exception(
+                "Failed tenant default seeding for company_id=%s schema=%s",
+                instance.id,
+                instance.schema_name,
+            )
+
+    transaction.on_commit(_run_seed)

@@ -1,5 +1,10 @@
 from django.db import migrations
 
+
+def noop_forward(apps, schema_editor):
+    # Seed moved to apps.orgs.management.commands.seed_tenant_defaults.
+    pass
+
 def seed_expense_vouchertypes(apps, schema_editor):
     VoucherType = apps.get_model("dea", "VoucherType")
     seeds = [
@@ -30,5 +35,5 @@ class Migration(migrations.Migration):
         ("dea", "0011_vouchernumbersequence"),
     ]
     operations = [
-        migrations.RunPython(seed_expense_vouchertypes, reverse_code=unseed_expense_vouchertypes),
+        migrations.RunPython(noop_forward, reverse_code=migrations.RunPython.noop),
     ]

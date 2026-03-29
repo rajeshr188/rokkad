@@ -3,6 +3,11 @@
 from django.db import migrations
 
 
+def noop_forward(apps, schema_editor):
+    # Seed moved to apps.orgs.management.commands.seed_tenant_defaults.
+    pass
+
+
 def seed_default_notice_types(apps, schema_editor):
     """
     Seed default notice type configurations for all modules.
@@ -256,5 +261,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(seed_default_notice_types, reverse_seed),
+        migrations.RunPython(noop_forward, reverse_code=migrations.RunPython.noop),
     ]

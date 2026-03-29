@@ -4,6 +4,11 @@ from django.core.management import call_command
 from django.db import migrations
 
 
+def noop_forward(apps, schema_editor):
+    # Seed moved to apps.orgs.management.commands.seed_tenant_defaults.
+    pass
+
+
 def load_fixture(apps, schema_editor):
     call_command("loaddata", "metal_rates.json")
 
@@ -14,5 +19,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(load_fixture),
+        migrations.RunPython(noop_forward, reverse_code=migrations.RunPython.noop),
     ]
