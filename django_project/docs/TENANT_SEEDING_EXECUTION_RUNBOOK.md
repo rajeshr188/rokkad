@@ -64,6 +64,58 @@ For new tenant onboarding, create tenant schema then run explicit seeding so eve
 2. Squash schema migrations only.
 3. Confirm no data seeding logic is reintroduced in squashed migrations.
 
+## Phase F Checklist (Squash Execution)
+
+### Go/No-Go Gates
+1. No pending hotfixes touching migration graph.
+2. Seed commands are canonical for baseline data (`seed_public_defaults`, `seed_tenant_defaults`).
+3. Parity checks are green on representative tenants.
+4. CI smoke workflow is green for bootstrap + seed + parity.
+5. Team agrees on a short migration freeze window.
+
+### Pre-Squash Preparation
+1. Create a dedicated branch for squash work.
+2. Snapshot current migration graph and applied state in staging/prod.
+3. Identify migrations to preserve as historical transforms (do not squash away business-critical transforms).
+4. Ensure migration-based baseline seeders are already no-op/stub where intended.
+5. Take a database backup from staging before test rehearsal.
+
+### Squash Steps
+1. Generate squashed migrations per app boundary (schema-only focus).
+2. Keep dependency graph deterministic across shared and tenant apps.
+3. Review squashed files manually:
+- remove accidental seed inserts
+- keep only schema operations and required transforms
+4. Mark replaced migrations with `replaces = [...]` where applicable.
+5. Keep old migrations in repository until all active environments pass transition.
+
+### Validation Matrix (Required)
+1. Fresh database bootstrap:
+- migrate shared + tenant schemas
+- run `seed_public_defaults`
+- run `seed_tenant_defaults --schema <new_schema>`
+- run parity check with `--fail-on-drift`
+2. Existing upgraded database:
+- migrate from current head to squashed head
+- validate no destructive drift in tenant data
+3. Onboarding flow:
+- create/clone tenant
+- ensure seed path executes and new tenant passes parity
+4. CI:
+- ensure PR fast smoke and push full smoke both pass.
+
+### Rollout Strategy
+1. Deploy squashed migrations first to staging.
+2. Run full tenant parity checks in staging.
+3. Deploy to production in low-traffic window.
+4. Monitor migration runtime and error logs.
+5. Keep rollback plan ready (backup restore + prior release artifact).
+
+### Post-Rollout Cleanup
+1. After one stable cycle, remove superseded old migration files.
+2. Re-run full parity checks across tenants.
+3. Update architecture docs and onboarding runbooks with new baseline migration point.
+
 ## Go-Live Acceptance Criteria
 1. New tenant onboarding is clone/create plus explicit seed.
 2. No required baseline defaults depend on migration side effects.

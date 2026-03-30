@@ -265,7 +265,6 @@ def insertData(apps, schema_editor):
         "Security Deposits",
         20,
         parent=non_current_liabilities,
-        is_current_liability=False,
     )
 
     # EQUITY
