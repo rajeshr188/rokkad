@@ -4,6 +4,8 @@ Date: 2026-03-29
 Status: Phase A-E Complete
 Owner: Platform Team
 
+Related guide: `TENANT_PROVISIONING_AND_SEEDING_GUIDE.md`
+
 ## Goal
 
 Separate baseline data seeding from migrations so migrations stay schema-focused.
