@@ -11,6 +11,40 @@ class Command(BaseCommand):
             "field": "AccountType",
             "values": ["Asset", "Liability", "Equity", "Income", "Expense"],
         },
+        "dea.EntityType": {
+            "field": "name",
+            "values": ["Person", "Organisation"],
+        },
+        "dea.TransactionType_DE": {
+            "field": "XactTypeCode",
+            "values": ["Cr", "Dr"],
+        },
+        "dea.TransactionType_Ext": {
+            "field": "XactTypeCode_ext",
+            "values": [
+                "AC",
+                "AD",
+                "CPU",
+                "CRPU",
+                "CRSL",
+                "CSL",
+                "IP",
+                "IR",
+                "LG",
+                "LT",
+                "LR",
+                "LP",
+                "PYT",
+                "RCT",
+                "DC",
+                "CXC",
+                "RP",
+            ],
+        },
+        "dea.AccountType_Ext": {
+            "field": "description",
+            "values": ["Creditor", "Debtor"],
+        },
         "dea.Ledger": {
             "field": "name",
             "values": [

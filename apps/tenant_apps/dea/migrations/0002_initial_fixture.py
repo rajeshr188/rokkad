@@ -18,11 +18,89 @@ def noop_reverse(apps, schema_editor):
     pass
 
 
+def _next_root_segment(ledger_model, account_type):
+    prefix = (account_type.code_prefix or "").strip()
+    if not prefix:
+        raise ValueError(
+            f"Missing code_prefix for AccountType={account_type.AccountType}"
+        )
+
+    existing_codes = ledger_model.objects.filter(
+        parent__isnull=True,
+        AccountType=account_type,
+    ).values_list("code", flat=True)
+
+    max_seq = 0
+    for code in existing_codes:
+        if not code:
+            continue
+        parts = code.split(".")
+        if len(parts) >= 2 and parts[0] == prefix:
+            try:
+                max_seq = max(max_seq, int(parts[1]))
+            except ValueError:
+                continue
+    return max_seq + 1
+
+
+def _next_child_segment(ledger_model, parent):
+    existing_codes = ledger_model.objects.filter(parent=parent).values_list(
+        "code", flat=True
+    )
+
+    max_seq = 0
+    for code in existing_codes:
+        if not code or not parent.code:
+            continue
+        if not code.startswith(parent.code + "."):
+            continue
+        try:
+            segment = int(code.split(".")[-1])
+            max_seq = max(max_seq, segment)
+        except ValueError:
+            continue
+    return max_seq + 1
+
+
+def _generate_code(ledger_model, account_type, parent=None):
+    if parent is None:
+        seq = _next_root_segment(ledger_model, account_type)
+        return f"{account_type.code_prefix}.{seq:02d}"
+
+    if not parent.code:
+        raise ValueError(f"Parent ledger '{parent.name}' has no code")
+    seq = _next_child_segment(ledger_model, parent)
+    return f"{parent.code}.{seq:02d}"
+
+
+def _create_ledger(ledger_model, account_type, name, sort_order, parent=None, **extra):
+    data = {
+        "AccountType": account_type,
+        "name": name,
+        "sort_order": sort_order,
+        "parent": parent,
+        "code": _generate_code(ledger_model, account_type, parent=parent),
+        # Keep MPTT fields initialized; rebuilt at end of migration.
+        "lft": 0,
+        "rght": 0,
+        "level": 0,
+        "tree_id": 0,
+    }
+    data.update(extra)
+    return ledger_model.objects.create(**data)
+
+
 def insertData(apps, schema_editor):
     """
-    Insert initial data for DEA app.
-    Note: Ledger codes are manually assigned here for initial setup.
-    For new ledgers created after migration, codes will be auto-generated.
+        Insert initial data for DEA app.
+
+        Ledger codes are generated in migration-time using the same hierarchical format
+        as runtime numbering:
+            - root: <AccountType.code_prefix>.<NN>
+            - child: <parent.code>.<NN>
+
+        This avoids hardcoded legacy numeric codes while keeping deterministic bootstrap
+        behavior for fresh schema provisioning.
     """
     entity = apps.get_model("dea", "EntityType")
     entity.objects.bulk_create([entity(name="Person"), entity(name="Organisation")])
@@ -63,490 +141,228 @@ def insertData(apps, schema_editor):
 
     # Updated AccountType creation with code_prefix
     acc_type = apps.get_model("dea", "AccountType")
-    acc_type.objects.bulk_create(
-        [
-            acc_type(AccountType="Asset", description="Asset", code_prefix="1"),
-            acc_type(
-                AccountType="Liability", description="Liabilities", code_prefix="2"
-            ),
-            acc_type(AccountType="Equity", description="Equity", code_prefix="3"),
-            acc_type(AccountType="Income", description="Income", code_prefix="4"),
-            acc_type(AccountType="Expense", description="Expense", code_prefix="5"),
-        ]
+    acc_type.objects.get_or_create(
+        AccountType="Asset",
+        defaults={"description": "Asset", "code_prefix": "1"},
     )
+    acc_type.objects.get_or_create(
+        AccountType="Liability",
+        defaults={"description": "Liabilities", "code_prefix": "2"},
+    )
+    acc_type.objects.get_or_create(
+        AccountType="Equity",
+        defaults={"description": "Equity", "code_prefix": "3"},
+    )
+    acc_type.objects.get_or_create(
+        AccountType="Income",
+        defaults={"description": "Income", "code_prefix": "4"},
+    )
+    acc_type.objects.get_or_create(
+        AccountType="Expense",
+        defaults={"description": "Expense", "code_prefix": "5"},
+    )
+
+    asset_type = acc_type.objects.get(AccountType="Asset")
+    liability_type = acc_type.objects.get(AccountType="Liability")
+    equity_type = acc_type.objects.get(AccountType="Equity")
+    income_type = acc_type.objects.get(AccountType="Income")
+    expense_type = acc_type.objects.get(AccountType="Expense")
 
     acc_type_ext = apps.get_model("dea", "AccountType_Ext")
-    acc_type_ext.objects.bulk_create(
-        [
-            acc_type_ext(description="Creditor", XactTypeCode_id="Cr"),
-            acc_type_ext(description="Debtor", XactTypeCode_id="Dr"),
-        ]
-    )
+    acc_type_ext.objects.get_or_create(description="Creditor", XactTypeCode_id="Cr")
+    acc_type_ext.objects.get_or_create(description="Debtor", XactTypeCode_id="Dr")
 
-    # Updated ledger creation with new fields
+    # Updated ledger creation with generated hierarchical codes.
     ledger = apps.get_model("dea", "Ledger")
 
-    # Current Assets (Parent)
-    ca = ledger.objects.create(
-        AccountType_id=1,
-        name="Current Assets",
-        code="1000",
-        sort_order=10,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
+    # ASSETS
+    current_assets = _create_ledger(ledger, asset_type, "Current Assets", 10)
+    fixed_assets = _create_ledger(ledger, asset_type, "Fixed Assets", 20)
 
-    # Fixed Assets (Parent)
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Fixed Assets",
-        code="1500",
-        sort_order=20,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
+    cash_in_hand = _create_ledger(
+        ledger, asset_type, "Cash In Hand", 10, parent=current_assets
     )
+    _create_ledger(ledger, asset_type, "Cash", 10, parent=cash_in_hand)
+    _create_ledger(ledger, asset_type, "CASH", 20, parent=cash_in_hand)
 
-    # Cash In Hand (Parent under Current Assets)
-    cih = ledger.objects.create(
-        AccountType_id=1,
-        name="Cash In Hand",
-        code="1100",
-        sort_order=10,
-        parent=ca,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
+    bank_accounts = _create_ledger(
+        ledger, asset_type, "Bank Accounts", 15, parent=current_assets
     )
+    _create_ledger(ledger, asset_type, "Bank Current Account", 10, parent=bank_accounts)
+    _create_ledger(ledger, asset_type, "Bank OD Account", 20, parent=bank_accounts)
 
-    # Cash (Child of Cash In Hand)
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Cash",
-        code="1101",
-        sort_order=10,
-        parent=cih,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
+    loans_adv = _create_ledger(
+        ledger, asset_type, "Loans & Advances", 20, parent=current_assets
     )
+    _create_ledger(ledger, asset_type, "LOAN_RECEIVABLE", 10, parent=loans_adv)
+    _create_ledger(ledger, asset_type, "LOAN_PRINCIPAL_CTRL", 20, parent=loans_adv)
+    _create_ledger(ledger, asset_type, "BORROWER_LOAN_CTRL", 30, parent=loans_adv)
 
-    # Loans & Advances
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Loans & Advances",
-        code="1200",
-        sort_order=20,
-        parent=ca,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
+    _create_ledger(ledger, asset_type, "Sundry Debtors", 30, parent=current_assets)
+    _create_ledger(ledger, asset_type, "Accounts Receivable", 35, parent=current_assets)
 
-    # Sundry Debtors
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Sundry Debtors",
-        code="1300",
-        sort_order=30,
-        parent=ca,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
+    inventory = _create_ledger(ledger, asset_type, "Inventory", 40, parent=current_assets)
+    _create_ledger(ledger, asset_type, "GST INV", 10, parent=inventory)
+    _create_ledger(ledger, asset_type, "Non-GST INV", 20, parent=inventory)
+    _create_ledger(ledger, asset_type, "INVENTORY", 30, parent=inventory)
 
-    # Inventory (Parent)
-    inv = ledger.objects.create(
-        AccountType_id=1,
-        name="Inventory",
-        code="1400",
-        sort_order=40,
-        parent=ca,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
+    _create_ledger(
+        ledger, asset_type, "Interest Receivables", 45, parent=current_assets
     )
+    _create_ledger(ledger, asset_type, "GST_INPUT_CREDIT", 50, parent=current_assets)
+    _create_ledger(ledger, asset_type, "Prepaid Expenses", 55, parent=current_assets)
 
-    # GST Inventory
-    ledger.objects.create(
-        AccountType_id=1,
-        name="GST INV",
-        code="1401",
-        sort_order=10,
-        parent=inv,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-
-    # Non-GST Inventory
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Non-GST INV",
-        code="1402",
-        sort_order=20,
-        parent=inv,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-
-    # Interest Receivables
-    ledger.objects.create(
-        AccountType_id=1,
-        name="Interest Receivables",
-        code="1250",
-        sort_order=25,
-        parent=ca,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
+    _create_ledger(ledger, asset_type, "Plant & Machinery", 10, parent=fixed_assets)
+    _create_ledger(ledger, asset_type, "Furniture & Fixtures", 20, parent=fixed_assets)
+    _create_ledger(ledger, asset_type, "Office Equipment", 30, parent=fixed_assets)
+    _create_ledger(ledger, asset_type, "Vehicles", 40, parent=fixed_assets)
+    _create_ledger(ledger, asset_type, "Computer & Peripherals", 50, parent=fixed_assets)
 
     # LIABILITIES
-    cl = ledger.objects.create(
-        AccountType_id=2,
-        name="Current Liabilities",
-        code="2000",
-        sort_order=10,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
+    current_liabilities = _create_ledger(ledger, liability_type, "Current Liabilities", 10)
+    non_current_liabilities = _create_ledger(
+        ledger, liability_type, "Non-Current Liabilities", 20
     )
 
-    # Loans
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Loans",
-        code="2100",
-        sort_order=10,
-        parent=cl,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
+    loans = _create_ledger(ledger, liability_type, "Loans", 10, parent=current_liabilities)
+    _create_ledger(ledger, liability_type, "LOAN_PAYABLE", 10, parent=loans)
+    _create_ledger(ledger, liability_type, "BORROWING_PRINCIPAL_CTRL", 20, parent=loans)
+    _create_ledger(ledger, liability_type, "LENDER_ACCOUNT_CTRL", 30, parent=loans)
+
+    _create_ledger(
+        ledger, liability_type, "Interest Payable", 20, parent=current_liabilities
+    )
+    _create_ledger(
+        ledger, liability_type, "Sundry Creditors", 30, parent=current_liabilities
+    )
+    _create_ledger(
+        ledger, liability_type, "ACCOUNTS_PAYABLE", 35, parent=current_liabilities
     )
 
-    # Interest Payable
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Interest Payable",
-        code="2200",
-        sort_order=20,
-        parent=cl,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
+    duties_taxes = _create_ledger(
+        ledger, liability_type, "Duties & Taxes", 40, parent=current_liabilities
+    )
+    cgst = _create_ledger(ledger, liability_type, "CGST", 10, parent=duties_taxes)
+    sgst = _create_ledger(ledger, liability_type, "SGST", 20, parent=duties_taxes)
+    igst = _create_ledger(ledger, liability_type, "IGST", 30, parent=duties_taxes)
+    _create_ledger(ledger, liability_type, "Input CGST", 10, parent=cgst)
+    _create_ledger(ledger, liability_type, "Output CGST", 20, parent=cgst)
+    _create_ledger(ledger, liability_type, "Input SGST", 10, parent=sgst)
+    _create_ledger(ledger, liability_type, "Output SGST", 20, parent=sgst)
+    _create_ledger(ledger, liability_type, "Input IGST", 10, parent=igst)
+    _create_ledger(ledger, liability_type, "Output IGST", 20, parent=igst)
+    _create_ledger(ledger, liability_type, "TDS_PAYABLE", 40, parent=duties_taxes)
+
+    _create_ledger(ledger, liability_type, "Tax Liability", 50, parent=current_liabilities)
+    _create_ledger(ledger, liability_type, "Salary Payable", 55, parent=current_liabilities)
+    _create_ledger(ledger, liability_type, "Rent Payable", 60, parent=current_liabilities)
+    _create_ledger(ledger, liability_type, "Accrued Expenses", 65, parent=current_liabilities)
+    _create_ledger(ledger, liability_type, "Unearned Revenue", 70, parent=current_liabilities)
+    _create_ledger(ledger, liability_type, "Term Loan", 10, parent=non_current_liabilities)
+    _create_ledger(
+        ledger,
+        liability_type,
+        "Security Deposits",
+        20,
+        parent=non_current_liabilities,
+        is_current_liability=False,
     )
 
-    # Sundry Creditors
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Sundry Creditors",
-        code="2300",
-        sort_order=30,
-        parent=cl,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
+    # EQUITY
+    capital = _create_ledger(ledger, equity_type, "Capital", 10)
+    _create_ledger(ledger, equity_type, "Capital A/c", 10, parent=capital)
+    _create_ledger(ledger, equity_type, "Drawings", 20, parent=capital)
+    _create_ledger(ledger, equity_type, "Retained Earnings", 30, parent=capital)
+    _create_ledger(ledger, equity_type, "Opening Balance Equity", 40, parent=capital)
 
-    # Duties & Taxes (Parent)
-    dt = ledger.objects.create(
-        AccountType_id=2,
-        name="Duties & Taxes",
-        code="2400",
-        sort_order=40,
-        parent=cl,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-
-    # GST Structure
-    cgst = ledger.objects.create(
-        AccountType_id=2,
-        name="CGST",
-        code="2410",
-        sort_order=10,
-        parent=dt,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    sgst = ledger.objects.create(
-        AccountType_id=2,
-        name="SGST",
-        code="2420",
-        sort_order=20,
-        parent=dt,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    igst = ledger.objects.create(
-        AccountType_id=2,
-        name="IGST",
-        code="2430",
-        sort_order=30,
-        parent=dt,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-
-    # Input/Output GST accounts
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Input CGST",
-        code="2411",
-        sort_order=10,
-        parent=cgst,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Output CGST",
-        code="2412",
-        sort_order=20,
-        parent=cgst,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Input SGST",
-        code="2421",
-        sort_order=10,
-        parent=sgst,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Output SGST",
-        code="2422",
-        sort_order=20,
-        parent=sgst,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Input IGST",
-        code="2431",
-        sort_order=10,
-        parent=igst,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Output IGST",
-        code="2432",
-        sort_order=20,
-        parent=igst,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-
-    # Tax Liability
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Tax Liability",
-        code="2500",
-        sort_order=50,
-        parent=cl,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-
-    # Capital Accounts
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Capital",
-        code="2600",
-        sort_order=60,
-        parent=cl,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=2,
-        name="Capital A/c",
-        code="2610",
-        sort_order=10,
-        parent=cl,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-
-    # INCOME ACCOUNTS
-    ledger.objects.create(
-        AccountType_id=4,
-        name="Interest Received",
-        code="4100",
-        sort_order=10,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=4,
-        name="Sales",
-        code="4200",
-        sort_order=20,
+    # INCOME
+    _create_ledger(ledger, income_type, "Interest Received", 10)
+    _create_ledger(ledger, income_type, "INTEREST_INCOME", 12)
+    _create_ledger(
+        ledger,
+        income_type,
+        "Sales",
+        20,
         is_operating_revenue=True,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
     )
+    _create_ledger(
+        ledger,
+        income_type,
+        "Service Income",
+        30,
+        is_operating_revenue=True,
+    )
+    _create_ledger(
+        ledger,
+        income_type,
+        "Commission Income",
+        40,
+        is_operating_revenue=True,
+    )
+    _create_ledger(ledger, income_type, "Other Income", 50)
+    _create_ledger(ledger, income_type, "Trading", 60)
 
-    # EXPENSE ACCOUNTS
-    ledger.objects.create(
-        AccountType_id=5,
-        name="Interest Paid",
-        code="5100",
-        sort_order=10,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=5,
-        name="Purchase",
-        code="5200",
-        sort_order=20,
+    # EXPENSES
+    _create_ledger(ledger, expense_type, "Interest Paid", 10)
+    _create_ledger(ledger, expense_type, "INTEREST_EXPENSE", 12)
+    _create_ledger(
+        ledger,
+        expense_type,
+        "Purchase",
+        20,
         is_operating_expense=True,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
     )
 
-    # COGS Structure
-    cogs = ledger.objects.create(
-        AccountType_id=5,
-        name="COGS",
-        code="5300",
-        sort_order=30,
+    cogs = _create_ledger(
+        ledger,
+        expense_type,
+        "COGS",
+        30,
         is_direct_expense=True,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
     )
-    ledger.objects.create(
-        AccountType_id=5,
-        name="GST COGS",
-        code="5301",
-        sort_order=10,
-        is_direct_expense=True,
+    _create_ledger(
+        ledger,
+        expense_type,
+        "GST COGS",
+        10,
         parent=cogs,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-    ledger.objects.create(
-        AccountType_id=5,
-        name="Non-GST COGS",
-        code="5302",
-        sort_order=20,
         is_direct_expense=True,
+    )
+    _create_ledger(
+        ledger,
+        expense_type,
+        "Non-GST COGS",
+        20,
         parent=cogs,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
+        is_direct_expense=True,
     )
 
-    # Trading Account
-    ledger.objects.create(
-        AccountType_id=4,
-        name="Trading",
-        code="4300",
-        sort_order=30,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
-
-    # EXPENSE LEDGERS (add missing standard categories)
-    expense_parent = ledger.objects.create(
-        AccountType_id=5,
-        name="Expenses",
-        code="5999",
-        sort_order=99,
-        lft=0,
-        rght=0,
-        level=0,
-        tree_id=0,
-    )
+    expense_parent = _create_ledger(ledger, expense_type, "Expenses", 99)
     expense_ledgers = [
-        ("Travel & Transportation", "5901"),
-        ("Food & Meals", "5902"),
-        ("Accommodation", "5903"),
-        ("Professional Services", "5904"),
-        ("Office & Supplies", "5905"),
-        ("Utilities & Communications", "5906"),
-        ("Maintenance & Repair", "5907"),
-        ("Marketing & Advertising", "5908"),
-        ("Other Expense", "5998"),
+        "Travel & Transportation",
+        "Food & Meals",
+        "Accommodation",
+        "Professional Services",
+        "Office & Supplies",
+        "Utilities & Communications",
+        "Maintenance & Repair",
+        "Marketing & Advertising",
+        "Bank Charges",
+        "Salary & Wages",
+        "Rent Expense",
+        "Insurance Expense",
+        "Depreciation Expense",
+        "Bad Debts",
+        "Other Expense",
     ]
-    for name, code in expense_ledgers:
-        ledger.objects.create(
-            AccountType_id=5,
-            name=name,
-            code=code,
-            sort_order=10,
+    for index, ledger_name in enumerate(expense_ledgers, start=1):
+        _create_ledger(
+            ledger,
+            expense_type,
+            ledger_name,
+            index * 10,
             parent=expense_parent,
             is_operating_expense=True,
-            lft=0,
-            rght=0,
-            level=0,
-            tree_id=0,
         )
 
 
