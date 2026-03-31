@@ -474,9 +474,9 @@
 {% endpartialdef %}
 
 {% partialdef statement-tab %}
-{% if loan.statementitem_set.exists %}
+{% if statement_items|default:loan.statementitem_set.all %}
 <ul class="list-group mt-3">
-  {% for i in loan.statementitem_set.all %}
+  {% for i in statement_items|default:loan.statementitem_set.all %}
   <li class="list-group-item">
     Verified: {{i.verified_at}} Statement:
     <a href="{% url 'girvi:statement_detail' i.statement.id %}">{{i.statement.id}}</a>

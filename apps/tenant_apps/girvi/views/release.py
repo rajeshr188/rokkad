@@ -1,7 +1,9 @@
 from datetime import datetime
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.template.response import TemplateResponse
@@ -43,14 +45,18 @@ def release_create(request, pk=None):
         form = ReleaseForm(request.POST or None)
         if form.is_valid():
             form.instance.created_by = request.user
-            form.save(commit=True)
-
-            # return HttpResponse(status = 200,headers={"HX-Trigger":loanChanged})
-            response = redirect("girvi:girvi_loan_detail", pk=form.instance.loan.pk)
-            response["HX-Push-Url"] = reverse(
-                "girvi:girvi_loan_detail", kwargs={"pk": form.instance.loan.pk}
-            )
-            return response
+            try:
+                form.save(commit=True)
+            except ValidationError as exc:
+                form.add_error(None, exc)
+                messages.error(request, str(exc))
+            else:
+                # return HttpResponse(status = 200,headers={"HX-Trigger":loanChanged})
+                response = redirect("girvi:girvi_loan_detail", pk=form.instance.loan.pk)
+                response["HX-Push-Url"] = reverse(
+                    "girvi:girvi_loan_detail", kwargs={"pk": form.instance.loan.pk}
+                )
+                return response
     else:
         loan = None
         if pk:

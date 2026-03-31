@@ -1,7 +1,8 @@
 import logging
 
 from django.conf import settings
-from django.db import IntegrityError, models
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
 from django.shortcuts import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -60,32 +61,39 @@ class Release(models.Model):
         return reverse("girvi:girvi_release_update", args=(self.pk,))
 
     def save(self, *args, **kwargs):
-        if not self.pk and not self.release_id:
+        is_create = self._state.adding
+
+        if is_create and not self.release_id:
             self.release_id = ReleaseIDGenerator.generate(self.loan.series)
-        super().save(*args, **kwargs)
-        # Transition the loan status to "delivered" after saving the release
-        try:
+
+        # Updates should not retrigger lifecycle transitions or accounting posts.
+        if not is_create:
+            return super().save(*args, **kwargs)
+
+        if not self.created_by:
+            raise ValidationError("created_by is required for release creation.")
+
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            # Transition the loan status to RELEASED and post release accounting
+            # in the same transaction so failure in either step rolls back.
             from ..flows import LoanFlow
 
             flow = LoanFlow(
                 self.loan, self.created_by, self.created_by.profile.workspace
             )
-            if flow.deliver.can_proceed():
-                flow.deliver(
-                    created_by=self.created_by,
-                    released_by=self.released_by,
-                    release_date=self.release_date,
+            if not flow.deliver.can_proceed():
+                raise ValidationError(
+                    f"Loan {self.loan.loan_id} cannot be released in status {self.loan.status}."
                 )
-        except IntegrityError as e:
-            logger.error(f"IntegrityError while transitioning loan status: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error while transitioning loan status: {e}")
 
-        # Non-blocking accounting hook for release event.
-        try:
+            flow.deliver(
+                created_by=self.created_by,
+                released_by=self.released_by,
+                release_date=self.release_date,
+            )
             record_loan_release(self, created_by=self.created_by)
-        except Exception as e:
-            logger.error(f"Release accounting post failed for {self.release_id}: {e}")
 
 
 # with schema_context(jcl):
