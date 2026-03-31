@@ -116,6 +116,168 @@ For new tenant onboarding, create tenant schema then run explicit seeding so eve
 2. Re-run full parity checks across tenants.
 3. Update architecture docs and onboarding runbooks with new baseline migration point.
 
+## Phase F Candidate Matrix
+
+### Convert To Command / Remove From Baseline Path
+- `apps/tenant_apps/dea/migrations/0002_initial_fixture.py`
+	- Current role: seeds DEA baseline masters + ledgers.
+	- Phase F target: remove baseline seeding from migration path and keep DEA seeding in `seed_core_ledgers` / `seed_tenant_defaults`.
+- `apps/orgs/migrations/0018_create_default_roles.py`
+	- Current role: seeds default roles.
+	- Phase F target: move baseline ownership fully to `seed_public_defaults`.
+
+### Already Converted To No-Op (Good Candidates To Disappear In Squash)
+- `apps/tenant_apps/dea/migrations/0009_seed_girvi_payment_vouchertypes.py`
+- `apps/tenant_apps/dea/migrations/0010_seed_girvi_release_vouchertype.py`
+- `apps/tenant_apps/dea/migrations/0012_seed_expense_vouchertypes.py`
+- `apps/tenant_apps/notify/migrations/0003_seed_default_notice_types.py`
+- `apps/tenant_apps/product/migrations/0003_auto_fixture.py`
+- `apps/tenant_apps/rates/migrations/0002_load_metal_rates.py`
+- `apps/tenant_apps/terms/migrations/0002_auto_20230723_1647.py`
+
+### Keep As Historical Data Transforms
+- `apps/tenant_apps/girvi/migrations/0005_migrate_loan_data_to_givenloan_takenloan.py`
+- `apps/tenant_apps/girvi/migrations/0013_archive_loanpayments_to_paymentvoucher.py`
+- `apps/tenant_apps/girvi/migrations/add_custody_tracking.py`
+- `apps/tenant_apps/product/migrations/0006_attribute_filterable_in_dashboard_and_more.py`
+- `apps/tenant_apps/product/migrations/0014_pricing_constraints_and_resolver_hardening.py`
+
+### Keep As Schema/Infrastructure Migrations
+- `apps/tenant_apps/dea/migrations/0003_create_ledger_balance_view.py`
+- `apps/tenant_apps/product/migrations/0004_auto_views.py`
+- `apps/tenant_apps/product/migrations/0011_pr6_unified_balance_views.py`
+- `apps/orgs/migrations/0001_initial.py`
+	- Note: keep `hstore` extension setup until product historical HStore usage is eliminated from baseline migration path.
+
+### Safe Early Squash Candidates
+- `accounts`
+- `pages`
+- `apps/onboarding`
+- `apps/subscriptions`
+
+### Deferred Squash Candidates
+- `apps/tenant_apps/dea`
+- `apps/tenant_apps/girvi`
+- `apps/tenant_apps/product`
+- `apps/orgs`
+
+## App-By-App Squash Sequence
+
+### Wave 1: Low-Risk Schema-Only Apps
+1. `accounts`
+2. `pages`
+3. `apps/onboarding`
+4. `apps/subscriptions`
+
+Execution notes:
+- These apps are the safest first batch because they are largely schema-only.
+- Squash them together or in parallel if migration dependencies remain isolated.
+- Validation after Wave 1:
+	- fresh migrate on empty database
+	- existing database upgrade rehearsal
+	- smoke login and onboarding entry paths
+
+### Wave 2: Public-Schema Support Apps With Limited Data Concerns
+1. `apps/orgs` preparation only, not squash yet
+2. `apps/tenant_apps/terms`
+3. `apps/tenant_apps/rates`
+4. `apps/tenant_apps/notify`
+
+Execution notes:
+- `terms`, `rates`, and `notify` have seed migrations already converted to no-op, so they are good early tenant-app squash candidates.
+- `orgs` should not be squashed in this wave; only prepare it by ensuring `seed_public_defaults` is the sole baseline source for roles/permissions.
+- Validation after Wave 2:
+	- `python manage.py seed_public_defaults`
+	- `python manage.py seed_tenant_defaults --schema <test_schema>`
+	- parity check on a newly created tenant schema
+
+### Wave 3: Product Hardening Before Squash
+1. `apps/tenant_apps/product` prep
+
+Required prep before squash:
+- Remove remaining dependency on historical HStore baseline path.
+- Separate schema/view migrations from historical data repair logic.
+- Preserve required data transforms such as attribute-link copy and pricing dedupe as explicit historical migrations or one-time upgrade scripts.
+
+Go/no-go for product squash:
+- no unresolved HStore dependency in baseline migration path
+- inventory views recreated correctly on fresh install
+- pricing and stock balance validations pass on upgrade rehearsal
+
+### Wave 4: DEA Hardening Before Squash
+1. `apps/tenant_apps/dea` prep
+
+Required prep before squash:
+- Move baseline DEA seeding fully out of `0002_initial_fixture.py` into command-only path.
+- Keep ledger/account balance view creation as schema/infrastructure in squashed baseline.
+- Confirm fresh tenant bootstrap works with:
+	- migrate
+	- `seed_tenant_defaults`
+	- parity check
+
+Go/no-go for DEA squash:
+- `seed_core_ledgers` and `seed_tenant_defaults` reproduce complete DEA baseline
+- fresh install does not depend on migration-side seed data
+- ledger views build correctly on empty database and upgraded database
+
+### Wave 5: Girvi Final Historical-Transform Wave
+1. `apps/tenant_apps/girvi`
+
+Required prep before squash:
+- Preserve business-critical historical transforms:
+	- loan restructure migration
+	- archived loan payment migration
+	- custody/repledge migration
+- Confirm DEA dependencies referenced by Girvi transforms are stable in post-squash graph.
+
+Go/no-go for girvi squash:
+- upgrade rehearsal on database containing legacy loan records
+- posting, payment archive, and custody history verified
+- no broken cross-app dependency with DEA squashed migrations
+
+### Wave 6: Orgs Final Public-Schema Cleanup
+1. `apps/orgs`
+
+Required prep before squash:
+- keep or relocate extension setup only where still required by active historical migrations
+- remove role/default baseline dependence from migration path
+- confirm invitations, memberships, domains, and workspace ownership upgrade cleanly
+
+Go/no-go for orgs squash:
+- public schema bootstrap succeeds from empty database
+- default roles come only from `seed_public_defaults`
+- invitation and membership flows still work after upgrade rehearsal
+
+## Recommended Overall Order
+1. Wave 1: `accounts`, `pages`, `apps/onboarding`, `apps/subscriptions`
+2. Wave 2: `apps/tenant_apps/terms`, `apps/tenant_apps/rates`, `apps/tenant_apps/notify`
+3. Wave 3: prepare and squash `apps/tenant_apps/product`
+4. Wave 4: prepare and squash `apps/tenant_apps/dea`
+5. Wave 5: squash `apps/tenant_apps/girvi`
+6. Wave 6: squash `apps/orgs`
+
+## Stop Conditions
+1. Any fresh-install migration error on empty database.
+2. Any upgrade drift between current head and squashed head.
+3. Any tenant parity regression after seed commands.
+4. Any broken cross-app dependency between DEA, Girvi, Product, and Orgs.
+
+## Per-App Checklist Matrix
+
+| App | Target Wave | Status | Main Blockers | Prep Needed |
+| --- | --- | --- | --- | --- |
+| `accounts` | 1 | Safe now | None identified | Fresh install + upgrade rehearsal |
+| `pages` | 1 | Safe now | None identified | Fresh install check |
+| `apps/onboarding` | 1 | Safe now | None identified | Verify onboarding entry flow after squash |
+| `apps/subscriptions` | 1 | Safe now | None identified | Fresh install + subscription flow smoke |
+| `apps/tenant_apps/terms` | 2 | Low risk | Historical seed migration retained as noop | Verify command-based fixture load only |
+| `apps/tenant_apps/rates` | 2 | Low risk | Historical seed migration retained as noop | Verify command-based fixture load only |
+| `apps/tenant_apps/notify` | 2 | Low risk | Historical seed migration retained as noop | Verify notice defaults come from `seed_tenant_defaults` |
+| `apps/tenant_apps/product` | 3 | Deferred | HStore legacy path, views, data repair migrations | Remove HStore baseline dependency, preserve transforms, verify views |
+| `apps/tenant_apps/dea` | 4 | Deferred | `0002` still seeds baseline, views, ledger bootstrapping history | Move baseline ownership fully to commands, preserve view migrations |
+| `apps/tenant_apps/girvi` | 5 | Deferred | Historical business data transforms and DEA coupling | Rehearse upgrade with legacy data and preserve transforms |
+| `apps/orgs` | 6 | Deferred | Public-schema defaults in migration, extension compatibility, tenant bootstrap coupling | Make `seed_public_defaults` canonical and verify invitation/workspace flows |
+
 ## Go-Live Acceptance Criteria
 1. New tenant onboarding is clone/create plus explicit seed.
 2. No required baseline defaults depend on migration side effects.
