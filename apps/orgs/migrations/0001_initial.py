@@ -13,6 +13,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Keep until product historical migrations no longer rely on HStoreField.
         migrations.RunSQL("CREATE EXTENSION IF NOT EXISTS hstore"),
         migrations.CreateModel(
             name="Role",
