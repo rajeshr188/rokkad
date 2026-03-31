@@ -2,28 +2,24 @@ from django.urls import path
 from django.views.generic.dates import ArchiveIndexView
 
 from . import views
-from .views import custody_views
 from .models import GivenLoan
+from .views import custody_views
 
 app_name = "girvi"
 
-urlpatterns = (
-    # create a path to create notification view
+CORE_URLPATTERNS = [
+    # Notifications and utility endpoints
     path(
         "girvi/loan/<int:pk>/notify/",
         views.create_loan_notification,
         name="girvi_loan_notice",
     ),
     path("deletemultiple/", views.deleteLoan, name="girvi_loan_deletemultiple"),
-    # path("girvi/check/", views.check_girvi, name="check_girvi"),
-    # path("girvi/check/<int:pk>/", views.check_girvi, name="check_girvi_statement"),
-    # path("girvi/statement/add/", views.statement_create, name="statement_add"),
     path(
         "girvi/loan/get-interestrate/",
         views.get_interestrate,
         name="girvi_get_interestrate",
     ),
-    # Example: /2012/week/23/
     path("girvi/notice/", views.notice, name="notice"),
     path("girvi/outdatedloans/notify/", views.notify_print, name="girvi_create_notice"),
     path(
@@ -31,10 +27,9 @@ urlpatterns = (
         views.loans_created_on_day_excluding_current_month,
         name="loans_created_on_day_excluding_current_month",
     ),
-)
+]
 
-# urls for archive views
-urlpatterns += (
+ARCHIVE_URLPATTERNS = [
     path(
         "loan_archive/",
         ArchiveIndexView.as_view(
@@ -48,13 +43,11 @@ urlpatterns += (
         name="loan_archive",
     ),
     path("<int:year>/", views.LoanYearArchiveView.as_view(), name="loan_year_archive"),
-    # Example: /2012/08/
     path(
         "<int:year>/<int:month>/",
         views.LoanMonthArchiveView.as_view(month_format="%m"),
         name="archive_month_numeric",
     ),
-    # Example: /2012/aug/
     path(
         "<int:year>/<str:month>/",
         views.LoanMonthArchiveView.as_view(),
@@ -65,17 +58,15 @@ urlpatterns += (
         views.LoanDayArchiveView.as_view(),
         name="archive_day",
     ),
-    # Example: /2012/week/23/
     path(
         "<int:year>/week/<int:week>/",
         views.LoanWeekArchiveView.as_view(),
         name="archive_week",
     ),
     path("today/", views.LoanTodayArchiveView.as_view(), name="archive_today"),
-)
+]
 
-# urls for License
-urlpatterns += (
+LICENSE_URLPATTERNS = [
     path("girvi/license/", views.license_list, name="girvi_license_list"),
     path(
         "girvi/license/create/",
@@ -117,21 +108,44 @@ urlpatterns += (
         views.LicenseRenewalView.as_view(),
         name="girvi_license_renewal",
     ),
-)
+]
 
-# urls for Loan
-urlpatterns += (
+LOAN_URLPATTERNS = [
     path("", views.girvi_dashboard, name="girvi_dashboard"),
     path("girvi/loan/<int:pk>/split/", views.split_loan_items, name="split_loan_items"),
     path("girvi/loan/merge/", views.merge_loans, name="merge_loans"),
     path("girvi/loan/", views.loan_list, name="girvi_loan_list"),
     # Loan detail tab endpoints (HTMX lazy-loaded)
-    path("girvi/loan/detail/<int:pk>/items/", views.loan_detail_items_tab, name="loan_detail_items_tab"),
-    path("girvi/loan/detail/<int:pk>/payments/", views.loan_detail_payments_tab, name="loan_detail_payments_tab"),
-    path("girvi/loan/detail/<int:pk>/transactions/", views.loan_detail_transactions_tab, name="loan_detail_transactions_tab"),
-    path("girvi/loan/detail/<int:pk>/statement/", views.loan_detail_statement_tab, name="loan_detail_statement_tab"),
-    path("girvi/loan/detail/<int:pk>/notices/", views.loan_detail_notices_tab, name="loan_detail_notices_tab"),
-    path("girvi/loan/detail/<int:pk>/release/", views.loan_detail_release_tab, name="loan_detail_release_tab"),
+    path(
+        "girvi/loan/detail/<int:pk>/items/",
+        views.loan_detail_items_tab,
+        name="loan_detail_items_tab",
+    ),
+    path(
+        "girvi/loan/detail/<int:pk>/payments/",
+        views.loan_detail_payments_tab,
+        name="loan_detail_payments_tab",
+    ),
+    path(
+        "girvi/loan/detail/<int:pk>/transactions/",
+        views.loan_detail_transactions_tab,
+        name="loan_detail_transactions_tab",
+    ),
+    path(
+        "girvi/loan/detail/<int:pk>/statement/",
+        views.loan_detail_statement_tab,
+        name="loan_detail_statement_tab",
+    ),
+    path(
+        "girvi/loan/detail/<int:pk>/notices/",
+        views.loan_detail_notices_tab,
+        name="loan_detail_notices_tab",
+    ),
+    path(
+        "girvi/loan/detail/<int:pk>/release/",
+        views.loan_detail_release_tab,
+        name="loan_detail_release_tab",
+    ),
     path("girvi/loan/table/", views.loan_table_partial, name="loan_table_partial"),
     path("girvi/loan/renew/<int:pk>/", views.loan_renew, name="girvi_loan_renew"),
     path("girvi/loan/create/", views.loan_create, name="girvi_loan_create"),
@@ -176,24 +190,32 @@ urlpatterns += (
         name="license_report",
     ),
     path(
-        "girvi/loan-crosstab/", views.LoanCrosstabReport.as_view(), name="loan_crosstab"
+        "girvi/loan-crosstab/",
+        views.LoanCrosstabReport.as_view(),
+        name="loan_crosstab_legacy",
     ),
     path(
         "girvi/loan-listreport/", views.LoanListReport.as_view(), name="Loan_list_repot"
     ),
+    path(
+        "girvi/loan-listreport/",
+        views.LoanListReport.as_view(),
+        name="girvi_loan_list_report",
+    ),
     path("girvi/ledger/", views.export_loans_to_excel, name="girvi_ledger"),
     path("girvi/unreleased/", views.generate_unreleased_pdf, name="girvi_unreleased"),
     path("girvi/grid-template/", views.print_grid_template, name="girvi_grid_template"),
-    # path("girvi/loan<int:pk>/approve/", views.approve_loan, name="girvi_approve_loan"),
-    # path("girvi/loan<int:pk>/disburse/", views.disburse_loan, name="girvi_disburse_loan"),
-    # path('loan/<int:pk>/transition/<str:transition_name>/', views.handle_transition, name='handle_transition'),
     path(
         "loan/<int:pk>/transition/", views.loan_transition_view, name="loan_transition"
     ),
-)
+    path(
+        "loan/<int:pk>/transition/",
+        views.loan_transition_view,
+        name="girvi_loan_transition",
+    ),
+]
 
-# urls for loanitem
-urlpatterns += (
+LOAN_ITEM_URLPATTERNS = [
     path(
         "loan/item/<int:pk>/detail", views.loanitem_detail, name="girvi_loanitem_detail"
     ),
@@ -213,8 +235,6 @@ urlpatterns += (
         name="repledgedloanitem_delete",
     ),
     path("loanitems/", views.loanitem_list, name="loanitem_list"),
-    # path('repledgedloanitem/<int:parent_id>/create/', views.repledgedloanitem_create_update, name='repledgedloanitem_create'),
-    # path('repledgedloanitem/<int:parent_id>/update/<int:id>/', views.repledgedloanitem_create_update, name='repledgedloanitem_update'),
     path(
         "loanitem/<int:parent_id>/create/",
         views.loanitem_create_update,
@@ -240,11 +260,9 @@ urlpatterns += (
         views.loanitem_picture_delete,
         name="loanitem_picture_delete",
     ),
-)
+]
 
-# LoanPayment list/update/delete URLs removed (PR-5: legacy model deprecated).
-# GivenLoan payment creation is at girvi/loanpayment/<pk>/create/
-urlpatterns += (
+PAYMENT_URLPATTERNS = [
     path(
         "girvi/loanpayment/<int:pk>/create/",
         views.loan_payment_create_view,
@@ -255,10 +273,9 @@ urlpatterns += (
         views.taken_loan_payment_create_view,
         name="takenloan_payment_create",
     ),
-)
+]
 
-# urls for series
-urlpatterns += (
+SERIES_URLPATTERNS = [
     path("girvi/series/", views.series_list, name="girvi_series_list"),
     path(
         "girvi/series/create/",
@@ -288,11 +305,14 @@ urlpatterns += (
     path(
         "girvi/series/next-loanid/", views.next_loanid, name="girvi_series_next_loanid"
     ),
-)
+]
 
-# urls for loan templates
-urlpatterns += (
-    path("girvi/templates/", views.LoanTemplateListView.as_view(), name="girvi_template_list"),
+TEMPLATE_URLPATTERNS = [
+    path(
+        "girvi/templates/",
+        views.LoanTemplateListView.as_view(),
+        name="girvi_template_list",
+    ),
     path(
         "girvi/templates/download-pack/",
         views.download_template_pack,
@@ -353,10 +373,9 @@ urlpatterns += (
         views.template_frame_delete,
         name="girvi_template_frame_delete",
     ),
-)
+]
 
-# urls for Release
-urlpatterns += (
+RELEASE_URLPATTERNS = [
     path("girvi/release/", views.release_list, name="girvi_release_list"),
     path(
         "girvi/release/create/",
@@ -395,10 +414,9 @@ urlpatterns += (
         name="submit_release_formset",
     ),
     path("girvi/release/<int:pk>/form_h/", views.form_h, name="release_form_h"),
-)
+]
 
-# urls for custody/repledge workflows
-urlpatterns += (
+CUSTODY_URLPATTERNS = [
     path(
         "girvi/custody/items/<int:item_id>/custody/",
         custody_views.item_custody_status,
@@ -464,14 +482,20 @@ urlpatterns += (
         custody_views.api_item_custody_status,
         name="api_item_custody_status",
     ),
-)
-# urls for forms
-urlpatterns += (
+]
+
+STATEMENT_URLPATTERNS = [
     path("statements/", views.verification_session_list, name="statement_list"),
+    path("statements/", views.verification_session_list, name="girvi_statement_list"),
     path(
         "statement/create/",
         views.verification_session_create,
         name="statement_create",
+    ),
+    path(
+        "statement/create/",
+        views.verification_session_create,
+        name="girvi_statement_create",
     ),
     path(
         "statement/<int:pk>/toggle_complete",
@@ -479,15 +503,15 @@ urlpatterns += (
         name="statement_update",
     ),
     path(
+        "statement/<int:pk>/toggle_complete",
+        views.verification_session_toggle,
+        name="girvi_statement_update",
+    ),
+    path(
         "statement/<int:pk>/detail/",
         views.verification_session_detail,
         name="statement_detail",
     ),
-    # path(
-    #     "statement/complete/<int:pk>/",
-    #     views.complete_verification_session,
-    #     name="statement_complete",
-    # ),
     path(
         "statement/<int:pk>/delete/",
         views.statement_delete,
@@ -503,20 +527,46 @@ urlpatterns += (
         views.statement_item_delete,
         name="statement_item_delete",
     ),
-)
+]
 
-# urls for storagebox
-urlpatterns += (
+STORAGE_BOX_URLPATTERNS = [
     path("storage_boxes/", views.list_storage_boxes, name="storage_boxes"),
+    path("storage_boxes/", views.list_storage_boxes, name="girvi_storage_boxes"),
     path("storage_boxes/add/", views.add_storage_box, name="add_storage_box"),
+    path("storage_boxes/add/", views.add_storage_box, name="girvi_add_storage_box"),
     path(
         "storage_boxes/update/<int:pk>/",
         views.update_storage_box,
         name="update_storage_box",
     ),
     path(
+        "storage_boxes/update/<int:pk>/",
+        views.update_storage_box,
+        name="girvi_update_storage_box",
+    ),
+    path(
         "storage_boxes/delete/<int:pk>/",
         views.delete_storage_box,
         name="delete_storage_box",
     ),
-)
+    path(
+        "storage_boxes/delete/<int:pk>/",
+        views.delete_storage_box,
+        name="girvi_delete_storage_box",
+    ),
+]
+
+urlpatterns = [
+    *CORE_URLPATTERNS,
+    *ARCHIVE_URLPATTERNS,
+    *LICENSE_URLPATTERNS,
+    *LOAN_URLPATTERNS,
+    *LOAN_ITEM_URLPATTERNS,
+    *PAYMENT_URLPATTERNS,
+    *SERIES_URLPATTERNS,
+    *TEMPLATE_URLPATTERNS,
+    *RELEASE_URLPATTERNS,
+    *CUSTODY_URLPATTERNS,
+    *STATEMENT_URLPATTERNS,
+    *STORAGE_BOX_URLPATTERNS,
+]
