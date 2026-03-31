@@ -132,12 +132,12 @@
           {% for transition in possible_transitions %}
             {% if transition == "approve" %}
               <a class="btn btn-sm btn-success"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 ✓ Approve
               </a>
             {% elif transition == "disburse" %}
               <a class="btn btn-sm btn-primary"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 💳 Disburse
               </a>
             {% elif transition == "deliver" %}
@@ -148,37 +148,37 @@
               </a>
             {% elif transition == "cancel" %}
               <a class="btn btn-sm btn-danger"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 ✕ Cancel
               </a>
             {% elif transition == "mark_defaulted" %}
               <a class="btn btn-sm btn-warning"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 ⚠ Mark Defaulted
               </a>
             {% elif transition == "mark_auctioned" %}
               <a class="btn btn-sm btn-dark"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 🔨 Auction
               </a>
             {% elif transition == "mark sold" or transition == "mark_sold" %}
               <a class="btn btn-sm btn-secondary"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 💰 Sell
               </a>
             {% elif transition == "undo_disburse" %}
               <a class="btn btn-sm btn-outline-warning"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 ↩ Undo Disbursal
               </a>
             {% elif transition == "undo_release" %}
               <a class="btn btn-sm btn-outline-secondary"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 ↩ Undo Release
               </a>
             {% else %}
               <a class="btn btn-sm btn-outline-secondary"
-                 href="{% url 'girvi:loan_transition' loan.pk %}?transition={{ transition }}">
+                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
                 {{ transition|capfirst }}
               </a>
             {% endif %}

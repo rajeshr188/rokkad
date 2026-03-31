@@ -5,7 +5,7 @@
         {{ form.media }}
         <form
             method="post"
-            hx-post="{% if form.instance.pk %}{% url 'girvi:update_storage_box' form.instance.pk %}{% else %}{% url 'girvi:add_storage_box' %}{% endif %}"
+            hx-post="{% if form.instance.pk %}{% url 'girvi:girvi_update_storage_box' form.instance.pk %}{% else %}{% url 'girvi:girvi_add_storage_box' %}{% endif %}"
             hx-target="#storagebox-list"
             hx-swap="outerHTML"
         >

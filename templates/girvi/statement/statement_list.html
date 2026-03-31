@@ -8,7 +8,7 @@
                 <h4 class="alert-heading">Statement List</h4>
                 <p>View and manage statements</p>
             </div>
-            <a href="{% url 'girvi:statement_create' %}" class="btn btn-primary">Create</a>
+            <a href="{% url 'girvi:girvi_statement_create' %}" class="btn btn-primary">Create</a>
             <div class="table-responsive">
                 <table class="table table-sm">
                     <thead>
@@ -44,7 +44,7 @@
                                         </a>
                                         
                                         <a class="btn btn-sm btn-success" 
-                                           href="{% url 'girvi:statement_update' session.id %}" 
+                                           href="{% url 'girvi:girvi_statement_update' session.id %}" 
                                            data-bs-toggle="tooltip" 
                                            data-bs-placement="top" 
                                            title="Complete">
