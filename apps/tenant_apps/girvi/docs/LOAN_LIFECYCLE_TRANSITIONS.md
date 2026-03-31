@@ -176,10 +176,10 @@
 | **Source** | `DEFAULTED` |
 | **Target** | `AUCTIONED` |
 | **Permission** | `can_mark_auctioned` |
-| **Accounting** | ✅ Auction voucher posted by view |
+| **Accounting** | ⚠ Not implemented yet (status changes, warning returned) |
 | **UI trigger** | "🔨 Auction" button → `loan_transition_view?transition=mark_auctioned` |
 | **Form fields** | `auctioned_by` (from `request.user`), `amount` (auction proceeds) |
-| **What happens** | Status advances; view creates accounting entry for auction proceeds. Auction amount recorded in `LoanChangeLog` metadata. |
+| **What happens** | Status advances via `LoanTransitionService`. Auction amount recorded in `LoanChangeLog` metadata. Service returns a warning message that accounting posting is not implemented yet. |
 
 ---
 
@@ -188,11 +188,11 @@
 |---|---|
 | **Source** | `DISBURSED` |
 | **Target** | `SOLD` |
-| **Permission** | *(none configured — inherits default)* |
-| **Accounting** | ✅ Sale voucher posted by view |
+| **Permission** | `can_mark_sold` |
+| **Accounting** | ⚠ Not implemented yet (status changes, warning returned) |
 | **UI trigger** | "💰 Sell" button → `loan_transition_view?transition=mark_sold` |
 | **Form fields** | `sold_by` (from `request.user`), `amount` (sale proceeds) |
-| **What happens** | Status advances directly from DISBURSED (bypasses DEFAULTED). View creates accounting entry for sale proceeds. |
+| **What happens** | Status advances directly from DISBURSED (bypasses DEFAULTED). Service returns a warning message that accounting posting is not implemented yet. |
 
 ---
 
@@ -204,15 +204,18 @@
 User clicks button
   → loan_transition_view (views/loan.py)
       → FormClass(request.POST)
-      → LoanFlow(loan, user, tenant)
-      → flow.<transition>(**form.cleaned_data)
-          → viewflow FSM validates source state + permission
-          → transition body sets _additional_data
-          → _on_success_transition fires (atomic):
-              → loan.save()
-              → LoanChangeLog.objects.create(...)
-      → if transition == "disburse":
-          record_loan_disbursal(loan, user)   # posts PaymentVoucher
+      → LoanTransitionService(loan, user, tenant).execute(transition, **data)
+          → LoanFlow(loan, user, tenant)
+          → flow.<transition>(**payload)
+              → viewflow FSM validates source state + permission
+              → transition body sets _additional_data
+              → _on_success_transition fires (atomic):
+                  → loan.save()
+                  → LoanChangeLog.objects.create(...)
+          → if transition == "disburse":
+              record_loan_disbursal(loan, user)   # posts PaymentVoucher
+          → if transition in {"mark_auctioned", "mark_sold"}:
+              returns warning (accounting for these transitions not implemented)
   → redirect to loan detail
 ```
 
@@ -265,6 +268,7 @@ User clicks "📦 Release"
 | `can_cancel_loan` | `cancel` |
 | `can_mark_defaulted` | `mark_defaulted` |
 | `can_mark_auctioned` | `mark_auctioned` |
+| `can_mark_sold` | `mark_sold` |
 | `can_disburse_loan` | `undo_disburse` |
 | `can_release_loan` | `undo_release` |
 
@@ -285,3 +289,65 @@ Permissions are checked against `Membership.role.permissions` for the user's act
 | `apps/tenant_apps/dea/posting/rules/givenloan_disbursal.py` | DEA rule for GIVENLOAN_DISBURSAL voucher |
 | `apps/tenant_apps/dea/posting/rules/givenloan_release.py` | DEA rule for GIVENLOAN_RELEASE voucher |
 | `apps/tenant_apps/girvi/forms.py` | All transition forms (`ApproveLoanForm`, `DisburseLoanForm`, etc.) |
+
+---
+
+## Lifecycle Review (March 2026)
+
+This review summarizes current gaps/shortcomings found in the loan lifecycle,
+what has already been fixed, and what still needs work.
+
+### Fixed In Current Iteration
+
+1. **Release lifecycle now runs atomically with accounting posting**
+     - `Release.save()` now enforces creation-only side effects, requires `created_by`,
+         and wraps release creation + `flow.deliver()` + `record_loan_release()` inside
+         one `transaction.atomic()` block.
+     - Result: no more silent partial success where release/status changed but release
+         accounting failed.
+
+2. **Transition orchestration moved out of HTTP view into service layer**
+     - `loan_transition_view` now delegates to `LoanTransitionService.execute(...)`.
+     - Result: transition branching, reversal handling, and disbursal posting are
+         centralized/testable and view remains a thin adapter.
+
+3. **`mark_sold` permission gap closed**
+     - `mark_sold` now requires `can_mark_sold` permission in `LoanFlow`.
+
+4. **Release creation surfaces validation failures to users**
+     - `release_create` catches `ValidationError`, adds a form non-field error,
+         and shows a user-facing message.
+
+### Remaining Gaps (Needs Future Fix)
+
+1. **Accounting not implemented for `mark_auctioned` and `mark_sold`**
+     - Current behavior: status transition succeeds, service returns warning.
+     - Needed: implement voucher posting + idempotent markers + reversal design
+         for each transition.
+
+2. **Dead states in `LoanStatus` (`REJECTED`, `CLOSED`)**
+     - Present in enum but no FSM transition targets them.
+     - Needed: either add explicit transitions and business rules, or remove from
+         active enum to avoid ambiguity.
+
+3. **Missing reversal transitions for pre-disbursement workflow**
+     - No `undo_approve` or reopen flow from `CANCELLED`.
+     - Needed: confirm product policy and add controlled reversal transitions if required.
+
+4. **`REPLEDGED` status ownership is not fully FSM-driven**
+     - `deliver` accepts `REPLEDGED` as source, but transition into `REPLEDGED`
+         is not represented in `LoanFlow`.
+     - Needed: either formalize a `mark_repledged` transition or document why this
+         state is managed elsewhere and ensure changelog parity.
+
+5. **Payment/outstanding principal consistency review still needed**
+     - `outstanding_principal` relies on total RECEIPT-based amounts.
+     - Needed: verify behavior with mixed partial repayments + final release receipt
+         to ensure no double subtraction in edge cases.
+
+### Recommended Priority
+
+1. Implement auction/sold accounting postings and tests.
+2. Decide lifecycle policy for `REJECTED`, `CLOSED`, `undo_approve`, and cancelled reopen.
+3. Formalize REPLEDGED entry/exit in FSM or explicitly codify non-FSM ownership.
+4. Add scenario tests around `outstanding_principal` with partial payment timelines.

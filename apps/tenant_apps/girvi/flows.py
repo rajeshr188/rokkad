@@ -247,6 +247,7 @@ class LoanFlow(object):
         source=LoanStatus.DISBURSED,
         target=LoanStatus.SOLD,
         label=_("mark sold"),
+        permission=lambda flow, user: has_permission(user, "can_mark_sold"),
     )
     def mark_sold(self, sold_by, amount):
         """Mark collateral as sold — sale voucher created by the view."""

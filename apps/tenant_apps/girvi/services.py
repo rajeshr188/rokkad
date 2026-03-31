@@ -1548,3 +1548,177 @@ class DashboardMetricsService:
             "current_rates": rates,
             "rates_timestamp": timezone.now(),
         }
+
+
+# ============================================================================
+# Loan Transition Service
+# ============================================================================
+
+
+from dataclasses import dataclass, field as dc_field
+from typing import Optional
+
+
+@dataclass
+class TransitionResult:
+    """
+    Returned by LoanTransitionService.execute().
+
+    Attributes:
+        success:  True when the FSM transition completed (accounting may still
+                  have partially failed -- check level).
+        level:    Django messages level name: "success", "warning", or "error".
+        message:  Human-readable outcome string, ready for template rendering.
+        payment:  Populated for disbursal transitions only.
+        created:  True when a new voucher was posted (vs idempotent re-use).
+    """
+
+    success: bool
+    level: str
+    message: str
+    payment: Optional[object] = dc_field(default=None)
+    created: bool = False
+
+
+class LoanTransitionService:
+    """
+    Orchestrates a single GivenLoan FSM transition end-to-end:
+      1. Validates the transition can proceed (FSM guard).
+      2. Calls the matching LoanFlow method inside an atomic block where needed.
+      3. Triggers accounting side-effects (disbursal/reversal vouchers).
+      4. Returns a TransitionResult the view renders as a message.
+
+    The view is responsible only for:
+      - fetching the loan
+      - validating the form
+      - calling this service
+      - translating the result into an HTTP response
+    """
+
+    def __init__(self, loan, user, tenant):
+        self.loan = loan
+        self.user = user
+        self.tenant = tenant
+
+    def execute(self, transition_name: str, **payload) -> "TransitionResult":
+        from django.utils.translation import gettext_lazy as _
+        from .flows import LoanFlow
+
+        flow = LoanFlow(self.loan, self.user, self.tenant)
+        transition_method = getattr(flow, transition_name, None)
+
+        if not (transition_method and transition_method.can_proceed()):
+            return TransitionResult(
+                success=False,
+                level="error",
+                message=str(_(
+                    "You do not have permission to perform this action "
+                    "or the transition is not valid."
+                )),
+            )
+
+        if transition_name == "undo_disburse":
+            return self._undo_disburse(transition_method, **payload)
+
+        if transition_name == "undo_release":
+            return self._undo_release(transition_method, **payload)
+
+        # Generic forward transition
+        transition_method(**payload)
+
+        if transition_name == "disburse":
+            from .models import LoanStatus
+            if self.loan.status == LoanStatus.DISBURSED:
+                return self._post_disbursal()
+
+        if transition_name in {"mark_auctioned", "mark_sold"}:
+            return TransitionResult(
+                success=True,
+                level="warning",
+                message=str(_(
+                    "Loan status updated, but accounting posting for this "
+                    "transition is not implemented yet."
+                )),
+            )
+
+        from django.utils.translation import gettext_lazy as _
+        return TransitionResult(
+            success=True,
+            level="success",
+            message=str(_("Loan status updated successfully.")),
+        )
+
+    # -- Reversal handlers ---------------------------------------------------
+
+    def _undo_disburse(self, transition_method, **payload) -> "TransitionResult":
+        from django.core.exceptions import ValidationError
+        from django.utils.translation import gettext_lazy as _
+        from .payment_service import reverse_loan_disbursal
+
+        try:
+            with transaction.atomic():
+                transition_method(**payload)
+                reverse_loan_disbursal(self.loan, self.user)
+            return TransitionResult(
+                success=True,
+                level="success",
+                message=str(_(
+                    "Disbursal reversed successfully. Loan returned to Approved."
+                )),
+            )
+        except (ValueError, ValidationError) as exc:
+            return TransitionResult(success=False, level="error", message=str(exc))
+
+    def _undo_release(self, transition_method, **payload) -> "TransitionResult":
+        from django.core.exceptions import ValidationError
+        from django.utils.translation import gettext_lazy as _
+        from .payment_service import reverse_loan_release
+
+        try:
+            with transaction.atomic():
+                release = self.loan.release
+                transition_method(**payload)
+                reverse_loan_release(self.loan, self.user)
+                release.delete()
+            return TransitionResult(
+                success=True,
+                level="success",
+                message=str(_(
+                    "Release reversed successfully. Loan returned to Disbursed."
+                )),
+            )
+        except (ValueError, ValidationError) as exc:
+            return TransitionResult(success=False, level="error", message=str(exc))
+
+    # -- Accounting side-effects ---------------------------------------------
+
+    def _post_disbursal(self) -> "TransitionResult":
+        from django.utils.translation import gettext_lazy as _
+        from .payment_service import record_loan_disbursal
+
+        try:
+            payment, created = record_loan_disbursal(self.loan, self.user)
+            if created:
+                msg = str(_(
+                    f"Loan status updated successfully. "
+                    f"Disbursal voucher {payment.payment_id} posted."
+                ))
+            else:
+                msg = str(_(
+                    f"Loan status updated successfully. "
+                    f"Disbursal already recorded as {payment.payment_id}."
+                ))
+            return TransitionResult(
+                success=True, level="success", message=msg,
+                payment=payment, created=created,
+            )
+        except Exception as exc:
+            logger.exception("Disbursal posting failed for loan %s", self.loan.pk)
+            return TransitionResult(
+                success=True,
+                level="warning",
+                message=str(_(
+                    f"Loan status updated successfully, "
+                    f"but disbursal posting failed: {exc}"
+                )),
+            )

@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
@@ -44,16 +44,21 @@ from ..forms import (
 )
 from ..models import (
     GivenLoan,
-    JournalEntry,
     License,
     LoanChangeLog,
     LoanStatus,
     Release,
     TakenLoan,
 )
-from apps.tenant_apps.dea.models import Voucher
-from ..payment_service import record_loan_disbursal, reverse_loan_disbursal, reverse_loan_release
-from ..services import LoanIDGenerator
+from ..selectors import (
+    build_unified_loan_rows,
+    get_given_loan_detail_read_model,
+    filter_unified_loans,
+    get_loan_totals,
+    given_loan_base_qs,
+    taken_loan_base_qs,
+)
+from ..services import LoanIDGenerator, LoanTransitionService
 from ..tables import LoanTable, TakenLoanTable, UnifiedLoanTable
 
 form_classes = {
@@ -90,40 +95,6 @@ def _parse_selected_ids(raw_ids):
     return cleaned, invalid_count
 
 
-def _get_loan_journal_entries(loan):
-    """
-    Get all JournalEntries related to a GivenLoan through the proper relationship chain:
-    GivenLoan -> PaymentVoucher -> Voucher -> JournalEntry
-    """
-    # Import PaymentVoucher model to get its ContentType
-    from apps.tenant_apps.dea.models import PaymentVoucher
-
-    # Get all payment vouchers for this loan
-    payments = loan.payments.all()
-
-    if not payments.exists():
-        return JournalEntry.objects.none()
-
-    # Get ContentType for PaymentVoucher
-    payment_content_type = ContentType.objects.get_for_model(PaymentVoucher)
-    payment_ids = list(payments.values_list("id", flat=True))
-
-    # Get all vouchers for these payments
-    vouchers = Voucher.objects.filter(
-        doc_content_type=payment_content_type, doc_object_id__in=payment_ids
-    )
-
-    if not vouchers.exists():
-        return JournalEntry.objects.none()
-
-    # Get all journal entries for these vouchers
-    return (
-        JournalEntry.objects.filter(voucher__in=vouchers)
-        .select_related("voucher", "posted_by")
-        .order_by("-posted_at")
-    )
-
-
 def loan_transition_view(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
     transition_name = request.GET.get("transition") or request.POST.get("transition")
@@ -136,76 +107,10 @@ def loan_transition_view(request, pk):
     if request.method == "POST":
         form = form_class(request.POST, user=request.user)
         if form.is_valid():
-            flow = LoanFlow(loan, request.user, request.tenant)
-            transition_method = getattr(flow, transition_name, None)
-            if transition_method and transition_method.can_proceed():
-                if transition_name == "undo_disburse":
-                    try:
-                        with transaction.atomic():
-                            transition_method(**form.cleaned_data)
-                            reverse_loan_disbursal(loan, request.user)
-                        messages.success(
-                            request,
-                            _("Disbursal reversed successfully. Loan returned to Approved."),
-                        )
-                    except (ValueError, ValidationError) as exc:
-                        messages.error(request, str(exc))
-                    return redirect(loan.get_absolute_url())
-
-                elif transition_name == "undo_release":
-                    try:
-                        with transaction.atomic():
-                            release = loan.release
-                            transition_method(**form.cleaned_data)
-                            reverse_loan_release(loan, request.user)
-                            release.delete()
-                        messages.success(
-                            request,
-                            _("Release reversed successfully. Loan returned to Disbursed."),
-                        )
-                    except (ValueError, ValidationError) as exc:
-                        messages.error(request, str(exc))
-                    return redirect(loan.get_absolute_url())
-
-                transition_method(**form.cleaned_data)
-
-                if transition_name == "disburse" and loan.status == LoanStatus.DISBURSED:
-                    try:
-                        payment, created = record_loan_disbursal(loan, request.user)
-                        if created:
-                            messages.success(
-                                request,
-                                _(
-                                    f"Loan status updated successfully. Disbursal voucher {payment.payment_id} posted."
-                                ),
-                            )
-                        else:
-                            messages.success(
-                                request,
-                                _(
-                                    f"Loan status updated successfully. Disbursal already recorded as {payment.payment_id}."
-                                ),
-                            )
-                    except Exception as exc:
-                        logger.exception(
-                            "Disbursal posting failed for loan %s", loan.pk
-                        )
-                        messages.warning(
-                            request,
-                            _(
-                                f"Loan status updated successfully, but disbursal posting failed: {exc}"
-                            ),
-                        )
-                    return redirect(loan.get_absolute_url())
-
-                messages.success(request, _("Loan status updated successfully."))
-            else:
-                messages.error(
-                    request,
-                    _(
-                        "You do not have permission to perform this action or the transition is not valid."
-                    ),
-                )
+            result = LoanTransitionService(loan, request.user, request.tenant).execute(
+                transition_name, **form.cleaned_data
+            )
+            getattr(messages, result.level)(request, result.message)
             return redirect(loan.get_absolute_url())
     else:
         form = form_class(user=request.user)
@@ -213,11 +118,7 @@ def loan_transition_view(request, pk):
     return render(
         request,
         "girvi/loan/loan_transition_form.html",
-        {
-            "form": form,
-            "loan": loan,
-            "transition_name": transition_name,
-        },
+        {"form": form, "loan": loan, "transition_name": transition_name},
     )
 
 
@@ -275,62 +176,24 @@ def get_interestrate(request):
 def loan_list(request: HttpRequest):
     loan_kind = request.GET.get("loan_kind", "given")
 
-    def get_given_qs():
-        return (
-            GivenLoan.objects.get_queryset()
-            .for_table_display()
-            .order_by("-id")
-            .select_related("borrower", "series", "created_by")
-            .prefetch_related("notifications", "loanitems")
-        )
-
-    def get_taken_qs():
-        # TakenLoan does not have a release relation; avoid for_table_display()
-        # because shared duration annotations reference release__release_date.
-        return (
-            TakenLoan.objects.get_queryset()
-            .with_metal_weights()
-            .with_itemwise_amounts()
-            .with_current_value()
-            .order_by("-id")
-            .select_related("lender", "series", "created_by")
-            .prefetch_related("repledgedloanitems")
-        )
-
     if loan_kind == "taken":
-        taken_qs = get_taken_qs()
-        filter = TakenLoanFilter(request.GET, request=request, queryset=taken_qs)
+        f = TakenLoanFilter(request.GET, request=request, queryset=taken_loan_base_qs())
+        totals = get_loan_totals(taken_qs=f.qs)
     elif loan_kind == "all":
-        filter = None
+        f = None
+        totals = get_loan_totals(
+            given_qs=given_loan_base_qs(), taken_qs=taken_loan_base_qs()
+        )
     else:
         loan_kind = "given"
-        given_qs = get_given_qs()
-        filter = LoanFilter(request.GET, request=request, queryset=given_qs)
-
-    if loan_kind == "given":
-        total_loan_amount = filter.qs.aggregate(total=Sum("loanitems__loanamount"))
-        total_interest = filter.qs.aggregate(total=Sum("loanitems__interest"))
-    elif loan_kind == "taken":
-        total_loan_amount = filter.qs.aggregate(
-            total=Sum("repledgedloanitems__repledged_loanamount")
-        )
-        total_interest = filter.qs.aggregate(total=Sum("repledgedloanitems__interest"))
-    else:
-        given_qs = get_given_qs()
-        taken_qs = get_taken_qs()
-        given_total = given_qs.aggregate(total=Sum("loanitems__loanamount"))["total"] or 0
-        taken_total = taken_qs.aggregate(total=Sum("repledgedloanitems__repledged_loanamount"))["total"] or 0
-        given_interest = given_qs.aggregate(total=Sum("loanitems__interest"))["total"] or 0
-        taken_interest = taken_qs.aggregate(total=Sum("repledgedloanitems__interest"))["total"] or 0
-        total_loan_amount = {"total": given_total + taken_total}
-        total_interest = {"total": given_interest + taken_interest}
+        f = LoanFilter(request.GET, request=request, queryset=given_loan_base_qs())
+        totals = get_loan_totals(given_qs=f.qs)
 
     context = {
-        "filter": filter,
+        "filter": f,
         "loan_kind": loan_kind,
         "export_formats": ["csv", "xls", "xlsx", "json", "html"],
-        "total_loan_amount": total_loan_amount,
-        "total_interest": total_interest,
+        **totals,
     }
     if request.htmx:
         return render(request, "girvi/loan/loan_list.html#loan-content", context)
@@ -341,114 +204,31 @@ def loan_list(request: HttpRequest):
 def loan_table_partial(request: HttpRequest):
     loan_kind = request.GET.get("loan_kind", "given")
 
-    def get_given_qs():
-        return (
-            GivenLoan.objects.get_queryset()
-            .for_table_display()
-            .order_by("-id")
-            .select_related("borrower", "series", "created_by")
-            .prefetch_related("notifications", "loanitems")
-        )
-
-    def get_taken_qs():
-        # TakenLoan does not have a release relation; avoid for_table_display()
-        # because shared duration annotations reference release__release_date.
-        return (
-            TakenLoan.objects.get_queryset()
-            .with_metal_weights()
-            .with_itemwise_amounts()
-            .with_current_value()
-            .order_by("-id")
-            .select_related("lender", "series", "created_by")
-            .prefetch_related("repledgedloanitems")
-        )
-
     if loan_kind == "taken":
-        taken_qs = get_taken_qs()
-        filter = TakenLoanFilter(request.GET, request=request, queryset=taken_qs)
-        table = TakenLoanTable(filter.qs)
-        total_loan_amount = filter.qs.aggregate(
-            total=Sum("repledgedloanitems__repledged_loanamount")
-        )
-        total_interest = filter.qs.aggregate(total=Sum("repledgedloanitems__interest"))
+        f = TakenLoanFilter(request.GET, request=request, queryset=taken_loan_base_qs())
+        table = TakenLoanTable(f.qs)
+        totals = get_loan_totals(taken_qs=f.qs)
     elif loan_kind == "all":
-        given_qs = get_given_qs()
-        taken_qs = get_taken_qs()
         query = request.GET.get("query", "").strip()
         status = request.GET.get("status", "All")
-        if query:
-            given_qs = given_qs.filter(
-                Q(id__icontains=query)
-                | Q(loan_id__icontains=query)
-                | Q(borrower__firstname__icontains=query)
-                | Q(borrower__lastname__icontains=query)
-            )
-            taken_qs = taken_qs.filter(
-                Q(id__icontains=query)
-                | Q(loan_id__icontains=query)
-                | Q(lender__firstname__icontains=query)
-                | Q(lender__lastname__icontains=query)
-            )
-        if status == "Released":
-            given_qs = given_qs.filter(release__isnull=False)
-            taken_qs = taken_qs.filter(status=LoanStatus.RELEASED)
-        elif status == "UnReleased":
-            given_qs = given_qs.filter(release__isnull=True)
-            taken_qs = taken_qs.exclude(status=LoanStatus.RELEASED)
-
-        all_rows = [
-            {
-                "id": row.id,
-                "loan_type": "Given",
-                "loan_id": row.loan_id,
-                "loan_date": row.loan_date,
-                "party": row.borrower.name,
-                "status": row.status,
-                "loan_amount": row.get_loan_amount,
-            }
-            for row in given_qs
-        ] + [
-            {
-                "id": row.id,
-                "loan_type": "Taken",
-                "loan_id": row.loan_id,
-                "loan_date": row.loan_date,
-                "party": row.lender.name,
-                "status": row.status,
-                "loan_amount": row.get_loan_amount,
-            }
-            for row in taken_qs
-        ]
-        all_rows.sort(key=lambda row: row["loan_date"], reverse=True)
-
-        filter = None
-        table = UnifiedLoanTable(all_rows)
-        total_loan_amount = {
-            "total": (given_qs.aggregate(total=Sum("loanitems__loanamount"))["total"] or 0)
-            + (
-                taken_qs.aggregate(total=Sum("repledgedloanitems__repledged_loanamount"))["total"]
-                or 0
-            )
-        }
-        total_interest = {
-            "total": (given_qs.aggregate(total=Sum("loanitems__interest"))["total"] or 0)
-            + (taken_qs.aggregate(total=Sum("repledgedloanitems__interest"))["total"] or 0)
-        }
+        given_qs, taken_qs = filter_unified_loans(
+            given_loan_base_qs(), taken_loan_base_qs(), query=query, status=status
+        )
+        f = None
+        table = UnifiedLoanTable(build_unified_loan_rows(given_qs, taken_qs))
+        totals = get_loan_totals(given_qs=given_qs, taken_qs=taken_qs)
     else:
         loan_kind = "given"
-        given_qs = get_given_qs()
-        filter = LoanFilter(request.GET, request=request, queryset=given_qs)
-        table = LoanTable(filter.qs)
-        total_loan_amount = filter.qs.aggregate(total=Sum("loanitems__loanamount"))
-        total_interest = filter.qs.aggregate(total=Sum("loanitems__interest"))
+        f = LoanFilter(request.GET, request=request, queryset=given_loan_base_qs())
+        table = LoanTable(f.qs)
+        totals = get_loan_totals(given_qs=f.qs)
 
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
     context = {
         "table": table,
         "loan_kind": loan_kind,
-        "total_loan_amount": total_loan_amount,
-        "total_interest": total_interest,
-        "filter": filter,
+        "filter": f,
+        **totals,
     }
     if request.htmx:
         return render(request, "girvi/loan/loan_list.html#loan-table", context)
@@ -852,59 +632,80 @@ def deleteLoan(request):
 @login_required
 @require_http_methods(["GET"])
 def loan_detail_items_tab(request, pk):
-    loan = get_object_or_404(GivenLoan.objects.prefetch_related("loanitems"), pk=pk)
+    rm = get_given_loan_detail_read_model(pk)
     return render(
         request,
         "girvi/loan/loan_detail_1.html#items-tab",
-        {"loan": loan, "items": loan.loanitems.all()},
+        {"loan": rm["loan"], "items": rm["items"], "summary": rm["summary"]},
     )
 
 
 @login_required
 @require_http_methods(["GET"])
 def loan_detail_payments_tab(request, pk):
-    loan = get_object_or_404(GivenLoan, pk=pk)
-    payments = loan.payments.order_by("-payment_date")
+    rm = get_given_loan_detail_read_model(pk)
     return render(
         request,
         "girvi/loan/loan_detail_1.html#payments-tab",
-        {"loan": loan, "payments": payments},
+        {
+            "loan": rm["loan"],
+            "payments": rm["payments"],
+            "summary": rm["summary"],
+        },
     )
 
 
 @login_required
 @require_http_methods(["GET"])
 def loan_detail_transactions_tab(request, pk):
-    loan = get_object_or_404(GivenLoan, pk=pk)
+    rm = get_given_loan_detail_read_model(pk)
     return render(
         request,
         "girvi/loan/loan_detail_1.html#transactions-tab",
-        {"loan": loan, "je": _get_loan_journal_entries(loan)},
+        {
+            "loan": rm["loan"],
+            "je": rm["journal_entries"],
+            "summary": rm["summary"],
+        },
     )
 
 
 @login_required
 @require_http_methods(["GET"])
 def loan_detail_statement_tab(request, pk):
-    loan = get_object_or_404(GivenLoan, pk=pk)
-    return render(request, "girvi/loan/loan_detail_1.html#statement-tab", {"loan": loan})
+    rm = get_given_loan_detail_read_model(pk)
+    return render(
+        request,
+        "girvi/loan/loan_detail_1.html#statement-tab",
+        {
+            "loan": rm["loan"],
+            "statement_items": rm["statement_items"],
+            "summary": rm["summary"],
+        },
+    )
 
 
 @login_required
 @require_http_methods(["GET"])
 def loan_detail_notices_tab(request, pk):
-    loan = get_object_or_404(
-        GivenLoan.objects.prefetch_related("notifications"), pk=pk
-    )
+    rm = get_given_loan_detail_read_model(pk)
     return render(
         request,
         "girvi/loan/loan_detail_1.html#notices-tab",
-        {"loan": loan, "notifications": loan.notifications.all()},
+        {
+            "loan": rm["loan"],
+            "notifications": rm["notifications"],
+            "summary": rm["summary"],
+        },
     )
 
 
 @login_required
 @require_http_methods(["GET"])
 def loan_detail_release_tab(request, pk):
-    loan = get_object_or_404(GivenLoan, pk=pk)
-    return render(request, "girvi/loan/loan_detail_1.html#release-tab", {"loan": loan})
+    rm = get_given_loan_detail_read_model(pk)
+    return render(
+        request,
+        "girvi/loan/loan_detail_1.html#release-tab",
+        {"loan": rm["loan"], "summary": rm["summary"]},
+    )
