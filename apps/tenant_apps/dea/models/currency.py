@@ -218,14 +218,10 @@ class ExchangeRate(models.Model):
 
 class CurrencyConfiguration(models.Model):
     """
-    Workspace-level currency configuration
+    Tenant-schema currency configuration (one per tenant schema).
+    No cross-schema FK needed — isolation is handled by the schema itself.
     """
 
-    from apps.orgs.models import Company
-
-    workspace = models.OneToOneField(
-        Company, on_delete=models.CASCADE, related_name="currency_config"
-    )
     base_currency = models.CharField(
         max_length=3, default="INR", help_text="Primary currency for this workspace"
     )
@@ -251,7 +247,7 @@ class CurrencyConfiguration(models.Model):
         verbose_name_plural = _("Currency Configurations")
 
     def __str__(self):
-        return f"{self.workspace} - Base: {self.base_currency}"
+        return f"Currency config - Base: {self.base_currency}"
 
     def get_enabled_currencies(self):
         """Get list of enabled currencies including base currency"""
