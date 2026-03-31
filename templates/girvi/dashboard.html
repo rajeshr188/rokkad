@@ -93,7 +93,7 @@
             <p class="text-muted mb-3">Manage collateral and repledging</p>
             <div class="d-grid gap-2">
               <a href="{% url 'girvi:create_repledge_select_items' %}" class="btn btn-sm btn-outline-info">Create Repledge</a>
-              <a href="{% url 'girvi:storage_boxes' %}" class="btn btn-sm btn-outline-info">View Custody Items</a>
+              <a href="{% url 'girvi:girvi_storage_boxes' %}" class="btn btn-sm btn-outline-info">View Custody Items</a>
             </div>
           </div>
         </div>
@@ -150,7 +150,7 @@
               <p class="text-muted mb-1">Total Boxes</p>
               <h4 class="mb-0">{{ total_boxes }}</h4>
             </div>
-            <a href="{% url 'girvi:storage_boxes' %}" class="btn btn-sm btn-dark w-100">Manage</a>
+            <a href="{% url 'girvi:girvi_storage_boxes' %}" class="btn btn-sm btn-dark w-100">Manage</a>
           </div>
         </div>
       </div>
@@ -205,7 +205,7 @@
               <p class="text-muted mb-1">Total Statement Items</p>
               <h4 class="mb-0">{{ total_statements }}</h4>
             </div>
-            <a href="{% url 'girvi:statement_list' %}" class="btn btn-sm btn-primary w-100">View</a>
+            <a href="{% url 'girvi:girvi_statement_list' %}" class="btn btn-sm btn-primary w-100">View</a>
           </div>
         </div>
       </div>

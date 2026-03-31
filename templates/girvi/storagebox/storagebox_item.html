@@ -9,7 +9,7 @@
         <div class="btn-group btn-group-sm">
             <button
                 class="btn btn-outline-primary"
-                hx-get="{% url 'girvi:update_storage_box' storage_box.pk %}"
+                hx-get="{% url 'girvi:girvi_update_storage_box' storage_box.pk %}"
                 hx-target="#storagebox-form"
                 hx-trigger="click"
             >
@@ -17,7 +17,7 @@
             </button>
             <button
                 class="btn btn-outline-danger"
-                hx-post="{% url 'girvi:delete_storage_box' storage_box.pk %}"
+                hx-post="{% url 'girvi:girvi_delete_storage_box' storage_box.pk %}"
                 hx-target="#storagebox-list"
                 hx-swap="outerHTML"
                 hx-confirm="Delete this storage box?"

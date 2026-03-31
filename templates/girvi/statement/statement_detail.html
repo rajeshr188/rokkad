@@ -3,7 +3,7 @@
 {%load crispy_forms_filters%}
 {% block content %}
 
-<a href="{% url 'girvi:statement_list' %}" class="btn btn-primary">Back</a>
+<a href="{% url 'girvi:girvi_statement_list' %}" class="btn btn-primary">Back</a>
 <div class="card">
     <div class="card-body">
         <h2>Statement Details</h2>
@@ -114,7 +114,7 @@
                     type="text" id="loan-id-input" name="loan_id" placeholder="Loan ID" required>
             </div>
 
-            <a href="{% url 'girvi:statement_update' statement.id %}" class="btn btn-primary">Complete</a>
+            <a href="{% url 'girvi:girvi_statement_update' statement.id %}" class="btn btn-primary">Complete</a>
             {% endif %}
         </div>
 
