@@ -37,64 +37,88 @@
   hx-get="{% url 'girvi:girvi_loan_detail' loan.id %}"
   hx-target="this" hx-swap="outerHTML transition:true">
 
-  <!-- Navigation & Action Toolbar -->
-  <div class="btn-toolbar mb-3" role="toolbar" aria-label="Loan Actions">
-    <div class="btn-group me-2" role="group" aria-label="Navigation">
-      {% if loan.get_previous %}
-      <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_previous.pk %}"
-        hx-target="#loan-detail-container" hx-swap="outerHTML transition:true"
-        hx-push-url="true" type="button" class="btn btn-outline-primary">
-        Previous {{ loan.get_previous.loan_id }}
-      </a>
-      {% endif %}
-      {% if loan.get_next %}
-      <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_next.id %}"
-        hx-target="#loan-detail-container" hx-swap="outerHTML transition:true"
-        hx-push-url="true" type="button" class="btn btn-outline-primary">
-        Next {{ loan.get_next.loan_id }}
-      </a>
-      {% endif %}
-    </div>
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+        <div>
+          <div class="d-flex flex-wrap gap-2 mb-2">
+            {% if loan.get_previous %}
+            <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_previous.pk %}"
+              hx-target="#loan-detail-container" hx-swap="outerHTML transition:true"
+              hx-push-url="true" class="btn btn-sm btn-outline-primary">
+              ← {{ loan.get_previous.loan_id }}
+            </a>
+            {% endif %}
+            {% if loan.get_next %}
+            <a hx-get="{% url 'girvi:girvi_loan_detail' loan.get_next.id %}"
+              hx-target="#loan-detail-container" hx-swap="outerHTML transition:true"
+              hx-push-url="true" class="btn btn-sm btn-outline-primary">
+              {{ loan.get_next.loan_id }} →
+            </a>
+            {% endif %}
+          </div>
+          <h2 class="h4 mb-1">Loan {{ object.loan_id }}</h2>
+          <div class="text-muted small">
+            {{ customer.name }} · {{ object.loan_date|date:"d M Y" }}
+            {% if location %}· {{ location }}{% if position %} · Slot {{ position }}{% endif %}{% endif %}
+          </div>
+        </div>
 
-    <div class="btn-group me-2" role="group" aria-label="Actions">
-      <a class="btn btn-outline-secondary {% if loan.loan_amount == 0 or loan.loan_type == 'Taken' %}disabled{% endif %}"
-        href="{% url 'girvi:loan_pdf' loan.id %}">Print</a>
-      {% if not object.is_released %}
-      <a class="btn btn-outline-success" hx-get="{% url 'girvi:release_loan_check_custody' loan.id %}"
-        hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">Release</a>
-      <a class="btn btn-outline-dark" hx-get="{% url 'girvi:create_repledge_select_items' %}"
-        hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">Repledge</a>
-      <a class="btn btn-outline-secondary" hx-get="{% url 'girvi:loan_custody_summary' loan.id %}"
-        hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">Custody</a>
-      <a class="btn btn-outline-primary" href="{% url 'girvi:girvi_loan_renew' object.id %}">Renew</a>
-      {% if loan.loanitems.count > 1 %}
-      <a class="btn btn-warning btn-sm"
-        hx-post="{% url 'girvi:split_loan_items' loan.id %}"
-        hx-confirm="This will split all items except the first one into separate loans. Continue?"
-        hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">Split Items</a>
-      {% endif %}
-      {% endif %}
-    </div>
+        <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-start">
+          <a class="btn btn-outline-secondary {% if loan.loan_amount == 0 or loan.loan_type == 'Taken' %}disabled{% endif %}"
+            href="{% url 'girvi:loan_pdf' loan.id %}">Print</a>
 
-    <div class="btn-group" role="group">
-      <a class="btn btn-outline-info" hx-get="{% url 'girvi:girvi_loan_update' object.id %}"
-        hx-target="#modal .modal-content"
-        hx-swap="innerHTML"
-        data-bs-toggle="modal"
-        data-bs-target="#modal">Edit</a>
-      <a class="btn btn-outline-danger" hx-confirm="Are you sure you want to delete this loan?"
-        hx-delete="{% url 'girvi:girvi_loan_delete' object.id %}">Delete</a>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Tools
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+              <li>
+                <a class="dropdown-item" hx-get="{% url 'girvi:loan_custody_summary' loan.id %}"
+                  hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">
+                  Custody Summary
+                </a>
+              </li>
+              {% if not object.is_released %}
+              <li><a class="dropdown-item" href="{% url 'girvi:girvi_loan_renew' object.id %}">Renew Loan</a></li>
+              <li>
+                <a class="dropdown-item" hx-get="{% url 'girvi:create_repledge_select_items' %}"
+                  hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">
+                  Create Repledge Loan
+                </a>
+              </li>
+              {% if loan.loanitems.count > 1 %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <button type="button" class="dropdown-item text-warning"
+                  hx-post="{% url 'girvi:split_loan_items' loan.id %}"
+                  hx-confirm="This will split all items except the first one into separate loans. Continue?"
+                  hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">
+                  Split Items into Loans
+                </button>
+              </li>
+              {% endif %}
+              {% endif %}
+            </ul>
+          </div>
+
+          <a class="btn btn-outline-primary" hx-get="{% url 'girvi:girvi_loan_update' object.id %}"
+            hx-target="#modal .modal-content"
+            hx-swap="innerHTML"
+            data-bs-toggle="modal"
+            data-bs-target="#modal">Edit</a>
+          <a class="btn btn-outline-danger" hx-confirm="Are you sure you want to delete this loan?"
+            hx-delete="{% url 'girvi:girvi_loan_delete' object.id %}">Delete</a>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Loan Status & Lifecycle Panel -->
-  <div class="card mb-3 border-0 shadow-sm">
-    <div class="card-body py-2">
-      <div class="d-flex flex-wrap align-items-center gap-3">
-
-        <!-- Current status badge -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <div class="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-start">
         <div>
-          <span class="text-muted small me-1">Status:</span>
+          <div class="text-muted small mb-2">Lifecycle</div>
           {% if current_status == "Disbursed" %}
             <span class="badge bg-primary fs-6">{{ current_status }}</span>
           {% elif current_status == "Approved" %}
@@ -110,308 +134,316 @@
           {% else %}
             <span class="badge bg-secondary fs-6">{{ current_status }}</span>
           {% endif %}
+          <span class="badge bg-light text-dark border ms-2">{{ object.loan_type }} Loan</span>
         </div>
 
-        <!-- Status history mini-timeline -->
-        {% if change_log %}
-        <div class="d-flex align-items-center gap-1 flex-wrap small text-muted">
-          <span class="me-1">History:</span>
-          {% for entry in change_log %}
-            <span class="badge bg-light text-dark border"
-                  title="{{ entry.changed|date:'d M Y H:i' }} by {{ entry.author }}{% if entry.metadata %} — {{ entry.metadata }}{% endif %}">
-              {{ entry.source }} → {{ entry.target }}
-            </span>
-          {% endfor %}
-        </div>
-        {% endif %}
-
-        <!-- Available transition action buttons -->
         {% if transition_actions %}
-        <div class="ms-auto d-flex flex-wrap gap-2">
-          <span class="text-muted small align-self-center">Actions:</span>
-          {% for action in transition_actions %}
-            {% if action.is_htmx %}
-              <a class="btn btn-sm {{ action.button_class }}"
-                 hx-get="{{ action.hx_get }}"
-                 hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">
-                {{ action.icon }} {{ action.title }}
-              </a>
-            {% else %}
-              <a class="btn btn-sm {{ action.button_class }}"
-                 href="{{ action.href }}">
-                {{ action.icon }} {{ action.title }}
-              </a>
-            {% endif %}
-          {% endfor %}
+        <div class="ms-xl-auto">
+          <div class="text-muted small mb-2">Available transitions</div>
+          <div class="d-flex flex-wrap gap-2">
+            {% for action in transition_actions %}
+              {% if action.is_htmx %}
+                <a class="btn btn-sm {{ action.button_class }}"
+                   hx-get="{{ action.hx_get }}"
+                   hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">
+                  {{ action.icon }} {{ action.title }}
+                </a>
+              {% else %}
+                <a class="btn btn-sm {{ action.button_class }}"
+                   href="{{ action.href }}">
+                  {{ action.icon }} {{ action.title }}
+                </a>
+              {% endif %}
+            {% endfor %}
+          </div>
         </div>
         {% endif %}
-
       </div>
+
+      {% if change_log %}
+      <hr class="my-3">
+      <div class="text-muted small mb-2">Recent history</div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for entry in change_log|slice:":8" %}
+          <span class="badge bg-light text-dark border"
+                title="{{ entry.changed|date:'d M Y H:i' }} by {{ entry.author }}{% if entry.metadata %} — {{ entry.metadata }}{% endif %}">
+            {{ entry.source }} → {{ entry.target }}
+          </span>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
   </div>
 
-  <!-- Main two-column layout -->
-  <div class="row">
-    <!-- Left sidebar -->
-    <div class="col-md-3">
-      <div class="card border-primary mb-3">
-        {% if customer.get_default_pic %}
-        <img src="{{ customer.get_default_pic.url }}" alt="{{ customer.name }}'s Profile Picture"
-          class="avatar-img card-img-top">
-        {% else %}
-        <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture" class="avatar-img card-img-top">
-        {% endif %}
+  <div class="row g-3 mb-3">
+    <div class="col-xl-4">
+      <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <h5 class="card-title {% if object.is_released %}bg-success{% endif %}">
-            Loan {{object.loan_type}} ID: {{object.loan_id}}
-          </h5>
-          <p class="card-text">
-            {{customer.name}} {{customer.get_relatedas_display}} {{customer.relatedto}}<br />
-            <a class="card-link link-info" hx-get="{% url 'contact_customer_detail' customer.id %}"
-              hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true"></a>
-            <a class="card-link link-warning" hx-get="{% url 'contact_customer_update' customer.id %}"
-              hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true"></a>
-          </p>
-          <p class="card-text"><strong>Address:</strong> {{customer.address.first}}</p>
-          <p class="card-text"><strong>Phone:</strong> {{customer.contactno.first}}</p>
-        </div>
-        <ul class="list-group list-group-flush">
-          <li class="list-group-item"><strong>Date:</strong> {{ object.loan_date|date:"F j, Y" }}</li>
-          <li class="list-group-item"><strong>Created By:</strong> {{object.created_by}}</li>
-          <li class="list-group-item">
-            <strong>Due Ratio:</strong>
-            <meter value="{{dvratio}}" min="0" max="100" low="30" high="{{loan.due}}" optimum="50"></meter>
-            {{dvratio}} %
-          </li>
-          <li class="list-group-item">
-            <span class="font-weight-bold">Months Since:</span>
-            <span class="badge bg-info">{{object.months_elapsed}} ({{object.loan_date|timesince}})</span>
-          </li>
-          <li class="list-group-item">
-            <span class="font-weight-bold">Expires:</span>
-            {% if worth %}
-            <span class="badge bg-danger">{{object.calculate_months_to_exceed_value}} Months</span>
+          <div class="d-flex align-items-center gap-3 mb-3">
+            {% if customer.get_default_pic %}
+            <img src="{{ customer.get_default_pic.url }}" alt="{{ customer.name }}'s Profile Picture"
+              class="rounded-circle border" style="width: 72px; height: 72px; object-fit: cover;">
             {% else %}
-            <span class="badge bg-danger">Expired</span>
+            <img src="{% static 'images/falconx.png' %}" alt="Default Profile Picture"
+              class="rounded-circle border" style="width: 72px; height: 72px; object-fit: cover;">
             {% endif %}
-          </li>
-          <li class="list-group-item">Location: {{location}}:{{position}}th item.</li>
-        </ul>
+            <div>
+              <h5 class="mb-1">{{ customer.name }}</h5>
+              <div class="text-muted small">
+                {{ customer.get_relatedas_display }}{% if customer.relatedto %} {{ customer.relatedto }}{% endif %}
+              </div>
+              <div class="small mt-1">
+                <a class="link-info text-decoration-none" hx-get="{% url 'contact_customer_detail' customer.id %}"
+                  hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true">View customer</a>
+                <span class="text-muted">·</span>
+                <a class="link-warning text-decoration-none" hx-get="{% url 'contact_customer_update' customer.id %}"
+                  hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true">Edit customer</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="small text-muted mb-2">Contact</div>
+          <div class="small mb-3">
+            <div><strong>Phone:</strong> {{ customer.contactno.first|default:"—" }}</div>
+            <div><strong>Address:</strong> {{ customer.address.first|default:"—" }}</div>
+          </div>
+
+          <div class="small text-muted mb-2">Loan meta</div>
+          <ul class="list-group list-group-flush small">
+            <li class="list-group-item px-0 d-flex justify-content-between"><span>Created by</span><strong>{{ object.created_by|default:"—" }}</strong></li>
+            <li class="list-group-item px-0 d-flex justify-content-between"><span>Opened</span><strong>{{ object.loan_date|date:"d M Y" }}</strong></li>
+            <li class="list-group-item px-0 d-flex justify-content-between"><span>Months elapsed</span><strong>{{ object.months_elapsed }}</strong></li>
+            <li class="list-group-item px-0 d-flex justify-content-between">
+              <span>Expiry window</span>
+              <strong>{% if worth %}{{ object.calculate_months_to_exceed_value }} months{% else %}Expired{% endif %}</strong>
+            </li>
+            <li class="list-group-item px-0 d-flex justify-content-between"><span>Location</span><strong>{% if location %}{{ location }}{% if position %} / {{ position }}{% endif %}{% else %}—{% endif %}</strong></li>
+          </ul>
+        </div>
       </div>
     </div>
 
-    <!-- Right column: tabs -->
-    <div class="col-md-9">
-      <div class="card text-center">
-        <div class="card-header">
-          <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="items-tab"
-                data-bs-toggle="tab" data-bs-target="#items-tab-pane"
-                hx-get="{% url 'girvi:loan_detail_items_tab' loan.pk %}"
-                hx-target="#items-tab-pane" hx-swap="innerHTML"
-                hx-trigger="click, load"
-                type="button" role="tab" aria-controls="items-tab-pane" aria-selected="true">
-                Items <span class="badge bg-secondary">{{object.loanitems.count}}</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="payments-tab"
-                data-bs-toggle="tab" data-bs-target="#payments-tab-pane"
-                hx-get="{% url 'girvi:loan_detail_payments_tab' loan.pk %}"
-                hx-target="#payments-tab-pane" hx-swap="innerHTML"
-                hx-trigger="click"
-                type="button" role="tab" aria-controls="payments-tab-pane" aria-selected="false">
-                Payment <span class="badge bg-secondary">{{object.payments.count}}</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="transactions-tab"
-                data-bs-toggle="tab" data-bs-target="#transactions-tab-pane"
-                hx-get="{% url 'girvi:loan_detail_transactions_tab' loan.pk %}"
-                hx-target="#transactions-tab-pane" hx-swap="innerHTML"
-                hx-trigger="click"
-                type="button" role="tab" aria-controls="transactions-tab-pane" aria-selected="false">
-                Transactions
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="statement-tab"
-                data-bs-toggle="tab" data-bs-target="#statement-tab-pane"
-                hx-get="{% url 'girvi:loan_detail_statement_tab' loan.pk %}"
-                hx-target="#statement-tab-pane" hx-swap="innerHTML"
-                hx-trigger="click"
-                type="button" role="tab" aria-controls="statement-tab-pane" aria-selected="false">
-                Statement <span class="badge bg-secondary">{{object.statementitem_set.count}}</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="notices-tab"
-                data-bs-toggle="tab" data-bs-target="#notices-tab-pane"
-                hx-get="{% url 'girvi:loan_detail_notices_tab' loan.pk %}"
-                hx-target="#notices-tab-pane" hx-swap="innerHTML"
-                hx-trigger="click"
-                type="button" role="tab" aria-controls="notices-tab-pane" aria-selected="false">
-                Notice <span class="badge bg-secondary">{{loan.notifications.count}}</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="release-tab"
-                data-bs-toggle="tab" data-bs-target="#release-tab-pane"
-                hx-get="{% url 'girvi:loan_detail_release_tab' loan.pk %}"
-                hx-target="#release-tab-pane" hx-swap="innerHTML"
-                hx-trigger="click"
-                type="button" role="tab" aria-controls="release-tab-pane" aria-selected="false">
-                Release
-                          <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="renewal-tab"
-                              data-bs-toggle="tab" data-bs-target="#renewal-tab-pane"
-                              type="button" role="tab" aria-controls="renewal-tab-pane" aria-selected="false">
-                              Renewal Chain
-                              {% if renewals_as_source or origin_renewal %}
-                              <span class="badge bg-info">{{ renewals_as_source|length|add:origin_renewal|yesno:"1,0" }}</span>
-                              {% endif %}
-                            </button>
-                          </li>
-                        </ul>
-              </button>
-            </li>
-          </ul>
-        </div>
-        <div class="card-body">
-          <div class="tab-content" id="myTabContent">
-            <div class="tab-pane fade show active" id="items-tab-pane" role="tabpanel"
-              aria-labelledby="items-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="payments-tab-pane" role="tabpanel"
-              aria-labelledby="payments-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="transactions-tab-pane" role="tabpanel"
-              aria-labelledby="transactions-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="statement-tab-pane" role="tabpanel"
-              aria-labelledby="statement-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="notices-tab-pane" role="tabpanel"
-              aria-labelledby="notices-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="release-tab-pane" role="tabpanel"
-              aria-labelledby="release-tab" tabindex="0"></div>
-                      <div class="tab-pane fade" id="renewal-tab-pane" role="tabpanel"
-                        aria-labelledby="renewal-tab" tabindex="0">
-                        {# ── Origin renewal (this loan was created by a renewal) ── #}
-                        {% if origin_renewal %}
-                        <div class="alert alert-info small mb-3">
-                          This loan was created by renewing
-                          <a href="{% url 'girvi:girvi_loan_detail' origin_renewal.source_loan_id %}">
-                            {{ origin_renewal.source_loan }}
-                          </a>
-                          on {{ origin_renewal.renewal_date|date:"d M Y" }}
-                          ({{ origin_renewal.get_mode_display }}).
-                        </div>
-                        {% endif %}
-
-                        {# ── Renewals where this loan is the source ── #}
-                        {% if renewals_as_source %}
-                        <div class="table-responsive">
-                          <table class="table table-sm table-hover">
-                            <thead class="table-light">
-                              <tr>
-                                <th>Date</th>
-                                <th>Mode</th>
-                                <th>Interest Paid</th>
-                                <th>Principal Paid</th>
-                                <th>Extra</th>
-                                <th>New Loan</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {% for r in renewals_as_source %}
-                              <tr>
-                                <td>{{ r.renewal_date|date:"d M Y" }}</td>
-                                <td><span class="badge bg-secondary">{{ r.get_mode_display }}</span></td>
-                                <td>₹{{ r.interest_paid }}</td>
-                                <td>₹{{ r.principal_paid }}</td>
-                                <td>₹{{ r.requested_extra_amount }}</td>
-                                <td>
-                                  {% if r.renewed_loan %}
-                                  <a href="{% url 'girvi:girvi_loan_detail' r.renewed_loan_id %}">
-                                    {{ r.renewed_loan.loan_id }}
-                                  </a>
-                                  {% else %}&mdash;{% endif %}
-                                </td>
-                              </tr>
-                              {% endfor %}
-                            </tbody>
-                          </table>
-                        </div>
-                        {% else %}
-                        <p class="text-muted small mt-2">No renewals on this loan.</p>
-                        {% endif %}
-                      </div>
+    <div class="col-xl-8">
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small">Principal</div>
+              <div class="h5 mb-0">{{ object.get_loan_amount_with_currency|default:"₹0" }}</div>
+            </div>
           </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small">Interest Due</div>
+              <div class="h5 mb-0">₹{{ object.interest_due|floatformat:2|default:"0.00" }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small">Total Due</div>
+              <div class="h5 mb-0">{{ object.total_due_with_currency|default:"₹0" }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small">Collateral Value</div>
+              <div class="h5 mb-0">{{ value|default:"₹0" }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <!-- Summary cards -->
-          <div class="container mt-4">
-            <div class="row">
-              <div class="col-md-6 mb-4">
-                <div class="card border-primary">
-                  <div class="card-header bg-info text-white text-center">
-                    <h5 class="mb-0">Loan Summary</h5>
-                  </div>
-                  <div class="card-body">
-                    <div class="row mb-2">
-                      <div class="col-6 font-weight-bold">Amount</div>
-                      <div class="col-6 text-right">{{ object.get_loan_amount_with_currency|default:"&#x20b9;0" }}</div>
-                    </div>
-                    <div class="row mb-2">
-                      <div class="col-6 font-weight-bold">Interest Due</div>
-                      <div class="col-6 text-right">&#x20b9;{{ object.interest_due|floatformat:2|default:"0.00" }} ({{ object.months_elapsed }} months)</div>
-                    </div>
-                    <div class="row mb-2">
-                      <div class="col-6 font-weight-bold">Payments</div>
-                      <div class="col-6 text-right">&#x20b9;{{ object.get_total_payments|floatformat:2|default:"0.00" }}</div>
-                    </div>
-                    <div class="row mb-2 border-top">
-                      <div class="col-6 font-weight-bold">Total Due</div>
-                      <div class="col-6 text-right">{{ object.total_due_with_currency|default:"&#x20b9;0" }}</div>
-                    </div>
-                  </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h6 class="card-title mb-3">Risk & Ratio Snapshot</h6>
+
+              <div class="mb-3">
+                <div class="d-flex justify-content-between small mb-1">
+                  <span>Loan to Value</span>
+                  <strong>{{ lvratio|floatformat:2|default:"0.00" }}%</strong>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div class="progress-bar bg-info" role="progressbar" style="width: {{ lvratio|default:0 }}%;"></div>
                 </div>
               </div>
-              <div class="col-md-6 mb-4">
-                <div class="card border-primary">
-                  <div class="card-header bg-info text-white text-center">
-                    <h5 class="mb-0">Item Summary</h5>
-                  </div>
-                  <div class="card-body table-responsive">
-                    <table class="table table-sm table-striped">
-                      <tbody>
-                        <tr>
-                          <td class="font-weight-bold">Item</td>
-                          <td>{{ object.item_desc|default:"&mdash;" }}</td>
-                        </tr>
-                        <tr>
-                          <td class="font-weight-bold">Weight</td>
-                          <td>{{ weight|default:"&mdash;" }}</td>
-                        </tr>
-                        <tr>
-                          <td class="font-weight-bold">Pure</td>
-                          <td>{{ pure|default:"&mdash;" }}</td>
-                        </tr>
-                        <tr>
-                          <td class="font-weight-bold">Value</td>
-                          <td>{{ value|default:"&#x20b9;0" }}</td>
-                        </tr>
-                        <tr>
-                          <td class="font-weight-bold">Amount:Value %</td>
-                          <td>
-                            <meter value="{{ lvratio|default:0 }}" min="0" max="100" low="30" high="70" optimum="50"></meter>
-                            <div class="h5 mb-0">{{ lvratio|floatformat:2|default:"0.00" }}%</div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+
+              <div>
+                <div class="d-flex justify-content-between small mb-1">
+                  <span>Due to Value</span>
+                  <strong>{{ dvratio|floatformat:2|default:"0.00" }}%</strong>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div class="progress-bar bg-warning" role="progressbar" style="width: {{ dvratio|default:0 }}%;"></div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h6 class="card-title mb-3">Collateral Snapshot</h6>
+              <div class="small d-flex justify-content-between mb-2"><span class="text-muted">Item</span><strong>{{ object.item_desc|default:"—" }}</strong></div>
+              <div class="small d-flex justify-content-between mb-2"><span class="text-muted">Weight</span><strong>{{ weight|default:"—" }}</strong></div>
+              <div class="small d-flex justify-content-between mb-2"><span class="text-muted">Pure Weight</span><strong>{{ pure|default:"—" }}</strong></div>
+              <div class="small d-flex justify-content-between"><span class="text-muted">Value</span><strong>{{ value|default:"₹0" }}</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white pb-0">
+      <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="items-tab"
+            data-bs-toggle="tab" data-bs-target="#items-tab-pane"
+            hx-get="{% url 'girvi:loan_detail_items_tab' loan.pk %}"
+            hx-target="#items-tab-pane" hx-swap="innerHTML"
+            hx-trigger="click, load"
+            type="button" role="tab" aria-controls="items-tab-pane" aria-selected="true">
+            Items <span class="badge bg-secondary">{{ object.loanitems.count }}</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="payments-tab"
+            data-bs-toggle="tab" data-bs-target="#payments-tab-pane"
+            hx-get="{% url 'girvi:loan_detail_payments_tab' loan.pk %}"
+            hx-target="#payments-tab-pane" hx-swap="innerHTML"
+            hx-trigger="click"
+            type="button" role="tab" aria-controls="payments-tab-pane" aria-selected="false">
+            Payments <span class="badge bg-secondary">{{ object.payments.count }}</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="transactions-tab"
+            data-bs-toggle="tab" data-bs-target="#transactions-tab-pane"
+            hx-get="{% url 'girvi:loan_detail_transactions_tab' loan.pk %}"
+            hx-target="#transactions-tab-pane" hx-swap="innerHTML"
+            hx-trigger="click"
+            type="button" role="tab" aria-controls="transactions-tab-pane" aria-selected="false">
+            Transactions
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="statement-tab"
+            data-bs-toggle="tab" data-bs-target="#statement-tab-pane"
+            hx-get="{% url 'girvi:loan_detail_statement_tab' loan.pk %}"
+            hx-target="#statement-tab-pane" hx-swap="innerHTML"
+            hx-trigger="click"
+            type="button" role="tab" aria-controls="statement-tab-pane" aria-selected="false">
+            Statement <span class="badge bg-secondary">{{ object.statementitem_set.count }}</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="notices-tab"
+            data-bs-toggle="tab" data-bs-target="#notices-tab-pane"
+            hx-get="{% url 'girvi:loan_detail_notices_tab' loan.pk %}"
+            hx-target="#notices-tab-pane" hx-swap="innerHTML"
+            hx-trigger="click"
+            type="button" role="tab" aria-controls="notices-tab-pane" aria-selected="false">
+            Notices <span class="badge bg-secondary">{{ loan.notifications.count }}</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="release-tab"
+            data-bs-toggle="tab" data-bs-target="#release-tab-pane"
+            hx-get="{% url 'girvi:loan_detail_release_tab' loan.pk %}"
+            hx-target="#release-tab-pane" hx-swap="innerHTML"
+            hx-trigger="click"
+            type="button" role="tab" aria-controls="release-tab-pane" aria-selected="false">
+            Release
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="renewal-tab"
+            data-bs-toggle="tab" data-bs-target="#renewal-tab-pane"
+            type="button" role="tab" aria-controls="renewal-tab-pane" aria-selected="false">
+            Renewal Chain
+            {% if renewals_as_source %}
+            <span class="badge bg-info">{{ renewals_as_source|length }}</span>
+            {% elif origin_renewal %}
+            <span class="badge bg-info">1</span>
+            {% endif %}
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card-body text-start">
+      <div class="tab-content" id="myTabContent">
+        <div class="tab-pane fade show active" id="items-tab-pane" role="tabpanel"
+          aria-labelledby="items-tab" tabindex="0"></div>
+        <div class="tab-pane fade" id="payments-tab-pane" role="tabpanel"
+          aria-labelledby="payments-tab" tabindex="0"></div>
+        <div class="tab-pane fade" id="transactions-tab-pane" role="tabpanel"
+          aria-labelledby="transactions-tab" tabindex="0"></div>
+        <div class="tab-pane fade" id="statement-tab-pane" role="tabpanel"
+          aria-labelledby="statement-tab" tabindex="0"></div>
+        <div class="tab-pane fade" id="notices-tab-pane" role="tabpanel"
+          aria-labelledby="notices-tab" tabindex="0"></div>
+        <div class="tab-pane fade" id="release-tab-pane" role="tabpanel"
+          aria-labelledby="release-tab" tabindex="0"></div>
+        <div class="tab-pane fade" id="renewal-tab-pane" role="tabpanel"
+          aria-labelledby="renewal-tab" tabindex="0">
+          {% if origin_renewal %}
+          <div class="alert alert-info small mb-3">
+            This loan was created by renewing
+            <a href="{% url 'girvi:girvi_loan_detail' origin_renewal.source_loan_id %}">
+              {{ origin_renewal.source_loan }}
+            </a>
+            on {{ origin_renewal.renewal_date|date:"d M Y" }}
+            ({{ origin_renewal.get_mode_display }}).
+          </div>
+          {% endif %}
+
+          {% if renewals_as_source %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Date</th>
+                  <th>Mode</th>
+                  <th>Interest Paid</th>
+                  <th>Principal Paid</th>
+                  <th>Extra</th>
+                  <th>New Loan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in renewals_as_source %}
+                <tr>
+                  <td>{{ r.renewal_date|date:"d M Y" }}</td>
+                  <td><span class="badge bg-secondary">{{ r.get_mode_display }}</span></td>
+                  <td>₹{{ r.interest_paid }}</td>
+                  <td>₹{{ r.principal_paid }}</td>
+                  <td>₹{{ r.requested_extra_amount }}</td>
+                  <td>
+                    {% if r.renewed_loan %}
+                    <a href="{% url 'girvi:girvi_loan_detail' r.renewed_loan_id %}">
+                      {{ r.renewed_loan.loan_id }}
+                    </a>
+                    {% else %}&mdash;{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted small mt-2 mb-0">No renewals on this loan.</p>
+          {% endif %}
         </div>
       </div>
     </div>
