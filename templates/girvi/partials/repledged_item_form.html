@@ -3,7 +3,6 @@
 <li class="list-group-item" id="form">
     {{instance}}
     {{ form.media }}
-    {{ form|as_crispy_errors }}
     <form method="post" action="{% if url %}{{ url }}{% else %}.{% endif %}" hx-post="{% if url %}{{ url }}{% else %}.{% endif %}" hx-target="#form" hx-swap="outerHTML">
         {% csrf_token %}
         {{ form.non_field_errors }}
@@ -11,19 +10,16 @@
             <div class="col-12 col-sm-6 col-lg-6">
                 <div class="form-group">
                     {{ form.original_loanitem|as_crispy_field }}
-                    {{ form.original_loanitem.errors }}
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-lg-6">
                 <div class="form-group">
                     {{ form.repledged_loanamount|as_crispy_field }}
-                    {{ form.repledged_loanamount.errors }}
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-lg-6">
                 <div class="form-group">
                     {{ form.interest_rate|as_crispy_field }}
-                    {{ form.interest_rate.errors }}
                 </div>
             </div>
         </div>

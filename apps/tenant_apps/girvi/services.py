@@ -28,6 +28,7 @@ from .service_modules.creation import (
     LoanCreatePreview,
     LoanCreateResult,
     LoanCreationService,
+    LoanItemCreateInput,
 )
 from .service_modules.id_generation import LoanIDGenerator, ReleaseIDGenerator
 from .service_modules.release_lifecycle import ReleaseLifecycleService
@@ -50,6 +51,7 @@ __all__ = [
     "LoanCreatePreview",
     "LoanCreateResult",
     "LoanCreationService",
+    "LoanItemCreateInput",
     "ReleaseLifecycleService",
     "LoanIDGenerator",
     "ReleaseIDGenerator",
@@ -1412,5 +1414,3 @@ class DashboardMetricsService:
             "current_rates": rates,
             "rates_timestamp": timezone.now(),
         }
-
-

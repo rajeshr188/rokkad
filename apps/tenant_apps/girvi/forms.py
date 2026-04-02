@@ -319,6 +319,7 @@ class LoanForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
+        self.helper.form_tag = False
         self.helper.layout = Layout(
             Row(
                 Column("series", css_class="form-group col-md-6 mb-0"),
@@ -341,32 +342,16 @@ class LoanForm(forms.ModelForm):
             HTML("<br/>"),
         )
         if self.instance and self.instance.id:
-            self.helper.attrs = {
-                "hx-post": reverse(
-                    "girvi:girvi_loan_update", kwargs={"pk": self.instance.id}
-                ),
-                "hx-target": "#modal-content",
-            }
-            cancel_button = Button(
-                "cancel",
-                "Cancel",
-                css_class="btn btn-secondary",
-                **{"data-bs-dismiss": "modal"},
+            self.post_url = reverse(
+                "girvi:girvi_loan_update", kwargs={"pk": self.instance.id}
             )
         else:
-            self.helper.attrs = {
-                "hx-post": reverse("girvi:girvi_loan_create"),
-                "hx-target": "#modal-content",
-            }
-            cancel_button = Button(
-                "cancel",
-                "Cancel",
-                css_class="btn btn-secondary",
-                **{"data-bs-dismiss": "modal"},
-            )
+            self.post_url = reverse("girvi:girvi_loan_create")
 
-        self.helper.add_input(Submit("submit", "Save"))
-        self.helper.add_input(cancel_button)
+        self.helper.attrs = {
+            "hx-post": self.post_url,
+            "hx-target": "#modal-content",
+        }
 
     def clean_created(self):
         cleaned_data = super().clean()
@@ -498,14 +483,7 @@ class LoanItemForm(forms.ModelForm):
     )
     itemtype = forms.ChoiceField(
         choices=(("Gold", "Gold"), ("Silver", "Silver"), ("Bronze", "Bronze")),
-        widget=forms.Select(
-            attrs={
-                "hx-get": reverse_lazy("girvi:girvi_get_interestrate"),
-                "hx-target": "#div_id_interestrate",
-                "hx-trigger": "change,load",
-                "hx-swap": "innerHTML",
-            }
-        ),
+        widget=forms.Select(),
     )
     loanamount = forms.DecimalField(required=True)
 
@@ -524,6 +502,14 @@ class LoanItemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["itemtype"].widget.attrs.update(
+            {
+                "hx-get": reverse_lazy("girvi:girvi_get_interestrate"),
+                "hx-target": f"#div_id_{self.add_prefix('interestrate')}",
+                "hx-trigger": "change,load",
+                "hx-swap": "innerHTML",
+            }
+        )
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.layout = Layout(
@@ -559,11 +545,12 @@ class LoanItemForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         loanamount = cleaned_data.get("loanamount")
-        itemtype = self.cleaned_data["itemtype"]
-        if loanamount is None:
+        itemtype = cleaned_data.get("itemtype")
+        weight = cleaned_data.get("weight")
+        purity = cleaned_data.get("purity")
+
+        if None in (loanamount, itemtype, weight, purity):
             return cleaned_data
-        weight = self.cleaned_data["weight"]
-        purity = self.cleaned_data["purity"]
 
         rate = (
             Rate.objects.filter(metal=itemtype).latest("timestamp").buying_rate
@@ -578,6 +565,61 @@ class LoanItemForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class InitialLoanItemForm(LoanItemForm):
+    OPTIONAL_ROW_INPUTS = ("item", "itemdesc", "weight", "loanamount", "interestrate")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.empty_permitted = True
+        self.fields["itemtype"].required = False
+        self.fields["itemtype"].initial = "Gold"
+        self.fields["quantity"].required = False
+        self.fields["quantity"].initial = 1
+        self.fields["purity"].required = False
+        self.fields["purity"].initial = 75
+        self.fields["itemdesc"].required = False
+        self.fields["weight"].required = False
+        self.fields["loanamount"].required = False
+        self.fields["interestrate"].required = False
+
+    def _row_has_user_input(self, cleaned_data):
+        return any(
+            cleaned_data.get(field) not in (None, "")
+            for field in self.OPTIONAL_ROW_INPUTS
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.errors:
+            return cleaned_data
+
+        if not self._row_has_user_input(cleaned_data):
+            return cleaned_data
+
+        required_messages = {
+            "itemdesc": "Description is required when adding an item.",
+            "weight": "Weight is required when adding an item.",
+            "loanamount": "Loan amount is required when adding an item.",
+            "interestrate": "Interest rate is required when adding an item.",
+        }
+        for field_name, message in required_messages.items():
+            if cleaned_data.get(field_name) in (None, ""):
+                self.add_error(field_name, message)
+
+        if cleaned_data.get("quantity") in (None, ""):
+            cleaned_data["quantity"] = 1
+        if cleaned_data.get("purity") in (None, ""):
+            cleaned_data["purity"] = 75
+        if not cleaned_data.get("itemtype"):
+            cleaned_data["itemtype"] = "Gold"
+
+        return cleaned_data
+
+
+def build_initial_loan_item_formset(*, extra=3):
+    return forms.formset_factory(InitialLoanItemForm, extra=extra, can_delete=True)
 
 
 class RepledgedLoanItemForm(forms.ModelForm):

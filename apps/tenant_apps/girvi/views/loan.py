@@ -32,6 +32,7 @@ from ..forms import (
     LoanForm,
     LoanItemForm,
     LoanRenewForm,
+    build_initial_loan_item_formset,
 )
 from ..models import (
     GivenLoan,
@@ -50,6 +51,7 @@ from ..selectors import (
 from ..services import (
     LoanCreateCommand,
     LoanCreationService,
+    LoanItemCreateInput,
     LoanRenewalCommand,
     LoanRenewalService,
     LoanTransitionService,
@@ -150,7 +152,16 @@ def ld(request):
 
 
 def get_interestrate(request):
-    metal = request.GET["itemtype"]
+    metal = request.GET.get("itemtype")
+    field_prefix = ""
+
+    if metal is None:
+        for key, value in request.GET.items():
+            if key.endswith("-itemtype"):
+                metal = value
+                field_prefix = key[: -len("-itemtype")]
+                break
+
     interest = 0
     prefs = CompanyPreferences(request.user.profile.workspace)
     if metal == "Gold":
@@ -159,7 +170,8 @@ def get_interestrate(request):
         interest = prefs.interest_rate_silver
     else:
         interest = prefs.interest_rate_other
-    form = LoanItemForm(initial={"interestrate": interest})
+
+    form = LoanItemForm(prefix=field_prefix or None, initial={"interestrate": interest})
     context = {
         "field": form["interestrate"],
     }
@@ -229,7 +241,32 @@ def loan_table_partial(request: HttpRequest):
     return render(request, "girvi/loan/loan_list.html", context)
 
 
-def _build_loan_create_command(form, user):
+def _extract_initial_item_inputs(item_formset):
+    initial_items = []
+    for item_data in getattr(item_formset, "cleaned_data", []) if item_formset else []:
+        if not item_data or item_data.get("DELETE"):
+            continue
+        if not any(
+            item_data.get(field) not in (None, "")
+            for field in ("item", "itemdesc", "weight", "loanamount", "interestrate")
+        ):
+            continue
+        initial_items.append(
+            LoanItemCreateInput(
+                item=item_data.get("item"),
+                itemdesc=item_data.get("itemdesc") or "",
+                itemtype=item_data.get("itemtype") or "Gold",
+                quantity=item_data.get("quantity") or 1,
+                weight=item_data.get("weight"),
+                purity=item_data.get("purity"),
+                loanamount=item_data.get("loanamount"),
+                interestrate=item_data.get("interestrate"),
+            )
+        )
+    return initial_items
+
+
+def _build_loan_create_command(form, user, item_formset=None):
     return LoanCreateCommand(
         borrower=form.cleaned_data["borrower"],
         series=form.cleaned_data["series"],
@@ -238,6 +275,7 @@ def _build_loan_create_command(form, user):
         interest_type=form.cleaned_data["interest_type"],
         created_by=user,
         loan_id=form.cleaned_data.get("loan_id") or "",
+        initial_items=_extract_initial_item_inputs(item_formset),
     )
 
 
@@ -254,6 +292,33 @@ def _parse_preview_loan_date(raw_value):
             continue
 
     return raw_value
+
+
+def _build_preview_initial_item_inputs(data):
+    initial_items = []
+
+    try:
+        total_forms = int(data.get("items-TOTAL_FORMS") or 0)
+    except (TypeError, ValueError):
+        total_forms = 0
+
+    for index in range(total_forms):
+        item_data = {
+            "itemdesc": data.get(f"items-{index}-itemdesc") or "",
+            "itemtype": data.get(f"items-{index}-itemtype") or "Gold",
+            "quantity": data.get(f"items-{index}-quantity") or 1,
+            "weight": data.get(f"items-{index}-weight"),
+            "purity": data.get(f"items-{index}-purity"),
+            "loanamount": data.get(f"items-{index}-loanamount"),
+            "interestrate": data.get(f"items-{index}-interestrate"),
+        }
+        if any(
+            item_data.get(field) not in (None, "")
+            for field in ("itemdesc", "weight", "loanamount", "interestrate")
+        ):
+            initial_items.append(LoanItemCreateInput(**item_data))
+
+    return initial_items
 
 
 def _build_create_preview_from_data(data, user):
@@ -293,6 +358,7 @@ def _build_create_preview_from_data(data, user):
             interest_type=interest_type,
             created_by=user,
             loan_id="",
+            initial_items=_build_preview_initial_item_inputs(data),
         )
     )
 
@@ -305,8 +371,12 @@ def _loan_detail_redirect_response(loan_id):
     )
 
 
-def _render_loan_form_response(request, *, loan=None, customer_pk=None, form=None):
+def _render_loan_form_response(
+    request, *, loan=None, customer_pk=None, form=None, item_formset=None
+):
     creation_preview = None
+    item_formset_class = build_initial_loan_item_formset()
+
     if form is None:
         if loan is None:
             initial_data = _get_initial_loan_data(request, customer_pk)
@@ -319,14 +389,16 @@ def _render_loan_form_response(request, *, loan=None, customer_pk=None, form=Non
                     headers={"HX-Redirect": reverse("girvi:girvi_license_list")}
                 )
             form = LoanForm(initial=initial_data)
+            item_formset = item_formset or item_formset_class(prefix="items")
             creation_preview = initial_data.get("creation_preview")
         else:
             form = LoanForm(instance=loan)
     elif loan is None and form.is_bound:
+        item_formset = item_formset or item_formset_class(request.POST or None, prefix="items")
         preview_fields = {"borrower", "series", "loan_date", "tenure", "interest_type"}
         if preview_fields.issubset(form.cleaned_data.keys()):
             creation_preview = LoanCreationService.preview(
-                _build_loan_create_command(form, request.user)
+                _build_loan_create_command(form, request.user, item_formset)
             )
 
     return TemplateResponse(
@@ -337,14 +409,23 @@ def _render_loan_form_response(request, *, loan=None, customer_pk=None, form=Non
             "loan": loan,
             "object": loan,
             "creation_preview": creation_preview,
+            "item_formset": item_formset if loan is None else None,
         },
     )
 
 
 def _handle_loan_create_post(request):
+    item_formset_class = build_initial_loan_item_formset()
     form = LoanForm(request.POST)
-    if form.is_valid():
-        result = LoanCreationService.execute(_build_loan_create_command(form, request.user))
+    item_formset = item_formset_class(request.POST, prefix="items")
+
+    form_is_valid = form.is_valid()
+    formset_is_valid = item_formset.is_valid()
+
+    if form_is_valid and formset_is_valid:
+        result = LoanCreationService.execute(
+            _build_loan_create_command(form, request.user, item_formset)
+        )
         if result.success:
             messages.success(request, result.message)
             return _loan_detail_redirect_response(result.loan.id)
@@ -352,7 +433,7 @@ def _handle_loan_create_post(request):
         form.add_error(None, result.message)
 
     messages.warning(request, "Please correct the errors below.")
-    return _render_loan_form_response(request, form=form)
+    return _render_loan_form_response(request, form=form, item_formset=item_formset)
 
 
 def _handle_loan_update_post(request, loan):

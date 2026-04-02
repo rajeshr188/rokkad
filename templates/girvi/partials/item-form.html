@@ -9,7 +9,6 @@
     <h5 class="mb-3">Edit Item</h5>
     {%endif%}
     {{form.media}}
-    {{ form|as_crispy_errors }}
     <div class="container-fluid">
         {% crispy form %}
     </div>
