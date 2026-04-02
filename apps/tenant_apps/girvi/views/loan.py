@@ -5,7 +5,7 @@ import pytz
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
@@ -16,7 +16,6 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods  # new
 from django_tables2.config import RequestConfig
-from django_tables2.export.export import TableExport
 from moneyed import Money
 
 # from django_fsm import has_transition_perm,can_proceed
@@ -29,25 +28,14 @@ from ..filters import LoanFilter
 from ..filters import TakenLoanFilter
 from ..flows import LoanFlow
 from ..forms import (
-    ApproveLoanForm,
-    CancelLoanForm,
-    DeliverLoanForm,
-    DisburseLoanForm,
     LoanForm,
     LoanItemForm,
     LoanRenewForm,
-    MarkAuctionedLoanForm,
-    MarkDefaultedLoanForm,
-    MarkSoldLoanForm,
-    UndoDisburseLoanForm,
-    UndoReleaseLoanForm,
 )
 from ..models import (
     GivenLoan,
-    License,
     LoanChangeLog,
     LoanStatus,
-    Release,
     TakenLoan,
 )
 from ..selectors import (
@@ -58,22 +46,20 @@ from ..selectors import (
     given_loan_base_qs,
     taken_loan_base_qs,
 )
-from ..services import LoanIDGenerator, LoanTransitionService
+from ..services import (
+    LoanCreateCommand,
+    LoanCreationService,
+    LoanRenewalCommand,
+    LoanRenewalService,
+    LoanTransitionService,
+)
 from ..tables import LoanTable, TakenLoanTable, UnifiedLoanTable
-
-form_classes = {
-    "approve": ApproveLoanForm,
-    "disburse": DisburseLoanForm,
-    # "deliver" is intentionally absent: releasing a loan MUST go through the
-    # Release create form (which runs the custody check and posts accounting).
-    # flow.deliver() is fired internally by Release.save(), not as a standalone action.
-    "cancel": CancelLoanForm,
-    "mark_defaulted": MarkDefaultedLoanForm,
-    "mark_auctioned": MarkAuctionedLoanForm,
-    "mark_sold": MarkSoldLoanForm,
-    "undo_disburse": UndoDisburseLoanForm,
-    "undo_release": UndoReleaseLoanForm,
-}
+from ..transition_registry import (
+    build_transition_actions,
+    get_transition_form_class,
+    get_transition_form_ui,
+    normalize_transition_name,
+)
 logger = logging.getLogger(__name__)
 
 
@@ -97,8 +83,10 @@ def _parse_selected_ids(raw_ids):
 
 def loan_transition_view(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
-    transition_name = request.GET.get("transition") or request.POST.get("transition")
-    form_class = form_classes.get(transition_name)
+    raw_transition_name = request.GET.get("transition") or request.POST.get("transition")
+    transition_name = normalize_transition_name(raw_transition_name)
+    form_class = get_transition_form_class(transition_name)
+    transition_ui = get_transition_form_ui(transition_name)
 
     if not form_class:
         messages.error(request, _("Invalid transition."))
@@ -118,7 +106,12 @@ def loan_transition_view(request, pk):
     return render(
         request,
         "girvi/loan/loan_transition_form.html",
-        {"form": form, "loan": loan, "transition_name": transition_name},
+        {
+            "form": form,
+            "loan": loan,
+            "transition_name": transition_name,
+            "transition_ui": transition_ui,
+        },
     )
 
 
@@ -235,49 +228,31 @@ def loan_table_partial(request: HttpRequest):
     return render(request, "girvi/loan/loan_list.html", context)
 
 
-@login_required
-def loan_save(request, id=None, pk=None):
-    """
-    Create or update a loan instance.
-    Args:
-        id (int): Loan ID for updates
-        pk (int): Customer ID for new loans
-    """
-    try:
-        # Get existing loan or None for new loan
-        loan = get_object_or_404(GivenLoan, id=id) if id else None
+def _build_loan_create_command(form, user):
+    return LoanCreateCommand(
+        borrower=form.cleaned_data["borrower"],
+        series=form.cleaned_data["series"],
+        loan_date=form.cleaned_data["loan_date"],
+        tenure=form.cleaned_data["tenure"],
+        interest_type=form.cleaned_data["interest_type"],
+        created_by=user,
+        loan_id=form.cleaned_data.get("loan_id") or "",
+    )
 
-        if request.method == "POST":
-            form = LoanForm(request.POST, instance=loan)
-            if form.is_valid():
-                with transaction.atomic():
-                    loan = form.save(commit=False)
-                    loan.created_by = request.user
-                    loan.save()
 
-                messages.success(
-                    request, f"{'Updated' if id else 'Created'} Loan: {loan.loan_id}"
-                )
-                # return loan_detail(make_get_request(request), loan.id)
-                # Redirect to detail page
-                return HttpResponse(
-                    headers={
-                        "HX-Redirect": reverse(
-                            "girvi:girvi_loan_detail", kwargs={"pk": loan.id}
-                        )
-                    }
-                )
+def _loan_detail_redirect_response(loan_id):
+    return HttpResponse(
+        headers={
+            "HX-Redirect": reverse("girvi:girvi_loan_detail", kwargs={"pk": loan_id})
+        }
+    )
 
-            messages.warning(request, "Please correct the errors below.")
-            return TemplateResponse(
-                request,
-                "girvi/loan/loan_form.html",
-                {"form": form, "loan": loan, "object": loan},
-            )
 
-        # Handle GET request for new loan
-        if not loan:
-            initial_data = _get_initial_loan_data(request, pk)
+def _render_loan_form_response(request, *, loan=None, customer_pk=None, form=None):
+    creation_preview = None
+    if form is None:
+        if loan is None:
+            initial_data = _get_initial_loan_data(request, customer_pk)
             if not initial_data:
                 messages.error(
                     request,
@@ -286,39 +261,103 @@ def loan_save(request, id=None, pk=None):
                 return HttpResponse(
                     headers={"HX-Redirect": reverse("girvi:girvi_license_list")}
                 )
-
             form = LoanForm(initial=initial_data)
+            creation_preview = initial_data.get("creation_preview")
         else:
             form = LoanForm(instance=loan)
+    elif loan is None and form.is_bound and form.cleaned_data:
+        creation_preview = LoanCreationService.preview(_build_loan_create_command(form, request.user))
 
-        return TemplateResponse(
-            request,
-            "girvi/loan/loan_form.html",
-            {"form": form, "loan": loan, "object": loan},
-        )
+    return TemplateResponse(
+        request,
+        "girvi/loan/loan_form.html",
+        {
+            "form": form,
+            "loan": loan,
+            "object": loan,
+            "creation_preview": creation_preview,
+        },
+    )
 
-    except Exception as e:
-        logger.warning(f"Error in loan_save: {str(e)}")
-        messages.error(request, f"An error occurred while saving loan")
-        return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
+
+def _handle_loan_create_post(request):
+    form = LoanForm(request.POST)
+    if form.is_valid():
+        result = LoanCreationService.execute(_build_loan_create_command(form, request.user))
+        if result.success:
+            messages.success(request, result.message)
+            return _loan_detail_redirect_response(result.loan.id)
+
+        form.add_error(None, result.message)
+
+    messages.warning(request, "Please correct the errors below.")
+    return _render_loan_form_response(request, form=form)
+
+
+def _handle_loan_update_post(request, loan):
+    form = LoanForm(request.POST, instance=loan)
+    if form.is_valid():
+        with transaction.atomic():
+            loan = form.save(commit=False)
+            if not loan.created_by:
+                loan.created_by = request.user
+            loan.save()
+
+        messages.success(request, f"Updated Loan: {loan.loan_id}")
+        return _loan_detail_redirect_response(loan.id)
+
+    messages.warning(request, "Please correct the errors below.")
+    return _render_loan_form_response(request, loan=loan, form=form)
+
+
+@login_required
+def loan_save(request, id=None, pk=None):
+    """Backward-compatible dispatcher. Prefer `loan_create` / `loan_update`."""
+    if id is not None:
+        return loan_update(request, pk=id)
+    if pk is not None:
+        return loan_create_for_customer(request, customer_pk=pk)
+    return loan_create(request)
 
 
 @login_required
 def loan_create(request):
-    """Create loan endpoint wrapper for unambiguous route semantics."""
-    return loan_save(request)
+    """Dedicated create endpoint using LoanCreationService for POST writes."""
+    try:
+        if request.method == "POST":
+            return _handle_loan_create_post(request)
+        return _render_loan_form_response(request)
+    except Exception as e:
+        logger.warning(f"Error in loan_create: {str(e)}")
+        messages.error(request, "An error occurred while creating loan")
+        return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
 
 
 @login_required
 def loan_create_for_customer(request, customer_pk):
-    """Create loan endpoint wrapper with borrower preselection."""
-    return loan_save(request, pk=customer_pk)
+    """Dedicated create endpoint with borrower preselection."""
+    try:
+        if request.method == "POST":
+            return _handle_loan_create_post(request)
+        return _render_loan_form_response(request, customer_pk=customer_pk)
+    except Exception as e:
+        logger.warning(f"Error in loan_create_for_customer: {str(e)}")
+        messages.error(request, "An error occurred while creating loan")
+        return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
 
 
 @login_required
 def loan_update(request, pk):
-    """Update loan endpoint wrapper for unambiguous route semantics."""
-    return loan_save(request, id=pk)
+    """Dedicated update endpoint for existing loans."""
+    try:
+        loan = get_object_or_404(GivenLoan, id=pk)
+        if request.method == "POST":
+            return _handle_loan_update_post(request, loan)
+        return _render_loan_form_response(request, loan=loan)
+    except Exception as e:
+        logger.warning(f"Error in loan_update: {str(e)}")
+        messages.error(request, "An error occurred while saving loan")
+        return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
 
 
 def _get_initial_loan_data(request, customer_pk=None):
@@ -326,7 +365,6 @@ def _get_initial_loan_data(request, customer_pk=None):
     try:
         # Try to get initial series
         series = None
-        loan_id = None
 
         try:
             # Try to get latest loan's series
@@ -340,18 +378,28 @@ def _get_initial_loan_data(request, customer_pk=None):
             logger.warning("No active series found for new loan")
             return None
 
-        # Generate preview of next loan ID for display
-        try:
-            loan_id = LoanIDGenerator.generate(series)
-        except Exception as e:
-            logger.error(f"Error generating loan_id preview: {e}")
-            loan_id = None
+        borrower = get_object_or_404(Customer, pk=customer_pk) if customer_pk else None
+        preview_command = LoanCreateCommand(
+            borrower=borrower,
+            series=series,
+            loan_date=timezone.now(),
+            tenure=3,
+            interest_type=GivenLoan._meta.get_field("interest_type").default,
+            created_by=request.user,
+            loan_id="",
+        )
+        creation_preview = LoanCreationService.preview(preview_command)
 
-        initial = {"series": series, "loan_date": ld(request), "loan_id": loan_id}
+        initial = {
+            "series": series,
+            "loan_date": ld(request),
+            "loan_id": creation_preview.expected_loan_id or None,
+            "creation_preview": creation_preview,
+        }
 
         # Add customer if provided
-        if customer_pk:
-            initial["borrower"] = get_object_or_404(Customer, pk=customer_pk)
+        if borrower:
+            initial["borrower"] = borrower
 
         return initial
 
@@ -380,7 +428,11 @@ def loan_detail(request, pk):
     loan = get_object_or_404(
         GivenLoan.objects.select_related(
             "borrower", "created_by", "series"
-        ).prefetch_related("loanitems"),
+        ).prefetch_related(
+            "loanitems",
+            "renewals_as_source__renewed_loan",
+            "renewal_record__source_loan",
+        ),
         pk=pk,
     )
 
@@ -399,6 +451,7 @@ def loan_detail(request, pk):
     possible_transitions = [
         transition.label for transition in flow.get_outgoing_transitions()
     ]
+    transition_actions = build_transition_actions(loan, possible_transitions)
 
     weight_summary = {item["itemtype"]: item for item in loan.get_weight_summary}
     gold_weight = (
@@ -477,8 +530,11 @@ def loan_detail(request, pk):
             else 0
         ),
         "possible_transitions": possible_transitions,
+        "transition_actions": transition_actions,
         "current_status": current_status,
         "change_log": changelog,
+        "renewals_as_source": list(loan.renewals_as_source.all()),
+        "origin_renewal": loan.renewal_record.first(),
     }
 
     if request.htmx:
@@ -574,8 +630,53 @@ def merge_loans(request):
 def loan_renew(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
 
-    messages.error(request, "Loan renewal is not yet supported for refactored loans.")
-    return redirect("girvi:girvi_loan_detail", pk=loan.pk)
+    if request.method == "POST":
+        form = LoanRenewForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            command = LoanRenewalCommand(
+                source_loan_id=loan.pk,
+                renewal_date=cd["renewal_date"],
+                mode=cd["mode"],
+                interest_paid=cd["interest_paid"],
+                principal_paid=cd["principal_paid"],
+                requested_extra_amount=cd.get("requested_extra_amount") or 0,
+                created_by=request.user,
+                payment_method=cd["payment_method"],
+                reference_number=cd.get("reference_number", ""),
+                notes=cd.get("notes", ""),
+            )
+            result = LoanRenewalService().execute(command)
+            if result.success:
+                for warn in result.warnings:
+                    messages.warning(request, warn)
+                messages.success(request, result.message)
+                return redirect("girvi:girvi_loan_detail", pk=result.new_loan_id)
+            else:
+                messages.error(request, result.message)
+    else:
+        form = LoanRenewForm(
+            initial={"renewal_date": timezone.now().strftime("%Y-%m-%dT%H:%M")}
+        )
+        # Build preview from defaults so template can show current financials
+        preview = LoanRenewalService().preview(
+            LoanRenewalCommand(
+                source_loan_id=loan.pk,
+                renewal_date=timezone.now(),
+                mode="PAY_AND_RENEW",
+                created_by=request.user,
+            )
+        )
+
+    return render(
+        request,
+        "girvi/loan/loan_renew.html",
+        {
+            "loan": loan,
+            "form": form,
+            "preview": preview if request.method == "GET" else None,
+        },
+    )
 
 
 @require_http_methods("POST")

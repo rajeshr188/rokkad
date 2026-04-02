@@ -160,7 +160,7 @@ class LoanFlow(object):
         }
 
     @status.transition(
-        source={LoanStatus.DISBURSED, LoanStatus.REPLEDGED},
+        source=LoanStatus.DISBURSED,
         target=LoanStatus.RELEASED,
         label=_("deliver"),
         permission=lambda flow, user: has_permission(user, "can_release_loan"),
@@ -241,6 +241,33 @@ class LoanFlow(object):
             "auctioned_at": timezone.now().isoformat(),
             "auctioned_by": str(auctioned_by),
             "auction_amount": str(amount),
+        }
+
+    @status.transition(
+        source=LoanStatus.DISBURSED,
+        target=LoanStatus.REPLEDGED,
+        label=_("repledge"),
+        permission=lambda flow, user: has_permission(user, "can_release_loan"),
+    )
+    def repledge(self, created_by):
+        """Mark a disbursed loan as repledged (renewed) — collateral stays in custody."""
+        self._additional_data = {
+            "created_by": str(created_by),
+            "repledged_at": timezone.now().isoformat(),
+        }
+
+    @status.transition(
+        source=LoanStatus.REPLEDGED,
+        target=LoanStatus.DISBURSED,
+        label=_("undo_repledge"),
+        permission=lambda flow, user: has_permission(user, "can_release_loan"),
+    )
+    def undo_repledge(self, undone_by, reason=""):
+        """Reverse a repledge — cancels the renewal and returns source loan to Disbursed."""
+        self._additional_data = {
+            "undone_by": str(undone_by),
+            "undone_at": timezone.now().isoformat(),
+            "reason": reason,
         }
 
     @status.transition(

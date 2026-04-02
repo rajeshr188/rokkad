@@ -1,8 +1,6 @@
 import logging
-import re
 from collections import Counter
 from decimal import Decimal
-from typing import Optional
 
 from django.apps import apps
 from django.db import transaction
@@ -25,12 +23,42 @@ from django.db.models.functions import Coalesce, ExtractYear, Round
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
 from .models import Series
+from .service_modules.creation import (
+    LoanCreateCommand,
+    LoanCreatePreview,
+    LoanCreateResult,
+    LoanCreationService,
+)
+from .service_modules.id_generation import LoanIDGenerator, ReleaseIDGenerator
+from .service_modules.release_lifecycle import ReleaseLifecycleService
+from .service_modules.renewal import (
+    LoanRenewalCommand,
+    LoanRenewalPreview,
+    LoanRenewalResult,
+    LoanRenewalService,
+)
+from .service_modules.transitions import LoanTransitionService
 
 # NOTE: LoanItem, LoanPayment, and License imported locally in methods to avoid circular import
 # NOTE: GivenLoan is imported locally in methods to avoid circular import
 # See usage in LoanSplitService.split_items() and LoanMergeService.merge()
 
 logger = logging.getLogger(__name__)
+
+__all__ = [
+    "LoanCreateCommand",
+    "LoanCreatePreview",
+    "LoanCreateResult",
+    "LoanCreationService",
+    "ReleaseLifecycleService",
+    "LoanIDGenerator",
+    "ReleaseIDGenerator",
+    "LoanTransitionService",
+    "LoanRenewalCommand",
+    "LoanRenewalPreview",
+    "LoanRenewalResult",
+    "LoanRenewalService",
+]
 
 
 class BulkReleaseService:
@@ -230,8 +258,14 @@ class BulkReleaseService:
                     )
                     continue
 
-                form.instance.created_by = user
-                instances.append(form.save(commit=True))
+                instances.append(
+                    ReleaseLifecycleService.create_release(
+                        loan=form.cleaned_data["loan"],
+                        created_by=user,
+                        release_date=form.cleaned_data["release_date"],
+                        released_by=form.cleaned_data.get("released_by"),
+                    )
+                )
 
         if commit_policy == cls.COMMIT_POLICY_PARTIAL and skipped_released_count:
             if not instances:
@@ -265,176 +299,6 @@ class BulkReleaseService:
             "commit_policy": commit_policy,
             "skipped_released_count": 0,
         }
-
-
-class LoanIDGenerator:
-    """
-    Simplified loan ID generation service.
-    Series is mandatory - generates formatted IDs like 'A00123'.
-
-    Thread-safe using select_for_update locks.
-    """
-
-    @staticmethod
-    def generate(series: Series) -> str:
-        """
-        Generate next globally unique loan ID for a series.
-
-        Args:
-            series: Required series object
-
-        Returns:
-            str: Formatted loan ID (e.g., 'A00123')
-
-        Raises:
-            ValueError: If series is None
-        """
-        if not series:
-            raise ValueError("Series is required for loan ID generation")
-
-        with transaction.atomic():
-            # Lock the series row to prevent race conditions
-            series = Series.objects.select_for_update().get(id=series.id)
-
-            # Get last loan in this series (use GivenLoan for refactored model)
-            last_loan = (
-                GivenLoan.objects.filter(series=series).order_by("-loan_id").first()
-            )
-
-            if last_loan:
-                # Extract number from last formatted loan_id (e.g., "A00123" -> 123)
-                try:
-                    last_num = int(last_loan.loan_id[len(series.prefix) :])
-                    next_num = last_num + 1
-                except (ValueError, IndexError):
-                    # If parsing fails, start from 1
-                    next_num = 1
-            else:
-                next_num = 1
-
-            # Format: PREFIX + zero-padded number
-            return series.format_loan_id(next_num)
-
-
-class ReleaseIDGenerator:
-    """
-    Thread-safe release ID generator scoped per series.
-
-    Generates release IDs in format: {SeriesName}{SequenceNumber}
-    Example: RL001, A0042
-
-    Features:
-    - Thread-safe using select_for_update locks
-    - Graceful fallback for missing/invalid release IDs
-    - Comprehensive logging for debugging
-    - Validates series configuration
-    """
-
-    DEFAULT_PREFIX = "RL"
-    OPTIONAL_DELIMITER = "-"
-    _TRAILING_DIGITS_RE = re.compile(r"(\d+)$")
-
-    @classmethod
-    def generate(cls, series: "Series") -> str:
-        """
-        Generate the next release ID for the given series.
-
-        Args:
-            series: Series object to generate release ID for
-
-        Returns:
-            str: Formatted release ID (e.g., 'RL001', 'A0042')
-
-        Raises:
-            ValueError: If series is None or invalid
-        """
-        if not series:
-            raise ValueError("Series is required for release ID generation")
-
-        prefix = cls._determine_prefix(series)
-
-        ReleaseModel = apps.get_model("girvi", "Release")
-        with transaction.atomic():
-            last_release = (
-                ReleaseModel.objects.select_for_update()
-                .filter(loan__series=series)
-                .order_by("-release_id")
-                .first()
-            )
-
-            last_sequence = cls._extract_sequence(last_release, prefix)
-            next_sequence = (last_sequence + 1) if last_sequence else 1
-
-            return cls._format(prefix, next_sequence, series.max_limit)
-
-    @classmethod
-    def _determine_prefix(cls, series: "Series") -> str:
-        """Determine prefix from series name or use default."""
-        prefix = (series.name or "").strip()
-        if prefix:
-            return prefix
-
-        logger.warning(
-            "Series %s has no name configured. Falling back to default release prefix '%s'.",
-            series.pk,
-            cls.DEFAULT_PREFIX,
-        )
-        return cls.DEFAULT_PREFIX
-
-    @classmethod
-    def _extract_sequence(cls, last_release: Optional["Release"], prefix: str) -> int:
-        """
-        Extract sequence number from last release ID.
-
-        Attempts to parse with prefix matching first, falls back to trailing digits.
-        Returns 0 if no valid sequence found (will start from 1).
-        """
-        if not last_release or not last_release.release_id:
-            return 0
-
-        release_id = last_release.release_id.strip()
-
-        # Try exact prefix match first
-        pattern = rf"^{re.escape(prefix)}(?:{re.escape(cls.OPTIONAL_DELIMITER)})?(\d+)$"
-        match = re.match(pattern, release_id)
-
-        if match:
-            sequence = int(match.group(1))
-            logger.debug(
-                "Extracted sequence %d from release ID '%s' using prefix '%s'",
-                sequence,
-                release_id,
-                prefix,
-            )
-            return sequence
-
-        # Fallback: try to extract any trailing digits
-        fallback = cls._TRAILING_DIGITS_RE.search(release_id)
-        if fallback:
-            sequence = int(fallback.group(1))
-            logger.warning(
-                "Release ID '%s' does not match expected prefix '%s'. "
-                "Using trailing digits fallback: %d",
-                release_id,
-                prefix,
-                sequence,
-            )
-            return sequence
-
-        # No valid sequence found
-        logger.warning(
-            "Unable to parse release ID '%s' for prefix '%s'. Resetting sequence to 1.",
-            release_id,
-            prefix,
-        )
-        return 0
-
-    @staticmethod
-    def _format(prefix: str, sequence: int, width: int) -> str:
-        """Format release ID with zero-padded sequence number."""
-        padded = f"{sequence:0{width}d}"
-        return f"{prefix}{padded}"
-
 
 def get_or_create_series(series_id: int = None) -> Series:
     """Helper to get or create default series."""
@@ -1550,175 +1414,3 @@ class DashboardMetricsService:
         }
 
 
-# ============================================================================
-# Loan Transition Service
-# ============================================================================
-
-
-from dataclasses import dataclass, field as dc_field
-from typing import Optional
-
-
-@dataclass
-class TransitionResult:
-    """
-    Returned by LoanTransitionService.execute().
-
-    Attributes:
-        success:  True when the FSM transition completed (accounting may still
-                  have partially failed -- check level).
-        level:    Django messages level name: "success", "warning", or "error".
-        message:  Human-readable outcome string, ready for template rendering.
-        payment:  Populated for disbursal transitions only.
-        created:  True when a new voucher was posted (vs idempotent re-use).
-    """
-
-    success: bool
-    level: str
-    message: str
-    payment: Optional[object] = dc_field(default=None)
-    created: bool = False
-
-
-class LoanTransitionService:
-    """
-    Orchestrates a single GivenLoan FSM transition end-to-end:
-      1. Validates the transition can proceed (FSM guard).
-      2. Calls the matching LoanFlow method inside an atomic block where needed.
-      3. Triggers accounting side-effects (disbursal/reversal vouchers).
-      4. Returns a TransitionResult the view renders as a message.
-
-    The view is responsible only for:
-      - fetching the loan
-      - validating the form
-      - calling this service
-      - translating the result into an HTTP response
-    """
-
-    def __init__(self, loan, user, tenant):
-        self.loan = loan
-        self.user = user
-        self.tenant = tenant
-
-    def execute(self, transition_name: str, **payload) -> "TransitionResult":
-        from django.utils.translation import gettext_lazy as _
-        from .flows import LoanFlow
-
-        flow = LoanFlow(self.loan, self.user, self.tenant)
-        transition_method = getattr(flow, transition_name, None)
-
-        if not (transition_method and transition_method.can_proceed()):
-            return TransitionResult(
-                success=False,
-                level="error",
-                message=str(_(
-                    "You do not have permission to perform this action "
-                    "or the transition is not valid."
-                )),
-            )
-
-        if transition_name == "undo_disburse":
-            return self._undo_disburse(transition_method, **payload)
-
-        if transition_name == "undo_release":
-            return self._undo_release(transition_method, **payload)
-
-        # Generic forward transition
-        transition_method(**payload)
-
-        if transition_name == "disburse":
-            from .models import LoanStatus
-            if self.loan.status == LoanStatus.DISBURSED:
-                return self._post_disbursal()
-
-        if transition_name in {"mark_auctioned", "mark_sold"}:
-            return TransitionResult(
-                success=True,
-                level="warning",
-                message=str(_(
-                    "Loan status updated, but accounting posting for this "
-                    "transition is not implemented yet."
-                )),
-            )
-
-        from django.utils.translation import gettext_lazy as _
-        return TransitionResult(
-            success=True,
-            level="success",
-            message=str(_("Loan status updated successfully.")),
-        )
-
-    # -- Reversal handlers ---------------------------------------------------
-
-    def _undo_disburse(self, transition_method, **payload) -> "TransitionResult":
-        from django.core.exceptions import ValidationError
-        from django.utils.translation import gettext_lazy as _
-        from .payment_service import reverse_loan_disbursal
-
-        try:
-            with transaction.atomic():
-                transition_method(**payload)
-                reverse_loan_disbursal(self.loan, self.user)
-            return TransitionResult(
-                success=True,
-                level="success",
-                message=str(_(
-                    "Disbursal reversed successfully. Loan returned to Approved."
-                )),
-            )
-        except (ValueError, ValidationError) as exc:
-            return TransitionResult(success=False, level="error", message=str(exc))
-
-    def _undo_release(self, transition_method, **payload) -> "TransitionResult":
-        from django.core.exceptions import ValidationError
-        from django.utils.translation import gettext_lazy as _
-        from .payment_service import reverse_loan_release
-
-        try:
-            with transaction.atomic():
-                release = self.loan.release
-                transition_method(**payload)
-                reverse_loan_release(self.loan, self.user)
-                release.delete()
-            return TransitionResult(
-                success=True,
-                level="success",
-                message=str(_(
-                    "Release reversed successfully. Loan returned to Disbursed."
-                )),
-            )
-        except (ValueError, ValidationError) as exc:
-            return TransitionResult(success=False, level="error", message=str(exc))
-
-    # -- Accounting side-effects ---------------------------------------------
-
-    def _post_disbursal(self) -> "TransitionResult":
-        from django.utils.translation import gettext_lazy as _
-        from .payment_service import record_loan_disbursal
-
-        try:
-            payment, created = record_loan_disbursal(self.loan, self.user)
-            if created:
-                msg = str(_(
-                    f"Loan status updated successfully. "
-                    f"Disbursal voucher {payment.payment_id} posted."
-                ))
-            else:
-                msg = str(_(
-                    f"Loan status updated successfully. "
-                    f"Disbursal already recorded as {payment.payment_id}."
-                ))
-            return TransitionResult(
-                success=True, level="success", message=msg,
-                payment=payment, created=created,
-            )
-        except Exception as exc:
-            logger.exception("Disbursal posting failed for loan %s", self.loan.pk)
-            return TransitionResult(
-                success=True,
-                level="warning",
-                message=str(_(
-                    f"Loan status updated successfully, "
-                    f"but disbursal posting failed: {exc}"
-                )),
-            )

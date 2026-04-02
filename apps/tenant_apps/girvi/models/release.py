@@ -2,14 +2,13 @@ import logging
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models, transaction
+from django.db import models
 from django.shortcuts import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.services import ReleaseIDGenerator
-from apps.tenant_apps.girvi.payment_service import record_loan_release
 
 logger = logging.getLogger(__name__)
 
@@ -66,34 +65,10 @@ class Release(models.Model):
         if is_create and not self.release_id:
             self.release_id = ReleaseIDGenerator.generate(self.loan.series)
 
-        # Updates should not retrigger lifecycle transitions or accounting posts.
-        if not is_create:
-            return super().save(*args, **kwargs)
-
-        if not self.created_by:
+        if is_create and not self.created_by:
             raise ValidationError("created_by is required for release creation.")
 
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-
-            # Transition the loan status to RELEASED and post release accounting
-            # in the same transaction so failure in either step rolls back.
-            from ..flows import LoanFlow
-
-            flow = LoanFlow(
-                self.loan, self.created_by, self.created_by.profile.workspace
-            )
-            if not flow.deliver.can_proceed():
-                raise ValidationError(
-                    f"Loan {self.loan.loan_id} cannot be released in status {self.loan.status}."
-                )
-
-            flow.deliver(
-                created_by=self.created_by,
-                released_by=self.released_by,
-                release_date=self.release_date,
-            )
-            record_loan_release(self, created_by=self.created_by)
+        return super().save(*args, **kwargs)
 
 
 # with schema_context(jcl):

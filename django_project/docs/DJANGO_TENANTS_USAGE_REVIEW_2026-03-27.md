@@ -137,7 +137,7 @@ Girvi and DEA models are TENANT_APPS — their tables exist only inside tenant s
 In `django_project/settings/dev.py` (or a dedicated `test.py` settings file), add:
 
 ```python
-TEST_RUNNER = "django_tenants.test.runner.TenantTestRunner"
+TEST_RUNNER = "django_project.test_runner.TenantAwareDiscoverRunner"
 ```
 
 Without this, `FastTenantTestCase` does not run tenant-app migrations into the test tenant schema. This is the root cause of the `relation "girvi_license" does not exist` failures seen during the rolled-back attempt.
@@ -159,7 +159,7 @@ class TenantTestBase(FastTenantTestCase):
     """
     Base class for girvi / DEA tests that need tenant-schema DB access.
 
-    django_tenants.TenantTestRunner must be configured as TEST_RUNNER for
+    a tenant-aware test runner must be configured as TEST_RUNNER for
     tenant-app migrations to be applied to the test tenant schema before
     any test body runs.
 
@@ -238,7 +238,7 @@ django.db.utils.ProgrammingError: relation "girvi_license" does not exist
 LINE 1: ...FROM "girvi_license" WHERE ...
 ```
 
-This means the test is running in the public schema (no tenant-app tables). Fix: verify `TEST_RUNNER = "django_tenants.test.runner.TenantTestRunner"` is in effect before debugging anything else.
+This means the test is running in the public schema (no tenant-app tables). Fix: verify `TEST_RUNNER = "django_project.test_runner.TenantAwareDiscoverRunner"` is in effect before debugging anything else.
 
 ---
 

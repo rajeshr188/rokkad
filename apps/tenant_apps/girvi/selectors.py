@@ -214,6 +214,8 @@ def given_loan_detail_qs():
             "notifications",
             "payments",
             "statementitem_set__statement",
+        "renewals_as_source__renewed_loan",
+        "renewal_record__source_loan",
         )
     )
 
@@ -272,6 +274,8 @@ def build_given_loan_detail_read_model(loan):
         "journal_entries": journal_entries,
         "statement_items": statement_items,
         "notifications": notifications,
+            "renewals_as_source": loan.renewals_as_source.all(),
+            "origin_renewal": loan.renewal_record.first(),
         "summary": {
             "status": loan.status,
             "is_released": loan.is_released,
