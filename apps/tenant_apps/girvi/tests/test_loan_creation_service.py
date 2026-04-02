@@ -6,7 +6,11 @@ from unittest.mock import MagicMock, patch
 from django.test import RequestFactory, SimpleTestCase
 from django.utils import timezone
 
-from apps.tenant_apps.girvi.views.loan import loan_create, loan_update
+from apps.tenant_apps.girvi.views.loan import (
+    loan_create,
+    loan_create_preview,
+    loan_update,
+)
 from apps.tenant_apps.girvi.services import LoanCreateCommand, LoanCreationService
 
 
@@ -50,6 +54,35 @@ class LoanCreationServiceTests(SimpleTestCase):
         self.assertTrue(preview.is_valid)
         self.assertEqual(preview.expected_loan_id, "A0002")
         self.assertEqual(preview.errors, [])
+
+    def test_preview_includes_borrower_account_summary(self):
+        borrower = SimpleNamespace(
+            pk=1,
+            account=SimpleNamespace(
+                credit_limit="₹50,000.00",
+                get_current_balance=MagicMock(return_value="₹12,500.00"),
+                get_available_credit=MagicMock(return_value="₹37,500.00"),
+            ),
+        )
+        command = LoanCreateCommand(
+            borrower=borrower,
+            series=SimpleNamespace(is_active=True, name="A", pk=7),
+            loan_date=timezone.now(),
+            tenure=3,
+            interest_type="Simple",
+            created_by=None,
+            loan_id="",
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.generate",
+            return_value="A0004",
+        ):
+            preview = LoanCreationService.preview(command)
+
+        self.assertEqual(preview.borrower_credit_limit, "₹50,000.00")
+        self.assertEqual(preview.borrower_current_balance, "₹12,500.00")
+        self.assertEqual(preview.borrower_available_credit, "₹37,500.00")
 
     def test_preview_rejects_future_dates(self):
         command = LoanCreateCommand(
@@ -159,3 +192,32 @@ class LoanCreationServiceTests(SimpleTestCase):
 
         execute_mock.assert_not_called()
         self.assertIn("/loan/detail/42/", response["HX-Redirect"])
+
+    def test_live_preview_endpoint_renders_preview_partial(self):
+        request = self.factory.get(
+            "/girvi/loan/create/preview/",
+            data={"borrower": "1", "series": "7", "loan_id": "A0005"},
+        )
+        request.user = SimpleNamespace(is_authenticated=True)
+
+        fake_preview = SimpleNamespace(
+            is_valid=True,
+            expected_loan_id="A0005",
+            borrower="Test Borrower",
+            series="Series A",
+            loan_date=timezone.now(),
+            tenure=3,
+            interest_type="Simple",
+            warnings=[],
+            errors=[],
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.views.loan._build_create_preview_from_data",
+            return_value=fake_preview,
+        ):
+            response = loan_create_preview(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Loan Creation Preview")
+        self.assertContains(response, "A0005")

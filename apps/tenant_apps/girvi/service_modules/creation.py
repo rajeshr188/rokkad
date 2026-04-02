@@ -4,7 +4,7 @@ from datetime import datetime
 
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -43,6 +43,9 @@ class LoanCreatePreview:
     loan_date: object | None = None
     tenure: int | None = None
     interest_type: str = ""
+    borrower_credit_limit: object | None = None
+    borrower_current_balance: object | None = None
+    borrower_available_credit: object | None = None
     warnings: list[str] = dc_field(default_factory=list)
     errors: list[str] = dc_field(default_factory=list)
 
@@ -65,6 +68,32 @@ class LoanCreationService:
         if timezone.is_naive(loan_date):
             return timezone.make_aware(loan_date, timezone.get_current_timezone())
         return loan_date
+
+    @staticmethod
+    def _get_borrower_account_summary(borrower):
+        if not borrower:
+            return None, None, None
+
+        try:
+            account = borrower.account
+        except (AttributeError, ObjectDoesNotExist):
+            return None, None, None
+
+        credit_limit = getattr(account, "credit_limit", None)
+
+        try:
+            current_balance = account.get_current_balance()
+        except Exception as exc:
+            logger.warning("Could not read borrower current balance: %s", exc)
+            current_balance = None
+
+        try:
+            available_credit = account.get_available_credit()
+        except Exception as exc:
+            logger.warning("Could not read borrower available credit: %s", exc)
+            available_credit = None
+
+        return credit_limit, current_balance, available_credit
 
     @staticmethod
     def preview(command: LoanCreateCommand) -> LoanCreatePreview:
@@ -91,6 +120,12 @@ class LoanCreationService:
                 logger.warning("Could not preview next loan ID: %s", exc)
                 warnings.append(f"Could not preview next loan ID: {exc}")
 
+        (
+            borrower_credit_limit,
+            borrower_current_balance,
+            borrower_available_credit,
+        ) = LoanCreationService._get_borrower_account_summary(command.borrower)
+
         return LoanCreatePreview(
             is_valid=len(errors) == 0,
             expected_loan_id=expected_loan_id,
@@ -99,6 +134,9 @@ class LoanCreationService:
             loan_date=normalized_loan_date,
             tenure=command.tenure,
             interest_type=command.interest_type,
+            borrower_credit_limit=borrower_credit_limit,
+            borrower_current_balance=borrower_current_balance,
+            borrower_available_credit=borrower_available_credit,
             warnings=warnings,
             errors=errors,
         )

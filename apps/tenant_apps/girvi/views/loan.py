@@ -1,5 +1,6 @@
 import decimal
 import logging
+from datetime import datetime
 
 import pytz
 from django.contrib import messages
@@ -240,6 +241,62 @@ def _build_loan_create_command(form, user):
     )
 
 
+def _parse_preview_loan_date(raw_value):
+    if not raw_value:
+        return timezone.now()
+    if isinstance(raw_value, datetime):
+        return raw_value
+
+    for fmt in ("%Y-%m-%dT%H:%M", "%d-%m-%Y %H:%M"):
+        try:
+            return datetime.strptime(str(raw_value), fmt)
+        except (TypeError, ValueError):
+            continue
+
+    return raw_value
+
+
+def _build_create_preview_from_data(data, user):
+    borrower = None
+    series = None
+
+    borrower_id = data.get("borrower")
+    if borrower_id:
+        try:
+            borrower = Customer.objects.select_related("account").filter(pk=int(borrower_id)).first()
+        except (TypeError, ValueError):
+            borrower = None
+
+    series_id = data.get("series")
+    if series_id:
+        try:
+            series = Series.objects.filter(pk=int(series_id)).first()
+        except (TypeError, ValueError):
+            series = None
+
+    try:
+        tenure = int(data.get("tenure") or 3)
+    except (TypeError, ValueError):
+        tenure = 3
+
+    interest_type = (
+        data.get("interest_type")
+        or GivenLoan._meta.get_field("interest_type").default
+    )
+
+    return LoanCreationService.preview(
+        LoanCreateCommand(
+            borrower=borrower,
+            series=series,
+            loan_date=_parse_preview_loan_date(data.get("loan_date")),
+            tenure=tenure,
+            interest_type=interest_type,
+            created_by=user,
+            loan_id="",
+        )
+    )
+
+
 def _loan_detail_redirect_response(loan_id):
     return HttpResponse(
         headers={
@@ -265,8 +322,12 @@ def _render_loan_form_response(request, *, loan=None, customer_pk=None, form=Non
             creation_preview = initial_data.get("creation_preview")
         else:
             form = LoanForm(instance=loan)
-    elif loan is None and form.is_bound and form.cleaned_data:
-        creation_preview = LoanCreationService.preview(_build_loan_create_command(form, request.user))
+    elif loan is None and form.is_bound:
+        preview_fields = {"borrower", "series", "loan_date", "tenure", "interest_type"}
+        if preview_fields.issubset(form.cleaned_data.keys()):
+            creation_preview = LoanCreationService.preview(
+                _build_loan_create_command(form, request.user)
+            )
 
     return TemplateResponse(
         request,
@@ -318,6 +379,17 @@ def loan_save(request, id=None, pk=None):
     if pk is not None:
         return loan_create_for_customer(request, customer_pk=pk)
     return loan_create(request)
+
+
+@login_required
+@require_http_methods(["GET"])
+def loan_create_preview(request):
+    preview = _build_create_preview_from_data(request.GET, request.user)
+    return render(
+        request,
+        "girvi/loan/_creation_preview.html",
+        {"creation_preview": preview, "loan": None},
+    )
 
 
 @login_required
@@ -378,7 +450,11 @@ def _get_initial_loan_data(request, customer_pk=None):
             logger.warning("No active series found for new loan")
             return None
 
-        borrower = get_object_or_404(Customer, pk=customer_pk) if customer_pk else None
+        borrower = (
+            get_object_or_404(Customer.objects.select_related("account"), pk=customer_pk)
+            if customer_pk
+            else None
+        )
         preview_command = LoanCreateCommand(
             borrower=borrower,
             series=series,

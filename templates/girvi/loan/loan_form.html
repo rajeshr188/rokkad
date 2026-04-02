@@ -11,6 +11,8 @@
 </div>
 
 <div class="modal-body">
+  {% include "girvi/loan/_creation_preview.html" %}
+
   {% crispy form %}
   <div
     hx-get="{% url 'get_customer_balance' %}"
