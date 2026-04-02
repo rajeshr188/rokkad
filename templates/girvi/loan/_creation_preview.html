@@ -1,10 +1,10 @@
 {% if not loan %}
 <div id="loan-creation-preview"
      hx-get="{% url 'girvi:girvi_loan_create_preview' %}"
-     hx-trigger="change from:#id_series, change from:select[name='borrower'], change from:#id_loan_date, change from:#id_tenure, change from:#id_interest_type"
+     hx-trigger="change from:#id_series, change from:select[name='borrower'], change from:#id_loan_date, change from:#id_tenure, change from:#id_interest_type, change from:[name^='items-']"
      hx-target="this"
      hx-swap="outerHTML"
-     hx-include="[name='series'], [name='borrower'], [name='loan_date'], [name='tenure'], [name='interest_type'], [name='loan_id']">
+     hx-include="[name='series'], [name='borrower'], [name='loan_date'], [name='tenure'], [name='interest_type'], [name='loan_id'], [name^='items-']">
   {% if creation_preview %}
   <div class="card mb-3 {% if creation_preview.is_valid %}border-success{% else %}border-warning{% endif %}">
     <div class="card-header py-2 fw-semibold">
@@ -54,6 +54,14 @@
         <div class="col-sm-6">
           <div class="text-muted">Available Credit</div>
           <div class="fw-semibold">{{ creation_preview.borrower_available_credit|default:"Not available" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Initial Items</div>
+          <div class="fw-semibold">{{ creation_preview.initial_item_count|default:0 }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Initial Principal</div>
+          <div class="fw-semibold">{{ creation_preview.initial_item_total|default:"0.00" }}</div>
         </div>
       </div>
 
