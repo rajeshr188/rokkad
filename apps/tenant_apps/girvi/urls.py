@@ -148,6 +148,11 @@ LOAN_URLPATTERNS = [
     ),
     path("girvi/loan/table/", views.loan_table_partial, name="loan_table_partial"),
     path("girvi/loan/renew/<int:pk>/", views.loan_renew, name="girvi_loan_renew"),
+    path(
+        "girvi/loan/create/preview/",
+        views.loan_create_preview,
+        name="girvi_loan_create_preview",
+    ),
     path("girvi/loan/create/", views.loan_create, name="girvi_loan_create"),
     path(
         "girvi/loan/create/customer/<int:customer_pk>/",
