@@ -16,7 +16,7 @@ from django_tables2.config import RequestConfig
 from ..filters import ReleaseFilter
 from ..forms import BulkReleaseForm, ReleaseForm
 from ..models import GivenLoan, Release
-from ..services import BulkReleaseService
+from ..services import BulkReleaseService, ReleaseLifecycleService
 from ..tables import ReleaseTable
 
 
@@ -44,17 +44,21 @@ def release_create(request, pk=None):
     if request.POST:
         form = ReleaseForm(request.POST or None)
         if form.is_valid():
-            form.instance.created_by = request.user
             try:
-                form.save(commit=True)
+                release = ReleaseLifecycleService.create_release(
+                    loan=form.cleaned_data["loan"],
+                    created_by=request.user,
+                    release_date=form.cleaned_data["release_date"],
+                    released_by=form.cleaned_data.get("released_by"),
+                )
             except ValidationError as exc:
                 form.add_error(None, exc)
                 messages.error(request, str(exc))
             else:
                 # return HttpResponse(status = 200,headers={"HX-Trigger":loanChanged})
-                response = redirect("girvi:girvi_loan_detail", pk=form.instance.loan.pk)
+                response = redirect("girvi:girvi_loan_detail", pk=release.loan.pk)
                 response["HX-Push-Url"] = reverse(
-                    "girvi:girvi_loan_detail", kwargs={"pk": form.instance.loan.pk}
+                    "girvi:girvi_loan_detail", kwargs={"pk": release.loan.pk}
                 )
                 return response
     else:

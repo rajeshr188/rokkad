@@ -66,7 +66,7 @@
         hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">Repledge</a>
       <a class="btn btn-outline-secondary" hx-get="{% url 'girvi:loan_custody_summary' loan.id %}"
         hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">Custody</a>
-      <a class="btn btn-outline-primary" hx-get="{% url 'girvi:girvi_loan_renew' object.id %}">Renew</a>
+      <a class="btn btn-outline-primary" href="{% url 'girvi:girvi_loan_renew' object.id %}">Renew</a>
       {% if loan.loanitems.count > 1 %}
       <a class="btn btn-warning btn-sm"
         hx-post="{% url 'girvi:split_loan_items' loan.id %}"
@@ -126,60 +126,20 @@
         {% endif %}
 
         <!-- Available transition action buttons -->
-        {% if possible_transitions %}
+        {% if transition_actions %}
         <div class="ms-auto d-flex flex-wrap gap-2">
           <span class="text-muted small align-self-center">Actions:</span>
-          {% for transition in possible_transitions %}
-            {% if transition == "approve" %}
-              <a class="btn btn-sm btn-success"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                ✓ Approve
-              </a>
-            {% elif transition == "disburse" %}
-              <a class="btn btn-sm btn-primary"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                💳 Disburse
-              </a>
-            {% elif transition == "deliver" %}
-              <a class="btn btn-sm btn-info"
-                 hx-get="{% url 'girvi:release_loan_check_custody' loan.id %}"
+          {% for action in transition_actions %}
+            {% if action.is_htmx %}
+              <a class="btn btn-sm {{ action.button_class }}"
+                 hx-get="{{ action.hx_get }}"
                  hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">
-                📦 Release
-              </a>
-            {% elif transition == "cancel" %}
-              <a class="btn btn-sm btn-danger"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                ✕ Cancel
-              </a>
-            {% elif transition == "mark_defaulted" %}
-              <a class="btn btn-sm btn-warning"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                ⚠ Mark Defaulted
-              </a>
-            {% elif transition == "mark_auctioned" %}
-              <a class="btn btn-sm btn-dark"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                🔨 Auction
-              </a>
-            {% elif transition == "mark sold" or transition == "mark_sold" %}
-              <a class="btn btn-sm btn-secondary"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                💰 Sell
-              </a>
-            {% elif transition == "undo_disburse" %}
-              <a class="btn btn-sm btn-outline-warning"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                ↩ Undo Disbursal
-              </a>
-            {% elif transition == "undo_release" %}
-              <a class="btn btn-sm btn-outline-secondary"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                ↩ Undo Release
+                {{ action.icon }} {{ action.title }}
               </a>
             {% else %}
-              <a class="btn btn-sm btn-outline-secondary"
-                 href="{% url 'girvi:girvi_loan_transition' loan.pk %}?transition={{ transition }}">
-                {{ transition|capfirst }}
+              <a class="btn btn-sm {{ action.button_class }}"
+                 href="{{ action.href }}">
+                {{ action.icon }} {{ action.title }}
               </a>
             {% endif %}
           {% endfor %}
@@ -303,6 +263,17 @@
                 hx-trigger="click"
                 type="button" role="tab" aria-controls="release-tab-pane" aria-selected="false">
                 Release
+                          <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="renewal-tab"
+                              data-bs-toggle="tab" data-bs-target="#renewal-tab-pane"
+                              type="button" role="tab" aria-controls="renewal-tab-pane" aria-selected="false">
+                              Renewal Chain
+                              {% if renewals_as_source or origin_renewal %}
+                              <span class="badge bg-info">{{ renewals_as_source|length|add:origin_renewal|yesno:"1,0" }}</span>
+                              {% endif %}
+                            </button>
+                          </li>
+                        </ul>
               </button>
             </li>
           </ul>
@@ -321,6 +292,58 @@
               aria-labelledby="notices-tab" tabindex="0"></div>
             <div class="tab-pane fade" id="release-tab-pane" role="tabpanel"
               aria-labelledby="release-tab" tabindex="0"></div>
+                      <div class="tab-pane fade" id="renewal-tab-pane" role="tabpanel"
+                        aria-labelledby="renewal-tab" tabindex="0">
+                        {# ── Origin renewal (this loan was created by a renewal) ── #}
+                        {% if origin_renewal %}
+                        <div class="alert alert-info small mb-3">
+                          This loan was created by renewing
+                          <a href="{% url 'girvi:girvi_loan_detail' origin_renewal.source_loan_id %}">
+                            {{ origin_renewal.source_loan }}
+                          </a>
+                          on {{ origin_renewal.renewal_date|date:"d M Y" }}
+                          ({{ origin_renewal.get_mode_display }}).
+                        </div>
+                        {% endif %}
+
+                        {# ── Renewals where this loan is the source ── #}
+                        {% if renewals_as_source %}
+                        <div class="table-responsive">
+                          <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Date</th>
+                                <th>Mode</th>
+                                <th>Interest Paid</th>
+                                <th>Principal Paid</th>
+                                <th>Extra</th>
+                                <th>New Loan</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for r in renewals_as_source %}
+                              <tr>
+                                <td>{{ r.renewal_date|date:"d M Y" }}</td>
+                                <td><span class="badge bg-secondary">{{ r.get_mode_display }}</span></td>
+                                <td>₹{{ r.interest_paid }}</td>
+                                <td>₹{{ r.principal_paid }}</td>
+                                <td>₹{{ r.requested_extra_amount }}</td>
+                                <td>
+                                  {% if r.renewed_loan %}
+                                  <a href="{% url 'girvi:girvi_loan_detail' r.renewed_loan_id %}">
+                                    {{ r.renewed_loan.loan_id }}
+                                  </a>
+                                  {% else %}&mdash;{% endif %}
+                                </td>
+                              </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted small mt-2">No renewals on this loan.</p>
+                        {% endif %}
+                      </div>
           </div>
 
           <!-- Summary cards -->

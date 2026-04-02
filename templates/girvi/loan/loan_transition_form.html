@@ -3,35 +3,6 @@
 {% block content %}
 {{ form.media }}
 
-{# ── resolve heading, icon, badge per transition ────────────────────────── #}
-{% if transition_name == "approve" %}
-  {% with heading="Approve Loan" icon="✓" badge_class="bg-success" %}
-  {% include "girvi/loan/_transition_form_inner.html" %}
-  {% endwith %}
-{% elif transition_name == "disburse" %}
-  {% with heading="Disburse Loan" icon="💳" badge_class="bg-primary" %}
-  {% include "girvi/loan/_transition_form_inner.html" %}
-  {% endwith %}
-{% elif transition_name == "deliver" %}
-  {% with heading="Release Collateral" icon="📦" badge_class="bg-info" %}
-  {% include "girvi/loan/_transition_form_inner.html" %}
-  {% endwith %}
-{% elif transition_name == "cancel" %}
-  {% with heading="Cancel Loan" icon="✕" badge_class="bg-danger" %}
-  {% include "girvi/loan/_transition_form_inner.html" %}
-  {% endwith %}
-{% elif transition_name == "mark_defaulted" %}
-  {% with heading="Mark as Defaulted" icon="⚠" badge_class="bg-warning" %}
-  {% include "girvi/loan/_transition_form_inner.html" %}
-  {% endwith %}
-{% elif transition_name == "mark_auctioned" %}
-  {% with heading="Record Auction" icon="🔨" badge_class="bg-dark" %}
-  {% include "girvi/loan/_transition_form_inner.html" %}
-  {% endwith %}
-{% else %}
-  {% with heading=transition_name|capfirst icon="→" badge_class="bg-secondary" %}
-  {% include "girvi/loan/_transition_form_inner.html" %}
-  {% endwith %}
-{% endif %}
+{% include "girvi/loan/_transition_form_inner.html" %}
 
 {% endblock %}

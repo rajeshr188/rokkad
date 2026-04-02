@@ -162,6 +162,20 @@ Primary docs:
 - `python manage.py check_tenant_seed_parity --baseline-schema <schema_name> --fail-on-drift`
 - `python manage.py setup_permissions`
 
+## Testing (django-tenants)
+
+`manage.py test` is configured with a tenant-aware test runner:
+
+- `TEST_RUNNER = "django_project.test_runner.TenantAwareDiscoverRunner"`
+
+This runner prepares test schemas using `migrate_schemas` semantics (schema-aware setup for `public` and tenant apps), rather than relying on plain non-tenant migration behavior.
+
+Example:
+
+- `python manage.py test apps.tenant_apps.girvi.tests -v 2`
+
+Note: seeing migration lines during tests is expected. The important part is that migrations run in tenant schema context (for example, log lines prefixed with `[standard:public]`).
+
 ## CI Smoke Validation
 
 GitHub Actions workflow:

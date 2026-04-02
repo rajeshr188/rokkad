@@ -417,8 +417,69 @@ class LoanForm(forms.ModelForm):
 
 
 class LoanRenewForm(forms.Form):
-    amount = forms.IntegerField()
-    interest = forms.IntegerField()
+    RENEWAL_MODE_CHOICES = [
+        ("PAY_AND_RENEW", "Pay & Renew — reduce principal"),
+        ("TOPUP_RENEW", "Top-Up Renew — borrow more"),
+    ]
+    PAYMENT_METHOD_CHOICES = [
+        ("CASH", "Cash"),
+        ("BANK", "Bank Transfer"),
+        ("CHEQUE", "Cheque"),
+        ("UPI", "UPI"),
+    ]
+
+    mode = forms.ChoiceField(
+        choices=RENEWAL_MODE_CHOICES,
+        widget=forms.RadioSelect,
+        initial="PAY_AND_RENEW",
+    )
+    renewal_date = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        required=True,
+    )
+    interest_paid = forms.DecimalField(
+        min_value=0,
+        required=True,
+        initial=0,
+        help_text="Interest amount received from borrower",
+    )
+    principal_paid = forms.DecimalField(
+        min_value=0,
+        required=True,
+        initial=0,
+        help_text="Principal reduction paid by borrower (0 = carry full balance forward)",
+    )
+    requested_extra_amount = forms.DecimalField(
+        min_value=0,
+        required=False,
+        initial=0,
+        help_text="Additional amount to lend (Top-Up mode only)",
+    )
+    payment_method = forms.ChoiceField(
+        choices=PAYMENT_METHOD_CHOICES,
+        initial="CASH",
+        required=True,
+    )
+    reference_number = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text="Cheque / bank reference number (optional)",
+    )
+    notes = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 2}),
+        required=False,
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        mode = cleaned.get("mode")
+        extra = cleaned.get("requested_extra_amount") or 0
+        if mode == "TOPUP_RENEW" and extra <= 0:
+            self.add_error(
+                "requested_extra_amount",
+                "Top-Up mode requires a positive extra amount.",
+            )
+        return cleaned
 
 
 class LoanItemForm(forms.ModelForm):
@@ -1079,6 +1140,60 @@ class UndoReleaseLoanForm(forms.Form):
             ),
         )
         self.helper.add_input(Submit("submit", "Undo Release", css_class="btn btn-warning"))
+
+
+class RepledgeLoanForm(forms.Form):
+    created_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["created_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "created_by",
+            HTML(
+                '<div class="alert alert-info">'
+                '<strong>Repledge</strong> marks this loan as renewed/repledged. '
+                'Collateral remains in custody and source loan moves to <em>Repledged</em>.'
+                "</div>"
+            ),
+        )
+        self.helper.add_input(
+            Submit("submit", "Confirm Repledge", css_class="btn btn-info")
+        )
+
+
+class UndoRepledgeLoanForm(forms.Form):
+    undone_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    reason = forms.CharField(
+        widget=forms.Textarea(
+            attrs={"rows": 3, "placeholder": "State why repledge is being reversed..."}
+        ),
+        label="Reason for Reversal",
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["undone_by"].initial = user.username
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "undone_by",
+            "reason",
+            HTML(
+                '<div class="alert alert-warning">'
+                '<strong>Undo Repledge</strong> reverses the renewal linkage and '
+                'returns source loan to <em>Disbursed</em> status.'
+                "</div>"
+            ),
+        )
+        self.helper.add_input(
+            Submit("submit", "Undo Repledge", css_class="btn btn-warning")
+        )
 
 
 class MarkDefaultedLoanForm(forms.Form):

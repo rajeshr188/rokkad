@@ -1,8 +1,8 @@
 {% load crispy_forms_tags %}
 
 <div class="d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom">
-  <h1 class="h2">{{ heading }}</h1>
-  <span class="badge {{ badge_class }} fs-6">{{ icon }} {{ loan.status }}</span>
+  <h1 class="h2">{{ transition_ui.heading }}</h1>
+  <span class="badge {{ transition_ui.badge_class }} fs-6">{{ transition_ui.icon }} {{ loan.status }}</span>
 </div>
 
 <div class="row justify-content-center">
@@ -29,8 +29,8 @@
 
     {# Transition form card #}
     <div class="card shadow-sm">
-      <div class="card-header {{ badge_class }} text-white fw-semibold py-2">
-        {{ icon }} {{ heading }}
+      <div class="card-header {{ transition_ui.badge_class }} text-white fw-semibold py-2">
+        {{ transition_ui.icon }} {{ transition_ui.heading }}
       </div>
       <div class="card-body">
         <form method="post">

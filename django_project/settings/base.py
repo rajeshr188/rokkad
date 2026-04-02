@@ -183,6 +183,9 @@ DATABASES = {
 
 DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
 
+# Ensure test database setup uses tenant-aware schema migration flow.
+TEST_RUNNER = "django_project.test_runner.TenantAwareDiscoverRunner"
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
     {

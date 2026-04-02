@@ -43,7 +43,9 @@
     APPROVED ──cancel──► CANCELLED
 
     DISBURSED ──(Release form)──► RELEASED
-    REPLEDGED ──(Release form)──► RELEASED
+
+    DISBURSED ──repledge──► REPLEDGED
+    REPLEDGED ──undo_repledge──► DISBURSED
 
     DISBURSED ──undo_disburse──► APPROVED     (reversal; only if no repayments posted)
     RELEASED  ──undo_release──►  DISBURSED    (reversal; deletes Release record)
@@ -101,14 +103,14 @@
 ### `deliver`  *(internal — do not call directly from UI)*
 | | |
 |---|---|
-| **Source** | `DISBURSED`, `REPLEDGED` |
+| **Source** | `DISBURSED` |
 | **Target** | `RELEASED` |
 | **Permission** | `can_release_loan` |
 | **Accounting** | ✅ `GIVENLOAN_RELEASE` PaymentVoucher posted by `record_loan_release()` **inside `Release.save()`** |
 | **UI trigger** | "📦 Release" button → `release_loan_check_custody` → `girvi_release_create` → `Release.save()` |
 | **Form fields** | `created_by`, `released_by`, `release_date` (all supplied by `Release.save()`) |
 | **What happens** | `Release.save()` fires `flow.deliver()` to advance status, then calls `record_loan_release()`. Journal entries: `Dr CASH / Cr LOAN_PRINCIPAL_CTRL` (principal) + `Dr CASH / Cr INTEREST_INCOME` (interest) + subledger `Cr BORROWER_LOAN_CTRL`. |
-| **⚠ Important** | `deliver` is **not** in `loan_transition_view`'s `form_classes`. It must never be triggered as a standalone action — doing so would advance the status without creating the `Release` document or posting accounting. Always go through the Release create form. |
+| **⚠ Important** | `deliver` is intentionally excluded from the transition registry endpoint (`loan_transition_view`). It must never be triggered as a standalone action — doing so would advance the status without creating the `Release` document or posting accounting. Always go through the Release create form. |
 | **Custody check** | Before the Release form, `release_loan_check_custody` verifies all items are back in the vault. If any are still with lenders, items must be returned first. |
 | **Idempotency** | Reference marker `RELEASE-<release.pk>` prevents double-posting. |
 
@@ -196,14 +198,40 @@
 
 ---
 
+### `repledge`
+| | |
+|---|---|
+| **Source** | `DISBURSED` |
+| **Target** | `REPLEDGED` |
+| **Permission** | `can_release_loan` |
+| **Accounting** | None (renewal workflow handles financial postings separately) |
+| **UI trigger** | "🔁 Repledge" button → `loan_transition_view?transition=repledge` |
+| **Form fields** | `created_by` (from `request.user`) |
+| **What happens** | Source loan is marked REPLEDGED to indicate collateral remains in custody under renewed/repledged lifecycle. |
+
+---
+
+### `undo_repledge`
+| | |
+|---|---|
+| **Source** | `REPLEDGED` |
+| **Target** | `DISBURSED` |
+| **Permission** | `can_release_loan` |
+| **Accounting** | Renewal reversal path (handled in service) |
+| **UI trigger** | "↩ Undo Repledge" button → `loan_transition_view?transition=undo_repledge` |
+| **Form fields** | `undone_by` (from `request.user`), `reason` (optional) |
+| **What happens** | Reversal workflow restores source loan to DISBURSED and rolls back renewal linkage for correction flows. |
+
+---
+
 ## How Transitions Are Processed
 
-### Standard path (approve / disburse / cancel / mark_defaulted / mark_auctioned / mark_sold)
+### Standard path (approve / disburse / cancel / mark_defaulted / mark_auctioned / mark_sold / repledge / undo_*)
 
 ```
 User clicks button
   → loan_transition_view (views/loan.py)
-      → FormClass(request.POST)
+    → transition_registry resolves FormClass(request.POST)
       → LoanTransitionService(loan, user, tenant).execute(transition, **data)
           → LoanFlow(loan, user, tenant)
           → flow.<transition>(**payload)
@@ -269,6 +297,8 @@ User clicks "📦 Release"
 | `can_mark_defaulted` | `mark_defaulted` |
 | `can_mark_auctioned` | `mark_auctioned` |
 | `can_mark_sold` | `mark_sold` |
+| `can_release_loan` | `repledge` |
+| `can_release_loan` | `undo_repledge` |
 | `can_disburse_loan` | `undo_disburse` |
 | `can_release_loan` | `undo_release` |
 
@@ -283,6 +313,7 @@ Permissions are checked against `Membership.role.permissions` for the user's act
 | `apps/tenant_apps/girvi/flows.py` | `LoanFlow` FSM — all transitions defined here |
 | `apps/tenant_apps/girvi/models/loan_refactored.py` | `LoanStatus` enum |
 | `apps/tenant_apps/girvi/views/loan.py` | `loan_transition_view` — handles all UI-driven transitions |
+| `apps/tenant_apps/girvi/transition_registry.py` | Transition wiring registry (form/UI dispatch metadata) |
 | `apps/tenant_apps/girvi/models/release.py` | `Release.save()` — triggers `deliver` + `record_loan_release` |
 | `apps/tenant_apps/girvi/payment_service.py` | `record_loan_disbursal`, `record_loan_release` |
 | `apps/tenant_apps/girvi/views/custody_views.py` | `release_loan_check_custody` — pre-release custody gate |
