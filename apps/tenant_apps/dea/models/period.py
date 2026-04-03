@@ -173,49 +173,48 @@ class AccountingPeriod(models.Model):
                 _("Can only close OPEN periods. Current status: ") + self.status
             )
 
-        from .ledger import Ledger, LedgerStatement
-        from .journal_entry import JournalEntry
+        from .ledger import Ledger
 
         try:
             with transaction.atomic():
-                # Get all ledgers with income/expense accounts
                 income_expense_ledgers = Ledger.objects.filter(
-                    AccountType__AccountType__in=["Revenue", "Expense"]
-                )
+                    AccountType__AccountType__in=["Revenue", "Income", "Expense"]
+                ).select_related("AccountType")
 
                 closing_entries = []
-                retained_earnings = Ledger.objects.get(name="Retained Earnings")
+                retained_earnings = None
+                if income_expense_ledgers.exists():
+                    retained_earnings = self._get_or_create_retained_earnings_ledger()
 
-                # Calculate balances for this period only
                 for ledger in income_expense_ledgers:
                     period_balance = ledger.calculate_period_balance(self)
+                    if period_balance.amount == 0:
+                        continue
 
-                    if period_balance.amount != 0:
-                        # Create closing entry
-                        closing_entries.append(
-                            {
-                                "ledgerno": retained_earnings.name,
-                                "ledgerno_dr": ledger.name,
-                                "amount": Money(
-                                    abs(period_balance.amount), period_balance.currency
-                                ),
-                            }
-                        )
+                    amount = Money(abs(period_balance.amount), period_balance.currency)
+                    if period_balance.amount > 0:
+                        debit_ledger = retained_earnings.name
+                        credit_ledger = ledger.name
+                    else:
+                        debit_ledger = ledger.name
+                        credit_ledger = retained_earnings.name
 
-                # Create closing journal entry if there are entries
-                if closing_entries:
-                    je = JournalEntry.objects.create(
-                        desc=f"Period Closing Entry - {self.end_date}",
-                        period=self,
-                        created_by=user,
+                    closing_entries.append(
+                        {
+                            "ledgerno": credit_ledger,
+                            "ledgerno_dr": debit_ledger,
+                            "amount": amount,
+                        }
                     )
-                    je.transact_from_list(closing_entries)
-                    self.closing_journal_entry = je
 
-                # Create closing statements for all ledgers and accounts
+                if closing_entries:
+                    self.closing_journal_entry = self._create_closing_journal_entry(
+                        user=user,
+                        closing_entries=closing_entries,
+                    )
+
                 self._create_closing_statements()
 
-                # Update period status
                 self.status = self.PeriodStatus.CLOSED
                 self.closed_date = timezone.now()
                 self.closed_by = user
@@ -229,6 +228,116 @@ class AccountingPeriod(models.Model):
         except Exception as e:
             logger.error(f"Error closing period {self.name}: {str(e)}")
             raise ValidationError(_("Failed to close period: ") + str(e))
+
+    def _get_or_create_retained_earnings_ledger(self):
+        """Ensure the required retained earnings ledger exists for period close."""
+        from .ledger import AccountType, Ledger
+
+        retained_earnings = Ledger.objects.filter(name="Retained Earnings").first()
+        if retained_earnings:
+            return retained_earnings
+
+        equity_type, _ = AccountType.objects.get_or_create(
+            AccountType="Equity",
+            defaults={"description": "Equity Account", "code_prefix": "3"},
+        )
+        if not equity_type.code_prefix:
+            equity_type.code_prefix = "3"
+            equity_type.save(update_fields=["code_prefix"])
+
+        capital, _ = Ledger.objects.get_or_create(
+            name="Capital",
+            defaults={
+                "AccountType": equity_type,
+                "sort_order": 10,
+            },
+        )
+        capital_updates = []
+        if capital.AccountType_id != equity_type.id:
+            capital.AccountType = equity_type
+            capital_updates.append("AccountType")
+        if capital.sort_order != 10:
+            capital.sort_order = 10
+            capital_updates.append("sort_order")
+        if capital_updates:
+            capital.save(update_fields=capital_updates)
+
+        if not capital.code:
+            capital.save()
+
+        retained_defaults = {
+            "AccountType": equity_type,
+            "sort_order": 30,
+            "parent": capital,
+        }
+        if capital.code:
+            child_segments = []
+            for code in capital.children.exclude(code="").values_list("code", flat=True):
+                if not code or not code.startswith(f"{capital.code}."):
+                    continue
+                try:
+                    child_segments.append(int(code.split(".")[-1]))
+                except (TypeError, ValueError):
+                    continue
+            next_segment = max(child_segments, default=0) + 1
+            retained_defaults["code"] = f"{capital.code}.{next_segment:02d}"
+
+        retained_earnings, created = Ledger.objects.get_or_create(
+            name="Retained Earnings",
+            defaults=retained_defaults,
+        )
+        retained_updates = []
+        if retained_earnings.AccountType_id != equity_type.id:
+            retained_earnings.AccountType = equity_type
+            retained_updates.append("AccountType")
+        if retained_earnings.parent_id != capital.id:
+            retained_earnings.parent = capital
+            retained_updates.append("parent")
+        if retained_earnings.sort_order != 30:
+            retained_earnings.sort_order = 30
+            retained_updates.append("sort_order")
+        if retained_updates:
+            retained_earnings.save(update_fields=retained_updates)
+
+        logger.info(
+            "Auto-created retained earnings ledger for accounting period close"
+        )
+        return retained_earnings
+
+    def _create_closing_journal_entry(self, user, closing_entries):
+        """Create and post the voucher-backed journal entry used for period close."""
+        from django.contrib.contenttypes.models import ContentType
+
+        from .journal import JournalEntry
+        from .voucher import Voucher, VoucherStatus, VoucherType
+
+        voucher_type, _ = VoucherType.objects.get_or_create(
+            name="PERIOD_CLOSE",
+            defaults={"description": "System-generated accounting period close"},
+        )
+
+        voucher = Voucher.objects.create(
+            voucher_no=f"PERIOD-CLOSE-{self.pk}-{timezone.now():%Y%m%d%H%M%S}",
+            voucher_type=voucher_type,
+            voucher_date=self.end_date,
+            status=VoucherStatus.POSTED,
+            created_by=user,
+            updated_by=user,
+            doc_content_type=ContentType.objects.get_for_model(type(self)),
+            doc_object_id=self.pk,
+            fingerprint=f"period-close:{self.pk}:{self.end_date.isoformat()}",
+            last_posted_at=timezone.now(),
+            narration=f"Period closing entry for {self.name}",
+        )
+
+        journal_entry = JournalEntry.objects.create(
+            voucher=voucher,
+            period=self,
+            posted_by=user,
+            desc=f"Period Closing Entry - {self.name}",
+        )
+        journal_entry.transact(closing_entries, [])
+        return journal_entry
 
     def _create_closing_statements(self):
         """Create closing statements for all ledgers and accounts at period end"""
@@ -248,9 +357,29 @@ class AccountingPeriod(models.Model):
         # Create statements for all accounts
         for account in Account.objects.all():
             balance = account.calculate_period_balance(self)
+            currency = getattr(balance, "currency", "INR")
+            period_transactions = account.accounttransactions.filter(
+                created__date__gte=self.start_date,
+                created__date__lte=self.end_date,
+                amount_currency=currency,
+            )
+            total_credit_amount = (
+                period_transactions.filter(XactTypeCode__XactTypeCode="Cr").aggregate(
+                    total=models.Sum("amount")
+                )["total"]
+                or 0
+            )
+            total_debit_amount = (
+                period_transactions.filter(XactTypeCode__XactTypeCode="Dr").aggregate(
+                    total=models.Sum("amount")
+                )["total"]
+                or 0
+            )
             AccountStatement.objects.create(
                 AccountNo=account,
-                ClosingBalance=Money(balance.amount, balance.currency),
+                ClosingBalance=Money(balance.amount, currency),
+                TotalCredit=Money(total_credit_amount, currency),
+                TotalDebit=Money(total_debit_amount, currency),
                 period=self,
                 is_opening_statement=False,
             )

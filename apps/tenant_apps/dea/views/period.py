@@ -255,7 +255,18 @@ def period_close(request, pk):
 
     # Check if period can be closed
     if period.status != AccountingPeriod.PeriodStatus.OPEN:
-        messages.error(request, f"Cannot close {period.status} period.")
+        if period.status == AccountingPeriod.PeriodStatus.CLOSED:
+            messages.info(
+                request,
+                f"Period '{period.name}' is already closed. Closing can only be done once.",
+            )
+        elif period.status == AccountingPeriod.PeriodStatus.LOCKED:
+            messages.warning(
+                request,
+                f"Period '{period.name}' is locked and cannot be closed again.",
+            )
+        else:
+            messages.error(request, f"Cannot close {period.status} period.")
         return redirect("dea_period_detail", pk=pk)
 
     if request.method == "POST":
@@ -266,11 +277,12 @@ def period_close(request, pk):
 
                 # Close the period
                 period.close_period(user=request.user, notes=notes)
+                entries_processed = period.journal_entries.count()
 
                 messages.success(
                     request,
                     f"Period '{period.name}' closed successfully. "
-                    f"{period.journal_count} entries processed.",
+                    f"{entries_processed} entries processed.",
                 )
 
                 logger.info(
