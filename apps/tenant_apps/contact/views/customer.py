@@ -25,7 +25,7 @@ CUSTOMER_LIST_TEMPLATE = "contact/customer_list_improved.html"
 def _get_customer_list_context(request):
     customer_queryset = Customer.objects.all().prefetch_related("contactno", "address")
     customer_filter = CustomerFilter(request.GET, queryset=customer_queryset)
-    filtered_queryset = customer_filter.qs
+    filtered_queryset = customer_filter.qs.distinct()
     paginator = Paginator(filtered_queryset, 12)
     page_obj = paginator.get_page(request.GET.get("page"))
 
