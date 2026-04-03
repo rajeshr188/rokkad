@@ -65,6 +65,16 @@
     top: 1rem;
   }
 
+  .setup-checklist .list-group-item {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .empty-action-state {
+    max-width: 22rem;
+    margin: 0 auto;
+  }
+
   @media (max-width: 991.98px) {
     .customer-sidebar {
       position: static;
@@ -251,7 +261,19 @@
         {% for contact in customer.contactno.all %}
           {% partial customer-contact-item %}
         {% empty %}
-          <li class="list-group-item text-muted text-center py-4">{% trans "No contact numbers added yet." %}</li>
+          <li class="list-group-item py-4">
+            <div class="empty-action-state text-center">
+              <div class="fw-semibold mb-1">{% trans "No contact numbers yet." %}</div>
+              <p class="text-muted small mb-3">{% trans "Add a primary phone number so your team can reach this customer quickly." %}</p>
+              <button
+                class="btn btn-primary btn-sm"
+                hx-get="{% url 'contact_create' customer.id %}"
+                hx-target="#modal-content"
+                data-bs-toggle="modal"
+                data-bs-target="#modal"
+              >{% trans "Add primary phone" %}</button>
+            </div>
+          </li>
         {% endfor %}
       </ul>
     </div>
@@ -280,7 +302,19 @@
         {% for address in customer.address.all %}
           {% partial customer-address-item %}
         {% empty %}
-          <li class="list-group-item text-muted text-center py-4">{% trans "No addresses added yet." %}</li>
+          <li class="list-group-item py-4">
+            <div class="empty-action-state text-center">
+              <div class="fw-semibold mb-1">{% trans "No addresses yet." %}</div>
+              <p class="text-muted small mb-3">{% trans "Add a default address for records, receipts, and follow-up visits." %}</p>
+              <button
+                class="btn btn-primary btn-sm"
+                hx-get="{% url 'customer_address_create' customer.id %}"
+                hx-target="#modal-content"
+                data-bs-toggle="modal"
+                data-bs-target="#modal"
+              >{% trans "Add default address" %}</button>
+            </div>
+          </li>
         {% endfor %}
       </ul>
     </div>
@@ -309,7 +343,19 @@
         {% for proof in customer.proofs.all %}
           {% partial customer-proof-item %}
         {% empty %}
-          <li class="list-group-item text-muted text-center py-4">{% trans "No identity proofs added yet." %}</li>
+          <li class="list-group-item py-4">
+            <div class="empty-action-state text-center">
+              <div class="fw-semibold mb-1">{% trans "No identity proofs yet." %}</div>
+              <p class="text-muted small mb-3">{% trans "Add one ID proof when available to keep verification details in one place." %}</p>
+              <button
+                class="btn btn-primary btn-sm"
+                hx-get="{% url 'customer_proof_create' customer.id %}"
+                hx-target="#modal-content"
+                data-bs-toggle="modal"
+                data-bs-target="#modal"
+              >{% trans "Add ID proof" %}</button>
+            </div>
+          </li>
         {% endfor %}
       </ul>
     </div>
@@ -463,6 +509,90 @@
             </dl>
           </div>
         </div>
+
+        {% with has_default_contact=customer.get_default_contact has_default_address=customer.get_default_address proof_count=customer.proofs.count %}
+          {% if not has_default_contact or not has_default_address or not proof_count %}
+            <div class="card section-card">
+              <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Recommended next steps" %}</h5>
+              </div>
+              <div class="card-body">
+                <p class="text-muted small mb-3">{% trans "Complete the basics to make this customer easier to work with." %}</p>
+                <ul class="list-group list-group-flush setup-checklist">
+                  <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                    <div>
+                      <div class="fw-semibold">{% trans "Primary phone" %}</div>
+                      <div class="text-muted small">
+                        {% if has_default_contact %}
+                          {% trans "Added" %}
+                        {% else %}
+                          {% trans "Needed for quick follow-up and reminders." %}
+                        {% endif %}
+                      </div>
+                    </div>
+                    {% if has_default_contact %}
+                      <span class="badge bg-success-subtle text-success-emphasis">{% trans "Done" %}</span>
+                    {% else %}
+                      <button
+                        class="btn btn-outline-primary btn-sm"
+                        hx-get="{% url 'contact_create' customer.id %}"
+                        hx-target="#modal-content"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modal"
+                      >{% trans "Add phone" %}</button>
+                    {% endif %}
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                    <div>
+                      <div class="fw-semibold">{% trans "Default address" %}</div>
+                      <div class="text-muted small">
+                        {% if has_default_address %}
+                          {% trans "Added" %}
+                        {% else %}
+                          {% trans "Useful for records and delivery references." %}
+                        {% endif %}
+                      </div>
+                    </div>
+                    {% if has_default_address %}
+                      <span class="badge bg-success-subtle text-success-emphasis">{% trans "Done" %}</span>
+                    {% else %}
+                      <button
+                        class="btn btn-outline-primary btn-sm"
+                        hx-get="{% url 'customer_address_create' customer.id %}"
+                        hx-target="#modal-content"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modal"
+                      >{% trans "Add address" %}</button>
+                    {% endif %}
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                    <div>
+                      <div class="fw-semibold">{% trans "ID proof" %}</div>
+                      <div class="text-muted small">
+                        {% if proof_count %}
+                          {% trans "Added" %}
+                        {% else %}
+                          {% trans "Helpful for verification and compliance." %}
+                        {% endif %}
+                      </div>
+                    </div>
+                    {% if proof_count %}
+                      <span class="badge bg-success-subtle text-success-emphasis">{% trans "Done" %}</span>
+                    {% else %}
+                      <button
+                        class="btn btn-outline-primary btn-sm"
+                        hx-get="{% url 'customer_proof_create' customer.id %}"
+                        hx-target="#modal-content"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modal"
+                      >{% trans "Add proof" %}</button>
+                    {% endif %}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+        {% endwith %}
 
         <div class="card section-card">
           <div class="card-header d-flex justify-content-between align-items-center">

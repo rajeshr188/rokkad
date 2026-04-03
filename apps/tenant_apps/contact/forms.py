@@ -1,7 +1,7 @@
 import datetime
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Button, Submit
+from crispy_forms.layout import Button, Column, HTML, Layout, Row, Submit
 from django import forms
 from django.apps import apps
 
@@ -125,9 +125,24 @@ class CustomerReportForm(BaseReportForm, forms.ModelForm):
 class CustomerForm(forms.ModelForm):
     # pricing_tier = forms.ModelChoiceField(queryset=PricingTier.objects.all())
     firstname = forms.CharField(
-        widget=forms.TextInput(attrs={"autofocus": True}),
+        widget=forms.TextInput(attrs={"autofocus": True, "placeholder": "First name"}),
     )
-    lastname = forms.CharField()
+    lastname = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Last name"}),
+    )
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={"placeholder": "name@example.com"}),
+    )
+    dob = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    relatedto = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Optional relationship name"}),
+    )
 
     class Meta:
         model = Customer
@@ -135,6 +150,9 @@ class CustomerForm(forms.ModelForm):
             "customer_type",
             "firstname",
             "lastname",
+            "email",
+            "dob",
+            "religion",
             "relatedas",
             "relatedto",
             # "pricing_tier",
@@ -151,21 +169,49 @@ class CustomerForm(forms.ModelForm):
         # default_pricing_tier = PricingTier.objects.get(name="Default")
         # self.fields["pricing_tier"].initial = default_pricing_tier
         self.helper = FormHelper()
+        self.helper.form_method = "post"
+        self.helper.layout = Layout(
+            HTML(
+                """
+                <div class="mb-3">
+                    <h6 class="text-uppercase text-muted small mb-2">Customer details</h6>
+                    <p class="text-muted small mb-0">Capture the profile and relationship information in a cleaner layout.</p>
+                </div>
+                """
+            ),
+            Row(
+                Column("customer_type", css_class="col-md-4"),
+                Column("religion", css_class="col-md-4"),
+                Column("dob", css_class="col-md-4"),
+                css_class="g-3",
+            ),
+            Row(
+                Column("firstname", css_class="col-md-6"),
+                Column("lastname", css_class="col-md-6"),
+                css_class="g-3",
+            ),
+            Row(
+                Column("email", css_class="col-12"),
+                css_class="g-3",
+            ),
+            Row(
+                Column("relatedas", css_class="col-md-4"),
+                Column("relatedto", css_class="col-md-8"),
+                css_class="g-3",
+            ),
+        )
         if customer_id:
             self.helper.attrs = {
                 "hx-post": reverse("contact_customer_update", args=[customer_id]),
                 "hx-target": "#modal-content",
                 "hx-swap": "innerHTML",
             }
-            cancel_url = reverse("contact_customer_detail", args=[customer_id])
             cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
                 **{
                     "data-bs-dismiss": "modal",
-                    # "hx-get": cancel_url,
-                    # "hx-target": "#modal-content",
                 },
             )
 
@@ -175,15 +221,12 @@ class CustomerForm(forms.ModelForm):
                 "hx-target": "#modal-content",
                 "hx-swap": "innerHTML",
             }
-            cancel_url = reverse("contact_customer_list")
             cancel_button = Button(
                 "cancel",
                 "Cancel",
                 css_class="btn btn-danger",
                 **{
                     "data-bs-dismiss": "modal",
-                    # "hx-get": cancel_url,
-                    # "hx-target": "#modal-content",
                 },
             )
 
