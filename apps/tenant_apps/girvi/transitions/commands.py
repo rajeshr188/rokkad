@@ -1,6 +1,8 @@
+from dataclasses import asdict, is_dataclass
+
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
-from dataclasses import asdict, is_dataclass
 
 from .types import TransitionResult
 
@@ -24,15 +26,35 @@ class BaseLoanTransitionCommand:
             return asdict(payload)
         raise TypeError("payload must be a dataclass instance")
 
+    @staticmethod
+    def _format_exception_message(exc: Exception) -> str:
+        if isinstance(exc, ValidationError):
+            if getattr(exc, "message_dict", None):
+                return " ".join(
+                    str(message)
+                    for messages in exc.message_dict.values()
+                    for message in messages
+                )
+            if getattr(exc, "messages", None):
+                return " ".join(str(message) for message in exc.messages)
+        return str(exc)
+
 
 class GenericForwardTransitionCommand(BaseLoanTransitionCommand):
     def execute(self, transition_method, payload=None) -> TransitionResult:
-        transition_method(**self._payload_to_kwargs(payload))
-        return TransitionResult(
-            success=True,
-            level="success",
-            message=str(_("Loan status updated successfully.")),
-        )
+        try:
+            transition_method(**self._payload_to_kwargs(payload))
+            return TransitionResult(
+                success=True,
+                level="success",
+                message=str(_("Loan status updated successfully.")),
+            )
+        except (ValueError, ValidationError) as exc:
+            return TransitionResult(
+                success=False,
+                level="error",
+                message=self._format_exception_message(exc),
+            )
 
 
 class DisburseTransitionCommand(BaseLoanTransitionCommand):
@@ -40,12 +62,16 @@ class DisburseTransitionCommand(BaseLoanTransitionCommand):
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
         from apps.tenant_apps.girvi.models import LoanStatus
+        from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
         from apps.tenant_apps.girvi.payment_service import record_loan_disbursal
 
         try:
             with transaction.atomic():
                 transition_method(**self._payload_to_kwargs(payload))
-                if self.loan.status != LoanStatus.DISBURSED:
+                if self.loan.status not in {
+                    LoanStatus.DISBURSED,
+                    LoanLifecycleState.ACTIVE_CURRENT,
+                }:
                     return TransitionResult(
                         success=True,
                         level="success",
@@ -233,6 +259,29 @@ TRANSITION_COMMAND_REGISTRY = {
     "undo_disburse": UndoDisburseTransitionCommand,
     "undo_release": UndoReleaseTransitionCommand,
     "undo_repledge": UndoRepledgeTransitionCommand,
+    # V2 lifecycle commands
+    "submit_for_approval": GenericForwardTransitionCommand,
+    "return_to_draft": GenericForwardTransitionCommand,
+    "approve_loan": GenericForwardTransitionCommand,
+    "reject_loan": GenericForwardTransitionCommand,
+    "cancel_loan": GenericForwardTransitionCommand,
+    "disburse_loan": DisburseTransitionCommand,
+    "undo_disbursal": UndoDisburseTransitionCommand,
+    "mark_overdue": GenericForwardTransitionCommand,
+    "cure_to_current": GenericForwardTransitionCommand,
+    "mark_npa": GenericForwardTransitionCommand,
+    "request_closure": GenericForwardTransitionCommand,
+    "complete_closure": GenericForwardTransitionCommand,
+    "reopen_from_closure_pending": GenericForwardTransitionCommand,
+    "request_renewal": GenericForwardTransitionCommand,
+    "complete_renewal": GenericForwardTransitionCommand,
+    "cancel_renewal_request": GenericForwardTransitionCommand,
+    "initiate_auction": GenericForwardTransitionCommand,
+    "start_auction": GenericForwardTransitionCommand,
+    "cancel_auction": GenericForwardTransitionCommand,
+    "complete_auction": MarkAuctionedTransitionCommand,
+    "close_after_auction": GenericForwardTransitionCommand,
+    "write_off_loan": GenericForwardTransitionCommand,
 }
 
 

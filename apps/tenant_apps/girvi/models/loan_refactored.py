@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 class LoanStatus(models.TextChoices):
-    """Loan lifecycle status"""
+    """Legacy loan lifecycle status used by the current production flow."""
 
     CREATED = "Created", "Created"
     APPROVED = "Approved", "Approved"
@@ -54,6 +54,35 @@ class LoanStatus(models.TextChoices):
     DEFAULTED = "Defaulted", "Defaulted"
     AUCTIONED = "Auctioned", "Auctioned"
     CANCELLED = "Cancelled", "Cancelled"
+
+
+class LoanLifecycleState(models.TextChoices):
+    """Deterministic lifecycle states for the next-generation GivenLoan FSM."""
+
+    DRAFT = "Draft", "Draft"
+    PENDING_APPROVAL = "PendingApproval", "Pending Approval"
+    APPROVED = "Approved", "Approved"
+
+    ACTIVE_CURRENT = "ActiveCurrent", "Active Current"
+    ACTIVE_OVERDUE = "ActiveOverdue", "Active Overdue"
+    ACTIVE_NPA = "ActiveNPA", "Active NPA"
+
+    CLOSURE_PENDING = "ClosurePending", "Closure Pending"
+    RENEWAL_PENDING = "RenewalPending", "Renewal Pending"
+    AUCTION_INITIATED = "AuctionInitiated", "Auction Initiated"
+    AUCTION_IN_PROGRESS = "AuctionInProgress", "Auction In Progress"
+    AUCTION_COMPLETE = "AuctionComplete", "Auction Complete"
+
+    CLOSED = "Closed", "Closed"
+    RENEWED = "Renewed", "Renewed"
+    WRITTEN_OFF = "WrittenOff", "Written Off"
+    REJECTED = "Rejected", "Rejected"
+    CANCELLED = "Cancelled", "Cancelled"
+
+
+ALL_LOAN_STATUS_CHOICES = tuple(
+    dict.fromkeys([*LoanStatus.choices, *LoanLifecycleState.choices])
+)
 
 
 class InterestType(models.TextChoices):
@@ -101,7 +130,7 @@ class BaseLoan(BusinessDoc):
     # Status
     status = models.CharField(
         max_length=20,
-        choices=LoanStatus.choices,
+        choices=ALL_LOAN_STATUS_CHOICES,
         default=LoanStatus.CREATED,
         db_index=True,
     )
@@ -208,8 +237,13 @@ class BaseLoan(BusinessDoc):
 
     @property
     def is_overdue(self) -> bool:
-        """Check if loan is overdue (defaulted or auctioned status)."""
-        return self.status in [LoanStatus.DEFAULTED, LoanStatus.AUCTIONED]
+        """Check if the loan is in any overdue/default servicing bucket."""
+        return self.status in [
+            LoanStatus.DEFAULTED,
+            LoanStatus.AUCTIONED,
+            LoanLifecycleState.ACTIVE_OVERDUE,
+            LoanLifecycleState.ACTIVE_NPA,
+        ]
 
     @property
     def months_elapsed(self) -> int:

@@ -16,10 +16,19 @@ class LoanTransitionService:
 
     def execute(self, transition_name: str, **payload) -> "TransitionResult":
         from django.utils.translation import gettext_lazy as _
-        from apps.tenant_apps.girvi.flows import LoanFlow
+        from apps.tenant_apps.girvi.flows import (
+            build_runtime_loan_flow,
+            resolve_runtime_transition_name,
+        )
 
         transition_name = normalize_transition_name(transition_name)
-        flow = LoanFlow(self.loan, self.user, self.tenant)
+        transition_name = resolve_runtime_transition_name(self.loan, transition_name)
+        flow = build_runtime_loan_flow(
+            self.loan,
+            self.user,
+            self.tenant,
+            transition_name=transition_name,
+        )
         transition_method = getattr(flow, transition_name, None)
 
         if not (transition_method and transition_method.can_proceed()):

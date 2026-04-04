@@ -27,7 +27,7 @@ from apps.tenant_apps.girvi.models.license import Series
 
 from ..filters import LoanFilter
 from ..filters import TakenLoanFilter
-from ..flows import LoanFlow
+from ..flows import build_runtime_loan_flow, resolve_runtime_transition_name
 from ..forms import (
     LoanForm,
     LoanItemForm,
@@ -88,6 +88,7 @@ def loan_transition_view(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
     raw_transition_name = request.GET.get("transition") or request.POST.get("transition")
     transition_name = normalize_transition_name(raw_transition_name)
+    transition_name = resolve_runtime_transition_name(loan, transition_name)
     form_class = get_transition_form_class(transition_name)
     transition_ui = get_transition_form_ui(transition_name)
 
@@ -593,7 +594,7 @@ def loan_detail(request, pk):
         pk=pk,
     )
 
-    flow = LoanFlow(loan, request.user, request.tenant)
+    flow = build_runtime_loan_flow(loan, request.user, request.tenant)
     current_status = flow.status
 
     # Full changelog objects for timeline display

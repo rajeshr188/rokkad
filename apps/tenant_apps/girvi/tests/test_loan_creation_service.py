@@ -15,6 +15,7 @@ from apps.tenant_apps.girvi.views.loan import (
     loan_update,
 )
 from apps.tenant_apps.girvi.forms import build_initial_loan_item_formset
+from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
 from apps.tenant_apps.girvi.services import (
     LoanCreateCommand,
     LoanCreationService,
@@ -154,7 +155,7 @@ class LoanCreationServiceTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.girvi.service_modules.creation.GivenLoan",
             return_value=fake_loan,
-        ), patch(
+        ) as given_loan_cls, patch(
             "apps.tenant_apps.girvi.service_modules.creation.ContentType.objects.get_for_model",
             return_value="givenloan-ct",
         ), patch(
@@ -163,10 +164,10 @@ class LoanCreationServiceTests(SimpleTestCase):
             result = LoanCreationService.execute(command)
 
         self.assertTrue(result.success)
+        self.assertEqual(given_loan_cls.call_args.kwargs["status"], LoanLifecycleState.DRAFT)
         log_create.assert_called_once()
         self.assertEqual(log_create.call_args.kwargs["source"], "Initial")
-        self.assertEqual(log_create.call_args.kwargs["target"], "Created")
-
+        self.assertEqual(log_create.call_args.kwargs["target"], "Draft")
     def test_initial_item_formset_uses_prefixed_interest_target(self):
         formset_class = build_initial_loan_item_formset()
         formset = formset_class(prefix="items")

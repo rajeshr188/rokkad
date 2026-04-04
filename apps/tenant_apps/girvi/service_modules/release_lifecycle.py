@@ -42,7 +42,7 @@ class ReleaseLifecycleService:
 
     @staticmethod
     def preview(command: ReleaseCreateCommand) -> ReleaseCreatePreview:
-        from apps.tenant_apps.girvi.flows import LoanFlow
+        from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
 
         errors = []
         warnings = []
@@ -63,8 +63,31 @@ class ReleaseLifecycleService:
 
         if loan and created_by:
             workspace = getattr(getattr(created_by, "profile", None), "workspace", None)
-            flow = LoanFlow(loan, created_by, workspace)
-            if not flow.deliver.can_proceed():
+            flow = build_runtime_loan_flow(
+                loan,
+                created_by,
+                workspace,
+            )
+            can_release = False
+            use_v2_closure = str(getattr(loan, "status", "")) in {
+                "ActiveCurrent",
+                "ActiveOverdue",
+                "ActiveNPA",
+                "ClosurePending",
+            }
+            deliver = getattr(flow, "deliver", None)
+            request_closure = getattr(flow, "request_closure", None)
+            complete_closure = getattr(flow, "complete_closure", None)
+
+            if use_v2_closure:
+                if request_closure and request_closure.can_proceed():
+                    can_release = True
+                elif complete_closure and complete_closure.can_proceed():
+                    can_release = True
+            elif deliver and deliver.can_proceed():
+                can_release = True
+
+            if not can_release:
                 errors.append(
                     f"Loan {loan.loan_id} cannot be released in status {loan.status}."
                 )
@@ -83,7 +106,7 @@ class ReleaseLifecycleService:
 
     @staticmethod
     def execute(command: ReleaseCreateCommand) -> ReleaseCreateResult:
-        from apps.tenant_apps.girvi.flows import LoanFlow
+        from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
         from apps.tenant_apps.girvi.payment_service import record_loan_release
 
         preview = ReleaseLifecycleService.preview(command)
@@ -101,7 +124,11 @@ class ReleaseLifecycleService:
 
         try:
             with transaction.atomic():
-                flow = LoanFlow(command.loan, created_by, workspace)
+                flow = build_runtime_loan_flow(
+                    command.loan,
+                    created_by,
+                    workspace,
+                )
                 release = Release(
                     loan=command.loan,
                     release_date=command.release_date,
@@ -110,11 +137,40 @@ class ReleaseLifecycleService:
                 )
                 release.save()
 
-                flow.deliver(
-                    created_by=created_by,
-                    released_by=command.released_by,
-                    release_date=command.release_date,
-                )
+                use_v2_closure = str(getattr(command.loan, "status", "")) in {
+                    "ActiveCurrent",
+                    "ActiveOverdue",
+                    "ActiveNPA",
+                    "ClosurePending",
+                }
+                deliver = getattr(flow, "deliver", None)
+                complete_closure = getattr(flow, "complete_closure", None)
+                request_closure = getattr(flow, "request_closure", None)
+
+                if use_v2_closure:
+                    if request_closure is not None and request_closure.can_proceed():
+                        request_closure(requested_by=created_by)
+
+                    if not (complete_closure and complete_closure.can_proceed()):
+                        raise ValidationError(
+                            f"Loan {command.loan.loan_id} cannot complete closure in status {command.loan.status}."
+                        )
+
+                    complete_closure(
+                        completed_by=created_by,
+                        release_id=getattr(release, "release_id", None),
+                    )
+                elif deliver is not None:
+                    deliver(
+                        created_by=created_by,
+                        released_by=command.released_by,
+                        release_date=command.release_date,
+                    )
+                else:
+                    raise ValidationError(
+                        f"Loan {command.loan.loan_id} has no release-capable transition flow."
+                    )
+
                 release_posting = record_loan_release(release, created_by=created_by)
                 if isinstance(release_posting, tuple):
                     payment, payment_created = release_posting

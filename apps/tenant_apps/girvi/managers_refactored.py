@@ -64,8 +64,21 @@ class BaseLoanQuerySet(models.QuerySet):
         return self.exclude(status="Released")
 
     def active(self):
-        """Filter to loans in active status."""
-        return self.filter(status__in=["Created", "Approved", "Disbursed"]).unreleased()
+        """Filter to loans in active or pre-closure lifecycle status."""
+        return self.filter(
+            status__in=[
+                "Created",
+                "Draft",
+                "PendingApproval",
+                "Approved",
+                "Disbursed",
+                "ActiveCurrent",
+                "ActiveOverdue",
+                "ActiveNPA",
+                "ClosurePending",
+                "RenewalPending",
+            ]
+        ).unreleased()
 
     def overdue(self):
         """Loans in non-performing states."""

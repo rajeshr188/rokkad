@@ -1,12 +1,16 @@
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.http import HttpResponseRedirect
+from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase
 from moneyed import Money
 
 from apps.tenant_apps.dea.models.payment import PaymentVoucher
-from apps.tenant_apps.girvi.forms import GivenLoanRepaymentForm
+from apps.tenant_apps.girvi.forms import GivenLoanRepaymentForm, RequestClosureLoanForm
+from apps.tenant_apps.girvi.transition_registry import get_transition_form_ui
+from apps.tenant_apps.girvi.models.loan_refactored import LoanStatus
 from apps.tenant_apps.girvi.payment_service import (
     record_loan_disbursal,
     record_loan_release,
@@ -256,34 +260,53 @@ class PR2TransitionHookTests(SimpleTestCase):
         self.user = SimpleNamespace(id=1, is_authenticated=True, username="tester")
         self.tenant = SimpleNamespace()
 
+    def test_request_closure_form_renders_plain_cancel_link(self):
+        loan = SimpleNamespace(
+            pk=1,
+            status="ActiveCurrent",
+            loan_id="GL-001",
+            borrower=SimpleNamespace(name="Tester"),
+            loan_date=date(2026, 4, 4),
+            get_loan_amount=1000,
+            get_absolute_url=lambda: "/girvi/loan/1/",
+        )
+
+        content = render_to_string(
+            "girvi/loan/_transition_form_inner.html",
+            {
+                "form": RequestClosureLoanForm(user=self.user),
+                "loan": loan,
+                "transition_name": "request_closure",
+                "transition_ui": get_transition_form_ui("request_closure"),
+            },
+        )
+
+        self.assertIn('href="/girvi/loan/1/"', content)
+        self.assertNotIn('hx-get="/girvi/loan/1/"', content)
+
     @patch("apps.tenant_apps.girvi.views.loan.redirect", side_effect=lambda url: HttpResponseRedirect(url))
     @patch("apps.tenant_apps.girvi.views.loan.messages.success")
-    @patch("apps.tenant_apps.girvi.views.loan.record_loan_disbursal")
     @patch("apps.tenant_apps.girvi.views.loan.get_object_or_404")
-    @patch("apps.tenant_apps.girvi.views.loan.LoanFlow")
-    def test_loan_transition_disburse_calls_record_loan_disbursal(
+    @patch("apps.tenant_apps.girvi.views.loan.LoanTransitionService")
+    def test_loan_transition_view_canonicalizes_disburse_to_v2_for_approved_loan(
         self,
-        mock_flow_cls,
+        mock_service_cls,
         mock_get_object_or_404,
-        mock_record_disbursal,
         _mock_success,
         _mock_redirect,
     ):
         loan = MagicMock()
         loan.pk = 1
-        loan.status = "Disbursed"
+        loan.status = LoanStatus.APPROVED
         loan.get_absolute_url.return_value = "/girvi/loan/1/"
         mock_get_object_or_404.return_value = loan
 
-        flow = MagicMock()
-        transition_method = MagicMock()
-        transition_method.can_proceed.return_value = True
-        setattr(flow, "disburse", transition_method)
-        mock_flow_cls.return_value = flow
-
-        payment = MagicMock()
-        payment.payment_id = "DIS-100"
-        mock_record_disbursal.return_value = (payment, True)
+        service = mock_service_cls.return_value
+        service.execute.return_value = SimpleNamespace(
+            success=True,
+            level="success",
+            message="ok",
+        )
 
         request = self.factory.post(
             "/girvi/loan/1/transition/",
@@ -296,8 +319,49 @@ class PR2TransitionHookTests(SimpleTestCase):
 
         self.assertIsInstance(response, HttpResponseRedirect)
         self.assertEqual(response.url, "/girvi/loan/1/")
-        transition_method.assert_called_once_with(disbursed_by="Tester")
-        mock_record_disbursal.assert_called_once_with(loan, self.user)
+        mock_service_cls.assert_called_once_with(loan, self.user, self.tenant)
+        service.execute.assert_called_once_with(
+            "disburse_loan",
+            disbursed_by="Tester",
+        )
+
+    @patch("apps.tenant_apps.girvi.views.loan.redirect", side_effect=lambda url: HttpResponseRedirect(url))
+    @patch("apps.tenant_apps.girvi.views.loan.messages.success")
+    @patch("apps.tenant_apps.girvi.views.loan.get_object_or_404")
+    @patch("apps.tenant_apps.girvi.views.loan.LoanTransitionService")
+    def test_loan_transition_disburse_delegates_to_transition_service(
+        self,
+        mock_service_cls,
+        mock_get_object_or_404,
+        _mock_success,
+        _mock_redirect,
+    ):
+        loan = MagicMock()
+        loan.pk = 1
+        loan.status = LoanStatus.APPROVED
+        loan.get_absolute_url.return_value = "/girvi/loan/1/"
+        mock_get_object_or_404.return_value = loan
+
+        service = mock_service_cls.return_value
+        service.execute.return_value = SimpleNamespace(
+            success=True,
+            level="success",
+            message="ok",
+        )
+
+        request = self.factory.post(
+            "/girvi/loan/1/transition/",
+            data={"transition": "disburse", "disbursed_by": "Tester"},
+        )
+        request.user = self.user
+        request.tenant = self.tenant
+
+        response = loan_transition_view(request, pk=1)
+
+        self.assertIsInstance(response, HttpResponseRedirect)
+        self.assertEqual(response.url, "/girvi/loan/1/")
+        mock_service_cls.assert_called_once_with(loan, self.user, self.tenant)
+        service.execute.assert_called_once_with("disburse_loan", disbursed_by="Tester")
 
 
 class PR4ReleaseServiceTests(SimpleTestCase):
