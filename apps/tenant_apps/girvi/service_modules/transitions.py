@@ -1,6 +1,7 @@
 from apps.tenant_apps.girvi.transition_registry import (
     build_transition_payload,
     get_transition_command,
+    normalize_transition_name,
 )
 from apps.tenant_apps.girvi.transitions.types import TransitionResult
 
@@ -17,6 +18,7 @@ class LoanTransitionService:
         from django.utils.translation import gettext_lazy as _
         from apps.tenant_apps.girvi.flows import LoanFlow
 
+        transition_name = normalize_transition_name(transition_name)
         flow = LoanFlow(self.loan, self.user, self.tenant)
         transition_method = getattr(flow, transition_name, None)
 

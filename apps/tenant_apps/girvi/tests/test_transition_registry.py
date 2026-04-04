@@ -5,6 +5,7 @@ from apps.tenant_apps.girvi.transition_registry import (
     TRANSITION_REGISTRY,
     get_transition_form_ui,
     get_transition_form_class,
+    get_transition_state_spec,
     normalize_transition_name,
 )
 from apps.tenant_apps.girvi.transitions.payloads import CancelPayload
@@ -13,6 +14,9 @@ from apps.tenant_apps.girvi.transitions.payloads import CancelPayload
 class TransitionRegistryTests(SimpleTestCase):
     def test_mark_sold_alias_is_normalized(self):
         self.assertEqual(normalize_transition_name("mark sold"), "mark_sold")
+
+    def test_release_alias_is_normalized_to_deliver(self):
+        self.assertEqual(normalize_transition_name("release"), "deliver")
 
     def test_registry_has_core_given_loan_transitions(self):
         expected = {
@@ -37,6 +41,13 @@ class TransitionRegistryTests(SimpleTestCase):
         self.assertEqual(ui.heading, "Record Sale")
         self.assertEqual(ui.icon, "💰")
         self.assertEqual(ui.badge_class, "bg-secondary")
+
+    def test_transition_state_spec_clarifies_release_contract(self):
+        spec = get_transition_state_spec("release")
+        self.assertIsNotNone(spec)
+        self.assertEqual(spec.key, "deliver")
+        self.assertEqual(spec.target_status, "Released")
+        self.assertEqual(spec.execution_mode, "release-flow")
 
     def test_build_transition_payload_returns_typed_dto(self):
         payload = build_transition_payload(

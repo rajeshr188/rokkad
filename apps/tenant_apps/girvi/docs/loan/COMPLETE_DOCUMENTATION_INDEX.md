@@ -41,6 +41,8 @@ You have 8 comprehensive guides covering every aspect of the loan query system r
 | Guide | Purpose | When to Use | Read Time |
 |-------|---------|------------|-----------|
 | [LOAN_ANNOTATIONS_IMPLEMENTATION_SUMMARY.md](LOAN_ANNOTATIONS_IMPLEMENTATION_SUMMARY.md) | High-level architecture | Understanding design | 20 min |
+| [COMMAND_PREVIEW_RESULT_PATTERN.md](COMMAND_PREVIEW_RESULT_PATTERN.md) | Why `Command -> Preview -> Result` fits Girvi workflows | Service-layer design and future refactors | 10 min |
+| [GIVENLOAN_STATUS_TRANSITION_CONTRACT.md](GIVENLOAN_STATUS_TRANSITION_CONTRACT.md) | Canonical status/transition meanings for `GivenLoan` | Lifecycle debugging and refactors | 10 min |
 
 ---
 

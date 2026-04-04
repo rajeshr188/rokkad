@@ -305,21 +305,15 @@ class BaseLoan(BusinessDoc):
         return bool(re.match(pattern, loan_id))
 
     def create_release(self, release_date, released_by, created_by):
-        """Create a release document for this loan."""
-        from django.apps import apps
+        """Create a release document for this loan via the lifecycle service."""
+        from ..services import ReleaseLifecycleService
 
-        Release = apps.get_model("girvi", "Release")
-
-        if self.is_released:
-            raise ValidationError("Loan already has a release")
-
-        release = Release.objects.create(
+        return ReleaseLifecycleService.create_release(
             loan=self,
             release_date=release_date,
             released_by=released_by,
             created_by=created_by,
         )
-        return release
 
     def get_status_history(self):
         """Get complete status change history."""

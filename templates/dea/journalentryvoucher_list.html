@@ -127,8 +127,8 @@
                             <td>{{ je.je_date|date:"d M Y" }}</td>
                             <td><span class="badge bg-secondary">{{ je.get_entry_type_display }}</span></td>
                             <td>{{ je.description|truncatewords:10 }}</td>
-                            <td class="text-end">₹{{ je.total_debit|floatformat:2 }}</td>
-                            <td class="text-end">₹{{ je.total_credit|floatformat:2 }}</td>
+                            <td class="text-end">₹{{ je.total_debit.amount|floatformat:2 }}</td>
+                            <td class="text-end">₹{{ je.total_credit.amount|floatformat:2 }}</td>
                             <td>
                                 {% if je.is_balanced %}
                                     <span class="badge bg-success"><i class="bi bi-check-circle"></i> Balanced</span>

@@ -24,15 +24,15 @@ TRANSITION_ACCOUNTING_IMPACT = {
 }
 
 TRANSITION_DESCRIPTIONS = {
-    "approve": "Loan reviewed and approved for disbursement. No accounting impact.",
-    "disburse": "Cash disbursed to borrower. Creates a LOAN_DISBURSE accounting entry.",
-    "deliver": "Collateral released to the loan holder. No immediate accounting impact.",
-    "cancel": "Loan cancelled before disbursement. No accounting impact.",
-    "mark_defaulted": "Borrower has defaulted. Event recorded; no immediate GL impact.",
-    "mark_auctioned": "Collateral auctioned to recover the loan amount. Creates an accounting entry.",
-    "mark_sold": "Collateral sold. Creates an accounting entry.",
-    "undo_disburse": "Reverses the disbursal — returns loan to Approved. Reverses GIVENLOAN_DISBURSAL voucher.",
-    "undo_release": "Reverses the release — returns loan to Disbursed. Reverses GIVENLOAN_RELEASE voucher and deletes the Release record.",
+    "approve": "Move a newly created loan into Approved. This is a review/approval step only.",
+    "disburse": "Move an approved loan into Disbursed and record the fund-outflow accounting entry.",
+    "deliver": "Business release action: return collateral to the customer, create the Release document, and move the loan to Released.",
+    "cancel": "Cancel a loan before disbursal. No accounting posting is expected.",
+    "mark_defaulted": "Flag a disbursed loan as Defaulted so recovery actions can follow.",
+    "mark_auctioned": "Record that defaulted collateral was auctioned. Follow-up accounting may be required.",
+    "mark_sold": "Record that collateral was sold from the Disbursed state. Follow-up accounting may be required.",
+    "undo_disburse": "Reverse the disbursal and return the loan to Approved.",
+    "undo_release": "Reverse the release document and return the loan to Disbursed.",
 }
 
 # ─── Permission helper ───────────────────────────────────────────────────────
@@ -59,9 +59,9 @@ class LoanFlow(object):
     - Record transition metadata in LoanChangeLog
     - Signal accounting impact to the calling view
 
-    The flow does NOT create vouchers itself. For accounting transitions
-    (disburse, mark_auctioned, mark_sold), the calling view creates and
-    posts the corresponding Voucher after the transition succeeds.
+    The flow does NOT create vouchers itself. For accounting transitions,
+    the service/command layer performs any required posting or reversal
+    after the legal state change succeeds.
     """
 
     status = fsm.State(LoanStatus, default=LoanStatus.CREATED)
@@ -153,7 +153,7 @@ class LoanFlow(object):
         permission=lambda flow, user: has_permission(user, "can_disburse_loan"),
     )
     def disburse(self, disbursed_by):
-        """Disburse an approved loan — LOAN_DISBURSE voucher created by the view."""
+        """Disburse an approved loan — accounting is handled by the service layer."""
         self._additional_data = {
             "disbursed_by": str(disbursed_by),
             "disbursed_at": timezone.now().isoformat(),
@@ -236,7 +236,7 @@ class LoanFlow(object):
         permission=lambda flow, user: has_permission(user, "can_mark_auctioned"),
     )
     def mark_auctioned(self, auctioned_by, amount):
-        """Auction collateral — auction voucher created by the view."""
+        """Auction collateral — any accounting side-effects are handled above the flow."""
         self._additional_data = {
             "auctioned_at": timezone.now().isoformat(),
             "auctioned_by": str(auctioned_by),
@@ -273,11 +273,11 @@ class LoanFlow(object):
     @status.transition(
         source=LoanStatus.DISBURSED,
         target=LoanStatus.SOLD,
-        label=_("mark sold"),
+        label=_("mark_sold"),
         permission=lambda flow, user: has_permission(user, "can_mark_sold"),
     )
     def mark_sold(self, sold_by, amount):
-        """Mark collateral as sold — sale voucher created by the view."""
+        """Record a collateral sale; any accounting side-effects are handled above the flow."""
         self._additional_data = {
             "sold_at": timezone.now().isoformat(),
             "sold_by": str(sold_by),

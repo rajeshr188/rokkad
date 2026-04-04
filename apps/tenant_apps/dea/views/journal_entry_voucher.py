@@ -4,7 +4,7 @@ Journal Entry Voucher Views
 CRUD views for managing JournalEntryVoucher with line items formset support.
 """
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import redirect
 from django.views.generic import (
     ListView,
     DetailView,
@@ -16,11 +16,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.db import transaction
 from django.contrib import messages
-from django.db.models import Sum, Q, Count
+from django.db.models import Q
 from decimal import Decimal
 
-from ..models import JournalEntryVoucher, JournalEntryLineItem
-from ..forms_vouchers import JournalEntryVoucherForm, JournalEntryLineItemFormSet
+from ..forms_vouchers import (
+    JournalEntryPairFormSet,
+    JournalEntryVoucherForm,
+    build_journal_entry_pair_initial,
+    save_journal_entry_pairs,
+)
+from ..models import JournalEntryVoucher, VoucherType
+from ..posting.engine import DjangoPostingEngine
+from ..services.post_doc import create_and_post_voucher_for_doc
 
 
 class JournalEntryVoucherListView(LoginRequiredMixin, ListView):
@@ -68,12 +75,23 @@ class JournalEntryVoucherListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         # Summary statistics
-        all_entries = self.get_queryset()
-        context["total_entries"] = all_entries.count()
-        context["reviewed_count"] = all_entries.filter(
-            reviewed_by__isnull=False
-        ).count()
-        context["pending_count"] = all_entries.filter(reviewed_by__isnull=True).count()
+        all_entries = list(self.get_queryset())
+        balanced_entries = sum(1 for entry in all_entries if entry.is_balanced)
+        total_debit = sum(entry.total_debit.amount for entry in all_entries)
+
+        context["summary"] = {
+            "total_entries": len(all_entries),
+            "balanced_entries": balanced_entries,
+            "unbalanced_entries": len(all_entries) - balanced_entries,
+            "total_debit": total_debit,
+        }
+        context["total_entries"] = context["summary"]["total_entries"]
+        context["reviewed_count"] = sum(
+            1 for entry in all_entries if entry.reviewed_by_id is not None
+        )
+        context["pending_count"] = sum(
+            1 for entry in all_entries if entry.reviewed_by_id is None
+        )
 
         # Filters
         context["entry_types"] = JournalEntryVoucher._meta.get_field(
@@ -95,6 +113,7 @@ class JournalEntryVoucherDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         journal_entry = self.object
+        context["je"] = journal_entry
 
         # Get line items grouped by DR/CR
         all_lines = journal_entry.line_items.all()
@@ -111,23 +130,27 @@ class JournalEntryVoucherDetailView(LoginRequiredMixin, DetailView):
         context["difference"] = debit_total - credit_total
 
         # Get related journal entries if posted
-        from ..models import JournalEntry, Voucher
+        from django.contrib.contenttypes.models import ContentType
+
+        from ..models import Voucher
 
         try:
             voucher = Voucher.objects.filter(
-                business_doc=journal_entry, status="POSTED"
+                doc_content_type=ContentType.objects.get_for_model(journal_entry),
+                doc_object_id=journal_entry.pk,
+                status="POSTED",
             ).first()
             if voucher:
                 context["voucher"] = voucher
                 context["journal_entries_posted"] = voucher.journal_entries.all()
-        except:
+        except Exception:
             pass
 
         return context
 
 
 class JournalEntryVoucherCreateView(LoginRequiredMixin, CreateView):
-    """Create a new journal entry voucher with line items"""
+    """Create a new journal entry voucher using pair-based posting rows."""
 
     model = JournalEntryVoucher
     form_class = JournalEntryVoucherForm
@@ -137,64 +160,53 @@ class JournalEntryVoucherCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
-            context["line_items_formset"] = JournalEntryLineItemFormSet(
-                self.request.POST, instance=self.object
+            context["pair_formset"] = JournalEntryPairFormSet(
+                self.request.POST,
+                prefix="pairs",
             )
         else:
-            context["line_items_formset"] = JournalEntryLineItemFormSet(
-                instance=self.object
-            )
+            context["pair_formset"] = JournalEntryPairFormSet(prefix="pairs")
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
-        line_items_formset = context["line_items_formset"]
+        pair_formset = context["pair_formset"]
 
-        with transaction.atomic():
-            # Set created_by and updated_by
-            form.instance.created_by = self.request.user
-            form.instance.updated_by = self.request.user
+        if not pair_formset.is_valid():
+            messages.error(self.request, "Please correct the posting pairs below.")
+            return self.form_invalid(form)
 
-            # Validate formset
-            if not line_items_formset.is_valid():
-                messages.error(self.request, "Please check the line items for errors.")
-                return self.form_invalid(form)
+        try:
+            with transaction.atomic():
+                form.instance.created_by = self.request.user
+                form.instance.updated_by = self.request.user
+                form.instance.auto_post_to_accounting = False
+                self.object = form.save()
 
-            # Save journal entry voucher
-            self.object = form.save()
+                pair_count = save_journal_entry_pairs(self.object, pair_formset)
+                self.object.full_clean()
+                self.object.save(update_fields=["total_debit", "total_credit", "updated_by", "updated_at"])
 
-            # Save line items
-            line_items_formset.instance = self.object
-            line_items = line_items_formset.save()
-
-            # Calculate totals from line items
-            debit_total = Decimal("0")
-            credit_total = Decimal("0")
-
-            for item in self.object.line_items.all():
-                if item.side == "DR":
-                    debit_total += item.amount.amount
-                else:
-                    credit_total += item.amount.amount
-
-            # Update journal entry totals
-            self.object.total_debit = debit_total
-            self.object.total_credit = credit_total
-            self.object.save()
-
-            # Check if balanced
-            if not self.object.is_balanced:
-                messages.warning(
-                    self.request,
-                    f"Journal entry {self.object.je_number} is not balanced! "
-                    f"DR: {debit_total}, CR: {credit_total}, Difference: {self.object.balance_difference}",
+                VoucherType.objects.get_or_create(
+                    name=self.object.get_voucher_type(),
+                    defaults={
+                        "description": f"Manual {self.object.get_entry_type_display()} journal adjustment"
+                    },
                 )
-            else:
-                messages.success(
-                    self.request,
-                    f"Journal entry {self.object.je_number} created successfully and is balanced!",
+                create_and_post_voucher_for_doc(
+                    doc=self.object,
+                    user=self.request.user,
+                    voucher_type_input=self.object.get_voucher_type(),
+                    engine=DjangoPostingEngine(),
                 )
+        except Exception as exc:
+            messages.error(self.request, f"Could not save the journal adjustment: {exc}")
+            return self.form_invalid(form)
 
+        messages.success(
+            self.request,
+            f"Journal adjustment {self.object.je_number} saved using {pair_count} posting pair(s).",
+        )
         return redirect(self.success_url)
 
     def form_invalid(self, form):
@@ -203,7 +215,7 @@ class JournalEntryVoucherCreateView(LoginRequiredMixin, CreateView):
 
 
 class JournalEntryVoucherUpdateView(LoginRequiredMixin, UpdateView):
-    """Update an existing journal entry voucher"""
+    """Update an existing journal entry voucher using pair-based rows."""
 
     model = JournalEntryVoucher
     form_class = JournalEntryVoucherForm
@@ -213,64 +225,56 @@ class JournalEntryVoucherUpdateView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
-            context["line_items_formset"] = JournalEntryLineItemFormSet(
-                self.request.POST, instance=self.object
+            context["pair_formset"] = JournalEntryPairFormSet(
+                self.request.POST,
+                prefix="pairs",
             )
         else:
-            context["line_items_formset"] = JournalEntryLineItemFormSet(
-                instance=self.object
+            context["pair_formset"] = JournalEntryPairFormSet(
+                initial=build_journal_entry_pair_initial(self.object),
+                prefix="pairs",
             )
         context["is_update"] = True
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
-        line_items_formset = context["line_items_formset"]
+        pair_formset = context["pair_formset"]
 
-        with transaction.atomic():
-            # Set updated_by
-            form.instance.updated_by = self.request.user
+        if not pair_formset.is_valid():
+            messages.error(self.request, "Please correct the posting pairs below.")
+            return self.form_invalid(form)
 
-            # Validate formset
-            if not line_items_formset.is_valid():
-                messages.error(self.request, "Please check the line items for errors.")
-                return self.form_invalid(form)
+        try:
+            with transaction.atomic():
+                form.instance.updated_by = self.request.user
+                form.instance.auto_post_to_accounting = False
+                self.object = form.save()
 
-            # Save journal entry voucher
-            self.object = form.save()
+                pair_count = save_journal_entry_pairs(self.object, pair_formset)
+                self.object.full_clean()
+                self.object.save(update_fields=["total_debit", "total_credit", "updated_by", "updated_at"])
 
-            # Save line items
-            line_items_formset.instance = self.object
-            line_items_formset.save()
-
-            # Recalculate totals
-            debit_total = Decimal("0")
-            credit_total = Decimal("0")
-
-            for item in self.object.line_items.all():
-                if item.side == "DR":
-                    debit_total += item.amount.amount
-                else:
-                    credit_total += item.amount.amount
-
-            # Update journal entry totals
-            self.object.total_debit = debit_total
-            self.object.total_credit = credit_total
-            self.object.save()
-
-            # Check if balanced
-            if not self.object.is_balanced:
-                messages.warning(
-                    self.request,
-                    f"Journal entry {self.object.je_number} is not balanced! "
-                    f"DR: {debit_total}, CR: {credit_total}, Difference: {self.object.balance_difference}",
+                VoucherType.objects.get_or_create(
+                    name=self.object.get_voucher_type(),
+                    defaults={
+                        "description": f"Manual {self.object.get_entry_type_display()} journal adjustment"
+                    },
                 )
-            else:
-                messages.success(
-                    self.request,
-                    f"Journal entry {self.object.je_number} updated successfully and is balanced!",
+                create_and_post_voucher_for_doc(
+                    doc=self.object,
+                    user=self.request.user,
+                    voucher_type_input=self.object.get_voucher_type(),
+                    engine=DjangoPostingEngine(),
                 )
+        except Exception as exc:
+            messages.error(self.request, f"Could not update the journal adjustment: {exc}")
+            return self.form_invalid(form)
 
+        messages.success(
+            self.request,
+            f"Journal adjustment {self.object.je_number} updated with {pair_count} posting pair(s).",
+        )
         return redirect(self.success_url)
 
 
@@ -282,5 +286,5 @@ class JournalEntryVoucherDeleteView(LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy("dea_journal_entry_voucher_list")
 
     def delete(self, request, *args, **kwargs):
-        messages.success(request, f"Journal entry deleted successfully!")
+        messages.success(request, "Journal entry deleted successfully!")
         return super().delete(request, *args, **kwargs)

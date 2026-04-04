@@ -5,11 +5,19 @@
 
 {% block workspace_content %}
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
         <h5 class="card-title mb-0">Accounting Periods</h5>
-        <a href="{% url 'dea_period_create' %}" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-circle"></i> Create Period
-        </a>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'dea_opening_balance_wizard' %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-calculator"></i> Opening Balances
+            </a>
+            <a href="{% url 'dea_opening_balance_bulk_import' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-upload"></i> Import OB CSV
+            </a>
+            <a href="{% url 'dea_period_create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Create Period
+            </a>
+        </div>
     </div>
     
     <div class="card-body">
@@ -75,6 +83,14 @@
                                 <a href="{% url 'dea_period_detail' period.pk %}" 
                                    class="btn btn-outline-primary" title="View Details">
                                     <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'dea_period_adjustments' period.pk %}" 
+                                   class="btn btn-outline-warning" title="Pre-close Adjustments">
+                                    <i class="bi bi-journal-check"></i>
+                                </a>
+                                <a href="{% url 'dea_opening_balance_wizard' %}?period={{ period.pk }}" 
+                                   class="btn btn-outline-info" title="Set Opening Balances">
+                                    <i class="bi bi-calculator"></i>
                                 </a>
                                 
                                 {% if period.status == 'OPEN' %}

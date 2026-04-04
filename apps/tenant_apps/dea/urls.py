@@ -144,6 +144,27 @@ urlpatterns += [
 
 # Accounting Period URLs
 urlpatterns += [
+    # Opening balance setup
+    path(
+        "opening-balance/wizard/",
+        views.opening_balance_wizard,
+        name="dea_opening_balance_wizard",
+    ),
+    path(
+        "opening-balance/bulk-import/",
+        views.opening_balance_bulk_import,
+        name="dea_opening_balance_bulk_import",
+    ),
+    path(
+        "opening-balance/template/",
+        views.opening_balance_template_download,
+        name="dea_ob_template",
+    ),
+    path(
+        "opening-balance/validate/",
+        views.opening_balance_validate_ajax,
+        name="dea_opening_balance_validate_ajax",
+    ),
     # Period management
     path("periods/", views.period_list, name="dea_period_list"),
     path("period/create/", views.period_create, name="dea_period_create"),
@@ -151,6 +172,11 @@ urlpatterns += [
     path("period/<int:pk>/update/", views.period_update, name="dea_period_update"),
     path("period/<int:pk>/delete/", views.period_delete, name="dea_period_delete"),
     # Period actions
+    path(
+        "period/<int:pk>/adjustments/",
+        views.period_adjustments,
+        name="dea_period_adjustments",
+    ),
     path("period/<int:pk>/close/", views.period_close, name="dea_period_close"),
     path("period/<int:pk>/lock/", views.period_lock, name="dea_period_lock"),
     path("period/<int:pk>/unlock/", views.period_unlock, name="dea_period_unlock"),

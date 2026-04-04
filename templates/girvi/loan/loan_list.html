@@ -111,6 +111,7 @@
           <li>
             <a class="dropdown-item" hx-get="{% url 'girvi:bulk_release' %}"
                hx-include="#loan-table-container input[name='selection']:checked"
+               hx-target="#content" hx-swap="innerHTML transition:true"
                hx-push-url="true">
               {% trans "Release Selected" %}
             </a>

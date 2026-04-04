@@ -17,6 +17,8 @@ This document explains **how the Girvi lifecycle executes at runtime**, step by 
 
 This is intended as a **reference guide** for future debugging and feature work.
 
+For the concise canonical transition contract, see `GIVENLOAN_STATUS_TRANSITION_CONTRACT.md`.
+
 ---
 
 ## 1) The key idea after Phase 2
@@ -68,7 +70,7 @@ The main `GivenLoan` state path now looks like this:
 CREATED ──approve──► APPROVED ──disburse──► DISBURSED ──deliver──► RELEASED
    │                         │                    │
    └──────cancel────────────► CANCELLED          ├──mark_defaulted──► DEFAULTED ──mark_auctioned──► AUCTIONED
-                                                 ├──mark sold────────► SOLD
+                                                 ├──mark_sold────────► SOLD
                                                  ├──repledge─────────► REPLEDGED ──undo_repledge──► DISBURSED
                                                  └──undo_disburse────► APPROVED
 

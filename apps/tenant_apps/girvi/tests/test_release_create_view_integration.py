@@ -15,16 +15,51 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
     def _user(self):
         return SimpleNamespace(
             is_authenticated=True,
+            username="demo-user",
             profile=SimpleNamespace(workspace="tenant-1"),
         )
 
     def _loan(self):
         return SimpleNamespace(pk=42, loan_id="GL-42", status="DISBURSED")
 
+    def test_release_create_get_renders_preview_feedback(self):
+        loan = self._loan()
+        loan.borrower = "Demo Borrower"
+        request = self.factory.get(f"/girvi/release/create/{loan.pk}/")
+        request.user = self._user()
+        request.htmx = True
+        request._messages = MagicMock()
+
+        fake_form = MagicMock()
+        fake_form.is_bound = False
+        fake_form.loan_preview = loan
+
+        fake_preview = SimpleNamespace(
+            is_valid=True,
+            current_status="Disbursed",
+            outstanding_amount="₹10,000.00",
+            warnings=["Loan has no outstanding balance. Release accounting may be skipped."],
+            errors=[],
+        )
+
+        with patch("apps.tenant_apps.girvi.views.release.get_object_or_404", return_value=loan), patch(
+            "apps.tenant_apps.girvi.views.release.ReleaseForm", return_value=fake_form
+        ), patch(
+            "apps.tenant_apps.girvi.views.release.ReleaseLifecycleService.preview",
+            return_value=fake_preview,
+        ):
+            response = release_create(request, pk=loan.pk)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Release Preview")
+        self.assertContains(response, "Loan has no outstanding balance. Release accounting may be skipped.")
+
     def test_release_create_posts_via_service_and_invokes_flow_and_posting(self):
         loan = self._loan()
         request = self.factory.post("/girvi/release/create/", data={"loan": loan.pk})
         request.user = self._user()
+        request.htmx = False
+        request._messages = MagicMock()
 
         fake_form = MagicMock()
         fake_form.is_valid.return_value = True

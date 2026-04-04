@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
@@ -37,6 +39,31 @@ def _resolve_voucher_type(voucher_type_input):
     raise ValueError(
         f"Invalid voucher_type input: expected VoucherType, str, or int, got {type(voucher_type_input)}"
     )
+
+
+def _resolve_voucher_date(doc):
+    """Pick the business-effective date for voucher posting."""
+    candidate_fields = (
+        "voucher_date",
+        "je_date",
+        "expense_date",
+        "invoice_date",
+        "movement_date",
+        "period_end",
+        "period_start",
+        "date",
+    )
+
+    for field_name in candidate_fields:
+        value = getattr(doc, field_name, None)
+        if value:
+            return value.date() if isinstance(value, datetime) else value
+
+    created_at = getattr(doc, "created_at", None)
+    if created_at:
+        return created_at.date() if isinstance(created_at, datetime) else created_at
+
+    return timezone.now().date()
 
 
 def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
@@ -94,9 +121,7 @@ def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
 
     # create new voucher and post it
     with transaction.atomic():
-        voucher_date = (
-            getattr(doc, "created_at", None) or timezone.now()
-        )
+        voucher_date = _resolve_voucher_date(doc)
         voucher_no = generate_date_based_voucher_number(
             voucher_type=voucher_type,
             transaction_date=voucher_date,
