@@ -1042,6 +1042,31 @@ class ApproveLoanForm(forms.Form):
         self.helper.add_input(Submit("submit", "Approve Loan", css_class="btn btn-success"))
 
 
+class SubmitForApprovalLoanForm(forms.Form):
+    submitted_by = forms.CharField(
+        max_length=255, widget=forms.HiddenInput(), required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["submitted_by"].initial = getattr(user, "username", str(user))
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "submitted_by",
+            HTML(
+                '<div class="alert alert-primary">'
+                '<strong>Submit for approval</strong> sends this draft loan into the checker/approval queue. '
+                'Borrower, collateral, and terms must already be complete.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(
+            Submit("submit", "Submit for Approval", css_class="btn btn-primary")
+        )
+
+
 class DisburseLoanForm(forms.Form):
     disbursed_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
 
@@ -1262,6 +1287,134 @@ class MarkDefaultedLoanForm(forms.Form):
             ),
         )
         self.helper.add_input(Submit("submit", "Mark as Defaulted", css_class="btn btn-warning"))
+
+
+class RequestClosureLoanForm(forms.Form):
+    requested_by = forms.CharField(
+        max_length=255, widget=forms.HiddenInput(), required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["requested_by"].initial = getattr(user, "username", str(user))
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "requested_by",
+            HTML(
+                '<div class="alert alert-info">'
+                '<strong>Request Closure</strong> moves the loan into <em>Closure Pending</em>. '
+                'Use this only once dues are settled and the release workflow is ready to begin.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(
+            Submit("submit", "Request Closure", css_class="btn btn-info")
+        )
+
+
+class RequestRenewalLoanForm(forms.Form):
+    requested_by = forms.CharField(
+        max_length=255, widget=forms.HiddenInput(), required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["requested_by"].initial = getattr(user, "username", str(user))
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "requested_by",
+            HTML(
+                '<div class="alert alert-info">'
+                '<strong>Request Renewal</strong> moves the loan into <em>Renewal Pending</em> so the renewal '
+                'terms and successor loan can be finalized safely.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(
+            Submit("submit", "Request Renewal", css_class="btn btn-info")
+        )
+
+
+class RejectLoanForm(forms.Form):
+    rejected_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "State the reason for rejection..."}),
+        label="Rejection Reason",
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["rejected_by"].initial = getattr(user, "username", str(user))
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "rejected_by",
+            "reason",
+            HTML(
+                '<div class="alert alert-danger">'
+                '<strong>Reject Loan</strong> ends this approval request without activating the loan. '
+                'A rejection reason is required for auditability.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Reject Loan", css_class="btn btn-danger"))
+
+
+class MarkNPALoanForm(forms.Form):
+    marked_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Describe why this loan is now NPA..."}),
+        label="NPA Reason",
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["marked_by"].initial = getattr(user, "username", str(user))
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "marked_by",
+            "reason",
+            HTML(
+                '<div class="alert alert-dark">'
+                '<strong>Mark NPA</strong> escalates the loan from overdue into the non-performing asset bucket. '
+                'Use this when your policy threshold has been crossed.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Mark NPA", css_class="btn btn-dark"))
+
+
+class WriteOffLoanForm(forms.Form):
+    written_off_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Describe the approved write-off reason..."}),
+        label="Write-off Reason",
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["written_off_by"].initial = getattr(user, "username", str(user))
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "written_off_by",
+            "reason",
+            HTML(
+                '<div class="alert alert-danger">'
+                '<strong>Write Off Loan</strong> recognizes an unrecoverable loss and terminates the loan. '
+                'This should only be used after the authorized business decision is recorded.'
+                '</div>'
+            ),
+        )
+        self.helper.add_input(Submit("submit", "Write Off Loan", css_class="btn btn-danger"))
 
 
 class MarkAuctionedLoanForm(forms.Form):

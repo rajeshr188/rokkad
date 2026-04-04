@@ -1,7 +1,7 @@
 from django.test import SimpleTestCase
 
-from apps.tenant_apps.girvi.flows import LoanFlow
-from apps.tenant_apps.girvi.models.loan_refactored import LoanStatus
+from apps.tenant_apps.girvi.flows import GivenLoanFlowV2, LoanFlow
+from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState, LoanStatus
 from apps.tenant_apps.girvi.transition_registry import (
     TRANSITION_REGISTRY,
     normalize_transition_name,
@@ -71,3 +71,53 @@ class LoanFlowMatrixTests(SimpleTestCase):
         all_outgoing.discard("deliver")  # handled via Release flow endpoint
         missing = sorted(all_outgoing.difference(set(TRANSITION_REGISTRY.keys())))
         self.assertEqual(missing, [])
+
+
+class GivenLoanFlowV2MatrixTests(SimpleTestCase):
+    def _outgoing_keys(self, status):
+        flow = GivenLoanFlowV2(_DummyLoan(status=status), _DummyUser(), tenant=None)
+        return {
+            normalize_transition_name(str(t.label))
+            for t in flow.get_outgoing_transitions()
+        }
+
+    def test_draft_outgoing_transitions(self):
+        self.assertEqual(
+            self._outgoing_keys(LoanLifecycleState.DRAFT),
+            {"submit_for_approval", "cancel_loan"},
+        )
+
+    def test_legacy_created_status_maps_to_v2_draft_transitions(self):
+        self.assertEqual(
+            self._outgoing_keys(LoanStatus.CREATED),
+            {"submit_for_approval", "cancel_loan"},
+        )
+
+    def test_active_current_outgoing_transitions(self):
+        self.assertEqual(
+            self._outgoing_keys(LoanLifecycleState.ACTIVE_CURRENT),
+            {
+                "undo_disbursal",
+                "mark_overdue",
+                "request_closure",
+                "request_renewal",
+            },
+        )
+
+    def test_active_npa_outgoing_transitions(self):
+        self.assertEqual(
+            self._outgoing_keys(LoanLifecycleState.ACTIVE_NPA),
+            {
+                "cure_to_current",
+                "request_closure",
+                "request_renewal",
+                "initiate_auction",
+                "write_off_loan",
+            },
+        )
+
+    def test_closure_pending_outgoing_transitions(self):
+        self.assertEqual(
+            self._outgoing_keys(LoanLifecycleState.CLOSURE_PENDING),
+            {"complete_closure", "reopen_from_closure_pending"},
+        )

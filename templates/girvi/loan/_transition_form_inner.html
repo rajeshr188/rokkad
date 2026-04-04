@@ -39,11 +39,7 @@
           <input type="hidden" name="transition" value="{{ transition_name }}">
           <div class="d-flex gap-2 mt-3">
             <a href="{{ loan.get_absolute_url }}"
-               class="btn btn-outline-secondary"
-               hx-get="{{ loan.get_absolute_url }}"
-               hx-target="#content"
-               hx-push-url="true"
-               hx-swap="innerHTML transition:true">
+               class="btn btn-outline-secondary">
               ← Cancel
             </a>
           </div>

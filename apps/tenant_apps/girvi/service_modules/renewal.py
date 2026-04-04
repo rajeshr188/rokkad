@@ -114,8 +114,12 @@ class LoanRenewalService:
         from django.core.exceptions import ValidationError as DjangoValidationError
         from moneyed import Money
 
-        from apps.tenant_apps.girvi.flows import LoanFlow
-        from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, LoanStatus
+        from apps.tenant_apps.girvi.flows import LoanFlow, build_runtime_loan_flow
+        from apps.tenant_apps.girvi.models.loan_refactored import (
+            GivenLoan,
+            LoanLifecycleState,
+            LoanStatus,
+        )
         from apps.tenant_apps.girvi.models.loan_item import LoanItem
         from apps.tenant_apps.girvi.models.renewal import LoanRenewal
         from apps.tenant_apps.girvi.payment_service import record_loan_disbursal
@@ -132,12 +136,18 @@ class LoanRenewalService:
             with transaction.atomic():
                 loan = GivenLoan.objects.select_for_update().get(pk=command.source_loan_id)
 
-                if loan.status != LoanStatus.DISBURSED:
+                allowed_statuses = {
+                    LoanStatus.DISBURSED,
+                    LoanLifecycleState.ACTIVE_CURRENT,
+                    LoanLifecycleState.ACTIVE_OVERDUE,
+                    LoanLifecycleState.ACTIVE_NPA,
+                }
+                if loan.status not in allowed_statuses:
                     return LoanRenewalResult(
                         success=False,
                         message=(
                             f"Loan {loan.loan_id} is in status '{loan.status}'. "
-                            "Only DISBURSED loans can be renewed."
+                            "Only active/disbursed loans can be renewed."
                         ),
                         source_loan_id=loan.pk,
                     )
@@ -165,7 +175,7 @@ class LoanRenewalService:
                     series=loan.series,
                     loan_date=command.renewal_date,
                     tenure=loan.tenure,
-                    status=LoanStatus.CREATED,
+                    status=LoanLifecycleState.DRAFT,
                     interest_type=loan.interest_type,
                     created_by=command.created_by,
                 )
@@ -185,12 +195,41 @@ class LoanRenewalService:
                         itemdesc=item.itemdesc,
                     )
 
-                source_flow = LoanFlow(loan, command.created_by, tenant=None)
-                source_flow.repledge(created_by=command.created_by)
+                if loan.status == LoanStatus.DISBURSED:
+                    source_flow = LoanFlow(loan, command.created_by, tenant=None)
+                    source_flow.repledge(created_by=command.created_by)
+                else:
+                    source_flow = build_runtime_loan_flow(
+                        loan,
+                        command.created_by,
+                        tenant=None,
+                        transition_name="complete_renewal",
+                    )
+                    if source_flow.request_renewal.can_proceed():
+                        source_flow.request_renewal(requested_by=command.created_by)
+                    source_flow.complete_renewal(
+                        completed_by=command.created_by,
+                        successor_loan_id=getattr(new_loan, "loan_id", None) or str(new_loan.pk),
+                    )
 
-                new_flow = LoanFlow(new_loan, command.created_by, tenant=None)
-                new_flow.approve(approved_by=command.created_by)
-                new_flow.disburse(disbursed_by=command.created_by)
+                new_flow = build_runtime_loan_flow(
+                    new_loan,
+                    command.created_by,
+                    tenant=None,
+                    transition_name="disburse_loan",
+                )
+                if hasattr(new_flow, "submit_for_approval") and new_flow.submit_for_approval.can_proceed():
+                    new_flow.submit_for_approval(submitted_by=command.created_by)
+
+                if hasattr(new_flow, "approve_loan") and new_flow.approve_loan.can_proceed():
+                    new_flow.approve_loan(approved_by=command.created_by)
+                elif hasattr(new_flow, "approve") and new_flow.approve.can_proceed():
+                    new_flow.approve(approved_by=command.created_by)
+
+                if hasattr(new_flow, "disburse_loan") and new_flow.disburse_loan.can_proceed():
+                    new_flow.disburse_loan(disbursed_by=command.created_by)
+                elif hasattr(new_flow, "disburse") and new_flow.disburse.can_proceed():
+                    new_flow.disburse(disbursed_by=command.created_by)
 
                 warns = []
                 try:

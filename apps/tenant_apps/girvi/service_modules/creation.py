@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.tenant_apps.girvi.models.loan_item import LoanItem
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
+from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, LoanLifecycleState
 from .id_generation import LoanIDGenerator
 
 logger = logging.getLogger(__name__)
@@ -266,7 +266,7 @@ class LoanCreationService:
             content_type=content_type,
             object_id=loan.pk,
             source="Initial",
-            target="Created",
+            target=str(getattr(loan, "status", LoanLifecycleState.DRAFT)),
             author=created_by,
             diff="",
             metadata={
@@ -300,6 +300,7 @@ class LoanCreationService:
                     series=command.series,
                     loan_date=preview.loan_date,
                     tenure=command.tenure,
+                    status=LoanLifecycleState.DRAFT,
                     interest_type=command.interest_type,
                     created_by=command.created_by,
                 )
