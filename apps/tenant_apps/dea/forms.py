@@ -308,11 +308,110 @@ class AccountingPeriodForm(forms.ModelForm):
         return cleaned_data
 
 
+class PeriodAdjustmentForm(forms.Form):
+    """Structured form for posting period-end adjustments before closing."""
+
+    ADJUSTMENT_TYPE_CHOICES = [
+        ("ACCRUAL", "Accrual"),
+        ("PREPAID_EXPENSE", "Prepaid expense adjustment"),
+        ("DEPRECIATION", "Depreciation"),
+        ("INTEREST_ACCRUAL", "Interest accrual"),
+        ("CUSTOM", "Custom adjustment"),
+    ]
+
+    adjustment_type = forms.ChoiceField(
+        choices=ADJUSTMENT_TYPE_CHOICES,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        help_text="Choose the kind of month-end or year-end adjustment to post.",
+    )
+    effective_date = forms.DateField(
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+        help_text="This usually matches the period end date.",
+    )
+    debit_ledger = forms.ModelChoiceField(
+        queryset=Ledger.objects.none(),
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label="Debit ledger",
+    )
+    credit_ledger = forms.ModelChoiceField(
+        queryset=Ledger.objects.none(),
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label="Credit ledger",
+    )
+    amount = MoneyField(max_digits=13, decimal_places=2, default_currency="INR")
+    description = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": "form-control",
+                "placeholder": "Explain why this adjustment is needed for the period close...",
+            }
+        ),
+        help_text="This note appears in the posted journal entry and review history.",
+    )
+    auto_reverse_next_period = forms.BooleanField(
+        required=False,
+        label="Flag for next-period reversal",
+        help_text="Planning aid only for now; automatic reversal will be a future enhancement.",
+    )
+
+    def __init__(self, *args, period=None, **kwargs):
+        self.period = period
+        super().__init__(*args, **kwargs)
+        ledger_queryset = Ledger.objects.select_related("AccountType").order_by("name")
+        self.fields["debit_ledger"].queryset = ledger_queryset
+        self.fields["credit_ledger"].queryset = ledger_queryset
+        if period is not None:
+            self.fields["effective_date"].initial = period.end_date
+
+        self.helper = FormHelper()
+        self.helper.form_method = "post"
+        self.helper.add_input(
+            Submit("submit", "Post Adjustment", css_class="btn btn-primary")
+        )
+        cancel_target = (
+            reverse_lazy("dea_period_close", kwargs={"pk": period.pk})
+            if period is not None
+            else "javascript:history.back()"
+        )
+        self.helper.add_input(
+            Button(
+                "cancel",
+                "Back to Close Checklist",
+                css_class="btn btn-secondary",
+                onclick=f"window.location.href='{cancel_target}'",
+            )
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        debit_ledger = cleaned_data.get("debit_ledger")
+        credit_ledger = cleaned_data.get("credit_ledger")
+        if debit_ledger and credit_ledger and debit_ledger == credit_ledger:
+            raise forms.ValidationError("Debit and credit ledgers must be different.")
+        return cleaned_data
+
+
 class PeriodCloseForm(forms.Form):
     """
     Form for closing an accounting period with confirmation
     """
 
+    review_adjustments = forms.BooleanField(
+        label="I have reviewed or posted the required pre-close adjustments (accruals, prepaids, depreciation, and interest).",
+        required=True,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    review_unposted_items = forms.BooleanField(
+        label="I have reviewed all draft or unposted vouchers for this period.",
+        required=True,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    review_carry_forward = forms.BooleanField(
+        label="I understand income and expense balances will reset, while balance-sheet balances carry forward.",
+        required=True,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     notes = forms.CharField(
         label="Closing Notes",
         required=False,
@@ -333,7 +432,8 @@ class PeriodCloseForm(forms.Form):
         help_text="This action will close all revenue and expense accounts to retained earnings",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, draft_vouchers_count=0, **kwargs):
+        self.draft_vouchers_count = draft_vouchers_count
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = "post"
@@ -348,6 +448,15 @@ class PeriodCloseForm(forms.Form):
                 onclick="window.history.back()",
             )
         )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.draft_vouchers_count:
+            raise forms.ValidationError(
+                f"This period still has {self.draft_vouchers_count} draft voucher(s). "
+                "Post or reverse them before closing."
+            )
+        return cleaned_data
 
 
 class PeriodFilterForm(forms.Form):

@@ -16,6 +16,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Q, Sum
@@ -30,19 +31,178 @@ from moneyed import Money
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import PeriodFilter
-from ..forms import AccountingPeriodForm, PeriodCloseForm
+from ..forms import AccountingPeriodForm, PeriodAdjustmentForm, PeriodCloseForm
 from ..models import (
     Account,
     AccountingPeriod,
     AccountStatement,
     JournalEntry,
+    JournalEntryLineItem,
+    JournalEntryVoucher,
     Ledger,
     LedgerStatement,
+    Voucher,
+    VoucherStatus,
+    VoucherType,
 )
 from ..tables import PeriodTable
 from ..utils.currency import Balance
 
 logger = logging.getLogger(__name__)
+
+PRE_CLOSE_ADJUSTMENT_TYPES = [
+    ("ACCRUAL", "Accruals"),
+    ("PREPAID_EXPENSE", "Prepaid expenses"),
+    ("DEPRECIATION", "Depreciation"),
+    ("INTEREST_ACCRUAL", "Interest accrual"),
+    ("CUSTOM", "Custom adjustments"),
+]
+
+
+def _map_adjustment_entry_type(adjustment_type):
+    if adjustment_type in {"ACCRUAL", "INTEREST_ACCRUAL"}:
+        return "ACCRUAL"
+    if adjustment_type in {"PREPAID_EXPENSE", "DEPRECIATION"}:
+        return "ADJUSTMENT"
+    return "OTHER"
+
+
+def _build_pre_close_summary(period):
+    reference = f"PERIOD:{period.pk}"
+    adjustment_docs = JournalEntryVoucher.objects.filter(reference=reference).order_by(
+        "-je_date", "-created_at"
+    )
+    adjustment_counts = {}
+    checklist = []
+
+    for key, label in PRE_CLOSE_ADJUSTMENT_TYPES:
+        count = adjustment_docs.filter(memo=f"PRE_CLOSE:{key}").count()
+        adjustment_counts[key] = count
+        checklist.append(
+            {
+                "label": label,
+                "count": count,
+                "ready": count > 0,
+                "status_text": "Recorded" if count else "Review needed",
+            }
+        )
+
+    draft_vouchers = (
+        Voucher.objects.filter(
+            journal_entries__period=period,
+            status=VoucherStatus.DRAFT,
+        )
+        .select_related("voucher_type")
+        .distinct()
+    )
+    draft_vouchers_count = draft_vouchers.count()
+    checklist.append(
+        {
+            "label": "Draft vouchers resolved",
+            "count": draft_vouchers_count,
+            "ready": draft_vouchers_count == 0,
+            "status_text": (
+                "Ready"
+                if draft_vouchers_count == 0
+                else f"{draft_vouchers_count} draft voucher(s) remain"
+            ),
+        }
+    )
+
+    return {
+        "adjustments": adjustment_docs[:20],
+        "adjustment_counts": adjustment_counts,
+        "total_adjustments": adjustment_docs.count(),
+        "draft_vouchers": draft_vouchers[:10],
+        "draft_vouchers_count": draft_vouchers_count,
+        "checklist": checklist,
+    }
+
+
+def _create_period_adjustment(period, user, cleaned_data):
+    adjustment_type = cleaned_data["adjustment_type"]
+    adjustment_label = dict(PRE_CLOSE_ADJUSTMENT_TYPES).get(
+        adjustment_type, adjustment_type.replace("_", " ").title()
+    )
+    debit_ledger = cleaned_data["debit_ledger"]
+    credit_ledger = cleaned_data["credit_ledger"]
+    amount = cleaned_data["amount"]
+    effective_date = cleaned_data["effective_date"]
+    description = cleaned_data["description"].strip()
+    if cleaned_data.get("auto_reverse_next_period"):
+        description = f"{description} [Flagged for next-period reversal review]"
+
+    adjustment_doc = JournalEntryVoucher.objects.create(
+        je_date=effective_date,
+        entry_type=_map_adjustment_entry_type(adjustment_type),
+        description=f"[{adjustment_label}] {description}",
+        memo=f"PRE_CLOSE:{adjustment_type}",
+        reference=f"PERIOD:{period.pk}",
+        total_debit=amount,
+        total_credit=amount,
+        reviewed_by=user,
+        reviewed_at=timezone.now(),
+        created_by=user,
+        updated_by=user,
+        auto_post_to_accounting=False,
+    )
+    JournalEntryLineItem.objects.bulk_create(
+        [
+            JournalEntryLineItem(
+                journal_entry=adjustment_doc,
+                line_number=1,
+                ledger_id=debit_ledger.pk,
+                ledger_name=debit_ledger.name or f"Ledger {debit_ledger.pk}",
+                side="DR",
+                amount=amount,
+                description=description,
+            ),
+            JournalEntryLineItem(
+                journal_entry=adjustment_doc,
+                line_number=2,
+                ledger_id=credit_ledger.pk,
+                ledger_name=credit_ledger.name or f"Ledger {credit_ledger.pk}",
+                side="CR",
+                amount=amount,
+                description=description,
+            ),
+        ]
+    )
+
+    voucher_type, _ = VoucherType.objects.get_or_create(
+        name="PERIOD_ADJUSTMENT",
+        defaults={"description": "System-posted pre-close adjustment entry"},
+    )
+    voucher = Voucher.objects.create(
+        voucher_no=f"PERIOD-ADJ-{period.pk}-{adjustment_doc.pk}",
+        voucher_type=voucher_type,
+        voucher_date=effective_date,
+        status=VoucherStatus.POSTED,
+        created_by=user,
+        updated_by=user,
+        doc_content_type=ContentType.objects.get_for_model(adjustment_doc),
+        doc_object_id=adjustment_doc.pk,
+        fingerprint=f"period-adjustment:{period.pk}:{adjustment_doc.pk}:{adjustment_type}",
+        last_posted_at=timezone.now(),
+        narration=adjustment_doc.description,
+    )
+    journal_entry = JournalEntry.objects.create(
+        voucher=voucher,
+        period=period,
+        posted_by=user,
+        desc=adjustment_doc.description,
+    )
+    journal_entry.transact(
+        [
+            {
+                "ledgerno": credit_ledger.name,
+                "ledgerno_dr": debit_ledger.name,
+                "amount": amount,
+            }
+        ],
+        [],
+    )
+    return adjustment_doc, journal_entry
 
 
 @login_required
@@ -247,6 +407,59 @@ def period_update(request, pk):
 
 @login_required
 @transaction.atomic
+def period_adjustments(request, pk):
+    """Review and post pre-close adjustment entries for a period."""
+    period = get_object_or_404(AccountingPeriod, pk=pk)
+    pre_close_summary = _build_pre_close_summary(period)
+
+    if request.method == "POST":
+        if period.status != AccountingPeriod.PeriodStatus.OPEN:
+            messages.error(
+                request,
+                f"Adjustments can only be posted while period '{period.name}' is OPEN.",
+            )
+            return redirect("dea_period_adjustments", pk=pk)
+
+        form = PeriodAdjustmentForm(request.POST, period=period)
+        if form.is_valid():
+            try:
+                adjustment_doc, journal_entry = _create_period_adjustment(
+                    period=period,
+                    user=request.user,
+                    cleaned_data=form.cleaned_data,
+                )
+                messages.success(
+                    request,
+                    f"Posted {adjustment_doc.get_entry_type_display().lower()} entry "
+                    f"{adjustment_doc.je_number} for period '{period.name}'.",
+                )
+                logger.info(
+                    "Period adjustment %s posted for period %s by %s",
+                    adjustment_doc.je_number,
+                    period.pk,
+                    request.user,
+                )
+                return redirect("dea_period_adjustments", pk=pk)
+            except ValidationError as e:
+                messages.error(request, f"Failed to post adjustment: {e}")
+            except Exception as e:
+                messages.error(request, f"Unexpected adjustment error: {e}")
+                logger.exception("Period adjustment exception: %s", e)
+    else:
+        form = PeriodAdjustmentForm(period=period)
+
+    context = {
+        "period": period,
+        "form": form,
+        "pre_close_summary": pre_close_summary,
+        "can_post_adjustments": period.status == AccountingPeriod.PeriodStatus.OPEN,
+        "title": f"Period Adjustments: {period.name}",
+    }
+    return TemplateResponse(request, "dea/period_adjustments.html", context)
+
+
+@login_required
+@transaction.atomic
 def period_close(request, pk):
     """
     Close an accounting period with validation and confirmation
@@ -269,8 +482,13 @@ def period_close(request, pk):
             messages.error(request, f"Cannot close {period.status} period.")
         return redirect("dea_period_detail", pk=pk)
 
+    pre_close_summary = _build_pre_close_summary(period)
+
     if request.method == "POST":
-        form = PeriodCloseForm(request.POST)
+        form = PeriodCloseForm(
+            request.POST,
+            draft_vouchers_count=pre_close_summary["draft_vouchers_count"],
+        )
         if form.is_valid():
             try:
                 notes = form.cleaned_data.get("notes", "")
@@ -307,7 +525,9 @@ def period_close(request, pk):
                 messages.error(request, f"Unexpected error: {e}")
                 logger.exception(f"Period close exception: {e}")
     else:
-        form = PeriodCloseForm()
+        form = PeriodCloseForm(
+            draft_vouchers_count=pre_close_summary["draft_vouchers_count"]
+        )
 
     # Get summary for confirmation
     context = {
@@ -316,6 +536,7 @@ def period_close(request, pk):
         "entries_count": period.journal_entries.count(),
         "ledgers_count": Ledger.objects.count(),
         "accounts_count": Account.objects.count(),
+        "pre_close_summary": pre_close_summary,
         "title": f"Close Period: {period.name}",
     }
 

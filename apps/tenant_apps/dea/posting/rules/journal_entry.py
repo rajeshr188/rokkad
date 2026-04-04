@@ -8,9 +8,8 @@ JOURNAL ENTRY POSTING PATTERN:
 - Supports all 7 journal entry types
 """
 
-from decimal import Decimal
 from django.core.exceptions import ValidationError
-from ..types import PostingBundle, DualLedgerLine
+from ..types import DualLedgerLine, LedgerLine, PostingBundle
 from .base import BasePostingRule
 from ..registry import register_rule
 
@@ -24,61 +23,108 @@ from ..registry import register_rule
 @register_rule("JOURNAL_ENTRY_OTHER")
 class JournalEntryRule(BasePostingRule):
     """
-    Posting rule for manual journal entries.
+    Posting rule for manual journal adjustments.
 
-    Simply posts the lines as entered by user without transformation.
-    All validation is done at data entry time (balanced, line count, etc).
-
-    Uses the ledger_id directly from each line item.
+    The create/update UI captures complete debit/credit pairs, and the stored
+    `JournalEntryLineItem` rows are interpreted in DR/CR order to emit one
+    `DualLedgerLine` per complete posting pair.
     """
 
     voucher_type = "JOURNAL_ENTRY"
-    rule_version = "1"
+    rule_version = "2"
 
     def build_posting(self, ctx) -> PostingBundle:
-        """Build posting from journal entry lines"""
+        """Build posting from ordered DR/CR line pairs."""
         doc = ctx.doc if hasattr(ctx, "doc") else ctx
 
-        # Validate document
         if not hasattr(doc, "line_items"):
             raise ValidationError("Document must have line_items")
-
-        # Validate balanced
         if not doc.is_balanced:
             raise ValidationError(
                 f"Entry not balanced: Difference = {doc.balance_difference}"
             )
 
-        lines = []
+        ordered_lines = list(doc.line_items.all().order_by("line_number", "id"))
+        if not ordered_lines:
+            raise ValidationError("Journal adjustment has no line items to post.")
 
-        # Add each line from journal entry
-        for je_line in doc.line_items.all():
+        ledger_lines = []
+        validation_legs = []
+        pending_debit = None
+
+        for je_line in ordered_lines:
+            amount = je_line.amount.amount
+            currency = str(je_line.amount.currency)
+            validation_legs.append(
+                LedgerLine(
+                    ledger_id=je_line.ledger_id,
+                    side="Dr" if je_line.side == "DR" else "Cr",
+                    currency=currency,
+                    amount=amount,
+                    amount_base=amount,
+                )
+            )
+
             if je_line.side == "DR":
-                # Debit line
-                lines.append(
-                    DualLedgerLine(
-                        ledger_dr=je_line.ledger_id,
-                        ledger_cr=None,
-                        amount=je_line.amount.amount,
-                        memo=je_line.description,
+                if pending_debit is not None:
+                    raise ValidationError(
+                        "Journal adjustment lines must be entered as debit/credit pairs."
                     )
+                pending_debit = je_line
+                continue
+
+            if pending_debit is None:
+                raise ValidationError(
+                    "A credit line was found without a preceding debit line."
                 )
-            else:  # CR
-                # Credit line
-                lines.append(
-                    DualLedgerLine(
-                        ledger_dr=None,
-                        ledger_cr=je_line.ledger_id,
-                        amount=je_line.amount.amount,
-                        memo=je_line.description,
-                    )
+
+            if (
+                pending_debit.amount.currency != je_line.amount.currency
+                or pending_debit.amount.amount != je_line.amount.amount
+            ):
+                raise ValidationError(
+                    "Each debit/credit pair must use the same amount and currency."
                 )
+
+            ledger_lines.append(
+                DualLedgerLine(
+                    debit_ledger_id=pending_debit.ledger_id,
+                    credit_ledger_id=je_line.ledger_id,
+                    currency=currency,
+                    amount=amount,
+                    amount_base=amount,
+                )
+            )
+            pending_debit = None
+
+        if pending_debit is not None:
+            raise ValidationError(
+                "The last posting row is incomplete. Every debit must be followed by a credit."
+            )
 
         return PostingBundle(
-            voucher_type=doc.get_voucher_type(),
-            voucher_number=doc.je_number,
-            voucher_date=doc.je_date,
-            description=f"{doc.get_entry_type_display()}: {doc.description}",
-            lines=lines,
+            ledger_lines=ledger_lines,
             account_lines=[],
+            _validation_legs=validation_legs,
         )
+
+    def fingerprint_payload(self, ctx):
+        doc = ctx.doc if hasattr(ctx, "doc") else ctx
+        rows = [
+            {
+                "line_number": line.line_number,
+                "ledger_id": line.ledger_id,
+                "side": line.side,
+                "amount": str(line.amount.amount),
+                "currency": str(line.amount.currency),
+                "description": line.description,
+            }
+            for line in doc.line_items.all().order_by("line_number", "id")
+        ]
+        return {
+            "voucher_type": doc.get_voucher_type(),
+            "je_number": doc.je_number,
+            "entry_type": doc.entry_type,
+            "je_date": str(doc.je_date),
+            "rows": rows,
+        }

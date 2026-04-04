@@ -1,5 +1,4 @@
 import logging
-from collections import Counter
 from decimal import Decimal
 
 from django.apps import apps
@@ -23,6 +22,7 @@ from django.db.models.functions import Coalesce, ExtractYear, Round
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
 from .models import Series
+from .service_modules.bulk_release import BulkReleaseService
 from .service_modules.creation import (
     LoanCreateCommand,
     LoanCreatePreview,
@@ -31,13 +31,19 @@ from .service_modules.creation import (
     LoanItemCreateInput,
 )
 from .service_modules.id_generation import LoanIDGenerator, ReleaseIDGenerator
-from .service_modules.release_lifecycle import ReleaseLifecycleService
+from .service_modules.release_lifecycle import (
+    ReleaseCreateCommand,
+    ReleaseCreatePreview,
+    ReleaseCreateResult,
+    ReleaseLifecycleService,
+)
 from .service_modules.renewal import (
     LoanRenewalCommand,
     LoanRenewalPreview,
     LoanRenewalResult,
     LoanRenewalService,
 )
+from .service_modules.split_merge import LoanMergeService, LoanSplitService
 from .service_modules.transitions import LoanTransitionService
 
 # NOTE: LoanItem, LoanPayment, and License imported locally in methods to avoid circular import
@@ -47,12 +53,16 @@ from .service_modules.transitions import LoanTransitionService
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "BulkReleaseService",
     "LoanCreateCommand",
     "LoanCreatePreview",
     "LoanCreateResult",
     "LoanCreationService",
     "LoanItemCreateInput",
     "ReleaseLifecycleService",
+    "ReleaseCreateCommand",
+    "ReleaseCreatePreview",
+    "ReleaseCreateResult",
     "LoanIDGenerator",
     "ReleaseIDGenerator",
     "LoanTransitionService",
@@ -60,247 +70,10 @@ __all__ = [
     "LoanRenewalPreview",
     "LoanRenewalResult",
     "LoanRenewalService",
+    "LoanSplitService",
+    "LoanMergeService",
 ]
 
-
-class BulkReleaseService:
-    COMMIT_POLICY_STRICT = "strict"
-    COMMIT_POLICY_PARTIAL = "partial"
-    DEFAULT_COMMIT_POLICY = COMMIT_POLICY_STRICT
-
-    @staticmethod
-    def parse_selected_ids(raw_ids):
-        cleaned = []
-        for value in raw_ids:
-            try:
-                parsed = int(value)
-            except (TypeError, ValueError):
-                continue
-            if parsed > 0:
-                cleaned.append(parsed)
-        return list(dict.fromkeys(cleaned))
-
-    @staticmethod
-    def build_summary(loans):
-        return {
-            "total_loans": len(loans),
-            "total_principal": sum(loan.get_loan_amount for loan in loans),
-            "total_interest": sum(loan.interest_due() for loan in loans),
-            "total_amount": sum(loan.total_due for loan in loans),
-        }
-
-    @classmethod
-    def build_bulk_form(cls, raw_selected_ids=None):
-        from .forms import BulkReleaseForm
-
-        selected_ids = cls.parse_selected_ids(raw_selected_ids or [])
-        initial = {"date": timezone.now().strftime("%Y-%m-%dT%H:%M")}
-        if selected_ids:
-            initial["loans"] = GivenLoan.objects.filter(
-                release__isnull=True, id__in=selected_ids
-            ).values_list("id", flat=True)
-        return BulkReleaseForm(initial=initial)
-
-    @classmethod
-    def build_preview_context(cls, loans, release_date):
-        from .forms import build_release_formset
-
-        Release = apps.get_model("girvi", "Release")
-
-        loans = list(loans)
-        formset_initial_data = [
-            {
-                "loan": loan,
-                "release_date": release_date,
-                "released_by": loan.borrower,
-                "release_amount": loan.total_due,
-            }
-            for loan in loans
-        ]
-        preview_formset_class = build_release_formset(extra=len(formset_initial_data))
-        formset = preview_formset_class(
-            queryset=Release.objects.none(), initial=formset_initial_data
-        )
-        return cls.build_review_context(
-            formset,
-            cls.build_summary(loans),
-            commit_policy=cls.DEFAULT_COMMIT_POLICY,
-        )
-
-    @classmethod
-    def bind_submit_formset(cls, post_data):
-        from .forms import ReleaseFormSet
-
-        Release = apps.get_model("girvi", "Release")
-        return ReleaseFormSet(post_data, queryset=Release.objects.none())
-
-    @classmethod
-    def extract_formset_loan_ids(cls, post_data):
-        try:
-            total_forms = int(post_data.get("form-TOTAL_FORMS", 0))
-        except (TypeError, ValueError):
-            return []
-
-        loan_ids = []
-        for index in range(total_forms):
-            value = post_data.get(f"form-{index}-loan")
-            if value:
-                loan_ids.append(value)
-
-        return cls.parse_selected_ids(loan_ids)
-
-    @staticmethod
-    def has_row_errors(formset):
-        for form in formset.forms:
-            delete_key = form.add_prefix("DELETE")
-            if form.data.get(delete_key) in {True, "True", "true", "on", "1"}:
-                continue
-            if getattr(form, "cleaned_data", None) and form.cleaned_data.get("DELETE"):
-                continue
-            if form.errors:
-                return True
-        return False
-
-    @classmethod
-    def build_review_context(
-        cls,
-        formset,
-        summary,
-        has_blocking_errors=False,
-        commit_policy=None,
-    ):
-        resolved_policy = cls._normalize_commit_policy(commit_policy)
-        return {
-            "formset": formset,
-            "summary": summary,
-            "has_row_errors": cls.has_row_errors(formset),
-            "has_blocking_errors": has_blocking_errors,
-            "commit_policy": resolved_policy,
-        }
-
-    @classmethod
-    def get_summary_for_post(cls, post_data):
-        selected_loan_ids = cls.extract_formset_loan_ids(post_data)
-        loans = list(
-            GivenLoan.objects.filter(id__in=selected_loan_ids).select_related("borrower")
-        )
-        summary = cls.build_summary(loans) if loans else None
-        return selected_loan_ids, summary
-
-    @classmethod
-    def commit_formset(cls, formset, user):
-        return cls.commit_formset_with_policy(
-            formset, user, commit_policy=cls.DEFAULT_COMMIT_POLICY
-        )
-
-    @classmethod
-    def _normalize_commit_policy(cls, commit_policy):
-        if commit_policy in {cls.COMMIT_POLICY_STRICT, cls.COMMIT_POLICY_PARTIAL}:
-            return commit_policy
-        return cls.DEFAULT_COMMIT_POLICY
-
-    @classmethod
-    def commit_formset_with_policy(cls, formset, user, commit_policy=None):
-        commit_policy = cls._normalize_commit_policy(commit_policy)
-        selected_loan_ids, summary = cls.get_summary_for_post(formset.data)
-
-        if not formset.is_valid():
-            return {
-                "success": False,
-                "commit_policy": commit_policy,
-                **cls.build_review_context(
-                    formset,
-                    summary,
-                    has_blocking_errors=bool(formset.non_form_errors()),
-                    commit_policy=commit_policy,
-                ),
-            }
-
-        with transaction.atomic():
-            locked_loans = GivenLoan.objects.select_for_update().filter(
-                id__in=selected_loan_ids
-            )
-            released_ids = set(
-                locked_loans.filter(release__isnull=False).values_list("id", flat=True)
-            )
-
-            if released_ids and commit_policy == cls.COMMIT_POLICY_STRICT:
-                formset._non_form_errors = formset.error_class(
-                    [
-                        "Some selected loans were released by another process. "
-                        "Please refresh and try again."
-                    ]
-                )
-                return {
-                    "success": False,
-                    "commit_policy": commit_policy,
-                    **cls.build_review_context(
-                        formset,
-                        summary,
-                        has_blocking_errors=True,
-                        commit_policy=commit_policy,
-                    ),
-                }
-
-            instances = []
-            skipped_released_count = 0
-            for form in formset.forms:
-                if not form.cleaned_data or form.cleaned_data.get("DELETE"):
-                    continue
-
-                loan = form.cleaned_data.get("loan")
-                if (
-                    loan
-                    and loan.id in released_ids
-                    and commit_policy == cls.COMMIT_POLICY_PARTIAL
-                ):
-                    skipped_released_count += 1
-                    form.add_error(
-                        "loan", "This loan was already released. Skipped in partial mode."
-                    )
-                    continue
-
-                instances.append(
-                    ReleaseLifecycleService.create_release(
-                        loan=form.cleaned_data["loan"],
-                        created_by=user,
-                        release_date=form.cleaned_data["release_date"],
-                        released_by=form.cleaned_data.get("released_by"),
-                    )
-                )
-
-        if commit_policy == cls.COMMIT_POLICY_PARTIAL and skipped_released_count:
-            if not instances:
-                formset._non_form_errors = formset.error_class(
-                    [
-                        "All selected loans were stale at submit time. "
-                        "No releases were created."
-                    ]
-                )
-                return {
-                    "success": False,
-                    "commit_policy": commit_policy,
-                    **cls.build_review_context(
-                        formset,
-                        summary,
-                        has_blocking_errors=True,
-                        commit_policy=commit_policy,
-                    ),
-                }
-
-            return {
-                "success": True,
-                "instances": instances,
-                "commit_policy": commit_policy,
-                "skipped_released_count": skipped_released_count,
-            }
-
-        return {
-            "success": True,
-            "instances": instances,
-            "commit_policy": commit_policy,
-            "skipped_released_count": 0,
-        }
 
 def get_or_create_series(series_id: int = None) -> Series:
     """Helper to get or create default series."""
@@ -322,187 +95,47 @@ def get_or_create_series(series_id: int = None) -> Series:
 
 
 def get_loan_cumulative_amount():
-    """
-    Get cumulative loan amounts over time.
-    Note: For GivenLoan, we need to aggregate through LoanItem.
-    """
-    from django.db.models import OuterRef, Subquery
-    from .models import LoanItem
+    from .selectors import get_loan_cumulative_amount as _selector_impl
 
-    # Subquery to get total loan amount for each GivenLoan
-    loan_amount_subquery = (
-        LoanItem.objects.filter(loan=OuterRef("pk"))
-        .values("loan")
-        .annotate(total=Sum("loanamount"))
-        .values("total")
-    )
-
-    loans = (
-        GivenLoan.objects.unreleased()
-        .annotate(loan_amount=Subquery(loan_amount_subquery))
-        .annotate(cumsum=Window(Sum("loan_amount"), order_by=F("loan_date").asc()))
-        .values("loan_date__date", "cumsum")
-        .order_by("loan_date")
-    )
-    return loans
-
-
-# def get_average_loan_instance_per_day():
-#     # Get the total number of distinct Loan instances
-#     total_loans = Loan.objects.filter(series__is_active=True).count()
-
-#     # Get the earliest and latest Loan instance
-#     earliest_loan = (
-#         Loan.objects.filter(series__is_active=True).order_by("loan_date").first()
-#     )
-#     latest_loan = (
-#         Loan.objects.filter(series__is_active=True).order_by("-loan_date").first()
-#     )
-
-#     # If there are no Loan instances, return 0
-#     if earliest_loan is None or latest_loan is None:
-#         return 0
-
-#     # Calculate the number of days between the earliest and latest Loan instance
-#     num_days = (latest_loan.loan_date - earliest_loan.loan_date).days + 1
-
-#     # Calculate the average number of Loan instances per day
-#     average_loan_instance_per_day = total_loans / num_days
-
-#     return round(average_loan_instance_per_day, 0)
-
-from django.db.models import Count
-from django.db.models.functions import TruncDate
+    return _selector_impl()
 
 
 def get_average_loan_instance_per_day():
-    # Get the count of loans per day
-    loans_per_day = (
-        GivenLoan.objects.annotate(day=TruncDate("loan_date"))
-        .values("day")
-        .annotate(count=Count("id"))
-        .aggregate(total_loans=Sum("count"), total_days=Count("day", distinct=True))
-    )
+    from .selectors import get_average_loan_instance_per_day as _selector_impl
 
-    # If there are no loans, return 0
-    if not loans_per_day["total_loans"]:
-        return 0
-
-    # Calculate average only for days that actually had loans
-    average = loans_per_day["total_loans"] / loans_per_day["total_days"]
-
-    return round(average, 0)
+    return _selector_impl()
 
 
 def get_loan_counts_grouped():
-    # Query to get the loan counts for each customer
-    loan_counts = (
-        GivenLoan.objects.unreleased()
-        .values(
-            "customer__id", "customer__firstname", "customer__lastname"
-        )  # Group by customer
-        .annotate(loan_count=Count("id"))
-        .order_by("loan_count")  # Count the number of loans
-    )
+    from .selectors import get_loan_counts_grouped as _selector_impl
 
-    # Use Counter to group customers by loan count
-    grouped_loan_counts = Counter(
-        loan_count for loan_count in loan_counts.values_list("loan_count", flat=True)
-    )
-    # Convert the Counter to a list of tuples for easier iteration in the template
-    grouped_loan_counts_list = list(grouped_loan_counts.items())
-
-    return grouped_loan_counts_list
+    return _selector_impl()
 
 
 def get_loans_by_year():
-    loans_by_year = (
-        GivenLoan.objects.annotate(
-            year=ExtractYear("loan_date"),
-            has_release=Case(
-                When(release__isnull=False, then=Value(1)),
-                default=Value(0),
-                output_field=IntegerField(),
-            ),
-        )  # Extract year from loan start_date and check if there is a release
-        .values("year")
-        .annotate(
-            loans_count=Count("id"),  # Count all loans
-            unreleased_count=Count(
-                "id", filter=Q(has_release=0)
-            ),  # Count loans without a release
-        )
-        .order_by("year")
-    )
-    return loans_by_year
+    from .selectors import get_loans_by_year as _selector_impl
+
+    return _selector_impl()
 
 
 def get_unreleased_loans_by_year():
-    data = (
-        GivenLoan.objects.unreleased()
-        .annotate(year=ExtractYear("loan_date"))  # Extract year from start_date
-        .values("year")  # Group by year
-        .annotate(release_count=Count("id"))  # Count the number of loans
-        .order_by("year")
-    )
-    return data
+    from .selectors import get_unreleased_loans_by_year as _selector_impl
+
+    return _selector_impl()
 
 
 def get_loanamount_by_itemtype():
-    from .models import LoanItem  # Import here to avoid circular imports
+    from .selectors import get_loanamount_by_itemtype as _selector_impl
 
-    query = (
-        LoanItem.objects.filter(loan__release__isnull=True)
-        .values("itemtype")
-        .annotate(total_loan_amount=Sum("loanamount"))  # Group by loan type
-    )
-    return query
-
-
-from django.db.models import DecimalField, ExpressionWrapper
+    return _selector_impl()
 
 
 def get_itemtype_averages():
-    from .models import LoanItem  # Import here to avoid circular imports
+    from .selectors import get_itemtype_averages as _selector_impl
 
-    """Calculate average loan amount per gram for each item type."""
-    try:
-        stats = (
-            LoanItem.objects.filter(loan__release__isnull=True, loan__loan_type="Given")
-            .values("itemtype")
-            .annotate(
-                total_weight=Coalesce(Sum("weight"), Decimal("0.00")),
-                total_amount=Coalesce(Sum("loanamount"), Decimal("0.00")),
-            )
-            .annotate(
-                avg_per_gram=Case(
-                    When(
-                        Q(total_weight__gt=0),  # Compare annotated field instead of Sum
-                        then=ExpressionWrapper(
-                            F("total_amount") / F("total_weight"),
-                            output_field=DecimalField(max_digits=10, decimal_places=2),
-                        ),
-                    ),
-                    default=Value(Decimal("0.00")),
-                    output_field=DecimalField(max_digits=10, decimal_places=2),
-                ),
-                count=Count("id"),
-            )
-            .order_by("itemtype")
-        )
+    return _selector_impl()
 
-        return {
-            item["itemtype"]: {
-                "avg_per_gram": item["avg_per_gram"],
-                "total_weight": item["total_weight"],
-                "total_amount": item["total_amount"],
-                "count": item["count"],
-            }
-            for item in stats
-        }
-    except Exception as e:
-        print(f"Error calculating averages: {e}")
-        return {}
+
 
 
 def get_interest_paid():
@@ -996,249 +629,6 @@ class LoanMetalWeightService:
                 output_field=BooleanField(),
             ),
         }
-
-
-class LoanSplitService:
-    """
-    Service to split a GivenLoan into multiple loans by separating items.
-
-    Business logic:
-    - First item always stays with original loan
-    - Remaining items can be moved to new loans
-    - Each new loan inherits borrower, dates, tenure, interest_type from original
-    - All operations logged in LoanChangeLog
-    - Atomic transaction ensures consistency
-    """
-
-    def __init__(self, loan, created_by):
-        """
-        Initialize split service.
-
-        Args:
-            loan: GivenLoan instance to split
-            created_by: User performing the split
-        """
-        from .models import GivenLoan
-
-        if not isinstance(loan, GivenLoan):
-            raise ValueError("split_items expects GivenLoan instance")
-
-        self.loan = loan
-        self.created_by = created_by
-
-    def split_items(self, item_ids=None):
-        """
-        Execute split: move selected items to new loans.
-
-        Args:
-            item_ids: List of LoanItem IDs to split off
-                     If None, splits all but first item
-
-        Returns:
-            List of newly created GivenLoan objects
-
-        Raises:
-            ValidationError: If split not possible (e.g., single item loan)
-        """
-        self._validate_can_split()
-        items_to_split = self._get_items_to_split(item_ids)
-        new_loans = self._create_new_loans(items_to_split)
-        return new_loans
-
-    def _validate_can_split(self):
-        """Validate that loan can be split."""
-        from django.core.exceptions import ValidationError
-
-        if not self.loan.can_split():
-            raise ValidationError("Loan must have more than one item to split")
-
-    def _get_items_to_split(self, item_ids):
-        """
-        Get items to split (keeping first item with original loan).
-
-        Args:
-            item_ids: Specific IDs to split, or None for all except first
-
-        Returns:
-            QuerySet of items to move to new loans
-        """
-        # First item always stays
-        first_item = self.loan.loanitems.earliest("id")
-
-        if item_ids:
-            # Split specific items only
-            items = self.loan.loanitems.filter(id__in=item_ids).exclude(
-                id=first_item.id
-            )
-        else:
-            # Split everything except first
-            items = self.loan.loanitems.exclude(id=first_item.id)
-
-        if not items.exists():
-            from django.core.exceptions import ValidationError
-
-            raise ValidationError("No valid items to split")
-
-        return items
-
-    def _create_new_loans(self, items_to_split):
-        """
-        Create new loans and move items.
-
-        Args:
-            items_to_split: QuerySet of items to move
-
-        Returns:
-            List of created GivenLoan objects
-        """
-        from .models import GivenLoan, LoanChangeLog
-
-        new_loans = []
-
-        with transaction.atomic():
-            for item in items_to_split:
-                # Create new loan with same parameters
-                new_loan = GivenLoan.objects.create(
-                    borrower=self.loan.borrower,
-                    loan_date=self.loan.loan_date,
-                    series=self.loan.series,
-                    tenure=self.loan.tenure,
-                    status=self.loan.status,
-                    interest_type=self.loan.interest_type,
-                    created_by=self.created_by,
-                )
-
-                # Move item to new loan
-                item.loan = new_loan
-                item.save(update_fields=["loan"])
-
-                # Log the split
-                LoanChangeLog.objects.create(
-                    loan=self.loan,
-                    source=f"Split item {item.id}",
-                    target=f"Created loan {new_loan.loan_id}",
-                    author=self.created_by,
-                    diff=f"Moved {item.itemdesc} to new loan",
-                )
-
-                new_loans.append(new_loan)
-
-        return new_loans
-
-
-class LoanMergeService:
-    """
-    Service to merge multiple GivenLoans into a single target loan.
-
-    Business logic:
-    - All loans must have same borrower
-    - No released loans can be merged
-    - All items moved to target loan
-    - Source loans deleted (cascading delete)
-    - All operations logged in LoanChangeLog
-    - Atomic transaction ensures consistency
-    """
-
-    def __init__(self, target_loan, merged_by):
-        """
-        Initialize merge service.
-
-        Args:
-            target_loan: GivenLoan to merge into (typically oldest)
-            merged_by: User performing the merge
-        """
-        from .models import GivenLoan
-
-        if not isinstance(target_loan, GivenLoan):
-            raise ValueError("merge expects GivenLoan instance")
-
-        self.target_loan = target_loan
-        self.merged_by = merged_by
-
-    def merge(self, source_loans):
-        """
-        Execute merge: combine multiple loans into target.
-
-        Args:
-            source_loans: List of GivenLoan objects to merge into target
-
-        Returns:
-            The target loan with all items merged
-
-        Raises:
-            ValidationError: If merge not possible (e.g., different borrower)
-        """
-        self._validate_can_merge(source_loans)
-        self._move_items(source_loans)
-        self._delete_sources(source_loans)
-        return self.target_loan
-
-    def _validate_can_merge(self, source_loans):
-        """
-        Validate that all loans can be merged.
-
-        Checks:
-        - All are GivenLoan instances
-        - Same borrower as target
-        - None are released
-        - Not merging target with itself
-
-        Args:
-            source_loans: List of loans to validate
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        from django.core.exceptions import ValidationError
-        from .models import GivenLoan
-
-        for loan in source_loans:
-            if not isinstance(loan, GivenLoan):
-                raise ValidationError("Can only merge GivenLoan objects")
-
-            if loan.borrower != self.target_loan.borrower:
-                raise ValidationError(f"Loan {loan.loan_id} has different borrower")
-
-            if loan.is_released:
-                raise ValidationError(f"Loan {loan.loan_id} is already released")
-
-            if loan.pk == self.target_loan.pk:
-                raise ValidationError("Cannot merge loan with itself")
-
-    def _move_items(self, source_loans):
-        """
-        Move all items from source loans to target.
-
-        Args:
-            source_loans: Loans whose items to move
-        """
-        from .models import LoanChangeLog
-
-        with transaction.atomic():
-            for loan in source_loans:
-                # Move all items in one query
-                item_count = loan.loanitems.count()
-                loan.loanitems.update(loan=self.target_loan)
-
-                # Log merge
-                LoanChangeLog.objects.create(
-                    loan=self.target_loan,
-                    source=f"Merged loan {loan.loan_id}",
-                    target=f"Into {self.target_loan.loan_id}",
-                    author=self.merged_by,
-                    diff=f"Merged {item_count} items",
-                )
-
-    def _delete_sources(self, source_loans):
-        """
-        Delete source loans after items moved.
-
-        Args:
-            source_loans: Loans to delete
-        """
-        with transaction.atomic():
-            for loan in source_loans:
-                loan.delete()
 
 
 class DashboardMetricsService:

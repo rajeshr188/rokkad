@@ -15,10 +15,45 @@
     {{form.media}}
     <div class="card-body" style="background-color: #eee;">
       <h5 class="card-title">Release Form</h5>
+
+      {% if release_preview %}
+        <div class="alert {% if release_preview.errors %}alert-danger{% elif release_preview.warnings %}alert-warning{% else %}alert-success{% endif %}" role="alert">
+          <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <div>
+              <strong>Release Preview</strong>
+              {% if release_preview.loan_id %}
+                <span class="ms-2 text-muted">{{ release_preview.loan_id }}</span>
+              {% endif %}
+            </div>
+            <span class="badge {% if release_preview.errors %}bg-danger{% elif release_preview.warnings %}bg-warning text-dark{% else %}bg-success{% endif %}">
+              {% if release_preview.errors %}Blocked{% elif release_preview.warnings %}Warning{% else %}Ready{% endif %}
+            </span>
+          </div>
+          <div class="small mt-2 text-muted">
+            {% if release_preview.current_status %}<div>Status: {{ release_preview.current_status }}</div>{% endif %}
+            <div>Outstanding: {{ release_preview.outstanding_amount }}</div>
+          </div>
+          {% if release_preview.errors %}
+            <div class="mt-2 small">
+              {% for error in release_preview.errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if release_preview.warnings %}
+            <div class="mt-2 small">
+              {% for warning in release_preview.warnings %}
+                <div>{{ warning }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
       <form method="post">
         {% csrf_token %}
         {{ form|crispy }}
-        <button class ="btn btn-success" type="submit">Submit</button>
+        <button class ="btn btn-success" type="submit" {% if release_preview and release_preview.errors %}disabled{% endif %}>Submit</button>
       </form>
     </div>
   </div>

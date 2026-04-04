@@ -2,18 +2,21 @@
 Opening Balance Setup Wizard
 Comprehensive views for setting up opening balances for ledgers and accounts
 """
-from decimal import Decimal
+import csv
+import io
+from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from djmoney.money import Money
-import csv
-import io
 
 from ..models import (
     Ledger,
@@ -25,6 +28,13 @@ from ..models import (
     AccountBalance,
 )
 from ..utils.currency import Balance
+
+
+def _opening_balance_wizard_url(step=None, **params):
+    query = {"step": step, **params}
+    query = {key: value for key, value in query.items() if value not in (None, "")}
+    base_url = reverse("dea_opening_balance_wizard")
+    return f"{base_url}?{urlencode(query)}" if query else base_url
 
 
 @login_required
@@ -53,13 +63,20 @@ def opening_balance_wizard(request):
 
 def _opening_balance_step1_period(request):
     """Step 1: Select accounting period for opening balances"""
+    preselected_period_id = request.GET.get("period") or request.GET.get("period_id")
+
     if request.method == "POST":
         period_id = request.POST.get("period_id")
         if period_id:
             request.session["ob_period_id"] = period_id
-            return redirect("dea_opening_balance_wizard?step=2")
+            return redirect(_opening_balance_wizard_url(step=2))
         else:
             messages.error(request, "Please select an accounting period")
+    elif preselected_period_id and AccountingPeriod.objects.filter(
+        pk=preselected_period_id
+    ).exists():
+        request.session["ob_period_id"] = str(preselected_period_id)
+        return redirect(_opening_balance_wizard_url(step=2))
 
     # Get all periods
     periods = AccountingPeriod.objects.all().order_by("-start_date")
@@ -85,7 +102,7 @@ def _opening_balance_step2_entry(request):
     period_id = request.session.get("ob_period_id")
     if not period_id:
         messages.error(request, "Please select a period first")
-        return redirect("dea_opening_balance_wizard?step=1")
+        return redirect(_opening_balance_wizard_url(step=1))
 
     period = get_object_or_404(AccountingPeriod, pk=period_id)
 
@@ -93,27 +110,28 @@ def _opening_balance_step2_entry(request):
         # Store entered balances in session
         balances_data = {}
 
-        # Process ledger balances
         for key, value in request.POST.items():
-            if key.startswith("ledger_"):
-                ledger_id = key.split("_")[1]
+            value = str(value).strip()
+            if not value:
+                continue
+
+            if key.startswith("ledger_") and not key.endswith("_currency"):
+                ledger_id = key.removeprefix("ledger_")
                 currency = request.POST.get(f"ledger_{ledger_id}_currency", "INR")
-                if value and value.strip():
-                    balances_data[f"ledger_{ledger_id}"] = {
-                        "amount": value,
-                        "currency": currency,
-                    }
-            elif key.startswith("account_"):
-                account_id = key.split("_")[1]
+                balances_data[f"ledger_{ledger_id}"] = {
+                    "amount": value,
+                    "currency": currency,
+                }
+            elif key.startswith("account_") and not key.endswith("_currency"):
+                account_id = key.removeprefix("account_")
                 currency = request.POST.get(f"account_{account_id}_currency", "INR")
-                if value and value.strip():
-                    balances_data[f"account_{account_id}"] = {
-                        "amount": value,
-                        "currency": currency,
-                    }
+                balances_data[f"account_{account_id}"] = {
+                    "amount": value,
+                    "currency": currency,
+                }
 
         request.session["ob_balances"] = balances_data
-        return redirect("dea_opening_balance_wizard?step=3")
+        return redirect(_opening_balance_wizard_url(step=3))
 
     # Get all root ledgers (no parent)
     ledgers = Ledger.objects.filter(parent__isnull=True).select_related("AccountType")
@@ -155,7 +173,7 @@ def _opening_balance_step3_review(request):
 
     if not period_id or not balances_data:
         messages.error(request, "Invalid session data. Please start over.")
-        return redirect("dea_opening_balance_wizard?step=1")
+        return redirect(_opening_balance_wizard_url(step=1))
 
     period = get_object_or_404(AccountingPeriod, pk=period_id)
 
@@ -170,8 +188,8 @@ def _opening_balance_step3_review(request):
 
     for key, data in balances_data.items():
         try:
-            amount = Decimal(data["amount"])
-            currency = data["currency"]
+            amount = Decimal(str(data.get("amount", "")).strip())
+            currency = data.get("currency", "INR")
 
             if key.startswith("ledger_"):
                 ledger_id = int(key.split("_")[1])
@@ -223,7 +241,7 @@ def _opening_balance_step3_review(request):
                     }
                 )
 
-        except (ValueError, Ledger.DoesNotExist, Account.DoesNotExist) as e:
+        except (InvalidOperation, TypeError, ValueError, Ledger.DoesNotExist, Account.DoesNotExist) as e:
             errors.append(f"Error processing {key}: {str(e)}")
 
     # Validate balance (debits should equal credits)
@@ -257,14 +275,14 @@ def _opening_balance_step3_review(request):
 def _opening_balance_step4_confirm(request):
     """Step 4: Confirm and post opening balances"""
     if request.method != "POST":
-        return redirect("dea_opening_balance_wizard?step=3")
+        return redirect(_opening_balance_wizard_url(step=3))
 
     period_id = request.session.get("ob_period_id")
     balances_data = request.session.get("ob_balances", {})
 
     if not period_id or not balances_data:
         messages.error(request, "Invalid session data. Please start over.")
-        return redirect("dea_opening_balance_wizard?step=1")
+        return redirect(_opening_balance_wizard_url(step=1))
 
     period = get_object_or_404(AccountingPeriod, pk=period_id)
 
@@ -274,8 +292,12 @@ def _opening_balance_step4_confirm(request):
         account_count = 0
 
         for key, data in balances_data.items():
-            amount = Decimal(data["amount"])
-            currency = data["currency"]
+            try:
+                amount = Decimal(str(data.get("amount", "")).strip())
+                currency = data.get("currency", "INR")
+            except (InvalidOperation, TypeError, ValueError) as exc:
+                raise ValidationError(f"Invalid opening balance for {key}: {data!r}") from exc
+
             money = Money(amount, currency)
 
             if key.startswith("ledger_"):
@@ -322,7 +344,7 @@ def _opening_balance_step4_confirm(request):
 
     except Exception as e:
         messages.error(request, f"Error creating opening balances: {str(e)}")
-        return redirect("dea_opening_balance_wizard?step=3")
+        return redirect(_opening_balance_wizard_url(step=3))
 
 
 @login_required

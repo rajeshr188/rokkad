@@ -21,9 +21,27 @@ Layer boundary:
            → applies cross-model filters and aggregations
 """
 
-from django.db.models import Q, Sum
+from collections import Counter
+from decimal import Decimal
 
-from .models import GivenLoan, TakenLoan, LoanStatus
+from django.db.models import (
+    Case,
+    Count,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+    When,
+    Window,
+)
+from django.db.models.functions import Coalesce, ExtractYear, TruncDate
+
+from .models import GivenLoan, LoanStatus, TakenLoan
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +212,147 @@ def get_loan_totals(*, given_qs=None, taken_qs=None):
         "total_loan_amount": {"total": given_amount + taken_amount},
         "total_interest": {"total": given_interest + taken_interest},
     }
+
+
+# ---------------------------------------------------------------------------
+# Analytics / dashboard selectors
+# ---------------------------------------------------------------------------
+
+
+def get_loan_cumulative_amount():
+    """Return unreleased GivenLoan principal totals as a cumulative time series."""
+    from .models import LoanItem
+
+    loan_amount_subquery = (
+        LoanItem.objects.filter(loan=OuterRef("pk"))
+        .values("loan")
+        .annotate(total=Sum("loanamount"))
+        .values("total")
+    )
+
+    return (
+        GivenLoan.objects.unreleased()
+        .annotate(loan_amount=Subquery(loan_amount_subquery))
+        .annotate(cumsum=Window(Sum("loan_amount"), order_by=F("loan_date").asc()))
+        .values("loan_date__date", "cumsum")
+        .order_by("loan_date")
+    )
+
+
+def get_average_loan_instance_per_day():
+    """Average number of GivenLoan records created on days that had loan activity."""
+    loans_per_day = (
+        GivenLoan.objects.annotate(day=TruncDate("loan_date"))
+        .values("day")
+        .annotate(count=Count("id"))
+        .aggregate(total_loans=Sum("count"), total_days=Count("day", distinct=True))
+    )
+
+    if not loans_per_day["total_loans"]:
+        return 0
+
+    average = loans_per_day["total_loans"] / loans_per_day["total_days"]
+    return round(average, 0)
+
+
+def get_loan_counts_grouped():
+    """Group unreleased GivenLoan counts by customer frequency bucket."""
+    loan_counts = (
+        GivenLoan.objects.unreleased()
+        .values("customer__id", "customer__firstname", "customer__lastname")
+        .annotate(loan_count=Count("id"))
+        .order_by("loan_count")
+    )
+
+    grouped_loan_counts = Counter(
+        loan_count for loan_count in loan_counts.values_list("loan_count", flat=True)
+    )
+    return list(grouped_loan_counts.items())
+
+
+def get_loans_by_year():
+    """Return yearly GivenLoan counts with unreleased totals."""
+    return (
+        GivenLoan.objects.annotate(
+            year=ExtractYear("loan_date"),
+            has_release=Case(
+                When(release__isnull=False, then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
+        )
+        .values("year")
+        .annotate(
+            loans_count=Count("id"),
+            unreleased_count=Count("id", filter=Q(has_release=0)),
+        )
+        .order_by("year")
+    )
+
+
+def get_unreleased_loans_by_year():
+    """Return yearly counts for unreleased GivenLoan records."""
+    return (
+        GivenLoan.objects.unreleased()
+        .annotate(year=ExtractYear("loan_date"))
+        .values("year")
+        .annotate(release_count=Count("id"))
+        .order_by("year")
+    )
+
+
+def get_loanamount_by_itemtype():
+    """Aggregate unreleased loan amounts by `LoanItem.itemtype`."""
+    from .models import LoanItem
+
+    return (
+        LoanItem.objects.filter(loan__release__isnull=True)
+        .values("itemtype")
+        .annotate(total_loan_amount=Sum("loanamount"))
+    )
+
+
+def get_itemtype_averages():
+    """Calculate average loan amount per gram for each item type."""
+    from .models import LoanItem
+
+    try:
+        stats = (
+            LoanItem.objects.filter(loan__release__isnull=True, loan__loan_type="Given")
+            .values("itemtype")
+            .annotate(
+                total_weight=Coalesce(Sum("weight"), Decimal("0.00")),
+                total_amount=Coalesce(Sum("loanamount"), Decimal("0.00")),
+            )
+            .annotate(
+                avg_per_gram=Case(
+                    When(
+                        Q(total_weight__gt=0),
+                        then=ExpressionWrapper(
+                            F("total_amount") / F("total_weight"),
+                            output_field=DecimalField(max_digits=10, decimal_places=2),
+                        ),
+                    ),
+                    default=Value(Decimal("0.00")),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                ),
+                count=Count("id"),
+            )
+            .order_by("itemtype")
+        )
+
+        return {
+            item["itemtype"]: {
+                "avg_per_gram": item["avg_per_gram"],
+                "total_weight": item["total_weight"],
+                "total_amount": item["total_amount"],
+                "count": item["count"],
+            }
+            for item in stats
+        }
+    except Exception as e:
+        print(f"Error calculating averages: {e}")
+        return {}
 
 
 # ---------------------------------------------------------------------------

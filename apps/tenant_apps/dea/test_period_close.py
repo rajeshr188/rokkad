@@ -18,18 +18,24 @@ from .models import (
     AccountingPeriod,
     AccountType,
     JournalEntry,
+    JournalEntryVoucher,
     Ledger,
     LedgerTransaction,
     Voucher,
+    VoucherStatus,
     VoucherType,
 )
-from .views.period import period_close
+from .views.period import period_adjustments, period_close
 
 
 User = get_user_model()
 
 
 class AccountingPeriodCloseTests(TenantTestCase):
+    @staticmethod
+    def get_test_schema_name():
+        return "test_dea_period_close"
+
     @classmethod
     def setup_tenant(cls, tenant):
         user = User.objects.create_user(
@@ -59,7 +65,12 @@ class AccountingPeriodCloseTests(TenantTestCase):
         factory = RequestFactory()
         request = factory.post(
             f"/dea/period/{period.pk}/close/",
-            data={"confirm": "on"},
+            data={
+                "review_adjustments": "on",
+                "review_unposted_items": "on",
+                "review_carry_forward": "on",
+                "confirm": "on",
+            },
         )
         request.user = self.user
         request.htmx = False
@@ -95,6 +106,134 @@ class AccountingPeriodCloseTests(TenantTestCase):
         self.assertEqual(response.status_code, 302)
         messages = [message.message for message in get_messages(request)]
         self.assertIn("already closed", messages[0].lower())
+
+    def test_period_adjustment_view_posts_manual_adjustment(self):
+        period = AccountingPeriod.objects.create(
+            name="Jun 2026",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 30),
+        )
+        expense_type = AccountType.objects.create(
+            AccountType="Expense",
+            description="Expense",
+            code_prefix="5",
+        )
+        liability_type = AccountType.objects.create(
+            AccountType="Liability",
+            description="Liability",
+            code_prefix="2",
+        )
+        interest_expense = Ledger.objects.create(
+            AccountType=expense_type,
+            name="Interest Expense-Test",
+            code="5.TEST.INTEREST",
+        )
+        interest_payable = Ledger.objects.create(
+            AccountType=liability_type,
+            name="Interest Payable-Test",
+            code="2.TEST.INTEREST",
+        )
+
+        factory = RequestFactory()
+
+        get_request = factory.get(f"/dea/period/{period.pk}/adjustments/")
+        get_request.user = self.user
+        get_request.htmx = False
+        get_session_middleware = SessionMiddleware(lambda req: None)
+        get_session_middleware.process_request(get_request)
+        get_request.session.save()
+        setattr(get_request, "_messages", FallbackStorage(get_request))
+
+        get_response = period_adjustments(get_request, period.pk)
+        get_response.render()
+        self.assertEqual(get_response.status_code, 200)
+
+        request = factory.post(
+            f"/dea/period/{period.pk}/adjustments/",
+            data={
+                "adjustment_type": "INTEREST_ACCRUAL",
+                "effective_date": period.end_date.isoformat(),
+                "debit_ledger": interest_expense.pk,
+                "credit_ledger": interest_payable.pk,
+                "amount_0": "250.00",
+                "amount_1": "INR",
+                "description": "Accrue month-end interest",
+                "auto_reverse_next_period": "on",
+            },
+        )
+        request.user = self.user
+        request.htmx = False
+
+        session_middleware = SessionMiddleware(lambda req: None)
+        session_middleware.process_request(request)
+        request.session.save()
+        setattr(request, "_messages", FallbackStorage(request))
+
+        response = period_adjustments(request, period.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            JournalEntryVoucher.objects.filter(
+                reference=f"PERIOD:{period.pk}",
+                memo="PRE_CLOSE:INTEREST_ACCRUAL",
+            ).exists()
+        )
+        posted_entry = period.journal_entries.get(desc__icontains="Accrue month-end interest")
+        self.assertEqual(posted_entry.voucher.status, VoucherStatus.POSTED)
+
+    def test_period_close_blocks_when_draft_vouchers_exist(self):
+        period = AccountingPeriod.objects.create(
+            name="Jul 2026",
+            start_date=date(2026, 7, 1),
+            end_date=date(2026, 7, 31),
+        )
+        voucher_type = VoucherType.objects.create(
+            name="DRAFT-PERIOD-CLOSE",
+            description="Draft close guard",
+        )
+        draft_voucher = Voucher.objects.create(
+            voucher_no="DRAFT-PERIOD-1",
+            voucher_type=voucher_type,
+            voucher_date=period.end_date,
+            status=VoucherStatus.DRAFT,
+            created_by=self.user,
+            updated_by=self.user,
+            doc_content_type=ContentType.objects.get_for_model(type(period)),
+            doc_object_id=period.pk,
+            fingerprint="draft-period-close",
+        )
+        JournalEntry.objects.create(
+            voucher=draft_voucher,
+            period=period,
+            posted_by=self.user,
+            desc="Draft period entry",
+        )
+
+        factory = RequestFactory()
+        request = factory.post(
+            f"/dea/period/{period.pk}/close/",
+            data={
+                "review_adjustments": "on",
+                "review_unposted_items": "on",
+                "review_carry_forward": "on",
+                "confirm": "on",
+            },
+        )
+        request.user = self.user
+        request.htmx = False
+
+        session_middleware = SessionMiddleware(lambda req: None)
+        session_middleware.process_request(request)
+        request.session.save()
+        setattr(request, "_messages", FallbackStorage(request))
+
+        response = period_close(request, period.pk)
+        response.render()
+        period.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(period.status, AccountingPeriod.PeriodStatus.OPEN)
+        self.assertIn(b"draft voucher", response.content.lower())
 
     def test_close_period_bootstraps_retained_earnings_for_income_balance(self):
         period = AccountingPeriod.objects.create(

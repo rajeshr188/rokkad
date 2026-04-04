@@ -149,11 +149,19 @@ class JournalEntryVoucher(BusinessDoc):
                 f"Journal entry not balanced: DR {self.total_debit} ≠ CR {self.total_credit}"
             )
 
-        # Check if has line items
-        line_count = self.line_items.count()
-        if line_count < 2:
+        # New unsaved vouchers do not have related line items yet; the create/update
+        # workflow validates and persists the posting pairs immediately afterward.
+        if not self.pk:
+            return
+
+        line_items = self.line_items.all()
+        if line_items.count() < 2:
             raise ValidationError(
                 "Journal entry must have at least 2 line items (1 DR and 1 CR)"
+            )
+        if not line_items.filter(side="DR").exists() or not line_items.filter(side="CR").exists():
+            raise ValidationError(
+                "Journal entry must include at least one debit line and one credit line."
             )
 
     def save(self, *args, **kwargs):

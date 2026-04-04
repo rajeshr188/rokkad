@@ -31,6 +31,16 @@ class TransitionUISpec:
 
 
 @dataclass(frozen=True)
+class TransitionStateSpec:
+    key: str
+    display_name: str
+    source_statuses: tuple[str, ...]
+    target_status: str
+    execution_mode: str
+    notes: str
+
+
+@dataclass(frozen=True)
 class TransitionFormUISpec:
     key: str
     heading: str
@@ -40,6 +50,8 @@ class TransitionFormUISpec:
 
 TRANSITION_ALIAS_MAP = {
     "mark sold": "mark_sold",
+    "release": "deliver",
+    "release_to_customer": "deliver",
 }
 
 
@@ -59,19 +71,111 @@ TRANSITION_REGISTRY: dict[str, TransitionSpec] = {
 }
 
 
+TRANSITION_STATE_REGISTRY: dict[str, TransitionStateSpec] = {
+    "approve": TransitionStateSpec(
+        key="approve",
+        display_name="Approve Loan",
+        source_statuses=("Created",),
+        target_status="Approved",
+        execution_mode="generic-transition",
+        notes="Administrative approval only; no accounting impact.",
+    ),
+    "disburse": TransitionStateSpec(
+        key="disburse",
+        display_name="Disburse Funds",
+        source_statuses=("Approved",),
+        target_status="Disbursed",
+        execution_mode="transition-with-accounting",
+        notes="Moves an approved loan into an active disbursed state and posts the disbursal entry.",
+    ),
+    "deliver": TransitionStateSpec(
+        key="deliver",
+        display_name="Release to Customer",
+        source_statuses=("Disbursed",),
+        target_status="Released",
+        execution_mode="release-flow",
+        notes="Business release action: create the Release document, run the deliver FSM transition, and post release accounting.",
+    ),
+    "cancel": TransitionStateSpec(
+        key="cancel",
+        display_name="Cancel Loan",
+        source_statuses=("Created", "Approved"),
+        target_status="Cancelled",
+        execution_mode="generic-transition",
+        notes="Cancels a loan before it is disbursed.",
+    ),
+    "mark_defaulted": TransitionStateSpec(
+        key="mark_defaulted",
+        display_name="Mark Defaulted",
+        source_statuses=("Disbursed",),
+        target_status="Defaulted",
+        execution_mode="generic-transition",
+        notes="Flags a disbursed loan as defaulted; follow-up recovery action may occur later.",
+    ),
+    "mark_auctioned": TransitionStateSpec(
+        key="mark_auctioned",
+        display_name="Record Auction",
+        source_statuses=("Defaulted",),
+        target_status="Auctioned",
+        execution_mode="warning-transition",
+        notes="Records auction outcome after default and may require downstream accounting handling.",
+    ),
+    "mark_sold": TransitionStateSpec(
+        key="mark_sold",
+        display_name="Record Sale",
+        source_statuses=("Disbursed",),
+        target_status="Sold",
+        execution_mode="warning-transition",
+        notes="Records a sale of collateral from the disbursed state.",
+    ),
+    "undo_disburse": TransitionStateSpec(
+        key="undo_disburse",
+        display_name="Undo Disbursal",
+        source_statuses=("Disbursed",),
+        target_status="Approved",
+        execution_mode="reversal-transition",
+        notes="Reverses the disbursal and its accounting entry.",
+    ),
+    "undo_release": TransitionStateSpec(
+        key="undo_release",
+        display_name="Undo Release",
+        source_statuses=("Released",),
+        target_status="Disbursed",
+        execution_mode="reversal-transition",
+        notes="Reverses the release document and related accounting entry.",
+    ),
+    "repledge": TransitionStateSpec(
+        key="repledge",
+        display_name="Mark Repledged",
+        source_statuses=("Disbursed",),
+        target_status="Repledged",
+        execution_mode="renewal-flow",
+        notes="Used when a disbursed loan is renewed/repledged while collateral remains in custody.",
+    ),
+    "undo_repledge": TransitionStateSpec(
+        key="undo_repledge",
+        display_name="Undo Repledge",
+        source_statuses=("Repledged",),
+        target_status="Disbursed",
+        execution_mode="reversal-transition",
+        notes="Cancels the renewal linkage and returns the source loan to Disbursed.",
+    ),
+}
+
+
 TRANSITION_UI_REGISTRY: dict[str, TransitionUISpec] = {
     "approve": TransitionUISpec("approve", "Approve", "btn-success", "✓"),
-    "disburse": TransitionUISpec("disburse", "Disburse", "btn-primary", "💳"),
-    "deliver": TransitionUISpec("deliver", "Release", "btn-info", "📦"),
+    "disburse": TransitionUISpec("disburse", "Disburse Funds", "btn-primary", "💳"),
+    "deliver": TransitionUISpec("deliver", "Release to Customer", "btn-info", "📦"),
     "cancel": TransitionUISpec("cancel", "Cancel", "btn-danger", "✕"),
     "mark_defaulted": TransitionUISpec(
         "mark_defaulted", "Mark Defaulted", "btn-warning", "⚠"
     ),
     "mark_auctioned": TransitionUISpec(
-        "mark_auctioned", "Auction", "btn-dark", "🔨"
+        "mark_auctioned", "Record Auction", "btn-dark", "🔨"
     ),
-    "mark_sold": TransitionUISpec("mark_sold", "Sell", "btn-secondary", "💰"),
-    "repledge": TransitionUISpec("repledge", "Repledge", "btn-info", "🔁"),
+    "mark_sold": TransitionUISpec("mark_sold", "Record Sale", "btn-secondary", "💰"),
+    "repledge": TransitionUISpec("repledge", "Mark Repledged", "btn-info", "🔁"),
     "undo_disburse": TransitionUISpec(
         "undo_disburse", "Undo Disbursal", "btn-outline-warning", "↩"
     ),
@@ -120,6 +224,7 @@ def normalize_transition_name(raw_name: str | None) -> str:
 def get_transition_form_class(transition_name: str):
     from django.utils.module_loading import import_string
 
+    transition_name = normalize_transition_name(transition_name)
     spec = TRANSITION_REGISTRY.get(transition_name)
     if not spec or not spec.enabled_in_loan_transition_view:
         return None
@@ -127,6 +232,7 @@ def get_transition_form_class(transition_name: str):
 
 
 def get_transition_command(transition_name: str):
+    transition_name = normalize_transition_name(transition_name)
     spec = TRANSITION_REGISTRY.get(transition_name)
     if spec and spec.command_class:
         return spec.command_class
@@ -136,6 +242,7 @@ def get_transition_command(transition_name: str):
 def build_transition_payload(transition_name: str, payload_dict: dict):
     from django.utils.module_loading import import_string
 
+    transition_name = normalize_transition_name(transition_name)
     spec = TRANSITION_REGISTRY.get(transition_name)
     if not spec or not spec.payload_class_path:
         if payload_dict:
@@ -146,6 +253,11 @@ def build_transition_payload(transition_name: str, payload_dict: dict):
 
     payload_class = import_string(spec.payload_class_path)
     return payload_class(**payload_dict)
+
+
+def get_transition_state_spec(transition_name: str) -> TransitionStateSpec | None:
+    """Return the canonical state contract for a transition key or alias."""
+    return TRANSITION_STATE_REGISTRY.get(normalize_transition_name(transition_name))
 
 
 def build_transition_actions(loan, raw_transitions):
