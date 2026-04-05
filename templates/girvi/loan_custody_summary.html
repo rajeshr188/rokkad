@@ -1,5 +1,8 @@
 {% extends 'layouts/workspace.html' %}
+{% load static %}
+{% load l10n %}
 {% block workspace_content %}
+{% partialdef custody-summary-content inline %}
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Custody Summary - {{ loan.loan_id }}</h2>
@@ -79,4 +82,5 @@
   </div>
   {% endif %}
 </div>
+{% endpartialdef %}
 {% endblock %}

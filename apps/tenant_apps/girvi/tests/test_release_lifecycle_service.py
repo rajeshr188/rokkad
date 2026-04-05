@@ -46,7 +46,7 @@ class ReleaseLifecycleServiceTests(TestCase):
 
         with patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
             "apps.tenant_apps.girvi.flows.LoanFlow", return_value=flow
-        ), patch("apps.tenant_apps.girvi.payment_service.record_loan_release") as post_release:
+        ), patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_release") as post_release:
             release = ReleaseLifecycleService.create_release(
                 loan=loan,
                 created_by=user,
@@ -78,7 +78,7 @@ class ReleaseLifecycleServiceTests(TestCase):
         with patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
             "apps.tenant_apps.girvi.flows.LoanFlow", return_value=flow
         ), patch(
-            "apps.tenant_apps.girvi.payment_service.record_loan_release",
+            "apps.tenant_apps.girvi.service_modules.payment.record_loan_release",
             return_value=(fake_payment, True),
         ):
             result = ReleaseLifecycleService.execute(
@@ -111,7 +111,7 @@ class ReleaseLifecycleServiceTests(TestCase):
 
         with patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
             "apps.tenant_apps.girvi.flows.LoanFlow", return_value=flow
-        ), patch("apps.tenant_apps.girvi.payment_service.record_loan_release") as post_release:
+        ), patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_release") as post_release:
             with self.assertRaises(ValidationError):
                 ReleaseLifecycleService.create_release(
                     loan=loan,
@@ -143,7 +143,7 @@ class ReleaseLifecycleServiceTests(TestCase):
         with patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
             "apps.tenant_apps.girvi.flows.build_runtime_loan_flow", return_value=flow
         ), patch(
-            "apps.tenant_apps.girvi.payment_service.record_loan_release",
+            "apps.tenant_apps.girvi.service_modules.payment.record_loan_release",
             return_value=(fake_payment, True),
         ):
             result = ReleaseLifecycleService.execute(

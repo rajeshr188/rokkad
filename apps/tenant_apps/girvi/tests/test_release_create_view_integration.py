@@ -83,7 +83,7 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
             "apps.tenant_apps.girvi.services.transaction.atomic", side_effect=lambda: nullcontext()
         ), patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
             "apps.tenant_apps.girvi.flows.LoanFlow", return_value=flow
-        ), patch("apps.tenant_apps.girvi.payment_service.record_loan_release") as post_release:
+        ), patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_release") as post_release:
             response = release_create(request)
 
         self.assertEqual(response.status_code, 302)

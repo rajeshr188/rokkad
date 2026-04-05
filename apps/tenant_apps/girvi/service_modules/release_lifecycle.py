@@ -107,7 +107,7 @@ class ReleaseLifecycleService:
     @staticmethod
     def execute(command: ReleaseCreateCommand) -> ReleaseCreateResult:
         from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
-        from apps.tenant_apps.girvi.payment_service import record_loan_release
+        from apps.tenant_apps.girvi.service_modules.payment import record_loan_release
 
         preview = ReleaseLifecycleService.preview(command)
         if not preview.is_valid:

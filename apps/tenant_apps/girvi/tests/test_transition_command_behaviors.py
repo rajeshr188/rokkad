@@ -33,7 +33,7 @@ class TransitionCommandBehaviorTests(TestCase):
 
         payment = SimpleNamespace(payment_id="PV-001")
         with patch(
-            "apps.tenant_apps.girvi.payment_service.record_loan_disbursal",
+            "apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal",
             return_value=(payment, True),
         ):
             result = cmd.execute(transition_method)
@@ -53,7 +53,7 @@ class TransitionCommandBehaviorTests(TestCase):
 
         payment = SimpleNamespace(payment_id="PV-EXIST")
         with patch(
-            "apps.tenant_apps.girvi.payment_service.record_loan_disbursal",
+            "apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal",
             return_value=(payment, False),
         ):
             result = cmd.execute(transition_method)
@@ -72,7 +72,7 @@ class TransitionCommandBehaviorTests(TestCase):
             loan.status = "Disbursed"
 
         with patch(
-            "apps.tenant_apps.girvi.payment_service.record_loan_disbursal",
+            "apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal",
             side_effect=Exception("posting failed"),
         ):
             result = cmd.execute(transition_method)

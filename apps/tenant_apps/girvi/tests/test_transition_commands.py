@@ -60,7 +60,7 @@ class TransitionCommandRegistryTests(SimpleTestCase):
         "apps.tenant_apps.girvi.transitions.commands.transaction.atomic",
         side_effect=lambda: nullcontext(),
     )
-    @patch("apps.tenant_apps.girvi.payment_service.record_loan_disbursal")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal")
     @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
     def test_transition_service_routes_draft_to_active_current_v2_journey(
         self,
@@ -93,7 +93,7 @@ class TransitionCommandRegistryTests(SimpleTestCase):
         "apps.tenant_apps.girvi.transitions.commands.transaction.atomic",
         side_effect=lambda: nullcontext(),
     )
-    @patch("apps.tenant_apps.girvi.payment_service.record_loan_disbursal")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal")
     @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
     def test_transition_service_accepts_legacy_approval_aliases_for_v2_states(
         self,

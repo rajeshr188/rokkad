@@ -568,7 +568,10 @@ class LoanItemForm(forms.ModelForm):
 
 
 class InitialLoanItemForm(LoanItemForm):
-    OPTIONAL_ROW_INPUTS = ("item", "itemdesc", "weight", "loanamount", "interestrate")
+    # `interestrate` is intentionally excluded here because HTMX auto-populates it
+    # for every extra row on page load. A lone auto-filled interest value should
+    # not make an otherwise blank row block form submission.
+    OPTIONAL_ROW_INPUTS = ("item", "itemdesc", "weight", "loanamount")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

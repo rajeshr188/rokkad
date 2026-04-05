@@ -122,7 +122,7 @@ class LoanRenewalService:
         )
         from apps.tenant_apps.girvi.models.loan_item import LoanItem
         from apps.tenant_apps.girvi.models.renewal import LoanRenewal
-        from apps.tenant_apps.girvi.payment_service import record_loan_disbursal
+        from apps.tenant_apps.girvi.service_modules.payment import record_loan_disbursal
 
         preview = self.preview(command)
         if not preview.is_valid:
