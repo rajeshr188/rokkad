@@ -63,7 +63,7 @@ class DisburseTransitionCommand(BaseLoanTransitionCommand):
     def execute(self, transition_method, payload=None) -> TransitionResult:
         from apps.tenant_apps.girvi.models import LoanStatus
         from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
-        from apps.tenant_apps.girvi.payment_service import record_loan_disbursal
+        from apps.tenant_apps.girvi.service_modules.payment import record_loan_disbursal
 
         try:
             with transaction.atomic():
@@ -147,7 +147,7 @@ class UndoDisburseTransitionCommand(BaseLoanTransitionCommand):
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
         from django.core.exceptions import ValidationError
-        from apps.tenant_apps.girvi.payment_service import reverse_loan_disbursal
+        from apps.tenant_apps.girvi.service_modules.payment import reverse_loan_disbursal
 
         try:
             with transaction.atomic():
@@ -171,7 +171,7 @@ class UndoReleaseTransitionCommand(BaseLoanTransitionCommand):
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
         from django.core.exceptions import ValidationError
-        from apps.tenant_apps.girvi.payment_service import reverse_loan_release
+        from apps.tenant_apps.girvi.service_modules.payment import reverse_loan_release
 
         try:
             with transaction.atomic():

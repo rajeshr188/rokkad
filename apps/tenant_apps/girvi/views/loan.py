@@ -249,7 +249,7 @@ def _extract_initial_item_inputs(item_formset):
             continue
         if not any(
             item_data.get(field) not in (None, "")
-            for field in ("item", "itemdesc", "weight", "loanamount", "interestrate")
+            for field in ("item", "itemdesc", "weight", "loanamount")
         ):
             continue
         initial_items.append(
@@ -315,7 +315,7 @@ def _build_preview_initial_item_inputs(data):
         }
         if any(
             item_data.get(field) not in (None, "")
-            for field in ("itemdesc", "weight", "loanamount", "interestrate")
+            for field in ("itemdesc", "weight", "loanamount")
         ):
             initial_items.append(LoanItemCreateInput(**item_data))
 

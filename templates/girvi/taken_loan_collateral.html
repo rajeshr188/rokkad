@@ -1,5 +1,6 @@
 {% extends 'layouts/workspace.html' %}
 {% block workspace_content %}
+{% partialdef taken-loan-collateral-content inline %}
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Taken Loan Collateral - {{ loan.loan_id }}</h2>
@@ -64,4 +65,5 @@
   </div>
   {% endif %}
 </div>
+{% endpartialdef %}
 {% endblock %}

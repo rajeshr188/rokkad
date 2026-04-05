@@ -189,9 +189,9 @@ def print_loan(request, pk=None):
         GivenLoan.objects.select_related(
             "borrower", "series", "series__license"
         ).prefetch_related(
-            "loanitems", "borrower__address_set", "borrower__contactno_set"
+            "loanitems", "borrower__address", "borrower__contactno"
         ),
-        pk=pk
+        pk=pk,
     )
     template = LoanTemplate.objects.get_default()
     if not template:

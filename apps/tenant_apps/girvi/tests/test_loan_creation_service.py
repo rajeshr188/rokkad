@@ -9,6 +9,7 @@ from django.test import RequestFactory, SimpleTestCase
 from django.utils import timezone
 
 from apps.tenant_apps.girvi.views.loan import (
+    _build_preview_initial_item_inputs,
     get_interestrate,
     loan_create,
     loan_create_preview,
@@ -213,6 +214,48 @@ class LoanCreationServiceTests(SimpleTestCase):
 
         self.assertTrue(is_valid)
         self.assertEqual(formset.errors, [{}, {}, {}])
+
+    def test_initial_item_formset_ignores_auto_interest_on_blank_extra_rows(self):
+        data = {
+            "items-TOTAL_FORMS": "3",
+            "items-INITIAL_FORMS": "0",
+            "items-MIN_NUM_FORMS": "0",
+            "items-MAX_NUM_FORMS": "1000",
+            "items-0-itemdesc": "Gold ring",
+            "items-0-itemtype": "Gold",
+            "items-0-quantity": "1",
+            "items-0-weight": "10.500",
+            "items-0-purity": "91.60",
+            "items-0-loanamount": "0",
+            "items-0-interestrate": "1.50",
+            "items-1-itemdesc": "",
+            "items-1-itemtype": "Gold",
+            "items-1-quantity": "",
+            "items-1-weight": "",
+            "items-1-purity": "",
+            "items-1-loanamount": "",
+            "items-1-interestrate": "1.50",
+            "items-2-itemdesc": "",
+            "items-2-itemtype": "Gold",
+            "items-2-quantity": "",
+            "items-2-weight": "",
+            "items-2-purity": "",
+            "items-2-loanamount": "",
+            "items-2-interestrate": "1.50",
+        }
+        formset_class = build_initial_loan_item_formset()
+
+        with patch("apps.tenant_apps.girvi.forms.Rate.objects.filter") as rate_filter:
+            rate_filter.return_value.exists.return_value = False
+            formset = formset_class(data, prefix="items")
+            is_valid = formset.is_valid()
+
+        self.assertTrue(is_valid)
+        self.assertEqual(formset.errors, [{}, {}, {}])
+
+        preview_items = _build_preview_initial_item_inputs(data)
+        self.assertEqual(len(preview_items), 1)
+        self.assertEqual(preview_items[0].itemdesc, "Gold ring")
 
     def test_execute_creates_initial_items_when_provided(self):
         command = LoanCreateCommand(

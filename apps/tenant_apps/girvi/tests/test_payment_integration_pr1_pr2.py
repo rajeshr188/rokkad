@@ -11,12 +11,14 @@ from apps.tenant_apps.dea.models.payment import PaymentVoucher
 from apps.tenant_apps.girvi.forms import GivenLoanRepaymentForm, RequestClosureLoanForm
 from apps.tenant_apps.girvi.transition_registry import get_transition_form_ui
 from apps.tenant_apps.girvi.models.loan_refactored import LoanStatus
-from apps.tenant_apps.girvi.payment_service import (
+from apps.tenant_apps.girvi.service_modules.payment import (
     record_loan_disbursal,
     record_loan_release,
 )
+from apps.tenant_apps.girvi.views.custody_views import loan_custody_summary
 from apps.tenant_apps.girvi.views.loan import loan_transition_view
 from apps.tenant_apps.girvi.views.loanpayment import loan_payment_create_view
+from apps.tenant_apps.girvi.views.prints import print_loan
 
 
 class PR1FormAndModelGuardTests(SimpleTestCase):
@@ -151,8 +153,8 @@ class PR3TakenLoanRepaymentViewTests(SimpleTestCase):
 
 
 class PR2DisbursalServiceTests(SimpleTestCase):
-    @patch("apps.tenant_apps.girvi.payment_service.PaymentVoucher")
-    @patch("apps.tenant_apps.girvi.payment_service.ContentType")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
     def test_disbursal_service_returns_existing_without_posting(
         self,
         mock_content_type,
@@ -163,16 +165,16 @@ class PR2DisbursalServiceTests(SimpleTestCase):
         mock_payment_voucher.objects.filter.return_value.first.return_value = existing
 
         with patch(
-            "apps.tenant_apps.girvi.payment_service.create_and_post_voucher_for_doc"
+            "apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc"
         ) as mock_post:
             FakeGivenLoan = type("FakeGivenLoan", (), {})
             FakeTakenLoan = type("FakeTakenLoan", (), {})
             loan = FakeGivenLoan()
             loan.pk = 10
             with patch(
-                "apps.tenant_apps.girvi.payment_service.GivenLoan", new=FakeGivenLoan
+                "apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan
             ), patch(
-                "apps.tenant_apps.girvi.payment_service.TakenLoan", new=FakeTakenLoan
+                "apps.tenant_apps.girvi.service_modules.payment.TakenLoan", new=FakeTakenLoan
             ):
                 result, created = record_loan_disbursal(loan, user=SimpleNamespace(id=1))
 
@@ -180,9 +182,9 @@ class PR2DisbursalServiceTests(SimpleTestCase):
         self.assertFalse(created)
         mock_post.assert_not_called()
 
-    @patch("apps.tenant_apps.girvi.payment_service.PaymentVoucher")
-    @patch("apps.tenant_apps.girvi.payment_service.ContentType")
-    @patch("apps.tenant_apps.girvi.payment_service.create_and_post_voucher_for_doc")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc")
     def test_disbursal_service_creates_and_posts_givenloan_voucher(
         self,
         mock_post,
@@ -204,9 +206,9 @@ class PR2DisbursalServiceTests(SimpleTestCase):
         mock_payment_voucher.objects.create.return_value = created_payment
 
         with patch(
-            "apps.tenant_apps.girvi.payment_service.GivenLoan", new=FakeGivenLoan
+            "apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan
         ), patch(
-            "apps.tenant_apps.girvi.payment_service.TakenLoan", new=FakeTakenLoan
+            "apps.tenant_apps.girvi.service_modules.payment.TakenLoan", new=FakeTakenLoan
         ):
             result, created = record_loan_disbursal(loan, user=SimpleNamespace(id=1))
 
@@ -216,9 +218,9 @@ class PR2DisbursalServiceTests(SimpleTestCase):
         mock_post.assert_called_once()
         created_payment.save.assert_called_once_with(update_fields=["posted"])
 
-    @patch("apps.tenant_apps.girvi.payment_service.PaymentVoucher")
-    @patch("apps.tenant_apps.girvi.payment_service.ContentType")
-    @patch("apps.tenant_apps.girvi.payment_service.create_and_post_voucher_for_doc")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc")
     def test_disbursal_service_creates_takenloan_disbursal_receipt(
         self,
         mock_post,
@@ -240,9 +242,9 @@ class PR2DisbursalServiceTests(SimpleTestCase):
         mock_payment_voucher.objects.create.return_value = created_payment
 
         with patch(
-            "apps.tenant_apps.girvi.payment_service.GivenLoan", new=FakeGivenLoan
+            "apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan
         ), patch(
-            "apps.tenant_apps.girvi.payment_service.TakenLoan", new=FakeTakenLoan
+            "apps.tenant_apps.girvi.service_modules.payment.TakenLoan", new=FakeTakenLoan
         ):
             result, created = record_loan_disbursal(loan, user=SimpleNamespace(id=1))
 
@@ -364,9 +366,79 @@ class PR2TransitionHookTests(SimpleTestCase):
         service.execute.assert_called_once_with("disburse_loan", disbursed_by="Tester")
 
 
+class CustodySummaryViewTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = SimpleNamespace(id=1, is_authenticated=True, username="tester")
+
+    @patch("apps.tenant_apps.girvi.views.custody_views.render")
+    @patch("apps.tenant_apps.girvi.views.custody_views.get_object_or_404")
+    def test_loan_custody_summary_uses_htmx_partial_template(
+        self,
+        mock_get_object_or_404,
+        mock_render,
+    ):
+        loan = SimpleNamespace(
+            loan_id="GL-001",
+            can_release=lambda: (True, ""),
+            loanitems=SimpleNamespace(all=lambda: [], count=lambda: 0),
+        )
+        mock_get_object_or_404.return_value = loan
+        mock_render.return_value = HttpResponseRedirect("/ok/")
+
+        request = self.factory.get("/girvi/loans/1/custody/")
+        request.user = self.user
+        request.htmx = True
+
+        response = loan_custody_summary(request, loan_id=1)
+
+        self.assertEqual(response.url, "/ok/")
+        self.assertEqual(
+            mock_render.call_args.args[1],
+            "girvi/loan_custody_summary.html#custody-summary-content",
+        )
+
+
+class PrintLoanViewTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = SimpleNamespace(id=1, is_authenticated=True, username="tester")
+
+    @patch("apps.tenant_apps.girvi.views.prints.get_custom_jcl", return_value=b"%PDF-1.4 test")
+    @patch("apps.tenant_apps.girvi.views.prints.LoanTemplate")
+    @patch("apps.tenant_apps.girvi.views.prints.get_object_or_404")
+    @patch("apps.tenant_apps.girvi.views.prints.GivenLoan")
+    def test_print_loan_prefetches_customer_contact_relations_with_current_related_names(
+        self,
+        mock_givenloan,
+        mock_get_object_or_404,
+        mock_template,
+        _mock_get_custom_jcl,
+    ):
+        mock_queryset = MagicMock(name="givenloan_queryset")
+        mock_givenloan.objects.select_related.return_value = mock_queryset
+
+        loan = SimpleNamespace(pk=1, loan_id="GL-001")
+        mock_get_object_or_404.return_value = loan
+        mock_template.objects.get_default.return_value = SimpleNamespace(pk=99)
+
+        request = self.factory.get("/girvi/girvi/loan/detail/1/pdf")
+        request.user = self.user
+
+        response = print_loan.__wrapped__(request, pk=1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        mock_queryset.prefetch_related.assert_called_once_with(
+            "loanitems",
+            "borrower__address",
+            "borrower__contactno",
+        )
+
+
 class PR4ReleaseServiceTests(SimpleTestCase):
-    @patch("apps.tenant_apps.girvi.payment_service.PaymentVoucher")
-    @patch("apps.tenant_apps.girvi.payment_service.ContentType")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
     def test_release_service_returns_existing_without_posting(
         self,
         mock_content_type,
@@ -377,7 +449,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
         mock_payment_voucher.objects.filter.return_value.first.return_value = existing
 
         with patch(
-            "apps.tenant_apps.girvi.payment_service.create_and_post_voucher_for_doc"
+            "apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc"
         ) as mock_post:
             FakeGivenLoan = type("FakeGivenLoan", (), {})
             loan = FakeGivenLoan()
@@ -392,7 +464,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
                 loan=loan,
             )
 
-            with patch("apps.tenant_apps.girvi.payment_service.GivenLoan", new=FakeGivenLoan):
+            with patch("apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan):
                 result, created = record_loan_release(
                     release,
                     created_by=SimpleNamespace(id=1),
@@ -402,9 +474,9 @@ class PR4ReleaseServiceTests(SimpleTestCase):
         self.assertFalse(created)
         mock_post.assert_not_called()
 
-    @patch("apps.tenant_apps.girvi.payment_service.PaymentVoucher")
-    @patch("apps.tenant_apps.girvi.payment_service.ContentType")
-    @patch("apps.tenant_apps.girvi.payment_service.create_and_post_voucher_for_doc")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc")
     def test_release_service_creates_and_posts_for_positive_outstanding(
         self,
         mock_post,
@@ -430,7 +502,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
             loan=loan,
         )
 
-        with patch("apps.tenant_apps.girvi.payment_service.GivenLoan", new=FakeGivenLoan):
+        with patch("apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan):
             result, created = record_loan_release(
                 release,
                 created_by=SimpleNamespace(id=1),
@@ -446,9 +518,9 @@ class PR4ReleaseServiceTests(SimpleTestCase):
         mock_post.assert_called_once()
         created_payment.save.assert_called_once_with(update_fields=["posted"])
 
-    @patch("apps.tenant_apps.girvi.payment_service.PaymentVoucher")
-    @patch("apps.tenant_apps.girvi.payment_service.ContentType")
-    @patch("apps.tenant_apps.girvi.payment_service.create_and_post_voucher_for_doc")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc")
     def test_release_service_skips_when_no_outstanding(
         self,
         mock_post,
@@ -469,7 +541,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
             loan=loan,
         )
 
-        with patch("apps.tenant_apps.girvi.payment_service.GivenLoan", new=FakeGivenLoan):
+        with patch("apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan):
             result, created = record_loan_release(
                 release,
                 created_by=SimpleNamespace(id=1),

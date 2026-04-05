@@ -6,6 +6,12 @@ from .creation import (
     LoanCreationService,
 )
 from .id_generation import LoanIDGenerator, ReleaseIDGenerator
+from .payment import (
+    record_loan_disbursal,
+    record_loan_release,
+    reverse_loan_disbursal,
+    reverse_loan_release,
+)
 from .release_lifecycle import (
     ReleaseCreateCommand,
     ReleaseCreatePreview,
@@ -32,6 +38,10 @@ __all__ = [
     "ReleaseCreatePreview",
     "ReleaseCreateResult",
     "LoanIDGenerator",
+    "record_loan_disbursal",
+    "record_loan_release",
+    "reverse_loan_disbursal",
+    "reverse_loan_release",
     "ReleaseIDGenerator",
     "LoanTransitionService",
     "LoanRenewalCommand",

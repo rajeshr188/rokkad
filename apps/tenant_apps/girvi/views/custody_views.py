@@ -90,7 +90,11 @@ def loan_custody_summary(request, loan_id):
         "total_items": loan.loanitems.count(),
     }
 
-    return render(request, "girvi/loan_custody_summary.html", context)
+    template_name = "girvi/loan_custody_summary.html"
+    if getattr(request, "htmx", False):
+        template_name += "#custody-summary-content"
+
+    return render(request, template_name, context)
 
 
 # ============================================================================
@@ -444,7 +448,11 @@ def taken_loan_collateral_detail(request, loan_id):
         "can_return_all": collateral.exists(),
     }
 
-    return render(request, "girvi/taken_loan_collateral.html", context)
+    template_name = "girvi/taken_loan_collateral.html"
+    if getattr(request, "htmx", False):
+        template_name += "#taken-loan-collateral-content"
+
+    return render(request, template_name, context)
 
 
 @login_required
