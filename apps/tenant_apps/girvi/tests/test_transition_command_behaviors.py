@@ -96,6 +96,25 @@ class TransitionCommandBehaviorTests(TestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.level, "warning")
 
+    @patch("apps.tenant_apps.notify.services.create_loan_auction_notice")
+    def test_mark_auctioned_creates_auction_notice_for_borrower(self, mock_create_notice):
+        borrower = SimpleNamespace(name="Asha")
+        loan = self._loan(status="Defaulted")
+        loan.borrower = borrower
+        loan.loan_id = "GL-001"
+
+        cmd = MarkAuctionedTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
+
+        def transition_method(**_payload):
+            loan.status = "Auctioned"
+
+        payload = MarkAuctionedPayload(auctioned_by="auditor", amount=100)
+        result = cmd.execute(transition_method, payload=payload)
+
+        self.assertTrue(result.success)
+        mock_create_notice.assert_called_once()
+        self.assertIn("Auction notice", result.message)
+
     def test_undo_release_returns_error_on_validation_exception(self):
         loan = self._loan(status="Released")
         cmd = UndoReleaseTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)

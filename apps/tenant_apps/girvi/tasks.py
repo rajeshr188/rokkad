@@ -4,7 +4,14 @@ import datetime
 
 from celery import shared_task
 from django.core.management import call_command
+from django.utils import timezone
 from celery.utils.log import get_task_logger
+
+from apps.tenant_apps.notify.models import Notification
+from apps.tenant_apps.notify.services import (
+    DEFAULT_LOAN_REMINDER_CODE,
+    create_bulk_loan_reminder_group,
+)
 
 from .msg import notify_msg
 
@@ -112,31 +119,33 @@ def notify_interest_overdue():
 
 @shared_task(name="one_year_reminder")
 def notify_Loan_reminder():
-    unreleased_loans = Loan.unreleased.filter(
-        created__day=datetime.datetime.date.today().day,
-        created__month=datetime.datetime.date.today().month,
-    ).order_by("customer")
-    logger.info("msg")
-    customers_with_pending_loans = Customer.objects.filter(
-        loan__in=unreleased_loans
-    ).distinct()
-
-    # Iterate over each user and send them a notification
-    for customer in customers_with_pending_loans:
-        # Get the user's pending loans
-        pending_loans = pending_loans.filter(customer=customer)
-
-        # Compose the message
-        message = f"Dear {customer.name},\n\n"
-        for i in pending_loans:
-            message += f"your loan {i.loanid} is completing {i.noofmonths|add:'1'}"
-
-        message += (
-            "Please make a payment as soon as possible to avoid additional fees.\n\n"
+    today = timezone.localdate()
+    reminder_loans = (
+        GivenLoan.objects.filter(
+            release__isnull=True,
+            loan_date__day=today.day,
+            loan_date__month=today.month,
         )
-        message += "Thank you for your cooperation.\n\n"
-        message += "Best regards,\nThe Loan Department"
-        notify_msg(number=customer.contactno.first().phone_number, content=message)
+        .select_related("borrower")
+        .order_by("borrower")
+    )
+
+    if not reminder_loans.exists():
+        logger.info("No loan reminder notifications due for %s", today)
+        return 0
+
+    group = create_bulk_loan_reminder_group(
+        reminder_loans,
+        notice_code=DEFAULT_LOAN_REMINDER_CODE,
+        medium_type=Notification.MediumType.Letter,
+    )
+    created_count = group.notifications.count()
+    logger.info(
+        "Created %s loan reminder notifications in group %s",
+        created_count,
+        group.name,
+    )
+    return created_count
 
 
 @shared_task(name="accrue_loan_interest_batch")

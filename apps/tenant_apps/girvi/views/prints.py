@@ -1,9 +1,7 @@
-from datetime import datetime
 import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from reportlab.lib.pagesizes import A4
@@ -19,10 +17,13 @@ from reportlab.platypus import (
     SimpleDocTemplate,
 )
 
-from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.filters import LoanFilter
 from apps.tenant_apps.girvi.models.template import LoanTemplate
-from apps.tenant_apps.notify.models import NoticeGroup, Notification
+from apps.tenant_apps.notify.models import Notification
+from apps.tenant_apps.notify.services import (
+    DEFAULT_LOAN_REMINDER_CODE,
+    create_bulk_loan_reminder_group,
+)
 from apps.tenant_apps.utils.loan_pdf import (
     get_custom_jcl,
     grid_template,
@@ -147,34 +148,24 @@ def notify_print(request):
             return HttpResponse(status=400, content="Some selected loans are not eligible for notifications.")
 
     if selected_loans:
-        # Create a new NoticeGroup
-        ng = NoticeGroup.objects.create(name=datetime.now())
+        notice_code = request.POST.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
+        medium_type = request.POST.get(
+            "medium_type",
+            Notification.MediumType.Letter,
+        )
 
-        # Get a queryset of customers with selected loans
-        customers = Customer.objects.filter(givenloan__in=selected_loans).distinct()
-
-        # Create a list of Notification objects to create
-        notifications_to_create = []
-        for customer in customers:
-            notifications_to_create.append(
-                Notification(
-                    group=ng,
-                    customer=customer,
-                )
-            )
-        # Use bulk_create to create the notifications
-        notifications = []
         try:
-            notifications = Notification.objects.bulk_create(notifications_to_create)
-        except IntegrityError:
-            logger.exception("Error adding notifications.")
+            ng = create_bulk_loan_reminder_group(
+                selected_loans,
+                notice_code=notice_code,
+                medium_type=medium_type,
+            )
+        except ValueError as exc:
+            return HttpResponse(status=400, content=str(exc))
+        except Exception:
+            logger.exception("Error creating reminder notifications.")
             return HttpResponse(status=500, content="Error creating notifications.")
 
-        # Add loans to the notifications
-        for notification in notifications:
-            loans = selected_loans.filter(borrower=notification.customer)
-            notification.loans.set(loans)
-            notification.save()
         return redirect(ng.get_absolute_url())
 
     return HttpResponse(status=200, content="No unreleased loans selected.")

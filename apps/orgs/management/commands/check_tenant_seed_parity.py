@@ -102,6 +102,7 @@ class Command(BaseCommand):
                 "LOAN_FIRST_REMINDER",
                 "LOAN_SECOND_REMINDER",
                 "LOAN_FINAL_NOTICE",
+                "LOAN_AUCTION_NOTICE",
                 "LOAN_CREATED",
                 "LOAN_MATURITY_ALERT",
                 "INVOICE_REMINDER",

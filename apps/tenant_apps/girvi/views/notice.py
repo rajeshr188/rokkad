@@ -1,35 +1,32 @@
-from datetime import datetime
-
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.tenant_apps.notify.models import NoticeGroup, Notification
+from apps.tenant_apps.notify.models import Notification
+from apps.tenant_apps.notify.services import (
+    DEFAULT_LOAN_REMINDER_CODE,
+    create_loan_reminder_notification,
+)
 
 from ..models import Customer, GivenLoan
 
 
 @login_required
 def create_loan_notification(request, pk=None):
-    # get loan instance
-    loan = get_object_or_404(GivenLoan, pk=pk)
-    # create a noticegroup
-    import random
-    import string
+    loan = get_object_or_404(GivenLoan.objects.select_related("borrower"), pk=pk)
+    notice_code = request.GET.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
+    medium_type = request.GET.get(
+        "medium_type",
+        Notification.MediumType.Letter,
+    )
 
-    # Generate a random string of 3 letters
-    random_string = "".join(random.choice(string.ascii_letters) for _ in range(3))
-    ng = NoticeGroup.objects.create(
-        name=f"{loan.loan_id}-{random_string}-{datetime.now().date()}"
-    )
-    notification = Notification.objects.create(
-        group=ng,
+    notification = create_loan_reminder_notification(
         customer=loan.borrower,
+        loans=[loan],
+        notice_code=notice_code,
+        medium_type=medium_type,
     )
-    # add the loan to the notification
-    notification.loans.add(loan)
-    notification.save()
     return redirect(notification.get_absolute_url())
 
 

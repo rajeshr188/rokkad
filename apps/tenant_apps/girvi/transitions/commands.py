@@ -1,3 +1,4 @@
+import logging
 from dataclasses import asdict, is_dataclass
 
 from django.core.exceptions import ValidationError
@@ -5,6 +6,8 @@ from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
 from .types import TransitionResult
+
+logger = logging.getLogger(__name__)
 
 
 class BaseLoanTransitionCommand:
@@ -126,12 +129,50 @@ class WarningTransitionCommand(BaseLoanTransitionCommand):
         )
 
 
-class MarkAuctionedTransitionCommand(WarningTransitionCommand):
+class AuctionNoticeMixin:
+    notice_success_suffix = " Auction notice created."
+
+    def _create_auction_notice(self) -> bool:
+        borrower = getattr(self.loan, "borrower", None)
+        if borrower is None:
+            return False
+
+        try:
+            from apps.tenant_apps.notify.services import create_loan_auction_notice
+
+            create_loan_auction_notice(loan=self.loan)
+            return True
+        except Exception:
+            logger.exception(
+                "Auction notice trigger failed for loan %s",
+                getattr(self.loan, "loan_id", getattr(self.loan, "pk", "unknown")),
+            )
+            return False
+
+    def _attach_notice_message(self, result: TransitionResult) -> TransitionResult:
+        if result.success and self._create_auction_notice():
+            result.message = f"{result.message}{self.notice_success_suffix}"
+        return result
+
+
+class AuctionNoticeTransitionCommand(AuctionNoticeMixin, GenericForwardTransitionCommand):
+    transition_name = "initiate_auction"
+
+    def execute(self, transition_method, payload=None) -> TransitionResult:
+        result = super().execute(transition_method, payload=payload)
+        return self._attach_notice_message(result)
+
+
+class MarkAuctionedTransitionCommand(AuctionNoticeMixin, WarningTransitionCommand):
     transition_name = "mark_auctioned"
     warning_message = (
         "Loan status updated, but accounting posting for this "
         "transition is not implemented yet."
     )
+
+    def execute(self, transition_method, payload=None) -> TransitionResult:
+        result = super().execute(transition_method, payload=payload)
+        return self._attach_notice_message(result)
 
 
 class MarkSoldTransitionCommand(WarningTransitionCommand):
@@ -276,7 +317,7 @@ TRANSITION_COMMAND_REGISTRY = {
     "request_renewal": GenericForwardTransitionCommand,
     "complete_renewal": GenericForwardTransitionCommand,
     "cancel_renewal_request": GenericForwardTransitionCommand,
-    "initiate_auction": GenericForwardTransitionCommand,
+    "initiate_auction": AuctionNoticeTransitionCommand,
     "start_auction": GenericForwardTransitionCommand,
     "cancel_auction": GenericForwardTransitionCommand,
     "complete_auction": MarkAuctionedTransitionCommand,

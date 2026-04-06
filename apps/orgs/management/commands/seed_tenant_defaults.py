@@ -232,7 +232,8 @@ class Command(BaseCommand):
     def _seed_notify_defaults(self):
         """
         Seed default NoticeTypeConfig records extracted from notify/0003_seed_default_notice_types.py.
-        Idempotent: uses get_or_create keyed on code.
+        Idempotent for all records; `LOAN_AUCTION_NOTICE` is refreshed via update_or_create
+        so existing tenants pick up the dedicated auction template text on reseed.
         """
         default_types = [
             {
@@ -269,11 +270,22 @@ class Command(BaseCommand):
                 "postal_template": "Dear {{customer.name}},\n\nFINAL NOTICE\n\nThis is your final notice before legal action.\n\nOverdue Loans:\n{% for item in items %}\nLoan ID: {{item.reference}}\nAmount: \u20b9{{item.amount}}\nOverdue Since: {{item.due_date}}\n{% endfor %}\n\nPlease settle immediately.",
             },
             {
+                "code": "LOAN_AUCTION_NOTICE",
+                "name": "Auction Notice",
+                "category": "LOAN",
+                "description": "Notice issued when a defaulted loan is moved into the auction recovery path",
+                "sort_order": 4,
+                "sms_template": "AUCTION NOTICE: Loan {{items.0.reference}} is in the auction recovery process. Please contact us immediately.",
+                "email_subject_template": "Auction Notice - Loan {{items.0.reference}}",
+                "email_template": "Dear {{customer.name}},\n\nYour loan has entered the auction recovery process:\n{% for item in items %}\n- Loan ID: {{item.reference}}\n- Amount: \u20b9{{item.amount}}\n- Auction / due date: {{item.due_date}}\n{% endfor %}\n\nPlease contact us immediately if you wish to settle the dues before completion.",
+                "postal_template": "Dear {{customer.name}},\n\nAUCTION NOTICE\n\nThis notice is to inform you that the following loan has entered the auction recovery process:\n{% for item in items %}\nLoan ID: {{item.reference}}\nAmount: \u20b9{{item.amount}}\nAuction / due date: {{item.due_date}}\n{% endfor %}\n\nPlease contact our office immediately if you wish to regularise the account.",
+            },
+            {
                 "code": "LOAN_CREATED",
                 "name": "Loan Created/Disbursed",
                 "category": "LOAN",
                 "description": "Welcome notification when new loan is created",
-                "sort_order": 4,
+                "sort_order": 5,
                 "sms_template": "Your loan {{items.0.reference}} of \u20b9{{items.0.amount}} has been approved. Thank you!",
                 "email_subject_template": "Loan Approved - {{items.0.reference}}",
                 "email_template": "Dear {{customer.name}},\n\nYour loan has been successfully approved:\n{% for item in items %}\n- Loan ID: {{item.reference}}\n- Amount: \u20b9{{item.amount}}\n- Due Date: {{item.due_date}}\n{% endfor %}\n\nThank you for choosing our services.",
@@ -284,7 +296,7 @@ class Command(BaseCommand):
                 "name": "Loan Maturity Alert",
                 "category": "LOAN",
                 "description": "Proactive alert before loan matures",
-                "sort_order": 5,
+                "sort_order": 6,
                 "sms_template": "Your loan {{items.0.reference}} matures on {{items.0.due_date}}. Please plan repayment.",
                 "email_subject_template": "Loan Maturity Alert - {{items.0.reference}}",
                 "email_template": "Dear {{customer.name}},\n\nYour loan will mature soon:\n{% for item in items %}\n- Loan ID: {{item.reference}}\n- Amount: \u20b9{{item.amount}}\n- Maturity Date: {{item.due_date}}\n{% endfor %}\n\nPlease plan for repayment or renewal.",
@@ -431,7 +443,14 @@ class Command(BaseCommand):
             },
         ]
         for notice_data in default_types:
-            NoticeTypeConfig.objects.get_or_create(
-                code=notice_data["code"],
-                defaults=notice_data,
-            )
+            code = notice_data["code"]
+            if code == "LOAN_AUCTION_NOTICE":
+                NoticeTypeConfig.objects.update_or_create(
+                    code=code,
+                    defaults=notice_data,
+                )
+            else:
+                NoticeTypeConfig.objects.get_or_create(
+                    code=code,
+                    defaults=notice_data,
+                )
