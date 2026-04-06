@@ -28,16 +28,29 @@
                 <h5 class="mb-0">{% trans "Preference Sections" %}</h5>
             </div>
             <div class="list-group list-group-flush">
-                <a href="{% url 'workspace_preferences' %}" 
+                {% if workspace_id %}
+                <a href="{% url 'workspace_preferences' workspace_id=workspace_id %}" 
                    class="list-group-item list-group-item-action {% if not current_section %}active{% endif %}">
                     {% trans "All Preferences" %}
                 </a>
                 {% for section in sections %}
-                <a href="{% url 'workspace_preferences' %}?section={{ section.name }}" 
+                <a href="{% url 'workspace_preferences' workspace_id=workspace_id %}?section={{ section.name }}" 
                    class="list-group-item list-group-item-action {% if current_section == section.name %}active{% endif %}">
                     {{ section.name|title }}
                 </a>
                 {% endfor %}
+                {% else %}
+                <a href="{% url 'company-preferences' %}" 
+                   class="list-group-item list-group-item-action {% if not current_section %}active{% endif %}">
+                    {% trans "All Preferences" %}
+                </a>
+                {% for section in sections %}
+                <a href="{% url 'company-preferences' %}?section={{ section.name }}" 
+                   class="list-group-item list-group-item-action {% if current_section == section.name %}active{% endif %}">
+                    {{ section.name|title }}
+                </a>
+                {% endfor %}
+                {% endif %}
             </div>
         </div>
     </div>

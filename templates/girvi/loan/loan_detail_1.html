@@ -259,6 +259,48 @@
         </div>
       </div>
 
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small">Gross Accrued</div>
+              <div class="h5 mb-0">₹{{ interest_reporting.gross_accrued|floatformat:2|default:"0.00" }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small">Interest Paid</div>
+              <div class="h5 mb-0">₹{{ interest_reporting.paid|floatformat:2|default:"0.00" }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small">Accrued Outstanding</div>
+              <div class="h5 mb-0">₹{{ interest_reporting.outstanding|floatformat:2|default:"0.00" }}</div>
+              <div class="small text-muted mt-1">Receivable: ₹{{ interest_reporting.receivable_balance|floatformat:2|default:"0.00" }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small">Last Accrual</div>
+              <div class="h6 mb-0">
+                {% if interest_reporting.last_accrual_date %}
+                  {{ interest_reporting.last_accrual_date|date:"d M Y" }}
+                {% else %}
+                  Not posted yet
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="row g-3">
         <div class="col-md-6">
           <div class="card border-0 shadow-sm h-100">

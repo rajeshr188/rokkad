@@ -1,8 +1,12 @@
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+
 from ..models.ledger import Ledger
 
 CACHE_TTL = 300  # seconds
+LEDGER_KEY_ALIASES = {
+    "INTEREST_RECEIVABLE": ["INTEREST_RECEIVABLE", "Interest Receivables"],
+}
 
 
 def get_ledger_id_by_key(key: str, *, tenant_id: int | None = None) -> int:
@@ -17,11 +21,18 @@ def get_ledger_id_by_key(key: str, *, tenant_id: int | None = None) -> int:
     if lid is not None:
         return lid
 
-    qs = Ledger.objects.only("id").filter(name=key)
+    candidate_names = LEDGER_KEY_ALIASES.get(key, [key])
+    qs = Ledger.objects.only("id", "name").filter(name__in=candidate_names)
     # If you have tenant scoping, use: qs = qs.filter(tenant_id=tenant_id)
-    try:
-        lid = qs.get().id
-    except Ledger.DoesNotExist:
+    lid = None
+    for candidate in candidate_names:
+        match = qs.filter(name=candidate).first()
+        if match:
+            lid = match.id
+            break
+
+    if lid is None:
         raise ValidationError(f"Ledger with key '{key}' not found")
+
     cache.set(cache_key, lid, CACHE_TTL)
     return lid

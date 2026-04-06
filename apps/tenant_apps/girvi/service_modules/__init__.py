@@ -1,3 +1,9 @@
+from .accrual import (
+    InterestAccrualCommand,
+    InterestAccrualPreview,
+    InterestAccrualResult,
+    InterestAccrualService,
+)
 from .bulk_release import BulkReleaseService
 from .creation import (
     LoanCreateCommand,
@@ -28,6 +34,10 @@ from .split_merge import LoanMergeService, LoanSplitService
 from .transitions import LoanTransitionService
 
 __all__ = [
+    "InterestAccrualCommand",
+    "InterestAccrualPreview",
+    "InterestAccrualResult",
+    "InterestAccrualService",
     "BulkReleaseService",
     "LoanCreateCommand",
     "LoanCreatePreview",

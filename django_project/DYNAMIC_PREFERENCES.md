@@ -55,7 +55,18 @@ Preferences are organized by section with a sidebar navigation. Users can:
 - View all preferences at once
 - Filter by section (e.g., "Loan", "Interest_Rate")
 
-The UI automatically lists available sections from the registry. Navigate to `/company-preferences/` or `/company-preferences/?section=Loan`.
+Preferred workspace UI route:
+- `/orgs/workspace/<workspace_id>/preferences/`
+- named URL: `workspace_preferences`
+
+Legacy compatibility route:
+- `/orgs/company-preferences/`
+- named URL: `company-preferences`
+
+The package's built-in page is also still mounted at:
+- `/dynamic_preferences/`
+
+For normal usage, the project should prefer the custom workspace preference page over the built-in package UI.
 
 ## Access Control
 Company preference editing is restricted to authenticated users with the Owner or Admin role. See `CompanyPreferenceBuilder` in `apps/orgs/views.py`.

@@ -2,10 +2,13 @@ import contextlib
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.template.loader import render_to_string
+from django.test import RequestFactory, SimpleTestCase
+from django.urls import reverse
 from django_tenants.utils import get_public_schema_name
 
 from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
+from apps.orgs.views import CompanyPreferenceBuilder
 from apps.orgs import signals as org_signals
 from apps.orgs.tenant_context import resolve_request_workspace
 
@@ -149,6 +152,47 @@ class TenantContextResolverTests(SimpleTestCase):
 		)
 		workspace = resolve_request_workspace(request, include_public=True)
 		self.assertEqual(workspace.schema_name, get_public_schema_name())
+
+
+class CompanyPreferenceBuilderTests(SimpleTestCase):
+	def setUp(self):
+		self.factory = RequestFactory()
+
+	def test_get_success_url_uses_workspace_preferences_route(self):
+		request = self.factory.get("/orgs/workspace/13/preferences/?section=Loan")
+		request.user = SimpleNamespace(
+			is_authenticated=True,
+			profile=SimpleNamespace(workspace=SimpleNamespace(id=13, name="Acme")),
+		)
+
+		view = CompanyPreferenceBuilder()
+		view.request = request
+		view.kwargs = {"workspace_id": 13}
+
+		self.assertEqual(
+			view.get_success_url(),
+			reverse("workspace_preferences", kwargs={"workspace_id": 13}) + "?section=Loan",
+		)
+
+	def test_template_section_links_render_with_workspace_id(self):
+		request = self.factory.get("/orgs/workspace/13/preferences/?section=Loan")
+		request.user = SimpleNamespace(is_authenticated=False)
+
+		html = render_to_string(
+			"company/company_preferences.html",
+			{
+				"sections": [{"name": "Loan", "obj": None}],
+				"current_section": "Loan",
+				"workspace_id": 13,
+				"form": SimpleNamespace(visible_fields=[]),
+			},
+			request=request,
+		)
+
+		self.assertIn(
+			reverse("workspace_preferences", kwargs={"workspace_id": 13}) + "?section=Loan",
+			html,
+		)
 
 
 class MiddlewareProcessRequestTests(SimpleTestCase):

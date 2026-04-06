@@ -84,20 +84,41 @@ class GivenLoanReleaseRule(BasePostingRule):
                 )
             )
 
-        # Interest receipt: Dr CASH / Cr INTEREST_INCOME
+        # Interest receipt: first clear any posted receivable, then recognise any remainder as fresh income.
         if interest_decimal > 0:
-            interest_income_id = get_ledger_id_by_key("INTEREST_INCOME", tenant_id=tenant_id)
-            if not interest_income_id:
-                raise ValidationError("Required ledger INTEREST_INCOME not found")
-            ledger_lines.append(
-                DualLedgerLine(
-                    debit_ledger_id=cash_id,
-                    credit_ledger_id=interest_income_id,
-                    currency=currency,
-                    amount=interest_decimal,
-                    amount_base=interest_decimal,
+            receivable_balance = Decimal("0")
+            receivable_balance_fn = getattr(source_loan, "interest_receivable_balance", None)
+            if callable(receivable_balance_fn):
+                receivable_balance = Decimal(str(receivable_balance_fn() or 0))
+
+            receivable_portion = min(interest_decimal, receivable_balance)
+            income_portion = interest_decimal - receivable_portion
+
+            if receivable_portion > 0:
+                interest_receivable_id = get_ledger_id_by_key("INTEREST_RECEIVABLE", tenant_id=tenant_id)
+                ledger_lines.append(
+                    DualLedgerLine(
+                        debit_ledger_id=cash_id,
+                        credit_ledger_id=interest_receivable_id,
+                        currency=currency,
+                        amount=receivable_portion,
+                        amount_base=receivable_portion,
+                    )
                 )
-            )
+
+            if income_portion > 0:
+                interest_income_id = get_ledger_id_by_key("INTEREST_INCOME", tenant_id=tenant_id)
+                if not interest_income_id:
+                    raise ValidationError("Required ledger INTEREST_INCOME not found")
+                ledger_lines.append(
+                    DualLedgerLine(
+                        debit_ledger_id=cash_id,
+                        credit_ledger_id=interest_income_id,
+                        currency=currency,
+                        amount=income_portion,
+                        amount_base=income_portion,
+                    )
+                )
 
         # Subledger AT: close borrower receivable against BORROWER_LOAN_CTRL
         account_lines = []

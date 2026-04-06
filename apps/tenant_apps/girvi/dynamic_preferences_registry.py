@@ -130,3 +130,109 @@ class GlobalLoanHaircut(BaseLoanHaircut):
 @company_preference_registry.register
 class CompanyLoanHaircut(BaseLoanHaircut):
     pass
+
+
+class BaseLoanAccrualTiming(ChoicePreference):
+    section = loan_section
+    name = "Accrual_Timing"
+    default = "EOM"
+    choices = [
+        ("EOM", "End of Month"),
+        ("BOM", "Beginning of Next Month"),
+    ]
+    required = True
+
+
+@global_preferences_registry.register
+class GlobalLoanAccrualTiming(BaseLoanAccrualTiming):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanAccrualTiming(BaseLoanAccrualTiming):
+    pass
+
+
+class BaseLoanAutoPostAccruals(BooleanPreference):
+    section = loan_section
+    name = "Auto_Post_Accruals"
+    default = True
+    required = False
+
+
+@global_preferences_registry.register
+class GlobalLoanAutoPostAccruals(BaseLoanAutoPostAccruals):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanAutoPostAccruals(BaseLoanAutoPostAccruals):
+    pass
+
+
+class BaseLoanCatchupOnReceipt(BooleanPreference):
+    section = loan_section
+    name = "Catchup_On_Receipt"
+    default = True
+    required = False
+
+
+@global_preferences_registry.register
+class GlobalLoanCatchupOnReceipt(BaseLoanCatchupOnReceipt):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanCatchupOnReceipt(BaseLoanCatchupOnReceipt):
+    pass
+
+
+class BaseLoanCatchupOnRelease(BooleanPreference):
+    section = loan_section
+    name = "Catchup_On_Release"
+    default = True
+    required = False
+
+
+@global_preferences_registry.register
+class GlobalLoanCatchupOnRelease(BaseLoanCatchupOnRelease):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanCatchupOnRelease(BaseLoanCatchupOnRelease):
+    pass
+
+
+class BaseLoanCatchupOnRenewal(BooleanPreference):
+    section = loan_section
+    name = "Catchup_On_Renewal"
+    default = True
+    required = False
+
+
+@global_preferences_registry.register
+class GlobalLoanCatchupOnRenewal(BaseLoanCatchupOnRenewal):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanCatchupOnRenewal(BaseLoanCatchupOnRenewal):
+    pass
+
+
+class BaseLoanAllowBackfillPosting(BooleanPreference):
+    section = loan_section
+    name = "Allow_Backfill_Posting"
+    default = False
+    required = False
+
+
+@global_preferences_registry.register
+class GlobalLoanAllowBackfillPosting(BaseLoanAllowBackfillPosting):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanAllowBackfillPosting(BaseLoanAllowBackfillPosting):
+    pass

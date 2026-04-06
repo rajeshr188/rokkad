@@ -22,6 +22,12 @@ from django.db.models.functions import Coalesce, ExtractYear, Round
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
 from .models import Series
+from .service_modules.accrual import (
+    InterestAccrualCommand,
+    InterestAccrualPreview,
+    InterestAccrualResult,
+    InterestAccrualService,
+)
 from .service_modules.bulk_release import BulkReleaseService
 from .service_modules.creation import (
     LoanCreateCommand,
@@ -53,6 +59,10 @@ from .service_modules.transitions import LoanTransitionService
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "InterestAccrualCommand",
+    "InterestAccrualPreview",
+    "InterestAccrualResult",
+    "InterestAccrualService",
     "BulkReleaseService",
     "LoanCreateCommand",
     "LoanCreatePreview",
