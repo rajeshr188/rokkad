@@ -189,6 +189,7 @@ It runs:
 
 ## Additional Documentation
 
+- `apps/tenant_apps/girvi/docs/loan/interest_accrual_guide.md` — current Girvi interest accrual behavior, trigger paths, and future improvements
 - `django_project/docs/INVITATION_FLOW_REFERENCE.md`
 - `django_project/docs/ALLAUTH_HARDENING_PLAN.md`
 - `django_project/docs/INVITATIONS_HARDENING_PLAN.md`

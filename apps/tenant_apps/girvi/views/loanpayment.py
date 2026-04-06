@@ -3,6 +3,8 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render, reverse
+
+from apps.orgs.preferences import CompanyPreferences
 from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -12,6 +14,7 @@ from apps.tenant_apps.dea.services.post_doc import create_and_post_voucher_for_d
 
 from ..forms import GivenLoanRepaymentForm, TakenLoanRepaymentForm
 from ..models import GivenLoan, TakenLoan
+from ..service_modules.accrual import InterestAccrualCommand, InterestAccrualService
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,40 @@ def loan_payment_create_view(request, pk=None):
             total = cd["total_amount"]
             interest = cd.get("interest_amount")
             principal = (total - interest) if interest is not None else None
+
+            prefs = CompanyPreferences(
+                getattr(getattr(request.user, "profile", None), "workspace", None)
+            )
+            if prefs.loan_catchup_on_receipt:
+                try:
+                    accrual_result = InterestAccrualService.execute(
+                        InterestAccrualCommand(
+                            loan=loan,
+                            as_of_date=cd["payment_date"],
+                            trigger_source="RECEIPT",
+                            created_by=request.user,
+                            notes=(
+                                f"Catch-up accrual before receipt {cd.get('reference_number', '')}".strip()
+                            ),
+                            post_to_accounting=True,
+                        )
+                    )
+                    if not accrual_result.success:
+                        messages.warning(
+                            request,
+                            f"Interest accrual catch-up could not be completed before posting the receipt: {accrual_result.message}",
+                            fail_silently=True,
+                        )
+                except Exception as exc:
+                    logger.exception(
+                        "Interest accrual catch-up failed before loan payment for loan %s",
+                        loan.pk,
+                    )
+                    messages.warning(
+                        request,
+                        f"Interest accrual catch-up failed before posting the receipt: {exc}",
+                        fail_silently=True,
+                    )
 
             payment = loan.create_payment(
                 amount=total,

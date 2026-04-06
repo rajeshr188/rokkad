@@ -4,6 +4,12 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from apps.orgs.preferences import CompanyPreferences
+from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
+
+from .accrual import InterestAccrualCommand, InterestAccrualService
+from .payment import record_loan_release
+
 
 @dataclass
 class ReleaseCreateCommand:
@@ -42,8 +48,6 @@ class ReleaseLifecycleService:
 
     @staticmethod
     def preview(command: ReleaseCreateCommand) -> ReleaseCreatePreview:
-        from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
-
         errors = []
         warnings = []
         loan = getattr(command, "loan", None)
@@ -106,9 +110,6 @@ class ReleaseLifecycleService:
 
     @staticmethod
     def execute(command: ReleaseCreateCommand) -> ReleaseCreateResult:
-        from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
-        from apps.tenant_apps.girvi.service_modules.payment import record_loan_release
-
         preview = ReleaseLifecycleService.preview(command)
         if not preview.is_valid:
             return ReleaseCreateResult(
@@ -121,9 +122,29 @@ class ReleaseLifecycleService:
         Release = apps.get_model("girvi", "Release")
         created_by = command.created_by
         workspace = getattr(getattr(created_by, "profile", None), "workspace", None)
+        warnings = list(preview.warnings)
 
         try:
             with transaction.atomic():
+                prefs = CompanyPreferences(workspace)
+                if prefs.loan_catchup_on_release:
+                    accrual_result = InterestAccrualService.execute(
+                        InterestAccrualCommand(
+                            loan=command.loan,
+                            as_of_date=command.release_date,
+                            trigger_source="RELEASE",
+                            created_by=created_by,
+                            notes=f"Catch-up accrual before release of {command.loan.loan_id}",
+                            post_to_accounting=True,
+                        )
+                    )
+                    if not accrual_result.success:
+                        warnings.append(
+                            f"Interest accrual catch-up failed before release: {accrual_result.message}"
+                        )
+                    else:
+                        warnings.extend(accrual_result.warnings)
+
                 flow = build_runtime_loan_flow(
                     command.loan,
                     created_by,
@@ -149,23 +170,26 @@ class ReleaseLifecycleService:
 
                 if use_v2_closure:
                     if request_closure is not None and request_closure.can_proceed():
-                        request_closure(requested_by=created_by)
+                        if callable(request_closure):
+                            request_closure(requested_by=created_by)
 
                     if not (complete_closure and complete_closure.can_proceed()):
                         raise ValidationError(
                             f"Loan {command.loan.loan_id} cannot complete closure in status {command.loan.status}."
                         )
 
-                    complete_closure(
-                        completed_by=created_by,
-                        release_id=getattr(release, "release_id", None),
-                    )
-                elif deliver is not None:
-                    deliver(
-                        created_by=created_by,
-                        released_by=command.released_by,
-                        release_date=command.release_date,
-                    )
+                    if callable(complete_closure):
+                        complete_closure(
+                            completed_by=created_by,
+                            release_id=getattr(release, "release_id", None),
+                        )
+                elif deliver is not None and getattr(deliver, "can_proceed", lambda: False)():
+                    if callable(deliver):
+                        deliver(
+                            created_by=created_by,
+                            released_by=command.released_by,
+                            release_date=command.release_date,
+                        )
                 else:
                     raise ValidationError(
                         f"Loan {command.loan.loan_id} has no release-capable transition flow."
@@ -178,7 +202,6 @@ class ReleaseLifecycleService:
                     payment = release_posting
                     payment_created = bool(release_posting)
 
-            warnings = list(preview.warnings)
             message = f"Loan {command.loan.loan_id} released successfully."
             if payment is None:
                 warnings.append(

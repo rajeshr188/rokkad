@@ -2271,3 +2271,19 @@ def print_labels_pdf(loans, labels_per_row=3, labels_per_column=10):
     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
     response["Content-Disposition"] = "inline; filename=labels.pdf"
     return response
+
+from reportlab.platypus import KeepInFrame
+
+
+def draw_text_with_fitting(canvas, text, x, y, max_width, max_height):
+    # Create a Paragraph object with the given text
+    styles = getSampleStyleSheet()
+    style = styles["Normal"]
+    paragraph = Paragraph(text, style)
+
+    # Create a KeepInFrame object to fit the paragraph within the specified dimensions
+    fitting_frame = KeepInFrame(max_width, max_height, content=[paragraph])
+
+    # Draw the fitting frame on the canvas at the specified position
+    fitting_frame.wrapOn(canvas, max_width, max_height)
+    fitting_frame.drawOn(canvas, x, y)

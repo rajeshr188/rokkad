@@ -5,6 +5,19 @@ from typing import Optional
 
 from django.db import transaction
 
+from apps.orgs.preferences import CompanyPreferences
+from apps.tenant_apps.girvi.flows import LoanFlow, build_runtime_loan_flow
+from apps.tenant_apps.girvi.models.loan_item import LoanItem
+from apps.tenant_apps.girvi.models.loan_refactored import (
+    GivenLoan,
+    LoanLifecycleState,
+    LoanStatus,
+)
+from apps.tenant_apps.girvi.models.renewal import LoanRenewal
+
+from .accrual import InterestAccrualCommand, InterestAccrualService
+from .payment import record_loan_disbursal
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,8 +61,6 @@ class LoanRenewalResult:
 
 class LoanRenewalService:
     def preview(self, command: LoanRenewalCommand) -> LoanRenewalPreview:
-        from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
-
         try:
             loan = GivenLoan.objects.get(pk=command.source_loan_id)
         except GivenLoan.DoesNotExist:
@@ -114,16 +125,6 @@ class LoanRenewalService:
         from django.core.exceptions import ValidationError as DjangoValidationError
         from moneyed import Money
 
-        from apps.tenant_apps.girvi.flows import LoanFlow, build_runtime_loan_flow
-        from apps.tenant_apps.girvi.models.loan_refactored import (
-            GivenLoan,
-            LoanLifecycleState,
-            LoanStatus,
-        )
-        from apps.tenant_apps.girvi.models.loan_item import LoanItem
-        from apps.tenant_apps.girvi.models.renewal import LoanRenewal
-        from apps.tenant_apps.girvi.service_modules.payment import record_loan_disbursal
-
         preview = self.preview(command)
         if not preview.is_valid:
             return LoanRenewalResult(
@@ -135,6 +136,31 @@ class LoanRenewalService:
         try:
             with transaction.atomic():
                 loan = GivenLoan.objects.select_for_update().get(pk=command.source_loan_id)
+                warns = []
+                workspace = getattr(
+                    getattr(command.created_by, "profile", None),
+                    "workspace",
+                    None,
+                )
+                prefs = CompanyPreferences(workspace)
+
+                if prefs.loan_catchup_on_renewal:
+                    accrual_result = InterestAccrualService.execute(
+                        InterestAccrualCommand(
+                            loan=loan,
+                            as_of_date=command.renewal_date,
+                            trigger_source="RENEWAL",
+                            created_by=command.created_by,
+                            notes=f"Catch-up accrual before renewal of {loan.loan_id}",
+                            post_to_accounting=True,
+                        )
+                    )
+                    if not accrual_result.success:
+                        warns.append(
+                            f"Interest accrual catch-up failed before renewal: {accrual_result.message}"
+                        )
+                    else:
+                        warns.extend(accrual_result.warnings)
 
                 allowed_statuses = {
                     LoanStatus.DISBURSED,
@@ -231,7 +257,6 @@ class LoanRenewalService:
                 elif hasattr(new_flow, "disburse") and new_flow.disburse.can_proceed():
                     new_flow.disburse(disbursed_by=command.created_by)
 
-                warns = []
                 try:
                     record_loan_disbursal(new_loan, command.created_by)
                 except Exception as acc_exc:

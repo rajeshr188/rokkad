@@ -670,6 +670,19 @@ def loan_detail(request, pk):
         position = location.position_for_item(loan.id)
     else:
         position = None
+
+    interest_reporting = {
+        "gross_accrued": getattr(loan, "gross_accrued_interest", decimal.Decimal("0.00")),
+        "paid": loan.interest_paid_total()
+        if hasattr(loan, "interest_paid_total")
+        else decimal.Decimal("0.00"),
+        "outstanding": getattr(loan, "outstanding_interest", decimal.Decimal("0.00")),
+        "receivable_balance": loan.interest_receivable_balance()
+        if hasattr(loan, "interest_receivable_balance")
+        else decimal.Decimal("0.00"),
+        "last_accrual_date": getattr(loan, "last_accrual_date", None),
+    }
+
     context = {
         "object": loan,
         "loan": loan,
@@ -693,6 +706,7 @@ def loan_detail(request, pk):
         "change_log": changelog,
         "renewals_as_source": list(loan.renewals_as_source.all()),
         "origin_renewal": loan.renewal_record.first(),
+        "interest_reporting": interest_reporting,
     }
 
     if request.htmx:

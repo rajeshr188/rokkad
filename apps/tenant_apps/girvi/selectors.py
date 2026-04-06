@@ -444,6 +444,15 @@ def build_given_loan_detail_read_model(loan):
             "interest_due": loan.interest_due(),
             "total_due": loan.total_due,
             "outstanding_principal": getattr(loan, "outstanding_principal", None),
+            "gross_accrued_interest": getattr(loan, "gross_accrued_interest", Decimal("0.00")),
+            "interest_paid_total": loan.interest_paid_total()
+            if hasattr(loan, "interest_paid_total")
+            else Decimal("0.00"),
+            "interest_outstanding": getattr(loan, "outstanding_interest", Decimal("0.00")),
+            "interest_receivable_balance": loan.interest_receivable_balance()
+            if hasattr(loan, "interest_receivable_balance")
+            else Decimal("0.00"),
+            "last_accrual_date": getattr(loan, "last_accrual_date", None),
         },
     }
 

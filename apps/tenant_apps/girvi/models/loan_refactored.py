@@ -290,10 +290,101 @@ class BaseLoan(BusinessDoc):
         ] or Decimal(0)
 
     def get_total_interest_payments(self) -> Decimal:
-        """Sum of interest payments."""
-        return self.loan_payments.aggregate(Sum("interest_payment"))[
+        """Sum of interest payments across voucher-backed and legacy payment flows."""
+        if getattr(self, "pk", None):
+            payments_relation = getattr(self, "payments", None)
+            if payments_relation is not None:
+                try:
+                    total = payments_relation.filter(direction="RECEIPT").aggregate(
+                        total_interest=Sum("interest_amount")
+                    )["total_interest"]
+                    if hasattr(total, "amount"):
+                        return Decimal(str(total.amount))
+                    if total not in (None, ""):
+                        return Decimal(str(total))
+                except Exception:
+                    pass
+
+        loan_payments = getattr(self, "loan_payments", None)
+        if loan_payments is None:
+            return Decimal(0)
+        return loan_payments.aggregate(Sum("interest_payment"))[
             "interest_payment__sum"
         ] or Decimal(0)
+
+    def interest_paid_total(self) -> Decimal:
+        """Interest cash already collected from the borrower."""
+        return round(self.get_total_interest_payments(), 2)
+
+    def interest_accrued_gross(self, as_of_date=None) -> Decimal:
+        """Interest that has been accrued/recognized up to the selected date."""
+        if not getattr(self, "pk", None):
+            return round(self.interest_due(as_of_date), 2)
+
+        accruals = getattr(self, "interest_accruals", None)
+        if accruals is None:
+            return round(self.interest_due(as_of_date), 2)
+
+        try:
+            queryset = accruals.all()
+            if as_of_date is not None:
+                cutoff = as_of_date.date() if hasattr(as_of_date, "date") else as_of_date
+                queryset = queryset.filter(period_end__lte=cutoff)
+            total = queryset.aggregate(total=Sum("accrued_amount"))["total"] or Decimal(0)
+        except Exception:
+            total = Decimal(0)
+
+        if total == 0:
+            return round(self.interest_due(as_of_date), 2)
+        return round(Decimal(str(total)), 2)
+
+    def interest_outstanding(self, as_of_date=None) -> Decimal:
+        """Accrued but not-yet-paid interest balance."""
+        outstanding = self.interest_accrued_gross(as_of_date) - self.interest_paid_total()
+        return round(max(outstanding, Decimal("0")), 2)
+
+    def interest_receivable_balance(self) -> Decimal:
+        """Portion of accrued interest that has already been booked into DEA receivables."""
+        if not getattr(self, "pk", None):
+            return Decimal("0.00")
+
+        accruals = getattr(self, "interest_accruals", None)
+        if accruals is None:
+            return Decimal("0.00")
+
+        try:
+            posted_total = (
+                accruals.filter(status="POSTED").aggregate(total=Sum("accrued_amount"))["total"]
+                or Decimal(0)
+            )
+        except Exception:
+            posted_total = Decimal(0)
+
+        outstanding = Decimal(str(posted_total)) - self.interest_paid_total()
+        return round(max(outstanding, Decimal("0")), 2)
+
+    @property
+    def gross_accrued_interest(self) -> Decimal:
+        return self.interest_accrued_gross()
+
+    @property
+    def outstanding_interest(self) -> Decimal:
+        return self.interest_outstanding()
+
+    @property
+    def last_accrual_date(self):
+        """Most recent accrued period end date, if any."""
+        if not getattr(self, "pk", None):
+            return None
+
+        accruals = getattr(self, "interest_accruals", None)
+        if accruals is None:
+            return None
+
+        try:
+            return accruals.order_by("-period_end").values_list("period_end", flat=True).first()
+        except Exception:
+            return None
 
     @property
     def current_value(self) -> Decimal:

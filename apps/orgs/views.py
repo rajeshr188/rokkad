@@ -309,9 +309,18 @@ class CompanyPreferenceBuilder(PreferenceFormView):
 
     def get_success_url(self):
         section = self.get_section()
+        workspace_id = self.kwargs.get("workspace_id")
+
+        if workspace_id:
+            base_url = reverse_lazy(
+                "workspace_preferences", kwargs={"workspace_id": workspace_id}
+            )
+        else:
+            base_url = reverse_lazy("company-preferences")
+
         if section:
-            return reverse_lazy("company-preferences") + f"?section={section}"
-        return reverse_lazy("company-preferences")
+            return f"{base_url}?section={section}"
+        return base_url
 
     def get_form_class(self):
         section = self.get_section()
@@ -336,6 +345,7 @@ class CompanyPreferenceBuilder(PreferenceFormView):
             for section in registry.sections()
         ]
         context["current_section"] = self.get_section()
+        context["workspace_id"] = self.kwargs.get("workspace_id")
         return context
 
     def render_to_response(self, context, **response_kwargs):

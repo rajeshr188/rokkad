@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals
 import datetime
 
 from celery import shared_task
+from django.core.management import call_command
 from celery.utils.log import get_task_logger
 
 from .msg import notify_msg
@@ -136,3 +137,16 @@ def notify_Loan_reminder():
         message += "Thank you for your cooperation.\n\n"
         message += "Best regards,\nThe Loan Department"
         notify_msg(number=customer.contactno.first().phone_number, content=message)
+
+
+@shared_task(name="accrue_loan_interest_batch")
+def accrue_loan_interest_batch(as_of_date=None, schema=None, post_to_accounting=True):
+    """Scheduled batch entry point for the tenant-aware interest accrual command."""
+    return call_command(
+        "accrue_loan_interest",
+        as_of_date=as_of_date,
+        schema=schema,
+        trigger_source="SCHEDULED",
+        skip_accounting=not post_to_accounting,
+        respect_timing=True,
+    )
