@@ -18,6 +18,7 @@ from .payment import (
     reverse_loan_disbursal,
     reverse_loan_release,
 )
+from .printing import LoanPrintService
 from .release_lifecycle import (
     ReleaseCreateCommand,
     ReleaseCreatePreview,
@@ -43,6 +44,7 @@ __all__ = [
     "LoanCreatePreview",
     "LoanCreateResult",
     "LoanCreationService",
+    "LoanPrintService",
     "ReleaseLifecycleService",
     "ReleaseCreateCommand",
     "ReleaseCreatePreview",

@@ -15,7 +15,7 @@ It is designed to support:
 - **Multi-channel delivery**: `Post`, `Letter`, `Email`, `SMS`, `WhatsApp`
 - **Single or batch sending** through `Notification` and `NoticeGroup`
 
-In the current codebase, the **data model is already generic**, but the **live Girvi integration still uses some legacy loan-specific paths**.
+In the current codebase, the **data model is already generic**, and the **Girvi integration is actively using the newer service-based pattern for reminders and auction notices, while a few older loan-specific paths still remain for backward compatibility**.
 
 ---
 
@@ -143,7 +143,7 @@ If no template is configured, it falls back to a simple default message.
 | Medium | Status | Notes |
 |---|---|---|
 | Post / Letter | ✅ usable | PDF print flow exists via `get_notice_pdf()` |
-| Email | ⚠️ stub | method exists but provider integration is not finished |
+| Email | ✅ wired for loan reminders / auction notices | Uses `Customer.email`, Django mail backend, and notice templates |
 | SMS | ⚠️ stub in `Notification`, partial Twilio helper exists in `girvi/msg.py` |
 | WhatsApp | ⚠️ stub | requires Business API integration |
 
@@ -156,25 +156,28 @@ If no template is configured, it falls back to a simple default message.
 
 Current behavior:
 1. Fetches the selected `GivenLoan`
-2. Creates a `NoticeGroup`
-3. Creates a `Notification`
-4. Adds the loan through the **legacy** `notification.loans.add(loan)` path
-5. Redirects to the notification detail page
+2. Calls `create_loan_reminder_notification(...)` from `apps/tenant_apps/notify/services.py`
+3. Creates a `Notification` using `notice_type_config`
+4. Links the loan through `NotificationItem` via `add_item(...)`
+5. Generates the message from the configured template
+6. Sends an email copy automatically if `Customer.email` is present
+7. Redirects to the notification detail page
 
-This works, but **new integrations should prefer `notice_type_config` + `add_item()`**.
+This is now the **preferred pattern** for new single-loan reminder and auction-notice creation.
 
 ### B. Bulk notifications from filtered loans
 `apps/tenant_apps/girvi/views/prints.py::notify_print`
 
 Current behavior:
 1. Takes selected unreleased loans
-2. Creates a new `NoticeGroup`
-3. Groups them by customer
-4. Bulk creates `Notification` rows
-5. Attaches loans per customer
-6. Redirects to the group detail page for printing or review
+2. Calls `create_bulk_loan_reminder_group(...)`
+3. Creates a `NoticeGroup`
+4. Groups loans by customer
+5. Creates one `Notification` per borrower using the notify service layer
+6. Attaches the related loans through `NotificationItem` and the compatibility `loans` relation
+7. Redirects to the group detail page for printing or review
 
-This is the main batch flow for overdue notice generation.
+This is the main batch flow for overdue reminder generation.
 
 ### C. Legacy reminder tasks
 `apps/tenant_apps/girvi/tasks.py` contains old reminder jobs like:
@@ -299,7 +302,13 @@ Current implementation uses:
 - optionally mark `is_printed=True` after print success
 
 ## 8.2 Email
-`Notification.send_email()` is present but still a stub.
+`Notification.send_email()` is now wired for loan reminders and auction notices when the borrower has a value in `Customer.email`.
+
+### Current behavior
+- a reminder / auction notice still creates the primary notification record (typically `Letter`)
+- if `customer.email` is present, an additional email notification is created and dispatched automatically
+- the email subject comes from `NoticeTypeConfig.email_subject_template`
+- the email body uses the generated `message` content
 
 ### Setup steps
 1. Configure Django email settings:

@@ -1,120 +1,234 @@
-I’ll trace the print path end-to-end from the template models to the print view and rendered HTML so we can map exactly how a GivenLoan gets turned into a printable layout. I’m starting with the model and then following where it’s used.
+# Girvi Loan Template System: Current Architecture
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/girvi/models/template.py)
+Last updated: April 2026
 
-Searched for regex `TemplateFrame|LoanTemplate|print|render|givenloan|GivenLoan` (`**/apps/tenant_apps/girvi/**/*.py`), 200 results
+> Formal assessment and roadmap: see [`assessment_and_roadmap.md`](./assessment_and_roadmap.md)
+>
+> Practical workflow guide: see [`template_management_workflow_guide.md`](./template_management_workflow_guide.md)
+>
+> Current operational summary: see [`current_implementation.md`](./current_implementation.md)
 
-Searched for regex `template frame|TemplateFrame|LoanTemplate|print` (`**/templates/girvi/**/*.html`), 10 results
+---
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/girvi/views/prints.py#1-1), lines 1 to 420
+## 1) Architectural intent
 
-Searched for regex `def print_loan|loan_pdf|TemplateFrame|LoanTemplate|templateframe|render_to_string|weasyprint|xhtml2pdf` (`**/apps/tenant_apps/girvi/views/**/*.py`), 7 results
+The Girvi print system is intentionally built around a **background-PDF + positioned-frame overlay** model.
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/girvi/urls.py#130-130), lines 130 to 220
+This design should be preserved because it provides:
+- reliable visual fidelity for business-designed ticket layouts
+- predictable multilingual rendering where pure HTML-to-PDF approaches were inconsistent
+- controlled placement of dynamic fields such as loan data, QR codes, photos, and summary blocks
 
-Searched for regex `TemplateFrame|LoanTemplate|get_custom_jcl|generate_loan_pdf|frame|draw|print_option` (`**/apps/tenant_apps/utils/loan_pdf.py`), 200 results
+In practice:
+1. a tenant prepares the visual ticket in an external design tool
+2. the design is uploaded as PDF background assets
+3. `TemplateFrame` rows define where dynamic data should be injected
+4. the renderer draws those values onto the PDF at print time
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/utils/loan_pdf.py#1-1), lines 1 to 420
+---
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/girvi/admin.py#30-30), lines 30 to 150
+## 2) Core domain objects
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/utils/loan_pdf.py#640-640), lines 640 to 980
+### `LoanTemplate`
+Represents one printable layout configuration.
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/utils/loan_pdf.py#980-980), lines 980 to 1160
+It stores:
+- template name and activation/default flags
+- `print_option` (for original / duplicate / A4 / back-page modes)
+- page dimensions
+- uploaded PDF assets such as `base_template`, `dup_template`, `terms_template`, and `form_d3_template`
 
-Searched for regex `templateframe_set|TemplateFrame\.|LoanTemplate\.objects\.get_default|get_custom_jcl\(` (`**/apps/tenant_apps/girvi/**/*.py`), 3 results
+### `TemplateFrame`
+Represents one printable region inside a template.
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/templates/girvi/loan/loan_detail_1.html#40-40), lines 40 to 90
+It stores:
+- `frame_name` identifying the business field to render
+- `template_type` (`ORIGINAL`, `DUPLICATE`, `BOTH`)
+- `field_type` (`TEXT`, `IMAGE`, `QR`, `TABLE`)
+- `x_pos`, `y_pos`, `width`, `height`
+- font and boundary settings used during rendering and preview
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/girvi/models/__init__.py)
+Primary model file:
+- `apps/tenant_apps/girvi/models/template.py`
 
-Searched for files matching `**/templates/**/preview_template.html`, 1 match
+---
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/templates/admin/preview_template.html)
+## 3) Runtime print flow
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/utils/loan_pdf.py#420-420), lines 420 to 640
+The live print path is now organized under Girvi-owned modules instead of shared utilities.
 
-Read [](file:///c%3A/Users/rajes/OneDrive/Desktop/rokkad/apps/tenant_apps/girvi/views/__init__.py)
+### Current end-to-end flow
+1. the user clicks **Print** from the loan screen
+2. `print_loan()` resolves the requested or default active template
+3. `LoanPrintService` performs readiness and rendering orchestration
+4. the document renderer resolves frame values from the `GivenLoan`
+5. ReportLab draws the values into the configured frame rectangles
+6. PyMuPDF combines the rendered overlay with the uploaded PDF backgrounds
+7. the final PDF is returned to the browser
 
-Great point to pause and map this. Here is how LoanTemplate and TemplateFrame drive GivenLoan printing in your codebase.
+Primary runtime modules:
+- `apps/tenant_apps/girvi/views/prints.py`
+- `apps/tenant_apps/girvi/service_modules/printing.py`
+- `apps/tenant_apps/girvi/documents/loan_ticket.py`
+- `apps/tenant_apps/girvi/documents/release_forms.py`
 
-**End-to-end flow**
-1. User clicks Print on loan detail in loan_detail_1.html.
-2. Route goes to loan pdf endpoint in urls.py.
-3. View loads the GivenLoan, gets default LoanTemplate, and calls the PDF builder in prints.py.
-4. PDF builder function is get_custom_jcl in loan_pdf.py.
-5. That function reads TemplateFrame rows for the selected LoanTemplate and renders each frame into PDF positions, then merges with base/duplicate/terms/form template files based on print_option.
+Legacy compatibility note:
+- `apps/tenant_apps/utils/loan_pdf.py` is retained only as a compatibility layer and should not be treated as the long-term ownership location for Girvi print logic.
 
-**What LoanTemplate does**
-1. Defines template-level print behavior and assets in template.py.
-2. Important fields:
-3. print_option controls output mode, such as O, OT, D, DF, BS, BD, BA, BDA in template.py.
-4. base_template, dup_template, terms_template, form_d3_template are the background PDFs in template.py.
-5. is_default determines which template print_loan picks via get_default in template.py.
+---
 
-**What TemplateFrame does**
-1. Each row is one drawable block on the page in template.py.
-2. frame_name picks what content to inject, like loan_id, customer_info, amount_words, loan_qr, customer_pic.
-3. template_type scopes the frame to original, duplicate, or both in template.py.
-4. field_type decides renderer path: text, image, table, qr in template.py.
-5. x_pos, y_pos, width, height, font settings control placement and text style.
-6. Uniqueness is enforced per template, frame_name, template_type in template.py.
+## 4) Module ownership and responsibilities
 
-**How frames are rendered**
-1. get_custom_jcl builds a data_mapping from a GivenLoan into printable values in loan_pdf.py.
-2. For each frame, it builds a ReportLab Frame from x_pos/y_pos/width/height in cm in loan_pdf.py.
-3. Text fields become Paragraph + KeepInFrame.
-4. Image fields open and center-fit image paths.
-5. QR fields generate qrcode image from mapped text.
-6. It selects frames by template_type plus BOTH in loan_pdf.py.
+### `documents/loan_ticket.py`
+Owns the main Girvi loan-ticket rendering logic.
 
-**How print_option changes output**
-1. BA and BDA create side-by-side A4 landscape pages for original and duplicate in loan_pdf.py.
-2. O, OT, D, DF produce A5 outputs with optional back-page templates.
-3. BS and BD produce two outputs and then merge pages in loan_pdf.py.
-4. Final overlay and multi-page composition uses PyMuPDF helpers in loan_pdf.py.
+Responsibilities:
+- resolve printable values from the loan object
+- support text, image, QR, and table frames
+- handle original / duplicate / A4 composite output modes
+- provide compatibility fallbacks across older and newer `GivenLoan` APIs
+- expose the frame-value provider registry for future field expansion
 
-**Admin side for configuring templates**
-1. LoanTemplate and TemplateFrame are managed in Django admin in admin.py.
-2. You get inline frame editing through TemplateFrameInline.
-3. There is also a visual-ish admin preview endpoint in admin.py with template preview_template.html.
+### `service_modules/printing.py`
+Owns orchestration and guardrails around printing.
 
-**Important gotcha to keep in mind**
-1. ReportLab uses bottom-left origin for y coordinates, but the admin preview div uses CSS top positioning in preview_template.html.
-2. That means preview may not exactly match final PDF placement unless this coordinate difference is handled consistently.
+Responsibilities:
+- resolve which template should be used
+- evaluate template readiness
+- produce user-facing readiness summaries
+- centralize rendering entry points
+- return structured print results for the views layer
 
-If you want, next I can create a concrete map for one real LoanTemplate: each frame row and exactly what GivenLoan field it prints, so you can tune layout faster.
+### `views/template.py`
+Owns tenant-facing template management workflows.
 
+Responsibilities:
+- list/create/update/delete templates
+- manage frames per template
+- seed starter frames
+- clone templates safely
+- run test-print actions
+- serve browser preview and real PDF preview
+- block default activation when blocking readiness issues exist
 
+---
 
-You are absolutely right, and your original design choice is strong.
+## 5) Supported output modes
 
-Using a user-designed PDF base plus programmatic frame stitching is a practical solution when multilingual font/rendering is unreliable in direct HTML-to-PDF pipelines, especially for Tamil. Your current architecture in template.py, loan_pdf.py, and prints.py is aligned with that requirement.
+The system currently supports the following print modes:
 
-The real gap now is access surface, not core engine:
-1. Engine exists and works.
-2. Configuration is mostly exposed through Django admin in admin.py.
-3. You want it as tenant owner/admin operation inside the product UI.
+| Option | Meaning |
+|---|---|
+| `O` | Original only |
+| `OT` | Original with terms/back page |
+| `D` | Duplicate only |
+| `DF` | Duplicate with Form D3 back page |
+| `BS` | Both copies, separate/single-sided |
+| `BD` | Both copies, double-sided |
+| `BA` | Both copies side-by-side on A4 |
+| `BDA` | Both copies on A4 with back pages |
 
-That is the right next direction.
+These modes are driven by `LoanTemplate.print_option` and determine which background assets are expected and how the final PDF is composed.
 
-A good way to evolve it:
-1. Keep current data model and PDF pipeline as-is.
-2. Build tenant-facing Template Management pages for LoanTemplate and TemplateFrame.
-3. Add role checks so only tenant owner/admin can manage templates.
-4. Add a visual preview page in app UI using the same frame data.
-5. Add a Publish/Default action so only one active default template per tenant.
-6. Add versioning or clone-template workflow to avoid accidental production breakage.
+---
 
-Key implementation notes:
-1. Move admin actions into normal views/forms, not replacing rendering logic.
-2. Reuse get_custom_jcl from loan_pdf.py as the single rendering source.
-3. Add tenant scoping to LoanTemplate and TemplateFrame (if not already done in this app context) so templates are isolated by workspace.
-4. Expose the existing preview concept from preview_template.html in tenant UI.
-5. Explicitly handle coordinate mismatch between CSS top-left preview and PDF bottom-left coordinates.
+## 6) Productized tenant workflow now available
 
-If you want, I can start implementing this as Phase 4A:
-1. Tenant routes + list/create/edit/delete for LoanTemplate.
-2. Inline frame editor page for TemplateFrame.
-3. Permission guards for owner/admin only.
-4. Non-admin preview page wired to current renderer.
+The original engine has now been successfully exposed through the tenant UI.
+
+Implemented capabilities include:
+- tenant-facing template CRUD
+- frame CRUD for each template
+- starter-frame generation for first-time setup
+- browser preview with measurement grid
+- real PDF preview for fidelity checks
+- test-print with the latest available loan
+- template cloning for safe experimentation
+- readiness assessment before promoting a template to default
+
+This means day-to-day template operations no longer depend on Django admin for normal business use.
+
+---
+
+## 7) Coordinate system and preview behavior
+
+A key architecture detail is the coordinate conversion between preview and final PDF output.
+
+### Stored / render coordinates
+- PDF rendering uses a **bottom-left origin**
+- frame dimensions are stored in **centimeters**
+
+### Browser preview
+- the on-screen preview uses a **top-left visual layout**
+- the UI converts coordinates so admins can position frames more intuitively
+- the visible grid helps estimate spacing quickly, but **real PDF preview remains the source of truth** for final fidelity
+
+This distinction is important whenever text wrapping, image fit, or A4 composite layouts are being tuned.
+
+---
+
+## 8) Extensibility model
+
+The renderer now uses a provider-style field resolution approach rather than relying on one large hardcoded mapping block.
+
+This gives a cleaner path for adding new frame names such as:
+- additional business/license fields
+- loan summary variations
+- customer/ornament details
+- future derived values
+
+Primary extension point:
+- `FRAME_VALUE_PROVIDERS` in `apps/tenant_apps/girvi/documents/loan_ticket.py`
+
+Recommended rule:
+- add new printable fields through the provider registry first, rather than scattering template-specific logic across views or HTML.
+
+---
+
+## 9) Safeguards currently in place
+
+The current architecture includes several operational protections:
+
+- active/default template resolution is centralized
+- readiness checks detect missing required frames or PDF assets
+- test-print lets admins validate against a real loan before rollout
+- clone-first workflow reduces risk when changing a live template
+- compatibility fallbacks prevent breakage across older `GivenLoan` method variants
+
+These safeguards are now part of the normal product workflow, not just developer-only practices.
+
+---
+
+## 10) What should remain unchanged
+
+The following architectural decisions are considered correct and should be preserved:
+
+1. keep the **background-PDF + frame overlay** model
+2. keep Girvi print logic owned inside `apps/tenant_apps/girvi/`
+3. keep rendering orchestration in the service layer rather than views
+4. keep tenant-specific template operations inside the product UI
+5. keep browser preview as an aid, but use real PDF preview/test print for final validation
+
+---
+
+## 11) Remaining optional enhancements
+
+The major productization work is complete. Remaining items are optional polish rather than architectural gaps:
+
+- lightweight template version history / audit trail
+- richer help text for supported frame names and expected values
+- additional field providers if business needs expand
+- further documentation cleanup for onboarding and support teams
+
+---
+
+## 12) Summary
+
+The Girvi template system is now in a good architectural state:
+- the core rendering strategy remains appropriate for the business problem
+- ownership has been moved into the Girvi domain
+- tenant-facing management workflows are in place
+- readiness, preview, clone, and test-print features reduce operational risk
+- future extension points are clearer and more maintainable than before
+
+This should be treated as the stable baseline architecture for future Girvi template work.

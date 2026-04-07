@@ -1,3 +1,10 @@
+"""Legacy compatibility module for PDF helpers.
+
+Girvi-specific ticket rendering now lives in `apps.tenant_apps.girvi.documents`.
+Keep new domain-specific PDF logic close to the owning app; this file remains only
+for backward-compatible imports and shared legacy helpers.
+"""
+
 import io
 import logging
 import os

@@ -58,6 +58,44 @@ def _resolve_amount(loan):
     return getattr(loan, "loanamount", None)
 
 
+def _customer_email(customer) -> str | None:
+    email = (getattr(customer, "email", None) or "").strip()
+    return email or None
+
+
+def _build_notification_record(
+    *,
+    customer,
+    loan_list,
+    notice_code,
+    notice_type_config,
+    medium_type,
+    group=None,
+):
+    notification = Notification.objects.create(
+        group=group,
+        customer=customer,
+        medium_type=medium_type,
+        notice_type=_resolve_legacy_notice_type(notice_code),
+        notice_type_config=notice_type_config,
+        status=Notification.StatusType.Draft,
+    )
+    notification.loans.set(loan_list)
+
+    for loan in loan_list:
+        notification.add_item(
+            loan,
+            amount=_resolve_amount(loan),
+            due_date=_resolve_due_date(loan),
+            reference_number=getattr(loan, "loan_id", str(getattr(loan, "pk", ""))),
+            notes=f"{notice_code} reminder for loan {getattr(loan, 'loan_id', getattr(loan, 'pk', ''))}",
+        )
+
+    notification.generate_message()
+    notification.save()
+    return notification
+
+
 def create_loan_reminder_notification(
     *,
     customer,
@@ -66,6 +104,7 @@ def create_loan_reminder_notification(
     medium_type: str = DEFAULT_LOAN_REMINDER_MEDIUM,
     group=None,
     auto_send: bool = False,
+    send_email_if_available: bool = True,
 ):
     """Create a configured notification for one customer's loan reminder flow."""
     loan_list = list(loans or [])
@@ -79,30 +118,32 @@ def create_loan_reminder_notification(
     normalized_medium = _normalize_medium_type(medium_type)
 
     with transaction.atomic():
-        notification = Notification.objects.create(
-            group=group,
+        notification = _build_notification_record(
             customer=customer,
-            medium_type=normalized_medium,
-            notice_type=_resolve_legacy_notice_type(notice_code),
+            loan_list=loan_list,
+            notice_code=notice_code,
             notice_type_config=notice_type_config,
-            status=Notification.StatusType.Draft,
+            medium_type=normalized_medium,
+            group=group,
         )
-        notification.loans.set(loan_list)
 
-        for loan in loan_list:
-            notification.add_item(
-                loan,
-                amount=_resolve_amount(loan),
-                due_date=_resolve_due_date(loan),
-                reference_number=getattr(loan, "loan_id", str(getattr(loan, "pk", ""))),
-                notes=f"{notice_code} reminder for loan {getattr(loan, 'loan_id', getattr(loan, 'pk', ''))}",
-            )
-
-        notification.generate_message()
-        notification.save()
-
-        if auto_send:
+        if auto_send or normalized_medium == Notification.MediumType.Email:
             notification.send_notification()
+
+        if (
+            send_email_if_available
+            and _customer_email(customer)
+            and normalized_medium != Notification.MediumType.Email
+        ):
+            email_notification = _build_notification_record(
+                customer=customer,
+                loan_list=loan_list,
+                notice_code=notice_code,
+                notice_type_config=notice_type_config,
+                medium_type=Notification.MediumType.Email,
+                group=group,
+            )
+            email_notification.send_notification()
 
     return notification
 

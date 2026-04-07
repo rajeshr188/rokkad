@@ -1,8 +1,15 @@
+import logging
+
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db import models
 from django.shortcuts import reverse
+from django.template import Context, Template
 from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+
+logger = logging.getLogger(__name__)
 
 
 # Create your models here.
@@ -406,38 +413,54 @@ class Notification(models.Model):
         # Implementation in views/prints.py
         pass
 
-    def send_email(self):
-        """
-        Send notification via email.
+    def _build_template_context(self):
+        return {
+            "customer": self.customer,
+            "notification": self,
+            "items": [
+                {
+                    "object": item.content_object,
+                    "amount": item.amount,
+                    "due_date": item.due_date,
+                    "reference": item.reference_number,
+                }
+                for item in self.items.all()
+            ],
+            "total_amount": self.calculate_total_amount(),
+            "notice_type": self.notice_type_config.name
+            if self.notice_type_config
+            else self.get_notice_type_display(),
+        }
 
-        TODO: Implement email sending logic
-        TODO: Support HTML templates with company branding
-        TODO: Optionally attach PDF version of notice
-        TODO: Track email opens/clicks if using service like SendGrid
-        """
-        # Example implementation:
-        # from django.core.mail import EmailMultiAlternatives
-        # from django.template.loader import render_to_string
-        #
-        # email_contact = self.customer.contactno.filter(is_email=True).first()
-        # if not email_contact:
-        #     return False
-        #
-        # html_content = render_to_string('notify/email_template.html', {
-        #     'customer': self.customer,
-        #     'notification': self,
-        # })
-        #
-        # msg = EmailMultiAlternatives(
-        #     subject=f"{self.get_notice_type_display()}",
-        #     body=self.message,
-        #     from_email=settings.DEFAULT_FROM_EMAIL,
-        #     to=[email_contact.email],
-        # )
-        # msg.attach_alternative(html_content, "text/html")
-        # msg.send()
-        # self.update_status(self.StatusType.Sent)
-        pass
+    def send_email(self):
+        """Send notification to the customer's configured email address."""
+        recipient = (getattr(self.customer, "email", None) or "").strip()
+        if not recipient:
+            return False
+
+        if not self.message:
+            self.generate_message()
+
+        subject = self.effective_notice_type or "Notification"
+        if self.notice_type_config and self.notice_type_config.email_subject_template:
+            subject = Template(self.notice_type_config.email_subject_template).render(
+                Context(self._build_template_context())
+            ).strip() or subject
+
+        try:
+            send_mail(
+                subject,
+                self.message,
+                settings.DEFAULT_FROM_EMAIL,
+                [recipient],
+                fail_silently=False,
+            )
+        except Exception:
+            logger.exception("Failed to send notification email for notification %s", self.pk or "unsaved")
+            return False
+
+        self.update_status(self.StatusType.Sent)
+        return True
 
     def send_sms(self):
         """
@@ -491,12 +514,7 @@ class Notification(models.Model):
 
         Supports both old (loans field) and new (NotificationItem) patterns.
         Uses templates from NoticeTypeConfig if available.
-
-        TODO: Implement full Django template rendering
-        TODO: Pull templates from NoticeTypeConfig or preferences
         """
-        from django.template import Context, Template
-
         # Determine which template to use
         template_text = None
         if self.notice_type_config:
@@ -533,26 +551,8 @@ class Notification(models.Model):
             return
 
         # Render template with context
-        context = {
-            "customer": self.customer,
-            "notification": self,
-            "items": [
-                {
-                    "object": item.content_object,
-                    "amount": item.amount,
-                    "due_date": item.due_date,
-                    "reference": item.reference_number,
-                }
-                for item in self.items.all()
-            ],
-            "total_amount": self.calculate_total_amount(),
-            "notice_type": self.notice_type_config.name
-            if self.notice_type_config
-            else self.get_notice_type_display(),
-        }
-
         template = Template(template_text)
-        self.message = template.render(Context(context))
+        self.message = template.render(Context(self._build_template_context()))
 
     @property
     def effective_notice_type(self):

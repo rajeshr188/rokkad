@@ -349,9 +349,24 @@ TEMPLATE_URLPATTERNS = [
         name="girvi_template_preview",
     ),
     path(
+        "girvi/templates/<int:pk>/preview-pdf/",
+        views.template_preview_pdf,
+        name="girvi_template_preview_pdf",
+    ),
+    path(
+        "girvi/templates/<int:pk>/test-print/",
+        views.template_test_print,
+        name="girvi_template_test_print",
+    ),
+    path(
         "girvi/templates/<int:pk>/set-default/",
         views.template_set_default,
         name="girvi_template_set_default",
+    ),
+    path(
+        "girvi/templates/<int:pk>/clone/",
+        views.template_clone,
+        name="girvi_template_clone",
     ),
     path(
         "girvi/templates/<int:pk>/toggle-active/",

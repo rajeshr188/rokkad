@@ -1,7 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
-from apps.tenant_apps.utils.loan_pdf import generate_form_h
+from apps.tenant_apps.girvi.documents.release_forms import generate_form_h
 
 from ..models import Release
 

@@ -1,5 +1,42 @@
 {% extends 'layouts/workspace.html' %}
 
+{% block extra_css %}
+<style>
+  .preview-grid-stage {
+    position: relative;
+    isolation: isolate;
+    background-color: #fff;
+  }
+
+  .preview-grid-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(13, 110, 253, 0.16) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(13, 110, 253, 0.16) 1px, transparent 1px),
+      linear-gradient(to right, rgba(13, 110, 253, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(13, 110, 253, 0.08) 1px, transparent 1px);
+    background-size: 1cm 1cm, 1cm 1cm, 0.5cm 0.5cm, 0.5cm 0.5cm;
+  }
+
+  .preview-frame-box {
+    position: absolute;
+    border: 1px dashed #0d6efd;
+    background: rgba(13, 110, 253, 0.10);
+    z-index: 2;
+    overflow: hidden;
+  }
+
+  .preview-frame-label {
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 2px 4px;
+  }
+</style>
+{% endblock %}
+
 {% block workspace_content %}
 <div class="container-fluid mt-3 mb-4">
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3 border-bottom pb-3">
@@ -73,8 +110,13 @@
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-info w-100">Create Starter Frames</button>
           </form>
+          <form method="post" action="{% url 'girvi:girvi_template_clone' template_obj.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary w-100">Clone Template</button>
+          </form>
           <a class="btn btn-outline-success w-100" href="{% url 'girvi:girvi_template_frame_create' template_obj.pk %}">Create Frame</a>
           <a class="btn btn-outline-secondary w-100" href="{{ template_obj.get_preview_url }}">Open Full Preview</a>
+          <a class="btn btn-outline-dark w-100" href="{% url 'girvi:girvi_template_test_print' template_obj.pk %}">Test Print With Latest Loan</a>
           <a class="btn btn-outline-danger w-100" href="{% url 'girvi:girvi_template_delete' template_obj.pk %}">Delete Template</a>
         </div>
       </div>
@@ -93,6 +135,37 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="alert alert-{{ readiness.status_class }} border mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <h5 class="alert-heading mb-1">Print Readiness</h5>
+        <p class="mb-1">{{ readiness.summary }}</p>
+        <p class="small mb-0 text-muted">Configured frames: {{ readiness.configured_frame_count }}</p>
+      </div>
+      <span class="badge text-bg-{{ readiness.status_class }}">{{ readiness.status_label }}</span>
+    </div>
+
+    {% if readiness.blocking_issues %}
+    <hr>
+    <div><strong>Blocking issues</strong></div>
+    <ul class="mb-0 mt-1">
+      {% for issue in readiness.blocking_issues %}
+      <li>{{ issue }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if readiness.warnings %}
+    <hr>
+    <div><strong>Warnings</strong></div>
+    <ul class="mb-0 mt-1">
+      {% for warning in readiness.warnings %}
+      <li>{{ warning }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
   </div>
 
   <div class="card mb-4 border-primary-subtle">
@@ -164,16 +237,21 @@
       <a class="btn btn-sm btn-outline-secondary" href="{{ template_obj.get_preview_url }}">Expand</a>
     </div>
     <div class="card-body overflow-auto">
-      <div class="preview-stage border bg-white position-relative" style="width: {{ template_obj.page_width }}cm; height: {{ template_obj.page_height }}cm; min-width: 320px;">
+      <div class="d-flex justify-content-end mb-2">
+        <span class="badge text-bg-light border">Grid: major lines = 1 cm, minor lines = 0.5 cm</span>
+      </div>
+      <div class="preview-stage preview-grid-stage border bg-white" style="width: {{ template_obj.page_width }}cm; height: {{ template_obj.page_height }}cm; min-width: 320px;">
         {% if template_obj.base_template %}
-        <object data="{{ template_obj.base_template.url }}" type="application/pdf" width="100%" height="100%" style="position:absolute; inset:0;">
+        <object data="{{ template_obj.base_template.url }}" type="application/pdf" width="100%" height="100%" style="position:absolute; inset:0; z-index:0;">
           <p class="p-3">Unable to display PDF preview. <a href="{{ template_obj.base_template.url }}" target="_blank">Download the asset</a>.</p>
         </object>
         {% endif %}
 
+        <div class="preview-grid-overlay"></div>
+
         {% for preview in preview_frames %}
-        <div style="position:absolute; left: {{ preview.left_offset }}cm; top: {{ preview.top_offset }}cm; width: {{ preview.width }}cm; height: {{ preview.height }}cm; border: 1px dashed #0d6efd; background: rgba(13, 110, 253, 0.08); z-index: 2; overflow: hidden;">
-          <div style="font-size: 11px; background: rgba(255,255,255,0.9); padding: 2px 4px;">{{ preview.frame.frame_name }}</div>
+        <div class="preview-frame-box" style="left: {{ preview.left_offset }}cm; top: {{ preview.top_offset }}cm; width: {{ preview.width }}cm; height: {{ preview.height }}cm;">
+          <div class="preview-frame-label">{{ preview.frame.frame_name }} <span class="text-muted">({{ preview.frame.x_pos }}, {{ preview.frame.y_pos }})</span></div>
         </div>
         {% endfor %}
       </div>

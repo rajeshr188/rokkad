@@ -17,17 +17,18 @@ from reportlab.platypus import (
     SimpleDocTemplate,
 )
 
+from apps.tenant_apps.girvi.documents.loan_ticket import (
+    get_custom_jcl,
+    grid_template,
+    print_labels_pdf,
+)
 from apps.tenant_apps.girvi.filters import LoanFilter
 from apps.tenant_apps.girvi.models.template import LoanTemplate
+from apps.tenant_apps.girvi.service_modules.printing import LoanPrintService
 from apps.tenant_apps.notify.models import Notification
 from apps.tenant_apps.notify.services import (
     DEFAULT_LOAN_REMINDER_CODE,
     create_bulk_loan_reminder_group,
-)
-from apps.tenant_apps.utils.loan_pdf import (
-    get_custom_jcl,
-    grid_template,
-    print_labels_pdf,
 )
 
 from ..forms import LoanSelectionForm
@@ -184,21 +185,28 @@ def print_loan(request, pk=None):
         ),
         pk=pk,
     )
-    template = LoanTemplate.objects.get_default()
-    if not template:
-        messages.warning(
-            request, "No default template configured. Please set a default template."
-        )
+    result = LoanPrintService.build_print_result(
+        loan,
+        template_resolver=LoanTemplate.objects.get_default,
+        renderer=get_custom_jcl,
+    )
+    if not result.template:
+        messages.warning(request, result.error_message)
         return redirect("girvi:girvi_loan_detail", pk=loan.pk)
-    
-    pdf = get_custom_jcl(loan=loan, template_id=template.pk)
-    if pdf is None:
-        messages.error(
-            request, "Failed to generate loan PDF. Please check template configuration and try again."
+
+    if not result.ok:
+        readiness = result.readiness or {}
+        logger.error(
+            "Loan PDF generation failed for loan=%s template_id=%s print_option=%s readiness=%s",
+            getattr(loan, "loan_id", None),
+            getattr(result.template, "pk", None),
+            getattr(result.template, "print_option", None),
+            readiness.get("summary"),
         )
+        messages.error(request, result.error_message)
         return redirect("girvi:girvi_loan_detail", pk=loan.pk)
-    
-    response = HttpResponse(pdf, content_type="application/pdf")
+
+    response = HttpResponse(result.pdf, content_type="application/pdf")
     response["Content-Disposition"] = f"inline; filename='{loan.loan_id}.pdf'"
     response["Content-Transfer-Encoding"] = "binary"
     return response

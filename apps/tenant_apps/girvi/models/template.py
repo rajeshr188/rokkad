@@ -7,8 +7,8 @@ from django.urls import reverse
 
 class LoanTemplateManager(models.Manager):
     def get_default(self):
-        """Get the default template or None if not found"""
-        return self.filter(is_default=True).first()
+        """Get the active default template or None if not found."""
+        return self.filter(is_default=True, is_active=True).first()
 
 
 class LoanTemplate(models.Model):

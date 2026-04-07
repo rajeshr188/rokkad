@@ -37,6 +37,7 @@ from .service_modules.creation import (
     LoanItemCreateInput,
 )
 from .service_modules.id_generation import LoanIDGenerator, ReleaseIDGenerator
+from .service_modules.printing import LoanPrintService
 from .service_modules.release_lifecycle import (
     ReleaseCreateCommand,
     ReleaseCreatePreview,
@@ -69,6 +70,7 @@ __all__ = [
     "LoanCreateResult",
     "LoanCreationService",
     "LoanItemCreateInput",
+    "LoanPrintService",
     "ReleaseLifecycleService",
     "ReleaseCreateCommand",
     "ReleaseCreatePreview",

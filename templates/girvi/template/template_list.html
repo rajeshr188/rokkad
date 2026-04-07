@@ -65,10 +65,14 @@
                 {% endif %}
               </td>
               <td class="text-end">
-                <div class="btn-group btn-group-sm">
-                  <a class="btn btn-outline-primary" href="{{ template.get_absolute_url }}">Open</a>
-                  <a class="btn btn-outline-secondary" href="{{ template.get_preview_url }}">Preview</a>
-                  <a class="btn btn-outline-dark" href="{{ template.get_update_url }}">Edit</a>
+                <div class="d-inline-flex gap-1 flex-wrap justify-content-end">
+                  <a class="btn btn-sm btn-outline-primary" href="{{ template.get_absolute_url }}">Open</a>
+                  <a class="btn btn-sm btn-outline-secondary" href="{{ template.get_preview_url }}">Preview</a>
+                  <a class="btn btn-sm btn-outline-dark" href="{{ template.get_update_url }}">Edit</a>
+                  <form method="post" action="{% url 'girvi:girvi_template_clone' template.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Clone</button>
+                  </form>
                 </div>
               </td>
             </tr>

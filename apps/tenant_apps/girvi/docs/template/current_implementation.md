@@ -2,6 +2,10 @@
 
 Last updated: March 2026 (implementation in progress)
 
+> Formal assessment and roadmap: see [`assessment_and_roadmap.md`](./assessment_and_roadmap.md)
+>
+> Practical workflow guide: see [`template_management_workflow_guide.md`](./template_management_workflow_guide.md)
+
 ## Why this architecture exists
 
 The current PDF rendering architecture is intentional and should be preserved:
