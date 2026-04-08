@@ -344,10 +344,12 @@ SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
 SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
 CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 
+REDIS_URL = env("REDIS_URL", default="redis://127.0.0.1:6379")
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": f"{REDIS_URL}/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
@@ -356,7 +358,7 @@ CACHES = {
     },
     "select2": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/2",
+        "LOCATION": f"{REDIS_URL}/2",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
@@ -458,8 +460,6 @@ LOGGING = {
         },
     },
 }
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
 # USE_THOUSAND_SEPARATOR = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

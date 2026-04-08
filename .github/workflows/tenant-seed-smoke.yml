@@ -17,6 +17,7 @@ env:
   DB_PASSWORD: kanchan
   DB_HOST: 127.0.0.1
   DB_PORT: "5432"
+  REDIS_URL: redis://127.0.0.1:6379
   EMAIL_HOST: localhost
   EMAIL_PORT: "1025"
   EMAIL_USE_TLS: "False"
@@ -59,6 +60,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
@@ -139,6 +141,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
