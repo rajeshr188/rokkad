@@ -1,9 +1,9 @@
 # Pull base image
-FROM python:3.11-slim-buster
+FROM python:3.12-slim-bookworm
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Create and set work directory called `app`
 RUN mkdir -p /code

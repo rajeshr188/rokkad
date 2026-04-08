@@ -1,0 +1,69 @@
+{% extends 'layouts/workspace.html' %}
+{% block workspace_content %}
+{% partialdef taken-loan-collateral-content inline %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Taken Loan Collateral - {{ loan.loan_id }}</h2>
+    <div class="btn-group">
+      <a class="btn btn-primary" href="{% url 'girvi:takenloan_payment_create' loan.id %}">Record Repayment</a>
+      <a class="btn btn-outline-secondary" hx-get="{% url 'girvi:girvi_loan_list' %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true">Loan List</a>
+      <a class="btn btn-outline-dark" hx-get="{% url 'girvi:create_repledge_select_items' %}" hx-target="#content" hx-swap="innerHTML transition:true" hx-push-url="true">Create Repledge</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-4"><div class="card"><div class="card-body"><strong>Loan Amount:</strong> {{ loan_amount }}</div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body"><strong>Collateral Value:</strong> {{ total_collateral_value }}</div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body"><strong>LTV:</strong> {{ ltv_ratio|floatformat:2 }}%</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Collateral Items</div>
+    <div class="card-body">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Source Loan</th>
+            <th>Borrower</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in collateral_items %}
+          <tr>
+            <td>{{ item.itemdesc }}</td>
+            <td>{{ item.loan.loan_id }}</td>
+            <td>{{ item.loan.borrower.name }}</td>
+            <td>{{ item.get_custody_status_display }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-muted">No collateral items found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if can_return_all %}
+      <form method="post" action="{% url 'girvi:return_taken_loan_collateral' loan.id %}">
+        {% csrf_token %}
+        <button class="btn btn-warning" type="submit" hx-confirm="Return all collateral to vault?">Return All Collateral</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if by_customer %}
+  <div class="card mt-3">
+    <div class="card-header">By Customer</div>
+    <div class="card-body">
+      {% for customer, data in by_customer.items %}
+      <div class="mb-2">
+        <strong>{{ customer.name }}</strong> - {{ data.count }} item(s), value {{ data.total_value }}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endpartialdef %}
+{% endblock %}

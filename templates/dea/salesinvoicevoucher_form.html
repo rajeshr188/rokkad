@@ -1,0 +1,257 @@
+{% extends 'layouts/workspace.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if is_update %}Edit{% else %}Create{% endif %} Sales Invoice{% endblock %}
+
+{% block extra_head %}
+<style>
+    .formset-row {
+        border-bottom: 1px solid #dee2e6;
+        padding: 10px 0;
+        margin-bottom: 10px;
+    }
+    .formset-row:last-child {
+        border-bottom: none;
+    }
+    .totals-card {
+        position: sticky;
+        top: 70px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="display-6">
+                <i class="bi bi-receipt-cutoff"></i> {% if is_update %}Edit{% else %}New{% endif %} Sales Invoice
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dea_sales_invoice_list' %}">Sales Invoices</a></li>
+                    <li class="breadcrumb-item active">{% if is_update %}Edit{% else %}Create{% endif %}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="post" id="sales-invoice-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Sales Invoice Details</h5>
+                    </div>
+                    <div class="card-body">
+                        {% crispy form %}
+                    </div>
+                </div>
+
+                <!-- Line Items -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Line Items</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ line_items_formset.management_form }}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm" id="line-items-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 10%">Item Code</th>
+                                        <th style="width: 20%">Description</th>
+                                        <th style="width: 8%">Qty</th>
+                                        <th style="width: 10%">Unit Price</th>
+                                        <th style="width: 8%">Disc %</th>
+                                        <th style="width: 6%">CGST %</th>
+                                        <th style="width: 6%">SGST %</th>
+                                        <th style="width: 6%">IGST %</th>
+                                        <th style="width: 10%">Line Total</th>
+                                        <th style="width: 6%">Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for form in line_items_formset %}
+                                    <tr class="formset-row">
+                                        <td>
+                                            {{ form.id }}
+                                            {{ form.item_code }}
+                                        </td>
+                                        <td>
+                                            {{ form.description }}
+                                        </td>
+                                        <td>
+                                            {{ form.quantity }}
+                                        </td>
+                                        <td>
+                                            {{ form.unit_price }}
+                                        </td>
+                                        <td>
+                                            {{ form.discount_percentage }}
+                                        </td>
+                                        <td>
+                                            {{ form.cgst_rate }}
+                                        </td>
+                                        <td>
+                                            {{ form.sgst_rate }}
+                                        </td>
+                                        <td>
+                                            {{ form.igst_rate }}
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm line-total" readonly value="0.00">
+                                        </td>
+                                        <td class="text-center">
+                                            {{ form.DELETE }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-line-item">
+                            <i class="bi bi-plus-circle"></i> Add Line Item
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar: Totals & Actions -->
+            <div class="col-md-4">
+                <div class="card totals-card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-calculator"></i> Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <td>Subtotal:</td>
+                                <td class="text-end"><strong id="summary-subtotal">₹0.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Discount:</td>
+                                <td class="text-end"><strong id="summary-discount">₹0.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Taxable:</td>
+                                <td class="text-end"><strong id="summary-taxable">₹0.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>GST:</td>
+                                <td class="text-end"><strong id="summary-tax">₹0.00</strong></td>
+                            </tr>
+                            <tr class="table-active">
+                                <td><strong>Total:</strong></td>
+                                <td class="text-end"><strong id="summary-total" class="text-primary fs-5">₹0.00</strong></td>
+                            </tr>
+                        </table>
+
+                        <hr>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> {% if is_update %}Update{% else %}Create{% endif %} Sales Invoice
+                            </button>
+                            <a href="{% url 'dea_sales_invoice_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function calculateTotals() {
+        let subtotal = 0;
+        let discountTotal = 0;
+        let taxTotal = 0;
+
+        document.querySelectorAll('.formset-row').forEach(function(row) {
+            const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+            if (deleteCheckbox && deleteCheckbox.checked) {
+                return;
+            }
+
+            const qtyInput = row.querySelector('input[name$="-quantity"]');
+            const priceInput = row.querySelector('input[name$="-unit_price"]');
+            const discountInput = row.querySelector('input[name$="-discount_percentage"]');
+            const cgstInput = row.querySelector('input[name$="-cgst_rate"]');
+            const sgstInput = row.querySelector('input[name$="-sgst_rate"]');
+            const igstInput = row.querySelector('input[name$="-igst_rate"]');
+            const lineTotalInput = row.querySelector('.line-total');
+
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            const discountRate = parseFloat(discountInput.value) || 0;
+            const cgstRate = parseFloat(cgstInput.value) || 0;
+            const sgstRate = parseFloat(sgstInput.value) || 0;
+            const igstRate = parseFloat(igstInput.value) || 0;
+
+            const lineTotal = qty * price;
+            const lineDiscount = lineTotal * discountRate / 100;
+            const lineTaxable = lineTotal - lineDiscount;
+            const lineTax = lineTaxable * (cgstRate + sgstRate + igstRate) / 100;
+
+            lineTotalInput.value = lineTotal.toFixed(2);
+
+            subtotal += lineTotal;
+            discountTotal += lineDiscount;
+            taxTotal += lineTax;
+        });
+
+        const taxable = subtotal - discountTotal;
+        const total = taxable + taxTotal;
+
+        document.getElementById('summary-subtotal').textContent = '₹' + subtotal.toFixed(2);
+        document.getElementById('summary-discount').textContent = '₹' + discountTotal.toFixed(2);
+        document.getElementById('summary-taxable').textContent = '₹' + taxable.toFixed(2);
+        document.getElementById('summary-tax').textContent = '₹' + taxTotal.toFixed(2);
+        document.getElementById('summary-total').textContent = '₹' + total.toFixed(2);
+    }
+
+    document.querySelectorAll('input').forEach(function(input) {
+        input.addEventListener('change', calculateTotals);
+        input.addEventListener('input', calculateTotals);
+    });
+
+    calculateTotals();
+
+    document.getElementById('add-line-item').addEventListener('click', function() {
+        const totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        const currentFormCount = parseInt(totalForms.value);
+
+        const templateRow = document.querySelector('.formset-row');
+        const newRow = templateRow.cloneNode(true);
+
+        newRow.innerHTML = newRow.innerHTML.replace(/-0-/g, '-' + currentFormCount + '-');
+        newRow.innerHTML = newRow.innerHTML.replace(/_0_/g, '_' + currentFormCount + '_');
+
+        newRow.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => input.value = '');
+        newRow.querySelectorAll('input[type="checkbox"]').forEach(input => input.checked = false);
+
+        document.querySelector('#line-items-table tbody').appendChild(newRow);
+        totalForms.value = currentFormCount + 1;
+
+        newRow.querySelectorAll('input').forEach(function(input) {
+            input.addEventListener('change', calculateTotals);
+            input.addEventListener('input', calculateTotals);
+        });
+
+        calculateTotals();
+    });
+});
+</script>
+{% endblock %}

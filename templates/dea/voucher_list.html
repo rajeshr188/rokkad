@@ -1,0 +1,106 @@
+{% extends 'layouts/workspace.html' %}
+{% load crispy_forms_tags %}
+{% load render_table from django_tables2 %}
+{% load django_tables2 %}
+
+{% block title %}Vouchers{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-6">
+                <i class="bi bi-receipt"></i> Vouchers
+            </h1>
+            <p class="text-muted">Manage accounting vouchers - create, post, and reverse transactions.</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'dea_voucher_create' %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-circle"></i> New Voucher
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Total Vouchers</h6>
+                    <h2 class="text-primary">{{ total_vouchers }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Draft</h6>
+                    <h2 class="text-secondary">{{ draft_vouchers }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Posted</h6>
+                    <h2 class="text-success">{{ posted_vouchers }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Reversed</h6>
+                    <h2 class="text-danger">{{ reversed_vouchers }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <!-- Filters -->
+                <div class="col-md-3">
+                    <div class="card border-light">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="bi bi-funnel"></i> Filters
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="get" class="mb-3">
+                                {{ filter.form|crispy }}
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
+                                        <i class="bi bi-search"></i> Filter
+                                    </button>
+                                    <a href="{% url 'dea_voucher_list' %}" class="btn btn-sm btn-secondary flex-grow-1">
+                                        <i class="bi bi-arrow-clockwise"></i> Reset
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="col-md-9">
+                    <div class="table-responsive">
+                        {% render_table table %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .display-6 {
+        font-weight: 600;
+    }
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
+{% endblock %}

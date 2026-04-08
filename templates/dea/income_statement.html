@@ -1,0 +1,45 @@
+{% extends 'layouts/workspace.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <h5 class="card-title">Income Statement</h5>
+        <small class="text-muted">Period: {{ from_date|default:'All time' }} to {{ to_date|default:'Present' }}</small>
+    </div>
+    <div class="card-body">
+        <!-- Revenue Section -->
+        <h6 class="border-bottom">Revenue</h6>
+        {% for entry in statement.revenue.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.ledger }}</div>
+            <div class="col text-end">{{ entry.balance }}</div>
+        </div>
+        {% endfor %}
+        <div class="row border-top mx-2">
+            <div class="col"><strong>Total Revenue</strong></div>
+            <div class="col text-end text-success">{{ statement.revenue.total }}</div>
+        </div>
+
+        <!-- Expenses Section -->
+        <h6 class="border-bottom mt-4">Expenses</h6>
+        {% for entry in statement.expenses.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.ledger }}</div>
+            <div class="col text-end">{{ entry.balance }}</div>
+        </div>
+        {% endfor %}
+        <div class="row border-top mx-2">
+            <div class="col"><strong>Total Expenses</strong></div>
+            <div class="col text-end text-danger">{{ statement.expenses.total }}</div>
+        </div>
+
+        <!-- Net Income -->
+        <div class="row border-top border-dark mx-2 mt-4">
+            <div class="col"><strong>Net Income</strong></div>
+            <div class="col text-end {% if statement.net_income.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                <strong>{{ statement.net_income }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

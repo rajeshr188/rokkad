@@ -1,0 +1,67 @@
+<!-- Role Badge Component -->
+<!-- Usage: include 'components/team/role_badge.html' with role=membership.role size='sm' -->
+
+{% if role %}
+<span class="badge role-badge role-badge--{{ role|lower }}" title="Role: {{ role }}">
+    {% if role == 'admin' %}
+        <i class="bi bi-shield-check"></i> Admin
+    {% elif role == 'manager' %}
+        <i class="bi bi-person-check"></i> Manager
+    {% elif role == 'member' %}
+        <i class="bi bi-person"></i> Member
+    {% elif role == 'guest' %}
+        <i class="bi bi-question-circle"></i> Guest
+    {% else %}
+        {{ role }}
+    {% endif %}
+</span>
+{% endif %}
+
+<style>
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.role-badge i {
+    font-size: 0.75rem;
+}
+
+/* Role Specific Colors */
+.role-badge--admin {
+    background-color: #dc3545;
+    color: white;
+}
+
+.role-badge--manager {
+    background-color: #fd7e14;
+    color: white;
+}
+
+.role-badge--member {
+    background-color: #0dcaf0;
+    color: white;
+}
+
+.role-badge--guest {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Size Variations */
+.role-badge.sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.role-badge.lg {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+}
+</style>

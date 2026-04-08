@@ -1,0 +1,19 @@
+{% extends 'layouts/workspace.html' %}
+{% block workspace_content %}
+<div class="container col-md-6 mt-4 mb-3">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Delete Document</h5>
+        </div>
+        <div class="card-body">
+            <p>Are you sure you want to delete the document: <strong>{{ object.title }}</strong>?</p>
+            <p class="text-muted"><small>This action cannot be undone.</small></p>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                <a href="{% url 'girvi:girvi_license_detail' object.license.id %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

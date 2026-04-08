@@ -1,0 +1,188 @@
+{% extends 'layouts/workspace.html' %}
+
+{% block title %}Sales Invoices{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-6"><i class="bi bi-receipt-cutoff"></i> Sales Invoices</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'dea_sales_invoice_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create Sales Invoice
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Invoices</h5>
+                    <p class="card-text display-6">{{ total_invoices }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Paid</h5>
+                    <p class="card-text display-6">{{ paid_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Pending</h5>
+                    <p class="card-text display-6">{{ pending_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Total Amount</h5>
+                    <p class="card-text display-6">₹{{ total_amount|floatformat:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="is_paid" class="form-label">Payment Status</label>
+                    <select name="is_paid" id="is_paid" class="form-select">
+                        <option value="">All</option>
+                        <option value="true" {% if current_is_paid == 'true' %}selected{% endif %}>Paid</option>
+                        <option value="false" {% if current_is_paid == 'false' %}selected{% endif %}>Pending</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="date_from" class="form-label">Date From</label>
+                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="date_to" class="form-label">Date To</label>
+                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" name="search" id="search" class="form-control" placeholder="Invoice, customer, reference" value="{{ search_query }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                    <a href="{% url 'dea_sales_invoice_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sales Invoices Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Sales Invoices</h5>
+        </div>
+        <div class="card-body">
+            {% if invoices %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Received</th>
+                            <th class="text-end">Outstanding</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'dea_sales_invoice_detail' invoice.pk %}">
+                                    <strong>{{ invoice.invoice_number }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ invoice.invoice_date|date:"d M Y" }}</td>
+                            <td>{{ invoice.customer }}</td>
+                            <td class="text-end">₹{{ invoice.total_amount|floatformat:2 }}</td>
+                            <td class="text-end">₹{{ invoice.received_amount|floatformat:2 }}</td>
+                            <td class="text-end">₹{{ invoice.outstanding_balance|floatformat:2 }}</td>
+                            <td>
+                                {% if invoice.is_fully_paid %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'dea_sales_invoice_detail' invoice.pk %}" class="btn btn-sm btn-outline-info" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'dea_sales_invoice_update' invoice.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'dea_sales_invoice_delete' invoice.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info text-center" role="alert">
+                <i class="bi bi-info-circle"></i> No sales invoices found.
+                <a href="{% url 'dea_sales_invoice_create' %}" class="alert-link">Create your first sales invoice</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

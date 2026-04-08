@@ -1,0 +1,193 @@
+{% extends 'layouts/workspace.html' %}
+
+{% block title %}Journal Entry Vouchers{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-6"><i class="bi bi-journal-text"></i> Journal Entry Vouchers</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'dea_journal_entry_voucher_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create Journal Entry
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Entries</h5>
+                    <p class="card-text display-6">{{ summary.total_entries }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Balanced</h5>
+                    <p class="card-text display-6">{{ summary.balanced_entries }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Unbalanced</h5>
+                    <p class="card-text display-6">{{ summary.unbalanced_entries }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Total Debit</h5>
+                    <p class="card-text display-6">₹{{ summary.total_debit|floatformat:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="entry_type" class="form-label">Entry Type</label>
+                    <select name="entry_type" id="entry_type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="CLOSING" {% if request.GET.entry_type == 'CLOSING' %}selected{% endif %}>Closing Entry</option>
+                        <option value="ACCRUAL" {% if request.GET.entry_type == 'ACCRUAL' %}selected{% endif %}>Accrual Entry</option>
+                        <option value="CORRECTION" {% if request.GET.entry_type == 'CORRECTION' %}selected{% endif %}>Correction Entry</option>
+                        <option value="REVAL" {% if request.GET.entry_type == 'REVAL' %}selected{% endif %}>Revaluation</option>
+                        <option value="DEPRECIATION" {% if request.GET.entry_type == 'DEPRECIATION' %}selected{% endif %}>Depreciation</option>
+                        <option value="INTERCOMPANY" {% if request.GET.entry_type == 'INTERCOMPANY' %}selected{% endif %}>Intercompany</option>
+                        <option value="ADHOC" {% if request.GET.entry_type == 'ADHOC' %}selected{% endif %}>Ad-hoc Entry</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="date_from" class="form-label">Date From</label>
+                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="date_to" class="form-label">Date To</label>
+                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" name="search" id="search" class="form-control" placeholder="JE number or description" value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                    <a href="{% url 'dea_journal_entry_voucher_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Journal Entries Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Journal Entries</h5>
+        </div>
+        <div class="card-body">
+            {% if object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>JE Number</th>
+                            <th>Date</th>
+                            <th>Entry Type</th>
+                            <th>Description</th>
+                            <th class="text-end">Total Debit</th>
+                            <th class="text-end">Total Credit</th>
+                            <th>Balance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for je in object_list %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'dea_journal_entry_voucher_detail' je.pk %}">
+                                    <strong>{{ je.je_number }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ je.je_date|date:"d M Y" }}</td>
+                            <td><span class="badge bg-secondary">{{ je.get_entry_type_display }}</span></td>
+                            <td>{{ je.description|truncatewords:10 }}</td>
+                            <td class="text-end">₹{{ je.total_debit.amount|floatformat:2 }}</td>
+                            <td class="text-end">₹{{ je.total_credit.amount|floatformat:2 }}</td>
+                            <td>
+                                {% if je.is_balanced %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Balanced</span>
+                                {% else %}
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Unbalanced</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'dea_journal_entry_voucher_detail' je.pk %}" class="btn btn-sm btn-outline-info" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'dea_journal_entry_voucher_update' je.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'dea_journal_entry_voucher_delete' je.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info text-center" role="alert">
+                <i class="bi bi-info-circle"></i> No journal entries found.
+                <a href="{% url 'dea_journal_entry_voucher_create' %}" class="alert-link">Create your first journal entry</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

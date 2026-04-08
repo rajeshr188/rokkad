@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-02-20 01:35+0530\n"
+"POT-Creation-Date: 2024-02-26 15:44+0530\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,33 +17,340 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
 #: .\apps\orgs\forms.py:29
 msgid "This e-mail address has already been invited."
-msgstr ""
+msgstr "यह ई-मेल पता पहले ही आमंत्रित किया जा चुका है."
 
 #: .\apps\orgs\forms.py:31
 msgid "This e-mail address has already accepted an invite."
-msgstr ""
+msgstr "यह ई-मेल पता पहले ही एक आमंत्रण स्वीकार कर चुका है"
 
 #: .\apps\orgs\forms.py:47 .\apps\orgs\forms.py:80
 msgid "E-mail"
-msgstr ""
+msgstr "ई-मेल"
 
-#: .\apps\orgs\models.py:105
-msgid "e-mail address"
-msgstr ""
+#: .\apps\orgs\models.py:23 .\apps\tenant_apps\contact\models.py:34
+#: .\apps\tenant_apps\girvi\models\license.py:9
+msgid "Name"
+msgstr "नाम"
+
+#: .\apps\orgs\models.py:26
+msgid "Owner"
+msgstr "मालिक"
+
+#: .\apps\orgs\models.py:27
+#, fuzzy
+#| msgid "Create"
+msgid "Creator"
+msgstr "बनाएँ"
+
+#: .\apps\orgs\models.py:36 .\apps\orgs\models.py:58
+#: .\templates\account\profile.html:11
+msgid "Company"
+msgstr "कंपनी"
+
+#: .\apps\orgs\models.py:37
+#, fuzzy
+#| msgid "Company"
+msgid "Companies"
+msgstr "कंपनी"
+
+#: .\apps\orgs\models.py:57
+msgid "User"
+msgstr "उपयोगकर्ता"
+
+#: .\apps\orgs\models.py:103
+msgid "name"
+msgstr "नाम"
+
+#: .\apps\orgs\models.py:107
+msgid "role"
+msgstr "भूमिका"
 
 #: .\apps\orgs\models.py:108
+msgid "roles"
+msgstr "भूमिकाएँ"
+
+#: .\apps\orgs\models.py:118
+msgid "e-mail address"
+msgstr "ई-मेल पता"
+
+#: .\apps\orgs\models.py:121
 msgid "created"
+msgstr "बनाया था"
+
+#: .\apps\tenant_apps\contact\models.py:32
+#: .\apps\tenant_apps\girvi\models\release.py:25
+#, fuzzy
+#| msgid "Create"
+msgid "Created By"
+msgstr "बनाएँ"
+
+#: .\apps\tenant_apps\contact\models.py:35
+msgid "First Name"
+msgstr "पहला नाम"
+
+#: .\apps\tenant_apps\contact\models.py:36
+#, fuzzy
+#| msgid "Name"
+msgid "Last Name"
+msgstr "नाम"
+
+#: .\apps\tenant_apps\contact\models.py:39
+msgid "Gender"
+msgstr "लिंग"
+
+#: .\apps\tenant_apps\contact\models.py:53
+msgid "Picture"
+msgstr "चित्र"
+
+#: .\apps\tenant_apps\contact\models.py:55
+#: .\apps\tenant_apps\girvi\models\license.py:15
+msgid "Address"
+msgstr "पता"
+
+#: .\apps\tenant_apps\contact\models.py:64
+#, fuzzy
+#| msgid "Customer"
+msgid "Customer Type"
+msgstr "ग्राहक"
+
+#: .\apps\tenant_apps\contact\models.py:68
+msgid "Related As"
+msgstr "रिश्ता"
+
+#: .\apps\tenant_apps\contact\models.py:71
+msgid "Related To"
+msgstr "संबंधित व्यक्ति"
+
+#: .\apps\tenant_apps\contact\models.py:73
+#: .\apps\tenant_apps\contact\models.py:372
+msgid "Area"
+msgstr "क्षेत्र"
+
+#: .\apps\tenant_apps\contact\models.py:75
+msgid "Active"
+msgstr "सक्रिय"
+
+#: .\apps\tenant_apps\contact\models.py:312
+#: .\apps\tenant_apps\contact\models.py:367
+#: .\apps\tenant_apps\contact\models.py:401
+#: .\apps\tenant_apps\contact\models.py:437 .\templates\_base.html:58
+msgid "Customer"
+msgstr "ग्राहक"
+
+#: .\apps\tenant_apps\contact\models.py:318
+#, fuzzy
+#| msgid "Customer"
+msgid "Related Customer"
+msgstr "ग्राहक"
+
+#: .\apps\tenant_apps\contact\models.py:322
+msgid "Relationship"
+msgstr "संबंध"
+
+#: .\apps\tenant_apps\contact\models.py:375
+msgid "Door No"
+msgstr "दरवाजा नंबर"
+
+#: .\apps\tenant_apps\contact\models.py:377
+msgid "Zip Code"
+msgstr "पिन कोड"
+
+#: .\apps\tenant_apps\contact\models.py:380
+msgid "Street"
+msgstr "सड़क"
+
+#: .\apps\tenant_apps\contact\models.py:382
+msgid "City"
+msgstr "शहर"
+
+#: .\apps\tenant_apps\contact\models.py:414
+msgid "Contact Type"
+msgstr "संपर्क प्रकार"
+
+#: .\apps\tenant_apps\contact\models.py:417
+msgid "Phone Number"
+msgstr "फ़ोन नंबर"
+
+#: .\apps\tenant_apps\girvi\models\license.py:13
+msgid "Type"
+msgstr "प्रकार"
+
+#: .\apps\tenant_apps\girvi\models\license.py:14
+#, fuzzy
+#| msgid "Name"
+msgid "Shop Name"
+msgstr "नाम"
+
+#: .\apps\tenant_apps\girvi\models\license.py:17
+msgid "Propreitor"
+msgstr "स्वामी"
+
+#: .\apps\tenant_apps\girvi\models\license.py:37
+#, fuzzy
+#| msgid "Series"
+msgid "Series Name"
+msgstr "श्रृंखला"
+
+#: .\apps\tenant_apps\girvi\models\license.py:40
+msgid "License"
+msgstr "लाइसेंस"
+
+#: .\apps\tenant_apps\girvi\models\license.py:41
+#, fuzzy
+#| msgid "Active"
+msgid "Is Active"
+msgstr "सक्रिय"
+
+#: .\apps\tenant_apps\girvi\models\loan.py:36
+#, fuzzy
+#| msgid "Date"
+msgid "Loan Date"
+msgstr "तारीख"
+
+#: .\apps\tenant_apps\girvi\models\loan.py:40
+msgid "Image"
+msgstr "चित्र"
+
+#: .\apps\tenant_apps\girvi\models\release.py:24
+msgid "Release ID"
+msgstr "रिलीज़ आईडी"
+
+#: .\apps\tenant_apps\girvi\models\release.py:31
+msgid "Released By"
+msgstr "रिलीज़ किया गया"
+
+#: .\apps\tenant_apps\product\forms.py:55
+#, fuzzy
+#| msgid "Name"
+msgctxt "Item name"
+msgid "Name"
+msgstr "नाम"
+
+#: .\apps\tenant_apps\product\forms.py:56
+msgctxt "Enable variants"
+msgid "Enable variants"
 msgstr ""
 
-#: .\templates\_base.html:35
+#: .\apps\tenant_apps\product\forms.py:58
+msgctxt "Product type attributes"
+msgid "Attributes specific to each variant"
+msgstr ""
+
+#: .\apps\tenant_apps\product\forms.py:61
+msgctxt "Product type attributes"
+msgid "Attributes common to all variants"
+msgstr ""
+
+#: .\apps\tenant_apps\product\forms.py:72
+msgctxt "Product type form error"
+msgid "Product variants are disabled."
+msgstr ""
+
+#: .\apps\tenant_apps\product\forms.py:78
+msgctxt "Product type form error"
+msgid "A single attribute can't belong to both a product and its variant."
+msgstr ""
+
+#: .\apps\tenant_apps\product\forms.py:148
+msgctxt "Category"
+msgid "Category"
+msgstr ""
+
+#: .\apps\tenant_apps\product\forms.py:188
+msgctxt "SKU"
+msgid "SKU"
+msgstr ""
+
+#: .\apps\tenant_apps\product\forms.py:189
+msgctxt "Integer number"
+msgid "Number in stock"
+msgstr ""
+
+#: .\apps\tenant_apps\product\forms.py:190
+msgctxt "Currency amount"
+msgid "Cost price"
+msgstr ""
+
+#: .\apps\tenant_apps\product\weight.py:32
+msgctxt "Kilogram weight unit symbol"
+msgid "kg"
+msgstr ""
+
+#: .\apps\tenant_apps\product\weight.py:33
+msgctxt "Pound weight unit symbol"
+msgid "lb"
+msgstr ""
+
+#: .\apps\tenant_apps\product\weight.py:34
+msgctxt "Ounce weight unit symbol"
+msgid "oz"
+msgstr ""
+
+#: .\apps\tenant_apps\product\weight.py:35
+msgctxt "Gram weight unit symbol"
+msgid "g"
+msgstr ""
+
+#: .\apps\tenant_apps\purchase\models\payment.py:50
+#: .\apps\tenant_apps\purchase\models\purchase.py:55
+msgid "Supplier"
+msgstr ""
+
+#: .\templates\_base.html:42
+msgid "Workspace"
+msgstr "कार्यस्थल"
+
+#: .\templates\_base.html:56 .\templates\account\profile.html:5
+msgid "Profile"
+msgstr "प्रोफ़ाइल"
+
+#: .\templates\_base.html:59 .\templates\girvi\loan\loan_list.html:9
+msgid "Loans"
+msgstr "ऋण"
+
+msgid "Loan"
+msgstr "ऋण"
+
+#: .\templates\_base.html:71
 msgid "Rokkad"
-msgstr "रॉककड "
+msgstr "रोकड़ "
 
-#: .\templates\_base.html:52
+#: .\templates\_base.html:72
+msgid "About"
+msgstr "के बारे में"
+
+#: .\templates\_base.html:87
 msgid "Change"
-msgstr ""
+msgstr "बदलें"
+
+#: .\templates\_base.html:100
+msgid "Preferences"
+msgstr "पसंद"
+
+#: .\templates\_base.html:104
+msgid "Dashboard"
+msgstr "डैशबोर्ड"
+
+#: .\templates\_base.html:109
+#, fuzzy
+#| msgid "Forgot password?"
+msgid "Change password"
+msgstr "पासवर्ड भूल गए?"
+
+#: .\templates\_base.html:113
+msgid "Sign out"
+msgstr "साइन आउट"
+
+#: .\templates\_base.html:117
+msgid "Log in"
+msgstr "लॉग इन"
+
+#: .\templates\_base.html:118
+msgid "Sign up"
+msgstr "साइन अप"
 
 #: .\templates\account\email\password_reset_key_message.txt:2
 #, python-format
@@ -54,11 +361,14 @@ msgid ""
 "request, you can safely ignore this email. Otherwise, click the button below "
 "to reset your password."
 msgstr ""
+"हमें आपका पासवर्ड रीसेट करने का अनुरोध प्राप्त हुआ है। यदि आपने इसे नहीं बनाया हैअनुरोध, आप "
+"इस ईमेल को सुरक्षित रूप से अनदेखा कर सकते हैं। अन्यथा, नीचे दिए गए बटन पर क्लिक करेंअपना "
+"पासवर्ड रीसेट करने के लिए"
 
 #: .\templates\account\email\password_reset_key_message.txt:8
 #, python-format
 msgid "In case you forgot, your username is %(username)s."
-msgstr ""
+msgstr "यदि आप भूल गए हैं, तो आपका उपयोगकर्ता नाम %(username)s है।"
 
 #: .\templates\account\email\password_reset_key_message.txt:10
 #, python-format
@@ -66,3 +376,311 @@ msgid ""
 "Thank you for using %(site_name)s!\n"
 "%(site_domain)s"
 msgstr ""
+
+#: .\templates\account\profile.html:12
+msgid "Membership"
+msgstr "सदस्यता"
+
+#: .\templates\account\profile.html:13
+msgid "Invitations"
+msgstr "निमंत्रण"
+
+#: .\templates\account\profile.html:14
+msgid "Subscription"
+msgstr "सदस्यता"
+
+#: .\templates\account\profile.html:15
+msgid "Payment"
+msgstr "भुगतान"
+
+#: .\templates\company\company_preferences.html:9
+#, fuzzy
+#| msgid "Preferences"
+msgid "Company Preferences"
+msgstr "पसंद"
+
+#: .\templates\contact\customer_list.html:16
+msgid "Customers"
+msgstr "ग्राहक"
+
+#: .\templates\girvi\loan\loan_list.html:24
+msgid "Archive"
+msgstr "संग्रहीत करें"
+
+#: .\templates\girvi\loan\loan_list.html:28
+msgid "Outdated"
+msgstr "पुराना"
+
+msgid "LoanID"
+msgstr "ऋण आईडी"
+
+msgid "Date"
+msgstr "ऋण तिथि"
+
+msgid "Amount"
+msgstr "ऋण राशि"
+
+msgid "Total Interest"
+msgstr "कुल ब्याज"
+
+#: .\templates\girvi\loan\loan_list.html:67
+#, fuzzy
+#| msgid "Active"
+msgid "Active"
+msgstr "सक्रिय"
+
+msgid "Actions"
+msgstr "क्रियाएँ"
+
+msgid "Add Loan"
+msgstr "ऋण जोड़ें"
+
+msgid "Add New"
+msgstr "नया जोड़ें"
+
+msgid "Bulk Release"
+msgstr "थोक रिलीज़"
+
+#: .\templates\table_htmx.html:64
+#, fuzzy
+#| msgid "Previous"
+msgid "Previous"
+msgstr "पिछला"
+
+#: .\templates\table_htmx.html:94
+msgid "Next"
+msgstr "अगला"
+
+msgid "Summary"
+msgstr "सारांश"
+
+msgit "Item"
+msgstr "आइटम"
+
+msgid "Renew"
+msgstr "नवीकरण"
+
+msgid "Settings"
+msgstr "सेटिंग्स "
+
+msgid "Log out"
+msgstr "लॉग आउट"
+
+msgid "Organizations"
+msgstr "संगठन"
+
+msgid "Join"
+msgstr "शामिल हों"
+
+msgid "Search"
+msgstr "खोजें"
+
+msgid "invite"
+msgstr "आमंत्रित करें"
+
+msgid "Members"
+msgstr "सदस्य"
+
+msgid "Product"
+msgstr "उत्पाद"
+
+msgid "Products"
+msgstr "उत्पाद"
+
+msgid "Category"
+msgstr "श्रेणी"
+
+msgid "Categories"
+msgstr "श्रेणियाँ"
+
+msgid "SKU"
+msgstr "एसकेयू"
+
+msgid "Stock"
+msgstr "स्टॉक"
+
+msgid "Cost"
+msgstr "लागत"
+
+msgid "Price"
+msgstr "मूल्य"
+
+msgid "Weight"
+msgstr "वजन"
+
+msgid "Purchase"
+msgstr "खरीद"
+
+msgid "Purchases"
+msgstr "खरीद"
+
+msgid "Supplier"
+msgstr "आपूर्तिकर्ता"
+
+msgid "Suppliers"
+msgstr "आपूर्तिकर्ता"
+
+msgid "Payment"
+msgstr "भुगतान"
+
+msgid "Payments"
+msgstr "भुगतान"
+
+msgid "ProductVariant"
+msgstr "उत्पाद वेरिएंट"
+
+msgid "ProductVariants"
+msgstr "उत्पाद वेरिएंट"
+
+msgid "ProductType"
+msgstr "उत्पाद प्रकार"
+
+msgid "ProductTypes"
+msgstr "उत्पाद प्रकार"
+
+msgid "ProductAttribute"
+msgstr "उत्पाद विशेषता"
+
+msgid "ProductAttributes"
+msgstr "उत्पाद विशेषताएँ"
+
+msgid "ProductAttributeValue"
+msgstr "उत्पाद विशेषताएँ मूल्य"
+
+msgid "ProductAttributeValues"
+msgstr "उत्पाद विशेषताएँ मूल्य"
+
+msgid "Address"
+msgstr "पता"
+
+msgid "Addresses"
+msgstr "पते"
+
+msgid "Contact"
+msgstr "संपर्क"
+
+msgid "Contacts"
+msgstr "संपर्क"
+
+msgid "Customer"
+msgstr "ग्राहक"
+
+msgid "Customers"
+msgstr "ग्राहक"
+
+msgid "ID"
+msgstr "आईडी"
+
+msgid "Actions"
+msgstr "क्रियाएँ"
+
+msgid "Phone Number"
+msgstr "फ़ोन नंबर"
+
+msgid "Results"
+msgstr "परिणाम"
+
+msdig "Rates"
+msgstr "दरें"
+
+msgid "Billing"
+msgstr "बिलिंग"
+
+msgid "Invoices"
+msgstr "चालान"
+
+msgid "Notify"
+msgstr "सूचित करें"
+
+msgid "Payment methods"
+msgstr "भुगतान के तरीके"
+
+msgid "Plans"
+msgstr "योजनाएँ"
+
+msgid "Filter"
+msgstr "फ़िल्टर"
+
+msgid "Verify"
+msgstr "सत्यापित करें"
+
+msgid "Add"
+msgstr "जोड़ें"
+
+msgid "Edit"
+msgstr "संपादित करें"
+
+msgid "Delete"
+msgstr "हटाएँ"
+
+msgid "Save"
+msgstr "सहेजें"
+
+msgid "Cancel"
+msgstr "रद्द करें"
+
+msgid "Close"
+msgstr "बंद करें"
+
+msgid "Verify"
+msgstr "सत्यापित करें"
+
+msgid "Inactive"
+msgstr "निष्क्रिय"
+
+msgid "Amount"
+msgstr "राशि"
+
+msgid "Status"
+msgstr "स्थिति"
+
+msgid "Due"
+msgstr "देय"
+
+msgid "Paid"
+msgstr "भुगतान किया"
+
+msgid "Unpaid"
+msgstr "अवैतनिक"
+
+msgid "Overdue"
+msgstr "अतिदेय"
+
+msgid "Pending"
+msgstr "बकाया"
+
+msgid "Completed"
+msgstr "पूर्ण"
+
+msgid "Sunken"
+msgstr "डूबा हुआ"
+
+msgid "Item"
+msgstr "आइटम"
+
+msgid "Quantity"
+msgstr "मात्रा"
+
+msgid "Price"
+msgstr "मूल्य"
+
+msgid "Total"
+msgstr "कुल"
+
+msgid "Weight"
+msgstr "वजन"
+
+msgid "Months"
+msgstr "महीने"
+
+msgid "Value"
+msgstr "मूल्य"
+
+msgid "Currency"
+msgstr "मुद्रा"
+
+msgid "Rates"
+msgstr "दर"
+
+msgid "Next"
+msgstr "अगला"

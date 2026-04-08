@@ -1,0 +1,514 @@
+{% extends 'layouts/workspace.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Customers" %}{% endblock %}
+
+{% block workspace_content %}
+{% partialdef customer-filter-panel %}
+<div class="filter-card" id="customer-filter-panel">
+    <h6><i class="bi bi-funnel me-2"></i>{% trans "Filters" %}</h6>
+    <form
+        method="get"
+        hx-get="{% url 'contact_customer_list' %}"
+        hx-target="#customer-list-results"
+        hx-select="#customer-list-results"
+        hx-swap="outerHTML"
+        hx-push-url="true"
+        hx-trigger="change delay:200ms, input delay:300ms from:input[name='query']"
+        class="filter-form"
+    >
+        <div class="mb-3">
+            <label class="form-label small text-muted text-uppercase">{% trans "Search" %}</label>
+            <input
+                type="text"
+                name="query"
+                class="form-control form-control-sm"
+                value="{{ filter.form.query.value|default:'' }}"
+                placeholder="{% trans 'Name, phone, area, street...' %}"
+            >
+        </div>
+        {% for field in filter.form %}
+            {% if field.name != 'query' %}
+            <div class="mb-3">
+                <label class="form-label small text-muted text-uppercase">{{ field.label }}</label>
+                {{ field }}
+            </div>
+            {% endif %}
+        {% endfor %}
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">{% trans "Apply" %}</button>
+            <a href="{% url 'contact_customer_list' %}" class="btn btn-outline-secondary btn-sm">{% trans "Clear" %}</a>
+        </div>
+    </form>
+</div>
+{% endpartialdef customer-filter-panel %}
+
+{% partialdef customer-list-results %}
+<main class="col-md-9" id="customer-list-results">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="small text-muted">
+            {% blocktrans count counter=results_count %}
+            {{ counter }} customer found
+            {% plural %}
+            {{ counter }} customers found
+            {% endblocktrans %}
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Export options">
+            <a href="?{% for key, value in request.GET.items %}{% if key != '_export' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}_export=csv" class="btn btn-outline-secondary">CSV</a>
+            <a href="?{% for key, value in request.GET.items %}{% if key != '_export' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}_export=xlsx" class="btn btn-outline-secondary">XLSX</a>
+        </div>
+    </div>
+
+    {% if customers %}
+    <div class="cards-container">
+        {% for customer in customers %}
+        <div class="customer-card">
+            <div class="customer-card-header"
+                 hx-get="{% url 'contact_customer_detail' customer.id %}"
+                 hx-target="#content"
+                 hx-push-url="true"
+                 style="cursor: pointer;">
+                <div class="customer-avatar">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="customer-name">
+                    <h6>{{ customer.name }}</h6>
+                    <p>#{{ customer.id }}</p>
+                </div>
+            </div>
+
+            <div class="customer-card-body">
+                <div class="customer-info-item">
+                    <div class="customer-info-label">{% trans "Type" %}</div>
+                    <div class="customer-info-value">
+                        <span class="badge bg-info-subtle text-info-emphasis">{{ customer.get_customer_type_display }}</span>
+                    </div>
+                </div>
+
+                {% with default_address=customer.get_default_address %}
+                <div class="customer-info-item">
+                    <div class="customer-info-label">{% trans "Address" %}</div>
+                    <div class="customer-info-value">
+                        {% if default_address %}
+                            {{ default_address.city }}{% if default_address.area %}, {{ default_address.area }}{% endif %}
+                        {% else %}
+                            <span class="text-muted">{% trans "No address" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endwith %}
+
+                <div class="customer-info-item">
+                    <div class="customer-info-label">{% trans "Phone" %}</div>
+                    <div class="customer-info-value">
+                        {% if customer.get_default_contact %}
+                            {{ customer.get_default_contact }}
+                        {% else %}
+                            <span class="text-muted">{% trans "No phone" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="customer-info-item">
+                    {% if customer.active %}
+                    <span class="badge bg-success">{% trans "Active" %}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="customer-card-footer">
+                <button class="btn btn-sm btn-primary" hx-get="{% url 'contact_customer_update' customer.id %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal">
+                    {% trans "Edit" %}
+                </button>
+                <a class="btn btn-sm btn-success" href="{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}">
+                    {% trans "Loan" %}
+                </a>
+                <button class="btn btn-sm btn-danger" hx-delete="{% url 'contact_customer_delete' customer.id %}" hx-confirm="{% trans 'Are you sure?' %}" hx-target="closest .customer-card" hx-swap="outerHTML swap:0.5s">
+                    {% trans "Delete" %}
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-4" aria-label="Customer pagination">
+        <ul class="pagination justify-content-center mb-0">
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                {% if page_obj.has_previous %}
+                <a
+                    class="page-link"
+                    href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                    hx-get="{% url 'contact_customer_list' %}?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                    hx-target="#customer-list-results"
+                    hx-select="#customer-list-results"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                >{% trans "Previous" %}</a>
+                {% else %}
+                <span class="page-link">{% trans "Previous" %}</span>
+                {% endif %}
+            </li>
+            <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                {% if page_obj.has_next %}
+                <a
+                    class="page-link"
+                    href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                    hx-get="{% url 'contact_customer_list' %}?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                    hx-target="#customer-list-results"
+                    hx-select="#customer-list-results"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                >{% trans "Next" %}</a>
+                {% else %}
+                <span class="page-link">{% trans "Next" %}</span>
+                {% endif %}
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-inbox"></i>
+        </div>
+        <p class="empty-state-text">{% trans "No customers match the current filters." %}</p>
+        <button class="btn btn-primary" hx-get="{% url 'contact_customer_create' %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal">
+            {% trans "Add Customer" %}
+        </button>
+    </div>
+    {% endif %}
+</main>
+{% endpartialdef customer-list-results %}
+
+{% partialdef customer-content inline %}
+    <style>
+    :root {
+        --primary: #667eea;
+        --secondary: #764ba2;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 0.75rem;
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .page-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+    }
+
+    .toolbar {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .toolbar .btn {
+        white-space: nowrap;
+    }
+
+    /* Filter sidebar */
+    .filter-sidebar {
+        position: sticky;
+        top: 1rem;
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+    }
+
+    .filter-card {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .filter-card h6 {
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #666;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    /* Cards container */
+    .cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .customer-card {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 1px solid #f0f0f0;
+    }
+
+    .customer-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .customer-card-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+    }
+
+    .customer-card-header:hover {
+        opacity: 0.95;
+    }
+
+    .customer-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .customer-name {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .customer-name h6 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .customer-name p {
+        margin: 0.25rem 0 0 0;
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+
+    .customer-card-body {
+        padding: 1rem;
+    }
+
+    .customer-info-item {
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    .customer-info-label {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .customer-info-value {
+        color: #333;
+        margin-top: 0.25rem;
+    }
+
+    .customer-card-footer {
+        padding: 0.75rem 1rem;
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .customer-card-footer .btn {
+        flex: 1;
+        padding: 0.375rem 0.5rem;
+        font-size: 0.75rem;
+        min-width: 80px;
+    }
+
+    /* Action buttons */
+    .btn-group-sm .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    /* Loading indicator */
+    .loading-indicator {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 999;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        text-align: center;
+    }
+
+    .loading-indicator.hidden {
+        display: none;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .toolbar {
+            justify-content: flex-start;
+        }
+
+        .toolbar .d-none {
+            display: block !important;
+        }
+
+        .filter-sidebar {
+            position: relative;
+            top: auto;
+            max-height: none;
+        }
+
+        .table-container {
+            margin-top: 1rem;
+        }
+
+        .table-container td,
+        .table-container th {
+            padding: 0.75rem;
+            font-size: 0.875rem;
+        }
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-text {
+        color: #999;
+        margin-bottom: 1.5rem;
+    }
+</style>
+<div class="container-lg py-4">
+
+    {# PAGE HEADER #}
+    <div class="page-header d-flex justify-content-between align-items-start">
+        <div>
+            <h1><i class="bi bi-people-fill me-2"></i>{% trans "Customers" %}</h1>
+            <p>
+                {% blocktrans count counter=filter.qs|length %}
+                {{ counter }} customer
+                {% plural %}
+                {{ counter }} customers
+                {% endblocktrans %}
+            </p>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-primary" hx-get="{% url 'contact_customer_create' %}" hx-target="#modal-content"
+                data-bs-toggle="modal" data-bs-target="#modal" title="{% trans 'Add new customer' %}">
+                <i class="bi bi-plus-lg me-1"></i>
+                <span class="d-none d-sm-inline">{% trans "Add Customer" %}</span>
+            </button>
+
+            <button class="btn btn-info" hx-get="{% url 'contact_customer_merge' %}" hx-target="#modal-content"
+                data-bs-toggle="modal" data-bs-target="#modal"
+                title="{% trans 'Merge duplicate customers' %}">
+                <i class="bi bi-arrows-collapse me-1"></i>
+                <span class="d-none d-sm-inline">{% trans "Merge" %}</span>
+            </button>
+
+            <a class="btn btn-success" href="{% url 'import_data' %}" title="{% trans 'Import customers' %}">
+                <i class="bi bi-upload me-1"></i>
+                <span class="d-none d-sm-inline">{% trans "Import" %}</span>
+            </a>
+
+            <a class="btn btn-secondary" href="?_export=xlsx" title="{% trans 'Export to Excel' %}">
+                <i class="bi bi-download me-1"></i>
+                <span class="d-none d-sm-inline">{% trans "Export" %}</span>
+            </a>
+
+            {# Mobile filter toggle #}
+            <button class="btn btn-outline-secondary d-md-none" data-bs-toggle="offcanvas"
+                data-bs-target="#filterOffcanvas">
+                <i class="bi bi-funnel me-1"></i>{% trans "Filter" %}
+            </button>
+        </div>
+    </div>
+
+    {# MAIN CONTENT AREA #}
+    <div class="row g-4">
+
+        {# FILTERS SIDEBAR #}
+        <aside class="col-md-3 d-none d-md-block">
+            {% partial customer-filter-panel %}
+        </aside>
+
+        {% partial customer-list-results %}
+
+    </div>
+
+</div>
+
+{# MOBILE FILTER OFFCANVAS #}
+<div class="offcanvas offcanvas-start" tabindex="-1" id="filterOffcanvas">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">{% trans "Filters" %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="p-3">
+            {% partial customer-filter-panel %}
+        </div>
+    </div>
+</div>
+
+{# LOADING INDICATOR #}
+<div id="loadingIndicator" class="loading-indicator hidden">
+    <div class="spinner-border text-primary mb-3" role="status">
+        <span class="visually-hidden">{% trans "Loading..." %}</span>
+    </div>
+    <p>{% trans "Loading..." %}</p>
+</div>
+
+
+{% endpartialdef customer-content %}
+
+{% endblock %}

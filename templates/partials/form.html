@@ -1,0 +1,8 @@
+{%load crispy_forms_tags%}
+<div class="">
+    <form method="post" hx-post="{% url 'girvi:girvi_release_create' %}" hx-target="#forms-container" hx-swap="beforeend">
+        {% csrf_token %}
+        {{ g_form|crispy }}
+        <button type="submit">Add Release Form</button>
+      </form>
+</div>

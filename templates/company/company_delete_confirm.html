@@ -1,0 +1,51 @@
+{% extends 'layouts/base.html' %}
+{% load orgs_tags %}
+
+{% block title %}Delete {{ company.name }} - Rokkad{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Delete Workspace
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <strong>Warning!</strong> This action cannot be undone.
+                    </div>
+                    
+                    <p class="mb-3">
+                        Are you sure you want to delete the workspace <strong>{{ company.name }}</strong>?
+                    </p>
+                    
+                    <p class="text-muted small mb-4">
+                        When you delete a workspace:
+                    </p>
+                    <ul class="text-muted small">
+                        <li>All data within this workspace will be permanently deleted</li>
+                        <li>Team members will lose access to this workspace</li>
+                        <li>Any active subscriptions will be cancelled</li>
+                        <li>This action is <strong>permanent</strong> and cannot be reversed</li>
+                    </ul>
+                    
+                    <form method="POST" class="mt-4">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'workspace_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('This will permanently delete {{ company.name }}. Are you absolutely sure?')">
+                                <i class="bi bi-trash"></i> Delete Workspace
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

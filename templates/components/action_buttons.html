@@ -1,0 +1,53 @@
+{% comment %}
+Permission-based action buttons for objects.
+Shows/hides buttons based on user's permissions and role.
+
+Context:
+  - object: The model instance
+  - user_permissions: Set of permission codenames
+  - user_role: User's role in workspace
+{% endcomment %}
+
+<div class="action-buttons btn-group" role="group" aria-label="Object actions">
+  {% if object.get_absolute_url %}
+    <a href="{{ object.get_absolute_url }}" class="btn btn-sm btn-info">
+      <i class="bi bi-eye"></i> View
+    </a>
+  {% endif %}
+  
+  {% if 'data_edit' in user_permissions %}
+    {% if object.get_edit_url %}
+      <a href="{{ object.get_edit_url }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-pencil"></i> Edit
+      </a>
+    {% elif object.get_update_url %}
+      <a href="{{ object.get_update_url }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-pencil"></i> Edit
+      </a>
+    {% endif %}
+  {% else %}
+    <button class="btn btn-sm btn-disabled" disabled title="Requires Editor role">
+      <i class="bi bi-pencil"></i> Edit
+    </button>
+  {% endif %}
+  
+  {% if 'data_export' in user_permissions %}
+    {% if object.get_export_url %}
+      <a href="{{ object.get_export_url }}" class="btn btn-sm btn-secondary">
+        <i class="bi bi-download"></i> Export
+      </a>
+    {% endif %}
+  {% endif %}
+  
+  {% if 'data_delete' in user_permissions %}
+    {% if object.get_delete_url %}
+      <form method="post" action="{{ object.get_delete_url }}" class="d-inline"
+            onsubmit="return confirm('Are you sure? This action cannot be undone.')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-danger">
+          <i class="bi bi-trash"></i> Delete
+        </button>
+      </form>
+    {% endif %}
+  {% endif %}
+</div>

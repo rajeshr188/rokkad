@@ -1,0 +1,124 @@
+{% extends 'layouts/workspace.html' %}
+{% load crispy_forms_tags %}
+
+{% block workspace_content %}
+<div class="container col-lg-8 mt-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">{% if form.instance.pk %}Edit Template{% else %}Create Template{% endif %}</h1>
+    <a href="{% url 'girvi:girvi_template_list' %}" class="btn btn-outline-secondary">Back</a>
+  </div>
+
+  {% if not form.instance.pk %}
+  <div class="card mb-3 border-primary-subtle">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <h5 class="card-title mb-1">Need a starting point?</h5>
+        <p class="text-muted mb-0">Download the starter base templates, redesign them externally, export them as PDF, then upload them here.</p>
+      </div>
+      <a class="btn btn-outline-primary" href="{% url 'girvi:girvi_template_download_pack' %}">Download Starter Pack</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card mb-3 border-secondary-subtle">
+    <div class="card-body">
+      <h5 class="card-title mb-2">Paper Size Reference</h5>
+      <p class="text-muted mb-3">Page width and height are stored in centimeters. Use these standard values when setting template size.</p>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Paper</th>
+              <th>Orientation</th>
+              <th>Width</th>
+              <th>Height</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>A4</td>
+              <td>Portrait</td>
+              <td>21.0 cm</td>
+              <td>29.7 cm</td>
+            </tr>
+            <tr>
+              <td>A4</td>
+              <td>Landscape</td>
+              <td>29.7 cm</td>
+              <td>21.0 cm</td>
+            </tr>
+            <tr>
+              <td>A5</td>
+              <td>Portrait</td>
+              <td>14.8 cm</td>
+              <td>21.0 cm</td>
+            </tr>
+            <tr>
+              <td>A5</td>
+              <td>Landscape</td>
+              <td>21.0 cm</td>
+              <td>14.8 cm</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3 border-info-subtle">
+    <div class="card-body">
+      <h5 class="card-title mb-2">Recommended Redesign Workflow</h5>
+      <ol class="mb-3">
+        <li>Download the starter pack and redesign each page in Google Docs or Office.</li>
+        <li>Export each designed page as PDF without scaling.</li>
+        <li>Upload each exported PDF into the matching field below.</li>
+      </ol>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Upload Field</th>
+              <th>Expected Page</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Base Template</td>
+              <td>Original copy front page</td>
+            </tr>
+            <tr>
+              <td>Duplicate Template</td>
+              <td>Duplicate copy front page</td>
+            </tr>
+            <tr>
+              <td>Terms Template</td>
+              <td>Back page used when print option includes terms</td>
+            </tr>
+            <tr>
+              <td>Form D3 Template</td>
+              <td>Back page used when print option includes Form D3</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <div class="d-flex gap-2 mt-3">
+          <button type="submit" class="btn btn-primary">Save Template</button>
+          {% if form.instance.pk %}
+          <a href="{{ form.instance.get_absolute_url }}" class="btn btn-outline-secondary">Cancel</a>
+          {% else %}
+          <a href="{% url 'girvi:girvi_template_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

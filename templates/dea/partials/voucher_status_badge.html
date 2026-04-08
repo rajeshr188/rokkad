@@ -1,0 +1,22 @@
+<!-- Voucher Status Badge -->
+{% if voucher.status == 'DRAFT' %}
+    <span class="badge bg-secondary">
+        <i class="bi bi-pencil"></i> Draft
+    </span>
+{% elif voucher.status == 'POSTED' %}
+    <span class="badge bg-success">
+        <i class="bi bi-check-circle"></i> Posted
+    </span>
+{% elif voucher.status == 'REVERSED' %}
+    <span class="badge bg-danger">
+        <i class="bi bi-arrow-counterclockwise"></i> Reversed
+    </span>
+{% elif voucher.status == 'CORRECTED' %}
+    <span class="badge bg-warning text-dark">
+        <i class="bi bi-exclamation-circle"></i> Corrected
+    </span>
+{% else %}
+    <span class="badge bg-secondary">
+        {{ voucher.get_status_display }}
+    </span>
+{% endif %}

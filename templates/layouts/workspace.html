@@ -1,0 +1,129 @@
+{% extends 'layouts/base.html' %}
+{% load orgs_tags %}
+
+{% block navbar %}
+    {% include 'components/navigation/main_nav.html' %}
+{% endblock %}
+
+{% block main_class %}d-flex flex-column min-vh-100{% endblock %}
+
+{% block content %}
+<div class="container-fluid flex-grow-1">
+    <div class="row h-100">
+        <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
+        <nav class="col-lg-2 bg-light sidebar border-end p-3 
+                    {% if not show_sidebar %}d-none{% endif %} d-lg-block" 
+             id="workspaceSidebar">
+            {% block sidebar %}
+                {% include 'components/navigation/sidebar.html' %}
+            {% endblock %}
+        </nav>
+        
+        <!-- Mobile Sidebar Toggle Button -->
+        <div class="d-lg-none position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+            <button class="btn btn-primary rounded-circle" 
+                    type="button" 
+                    id="sidebarToggleBtn" 
+                    data-bs-toggle="offcanvas" 
+                    data-bs-target="#sidebarOffcanvas"
+                    aria-controls="sidebarOffcanvas"
+                    title="Toggle Navigation">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Offcanvas Sidebar -->
+        <div class="offcanvas offcanvas-start bg-light" 
+             tabindex="-1" 
+             id="sidebarOffcanvas"
+             aria-labelledby="sidebarOffcanvasLabel">
+            <div class="offcanvas-header border-bottom">
+                <h5 class="offcanvas-title" id="sidebarOffcanvasLabel">
+                    <i class="bi bi-list"></i> Navigation
+                </h5>
+                <button type="button" 
+                        class="btn-close" 
+                        data-bs-dismiss="offcanvas" 
+                        aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body p-0">
+                <div class="p-3">
+                    {% block mobile_sidebar %}
+                        {% include 'components/navigation/sidebar.html' %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Area -->
+        <main class="col-lg-10 px-3 px-md-4 py-3" id="content">
+            <!-- Breadcrumb Navigation -->
+            {% block breadcrumbs %}{% endblock %}
+            
+            <!-- Page Header -->
+            {% block page_header %}{% endblock %}
+            
+            <!-- Workspace Content -->
+            {% block workspace_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<style>
+/* Mobile responsive improvements */
+@media (max-width: 991.98px) {
+    .sidebar {
+        display: none !important;
+    }
+    
+    main {
+        width: 100% !important;
+    }
+}
+
+/* Smooth sidebar toggleoffcanvas transitions */
+.offcanvas {
+    --bs-offcanvas-width: 250px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.offcanvas-body {
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+/* Sidebar toggle button styling */
+#sidebarToggleBtn {
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+#sidebarToggleBtn:hover {
+    transform: scale(1.1);
+}
+
+/* Ensure content doesn't hide behind floating button */
+main {
+    padding-bottom: 80px;
+}
+
+@media (min-width: 992px) {
+    main {
+        padding-bottom: 1.5rem;
+    }
+}
+
+.sidebar {
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
+    position: sticky;
+    top: 70px;
+}
+</style>
+{% endblock %}

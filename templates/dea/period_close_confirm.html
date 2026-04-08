@@ -1,0 +1,89 @@
+{% extends 'layouts/workspace.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Close Period: {{ period.name }}{% endblock %}
+
+{% block workspace_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Close Accounting Period
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h6><strong>Warning:</strong> You are about to close the accounting period:</h6>
+                    <p class="mb-0">
+                        <strong>{{ period.name }}</strong><br>
+                        {{ period.start_date|date:"F j, Y" }} - {{ period.end_date|date:"F j, Y" }}
+                    </p>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-light h-100"><div class="card-body text-center"><h3 class="mb-0">{{ entries_count }}</h3><small class="text-muted">Journal Entries</small></div></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light h-100"><div class="card-body text-center"><h3 class="mb-0">{{ pre_close_summary.total_adjustments }}</h3><small class="text-muted">Pre-close Adjustments</small></div></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card {% if pre_close_summary.draft_vouchers_count == 0 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %} h-100"><div class="card-body text-center"><h3 class="mb-0">{{ pre_close_summary.draft_vouchers_count }}</h3><small class="text-muted">Draft Vouchers</small></div></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light h-100"><div class="card-body text-center d-grid"><a href="{% url 'dea_period_adjustments' period.pk %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-journal-check"></i> Manage Adjustments</a></div></div>
+                    </div>
+                </div>
+
+                {% if pre_close_summary.draft_vouchers_count %}
+                <div class="alert alert-danger">
+                    <strong>Draft vouchers must be resolved before closing.</strong>
+                    <ul class="mb-0 mt-2">
+                        {% for voucher in pre_close_summary.draft_vouchers %}
+                        <li>{{ voucher.voucher_no }} — {{ voucher.voucher_type }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <h6>Pre-close checklist</h6>
+                        <div class="list-group">
+                            {% for item in pre_close_summary.checklist %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ item.label }}</strong><br>
+                                    <small class="text-muted">{{ item.status_text }}</small>
+                                </div>
+                                <span class="badge {% if item.ready %}bg-success{% else %}bg-warning text-dark{% endif %} rounded-pill">{{ item.count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>What will happen on close</h6>
+                        <ul class="mb-3">
+                            <li>Closing statements will be generated for <strong>{{ ledgers_count }}</strong> ledgers and <strong>{{ accounts_count }}</strong> accounts.</li>
+                            <li>Income and expense balances will be transferred to <strong>Retained Earnings</strong>.</li>
+                            <li>Balance-sheet balances remain available for the next period opening logic.</li>
+                            <li>New postings to this period will be blocked once the status changes to <strong>CLOSED</strong>.</li>
+                        </ul>
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle"></i>
+                            You can still <strong>lock</strong> the period after closing for stricter control.
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    {% crispy form %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

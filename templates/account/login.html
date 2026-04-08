@@ -1,14 +1,33 @@
-{% extends '_base.html' %}
+{% extends 'layouts/base.html' %}
 {% load crispy_forms_tags %}
-
+{% load socialaccount%}
 {% block title %}Log in{% endblock %}
 
 {% block content %}
-<h2>Log in</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form|crispy }}
-  <button class="btn btn-success" type="submit">Log in</button>
-</form>
-<a href="{% url 'account_reset_password' %}">Forgot Password?</a>
+<div class="container">
+  <div class="row justify-content-center align-items-center" style="min-height: 100vh;">
+      <div class="col-md-6 col-lg-4">
+          <div class="card shadow-lg">
+              <div class="card-body">
+                  <h3 class="text-center mb-4">Welcome Back!</h3>
+                  <form method="post" class="mb-3">
+                      {% csrf_token %}
+                      {{ form|crispy }}
+                      <button class="btn btn-success btn-lg btn-block" type="submit">
+                          <i class="bi bi-box-arrow-in-right mr-2"></i>Log in
+                      </button>
+                  </form>
+                  <hr>
+                  <a class="btn btn-primary btn-lg btn-block" href="{% provider_login_url 'google' %}">
+                      <i class="bi bi-google mr-2"></i>Continue with Google
+                  </a>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+<div id="g_id_onload"
+     data-client_id="{{ GOOGLE_CLIENT_ID }}"
+     data-login_uri="{% url 'google_login_by_token' %}"></div>
+
 {% endblock content %}

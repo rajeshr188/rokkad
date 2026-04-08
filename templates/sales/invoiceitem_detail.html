@@ -1,0 +1,26 @@
+{%block content%}
+    <tr hx-get="{% url 'sales_invoiceitem_update' object.id %}" hx-target="this" hx-swap="outerHTML">
+        <td>{{object.is_return}}</td>
+        <td>{{object.product}}</td>
+        <td>{{object.quantity}}</td>
+        <td>{{object.weight}}</td>
+        <td>{{object.less_stone}}</td>
+        <td>{{object.touch}}</td>
+        <td>{{object.wastage}}</td>
+        <td>{{object.makingcharge}}</td>
+        <td>{{object.net_wt}}</td>
+        <td>{{object.total}}</td>
+        <td>
+            <button class="btn btn-info" 
+                hx-get="{% url 'sales_invoiceitem_update' object.pk%}" 
+                hx-swap="outerHTML">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-danger" 
+                hx-post="{% url 'sales_invoiceitem_delete' object.pk%}" 
+                hx-confirm="sure to delete?">
+                <i class="fa fa-trash"></i>
+            </button>
+        </td>
+    </tr>
+{%endblock%}

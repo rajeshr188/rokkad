@@ -1,0 +1,35 @@
+import django_filters
+
+from apps.tenant_apps.contact.forms import CustomerWidget
+from apps.tenant_apps.contact.models import Customer
+
+from .models import Payment, Purchase
+
+
+class PurchaseFilter(django_filters.FilterSet):
+    supplier = django_filters.ModelChoiceFilter(
+        queryset=Customer.objects.all(),
+        # widget=Select2Widget creates N=1 problem with customer contacts
+        widget=CustomerWidget,
+    )
+    created = django_filters.DateTimeFromToRangeFilter()
+    # posted = django_filters.BooleanFilter(field_name="posted", lookup_expr="isnull")
+
+    class Meta:
+        model = Purchase
+        fields = [
+            "id",
+            "created",
+            "is_gst",
+            "status",
+        ]
+
+
+class PaymentFilter(django_filters.FilterSet):
+    supplier = django_filters.ModelChoiceFilter(
+        queryset=Customer.objects.all(), widget=CustomerWidget
+    )
+
+    class Meta:
+        model = Payment
+        fields = ["id", "created", "total_currency", "status"]

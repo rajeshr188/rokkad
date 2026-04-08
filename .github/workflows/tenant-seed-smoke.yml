@@ -1,0 +1,208 @@
+name: Tenant Seed Smoke
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dea-kiss
+
+env:
+  DJANGO_SETTINGS_MODULE: django_project.settings.dev
+  DEBUG: "True"
+  SECRET_KEY: ci-secret-key
+  DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+  DB_NAME: dea-kiss-v2
+  DB_USER: postgres
+  DB_PASSWORD: kanchan
+  DB_HOST: 127.0.0.1
+  DB_PORT: "5432"
+  REDIS_URL: redis://127.0.0.1:6379
+  EMAIL_HOST: localhost
+  EMAIL_PORT: "1025"
+  EMAIL_USE_TLS: "False"
+  EMAIL_HOST_USER: ci@example.com
+  EMAIL_HOST_PASSWORD: not-used
+  DEFAULT_FROM_EMAIL: ci@example.com
+  ADMINS: CI Admin <ci@example.com>
+  GOOGLE_CLIENT_ID: ""
+  CLOUDFLARE_R2_BUCKET: ci-bucket
+  CLOUDFLARE_R2_ACCESS_KEY: ci-access-key
+  CLOUDFLARE_R2_SECRET_KEY: ci-secret-key
+  CLOUDFLARE_R2_BUCKET_ENDPOINT: http://localhost:9000
+
+jobs:
+  tenant-seed-smoke-pr-fast:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: dea-kiss-v2
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: kanchan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dea-kiss-v2"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run shared migrations
+        run: |
+          python manage.py migrate_schemas --shared --noinput
+
+      - name: Create CI target tenant in public schema
+        run: |
+          python manage.py shell <<'PY'
+          from django.contrib.auth import get_user_model
+          from django_tenants.utils import get_public_schema_name, schema_context
+          from apps.orgs.models import Company, Domain
+
+          User = get_user_model()
+          with schema_context(get_public_schema_name()):
+              user, _ = User.objects.get_or_create(
+                  username="ci_owner",
+                  defaults={
+                      "email": "ci-owner@example.com",
+                      "is_staff": True,
+                      "is_superuser": True,
+                  },
+              )
+              company, created = Company.objects.get_or_create(
+                  schema_name="ci_target",
+                  defaults={
+                      "name": "CI Target",
+                      "owner": user,
+                      "creator": user,
+                  },
+              )
+              if not created:
+                  company.name = "CI Target"
+                  company.owner = user
+                  company.creator = user
+                  company.save()
+
+              Domain.objects.update_or_create(
+                  domain="ci_target.localhost",
+                  defaults={"tenant": company, "is_primary": True},
+              )
+          PY
+
+      - name: Run tenant migration and seed smoke
+        run: |
+          python manage.py migrate_schemas --schema ci_target --noinput
+          python manage.py seed_tenant_defaults --schema ci_target
+
+  tenant-seed-smoke-full:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: dea-kiss-v2
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: kanchan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dea-kiss-v2"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run shared migrations
+        run: |
+          python manage.py migrate_schemas --shared --noinput
+
+      - name: Create CI tenants in public schema
+        run: |
+          python manage.py shell <<'PY'
+          from django.contrib.auth import get_user_model
+          from django_tenants.utils import get_public_schema_name, schema_context
+          from apps.orgs.models import Company, Domain
+
+          User = get_user_model()
+          with schema_context(get_public_schema_name()):
+              user, _ = User.objects.get_or_create(
+                  username="ci_owner",
+                  defaults={
+                      "email": "ci-owner@example.com",
+                      "is_staff": True,
+                      "is_superuser": True,
+                  },
+              )
+
+              for schema_name, company_name in [
+                  ("ci_baseline", "CI Baseline"),
+                  ("ci_target", "CI Target"),
+              ]:
+                  company, created = Company.objects.get_or_create(
+                      schema_name=schema_name,
+                      defaults={
+                          "name": company_name,
+                          "owner": user,
+                          "creator": user,
+                      },
+                  )
+                  if not created:
+                      company.name = company_name
+                      company.owner = user
+                      company.creator = user
+                      company.save()
+
+                  Domain.objects.update_or_create(
+                      domain=f"{schema_name}.localhost",
+                      defaults={"tenant": company, "is_primary": True},
+                  )
+          PY
+
+      - name: Run tenant migrations
+        run: |
+          python manage.py migrate_schemas --schema ci_baseline --noinput
+          python manage.py migrate_schemas --schema ci_target --noinput
+
+      - name: Run smoke seeding and parity
+        run: |
+          python manage.py check
+          python manage.py seed_public_defaults
+          python manage.py seed_tenant_defaults --schema ci_baseline
+          python manage.py seed_tenant_defaults --schema ci_target
+          python manage.py check_tenant_seed_parity --baseline-schema ci_baseline --schema ci_target --fail-on-drift

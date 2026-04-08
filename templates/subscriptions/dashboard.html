@@ -1,0 +1,354 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Billing Dashboard - Rokkad{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-trial {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .status-past-due {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .stat-box {
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .invoice-table {
+        font-size: 0.95rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .action-buttons .btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+    
+    .trial-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .trial-days {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    
+    .feature-limits {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .feature-limit {
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .feature-limit-label {
+        color: #666;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .feature-limit-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #333;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-bar {
+        height: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-2">Billing Dashboard</h1>
+            <p class="text-muted">Manage your subscription and billing information</p>
+        </div>
+    </div>
+    
+    {% if subscription %}
+        <!-- Trial Banner (if applicable) -->
+        {% if is_trial %}
+        <div class="trial-banner">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h3 class="mb-2">Free Trial Active</h3>
+                    <p class="mb-0">You have <strong>{{ days_until_renewal }} days</strong> remaining in your trial period.</p>
+                </div>
+                <div class="col-md-6 text-right">
+                    <div class="trial-days">{{ days_until_renewal }}</div>
+                    <small>days left</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Current Plan Section -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h4 class="mb-3">Current Plan</h4>
+                    
+                    <h2 class="mb-2">{{ plan.name }}</h2>
+                    <p class="text-muted mb-3">{{ plan.get_tier_display }}</p>
+                    
+                    <div class="mb-3">
+                        <span class="status-badge status-{{ subscription.status }}">
+                            {{ subscription.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Monthly Price</small>
+                        <strong class="h5">₹{{ plan.price }}</strong>
+                    </div>
+                    
+                    {% if days_until_renewal >= 0 %}
+                    <p class="text-muted small">
+                        Next billing date: <strong>{{ subscription.next_billing_date|date:"M d, Y" }}</strong>
+                    </p>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'subscriptions:plan-list' %}" class="btn btn-outline-primary btn-sm">
+                            Change Plan
+                        </a>
+                        {% if subscription.status == 'active' %}
+                        <button class="btn btn-outline-danger btn-sm" onclick="confirmCancel()">
+                            Cancel Subscription
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Usage Statistics -->
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h4 class="mb-3">Usage & Limits</h4>
+                    
+                    <div class="feature-limits">
+                        <div class="feature-limit">
+                            <div class="feature-limit-label">Users</div>
+                            <div class="feature-limit-value">
+                                {{ subscription.current_user_count }}/{{ plan.max_users }}
+                            </div>
+                            <div class="progress mt-2">
+                                <div class="progress-bar" 
+                                     style="width: {{ usage_percentage_users|default:0 }}%">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-limit">
+                            <div class="feature-limit-label">Warehouses</div>
+                            <div class="feature-limit-value">
+                                {{ subscription.current_warehouse_count|default:0 }}/{{ plan.max_warehouses }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if user_overage > 0 %}
+                    <div class="alert alert-warning mt-3">
+                        <strong>Usage Overage:</strong> You have {{ user_overage }} extra user(s)
+                        <br><span class="small">Current overage charge: ₹{{ overage_charge }}/month</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Plan Features -->
+        <div class="dashboard-card">
+            <h4 class="mb-3">Included Features</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            {% if plan.has_advanced_reporting %}
+                                <i class="fas fa-check text-success"></i> Advanced Reporting
+                            {% else %}
+                                <i class="fas fa-times text-muted"></i> <span class="text-muted">Advanced Reporting</span>
+                            {% endif %}
+                        </li>
+                        <li class="mb-2">
+                            {% if plan.has_multi_warehouse %}
+                                <i class="fas fa-check text-success"></i> Multi-Warehouse Support
+                            {% else %}
+                                <i class="fas fa-times text-muted"></i> <span class="text-muted">Multi-Warehouse Support</span>
+                            {% endif %}
+                        </li>
+                        <li class="mb-2">
+                            {% if plan.has_approvals_workflow %}
+                                <i class="fas fa-check text-success"></i> Approval Workflow
+                            {% else %}
+                                <i class="fas fa-times text-muted"></i> <span class="text-muted">Approval Workflow</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            {% if plan.has_api_access %}
+                                <i class="fas fa-check text-success"></i> API Access
+                            {% else %}
+                                <i class="fas fa-times text-muted"></i> <span class="text-muted">API Access</span>
+                            {% endif %}
+                        </li>
+                        <li class="mb-2">
+                            {% if plan.has_custom_fields %}
+                                <i class="fas fa-check text-success"></i> Custom Fields
+                            {% else %}
+                                <i class="fas fa-times text-muted"></i> <span class="text-muted">Custom Fields</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Invoices -->
+        <div class="dashboard-card">
+            <h4 class="mb-3">Recent Invoices</h4>
+            {% if recent_invoices %}
+                <div class="table-responsive">
+                    <table class="table table-hover invoice-table mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th style="width: 150px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in recent_invoices %}
+                            <tr>
+                                <td><strong>{{ invoice.invoice_number }}</strong></td>
+                                <td>{{ invoice.invoice_date|date:"M d, Y" }}</td>
+                                <td>₹{{ invoice.total_amount }}</td>
+                                <td>
+                                    <span class="badge badge-{% if invoice.is_paid %}success{% else %}warning{% endif %}">
+                                        {% if invoice.is_paid %}Paid{% else %}Pending{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'subscriptions:invoice-detail' pk=invoice.id %}" 
+                                           class="btn btn-outline-primary">
+                                            View
+                                        </a>
+                                        <a href="{% url 'subscriptions:invoice-pdf' pk=invoice.id %}" 
+                                           class="btn btn-outline-secondary">
+                                            PDF
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center py-4">No invoices yet</p>
+            {% endif %}
+        </div>
+        
+        <!-- Billing Contact -->
+        <div class="dashboard-card">
+            <h4 class="mb-3">Billing Contact</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Email:</strong> {{ request.user.email }}</p>
+                    <p><strong>Name:</strong> {{ request.user.get_full_name }}</p>
+                </div>
+                <div class="col-md-6">
+                    <a href="#" class="btn btn-outline-secondary btn-sm">Update Billing Details</a>
+                </div>
+            </div>
+        </div>
+    
+    {% else %}
+        <!-- No Subscription -->
+        <div class="alert alert-info">
+            <h4 class="alert-heading">No Active Subscription</h4>
+            <p>You don't have an active subscription yet. Get started by choosing a plan.</p>
+            <hr>
+            <a href="{% url 'subscriptions:plan-list' %}" class="btn btn-primary">
+                View Plans
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function confirmCancel() {
+    if (confirm('Are you sure you want to cancel your subscription? This action cannot be undone.')) {
+        // Implement cancellation logic
+        alert('Cancellation feature coming soon');
+    }
+}
+</script>
+{% endblock %}

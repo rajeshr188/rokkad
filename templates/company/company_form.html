@@ -1,12 +1,100 @@
-{% extends 'account/profile.html' %}
+{% extends 'layouts/base.html' %}
 {% load crispy_forms_tags %}
+{% load orgs_tags %}
 
-{% block profile-content %}
-  <h1>Create a New Company</h1>
+{% block title %}{% if company %}Edit {{ company.name }}{% else %}Create Workspace{% endif %} - Rokkad{% endblock %}
 
-  <form method="POST">
-    {% csrf_token %}
-    {{ form|crispy }}
-    <button type="submit">Submit</button>
-  </form>
+{% block content %}
+<div class="container py-4">
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'workspace_list' %}">Workspaces</a></li>
+            {% if company %}
+            <li class="breadcrumb-item"><a href="{% url 'workspace_detail' company.id %}">{{ company.name }}</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+            {% else %}
+            <li class="breadcrumb-item active">Create Workspace</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        {% if company %}
+                        <i class="bi bi-pencil-square"></i> Update Workspace
+                        {% else %}
+                        <i class="bi bi-plus-circle"></i> Create New Workspace
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if not company %}
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Welcome!</strong> Create your first workspace to start managing your business. 
+                        You'll be assigned as the <strong>Owner</strong> with full administrative privileges.
+                    </div>
+                    {% endif %}
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            {{ form|crispy }}
+                        </div>
+
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-exclamation-triangle"></i> Please correct the following errors:
+                            </h6>
+                            <ul class="mb-0">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                    <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url 'workspace_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button class="btn btn-primary btn-lg" type="submit">
+                                {% if company %}
+                                <i class="bi bi-check-circle"></i> Save Changes
+                                {% else %}
+                                <i class="bi bi-plus-circle"></i> Create Workspace
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+
+                    {% if not company %}
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6 class="mb-2">
+                            <i class="bi bi-lightbulb text-warning"></i> What happens next?
+                        </h6>
+                        <ul class="small mb-0">
+                            <li>You'll be assigned as the <strong>Owner</strong> of this workspace</li>
+                            <li>You can invite team members with different roles (Admin, Member)</li>
+                            <li>Set up your business preferences and configurations</li>
+                            <li>Start managing your data within this workspace</li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

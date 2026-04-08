@@ -1,0 +1,88 @@
+<!-- Card Component -->
+<!-- Usage: include 'components/common/card.html' with title='Card Title' ... -->
+
+<div class="card {% if class %}{{ class }}{% endif %}">
+    {% if title or header %}
+    <div class="card-header {% if header_class %}{{ header_class }}{% endif %}">
+        {% if title %}
+        <h5 class="card-title mb-0">{{ title }}</h5>
+        {% else %}
+        {{ header }}
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="card-body">
+        {{ content }}
+    </div>
+    
+    {% if footer %}
+    <div class="card-footer">
+        {{ footer }}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.card-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* Card variants */
+.card--bordered {
+    border: 2px solid #dee2e6;
+}
+
+.card--elevated {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card--nohover:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Dark card */
+.card-dark {
+    background-color: #2d2d2d;
+    color: #fff;
+    border-color: #404040;
+}
+
+.card-dark .card-header {
+    background-color: #1a1a1a;
+}
+
+.card-dark .card-footer {
+    background-color: #1a1a1a;
+}
+</style>

@@ -1,0 +1,442 @@
+{% extends 'layouts/workspace.html' %}
+{% load static %}
+{% block workspace_content %}
+<div class="container-fluid mt-3 mb-3" id="content">
+  <!-- Action Buttons -->
+  <div class="row mb-3">
+    <div class="col-md-12">
+      <div class="btn-group" role="group">
+        <a class="btn btn-default" href="{% url 'girvi:girvi_license_list' %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
+          </svg> Back
+        </a>
+        <a class="btn btn-primary" href="{{ object.get_update_url }}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+          </svg> Edit
+        </a>
+        <a class="btn btn-warning" href="{% url 'girvi:girvi_license_renewal' object.id %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+          </svg> Renew
+        </a>
+        <a class="btn btn-success" href="{% url 'girvi:girvi_license_document_upload' object.id %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload" viewBox="0 0 16 16">
+            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
+          </svg> Upload Doc
+        </a>
+        <a class="btn btn-danger" href="{% url 'girvi:girvi_license_delete' object.id %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+            <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/>
+          </svg> Delete
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Alert -->
+  {% if is_expired %}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>License Expired!</strong> This license expired on {{ object.date_expires|date:"M d, Y" }}.
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% elif is_expiring_soon %}
+  <div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <strong>License Expiring Soon!</strong> This license will expire in {{ days_until_expiry }} days on {{ object.date_expires|date:"M d, Y" }}.
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endif %}
+
+  <!-- Main Content Tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-controls="details" aria-selected="true">
+        Details
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab" aria-controls="documents" aria-selected="false">
+        Documents <span class="badge bg-secondary">{{ document_count }}</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="linked-tab" data-bs-toggle="tab" data-bs-target="#linked" type="button" role="tab" aria-controls="linked" aria-selected="false">
+        Linked Licenses
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="series-tab" data-bs-toggle="tab" data-bs-target="#series" type="button" role="tab" aria-controls="series" aria-selected="false">
+        Loan Series
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- Details Tab -->
+    <div class="tab-pane fade show active" id="details" role="tabpanel" aria-labelledby="details-tab">
+      <div class="row mt-3">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-light">
+              <h6 class="mb-0">License Information</h6>
+            </div>
+            <div class="card-body">
+              <table class="table table-sm">
+                <tr>
+                  <th>License Name:</th>
+                  <td><strong>{{ object.name }}</strong></td>
+                </tr>
+                <tr>
+                  <th>License Number:</th>
+                  <td><code>{{ object.license_number }}</code></td>
+                </tr>
+                <tr>
+                  <th>Type:</th>
+                  <td><span class="badge bg-info">{{ object.get_type_display }}</span></td>
+                </tr>
+                <tr>
+                  <th>Status:</th>
+                  <td><span class="badge bg-{{ status_color }}">{{ object.get_status_display }}</span></td>
+                </tr>
+                <tr>
+                  <th>Issued Date:</th>
+                  <td>{{ object.date_issued|date:"M d, Y" }}</td>
+                </tr>
+                <tr>
+                  <th>Expiry Date:</th>
+                  <td>
+                    {% if object.date_expires %}
+                      {{ object.date_expires|date:"M d, Y" }}
+                      {% if is_expired %}
+                        <span class="badge bg-danger">Expired</span>
+                      {% elif is_expiring_soon %}
+                        <span class="badge bg-warning">{{ days_until_expiry }} days left</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">No expiry date</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Issuing Authority:</th>
+                  <td>{{ object.issuing_authority|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                  <th>Auto Renewable:</th>
+                  <td>{% if object.is_renewable %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-light">
+              <h6 class="mb-0">Business Information</h6>
+            </div>
+            <div class="card-body">
+              <table class="table table-sm">
+                <tr>
+                  <th>Business Name:</th>
+                  <td><strong>{{ object.shopname }}</strong></td>
+                </tr>
+                <tr>
+                  <th>Business Type:</th>
+                  <td><span class="badge bg-primary">{{ object.get_business_type_display }}</span></td>
+                </tr>
+                <tr>
+                  <th>Proprietor:</th>
+                  <td>{{ object.propreitor }}</td>
+                </tr>
+                <tr>
+                  <th>Address:</th>
+                  <td>{{ object.address }}</td>
+                </tr>
+                {% if object.city %}
+                <tr>
+                  <th>City:</th>
+                  <td>{{ object.city }}</td>
+                </tr>
+                {% endif %}
+                {% if object.state %}
+                <tr>
+                  <th>State:</th>
+                  <td>{{ object.state }}</td>
+                </tr>
+                {% endif %}
+                {% if object.postal_code %}
+                <tr>
+                  <th>Postal Code:</th>
+                  <td>{{ object.postal_code }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <th>Phone:</th>
+                  <td>{{ object.phonenumber }}</td>
+                </tr>
+                {% if object.email %}
+                <tr>
+                  <th>Email:</th>
+                  <td><a href="mailto:{{ object.email }}">{{ object.email }}</a></td>
+                </tr>
+                {% endif %}
+              </table>
+            </div>
+          </div>
+
+          {% if object.notes %}
+          <div class="card mt-3">
+            <div class="card-header bg-light">
+              <h6 class="mb-0">Notes</h6>
+            </div>
+            <div class="card-body">
+              <small>{{ object.notes|linebreaks }}</small>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Documents Tab -->
+    <div class="tab-pane fade" id="documents" role="tabpanel" aria-labelledby="documents-tab">
+      <div class="mt-3">
+        {% if documents %}
+        <div class="row">
+          {% for doc in documents %}
+          <div class="col-md-6 mb-3">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">{{ doc.get_document_type_display }}</h6>
+                <a href="{% url 'girvi:girvi_license_document_delete' doc.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this document?');">
+                  Delete
+                </a>
+              </div>
+              <div class="card-body">
+                <h6>{{ doc.title }}</h6>
+                <p class="text-muted small">{{ doc.description|truncatewords:20 }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                  <small>Uploaded: {{ doc.upload_date|date:"M d, Y" }}</small>
+                  {% if doc.expiry_date %}
+                    {% if doc.is_document_expired %}
+                      <span class="badge bg-danger">Expired</span>
+                    {% else %}
+                      <span class="badge bg-info">Expires: {{ doc.expiry_date|date:"M d, Y" }}</span>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </div>
+              <div class="card-footer">
+                <a href="{{ doc.get_document_url }}" class="btn btn-sm btn-info" target="_blank">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                  </svg> Download
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info mt-2">
+          No documents uploaded. <a href="{% url 'girvi:girvi_license_document_upload' object.id %}">Upload a document.</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Linked Licenses Tab -->
+    <div class="tab-pane fade" id="linked" role="tabpanel" aria-labelledby="linked-tab">
+      <div class="mt-3">
+        {% if linked_licenses %}
+        <div class="list-group">
+          {% for lic in linked_licenses %}
+          <a href="{{ lic.get_absolute_url }}" class="list-group-item list-group-item-action">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-1">{{ lic.name }}</h6>
+                <small class="text-muted">{{ lic.get_type_display }} - {{ lic.shopname }}</small>
+              </div>
+              <span class="badge bg-{{ lic.get_status_display_color }}">{{ lic.get_status_display }}</span>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info mt-2">
+          No linked licenses found.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Series Tab -->
+    <div class="tab-pane fade" id="series" role="tabpanel" aria-labelledby="series-tab">
+      <div class="mt-3">
+        {% if object.series_set.all %}
+        <ul class="nav nav-tabs" id="seriesTab" role="tablist">
+          {% for item in object.series_set.all %}
+          <li class="nav-item" role="presentation">
+            <button class="nav-link {% if forloop.first %}active{% endif %}" id="tab-{{ item.id }}" data-bs-toggle="tab" data-bs-target="#content-{{ item.id }}" type="button" role="tab" aria-controls="content-{{ item.id }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+              {{ item }}
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+        
+        <div class="tab-content" id="seriesTabContent">
+          {% for item in object.series_set.all %}
+          <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="content-{{ item.id }}" role="tabpanel" aria-labelledby="tab-{{ item.id }}">
+            <div class="mt-3">
+              <ul class="list-group">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Loans in {{ item }}
+                  {% if item.is_active %}
+                  <span class="badge bg-primary rounded-pill">{{ item.loan_count }}</span>
+                  {% else %}
+                  <a class="btn btn-primary btn-sm" href="{% url 'girvi:girvi_activate_series' item.id %}">Activate</a>
+                  {% endif %}
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Loan Amount
+                  <span class="badge bg-primary rounded-pill">{{ item.total_loan_amount.t }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Itemwise Loan Amount
+                  <span class="badge bg-primary rounded-pill">{{ item.get_itemwise_loanamount }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Itemwise Weight
+                  <span class="badge bg-primary rounded-pill">{{ item.get_itemwise_pure_weight }} gms</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Period
+                  <span class="badge bg-primary rounded-pill">{{ item.get_earliest_date|date }} - {{ item.get_latest_date|date }}</span>
+                </li>
+                <li class="list-group-item">
+                  <a class="btn btn-primary btn-sm" href="{% url 'girvi:girvi_series_detail' item.id %}">Detail</a>
+                  <a class="btn btn-primary btn-sm" href="{% url 'girvi:girvi_series_update' item.id %}">Update</a>
+                  <a class="btn btn-danger btn-sm" href="" 
+                    hx-confirm="Are you sure to delete this series" 
+                    hx-delete="{% url 'girvi:girvi_series_delete' item.id %}"
+                    hx-target="#content">Delete</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info mt-2">
+          No series found. <a href="{% url 'girvi:girvi_series_create' %}">Create one.</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container col-auto mt-3 mb-3" id="content">
+  <p class="py-2">
+    <a class="btn btn-default" href="{% url 'girvi:girvi_license_list' %}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
+    </svg> License</a>
+    <a class="btn btn-primary" href="{{object.get_update_url}}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+      <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+      <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+    </svg> License</a>
+    <a class="btn btn-danger" href="{% url 'girvi:girvi_license_delete' object.id%}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+      <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/>
+    </svg> License</a>
+    <a class="btn btn-success" href="{% url 'girvi:girvi_series_create' %}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16">
+      <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
+      <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+    </svg> series</a>
+  </p>
+  <div id="form"></div>
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          License Details
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">{{ object.name }}</h5>
+          <p class="card-text"><strong>ID:</strong> {{ object.id }}</p>
+          <p class="card-text"><strong>Created:</strong> {{ object.created }}</p>
+          <p class="card-text"><strong>Last Updated:</strong> {{ object.updated }}</p>
+          <p class="card-text"><strong>Type:</strong> {{ object.type }}</p>
+          <p class="card-text"><strong>Shop Name:</strong> {{ object.shopname }}</p>
+          <p class="card-text"><strong>Address:</strong> {{ object.address }}</p>
+          <p class="card-text"><strong>Phone Number:</strong> {{ object.phonenumber }}</p>
+          <p class="card-text"><strong>Proprietor:</strong> {{ object.propreitor }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <!-- Nav tabs -->
+      <ul class="nav nav-tabs" id="seriesTab" role="tablist">
+        {% for item in object.series_set.all %}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link {% if forloop.first %}active{% endif %}" id="tab-{{ item.id }}" data-bs-toggle="tab" data-bs-target="#content-{{ item.id }}" type="button" role="tab" aria-controls="content-{{ item.id }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+            {{ item }}
+          </button>
+        </li>
+        {% endfor %}
+      </ul>
+    
+      <!-- Tab panes -->
+      <div class="tab-content" id="seriesTabContent">
+        {% for item in object.series_set.all %}
+        <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="content-{{ item.id }}" role="tabpanel" aria-labelledby="tab-{{ item.id }}">
+          <div class="card">
+            <div class="card-body">
+              <ul class="list-group">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Loans in {{ item }}
+                  {% if item.is_active %}
+                  <span class="badge bg-primary rounded-pill">{{ item.loan_count }}</span>
+                  {% else %}
+                  <a class="btn btn-primary" href="{% url 'girvi:girvi_activate_series' item.id %}">Activate</a>
+                  {% endif %}
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Loan Amount
+                  <span class="badge bg-primary rounded-pill">{{ item.total_loan_amount.t }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Itemwise Loan Amount
+                  <span class="badge bg-primary rounded-pill">{{ item.get_itemwise_loanamount }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Itemwise Weight
+                  <span class="badge bg-primary rounded-pill">{{ item.get_itemwise_pure_weight }} gms</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Period
+                  <span class="badge bg-primary rounded-pill">{{ item.get_earliest_date|date }} - {{ item.get_latest_date|date }}</span>
+                </li>
+                <li class="list-group-item">
+                  <a class="btn btn-primary" href="{% url 'girvi:girvi_series_detail' item.id %}">Detail</a>
+                  <a class="btn btn-primary" href="{% url 'girvi:girvi_series_update' item.id %}">Update</a>
+                  <a class="btn btn-danger" href="" 
+                    hx-confirm="Are you sure to delete this series" 
+                    hx-delete="{% url 'girvi:girvi_series_delete' item.id %}"
+                    hx-target="#content">Delete</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

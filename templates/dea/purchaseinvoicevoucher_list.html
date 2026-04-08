@@ -1,0 +1,193 @@
+{% extends 'layouts/workspace.html' %}
+{% load static %}
+{% load render_table from django_tables2 %}
+
+{% block title %}Purchase Invoices - DEA{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">Purchase Invoices</h1>
+            <p class="text-muted">Manage vendor invoices and track payments</p>
+        </div>
+        <a href="{% url 'dea_purchase_invoice_create' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus"></i> New Purchase Invoice
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Invoices</h6>
+                    <h3 class="mb-0">{{ total_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-success">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Amount</h6>
+                    <h3 class="mb-0">₹{{ total_amount|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-warning">
+                <div class="card-body">
+                    <h6 class="text-muted">Pending</h6>
+                    <h3 class="mb-0">₹{{ pending_amount|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-info">
+                <div class="card-body">
+                    <h6 class="text-muted">Paid</h6>
+                    <h3 class="mb-0">₹{{ paid_amount|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Purchase Type</label>
+                    <select name="purchase_type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="GOODS" {% if request.GET.purchase_type == 'GOODS' %}selected{% endif %}>Goods</option>
+                        <option value="SERVICES" {% if request.GET.purchase_type == 'SERVICES' %}selected{% endif %}>Services</option>
+                        <option value="ASSETS" {% if request.GET.purchase_type == 'ASSETS' %}selected{% endif %}>Assets</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Payment Status</label>
+                    <select name="is_fully_paid" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="true" {% if request.GET.is_fully_paid == 'true' %}selected{% endif %}>Fully Paid</option>
+                        <option value="false" {% if request.GET.is_fully_paid == 'false' %}selected{% endif %}>Pending</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date From</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date To</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                </div>
+            </form>
+            <div class="row g-3 mt-2">
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control" placeholder="Search vendor or invoice number..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'dea_purchase_invoice_list' %}" class="btn btn-secondary w-100">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 15%">Invoice #</th>
+                        <th style="width: 15%">Vendor</th>
+                        <th style="width: 12%">Type</th>
+                        <th style="width: 12%">Date</th>
+                        <th style="width: 15%">Amount</th>
+                        <th style="width: 12%">Status</th>
+                        <th style="width: 19%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in object_list %}
+                    <tr>
+                        <td><strong>{{ invoice.internal_number }}</strong></td>
+                        <td>{{ invoice.vendor.name }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ invoice.get_purchase_type_display }}</span>
+                        </td>
+                        <td>{{ invoice.invoice_date|date:"d-M-Y" }}</td>
+                        <td>₹{{ invoice.net_payable.amount|floatformat:2 }}</td>
+                        <td>
+                            {% if invoice.is_fully_paid %}
+                                <span class="badge bg-success">Paid</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                                <small class="text-muted d-block">₹{{ invoice.outstanding_balance.amount|floatformat:2 }} due</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'dea_purchase_invoice_detail' invoice.pk %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'dea_purchase_invoice_update' invoice.pk %}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'dea_purchase_invoice_delete' invoice.pk %}" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            No purchase invoices found. <a href="{% url 'dea_purchase_invoice_create' %}">Create one</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if is_paginated %}
+        <nav class="card-footer bg-light">
+            <ul class="pagination mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .border-left-primary { border-left: 4px solid #007bff; }
+    .border-left-success { border-left: 4px solid #28a745; }
+    .border-left-warning { border-left: 4px solid #ffc107; }
+    .border-left-info { border-left: 4px solid #17a2b8; }
+</style>
+{% endblock %}

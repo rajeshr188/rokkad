@@ -1,0 +1,85 @@
+{% extends 'layouts/workspace.html' %}
+{% block title %}Chart of Accounts{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Chart of Accounts</h4>
+    <div class="btn-group">
+        <a href="{% url 'dea_ledger_create' %}" class="btn btn-sm btn-primary"
+           hx-get="{% url 'dea_ledger_create' %}" hx-target="#modal-content" hx-trigger="click">
+            + Add Ledger
+        </a>
+        <a href="{% url 'dea_ledger_list' %}" class="btn btn-sm btn-outline-secondary">
+            Balance View
+        </a>
+        <a href="{% url 'trial_balance' %}" class="btn btn-sm btn-outline-secondary">
+            Trial Balance
+        </a>
+    </div>
+</div>
+
+<div id="modal-content"></div>
+
+{% if groups %}
+    {% for group in groups %}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2 bg-light">
+            <strong>{{ group.label }}</strong>
+            <span class="text-muted small">
+                {{ group.rows|length }} account{{ group.rows|length|pluralize }}
+                {% if group.total %}
+                    &nbsp;|&nbsp; Total: <span class="fw-semibold">{{ group.total }}</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:55%">Name</th>
+                        <th style="width:15%">Code</th>
+                        <th style="width:20%" class="text-end">Current Balance</th>
+                        <th style="width:10%"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in group.rows %}
+                    <tr>
+                        <td>
+                            {# Indent child ledgers using MPTT level #}
+                            {% if row.depth > 0 %}
+                                <span class="text-muted" style="padding-left: {{ row.depth }}em;">└ </span>
+                            {% endif %}
+                            <a href="{{ row.detail_url }}" class="text-decoration-none">{{ row.name }}</a>
+                        </td>
+                        <td class="text-muted small">{{ row.code|default:"—" }}</td>
+                        <td class="text-end">
+                            {% if row.balance is not None %}
+                                <span class="{% if row.balance.amount < 0 %}text-danger{% else %}text-secondary{% endif %}">
+                                    {{ row.balance }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'dea_ledger_update' row.ledger.pk %}"
+                               class="btn btn-xs btn-outline-secondary btn-sm py-0 px-1"
+                               title="Edit">✎</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="alert alert-info">
+        No ledger accounts found.
+        <a href="{% url 'dea_ledger_create' %}">Create your first ledger</a>.
+    </div>
+{% endif %}
+
+<p class="text-muted small mt-2">{{ total_ledgers }} ledger{{ total_ledgers|pluralize }} total</p>
+{% endblock %}

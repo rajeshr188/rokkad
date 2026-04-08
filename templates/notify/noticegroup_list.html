@@ -1,0 +1,48 @@
+{% extends 'layouts/workspace.html' %}
+{% block title %}Notice Groups{% endblock %}
+{% block page_header %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Notice Groups <span class="badge bg-secondary">{{ objects.count }}</span></h4>
+  <a class="btn btn-primary btn-sm" href="{% url 'notify_noticegroup_create' %}">
+    <i class="bi bi-plus-circle me-1"></i>New Group
+  </a>
+</div>
+{% endblock %}
+{% block workspace_content %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Notifications</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in objects %}
+        <tr>
+          <td><a href="{% url 'notify_noticegroup_detail' i.id %}">{{ i.name }}</a></td>
+          <td class="text-muted">{{ i.description|default:"-" }}</td>
+          <td>{{ i.notifications.count }}</td>
+          <td class="text-muted small">{{ i.created|date:"d M Y" }}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-danger"
+              hx-delete="{% url 'notify_noticegroup_delete' i.id %}"
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              hx-confirm="Delete notice group '{{ i.name }}'?">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No notice groups yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends 'layouts/workspace.html' %}
+{%load static%}
+{%block workspace_content%}
+<div class="container-fluid mt-3 mb-3" id="content">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h3 class="mb-0">Licenses</h3>
+        </div>
+        <div class="col-md-6 text-end">
+            <a class="btn btn-success" href="{% url 'girvi:girvi_license_create' %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16">
+                    <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+                </svg> New License
+            </a>
+            <a class="btn btn-info" href="{% url 'girvi:girvi_license_expiry_report' %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16">
+                    <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-.985-.299l.219-.976c.383.086.76.2 1.126.342l-.36.921zm1.37.71a7.01 7.01 0 0 0-.746-.893l.595-.791c.305.36.63.72.995 1.052l-.596.79zm2.169 1.196a6.98 6.98 0 0 0-1.012-.02l.154-.979c.21-.02.421.007.632.062l-.123.985zm1.563 1.318a6.991 6.991 0 0 0-.44-1.244l.808-.589c.21.352.405.744.576 1.128l-.744.665zm.992 1.479a7 7 0 0 0-.348-1.434l.847-.487c.148.439.287.908.404 1.347l-.803.54zm.287 1.746a6.985 6.985 0 0 0-.08-1.378l.873-.36c.08.411.16.84.22 1.214l-.825.543zM8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+                </svg> Expiry Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label for="type_filter" class="form-label">License Type:</label>
+                        <select id="type_filter" name="type" class="form-select form-select-sm">
+                            <option value="">All Types</option>
+                            {% for type_code, type_label in license_types %}
+                                <option value="{{ type_code }}" {% if request.GET.type == type_code %}selected{% endif %}>
+                                    {{ type_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status_filter" class="form-label">Status:</label>
+                        <select id="status_filter" name="status" class="form-select form-select-sm">
+                            <option value="">All Status</option>
+                            {% for status_code, status_label in statuses %}
+                                <option value="{{ status_code }}" {% if request.GET.status == status_code %}selected{% endif %}>
+                                    {{ status_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="business_type_filter" class="form-label">Business Type:</label>
+                        <select id="business_type_filter" name="business_type" class="form-select form-select-sm">
+                            <option value="">All Business Types</option>
+                            {% for btype_code, btype_label in business_types %}
+                                <option value="{{ btype_code }}" {% if request.GET.business_type == btype_code %}selected{% endif %}>
+                                    {{ btype_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 align-self-end">
+                        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                        <a href="{% url 'girvi:girvi_license_list' %}" class="btn btn-secondary btn-sm">Clear</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Licenses Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">License List ({{ object_list|length }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>License</th>
+                            <th>Number</th>
+                            <th>Type</th>
+                            <th>Business</th>
+                            <th>Proprietor</th>
+                            <th>Status</th>
+                            <th>Expiry</th>
+                            <th>Documents</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for license in object_list %}
+                        <tr>
+                            <td>
+                                <a href="{{ license.get_absolute_url }}">{{ license.name }}</a>
+                            </td>
+                            <td><small>{{ license.license_number }}</small></td>
+                            <td>
+                                <span class="badge bg-info">{{ license.get_type_display }}</span>
+                            </td>
+                            <td>
+                                <small>{{ license.shopname }}</small>
+                            </td>
+                            <td>{{ license.propreitor }}</td>
+                            <td>
+                                <span class="badge bg-{{ license.get_status_display_color }}">
+                                    {{ license.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if license.date_expires %}
+                                    {% if license.is_expired %}
+                                        <span class="badge bg-danger">Expired</span>
+                                    {% elif license.is_expiring_soon %}
+                                        <span class="badge bg-warning">{{ license.days_until_expiry }} days</span>
+                                    {% else %}
+                                        <small>{{ license.date_expires|date:"M d, Y" }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ license.get_document_count }}</span>
+                            </td>
+                            <td>
+                                <a href="{{ license.get_absolute_url }}" class="btn btn-sm btn-info">View</a>
+                                <a href="{{ license.get_update_url }}" class="btn btn-sm btn-primary">Edit</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                No licenses found. <a href="{% url 'girvi:girvi_license_create' %}">Create one.</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

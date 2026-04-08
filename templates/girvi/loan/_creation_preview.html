@@ -1,0 +1,86 @@
+{% if not loan %}
+<div id="loan-creation-preview"
+     hx-get="{% url 'girvi:girvi_loan_create_preview' %}"
+     hx-trigger="change from:#id_series, change from:select[name='borrower'], change from:#id_loan_date, change from:#id_tenure, change from:#id_interest_type, change from:[name^='items-']"
+     hx-target="this"
+     hx-swap="outerHTML"
+     hx-include="[name='series'], [name='borrower'], [name='loan_date'], [name='tenure'], [name='interest_type'], [name='loan_id'], [name^='items-']">
+  {% if creation_preview %}
+  <div class="card mb-3 {% if creation_preview.is_valid %}border-success{% else %}border-warning{% endif %}">
+    <div class="card-header py-2 fw-semibold">
+      Loan Creation Preview
+      {% if creation_preview.is_valid %}
+      <span class="badge bg-success float-end">Ready</span>
+      {% elif creation_preview.borrower %}
+      <span class="badge bg-warning text-dark float-end">Needs review</span>
+      {% else %}
+      <span class="badge bg-secondary float-end">Select borrower</span>
+      {% endif %}
+    </div>
+    <div class="card-body py-2">
+      <div class="row g-2 small">
+        <div class="col-sm-6">
+          <div class="text-muted">Expected Loan ID</div>
+          <div class="fw-semibold">{{ creation_preview.expected_loan_id|default:"Will be assigned on save" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Series</div>
+          <div class="fw-semibold">{{ creation_preview.series|default:"Select a series" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Borrower</div>
+          <div class="fw-semibold">{{ creation_preview.borrower|default:"Select a borrower" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Loan Date</div>
+          <div class="fw-semibold">{{ creation_preview.loan_date|date:"d M Y, H:i"|default:"Pending" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Tenure</div>
+          <div class="fw-semibold">{{ creation_preview.tenure|default:"-" }} months</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Interest Type</div>
+          <div class="fw-semibold">{{ creation_preview.interest_type|default:"-" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Credit Limit</div>
+          <div class="fw-semibold">{{ creation_preview.borrower_credit_limit|default:"Not set" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Current Balance</div>
+          <div class="fw-semibold">{{ creation_preview.borrower_current_balance|default:"Not available" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Available Credit</div>
+          <div class="fw-semibold">{{ creation_preview.borrower_available_credit|default:"Not available" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Initial Items</div>
+          <div class="fw-semibold">{{ creation_preview.initial_item_count|default:0 }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Initial Principal</div>
+          <div class="fw-semibold">{{ creation_preview.initial_item_total|default:"0.00" }}</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info py-1 px-2 mt-2 mb-0 small">
+        Preview values are informational only; the final loan ID is assigned when the record is saved.
+      </div>
+    </div>
+
+    {% if creation_preview.warnings or creation_preview.errors %}
+    <div class="card-footer py-2">
+      {% for warn in creation_preview.warnings %}
+      <div class="alert alert-warning py-1 px-2 mb-1 small">{{ warn }}</div>
+      {% endfor %}
+      {% for err in creation_preview.errors %}
+      <div class="alert alert-danger py-1 px-2 mb-1 small">{{ err }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}

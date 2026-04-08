@@ -1,0 +1,53 @@
+<div class="card">
+    <div class="card-header bg-success-subtle border-success">
+        <h5 class="mb-1">Step 3: Confirmed</h5>
+        <div class="d-flex flex-wrap gap-2 small">
+            <span class="badge bg-secondary">1. Select</span>
+            <span class="badge bg-secondary">2. Review</span>
+            <span class="badge bg-success">3. Confirm</span>
+        </div>
+        <p class="mb-0 mt-2">Bulk release completed successfully for {{ instances|length }} loan{{ instances|length|pluralize }}.</p>
+    </div>
+    <div class="card-header">
+        <h3 class="card-title">Released Loans</h3>
+    </div>
+    <div class="card-body">
+        {% if skipped_released_count %}
+        <div class="alert alert-warning" role="alert">
+            {{ skipped_released_count }} loan{{ skipped_released_count|pluralize }} skipped because they were already released during submit.
+            {% if commit_policy %}Policy: {{ commit_policy }}.{% endif %}
+        </div>
+        {% endif %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-hover">
+                <thead>
+                <tr>
+                    <th>Release ID</th>
+                    <th>Loan ID</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Interest</th>
+                    <th>Release Total</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {%for release in instances%}
+                <tr>
+                    <td>{{release.release_id}}</td>
+                    <td>{{release.loan.loan_id}}</td>
+                    <td>{{ release.loan.borrower }}</td>
+                    <td>{{release.loan.loan_amount}}</td>
+                    <td>{{ release.loan.interest_due }}</td>
+                    <td>{{ release.loan.total_due }}</td>
+                    <td>
+                        <a href="{%url 'girvi:girvi_release_update' release.id%}" class="btn btn-warning btn-sm">Update</a>
+                        <a href="{%url 'girvi:girvi_release_delete' release.id%}" class="btn btn-danger btn-sm">Delete</a>
+                    </td>
+                </tr>
+                {%endfor%}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

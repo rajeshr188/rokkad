@@ -1,0 +1,48 @@
+<!-- templates/admin/preview_template.html -->
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div class="module">
+    <h2>Template Preview: {{ template.name }}</h2>
+    
+    <div class="preview-container" style="position: relative; width: {{ template.page_width }}cm; height: {{ template.page_height }}cm; border: 1px solid #ccc;">
+        {% if template.base_template %}
+        <object 
+            data="{{ template.base_template.url }}" 
+            type="application/pdf" 
+            width="100%" 
+            height="100%"
+            style="position: absolute; top: 0; left: 0;">
+            <p>Unable to display PDF. <a href="{{ template.base_template.url }}">Download</a> instead.</p>
+        </object>
+        {% endif %}
+        
+        {% for frame in frames %}
+        <div class="frame" style="
+            position: absolute;
+            left: {{ frame.x_pos }}cm;
+            top: {{ frame.y_pos }}cm;
+            width: {{ frame.width }}cm;
+            height: {{ frame.height }}cm;
+            border: 1px dashed #666;
+            background: rgba(0,0,0,0.1);
+            z-index: 1000;">
+            <div class="frame-label">{{ frame.get_frame_name_display }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.preview-container {
+    margin: 20px;
+    background: white;
+}
+.frame-label {
+    font-size: 12px;
+    padding: 2px;
+    background: rgba(255,255,255,0.8);
+}
+</style>
+{% endblock %}

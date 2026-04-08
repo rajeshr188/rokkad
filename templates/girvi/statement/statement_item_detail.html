@@ -1,0 +1,10 @@
+<li class="list-group-item d-flex justify-content-between align-items-center" hx-target="this" hx-swap="outerHTML">
+    {{item.loan}}
+    {% if item.descrepancy_found %}{{item.descrepancy_note}} - on  {{item.loan.release.release_date}}{% endif %}
+    <a class="btn btn-sm btn-danger" href=""
+        hx-confirm="Are you sure to delete this item??" 
+        hx-post="{% url 'girvi:statement_item_delete' item.id %}"
+        hx-trigger="click"
+        hx-target="closest li"
+        >Delete</a>
+</li>

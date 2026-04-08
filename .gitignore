@@ -10,6 +10,11 @@ __pycache__/
 *.log
 db.sqlite3
 media
+/staticfiles/
 
 # Virtual environment
 .venv
+.env
+.venv1
+
+

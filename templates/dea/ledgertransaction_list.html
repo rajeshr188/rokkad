@@ -1,0 +1,14 @@
+<table class="table table-primary">
+    <tbody>
+        {% for i in object_list %}
+        <tr>
+            <td>{{i.journal}}</td>
+            <td>{{i.created|date}}</td>
+            <td>{{i.ledgerno}}</td>
+            <td>{{i.ledgerno_dr}}</td>
+            <td>{{i.amount}}</td>
+        </tr>
+        {%endfor%}
+    </tbody>
+</table>
+{% endblock %}

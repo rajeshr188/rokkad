@@ -1,0 +1,122 @@
+{% extends 'layouts/workspace.html' %}
+{% block title %}Notification #{{ object.id }}{% endblock %}
+{% block page_header %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1">
+        <li class="breadcrumb-item"><a href="{% url 'notify_notification_list' %}">Notifications</a></li>
+        {% if object.group %}
+        <li class="breadcrumb-item"><a href="{% url 'notify_noticegroup_detail' object.group.id %}">{{ object.group.name }}</a></li>
+        {% endif %}
+        <li class="breadcrumb-item active">#{{ object.id }}</li>
+      </ol>
+    </nav>
+    <h4 class="mb-0">Notification #{{ object.id }}</h4>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'notify_notification_print' object.id %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-printer me-1"></i>Print
+    </a>
+    <button class="btn btn-sm btn-outline-danger"
+      hx-delete="{% url 'notify_notification_delete' object.id %}"
+      hx-confirm="Delete this notification?"
+      hx-redirect="{% url 'notify_notification_list' %}">
+      <i class="bi bi-trash me-1"></i>Delete
+    </button>
+  </div>
+</div>
+{% endblock %}
+{% block workspace_content %}
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">Details</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5 text-muted">Customer</dt>
+          <dd class="col-sm-7"><a href="{{ object.customer.get_absolute_url }}">{{ object.customer }}</a></dd>
+
+          <dt class="col-sm-5 text-muted">Group</dt>
+          <dd class="col-sm-7">
+            {% if object.group %}<a href="{% url 'notify_noticegroup_detail' object.group.id %}">{{ object.group.name }}</a>{% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-sm-5 text-muted">Type</dt>
+          <dd class="col-sm-7">
+            {% if object.notice_type_config %}{{ object.notice_type_config.name }}{% elif object.notice_type %}{{ object.get_notice_type_display }}{% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-sm-5 text-muted">Medium</dt>
+          <dd class="col-sm-7">{{ object.get_medium_type_display }}</dd>
+
+          <dt class="col-sm-5 text-muted">Status</dt>
+          <dd class="col-sm-7">
+            <span class="badge {% if object.status == 'S' %}bg-success{% elif object.status == 'D' %}bg-secondary{% elif object.status == 'Z' %}bg-info{% elif object.status == 'A' %}bg-primary{% else %}bg-warning text-dark{% endif %}">
+              {{ object.get_status_display }}
+            </span>
+          </dd>
+
+          <dt class="col-sm-5 text-muted">Printed</dt>
+          <dd class="col-sm-7">
+            {% if object.is_printed %}<i class="bi bi-check-circle-fill text-success"></i> Yes{% else %}<i class="bi bi-circle text-muted"></i> No{% endif %}
+          </dd>
+
+          <dt class="col-sm-5 text-muted">Created</dt>
+          <dd class="col-sm-7">{{ object.created|date:"d M Y, H:i" }}</dd>
+        </dl>
+        {% if object.message %}
+        <hr>
+        <div class="text-muted small">Message</div>
+        <p class="mb-0">{{ object.message }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">Linked Items</div>
+      {% with items=object.items.all loans=object.loans.all %}
+      {% if items %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Type</th><th>Reference</th><th>Amount</th><th>Due Date</th></tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td class="text-muted small">{{ item.content_type.model }}</td>
+              <td>{{ item.reference_number|default:item.object_id }}</td>
+              <td>{% if item.amount %}{{ item.amount }}{% else %}—{% endif %}</td>
+              <td>{% if item.due_date %}{{ item.due_date|date:"d M Y" }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% elif loans %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Loan ID</th><th>Borrower</th></tr>
+          </thead>
+          <tbody>
+            {% for loan in loans %}
+            <tr>
+              <td><a href="{{ loan.get_absolute_url }}">{{ loan.loan_id }}</a></td>
+              <td>{{ loan.borrower }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-muted">No linked items.</div>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+</div>
+{% endblock %}

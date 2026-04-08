@@ -1,0 +1,73 @@
+<!-- Alert Component -->
+<!-- Usage: include 'components/common/alert.html' with type='success' content='Operation successful' -->
+
+{% if content or message %}
+<div class="alert alert-{{ type|default:'info' }} alert-dismissible fade show" role="alert">
+    <!-- Icon -->
+    {% if type == 'success' %}
+        <i class="bi bi-check-circle"></i>
+    {% elif type == 'danger' or type == 'error' %}
+        <i class="bi bi-exclamation-circle"></i>
+    {% elif type == 'warning' %}
+        <i class="bi bi-exclamation-triangle"></i>
+    {% elif type == 'info' %}
+        <i class="bi bi-info-circle"></i>
+    {% endif %}
+    
+    <!-- Content -->
+    <span>{{ content|default:message }}</span>
+    {% if details %}
+    <small class="d-block mt-2">{{ details }}</small>
+    {% endif %}
+    
+    <!-- Close button -->
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<style>
+.alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid;
+    border-radius: 0.375rem;
+}
+
+.alert i {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+    font-size: 1.1rem;
+}
+
+.alert-success {
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+    color: #0f5132;
+}
+
+.alert-danger,
+.alert-error {
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+    color: #842029;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+    color: #664d03;
+}
+
+.alert-info {
+    background-color: #cfe2ff;
+    border-color: #b6d4fe;
+    color: #084298;
+}
+
+.alert .btn-close {
+    margin: -0.5rem -0.5rem -0.5rem auto;
+}
+</style>

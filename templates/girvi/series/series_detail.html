@@ -1,0 +1,38 @@
+{% extends 'layouts/workspace.html' %}
+{% load static %}
+{% block workspace_content %}
+<div class="container col-md-6 mt-3">
+	<div class="card">
+		<div class="card-body">
+			<div class="d-flex justify-content-between align-items-center">
+				<h1 class="h4 mb-0">Series {{ series.prefix }} - {{ series.name }}</h1>
+				<a href="{% url 'girvi:girvi_series_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
+			</div>
+			<hr>
+			<ul class="list-group list-group-flush mb-3">
+				<li class="list-group-item d-flex justify-content-between">
+					<span>License</span>
+					<span>{{ series.license }}</span>
+				</li>
+				<li class="list-group-item d-flex justify-content-between">
+					<span>Loan Type</span>
+					<span>{{ series.get_loan_type_display }}</span>
+				</li>
+				<li class="list-group-item d-flex justify-content-between">
+					<span>Status</span>
+					<span>{% if series.is_active %}Active{% else %}Inactive{% endif %}</span>
+				</li>
+			</ul>
+			<div class="d-flex gap-2">
+				<a class="btn btn-primary btn-sm" href="{% url 'girvi:girvi_series_update' series.pk %}">Edit</a>
+				<a class="btn btn-warning btn-sm" href="{% url 'girvi:girvi_activate_series' series.pk %}">Toggle Active</a>
+				<form method="post" action="{% url 'girvi:girvi_series_delete' series.pk %}">
+					{% csrf_token %}
+					<button class="btn btn-danger btn-sm" type="submit">Delete</button>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% endblock %}

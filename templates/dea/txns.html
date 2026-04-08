@@ -1,0 +1,108 @@
+<div class="table-responsive">   
+  {% if not object.content_object %}
+        <div class="dropdown float-end">
+          <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+              <path d="M8 0a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2H9v6a1 1 0 1 1-2 0V9H1a1 1 0 0 1 0-2h6V1a1 1 0 0 1 1-1z"/>
+            </svg>
+            Add Transaction
+          </button>
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item" href="#" 
+                 hx-get="{% url 'dea_ledgertransaction_create' pk=object.id %}"
+                 hx-target="#transaction-form"
+                 hx-swap="innerHTML">
+                Ledger Transaction
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#"
+                 hx-get="{% url 'dea_accounttransaction_create' pk=object.id %}"
+                 hx-target="#transaction-form"
+                 hx-swap="innerHTML">
+                Account Transaction
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#"
+                 hx-get="{% url 'stock_journalentry' pk=object.id %}"
+                 hx-target="#transaction-form"
+                 hx-swap="innerHTML">
+                Stock Transaction
+              </a>
+            </li>
+          </ul>
+        </div>
+        {% endif %}
+  <div id="transaction-form"></div>
+    <table class="table table-sm table-hover caption-top">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Debit Acc</th>
+          <th>Credit Acc</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <caption>Account Transactions</caption>
+      <tbody class="table-group-divider">
+        {%if object.atxns.exists%}
+        {%for i in object.atxns.all%}
+        {% include 'dea/accounttransaction_detail.html' with i=i %}
+        {%endfor%}
+        {%endif%}
+      </tbody>
+    </table>
+    
+    
+    <table class="table table-sm table-hover caption-top">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Debit Acc</th>
+          <th>Credit Acc</th>
+        </tr>
+      </thead>
+      <caption>Ledger Transactions</caption>
+      <tbody class="table-group-divider">
+        {%if object.ltxns.exists%}
+        {%for i in object.ltxns.all%}
+        {%include 'dea/ledgertransaction_detail.html' with i=i%}
+        {%endfor%}
+        {%endif%}
+      </tbody>
+    </table>
+    
+    
+    <table class="table table-sm table-hover caption-top">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Stock</th>
+          <th>Debit</th>
+          <th>Credit</th>
+        </tr>
+      </thead>
+      <caption>Stock Transactions</caption>
+      <tbody class="table-group-divider">
+        {%if object.stxns.exists%}
+        {%for i in object.stxns.all%}
+        <tr class="table-warning">
+          <td>{{i.id}}</td>
+          <td>{{i.created|date}}</td>
+          <td><a href="{% url 'product_stock_detail' i.stock.id%}">{{i.stock}} {{i.lot.barcode}}</a></td>
+          <td>{%if i.movement_type.direction == '+'%}+{{i.quantity}} nos +{{i.weight}} gms{%endif%}</td>
+          <td>{%if i.movement_type.direction == '-'%}-{{i.quantity}} nos -{{i.weight}} gms{%endif%}</td>
+        </tr>
+        {%endfor%}
+        {%endif%}
+      </tbody>
+    </table>
+    
+  </div>
