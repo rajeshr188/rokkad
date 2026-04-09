@@ -7,15 +7,26 @@ from unittest.mock import MagicMock, patch
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.test import RequestFactory, SimpleTestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.views.notice import create_loan_notification
-from apps.tenant_apps.notify.models import NoticeTypeConfig, Notification
+from apps.tenant_apps.notify.models import (
+    NoticeGroup,
+    NoticeTypeConfig,
+    Notification,
+    NotificationTemplate,
+)
 from apps.tenant_apps.notify.services import (
     DEFAULT_LOAN_REMINDER_CODE,
     create_bulk_loan_reminder_group,
     create_loan_reminder_notification,
+)
+from apps.tenant_apps.notify.views import (
+    noticegroup_detail,
+    noticegroup_print,
+    notification_print,
 )
 
 
@@ -23,6 +34,7 @@ class LoanReminderIntegrationTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.user = SimpleNamespace(is_authenticated=True)
+        self.anon_user = SimpleNamespace(is_authenticated=False)
 
     def _build_loan(self, *, pk=1, loan_id="GL-001", borrower=None, amount="1000.00"):
         borrower = borrower or SimpleNamespace(pk=11, name="Asha")
@@ -145,6 +157,38 @@ class LoanReminderIntegrationTests(SimpleTestCase):
         )
         email_notification.send_notification.assert_called_once_with()
 
+    @patch(
+        "apps.tenant_apps.notify.services.transaction.atomic",
+        side_effect=lambda: nullcontext(),
+    )
+    @patch("apps.tenant_apps.notify.services.Notification.objects.create")
+    @patch("apps.tenant_apps.notify.services.NoticeTypeConfig.objects.filter")
+    def test_create_loan_reminder_notification_excludes_email_copy_from_group(
+        self,
+        mock_notice_type_filter,
+        mock_notification_create,
+        _mock_atomic,
+    ):
+        notice_type_config = SimpleNamespace(code=DEFAULT_LOAN_REMINDER_CODE, name="First Reminder")
+        mock_notice_type_filter.return_value.first.return_value = notice_type_config
+        primary_notification = MagicMock(name="letter_notification")
+        email_notification = MagicMock(name="email_notification")
+        mock_notification_create.side_effect = [primary_notification, email_notification]
+
+        borrower = SimpleNamespace(pk=21, name="Kiran", email="kiran@example.com")
+        loan = self._build_loan(borrower=borrower)
+        group = NoticeGroup(name="Loan reminders")
+
+        create_loan_reminder_notification(
+            customer=borrower,
+            loans=[loan],
+            medium_type=Notification.MediumType.Letter,
+            group=group,
+        )
+
+        self.assertIs(mock_notification_create.call_args_list[0].kwargs["group"], group)
+        self.assertIsNone(mock_notification_create.call_args_list[1].kwargs["group"])
+
     @patch("apps.tenant_apps.notify.models.Notification.update_status")
     @patch("apps.tenant_apps.notify.models.send_mail")
     def test_notification_send_email_uses_customer_email(
@@ -208,3 +252,175 @@ class LoanReminderIntegrationTests(SimpleTestCase):
             notice_code="LOAN_FINAL_NOTICE",
             medium_type=Notification.MediumType.SMS,
         )
+
+    @patch("apps.tenant_apps.notify.models.NotificationTemplate.resolve_for")
+    def test_get_renderer_type_defaults_to_pdf_for_letters(self, mock_resolve_template):
+        mock_resolve_template.return_value = None
+
+        notification = Notification(medium_type=Notification.MediumType.Letter)
+
+        self.assertEqual(
+            notification.get_renderer_type(),
+            NotificationTemplate.RendererType.PDF,
+        )
+
+    @patch("apps.tenant_apps.notify.models.NotificationTemplate.resolve_for")
+    def test_generate_message_uses_notification_template_override(self, mock_resolve_template):
+        template = MagicMock(renderer=NotificationTemplate.RendererType.DJANGO)
+        template.render.return_value = "Custom rendered reminder"
+        mock_resolve_template.return_value = template
+
+        notification = Notification(medium_type=Notification.MediumType.Email)
+        notification.customer = Customer(firstname="Kiran", email="kiran@example.com")
+        notification.notice_type_config = NoticeTypeConfig(
+            code="LOAN_FIRST_REMINDER",
+            name="First Reminder",
+            category=NoticeTypeConfig.CategoryChoices.LOAN,
+        )
+        notification.notice_type = Notification.NoticeType.First_Reminder
+
+        notification.generate_message()
+
+        self.assertEqual(notification.message, "Custom rendered reminder")
+        template.render.assert_called_once_with(notification)
+
+    @patch("apps.tenant_apps.notify.models.get_notice_pdf", return_value=b"%PDF-1.4 notice")
+    @patch("apps.tenant_apps.notify.models.NotificationTemplate.resolve_for")
+    def test_print_letter_uses_pdf_renderer_and_template_key(
+        self,
+        mock_resolve_template,
+        mock_get_notice_pdf,
+    ):
+        mock_resolve_template.return_value = SimpleNamespace(
+            renderer=NotificationTemplate.RendererType.PDF,
+            pdf_template_key="loan_notice_v1",
+        )
+
+        notification = Notification(medium_type=Notification.MediumType.Letter)
+        notification.customer = Customer(firstname="Kiran")
+        notification.notice_type_config = NoticeTypeConfig(
+            code="LOAN_FIRST_REMINDER",
+            name="First Reminder",
+            category=NoticeTypeConfig.CategoryChoices.LOAN,
+        )
+        notification.get_printable_items = MagicMock(
+            return_value=[SimpleNamespace(loan_id="GL-001")]
+        )
+        notification.save = MagicMock()
+
+        pdf = notification.print_letter()
+
+        self.assertEqual(pdf, b"%PDF-1.4 notice")
+        mock_get_notice_pdf.assert_called_once_with(
+            selection=[SimpleNamespace(loan_id="GL-001")],
+            template_key="loan_notice_v1",
+        )
+
+    @patch("apps.tenant_apps.notify.views.get_object_or_404")
+    @patch("apps.tenant_apps.notify.views.GivenLoan")
+    def test_noticegroup_detail_prefetches_loan_borrower_relation(
+        self,
+        mock_given_loan,
+        mock_get_object_or_404,
+    ):
+        request = self.factory.get("/notify/noticegroup/3/")
+        request.user = self.user
+
+        notifications_qs = MagicMock(name="notifications_qs")
+        items_qs = MagicMock(name="items_qs")
+        ng = SimpleNamespace(
+            pk=3,
+            name="Loan reminders",
+            notifications=SimpleNamespace(all=MagicMock(return_value=notifications_qs)),
+        )
+        mock_get_object_or_404.return_value = ng
+        notifications_qs.prefetch_related.return_value = items_qs
+        items_qs.select_related.return_value = items_qs
+
+        released_filter = MagicMock(name="released_filter")
+        borrower_values = MagicMock(name="borrower_values")
+        borrower_distinct = MagicMock(name="borrower_distinct")
+        mock_given_loan.objects.filter.return_value = released_filter
+        released_filter.filter.return_value.count.return_value = 2
+        released_filter.filter.return_value.values.return_value = borrower_values
+        borrower_values.distinct.return_value = borrower_distinct
+        borrower_distinct.count.return_value = 1
+
+        response = noticegroup_detail.__wrapped__(request, pk=3)
+
+        notifications_qs.prefetch_related.assert_called_once_with(
+            "loans",
+            "loans__borrower",
+        )
+        self.assertEqual(response.context_data["loans"], 2)
+        self.assertEqual(response.context_data["customers"], 1)
+
+    @patch("apps.tenant_apps.notify.models.get_notice_pdf", return_value=b"%PDF-1.4 notice")
+    def test_notice_group_print_notice_skips_non_printable_and_deduplicates(self, mock_get_notice_pdf):
+        printable_notification = MagicMock()
+        printable_notification.get_renderer_type.return_value = NotificationTemplate.RendererType.PDF
+        printable_notification.get_printable_items.return_value = [
+            SimpleNamespace(
+                pk=1,
+                loan_id="GL-001",
+                borrower=SimpleNamespace(pk=10),
+                _meta=SimpleNamespace(label_lower="girvi.givenloan"),
+            )
+        ]
+        printable_notification.get_selected_template.return_value = SimpleNamespace(
+            pdf_template_key="loan_notice_v1"
+        )
+
+        duplicate_printable_notification = MagicMock()
+        duplicate_printable_notification.get_renderer_type.return_value = NotificationTemplate.RendererType.PDF
+        duplicate_printable_notification.get_printable_items.return_value = [
+            SimpleNamespace(
+                pk=1,
+                loan_id="GL-001",
+                borrower=SimpleNamespace(pk=10),
+                _meta=SimpleNamespace(label_lower="girvi.givenloan"),
+            )
+        ]
+        duplicate_printable_notification.get_selected_template.return_value = SimpleNamespace(
+            pdf_template_key="loan_notice_v1"
+        )
+
+        email_notification = MagicMock()
+        email_notification.get_renderer_type.return_value = NotificationTemplate.RendererType.DJANGO
+
+        notifications = [printable_notification, duplicate_printable_notification, email_notification]
+        group = NoticeGroup(name="Loan reminders")
+        group.notifications = SimpleNamespace(
+            select_related=MagicMock(
+                return_value=SimpleNamespace(prefetch_related=MagicMock(return_value=notifications))
+            )
+        )
+
+        pdf = group.print_notice()
+
+        self.assertEqual(pdf, b"%PDF-1.4 notice")
+        mock_get_notice_pdf.assert_called_once()
+        self.assertEqual(len(mock_get_notice_pdf.call_args.kwargs["selection"]), 1)
+        self.assertEqual(
+            mock_get_notice_pdf.call_args.kwargs["template_key"],
+            "loan_notice_v1",
+        )
+        email_notification.get_printable_items.assert_not_called()
+
+    def test_noticegroup_print_requires_login(self):
+        request = self.factory.get("/notify/noticegroup/1/print")
+        request.user = self.anon_user
+
+        response = noticegroup_print(request, pk=1)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response.url)
+
+    def test_notification_print_requires_login(self):
+        request = self.factory.get("/notify/notification/1/print")
+        request.user = self.anon_user
+
+        response = notification_print(request, pk=1)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response.url)

@@ -9,6 +9,14 @@
 </div>
 {% endblock %}
 {% block workspace_content %}
+<div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <strong>New workflow available:</strong> Use <code>Notify V2</code> for batch print/post runs and artifact downloads.
+  </div>
+  <a class="btn btn-sm btn-outline-primary" href="{% url 'notify_v2_batch_list' %}">
+    <i class="bi bi-box-arrow-up-right me-1"></i>Open Notify V2
+  </a>
+</div>
 <div class="card">
   <div class="table-responsive">
     <table class="table table-sm table-hover mb-0">

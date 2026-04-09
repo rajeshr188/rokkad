@@ -22,6 +22,7 @@ CORE_URLPATTERNS = [
     ),
     path("girvi/notice/", views.notice, name="notice"),
     path("girvi/outdatedloans/notify/", views.notify_print, name="girvi_create_notice"),
+    path("girvi/outdatedloans/notify-v2/", views.notify_print_v2, name="girvi_create_notice_v2"),
     path(
         "loans/today/",
         views.loans_created_on_day_excluding_current_month,

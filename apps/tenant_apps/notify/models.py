@@ -5,9 +5,10 @@ from django.core.mail import send_mail
 from django.db import models
 from django.shortcuts import reverse
 from django.template import Context, Template
-from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+
+from apps.tenant_apps.utils.loan_pdf import get_notice_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -124,9 +125,50 @@ class NoticeGroup(models.Model):
         return self.notifications.count()
 
     def print_notice(self):
-        """Generate PDF for all notifications in this group"""
-        # TODO: Implement batch PDF generation
-        pass
+        """Generate a batch PDF for all printable notifications in this group."""
+        selection = []
+        template_key = None
+        seen_objects = set()
+
+        notifications = self.notifications.select_related(
+            "notice_type_config"
+        ).prefetch_related(
+            "items",
+            "loans",
+        )
+        for notification in notifications:
+            if notification.get_renderer_type() != NotificationTemplate.RendererType.PDF:
+                continue
+
+            printable_items = notification.get_printable_items()
+            if not printable_items:
+                continue
+
+            if template_key is None:
+                selected_template = notification.get_selected_template()
+                template_key = getattr(selected_template, "pdf_template_key", None)
+
+            for obj in printable_items:
+                obj_key = (
+                    getattr(getattr(obj, "_meta", None), "label_lower", obj.__class__.__name__),
+                    getattr(obj, "pk", None),
+                )
+                if obj_key in seen_objects:
+                    continue
+                seen_objects.add(obj_key)
+                selection.append(obj)
+
+        if not selection:
+            return None
+
+        selection.sort(
+            key=lambda obj: getattr(
+                getattr(obj, "borrower", None) or getattr(obj, "customer", None),
+                "pk",
+                0,
+            )
+        )
+        return get_notice_pdf(selection=selection, template_key=template_key)
 
 
 class NotificationItem(models.Model):
@@ -375,6 +417,8 @@ class Notification(models.Model):
         Example:
             objects = notification.get_related_objects()  # [loan1, loan2, invoice1]
         """
+        if not self.pk:
+            return []
         return [item.content_object for item in self.items.all()]
 
     def calculate_total_amount(self):
@@ -385,6 +429,9 @@ class Notification(models.Model):
             Decimal: Total amount across all items
         """
         from django.db.models import Sum
+
+        if not self.pk:
+            return 0
 
         result = self.items.aggregate(total=Sum("amount"))
         return result["total"] or 0
@@ -405,15 +452,68 @@ class Notification(models.Model):
         self.save()
 
     def print_letter(self):
-        """
-        Generate and return PDF for postal notification.
+        """Generate and return PDF bytes for a printable notification."""
+        if self.get_renderer_type() != NotificationTemplate.RendererType.PDF:
+            return None
 
-        TODO: Mark is_printed=True after successful generation
-        """
-        # Implementation in views/prints.py
-        pass
+        selection = self.get_printable_items()
+        if not selection:
+            return None
+
+        selected_template = self.get_selected_template()
+        template_key = getattr(selected_template, "pdf_template_key", None)
+        pdf = get_notice_pdf(selection=selection, template_key=template_key)
+        if pdf:
+            self.is_printed = True
+            if self.pk:
+                self.save(update_fields=["is_printed", "last_updated"])
+            else:
+                self.save()
+        return pdf
+
+    def get_selected_template(self):
+        if not getattr(self, "notice_type_config", None):
+            return None
+        return NotificationTemplate.resolve_for(self)
+
+    def get_renderer_type(self):
+        selected_template = self.get_selected_template()
+        if selected_template:
+            return selected_template.renderer
+        if self.medium_type in (self.MediumType.Post, self.MediumType.Letter):
+            return NotificationTemplate.RendererType.PDF
+        return NotificationTemplate.RendererType.DJANGO
+
+    def get_printable_items(self):
+        related_objects = [
+            obj for obj in self.get_related_objects() if hasattr(obj, "loan_id")
+        ]
+        if related_objects:
+            return related_objects
+        try:
+            return list(self.loans.all())
+        except Exception:
+            return []
+
+    def get_subject_text(self):
+        default_subject = self.effective_notice_type or "Notification"
+        selected_template = self.get_selected_template()
+        if selected_template and selected_template.subject_template:
+            subject = selected_template.render_subject(self)
+            if subject:
+                return subject
+
+        if self.notice_type_config and self.notice_type_config.email_subject_template:
+            return (
+                Template(self.notice_type_config.email_subject_template)
+                .render(Context(self._build_template_context()))
+                .strip()
+                or default_subject
+            )
+        return default_subject
 
     def _build_template_context(self):
+        item_rows = self.items.all() if self.pk else []
         return {
             "customer": self.customer,
             "notification": self,
@@ -424,7 +524,7 @@ class Notification(models.Model):
                     "due_date": item.due_date,
                     "reference": item.reference_number,
                 }
-                for item in self.items.all()
+                for item in item_rows
             ],
             "total_amount": self.calculate_total_amount(),
             "notice_type": self.notice_type_config.name
@@ -441,11 +541,7 @@ class Notification(models.Model):
         if not self.message:
             self.generate_message()
 
-        subject = self.effective_notice_type or "Notification"
-        if self.notice_type_config and self.notice_type_config.email_subject_template:
-            subject = Template(self.notice_type_config.email_subject_template).render(
-                Context(self._build_template_context())
-            ).strip() or subject
+        subject = self.get_subject_text()
 
         try:
             send_mail(
@@ -515,10 +611,17 @@ class Notification(models.Model):
         Supports both old (loans field) and new (NotificationItem) patterns.
         Uses templates from NoticeTypeConfig if available.
         """
+        selected_template = self.get_selected_template()
+        if selected_template:
+            rendered_message = selected_template.render(self)
+            if rendered_message:
+                self.message = rendered_message
+                return
+
         # Determine which template to use
         template_text = None
         if self.notice_type_config:
-            # Use new template system based on medium type
+            # Use notice-type defaults when no NotificationTemplate override exists
             if self.medium_type == self.MediumType.SMS:
                 template_text = self.notice_type_config.sms_template
             elif self.medium_type == self.MediumType.Email:
@@ -530,19 +633,26 @@ class Notification(models.Model):
 
         if not template_text:
             # Fallback to basic message
-            if self.items.exists():
+            item_rows = self.items.all() if self.pk else []
+            loan_rows = []
+            try:
+                loan_rows = list(self.loans.all())
+            except Exception:
+                loan_rows = []
+
+            if item_rows:
                 # New pattern: use NotificationItem
                 items_list = [
                     f"{item.reference_number or item.object_id}"
-                    for item in self.items.all()
+                    for item in item_rows
                 ]
                 items_str = ", ".join(items_list)
                 self.message = (
                     f"Dear {self.customer.name}, this is regarding items: {items_str}."
                 )
-            elif self.loans.exists():
+            elif loan_rows:
                 # Old pattern: use loans M2M
-                loan_ids = ", ".join([loan.loan_id for loan in self.loans.all()])
+                loan_ids = ", ".join([loan.loan_id for loan in loan_rows])
                 self.message = f"Dear {self.customer.name}, your loans {loan_ids} require attention."
             else:
                 self.message = (
@@ -567,3 +677,106 @@ class Notification(models.Model):
         elif self.notice_type:
             return self.get_notice_type_display()
         return "Unknown"
+
+
+class NotificationTemplate(models.Model):
+    """Per-medium template override with explicit renderer selection."""
+
+    class RendererType(models.TextChoices):
+        DJANGO = "DJANGO", "Django/Jinja Template"
+        PDF = "PDF", "PDF / Predefined Print Format"
+
+    notice_type_config = models.ForeignKey(
+        NoticeTypeConfig,
+        on_delete=models.CASCADE,
+        related_name="notification_templates",
+        help_text="Notice type this template belongs to.",
+    )
+    name = models.CharField(
+        max_length=100,
+        help_text="Internal label for this template entry.",
+    )
+    medium_type = models.CharField(
+        max_length=1,
+        choices=Notification.MediumType.choices,
+        help_text="Channel this template should be used for.",
+    )
+    renderer = models.CharField(
+        max_length=10,
+        choices=RendererType.choices,
+        default=RendererType.DJANGO,
+        help_text="Use PDF for fixed printable formats and Django/Jinja for flexible digital messages.",
+    )
+    subject_template = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Optional subject override for media such as email.",
+    )
+    body_template = models.TextField(
+        blank=True,
+        help_text="Use Django template syntax such as {{ customer.name }} and {% for item in items %}.",
+    )
+    pdf_template_key = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Optional key for selecting the printable PDF layout implementation.",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Only active templates are considered during renderer selection.",
+    )
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower values are preferred first when multiple templates exist.",
+    )
+    created = models.DateTimeField(auto_now_add=True, editable=False)
+    modified = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        ordering = ["notice_type_config__category", "sort_order", "name"]
+        verbose_name = "Notification Template"
+        verbose_name_plural = "Notification Templates"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["notice_type_config", "medium_type", "name"],
+                name="notify_unique_template_name_per_notice_medium",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["notice_type_config", "medium_type", "is_active"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.notice_type_config.name} - {self.get_medium_type_display()} "
+            f"({self.get_renderer_display()})"
+        )
+
+    @classmethod
+    def resolve_for(cls, notification):
+        notice_type_config = getattr(notification, "notice_type_config", None)
+        if not notice_type_config or not getattr(notice_type_config, "pk", None):
+            return None
+        return (
+            cls.objects.filter(
+                notice_type_config=notice_type_config,
+                medium_type=notification.medium_type,
+                is_active=True,
+            )
+            .order_by("sort_order", "id")
+            .first()
+        )
+
+    def render_subject(self, notification):
+        if not self.subject_template:
+            return ""
+        return Template(self.subject_template).render(
+            Context(notification._build_template_context())
+        ).strip()
+
+    def render(self, notification):
+        if not self.body_template:
+            return ""
+        return Template(self.body_template).render(
+            Context(notification._build_template_context())
+        )

@@ -6,7 +6,13 @@ from django.db import transaction
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from apps.tenant_apps.dea.models import VoucherType
-from apps.tenant_apps.notify.models import NoticeTypeConfig
+from apps.tenant_apps.notify.models import NoticeTypeConfig, NotificationTemplate as LegacyNotificationTemplate
+from apps.tenant_apps.notify_v2.models import (
+    NotificationEventType as NotifyV2EventType,
+    NotificationPolicy as NotifyV2Policy,
+    NotificationTemplate as NotifyV2Template,
+)
+from apps.tenant_apps.notify_v2.services.batch_service import seed_girvi_batch_defaults
 from apps.tenant_apps.product.models import Attribute, Category, Movement, ProductType
 
 
@@ -49,6 +55,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Skip notify fixture seeding.",
         )
+        parser.add_argument(
+            "--skip-notify-v2",
+            action="store_true",
+            help="Skip notify_v2 baseline seeding.",
+        )
 
     def handle(self, *args, **options):
         schema_name = options["schema"].strip()
@@ -78,6 +89,8 @@ class Command(BaseCommand):
             actions.append("seed_product")
         if not options["skip_notify"]:
             actions.append("seed_notify")
+        if not options["skip_notify_v2"]:
+            actions.append("seed_notify_v2")
 
         self.stdout.write(
             self.style.NOTICE(
@@ -110,6 +123,9 @@ class Command(BaseCommand):
 
                 if "seed_notify" in actions:
                     self._seed_notify_defaults()
+
+                if "seed_notify_v2" in actions:
+                    self._seed_notify_v2_defaults()
 
         self.stdout.write(self.style.SUCCESS(f"Tenant seed completed for schema={schema_name}"))
 
@@ -229,9 +245,113 @@ class Command(BaseCommand):
                 defaults={"slug": attr_slug},
             )
 
+    def _seed_notification_template_defaults(self, notice_configs):
+        """
+        Seed explicit NotificationTemplate rows for the core loan reminder
+        and auction workflows.
+
+        Uses get_or_create so tenant-edited templates are preserved on reseed.
+        """
+        loan_notice_codes = (
+            "LOAN_FIRST_REMINDER",
+            "LOAN_SECOND_REMINDER",
+            "LOAN_FINAL_NOTICE",
+            "LOAN_AUCTION_NOTICE",
+        )
+
+        for code in loan_notice_codes:
+            notice_type = notice_configs.get(code) or NoticeTypeConfig.objects.filter(
+                code=code
+            ).first()
+            if not notice_type:
+                continue
+
+            template_rows = [
+                {
+                    "name": "Default Letter PDF",
+                    "medium_type": "L",
+                    "renderer": LegacyNotificationTemplate.RendererType.PDF,
+                    "pdf_template_key": code.lower(),
+                    "sort_order": 10,
+                },
+                {
+                    "name": "Default Post PDF",
+                    "medium_type": "P",
+                    "renderer": LegacyNotificationTemplate.RendererType.PDF,
+                    "pdf_template_key": code.lower(),
+                    "sort_order": 20,
+                },
+                {
+                    "name": "Default Email Template",
+                    "medium_type": "E",
+                    "renderer": LegacyNotificationTemplate.RendererType.DJANGO,
+                    "subject_template": (
+                        notice_type.email_subject_template or notice_type.name
+                    ),
+                    "body_template": (
+                        notice_type.email_template or notice_type.postal_template
+                    ),
+                    "sort_order": 30,
+                },
+                {
+                    "name": "Default SMS Template",
+                    "medium_type": "S",
+                    "renderer": LegacyNotificationTemplate.RendererType.DJANGO,
+                    "body_template": (
+                        notice_type.sms_template or notice_type.email_template
+                    ),
+                    "sort_order": 40,
+                },
+                {
+                    "name": "Default WhatsApp Template",
+                    "medium_type": "W",
+                    "renderer": LegacyNotificationTemplate.RendererType.DJANGO,
+                    "body_template": (
+                        notice_type.whatsapp_template
+                        or notice_type.sms_template
+                        or notice_type.email_template
+                    ),
+                    "sort_order": 50,
+                },
+            ]
+
+            for template_data in template_rows:
+                LegacyNotificationTemplate.objects.get_or_create(
+                    notice_type_config=notice_type,
+                    medium_type=template_data["medium_type"],
+                    name=template_data["name"],
+                    defaults={
+                        "renderer": template_data["renderer"],
+                        "subject_template": template_data.get("subject_template", ""),
+                        "body_template": template_data.get("body_template", ""),
+                        "pdf_template_key": template_data.get("pdf_template_key", ""),
+                        "sort_order": template_data["sort_order"],
+                        "is_active": True,
+                    },
+                )
+
+    def _seed_notify_v2_defaults(self):
+        """Seed baseline notify_v2 configuration for Girvi reminder and recovery flows."""
+        event_keys = (
+            "loan.first_reminder_due",
+            "loan.second_reminder_due",
+            "loan.final_notice_due",
+            "loan.auction_notice_due",
+        )
+        seed_girvi_batch_defaults(event_keys=event_keys)
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Notify V2 defaults ready: "
+                f"event_types={NotifyV2EventType.objects.filter(key__in=event_keys).count()} "
+                f"policies={NotifyV2Policy.objects.filter(event_type__key__in=event_keys).count()} "
+                f"templates={NotifyV2Template.objects.filter(event_type__key__in=event_keys).count()}"
+            )
+        )
+
     def _seed_notify_defaults(self):
         """
-        Seed default NoticeTypeConfig records extracted from notify/0003_seed_default_notice_types.py.
+        Seed default NoticeTypeConfig and NotificationTemplate records for notify.
         Idempotent for all records; `LOAN_AUCTION_NOTICE` is refreshed via update_or_create
         so existing tenants pick up the dedicated auction template text on reseed.
         """
@@ -442,15 +562,19 @@ class Command(BaseCommand):
                 "email_template": "Dear {{customer.name}},\n\nWe have an important announcement:\n\n{{items.0.reference}}\n\nThank you for your attention.",
             },
         ]
+        seeded_notice_types = {}
         for notice_data in default_types:
             code = notice_data["code"]
             if code == "LOAN_AUCTION_NOTICE":
-                NoticeTypeConfig.objects.update_or_create(
+                notice_type, _created = NoticeTypeConfig.objects.update_or_create(
                     code=code,
                     defaults=notice_data,
                 )
             else:
-                NoticeTypeConfig.objects.get_or_create(
+                notice_type, _created = NoticeTypeConfig.objects.get_or_create(
                     code=code,
                     defaults=notice_data,
                 )
+            seeded_notice_types[code] = notice_type
+
+        self._seed_notification_template_defaults(seeded_notice_types)

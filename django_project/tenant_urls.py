@@ -12,6 +12,7 @@ urlpatterns = [
     path("rates/", include("apps.tenant_apps.rates.urls")),
     path("product/", include("apps.tenant_apps.product.urls")),
     path("notify/", include("apps.tenant_apps.notify.urls")),
+    path("notify-v2/", include("apps.tenant_apps.notify_v2.urls")),
     path("dea/", include("apps.tenant_apps.dea.urls")),
     path("purchase/", include("apps.tenant_apps.purchase.urls")),
     path("sales/", include("apps.tenant_apps.sales.urls")),

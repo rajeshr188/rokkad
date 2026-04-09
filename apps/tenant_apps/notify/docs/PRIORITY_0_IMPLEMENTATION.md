@@ -1,5 +1,7 @@
 # Priority 0 Implementation Complete: Generic Notification System
 
+> For the clean-slate V2 target architecture, see [NOTIFY_V2_REDESIGN_BLUEPRINT.md](NOTIFY_V2_REDESIGN_BLUEPRINT.md).
+
 ## What Was Implemented
 
 The notification system has been successfully refactored to support **generic relationships** with any business model across your SaaS platform. This architectural change enables the notify app to handle notifications for:

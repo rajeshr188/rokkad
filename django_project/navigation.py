@@ -58,6 +58,14 @@ NAVIGATION_STRUCTURE = {
             "required_permission": "data_view",
         },
         {
+            "id": "notify-v2",
+            "label": "Notifications (V2)",
+            "url_name": "notify_v2_batch_list",
+            "icon": "envelope-paper-fill",
+            "section": "data",
+            "required_permission": "data_view",
+        },
+        {
             "id": "sales",
             "label": "Sales",
             "url_name": "sales:invoice_list",

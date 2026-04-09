@@ -135,13 +135,15 @@ def create_loan_reminder_notification(
             and _customer_email(customer)
             and normalized_medium != Notification.MediumType.Email
         ):
+            # Keep auto-generated email copies outside printable groups so batch
+            # print/detail flows stay aligned with the primary physical notice run.
             email_notification = _build_notification_record(
                 customer=customer,
                 loan_list=loan_list,
                 notice_code=notice_code,
                 notice_type_config=notice_type_config,
                 medium_type=Notification.MediumType.Email,
-                group=group,
+                group=None,
             )
             email_notification.send_notification()
 

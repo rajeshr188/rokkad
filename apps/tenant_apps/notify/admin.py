@@ -1,5 +1,11 @@
 from django.contrib import admin
-from .models import NoticeGroup, Notification, NoticeTypeConfig, NotificationItem
+from .models import (
+    NoticeGroup,
+    Notification,
+    NoticeTypeConfig,
+    NotificationItem,
+    NotificationTemplate,
+)
 
 
 @admin.register(NoticeTypeConfig)
@@ -94,6 +100,59 @@ class NoticeTypeConfigAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} notice types deactivated.")
 
     deactivate.short_description = "Deactivate selected notice types"
+
+
+@admin.register(NotificationTemplate)
+class NotificationTemplateAdmin(admin.ModelAdmin):
+    list_display = [
+        "name",
+        "notice_type_config",
+        "medium_type",
+        "renderer",
+        "is_active",
+        "sort_order",
+        "pdf_template_key",
+    ]
+    list_filter = ["medium_type", "renderer", "is_active", "notice_type_config"]
+    search_fields = [
+        "name",
+        "notice_type_config__code",
+        "notice_type_config__name",
+        "body_template",
+        "pdf_template_key",
+    ]
+    ordering = ["notice_type_config__category", "sort_order", "name"]
+    readonly_fields = ["created", "modified"]
+
+    fieldsets = (
+        (
+            "Template Scope",
+            {
+                "fields": (
+                    "notice_type_config",
+                    "name",
+                    "medium_type",
+                    "renderer",
+                    "is_active",
+                    "sort_order",
+                )
+            },
+        ),
+        (
+            "Content",
+            {
+                "fields": ("subject_template", "body_template", "pdf_template_key"),
+                "description": "Use PDF renderer for fixed printed forms and Django/Jinja templates for flexible digital notifications.",
+            },
+        ),
+        (
+            "Metadata",
+            {
+                "fields": ("created", "modified"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
 
 
 class NotificationItemInline(admin.TabularInline):

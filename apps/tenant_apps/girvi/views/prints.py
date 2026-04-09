@@ -30,12 +30,29 @@ from apps.tenant_apps.notify.services import (
     DEFAULT_LOAN_REMINDER_CODE,
     create_bulk_loan_reminder_group,
 )
+from apps.tenant_apps.notify_v2.models import NotificationJob
+from apps.tenant_apps.notify_v2.services import create_girvi_reminder_batch
 
 from ..forms import LoanSelectionForm
 from ..models import GivenLoan
 
 
 logger = logging.getLogger(__name__)
+
+_NOTIFY_V2_EVENT_MAP = {
+    "LOAN_FIRST_REMINDER": "loan.first_reminder_due",
+    "LOAN_SECOND_REMINDER": "loan.second_reminder_due",
+    "LOAN_FINAL_NOTICE": "loan.final_notice_due",
+    "LOAN_AUCTION_NOTICE": "loan.auction_notice_due",
+}
+
+_NOTIFY_V2_CHANNEL_MAP = {
+    Notification.MediumType.Email: NotificationJob.Channel.EMAIL,
+    Notification.MediumType.Letter: NotificationJob.Channel.LETTER,
+    Notification.MediumType.Post: NotificationJob.Channel.POST,
+    Notification.MediumType.SMS: NotificationJob.Channel.SMS,
+    Notification.MediumType.Whatsapp: NotificationJob.Channel.WHATSAPP,
+}
 
 
 def _parse_selected_ids(raw_ids):
@@ -170,6 +187,72 @@ def notify_print(request):
         return redirect(ng.get_absolute_url())
 
     return HttpResponse(status=200, content="No unreleased loans selected.")
+
+
+@login_required
+def notify_print_v2(request):
+    loan_kind = request.POST.get("loan_kind", "given")
+    if loan_kind != "given":
+        return HttpResponse(status=400, content="Notify V2 batches can be created only for Given loans.")
+
+    select_all = request.POST.get("selectall")
+    selected_loans = None
+
+    if select_all == "selected":
+        filterset = LoanFilter(
+            request.GET,
+            queryset=GivenLoan.objects.filter(release__isnull=True)
+            .select_related("borrower")
+            .prefetch_related("notifications", "loanitems"),
+        )
+        selected_loans = list(filterset.qs.order_by("borrower"))
+    else:
+        selection, invalid_count = _parse_selected_ids(request.POST.getlist("selection"))
+        if invalid_count:
+            logger.warning("notify_print_v2 rejected invalid IDs: %s", request.POST.getlist("selection"))
+            return HttpResponse(status=400, content="Invalid loan selection.")
+        if not selection:
+            return HttpResponse(status=400, content="Please select at least one unreleased given loan.")
+
+        selected_queryset = (
+            GivenLoan.objects.filter(release__isnull=True)
+            .filter(id__in=selection)
+        )
+
+        if selected_queryset.count() != len(selection):
+            return HttpResponse(status=400, content="Some selected loans are not eligible for notifications.")
+
+        selected_loans = list(selected_queryset.order_by("borrower"))
+
+    if not selected_loans:
+        return HttpResponse(status=200, content="No unreleased loans selected.")
+
+    notice_code = request.POST.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
+    medium_type = request.POST.get("medium_type", Notification.MediumType.Letter)
+    event_key = _NOTIFY_V2_EVENT_MAP.get(notice_code, "loan.first_reminder_due")
+    channel = _NOTIFY_V2_CHANNEL_MAP.get(medium_type, NotificationJob.Channel.LETTER)
+
+    try:
+        batch_result = create_girvi_reminder_batch(
+            loans=selected_loans,
+            created_by=request.user,
+            event_key=event_key,
+            channel=channel,
+        )
+    except ValueError as exc:
+        return HttpResponse(status=400, content=str(exc))
+    except Exception:
+        logger.exception("Error creating notify_v2 reminder batch.")
+        return HttpResponse(status=500, content="Error creating notify_v2 batch.")
+
+    try:
+        messages.success(
+            request,
+            f"Created notify_v2 batch with {batch_result.preview.borrower_count} recipient(s).",
+        )
+    except Exception:
+        pass
+    return redirect(batch_result.batch.get_absolute_url())
 
 
 import base64

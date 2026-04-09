@@ -117,9 +117,15 @@
             </a>
           </li>
           <li>
+            <a class="dropdown-item" hx-post="{% url 'girvi:girvi_create_notice_v2' %}?{{ request.GET.urlencode }}"
+               hx-include="#loan-table-container input[name='selection']:checked,#selectall,#loan-kind-hidden">
+              {% trans "Reminder Batch (V2)" %}
+            </a>
+          </li>
+          <li>
             <a class="dropdown-item" hx-post="{% url 'girvi:girvi_create_notice' %}?{{ request.GET.urlencode }}"
                hx-include="#loan-table-container input[name='selection']:checked,#selectall,#loan-kind-hidden">
-              {% trans "Notify Selected" %}
+              {% trans "Notify Selected (Legacy)" %}
             </a>
           </li>
           <li>

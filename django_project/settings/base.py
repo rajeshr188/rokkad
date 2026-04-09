@@ -82,6 +82,7 @@ TENANT_APPS = [
     "apps.tenant_apps.terms",
     "apps.tenant_apps.rates",
     "apps.tenant_apps.notify",
+    "apps.tenant_apps.notify_v2",
     "apps.tenant_apps.dea",
     "apps.tenant_apps.purchase",
     "apps.tenant_apps.sales",
@@ -273,6 +274,20 @@ EMAIL_USE_TLS = env("EMAIL_USE_TLS")
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+
+# notify_v2 digital delivery adapters (Twilio + WhatsApp Cloud API)
+TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID", default="")
+TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN", default="")
+TWILIO_FROM_NUMBER = env("TWILIO_FROM_NUMBER", default="")
+TWILIO_WHATSAPP_FROM_NUMBER = env("TWILIO_WHATSAPP_FROM_NUMBER", default="")
+NOTIFY_V2_TWILIO_STUB_FALLBACK = env.bool("NOTIFY_V2_TWILIO_STUB_FALLBACK", default=True)
+
+# WhatsApp provider for notify_v2 channel dispatch: "twilio" or "cloud"
+NOTIFY_V2_WHATSAPP_PROVIDER = env("NOTIFY_V2_WHATSAPP_PROVIDER", default="twilio")
+WHATSAPP_CLOUD_API_VERSION = env("WHATSAPP_CLOUD_API_VERSION", default="v20.0")
+WHATSAPP_CLOUD_PHONE_NUMBER_ID = env("WHATSAPP_CLOUD_PHONE_NUMBER_ID", default="")
+WHATSAPP_CLOUD_ACCESS_TOKEN = env("WHATSAPP_CLOUD_ACCESS_TOKEN", default="")
+WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN = env("WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN", default="")
 # ADMINS = [('Admin', 'admin@example.com')]
 
 

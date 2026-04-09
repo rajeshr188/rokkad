@@ -6,7 +6,6 @@ from django.views.decorators.http import require_http_methods
 
 from apps.tenant_apps.girvi.models import GivenLoan
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-from apps.tenant_apps.utils.loan_pdf import get_notice_pdf
 
 from .forms import NoticeGroupForm, NotificationForm
 from .models import NoticeGroup, Notification
@@ -43,18 +42,25 @@ def noticegroup_detail(request, pk):
         ng.notifications.all()
         .prefetch_related(
             "loans",
-            "loans__customer",
+            "loans__borrower",
         )
         .select_related("group", "customer")
     )
+    printable_items = items.filter(
+        medium_type__in=(
+            Notification.MediumType.Post,
+            Notification.MediumType.Letter,
+        )
+    )
     loans = (
         GivenLoan.objects.filter(release__isnull=True)
-        .filter(notifications__in=items)
+        .filter(notifications__in=printable_items)
+        .distinct()
         .count()
     )
     uniquie_customers = (
         GivenLoan.objects.filter(release__isnull=True)
-        .filter(notifications__in=items)
+        .filter(notifications__in=printable_items)
         .values("borrower")
         .distinct()
         .count()
@@ -128,35 +134,27 @@ def notification_detail(request, pk):
 
 
 # this looks heavy on frontend with items > 100: optimise it
+@login_required
 def noticegroup_print(request, pk):
     ng = get_object_or_404(NoticeGroup, pk=pk)
-    selected_loans = []
-    items = ng.notifications.all().prefetch_related("loans")
+    pdf = ng.print_notice()
+    if not pdf:
+        return HttpResponse("No printable content available for this notice group.", status=400)
 
-    print("generated items to print in this noticegroup")
-    for i in items:
-        for j in i.loans.all():
-            selected_loans.append(j.id)
-    selected_loans = (
-        GivenLoan.objects.filter(release__isnull=True)
-        .filter(id__in=selected_loans)
-        .order_by("borrower")
-        .prefetch_related("borrower", "loanitems")
-    )
-    pdf = get_notice_pdf(selection=selected_loans)
-    # Create a response object
     response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = 'attachment; filename="notice.pdf"'
+    response["Content-Disposition"] = f'attachment; filename="noticegroup_{ng.pk}.pdf"'
     return response
 
 
+@login_required
 def notification_print(request, pk):
     notification = get_object_or_404(Notification, pk=pk)
-    selected_loans = notification.loans.all()
-    pdf = get_notice_pdf(selection=selected_loans)
-    # Create a response object
+    pdf = notification.print_letter()
+    if not pdf:
+        return HttpResponse("No printable content available for this notification.", status=400)
+
     response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = 'attachment; filename="notice.pdf"'
+    response["Content-Disposition"] = f'attachment; filename="notification_{notification.pk}.pdf"'
     return response
 
 

@@ -7,6 +7,8 @@
 > - Migration guide from old to new system
 > - Admin interface documentation
 >
+> **Clean-slate target architecture:** see [NOTIFY_V2_REDESIGN_BLUEPRINT.md](NOTIFY_V2_REDESIGN_BLUEPRINT.md) for the no-backward-compatibility redesign plan.
+>
 > **Next Step**: Run `python manage.py migrate` to apply changes.
 
 ## Executive Summary

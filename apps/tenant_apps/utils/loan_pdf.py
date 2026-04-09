@@ -2037,16 +2037,24 @@ form_i_content = """
 # generate_pdf(form_i_content, "form_i.pdf")
 
 
-def get_notice_pdf(selection=None):
+def get_notice_pdf(selection=None, template_key=None):
+    """Generate a printable notice PDF.
+
+    `template_key` is the explicit selector for predefined printable layouts.
+    The current implementation still uses the standard loan reminder notice body
+    for all keys and keeps the extension point ready for future PDF variants.
+    """
     # TODO: paginate the pdf for better performance
     # TODO: add a progress bar
     # TODO: add page templates
+
+    selection = selection or []
 
     # Create a file-like buffer to receive PDF data.
     buffer = io.BytesIO()
     # Create the PDF object, using the buffer as its "file."
     doc = SimpleDocTemplate(buffer, pagesize=letter)
-    doc.title = "Notice-Group"
+    doc.title = template_key or "Notice-Group"
 
     # Define styles for the paragraphs
     styles = getSampleStyleSheet()
