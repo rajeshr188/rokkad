@@ -174,10 +174,9 @@ class Customer(models.Model):
 
     def get_default_address(self):
         """Get customer's default address"""
-        try:
-            return self.address.filter(is_default=True).first()
-        except Address.DoesNotExist:
-            return self.address.first()
+        # Use .all() so Django prefetch cache is honoured (avoids N+1)
+        addresses = list(self.address.all())
+        return next((a for a in addresses if a.is_default), None) or (addresses[0] if addresses else None)
 
     # Backward compatibility alias
     def get_address(self):
@@ -186,8 +185,9 @@ class Customer(models.Model):
 
     def get_default_contact(self):
         """Get customer's default contact"""
-        default_contact = self.contactno.filter(is_default=True).first()
-        return default_contact or self.contactno.first()
+        # Use .all() so Django prefetch cache is honoured (avoids N+1)
+        contacts = list(self.contactno.all())
+        return next((c for c in contacts if c.is_default), None) or (contacts[0] if contacts else None)
 
     # Backward compatibility alias
     def get_contactno(self):

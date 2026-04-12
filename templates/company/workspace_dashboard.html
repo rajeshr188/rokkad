@@ -110,6 +110,68 @@
     </div>
 </div>
 
+<!-- Current Metal Rates -->
+{% if gold_rate or silver_rate %}
+<div class="row mb-4">
+    {% if gold_rate %}
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100 border-0 shadow-sm border-start border-warning border-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-coin text-warning fs-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small">Gold 24K (Buy)</p>
+                        <h4 class="mb-0 fw-bold">₹{{ gold_rate.buying_rate }}</h4>
+                        <small class="text-muted">Sell: ₹{{ gold_rate.selling_rate }}</small>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>{{ gold_rate.timestamp|date:"d M, H:i" }}
+                        &mdash; {{ gold_rate.rate_source }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if silver_rate %}
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100 border-0 shadow-sm border-start border-secondary border-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-secondary bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-coin text-secondary fs-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small">Silver {{ silver_rate.purity }} (Buy)</p>
+                        <h4 class="mb-0 fw-bold">₹{{ silver_rate.buying_rate }}</h4>
+                        <small class="text-muted">Sell: ₹{{ silver_rate.selling_rate }}</small>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>{{ silver_rate.timestamp|date:"d M, H:i" }}
+                        &mdash; {{ silver_rate.rate_source }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="col-lg-6 col-md-12 mb-3 d-flex align-items-center">
+        <a href="{% url 'rate_list' %}" class="btn btn-outline-warning btn-sm me-2">
+            <i class="bi bi-list-ul me-1"></i>All Rates
+        </a>
+        <a href="{% url 'rate_create' %}" class="btn btn-warning btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>Add Rate
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <!-- Subscription Status Section (if Owner/Admin) -->
 {% if 'billing_view' in user_permissions %}
 <div class="row mb-4">

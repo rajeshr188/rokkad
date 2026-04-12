@@ -767,6 +767,7 @@ def workspace_dashboard(request, workspace_id):
         get_average_loan_instance_per_day,
         get_loan_cumulative_amount,
     )
+    from apps.tenant_apps.rates.models import Rate
     from django.db.models import Sum, Count, Exists, OuterRef
     from datetime import date
 
@@ -977,6 +978,18 @@ def workspace_dashboard(request, workspace_id):
     context["pending_invitations"] = workspace.invitations.filter(
         accepted=False
     ).count()
+
+    # Current metal rates
+    context["gold_rate"] = (
+        Rate.objects.filter(metal=Rate.Metal.GOLD, purity=Rate.Purity.K24)
+        .order_by("-timestamp")
+        .first()
+    )
+    context["silver_rate"] = (
+        Rate.objects.filter(metal=Rate.Metal.SILVER)
+        .order_by("-timestamp")
+        .first()
+    )
 
     # Breadcrumb context
     context["breadcrumb_items"] = [

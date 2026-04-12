@@ -26,7 +26,10 @@ def _get_customer_list_context(request):
     customer_queryset = Customer.objects.all().prefetch_related("contactno", "address")
     customer_filter = CustomerFilter(request.GET, queryset=customer_queryset)
     filtered_queryset = customer_filter.qs.distinct()
-    paginator = Paginator(filtered_queryset, 12)
+    # Determine view preference from query parameter or session
+    view_type = request.GET.get('view_type') or request.session.get('customer_view_type', 'card')
+    items_per_page = 12 if view_type == 'card' else 25  # Show more items in list view
+    paginator = Paginator(filtered_queryset, items_per_page)
     page_obj = paginator.get_page(request.GET.get("page"))
 
     return {
@@ -34,6 +37,7 @@ def _get_customer_list_context(request):
         "customers": page_obj.object_list,
         "page_obj": page_obj,
         "results_count": paginator.count,
+        "view_type": view_type,
     }
 
 
@@ -50,6 +54,10 @@ def customer_list(request):
             dataset_kwargs={"title": "loans"},
         )
         return exporter.response(f"table.{export_format}")
+
+    # Save view preference to session if provided
+    if 'view_type' in request.GET:
+        request.session['customer_view_type'] = request.GET['view_type']
 
     if request.htmx:
         fragment_name = "customer-list-results"

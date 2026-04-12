@@ -8,7 +8,7 @@ from apps.orgs.tenant_context import resolve_request_workspace
 
 
 def _resolve_workspace(request):
-    return resolve_request_workspace(request, include_public=True)
+    return resolve_request_workspace(request, include_public=False, allow_profile_fallback=True)
 
 
 def google_oauth_context(request):
@@ -53,13 +53,12 @@ def user_permissions(request):
         # This integrates with the permission system defined in models
         role = membership.role
 
-        # Get permission codenames from role
-        perms = set()
+        # Always start with the role-matrix permissions (custom string-based,
+        # e.g. 'team_invite', 'workspace_edit') so sidebar gates work correctly.
+        # Then union in any explicit Django Permission codenames from the DB.
+        perms = _get_permissions_for_role(role.name)
         if hasattr(role, "permissions"):
-            perms = set(role.permissions.values_list("codename", flat=True))
-        else:
-            # Fallback: Use role name to determine permissions
-            perms = _get_permissions_for_role(role.name)
+            perms |= set(role.permissions.values_list("codename", flat=True))
 
         return {
             "user_permissions": perms,

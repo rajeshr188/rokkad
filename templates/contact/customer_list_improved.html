@@ -53,13 +53,40 @@
             {{ counter }} customers found
             {% endblocktrans %}
         </div>
-        <div class="btn-group btn-group-sm" role="group" aria-label="Export options">
-            <a href="?{% for key, value in request.GET.items %}{% if key != '_export' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}_export=csv" class="btn btn-outline-secondary">CSV</a>
-            <a href="?{% for key, value in request.GET.items %}{% if key != '_export' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}_export=xlsx" class="btn btn-outline-secondary">XLSX</a>
+        <div class="d-flex gap-2 align-items-center">
+            <!-- View toggle -->
+            <div class="btn-group btn-group-sm" role="group" aria-label="View options">
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'view_type' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}view_type=card"
+                   hx-get="{% url 'contact_customer_list' %}?{% for key, value in request.GET.items %}{% if key != 'view_type' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}view_type=card"
+                   hx-target="#customer-list-results"
+                   hx-select="#customer-list-results"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   class="btn btn-outline-secondary {% if view_type == 'card' %}active{% endif %}" 
+                   title="Card view">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </a>
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'view_type' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}view_type=list"
+                   hx-get="{% url 'contact_customer_list' %}?{% for key, value in request.GET.items %}{% if key != 'view_type' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}view_type=list"
+                   hx-target="#customer-list-results"
+                   hx-select="#customer-list-results"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   class="btn btn-outline-secondary {% if view_type == 'list' %}active{% endif %}" 
+                   title="List view">
+                    <i class="bi bi-list-ul"></i>
+                </a>
+            </div>
+            <!-- Export options -->
+            <div class="btn-group btn-group-sm" role="group" aria-label="Export options">
+                <a href="?{% for key, value in request.GET.items %}{% if key != '_export' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}_export=csv" class="btn btn-outline-secondary">CSV</a>
+                <a href="?{% for key, value in request.GET.items %}{% if key != '_export' and key != 'page' %}{{ key|urlencode }}={{ value|urlencode }}&{% endif %}{% endfor %}_export=xlsx" class="btn btn-outline-secondary">XLSX</a>
+            </div>
         </div>
     </div>
-
     {% if customers %}
+    {% if view_type == 'card' %}
+    <!-- Card View -->
     <div class="cards-container">
         {% for customer in customers %}
         <div class="customer-card">
@@ -101,11 +128,9 @@
                 <div class="customer-info-item">
                     <div class="customer-info-label">{% trans "Phone" %}</div>
                     <div class="customer-info-value">
-                        {% if customer.get_default_contact %}
-                            {{ customer.get_default_contact }}
-                        {% else %}
-                            <span class="text-muted">{% trans "No phone" %}</span>
-                        {% endif %}
+                        {% with phone=customer.get_default_contact %}
+                        {% if phone %}{{ phone }}{% else %}<span class="text-muted">{% trans "No phone" %}</span>{% endif %}
+                        {% endwith %}
                     </div>
                 </div>
 
@@ -132,6 +157,73 @@
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <!-- List View -->
+    <div class="table-responsive">
+        <table class="table table-hover customer-table">
+            <thead class="table-light">
+                <tr>
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "Type" %}</th>
+                    <th>{% trans "Phone" %}</th>
+                    <th>{% trans "Address" %}</th>
+                    <th>{% trans "Status" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr class="customer-table-row"
+                    hx-get="{% url 'contact_customer_detail' customer.id %}"
+                    hx-target="#content"
+                    hx-push-url="true"
+                    style="cursor: pointer;">
+                    <td class="fw-semibold">{{ customer.name }}<br><small class="text-muted">#{{ customer.id }}</small></td>
+                    <td><span class="badge bg-info-subtle text-info-emphasis">{{ customer.get_customer_type_display }}</span></td>
+                    <td>
+                        {% with phone=customer.get_default_contact %}{% if phone %}{{ phone }}{% else %}<span class="text-muted">-</span>{% endif %}{% endwith %}
+                    </td>
+                    <td>
+                        {% with default_address=customer.get_default_address %}
+                            {% if default_address %}
+                                {% if default_address.door_number %}{{ default_address.door_number }}, {% endif %}
+                                {% if default_address.street %}{{ default_address.street }}, {% endif %}
+                                {% if default_address.area %}{{ default_address.area }}, {% endif %}
+                                {{ default_address.city }}
+                                {% if default_address.state %}, {{ default_address.get_state_display }}{% endif %}
+                                {% if default_address.zip_code %} - {{ default_address.zip_code }}{% endif %}
+                                {% if default_address.country %}, {{ default_address.get_country_display }}{% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% if customer.active %}
+                            <span class="badge bg-success">{% trans "Active" %}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+                        {% endif %}
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-sm btn-outline-primary" hx-get="{% url 'contact_customer_update' customer.id %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal" title="{% trans 'Edit' %}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <a class="btn btn-sm btn-outline-success" href="{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}" title="{% trans 'New Loan' %}">
+                                <i class="bi bi-plus-circle"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger" hx-delete="{% url 'contact_customer_delete' customer.id %}" hx-confirm="{% trans 'Are you sure?' %}" hx-target="closest tr" hx-swap="outerHTML swap:0.5s" title="{% trans 'Delete' %}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 
     {% if page_obj.paginator.num_pages > 1 %}
     <nav class="mt-4" aria-label="Customer pagination">
@@ -354,6 +446,43 @@
         padding: 0.375rem 0.75rem;
         font-size: 0.8125rem;
     }
+
+       /* Table view styles */
+       .customer-table {
+           margin-bottom: 0;
+       }
+
+       .customer-table thead th {
+           font-weight: 600;
+           text-transform: uppercase;
+           font-size: 0.75rem;
+           letter-spacing: 0.5px;
+           color: #666;
+           border-bottom: 2px solid #dee2e6;
+       }
+
+       .customer-table tbody tr {
+           border-bottom: 1px solid #dee2e6;
+           transition: background-color 0.15s ease;
+       }
+
+       .customer-table tbody tr:hover {
+           background-color: #f8f9fa;
+       }
+
+       .customer-table td {
+           vertical-align: middle;
+           padding: 1rem 0.75rem;
+       }
+
+       .customer-table .btn-group {
+           display: flex;
+           gap: 0.25rem;
+       }
+
+       .customer-table .btn-group .btn {
+           padding: 0.375rem 0.5rem;
+       }
 
     /* Loading indicator */
     .loading-indicator {

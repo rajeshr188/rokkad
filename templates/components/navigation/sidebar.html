@@ -2,25 +2,27 @@
 <!-- Workspace Sidebar -->
 <div class="sidebar-wrapper">
     <div class="sidebar-sticky">
+        {% with effective_workspace=workspace|default:user_workspace %}
+        {% firstof user_role "Member" as role_name %}
         <!-- Workspace Info - Using context processor variable -->
-        {% if user_workspace %}
+        {% if effective_workspace %}
         <div class="mb-4 p-3 bg-light rounded border-bottom">
             <h6 class="mb-2 text-uppercase small text-muted">Current Workspace</h6>
             <h5 class="mb-0">
                 <i class="bi bi-briefcase-fill text-primary"></i>
-                {{ user_workspace.name }}
+                {{ effective_workspace.name }}
             </h5>
             <small class="text-muted d-block mt-2">
-                Role: <span class="badge bg-primary">{{ user_role }}</span>
+                Role: <span class="badge bg-primary">{{ role_name }}</span>
             </small>
         </div>
         {% endif %}
         
         <!-- Main Navigation -->
         <nav class="nav flex-column gap-2">
-            {% if user_workspace %}
+                {% if effective_workspace %}
             <a class="nav-link {% if request.resolver_match.url_name == 'workspace_dashboard' %}active{% endif %}" 
-               href="{% url 'workspace_dashboard' workspace_id=user_workspace.id %}">
+                    href="{% url 'workspace_dashboard' workspace_id=effective_workspace.id %}">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
             {% endif %}
@@ -36,9 +38,9 @@
                     <span class="badge bg-warning text-dark float-end">{{ pending_invites }}</span>
                     {% endif %}
                 </a>
-                {% if user_workspace %}
+                     {% if effective_workspace %}
                 <a class="nav-link {% if request.resolver_match.url_name == 'team_invite' %}active{% endif %}" 
-                   href="{% url 'team_invite' workspace_id=user_workspace.id %}">
+                         href="{% url 'team_invite' workspace_id=effective_workspace.id %}">
                     <i class="bi bi-person-plus"></i> Invite Member
                 </a>
                 {% endif %}
@@ -49,13 +51,13 @@
             {% if 'workspace_edit' in user_permissions %}
             <div class="nav-section">
                 <h6 class="nav-section-title">Workspace</h6>
-                {% if user_workspace %}
+                     {% if effective_workspace %}
                 <a class="nav-link {% if request.resolver_match.url_name == 'workspace_detail' %}active{% endif %}" 
-                   href="{% url 'workspace_detail' workspace_id=user_workspace.id %}">
+                         href="{% url 'workspace_detail' workspace_id=effective_workspace.id %}">
                     <i class="bi bi-gear"></i> Settings
                 </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'workspace_preferences' %}active{% endif %}" 
-                   href="{% url 'workspace_preferences' workspace_id=user_workspace.id %}">
+                         href="{% url 'workspace_preferences' workspace_id=effective_workspace.id %}">
                     <i class="bi bi-sliders"></i> Preferences
                 </a>
                 {% endif %}
@@ -79,12 +81,12 @@
             {% endif %}
             
             <!-- Tenant App Features (only in workspace context) -->
-            {% if user_workspace and user_workspace.schema_name != 'public' %}
+            {% if effective_workspace and effective_workspace.schema_name != 'public' %}
             <div class="nav-section">
                 <h6 class="nav-section-title">Apps</h6>
                 
                 <!-- Contacts -->
-                {% if 'contact_view' in user_permissions %}
+                {% if 'contact_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link {% if request.resolver_match.url_name == 'contact_customer_list' or 'contact' in request.resolver_match.url_name %}active{% endif %}" 
                    href="{% url 'contact_customer_list' %}">
                     <i class="bi bi-people-fill"></i> Contacts
@@ -92,7 +94,7 @@
                 {% endif %}
 
                 <!-- Product/Catalog -->
-                {% if 'data_view' in user_permissions %}
+                {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link {% if 'product_' in request.resolver_match.url_name %}active{% endif %}"
                    href="{% url 'product_product_home' %}">
                     <i class="bi bi-grid-1x2-fill"></i> Product
@@ -100,7 +102,7 @@
                 {% endif %}
                 
                 <!-- Girvi (Loans) -->
-                {% if 'girvi_loan_view' in user_permissions %}
+                {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link {% if request.resolver_match.namespace == 'girvi' %}active{% endif %}" 
                    href="{% url 'girvi:girvi_dashboard' %}">
                     <i class="bi bi-cash-coin"></i> Girvi
@@ -108,7 +110,7 @@
                 {% endif %}
                 
                 <!-- Sales -->
-                {% if 'sales_invoice_view' in user_permissions %}
+                {% if 'sales_invoice_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link {% if request.resolver_match.namespace == 'sales' %}active{% endif %}" 
                    href="{% url 'sales:sales_invoice_list' %}">
                     <i class="bi bi-receipt"></i> Sales
@@ -116,18 +118,26 @@
                 {% endif %}
                 
                 <!-- Purchase -->
-                {% if 'purchase_invoice_view' in user_permissions %}
+                {% if 'purchase_invoice_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link {% if request.resolver_match.namespace == 'purchase' %}active{% endif %}" 
-                   href="{% url 'purchase:purchase_list' %}">
+                   href="{% url 'purchase:purchase_invoice_list' %}">
                     <i class="bi bi-bag"></i> Purchase
                 </a>
                 {% endif %}
                 
                 <!-- Accounting/DEA -->
-                {% if 'dea_journal_view' in user_permissions %}
-                <a class="nav-link {% if request.resolver_match.namespace == 'dea' %}active{% endif %}" 
-                   href="{% url 'dea:journal_entry_list' %}">
+                {% if 'dea_journal_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
+                <a class="nav-link" 
+                   href="{% url 'dea_journal_entries_list' %}">
                     <i class="bi bi-graph-up"></i> Accounting
+                </a>
+                {% endif %}
+
+                <!-- Rates -->
+                {% if role_name == 'Owner' or role_name == 'Admin' %}
+                <a class="nav-link {% if request.resolver_match.url_name == 'rate_list' or 'rate' in request.resolver_match.url_name %}active{% endif %}"
+                   href="{% url 'rate_list' %}">
+                    <i class="bi bi-coin"></i> Rates
                 </a>
                 {% endif %}
             </div>
@@ -135,7 +145,7 @@
         </nav>
         
         <!-- Workspace Stats (if workspace exists) -->
-        {% if user_workspace %}
+        {% if effective_workspace %}
         <div class="mt-4 pt-3 border-top small text-muted">
             <div class="mb-2">
                 <span>Subscription:</span>
@@ -157,6 +167,7 @@
             {% endif %}
         </div>
         {% endif %}
+        {% endwith %}
     </div>
 </div>
 
