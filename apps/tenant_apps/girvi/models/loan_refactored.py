@@ -29,14 +29,16 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
+from django.contrib.auth import get_user_model
+
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import BusinessDoc, JournalEntry
 from apps.tenant_apps.girvi.models.custody_tracking import (
     GivenLoanReleaseMixin,
     TakenLoanCollateralMixin,
 )
 from ..managers_refactored import GivenLoanManager, TakenLoanManager
 
+User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
@@ -97,13 +99,29 @@ class InterestType(models.TextChoices):
 # ============================================================================
 
 
-class BaseLoan(BusinessDoc):
+class BaseLoan(models.Model):
     """
     Abstract base class for all loan types.
     Contains shared fields and common behavior.
 
     All redundant calculated fields have been removed and replaced with @property methods.
     """
+
+    # Audit fields (previously inherited from dea.BusinessDoc — decoupled 2026-05-03)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="%(class)s_created_by",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="%(class)s_updated_by",
+    )
 
     # Core identification - globally unique formatted ID
     loan_id = models.CharField(
@@ -278,16 +296,46 @@ class BaseLoan(BusinessDoc):
         return Money(self.total_due, "INR")
 
     def get_total_payments(self) -> Decimal:
-        """Sum of all payments made on this loan."""
-        return self.loan_payments.aggregate(Sum("payment_amount"))[
-            "payment_amount__sum"
-        ] or Decimal(0)
+        """Sum of all borrower receipts made on this loan."""
+        if getattr(self, "pk", None):
+            payments_relation = getattr(self, "payments", None)
+            if payments_relation is not None:
+                try:
+                    total = payments_relation.filter(direction="RECEIPT").aggregate(
+                        total=Sum("amount_in_base_currency")
+                    )["total"]
+                    if hasattr(total, "amount"):
+                        return Decimal(str(total.amount))
+                    if total not in (None, ""):
+                        return Decimal(str(total))
+                except Exception:
+                    pass
+
+        loan_payments = getattr(self, "loan_payments", None)
+        if loan_payments is None:
+            return Decimal(0)
+        return loan_payments.aggregate(Sum("payment_amount"))["payment_amount__sum"] or Decimal(0)
 
     def get_total_principal_payments(self) -> Decimal:
-        """Sum of principal payments."""
-        return self.loan_payments.aggregate(Sum("principal_payment"))[
-            "principal_payment__sum"
-        ] or Decimal(0)
+        """Sum of principal payments across voucher-backed and legacy flows."""
+        if getattr(self, "pk", None):
+            payments_relation = getattr(self, "payments", None)
+            if payments_relation is not None:
+                try:
+                    total = payments_relation.filter(direction="RECEIPT").aggregate(
+                        total_principal=Sum("principal_amount")
+                    )["total_principal"]
+                    if hasattr(total, "amount"):
+                        return Decimal(str(total.amount))
+                    if total not in (None, ""):
+                        return Decimal(str(total))
+                except Exception:
+                    pass
+
+        loan_payments = getattr(self, "loan_payments", None)
+        if loan_payments is None:
+            return Decimal(0)
+        return loan_payments.aggregate(Sum("principal_payment"))["principal_payment__sum"] or Decimal(0)
 
     def get_total_interest_payments(self) -> Decimal:
         """Sum of interest payments across voucher-backed and legacy payment flows."""
@@ -468,7 +516,7 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         """
         from decimal import Decimal
         from moneyed import Money
-        from apps.tenant_apps.dea.models import PaymentVoucher
+        from django.apps import apps as _apps; PaymentVoucher = _apps.get_model("dea", "PaymentVoucher")
 
         if not created_by:
             raise ValidationError("created_by user is required")
@@ -711,7 +759,7 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         """
         from decimal import Decimal
         from moneyed import Money
-        from apps.tenant_apps.dea.models import PaymentVoucher
+        from django.apps import apps as _apps; PaymentVoucher = _apps.get_model("dea", "PaymentVoucher")
 
         if not created_by:
             raise ValidationError("created_by user is required")
@@ -776,7 +824,7 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         """
         from decimal import Decimal
         from moneyed import Money
-        from apps.tenant_apps.dea.models import PaymentVoucher
+        from django.apps import apps as _apps; PaymentVoucher = _apps.get_model("dea", "PaymentVoucher")
 
         if not created_by:
             raise ValidationError("created_by user is required")
@@ -1008,7 +1056,7 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
         """
         from decimal import Decimal
         from moneyed import Money
-        from apps.tenant_apps.dea.models import PaymentVoucher
+        from django.apps import apps as _apps; PaymentVoucher = _apps.get_model("dea", "PaymentVoucher")
 
         if not created_by:
             raise ValidationError("created_by user is required")

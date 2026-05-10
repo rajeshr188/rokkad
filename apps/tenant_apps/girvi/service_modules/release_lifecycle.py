@@ -158,6 +158,16 @@ class ReleaseLifecycleService:
                 )
                 release.save()
 
+                # Update custody: move all items from vault/lender → customer
+                loan_items = getattr(command.loan, "loanitems", None)
+                if loan_items is not None:
+                    for item in loan_items.all():
+                        try:
+                            if hasattr(item, "release_to_customer"):
+                                item.release_to_customer(user=created_by)
+                        except Exception:
+                            pass  # WITH_CUSTOMER already, or validation error – skip silently
+
                 use_v2_closure = str(getattr(command.loan, "status", "")) in {
                     "ActiveCurrent",
                     "ActiveOverdue",

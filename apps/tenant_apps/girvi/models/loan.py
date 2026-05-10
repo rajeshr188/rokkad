@@ -3,6 +3,7 @@ import re
 from decimal import Decimal
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -19,7 +20,6 @@ from apps.tenant_apps.dea.models import (
     AccountTransaction,
     LedgerTransaction,
 )
-from apps.tenant_apps.dea.models import BusinessDoc
 
 # Import constants from refactored models (but NOT the new model classes - they're defined in loan_refactored.py)
 from .loan_refactored import LoanStatus, InterestType
@@ -27,10 +27,29 @@ from .loan_refactored import LoanStatus, InterestType
 # Import old managers (deprecated, kept for backward compatibility)
 from ..managers import LoanManager, LoanQuerySet, ReleasedManager, UnReleasedManager
 
+_User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-class Loan(BusinessDoc):
+class _LoanAuditMixin(models.Model):
+    """
+    Audit fields previously inherited from dea.BusinessDoc (decoupled 2026-05-03).
+    Used only by the legacy Loan and LoanPayment models in this file.
+    """
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        _User, on_delete=models.SET_NULL, null=True, related_name="%(class)s_created_by"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        _User, on_delete=models.SET_NULL, null=True, related_name="%(class)s_updated_by"
+    )
+
+    class Meta:
+        abstract = True
+
+
+class Loan(_LoanAuditMixin):
     """
     DEPRECATED: Use GivenLoan and TakenLoan models instead.
 
@@ -686,7 +705,7 @@ class LoanChangeLog(models.Model):
         return f"{loan_id} - {self.source} → {self.target}"
 
 
-class LoanPayment(BusinessDoc):
+class LoanPayment(_LoanAuditMixin):
     """
     DEPRECATED — do not use in new code.
     Legacy loan payment model superseded by apps.tenant_apps.dea.models.PaymentVoucher.
