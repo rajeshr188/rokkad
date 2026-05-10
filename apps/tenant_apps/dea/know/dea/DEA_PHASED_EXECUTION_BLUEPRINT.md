@@ -456,7 +456,7 @@ before the user can submit the close.
 
 ---
 
-### 2.2 Depreciation engine
+### [x] 2.2 Depreciation engine — done in c9b6cbc
 
 **Files to create:**  
 - `apps/tenant_apps/dea/models/asset.py` (`FixedAsset`, `DepreciationSchedule`)  
