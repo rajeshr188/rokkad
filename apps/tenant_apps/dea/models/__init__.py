@@ -12,3 +12,4 @@ from .sales_invoice import *
 from .purchase_invoice import *
 from .numbering import *
 from .asset import *
+from .prepaid import *

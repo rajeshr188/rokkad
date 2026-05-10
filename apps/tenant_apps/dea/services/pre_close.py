@@ -129,37 +129,25 @@ class PreCloseChecklist:
         )
 
     def _prepaid_expired_check(self, period) -> CheckResult:
-        period_entries = period.journal_entries.count()
-        if period_entries == 0:
-            return CheckResult(
-                key="prepaid_expired",
-                label="Prepaid expiry schedule",
-                status="info",
-                is_fatal=False,
-                count=0,
-                status_text="No period activity yet; prepaid check not required",
-            )
+        from apps.tenant_apps.dea.services.prepaid import PrepaidService
 
-        count = JournalEntryVoucher.objects.filter(
-            reference=f"PERIOD:{period.pk}",
-            memo__in=["PRE_CLOSE:PREPAID_EXPENSE", "PRE_CLOSE:ACCRUAL"],
-        ).count()
-        if count:
+        count = PrepaidService.get_unposted_for_period(period).count()
+        if count == 0:
             return CheckResult(
                 key="prepaid_expired",
                 label="Prepaid expiry schedule",
                 status="pass",
                 is_fatal=False,
-                count=count,
-                status_text="Prepaid/accrual adjustments recorded",
+                count=0,
+                status_text="All prepaid schedules are posted for this period",
             )
         return CheckResult(
             key="prepaid_expired",
             label="Prepaid expiry schedule",
             status="warning",
             is_fatal=False,
-            count=0,
-            status_text="Review prepaid and accrual schedules before close",
+            count=count,
+            status_text=f"{count} prepaid item(s) still need amortization",
         )
 
     def _balance_sheet_trial_check(self, period) -> CheckResult:
