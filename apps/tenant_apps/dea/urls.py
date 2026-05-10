@@ -2,6 +2,7 @@ from django.urls import path
 
 
 from . import views
+from .views import reports as reports_views
 from .views import dashboard_enhanced
 
 urlpatterns = [
@@ -35,6 +36,52 @@ urlpatterns += [
     path("reports/payables/aging/", views.payables_aging, name="ap_aging"),
     # Financial ratios
     path("reports/ratios/", views.financial_ratios, name="financial_ratios"),
+    # Phase 2.5 report views (period-aware)
+    path(
+        "reports/period/<int:period_id>/trial-balance/",
+        reports_views.TrialBalanceView.as_view(),
+        name="trial_balance_period",
+    ),
+    path(
+        "reports/period/<int:period_id>/income-statement/",
+        reports_views.IncomeStatementView.as_view(),
+        name="income_statement_period",
+    ),
+    path(
+        "reports/period/<int:period_id>/balance-sheet/",
+        reports_views.BalanceSheetView.as_view(),
+        name="balance_sheet_period",
+    ),
+    path(
+        "reports/period/<int:period_id>/cash-flow/",
+        reports_views.CashFlowView.as_view(),
+        name="cash_flow_period",
+    ),
+    path(
+        "reports/period/<int:period_id>/ar-aging/",
+        reports_views.ARAgingView.as_view(),
+        name="ar_aging_period",
+    ),
+    path(
+        "reports/period/<int:period_id>/ap-aging/",
+        reports_views.APAgingView.as_view(),
+        name="ap_aging_period",
+    ),
+    path(
+        "reports/period/<int:period_id>/trial-balance.csv",
+        reports_views.trial_balance_csv,
+        name="trial_balance_csv",
+    ),
+    path(
+        "reports/period/<int:period_id>/income-statement.csv",
+        reports_views.income_statement_csv,
+        name="income_statement_csv",
+    ),
+    path(
+        "reports/period/<int:period_id>/balance-sheet.csv",
+        reports_views.balance_sheet_csv,
+        name="balance_sheet_csv",
+    ),
 ]
 urlpatterns += [
     # for ledgers
