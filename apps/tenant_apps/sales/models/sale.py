@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
@@ -16,32 +15,9 @@ from djmoney.models.fields import MoneyField
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import AccountStatement  # , JournalTypes
-from apps.tenant_apps.dea.models import JournalEntry
-from apps.tenant_apps.dea.models import Voucher, VoucherStatus
-from apps.tenant_apps.dea.utils.currency import Balance
+from apps.tenant_apps.dea.facade import Balance, resolve_posted_journal_entry
 from apps.tenant_apps.product.models import Stock, StockItem
 from apps.tenant_apps.terms.models import PaymentTerm
-
-
-def _resolve_posted_journal_entry(doc):
-    if not getattr(doc, "pk", None):
-        return None
-
-    content_type = ContentType.objects.get_for_model(doc, for_concrete_model=False)
-    voucher = (
-        Voucher.objects.filter(
-            doc_content_type=content_type,
-            doc_object_id=doc.pk,
-            status=VoucherStatus.POSTED,
-        )
-        .order_by("-last_posted_at", "-id")
-        .first()
-    )
-    if not voucher:
-        return None
-
-    return voucher.journal_entries.order_by("-id").first()
 
 
 class Month(Func):
@@ -167,7 +143,7 @@ class Invoice(models.Model):
         related_name="sales",
     )
     journal_entries = GenericRelation(
-        JournalEntry,
+        "dea.JournalEntry",
         related_query_name="sales_doc",
     )
     objects = SalesQueryset.as_manager()
@@ -519,7 +495,7 @@ class Invoice(models.Model):
         return lt, at
 
     def get_journal_entry(self, desc=None):
-        return _resolve_posted_journal_entry(self)
+        return resolve_posted_journal_entry(self)
 
     def delete_journal_entry(self):
         return None

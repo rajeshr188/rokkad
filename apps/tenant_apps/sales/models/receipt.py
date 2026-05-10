@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q, Sum
 from django.forms import model_to_dict
@@ -10,28 +9,7 @@ from djmoney.models.fields import MoneyField
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
-from apps.tenant_apps.dea.models import Voucher, VoucherStatus
-
-
-def _resolve_posted_journal_entry(doc):
-    if not getattr(doc, "pk", None):
-        return None
-
-    content_type = ContentType.objects.get_for_model(doc, for_concrete_model=False)
-    voucher = (
-        Voucher.objects.filter(
-            doc_content_type=content_type,
-            doc_object_id=doc.pk,
-            status=VoucherStatus.POSTED,
-        )
-        .order_by("-last_posted_at", "-id")
-        .first()
-    )
-    if not voucher:
-        return None
-
-    return voucher.journal_entries.order_by("-id").first()
+from apps.tenant_apps.dea.facade import resolve_posted_journal_entry
 
 
 class Receipt(models.Model):
@@ -61,7 +39,7 @@ class Receipt(models.Model):
         max_length=18, choices=status_choices, default="Unallotted"
     )
     is_active = models.BooleanField(default=True)
-    journal_entries = GenericRelation(JournalEntry, related_query_name="receipt_doc")
+    journal_entries = GenericRelation("dea.JournalEntry", related_query_name="receipt_doc")
     # Relationship Fields
     customer = models.ForeignKey(
         Customer,
@@ -329,7 +307,7 @@ class Receipt(models.Model):
         return lt, at
 
     def get_journal_entry(self, desc=None):
-        return _resolve_posted_journal_entry(self)
+        return resolve_posted_journal_entry(self)
 
     def delete_journal_entry(self):
         return None
