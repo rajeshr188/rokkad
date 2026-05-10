@@ -1,0 +1,66 @@
+{% extends 'layouts/management.html' %}
+{% load orgs_tags %}
+
+{% block title %}My Memberships - Rokkad{% endblock %}
+
+{% block mgmt_content %}
+<div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-diagram-3 me-2"></i>My Memberships</h4>
+            <p class="text-muted mb-0">All workspace memberships associated with your account.</p>
+        </div>
+        <span class="badge bg-primary">{{ membership_count }} total</span>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if memberships %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Workspace</th>
+                            <th>Role</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for membership in memberships %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ membership.company.name }}</div>
+                                {% if active_workspace and active_workspace.id == membership.company.id %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle mt-1">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>{% render_role_badge role=membership.role.name %}</td>
+                            <td class="text-muted">{{ membership.date_joined|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="{% url 'workspace_select' membership.company.id %}?next={% url 'workspace_dashboard' workspace_id=membership.company.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-box-arrow-in-right me-1"></i>Open
+                                    </a>
+                                    {% if membership.role and membership.role.name == 'Owner' %}
+                                    <a href="{% url 'workspace_select' membership.company.id %}?next={% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-credit-card me-1"></i>Billing
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                <p class="text-muted mt-3 mb-0">You do not have any workspace memberships yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

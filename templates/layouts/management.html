@@ -1,0 +1,262 @@
+{% extends 'layouts/base.html' %}
+{% load orgs_tags %}
+
+{# ─────────────────────────────────────────────────────────────────────
+   Control-plane layout  (public schema – account & workspace management)
+   Visual distinction from the tenant data-plane:
+     • Amber accent bar at top
+     • Left sidebar with management-only nav (no business app links)
+     • "Account Management" label so users always know where they are
+   ───────────────────────────────────────────────────────────────────── #}
+
+{% block extra_css %}
+<style>
+/* ── Accent bar ── */
+.mgmt-accent-bar {
+    background: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+    color: #fff;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    padding: 0.35rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.mgmt-accent-bar .plane-label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.95;
+}
+.mgmt-accent-bar a { color: rgba(255,255,255,0.85); text-decoration: none; }
+.mgmt-accent-bar a:hover { color: #fff; text-decoration: underline; }
+
+/* ── Layout shell ── */
+.mgmt-shell {
+    display: flex;
+    min-height: calc(100vh - 56px - 32px); /* minus navbar & accent bar */
+}
+
+/* ── Management sidebar ── */
+.mgmt-sidebar {
+    width: 230px;
+    min-width: 230px;
+    background: #f8f7ff;
+    border-right: 1px solid #e9e4f8;
+    padding: 1.25rem 0;
+    position: sticky;
+    top: 88px; /* navbar + accent */
+    max-height: calc(100vh - 88px);
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+.mgmt-sidebar .sidebar-section-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #7c3aed;
+    padding: 0.75rem 1.25rem 0.25rem;
+}
+.mgmt-sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 1.25rem;
+    font-size: 0.875rem;
+    color: #374151;
+    border-radius: 0;
+    transition: background 0.15s, color 0.15s;
+}
+.mgmt-sidebar .nav-link:hover {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+.mgmt-sidebar .nav-link.active {
+    background: #ddd6fe;
+    color: #4c1d95;
+    font-weight: 600;
+    border-right: 3px solid #7c3aed;
+}
+.mgmt-sidebar .nav-link .badge {
+    margin-left: auto;
+}
+.mgmt-sidebar hr { border-color: #e9e4f8; margin: 0.5rem 1.25rem; }
+
+/* ── Main content area ── */
+.mgmt-content {
+    flex: 1;
+    min-width: 0;
+    padding: 1.75rem 2rem;
+}
+
+/* ── Mobile ── */
+@media (max-width: 991.98px) {
+    .mgmt-sidebar { display: none; }
+    .mgmt-content { padding: 1rem; }
+}
+</style>
+{% block mgmt_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+{# Accent identification bar #}
+<div class="mgmt-accent-bar">
+    <span>
+        <i class="bi bi-person-workspace me-1"></i>
+        <span class="plane-label">Account &amp; Workspace Management</span>
+    </span>
+    <span class="d-flex align-items-center gap-3">
+        {% if request.user.is_authenticated %}
+        <span><i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}</span>
+        {% endif %}
+        {% with ws=request.user.profile.workspace %}
+        {% if ws %}
+        <a href="{% url 'workspace_dashboard' workspace_id=ws.id %}">
+            <i class="bi bi-arrow-right-circle me-1"></i>Enter {{ ws.name }}
+        </a>
+        {% endif %}
+        {% endwith %}
+    </span>
+</div>
+
+{# Messages (inside layout so they appear above the two-column shell) #}
+{% if messages %}
+<div class="px-3 pt-2">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show py-2 mb-2" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="mgmt-shell">
+    {# ── Left management sidebar ── #}
+    <aside class="mgmt-sidebar d-none d-lg-flex flex-column">
+        <span class="sidebar-section-title">Workspaces</span>
+        <a class="nav-link {% if request.resolver_match.url_name == 'workspace_selector' %}active{% endif %}"
+           href="{% url 'workspace_selector' %}">
+            <i class="bi bi-grid-3x3-gap"></i> My Workspaces
+        </a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'workspace_create' %}active{% endif %}"
+           href="{% url 'workspace_create' %}">
+            <i class="bi bi-plus-circle"></i> New Workspace
+        </a>
+
+        {% with ew=workspace|default:user_workspace %}
+        {% firstof user_role "Member" as role_name %}
+        {% if ew %}
+        <hr>
+        <span class="sidebar-section-title">{{ ew.name|truncatechars:20 }}</span>
+        <a class="nav-link {% if request.resolver_match.url_name == 'workspace_detail' %}active{% endif %}"
+           href="{% url 'workspace_detail' workspace_id=ew.id %}">
+            <i class="bi bi-gear"></i> Settings
+        </a>
+        {% if role_name == 'Owner' %}
+        <a class="nav-link {% if request.resolver_match.url_name == 'workspace_preferences' %}active{% endif %}"
+           href="{% url 'workspace_preferences' workspace_id=ew.id %}">
+            <i class="bi bi-sliders"></i> Preferences
+        </a>
+        {% endif %}
+        <a class="nav-link {% if request.resolver_match.url_name == 'team_members_list' %}active{% endif %}"
+           href="{% url 'team_members_list' %}">
+            <i class="bi bi-people"></i> Team Members
+        </a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'team_invite' %}active{% endif %}"
+              href="{% url 'team_invite' workspace_id=ew.id %}">
+            <i class="bi bi-person-plus"></i> Invite Member
+        </a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'team_invitations_list' %}active{% endif %}"
+              href="{% url 'team_invitations_list' %}">
+            <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
+        </a>
+        {% endif %}
+        {% endwith %}
+
+        <hr>
+        <span class="sidebar-section-title">Account</span>
+        <a class="nav-link {% if request.resolver_match.url_name == 'team_invitations' %}active{% endif %}"
+           href="{% url 'team_invitations' %}">
+            <i class="bi bi-envelope-open"></i> My Invitations
+            {% if invitation_count and invitation_count > 0 %}
+            <span class="badge bg-warning text-dark">{{ invitation_count }}</span>
+            {% endif %}
+        </a>
+        {% if role_name == 'Owner' %}
+        {% with ew=workspace|default:user_workspace %}
+        <a class="nav-link {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}"
+           href="{% if ew %}{% url 'workspace_select' ew.id %}?next={% url 'subscriptions:dashboard' %}{% else %}{% url 'workspace_selector' %}?show_all=1{% endif %}">
+            <i class="bi bi-credit-card"></i> Billing
+        </a>
+        {% endwith %}
+        {% endif %}
+        <a class="nav-link {% if request.resolver_match.url_name == 'account_settings' %}active{% endif %}"
+           href="{% url 'account_settings' %}">
+            <i class="bi bi-shield-lock"></i> Account Settings
+        </a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+           href="{% url 'profile' %}">
+            <i class="bi bi-person-gear"></i> Profile
+        </a>
+    </aside>
+
+    {# ── Page content ── #}
+    <div class="mgmt-content">
+        {% block breadcrumbs %}{% endblock %}
+        {% block page_header %}{% endblock %}
+        {% block mgmt_content %}{% endblock %}
+    </div>
+</div>
+
+{# Mobile floating nav button #}
+<div class="d-lg-none position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
+    <button class="btn btn-primary rounded-circle shadow" style="width:50px;height:50px;"
+            type="button" data-bs-toggle="offcanvas" data-bs-target="#mgmtOffcanvas">
+        <i class="bi bi-list fs-5"></i>
+    </button>
+</div>
+
+{# Mobile offcanvas sidebar #}
+<div class="offcanvas offcanvas-start" tabindex="-1" id="mgmtOffcanvas" style="background:#f8f7ff;">
+    <div class="offcanvas-header border-bottom" style="border-color:#e9e4f8!important;">
+        <h6 class="offcanvas-title fw-bold" style="color:#7c3aed;">
+            <i class="bi bi-person-workspace me-1"></i> Management
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="p-3">
+            {# Duplicate sidebar content for mobile — same links #}
+            <div class="mb-1 small fw-bold text-uppercase" style="color:#7c3aed;letter-spacing:.08em;">Workspaces</div>
+            <a class="nav-link py-2" href="{% url 'workspace_selector' %}"><i class="bi bi-grid-3x3-gap me-2"></i>My Workspaces</a>
+            <a class="nav-link py-2" href="{% url 'workspace_create' %}"><i class="bi bi-plus-circle me-2"></i>New Workspace</a>
+            {% with ew=workspace|default:user_workspace %}
+            {% firstof user_role "Member" as role_name %}
+            {% if ew %}
+            <hr style="border-color:#e9e4f8;">
+            <div class="mb-1 small fw-bold text-uppercase" style="color:#7c3aed;letter-spacing:.08em;">{{ ew.name|truncatechars:20 }}</div>
+            <a class="nav-link py-2" href="{% url 'workspace_detail' workspace_id=ew.id %}"><i class="bi bi-gear me-2"></i>Settings</a>
+            {% if role_name == 'Owner' %}
+            <a class="nav-link py-2" href="{% url 'workspace_preferences' workspace_id=ew.id %}"><i class="bi bi-sliders me-2"></i>Preferences</a>
+            {% endif %}
+            <a class="nav-link py-2" href="{% url 'team_members_list' %}"><i class="bi bi-people me-2"></i>Team Members</a>
+            <a class="nav-link py-2" href="{% url 'team_invite' workspace_id=ew.id %}"><i class="bi bi-person-plus me-2"></i>Invite Member</a>
+            <a class="nav-link py-2" href="{% url 'team_invitations_list' %}"><i class="bi bi-envelope-arrow-up me-2"></i>Sent Invitations</a>
+            {% endif %}
+            {% endwith %}
+            <hr style="border-color:#e9e4f8;">
+            <div class="mb-1 small fw-bold text-uppercase" style="color:#7c3aed;letter-spacing:.08em;">Account</div>
+            <a class="nav-link py-2" href="{% url 'team_invitations' %}"><i class="bi bi-envelope-open me-2"></i>My Invitations</a>
+            {% if role_name == 'Owner' %}
+            {% with ew=workspace|default:user_workspace %}
+            <a class="nav-link py-2" href="{% if ew %}{% url 'workspace_select' ew.id %}?next={% url 'subscriptions:dashboard' %}{% else %}{% url 'workspace_selector' %}?show_all=1{% endif %}"><i class="bi bi-credit-card me-2"></i>Billing</a>
+            {% endwith %}
+            {% endif %}
+            <a class="nav-link py-2" href="{% url 'profile' %}"><i class="bi bi-person-gear me-2"></i>Profile</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
