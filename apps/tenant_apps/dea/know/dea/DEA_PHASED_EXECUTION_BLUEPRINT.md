@@ -518,7 +518,7 @@ ledger decreases by 1/12 and expense increases by 1/12.
 
 ---
 
-### 2.4 Bank reconciliation subsystem
+### [x] 2.4 Bank reconciliation subsystem — done in 0d360d9
 
 **Files to create:**  
 - `apps/tenant_apps/dea/models/bank.py` (`BankAccount`, `BankStatementLine`, `ReconciliationMatch`)  
@@ -681,7 +681,7 @@ verify `is_fully_paid` becomes `True` and `received_amount` is updated.
 | BS balances for a closed test period | Manual + automated assertion in test |
 | P&L net profit matches RE delta | Automated test using two periods |
 | Depreciation posts and accumulates | `test_depreciation_service.py` |
-| Bank reconciliation: import + auto-match | `test_reconciliation.py` |
+| Bank reconciliation: import + auto-match | `test_reconciliation.py` (9 smoke tests) |
 | Manual JE via formset, JE materializes | Selenium or manual smoke |
 | AR settlement marks invoice paid | `test_settlement.py` + `test_settlement_integration.py` |
 | Payment posting triggers automatic settlement | `test_settlement_integration.py` (5 E2E tests) |
