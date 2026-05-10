@@ -20,12 +20,19 @@ Invitation = get_invitation_model()
 class CustomCleanEmailMixin:
     def validate_invitation(self, email):
         if (
-            Invitation.objects.all_valid()
-            .filter(email__iexact=email, accepted=False)
+            Invitation.objects.filter(
+                email__iexact=email,
+                status=Invitation.Status.PENDING,
+                accepted=False,
+            )
             .exists()
         ):
             raise AlreadyInvited
-        elif Invitation.objects.filter(email__iexact=email, accepted=True).exists():
+        elif Invitation.objects.filter(
+            email__iexact=email,
+            status=Invitation.Status.ACCEPTED,
+            accepted=True,
+        ).exists():
             raise AlreadyAccepted
         # elif get_user_model().objects.filter(email__iexact=email):
         #     raise UserRegisteredEmail
@@ -100,13 +107,20 @@ class CompanyInvitationForm(forms.ModelForm):
 
     def validate_invitation(self, email, company):
         if (
-            Invitation.objects.all_valid()
-            .filter(email__iexact=email, company=company, accepted=False)
+            Invitation.objects.filter(
+                email__iexact=email,
+                company=company,
+                status=Invitation.Status.PENDING,
+                accepted=False,
+            )
             .exists()
         ):
             raise AlreadyInvited
         elif Invitation.objects.filter(
-            email__iexact=email, company=company, accepted=True
+            email__iexact=email,
+            company=company,
+            status=Invitation.Status.ACCEPTED,
+            accepted=True,
         ).exists():
             raise AlreadyAccepted
         # elif get_user_model().objects.filter(email__iexact=email):
@@ -147,10 +161,6 @@ class CompanyInvitationForm(forms.ModelForm):
             "role": role,
             "inviter": self.inviter,
         }
-
-        # Check if the inviter is an owner of the company
-        if not company.owner == params["inviter"]:
-            raise forms.ValidationError("Only company owners can send invitations.")
 
         instance = Invitation.create(**params)
         instance.send_invitation(self.request)

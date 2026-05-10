@@ -27,6 +27,7 @@ from django_tenants.utils import (
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import Company, Membership
+from apps.orgs.permissions import is_platform_admin
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +45,12 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
     """
 
     # URLs exempt from workspace validation
+    # Note: "/admin/" is intentionally NOT exempt here so that Django admin
+    # requests on tenant domains receive the correct tenant schema context.
+    # The public-schema admin is served from SECRET_ADMIN_URL (public_urls.py),
+    # not from "/admin/", so there is no conflict.
     EXEMPT_URLS = [
         "/accounts/",
-        "/admin/",
         "/static/",
         "/media/",
         "/__debug__/",
@@ -95,6 +99,33 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             path_workspace=path_workspace,
             profile_workspace=profile_workspace,
         )
+
+        # Domain mapping is authoritative. If path embeds a different workspace id,
+        # reject it to prevent cross-workspace URL probing on tenant domains.
+        if (
+            domain_workspace
+            and path_workspace
+            and domain_workspace.id != path_workspace.id
+            and domain_workspace.schema_name != get_public_schema_name()
+            and not (
+                request.user.is_authenticated and is_platform_admin(request.user)
+            )
+        ):
+            logger.warning(
+                "Workspace path/domain mismatch for user %s: domain=%s path=%s path_url=%s",
+                getattr(request.user, "id", None),
+                domain_workspace.id,
+                path_workspace.id,
+                request.path,
+            )
+            self._set_public_context(request)
+            messages.error(
+                request,
+                "Workspace URL does not match the current domain.",
+            )
+            return HttpResponseRedirect(
+                reverse("workspace_dashboard", kwargs={"workspace_id": domain_workspace.id})
+            )
 
         # Keep a clear signal for downstream code and diagnostics.
         request.tenant_resolution_source = source
@@ -276,6 +307,19 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         Validates that user is actually a member of the workspace.
         Returns dict with 'allowed', 'reason', 'message' keys.
         """
+
+        # Superusers bypass membership checks (Django admin / staff access)
+        if is_platform_admin(user):
+            logger.debug(
+                f"✅ Superuser {user.id} ({user.email}) granted access to workspace "
+                f"{workspace.id} ({workspace.name}) without membership requirement."
+            )
+            return {
+                "allowed": True,
+                "reason": "SUPERUSER",
+                "message": "",
+                "membership": None,
+            }
 
         # Check 1: Is company deleted?
         if workspace.is_deleted:

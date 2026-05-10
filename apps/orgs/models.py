@@ -77,7 +77,7 @@ class Company(TenantMixin):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("orgs_company_detail", args=[str(self.id)])
+        return reverse("workspace_detail", kwargs={"workspace_id": self.id})
 
     def archive(self):
         """Soft-delete workspace while preserving schema/data for recovery."""
@@ -205,6 +205,12 @@ class Role(models.Model):
 
 
 class CompanyInvitation(AbstractBaseInvitation):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        DECLINED = "declined", "Declined"
+        REVOKED = "revoked", "Revoked"
+
     company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
@@ -223,9 +229,41 @@ class CompanyInvitation(AbstractBaseInvitation):
         max_length=app_settings.EMAIL_MAX_LENGTH,
     )
     created = models.DateTimeField(verbose_name=_("created"), default=timezone.now)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ("email", "company")
+
+    @classmethod
+    def pending_queryset(cls):
+        return cls.objects.filter(status=cls.Status.PENDING, accepted=False)
+
+    def lifecycle_state(self):
+        if self.status == self.Status.PENDING and self.key_expired():
+            return "expired"
+        return self.status
+
+    @property
+    def is_pending(self):
+        return self.lifecycle_state() == "pending"
+
+    def mark_declined(self):
+        self.accepted = False
+        self.status = self.Status.DECLINED
+        self.responded_at = timezone.now()
+        self.save(update_fields=["accepted", "status", "responded_at"])
+
+    def mark_revoked(self):
+        self.accepted = False
+        self.status = self.Status.REVOKED
+        self.responded_at = timezone.now()
+        self.save(update_fields=["accepted", "status", "responded_at"])
 
     @classmethod
     def create(cls, email, company, role, inviter=None, **kwargs):
@@ -245,10 +283,19 @@ class CompanyInvitation(AbstractBaseInvitation):
         return instance
 
     def key_expired(self):
+        if not self.sent:
+            return False
         expiration_date = self.sent + datetime.timedelta(
             days=app_settings.INVITATION_EXPIRY,
         )
         return expiration_date <= timezone.now()
+
+    def accept(self, *args, **kwargs):
+        self.accepted = True
+        self.status = self.Status.ACCEPTED
+        self.responded_at = timezone.now()
+        self.save(update_fields=["accepted", "status", "responded_at"])
+        return self
 
     def send_invitation(self, request, **kwargs):
         current_site = get_current_site(request)
@@ -279,7 +326,7 @@ class CompanyInvitation(AbstractBaseInvitation):
         )
 
     def __str__(self):
-        return f"Invited: {self.email} Status: {self.accepted} "
+        return f"Invited: {self.email} Status: {self.lifecycle_state()} "
 
 
 class PendingInvitation(models.Model):

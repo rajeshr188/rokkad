@@ -466,6 +466,55 @@ def get_permissions_for_role(role_name: str) -> List[str]:
     return role_map.get(role_name, [])
 
 
+def is_platform_admin(user) -> bool:
+    """Return whether the user has platform-level override access."""
+    return bool(user and getattr(user, "is_authenticated", False) and getattr(user, "is_superuser", False))
+
+
+def get_effective_permissions(user, workspace) -> set[str]:
+    """Return the effective permission set for a user in a workspace."""
+    if not user or not getattr(user, "is_authenticated", False) or workspace is None:
+        return set()
+
+    if is_platform_admin(user):
+        return set(get_all_permission_codenames()) | {"admin_access"}
+
+    from apps.orgs.models import Membership
+
+    try:
+        membership = Membership.objects.select_related("role").get(
+            user=user, company=workspace
+        )
+    except Membership.DoesNotExist:
+        return set()
+
+    perms = set(get_permissions_for_role(membership.role.name))
+    if hasattr(membership.role, "permissions"):
+        perms |= set(membership.role.permissions.values_list("codename", flat=True))
+
+    return perms
+
+
+def get_workspace_role_name(user, workspace) -> str | None:
+    """Return the user's effective role label for the workspace."""
+    if not user or not getattr(user, "is_authenticated", False) or workspace is None:
+        return None
+
+    if is_platform_admin(user):
+        return "Superuser"
+
+    from apps.orgs.models import Membership
+
+    try:
+        membership = Membership.objects.select_related("role").get(
+            user=user, company=workspace
+        )
+    except Membership.DoesNotExist:
+        return None
+
+    return membership.role.name
+
+
 def get_permission_display_name(codename: str) -> str:
     """Get display name for a permission codename"""
     for perm in ALL_PERMISSIONS:

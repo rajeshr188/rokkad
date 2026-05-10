@@ -1,16 +1,16 @@
 import logging
+from types import SimpleNamespace
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django_tenants.utils import get_public_schema_name, remove_www,schema_context
+from django_tenants.utils import get_public_schema_name
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
@@ -23,8 +23,10 @@ from .forms import (
     MembershipForm,
     company_preference_form_builder,
 )
-from .models import Company, CompanyInvitation, Domain, Membership, Role
+from .models import Company, CompanyInvitation, Membership, Role
+from .permissions import get_effective_permissions, is_platform_admin
 from .registries import company_preference_registry
+from .services import control_plane
 from .tenant_context import resolve_request_workspace
 
 # Create your views here.
@@ -58,6 +60,71 @@ def has_role(user, tenant, role_name):
     return role.name == role_name
 
 
+def _assert_workspace_access(
+    request,
+    workspace,
+    required_permissions=None,
+    allow_platform_admin=True,
+):
+    """Validate workspace access and return normalized access context."""
+    required_permissions = set(required_permissions or [])
+
+    if allow_platform_admin and is_platform_admin(request.user):
+        effective_perms = get_effective_permissions(request.user, workspace)
+        return {
+            "membership": None,
+            "role_name": "Superuser",
+            "effective_permissions": effective_perms,
+        }
+
+    membership = (
+        Membership.objects.select_related("role")
+        .filter(user=request.user, company=workspace)
+        .first()
+    )
+    if membership is None:
+        raise PermissionDenied("You are not a member of this workspace")
+
+    effective_perms = get_effective_permissions(request.user, workspace)
+    missing_permissions = required_permissions - effective_perms
+    if missing_permissions:
+        raise PermissionDenied(
+            f"Missing required workspace permissions: {', '.join(sorted(missing_permissions))}"
+        )
+
+    role_name = membership.role.name if membership.role else "Member"
+    return {
+        "membership": membership,
+        "role_name": role_name,
+        "effective_permissions": effective_perms,
+    }
+
+
+def _is_owner_membership(membership):
+    return bool(
+        membership
+        and getattr(membership, "role", None)
+        and getattr(membership.role, "name", "").lower() == "owner"
+    )
+
+
+def _owner_membership_count(workspace):
+    return Membership.objects.filter(company=workspace, role__name__iexact="owner").count()
+
+
+def _assert_owner_access(request, workspace, allow_platform_admin=True):
+    """Allow only workspace owner (or platform admin when enabled)."""
+    access = _assert_workspace_access(
+        request,
+        workspace,
+        required_permissions=set(),
+        allow_platform_admin=allow_platform_admin,
+    )
+    if access["role_name"].lower() != "owner":
+        raise PermissionDenied("Only workspace owners can access this page")
+    return access
+
+
 @login_required
 @audit_log("COMPANY_CREATE", description="Create new company")
 def workspace_create(request):
@@ -67,35 +134,13 @@ def workspace_create(request):
     """
     if request.method == "POST":
         form = CompanyForm(request.POST, request.FILES)
-        print(f"form: {form.is_valid()}")
         if form.is_valid():
-            with schema_context(get_public_schema_name()):
-                company = form.save(commit=False)
-                company.schema_name = company.name.lower().replace(" ", "_")
-                company.creator = request.user
-                company.owner = request.user
-                company.save()
-                domain = remove_www(request.get_host().split(":")[0]).lower()
-                company_domain = f"{company.schema_name}.{domain}"
-                Domain.objects.create(
-                    tenant=company, domain=company_domain, is_primary=True
-                )
-                Membership.objects.create(
-                    user=request.user,
-                    company=company,
-                    role=Role.objects.get(name="Owner"),
-                )
-                request.user.profile.set_workspace(company)
-
-                # Log successful company creation
-                AuditLog.log(
-                    "COMPANY_CREATE",
-                    user=request.user,
-                    company=company,
-                    description=f"Created company: {company.name}",
-                    request=request,
-                    success=True,
-                )
+            company = control_plane.create_workspace_from_form(
+                form=form,
+                user=request.user,
+                request=request,
+            )
+            request.user.profile.set_workspace(company)
             return redirect("workspace_list")
         else:
             # Handle form errors
@@ -108,16 +153,12 @@ def workspace_create(request):
 @login_required
 def workspace_list(request):
     """
-    List all workspaces user has access to.
-    Shows workspace cards with membership info.
+    Legacy workspace listing endpoint.
+
+    Canonical entrypoint is workspace_selector. Keep this route as a
+    compatibility alias to avoid breaking old links.
     """
-    companies = request.user.owned_companies.exclude(name="public").annotate(
-        num_members=Count("memberships")
-    )
-    form = CompanyForm()
-    return render(
-        request, "company/company_list.html", {"companies": companies, "form": form}
-    )
+    return redirect("workspace_selector")
 
 
 @login_required
@@ -134,23 +175,16 @@ def workspace_detail(request, workspace_id=None, company_id=None):
     if company.is_deleted:
         raise Http404("Company not found")
 
-    try:
-        membership = Membership.objects.select_related("role").get(
-            user=request.user,
-            company=company,
-        )
-    except Membership.DoesNotExist:
-        raise PermissionDenied("Not a workspace member")
-
-    has_view_permission = membership.role.permissions.filter(
-        codename="workspace_view"
-    ).exists()
-    if not has_view_permission:
-        raise PermissionDenied("Permission 'workspace_view' required")
+    _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"workspace_view"},
+        allow_platform_admin=True,
+    )
 
     roles = Role.objects.all()
     return render(
-        request, "company/company_detail.html", {"company": company, "roles": roles}
+        request, "company/company_detail.html", {"company": company, "roles": roles, "workspace": company}
     )
 
 
@@ -166,24 +200,28 @@ def workspace_update(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = Company.objects.get(id=workspace_id)
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"workspace_edit"},
+        allow_platform_admin=True,
+    )
+    _assert_owner_access(request, company, allow_platform_admin=True)
+
     if request.method == "POST":
         form = CompanyForm(request.POST, instance=company)
         if form.is_valid():
-            form.save()
-            AuditLog.log(
-                "COMPANY_UPDATE",
-                user=request.user,
-                company=company,
-                description=f"Updated company: {company.name}",
+            control_plane.save_workspace_update_form(
+                form=form,
+                actor=request.user,
                 request=request,
-                success=True,
             )
             return redirect("workspace_list")
     else:
         form = CompanyForm(instance=company)
     return render(
-        request, "company/company_form.html", {"form": form, "company": company}
+        request, "company/company_form.html", {"form": form, "company": company, "workspace": company}
     )
 
 
@@ -198,15 +236,21 @@ def workspace_delete(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id)
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"workspace_delete"},
+        allow_platform_admin=True,
+    )
 
     if request.method == "GET":
         return render(
-            request, "company/company_delete_confirm.html", {"company": company}
+            request, "company/company_delete_confirm.html", {"company": company, "workspace": company}
         )
 
     elif request.method == "POST":
-        if request.user != company.owner:
+        if request.user != company.owner and not is_platform_admin(request.user):
             AuditLog.log(
                 "COMPANY_DELETE",
                 user=request.user,
@@ -217,17 +261,11 @@ def workspace_delete(request, workspace_id=None, company_id=None):
             )
             return redirect("error_page")  # Redirect to an error page
 
-        # Log before deletion
-        AuditLog.log(
-            "COMPANY_DELETE",
-            user=request.user,
+        control_plane.archive_workspace(
             company=company,
-            description=f"Archived workspace: {company.name}",
+            actor=request.user,
             request=request,
-            success=True,
         )
-
-        company.archive()
 
         # Reset the user's workspace to the public schema if needed
         if getattr(request.user.profile, "workspace", None) == company:
@@ -241,9 +279,46 @@ def workspace_delete(request, workspace_id=None, company_id=None):
 
 @login_required
 def companyinvitations_list(request):
-    invitations = CompanyInvitation.objects.filter(email=request.user.email)
+    workspace = resolve_request_workspace(
+        request,
+        include_public=False,
+        allow_profile_fallback=True,
+    )
+
+    if workspace is not None:
+        _assert_workspace_access(
+            request,
+            workspace,
+            required_permissions={"team_invite"},
+            allow_platform_admin=True,
+        )
+
+    invitations = CompanyInvitation.objects.select_related(
+        "company", "role", "inviter"
+    ).order_by("-created")
+
+    if workspace is not None:
+        invitations = invitations.filter(company=workspace)
+    else:
+        invitations = invitations.filter(inviter=request.user)
+
+    invitations_with_state = []
+    for invitation in invitations:
+        invitations_with_state.append(
+            {
+                "invitation": invitation,
+                "state": invitation.lifecycle_state(),
+            }
+        )
+
     return render(
-        request, "company/company_invitations_list.html", {"invitations": invitations}
+        request,
+        "company/company_invitations_list.html",
+        {
+            "invitations": invitations_with_state,
+            "current_workspace": workspace,
+            "workspace": workspace,
+        },
     )
 
 
@@ -259,26 +334,33 @@ def team_invite(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = Company.objects.get(id=workspace_id)
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"team_invite"},
+        allow_platform_admin=True,
+    )
+
     if request.method == "POST":
         form = CompanyInvitationForm(
             request.POST, inviter=request.user, request=request, company=company
         )
         if form.is_valid():
-            invitation = form.save()
-            AuditLog.log(
-                "TEAM_INVITE",
-                user=request.user,
-                company=company,
-                description=f"Invited {invitation.email} to company",
-                request=request,
-                success=True,
-                content_object=invitation,
-            )
-            messages.success(request, "Invitation sent successfully")
-            return redirect("invite-success-url")
+            try:
+                control_plane.send_team_invitation(
+                    form=form,
+                    actor=request.user,
+                    company=company,
+                    request=request,
+                )
+                messages.success(request, "Invitation sent successfully")
+                return redirect("team_invite_success")
+            except (ValidationError, ValueError) as exc:
+                form.add_error(None, str(exc))
+                messages.error(request, "Unable to send invitation. Please review errors.")
         else:
-            messages.error(request, "correct the errors")
+            messages.error(request, "Please correct the errors below.")
     else:
         form = CompanyInvitationForm(inviter=request.user, company=company)
     return render(
@@ -287,6 +369,7 @@ def team_invite(request, workspace_id=None, company_id=None):
         {
             "form": form,
             "company": company,
+            "workspace": company,
             "url": reverse("team_invite", kwargs={"workspace_id": workspace_id}),
         },
     )
@@ -302,6 +385,22 @@ def invite_success(request):
 class CompanyPreferenceBuilder(PreferenceFormView):
     template_name = "company/company_preferences.html"
     title = "Company Preferences"
+
+    def dispatch(self, request, *args, **kwargs):
+        workspace_id = kwargs.get("workspace_id")
+        if workspace_id is None:
+            raise Http404("Workspace ID is required")
+
+        workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+        _assert_workspace_access(
+            request,
+            workspace,
+            required_permissions={"workspace_settings"},
+            allow_platform_admin=True,
+        )
+        _assert_owner_access(request, workspace, allow_platform_admin=True)
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get_section(self):
         """Get section from URL parameter, default to showing all"""
@@ -372,21 +471,48 @@ def team_remove_member(request, workspace_id=None, membership_id=None, company_i
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id)
-    membership = get_object_or_404(Membership, id=membership_id, company=company)
-
-    # Log before deletion
-    AuditLog.log(
-        "TEAM_MEMBER_REMOVE",
-        user=request.user,
-        company=company,
-        description=f"Removed member: {membership.user.email}",
-        request=request,
-        success=True,
-        content_object=membership.user,
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"team_remove"},
+        allow_platform_admin=True,
     )
 
-    membership.delete()
+    membership = get_object_or_404(Membership, id=membership_id, company=company)
+
+    is_self_leave = membership.user == request.user
+    if _is_owner_membership(membership):
+        owner_count = _owner_membership_count(company)
+        if owner_count <= 1:
+            messages.error(
+                request,
+                "Cannot remove the last owner. Transfer ownership first.",
+            )
+            return redirect("workspace_detail", workspace_id=workspace_id)
+
+        if is_self_leave:
+            messages.error(
+                request,
+                "Owner must transfer ownership before leaving the workspace.",
+            )
+            return redirect("workspace_detail", workspace_id=workspace_id)
+
+    control_plane.remove_membership(
+        membership=membership,
+        actor=request.user,
+        request=request,
+    )
+
+    # If removed member had this workspace selected, clear stale selection.
+    if hasattr(membership.user, "profile") and membership.user.profile.workspace == company:
+        membership.user.profile.workspace = None
+        membership.user.profile.save(update_fields=["workspace"])
+
+    if is_self_leave:
+        messages.success(request, "You have left the workspace.")
+        return redirect("workspace_selector")
+
     return redirect("workspace_list")  # Redirect to the list of workspaces
 
 
@@ -397,32 +523,46 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
     Change team member's role.
     Requires team_change_role permission (Owner only).
     """
-    print("team_change_role")
     workspace_id = workspace_id or company_id
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id)
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"team_change_role"},
+        allow_platform_admin=True,
+    )
+
     membership = get_object_or_404(Membership, id=membership_id, company=company)
     roles = Role.objects.all()
 
     if request.method in ["POST", "PATCH"]:
-        old_role = membership.role.name
         role_id = request.POST.get("role")
         role = get_object_or_404(Role, id=role_id)
-        membership.role = role
-        membership.save()
 
-        # Log role change
-        AuditLog.log(
-            "TEAM_ROLE_CHANGE",
-            user=request.user,
-            company=company,
-            description=f"Changed {membership.user.email} role from {old_role} to {role.name}",
+        demoting_owner = (
+            _is_owner_membership(membership)
+            and role.name.lower() != "owner"
+        )
+        if demoting_owner and _owner_membership_count(company) <= 1:
+            messages.error(
+                request,
+                "Cannot demote the last owner. Transfer ownership first.",
+            )
+            if request.htmx:
+                return JsonResponse(
+                    {"success": False, "error": "last_owner_cannot_be_demoted"},
+                    status=400,
+                )
+            return redirect("workspace_detail", workspace_id=workspace_id)
+
+        control_plane.change_membership_role(
+            membership=membership,
+            new_role=role,
+            actor=request.user,
             request=request,
-            success=True,
-            content_object=membership.user,
-            data={"old_role": old_role, "new_role": role.name},
         )
 
         if request.htmx:
@@ -439,29 +579,173 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
 
 @login_required
 def membership_list(request):
-    memberships = request.user.memberships.all()
-    return render(request, "company/membership_list.html", {"memberships": memberships})
+    workspace = resolve_request_workspace(
+        request,
+        include_public=False,
+        allow_profile_fallback=True,
+    )
+
+    if not workspace:
+        messages.info(request, "Select a workspace to view team members.")
+        return redirect("workspace_selector")
+
+    try:
+        access = _assert_workspace_access(
+            request,
+            workspace,
+            required_permissions={"team_list"},
+            allow_platform_admin=True,
+        )
+    except PermissionDenied:
+        messages.error(request, "You do not have permission to view team members.")
+        return redirect("workspace_selector")
+
+    memberships = (
+        Membership.objects.select_related("user", "role", "company")
+        .filter(company=workspace)
+        .order_by("role__name", "user__username")
+    )
+
+    context = {
+        "workspace": workspace,
+        "memberships": memberships,
+        "workspace_count": memberships.count(),
+        "can_change_role": "team_change_role" in access["effective_permissions"],
+        "can_remove_member": "team_remove" in access["effective_permissions"],
+    }
+    return render(request, "company/membership_list.html", context)
+
+
+@login_required
+def my_memberships(request):
+    memberships = (
+        request.user.memberships.select_related("company", "role")
+        .filter(company__is_deleted=False)
+        .order_by("company__name")
+    )
+
+    context = {
+        "memberships": memberships,
+        "membership_count": memberships.count(),
+        "active_workspace": resolve_request_workspace(
+            request,
+            include_public=False,
+            allow_profile_fallback=True,
+        ),
+    }
+    return render(request, "company/my_memberships.html", context)
+
+
+@login_required
+def workspace_leave(request, workspace_id):
+    """
+    Allow any workspace member to leave a workspace themselves.
+    Owners must transfer ownership before leaving.
+    """
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    membership = get_object_or_404(Membership, user=request.user, company=company)
+
+    if request.method == "GET":
+        return render(request, "company/workspace_leave_confirm.html", {
+            "company": company,
+            "workspace": company,
+            "membership": membership,
+        })
+
+    if request.method == "POST":
+        if _is_owner_membership(membership):
+            if _owner_membership_count(company) <= 1:
+                messages.error(
+                    request,
+                    "You are the only owner. Transfer ownership to another member before leaving.",
+                )
+                return redirect("workspace_detail", workspace_id=workspace_id)
+            messages.error(
+                request,
+                "Owner must transfer ownership before leaving the workspace.",
+            )
+            return redirect("workspace_detail", workspace_id=workspace_id)
+
+        control_plane.remove_membership(
+            membership=membership,
+            actor=request.user,
+            request=request,
+        )
+
+        if request.user.profile.workspace == company:
+            request.user.profile.workspace = None
+            request.user.profile.save(update_fields=["workspace"])
+
+        messages.success(request, f"You have left {company.name}.")
+        return redirect("workspace_selector")
 
 
 @login_required
 def profile(request):
-    return render(request, "company/profile.html")
+    user = request.user
+    workspace = resolve_request_workspace(
+        request,
+        include_public=False,
+        allow_profile_fallback=True,
+    )
+
+    memberships = (
+        user.memberships.select_related("company", "role")
+        .filter(company__is_deleted=False)
+        .order_by("company__name")
+    )
+    pending_invitations = CompanyInvitation.pending_queryset().filter(
+        email=user.email
+    ).count()
+
+    context = {
+        "workspace": workspace,
+        "memberships": memberships,
+        "workspace_count": memberships.count(),
+        "pending_invitation_count": pending_invitations,
+    }
+    return render(request, "company/profile.html", context)
+
+
+@login_required
+def account_settings(request):
+    return render(request, "company/account_settings.html")
 
 
 @login_required
 def invitation_delete(request, invitation_id):
     invitation = get_object_or_404(CompanyInvitation, id=invitation_id)
 
-    # Check if the user has the permission to delete the invitation
-    if request.user != invitation.inviter:
-        return redirect("error_page")  # Redirect to an error page
+    # Inviter can always revoke. Workspace admins/owners can also revoke.
+    can_revoke = request.user == invitation.inviter
+    if not can_revoke:
+        try:
+            _assert_workspace_access(
+                request,
+                invitation.company,
+                required_permissions={"team_invite"},
+                allow_platform_admin=True,
+            )
+            can_revoke = True
+        except PermissionDenied:
+            can_revoke = False
 
-    invitation.delete()
+    if not can_revoke:
+        messages.error(request, "You do not have permission to revoke this invitation.")
+        return redirect("workspace_selector")
 
-    # return redirect(
-    #     "orgs_companyinvitations_list"
-    # )  # Redirect to the list of invitations
-    return HttpResponse("Invitation deleted successfully")
+    control_plane.revoke_invitation(
+        invitation=invitation,
+        actor=request.user,
+        request=request,
+    )
+
+    messages.success(request, "Invitation revoked successfully")
+
+    if request.headers.get("HX-Request"):
+        return HttpResponse("Invitation revoked successfully")
+
+    return redirect("team_invitations_list")
 
 
 from io import StringIO
@@ -527,12 +811,13 @@ def workspace_selector(request):
     )
 
     # If user has a valid selected workspace, take them directly to workspace dashboard
+    # unless ?show_all=1 is passed (e.g. from "Back to Workspaces" link)
     selected_workspace = resolve_request_workspace(
         request,
         include_public=True,
         allow_profile_fallback=True,
     )
-    if selected_workspace and selected_workspace.schema_name != "public":
+    if selected_workspace and selected_workspace.schema_name != "public" and not request.GET.get("show_all"):
         try:
             # Verify membership still active
             memberships.get(company=selected_workspace)
@@ -544,9 +829,8 @@ def workspace_selector(request):
 
     # Get pending invitations
     pending_invitations = (
-        CompanyInvitation.objects.filter(
+        CompanyInvitation.pending_queryset().filter(
             email=user.email,
-            accepted=False,
         )
         .select_related("company", "role")
         .order_by("-created")
@@ -555,6 +839,12 @@ def workspace_selector(request):
     # Filter out expired invitations
     valid_invitations = [inv for inv in pending_invitations if not inv.key_expired()]
 
+    # Count outgoing pending invitations sent by this user
+    sent_invitations_count = CompanyInvitation.objects.filter(
+        inviter=user,
+        status=CompanyInvitation.Status.PENDING,
+    ).count()
+
     context = {
         "workspaces": memberships,
         "pending_invitations": valid_invitations,
@@ -562,6 +852,7 @@ def workspace_selector(request):
         "workspace_count": memberships.count(),
         "invitation_count": len(valid_invitations),
         "has_workspaces": memberships.exists(),
+        "sent_invitations_count": sent_invitations_count,
     }
 
     return render(request, "company/workspace_home.html", context)
@@ -578,6 +869,7 @@ def team_invitations(request):
     # Get pending invitations
     pending_invitations = CompanyInvitation.objects.filter(
         email=user.email,
+        status=CompanyInvitation.Status.PENDING,
         accepted=False,
     ).select_related("company", "role")
 
@@ -601,22 +893,27 @@ def team_invitations(request):
                 id=invitation_id, email=user.email
             )
 
+            current_state = invitation.lifecycle_state()
+            if current_state == "expired":
+                messages.error(
+                    request,
+                    f"Invitation from {invitation.company.name} has expired.",
+                )
+                return redirect("team_invitations")
+
+            if current_state != CompanyInvitation.Status.PENDING:
+                messages.info(
+                    request,
+                    f"Invitation is already {current_state}.",
+                )
+                return redirect("team_invitations")
+
             if action == "accept":
-                # Check if user already a member
-                existing = Membership.objects.filter(
-                    user=user, company=invitation.company
-                ).exists()
-
-                if not existing:
-                    # Create membership
-                    Membership.objects.create(
-                        user=user,
-                        company=invitation.company,
-                        role=invitation.role,
-                    )
-
-                # Mark invitation as accepted
-                invitation.accept(request)
+                control_plane.accept_invitation(
+                    invitation=invitation,
+                    user=user,
+                    request=request,
+                )
 
                 # Set as active workspace
                 user.profile.workspace = invitation.company
@@ -632,14 +929,17 @@ def team_invitations(request):
                 )
 
             elif action == "decline":
-                # Simply leave invitation unaccepted (no rejection mechanism in model)
-                # Invitation will expire after 7 days
+                control_plane.decline_invitation(
+                    invitation=invitation,
+                    actor=user,
+                    request=request,
+                )
 
                 messages.info(
                     request, f"Declined invitation from {invitation.company.name}"
                 )
 
-                return redirect("workspace_list")
+                return redirect("team_invitations")
 
         except CompanyInvitation.DoesNotExist:
             messages.error(request, "Invitation not found")
@@ -661,31 +961,35 @@ def workspace_select(request, workspace_id):
     """
     user = request.user
 
+    workspace = Company.objects.filter(id=workspace_id, is_deleted=False).first()
+    if workspace is None:
+        messages.error(request, "Workspace not found")
+        return redirect("workspace_selector")
+
     try:
-        workspace = Company.objects.get(id=workspace_id, is_deleted=False)
-
-        # Verify user is member
-        user.memberships.get(company=workspace)
-
-        # Set as active workspace
-        user.profile.set_workspace(workspace)
-
-        AuditLog.log(
-            "WORKSPACE_SWITCH",
-            user=user,
-            company=workspace,
-            description=f"Switched to workspace: {workspace.name}",
-            request=request,
-            success=True,
-        )
-
-        messages.success(request, f"Switched to {workspace.name}")
-
-        return redirect("workspace_dashboard", workspace_id=workspace.id)
-
-    except (Company.DoesNotExist, Membership.DoesNotExist):
+        _assert_workspace_access(request, workspace, allow_platform_admin=True)
+    except PermissionDenied:
         messages.error(request, "Workspace not found or access denied")
         return redirect("workspace_selector")
+
+    # Set as active workspace
+    user.profile.set_workspace(workspace)
+
+    AuditLog.log(
+        "WORKSPACE_SWITCH",
+        user=user,
+        company=workspace,
+        description=f"Switched to workspace: {workspace.name}",
+        request=request,
+        success=True,
+    )
+
+    messages.success(request, f"Switched to {workspace.name}")
+
+    next_url = request.GET.get("next")
+    if next_url and next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect("workspace_dashboard", workspace_id=workspace.id)
 
 
 def subscription_required(view_func):
@@ -771,14 +1075,23 @@ def workspace_dashboard(request, workspace_id):
     from django.db.models import Sum, Count, Exists, OuterRef
     from datetime import date
 
-    # Get workspace and verify membership
+    # Get workspace and validate access policy.
     workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
 
     try:
-        membership = request.user.memberships.get(company=workspace)
-    except Membership.DoesNotExist:
+        access_context = _assert_workspace_access(
+            request,
+            workspace,
+            allow_platform_admin=True,
+        )
+    except PermissionDenied:
         messages.error(request, "Access denied to this workspace")
         return redirect("workspace_list")
+
+    membership = access_context["membership"]
+    role_name = access_context["role_name"]
+    if membership is None:
+        membership = SimpleNamespace(role=SimpleNamespace(name=role_name))
 
     # Set as active workspace if not already
     if request.user.profile.workspace != workspace:
@@ -792,10 +1105,10 @@ def workspace_dashboard(request, workspace_id):
     context = {}
     context["workspace"] = workspace
     context["membership"] = membership
-    context["role"] = membership.role
+    context["role"] = role_name
 
     # Check if user can view detailed metrics (Owner/Admin)
-    context["can_view"] = membership.role.name in ["Owner", "Admin"]
+    context["can_view"] = role_name in ["Owner", "Admin", "Superuser"]
 
     # Customer statistics
     customers = Customer.objects.all()
@@ -976,7 +1289,8 @@ def workspace_dashboard(request, workspace_id):
     # Team information
     context["team_count"] = workspace.memberships.count()
     context["pending_invitations"] = workspace.invitations.filter(
-        accepted=False
+        status=CompanyInvitation.Status.PENDING,
+        accepted=False,
     ).count()
 
     # Current metal rates
