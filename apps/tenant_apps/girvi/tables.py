@@ -209,7 +209,7 @@ class LoanTable(tables.Table):
             "class": "table table-sm table-bordered table-striped-columns table-hover"
         }
         empty_text = "There are no loans matching the search criteria..."
-        template_name = "table_htmx.html"
+        template_name = "girvi/loan/table_htmx_loan_list.html"
 
 
 class TakenLoanTable(tables.Table):
@@ -338,7 +338,7 @@ class TakenLoanTable(tables.Table):
             "class": "table table-sm table-bordered table-striped-columns table-hover"
         }
         empty_text = "There are no taken loans matching the search criteria..."
-        template_name = "table_htmx.html"
+        template_name = "girvi/loan/table_htmx_loan_list.html"
 
 
 class UnifiedLoanTable(tables.Table):
@@ -384,7 +384,7 @@ class UnifiedLoanTable(tables.Table):
         attrs = {
             "class": "table table-sm table-bordered table-striped-columns table-hover"
         }
-        template_name = "table_htmx.html"
+        template_name = "girvi/loan/table_htmx_loan_list.html"
 
 
 class LoanItemTable(tables.Table):

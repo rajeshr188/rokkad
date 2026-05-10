@@ -372,9 +372,8 @@ def given_loan_detail_qs():
             "loanitems",
             "notifications",
             "payments",
-            "statementitem_set__statement",
-        "renewals_as_source__renewed_loan",
-        "renewal_record__source_loan",
+            "renewals_as_source__renewed_loan",
+            "renewal_record__source_loan",
         )
     )
 
@@ -389,29 +388,9 @@ def get_given_loan_journal_entries(loan):
     Resolve loan-linked JournalEntry records through payment and voucher links:
       GivenLoan -> PaymentVoucher -> Voucher -> JournalEntry
     """
-    from django.contrib.contenttypes.models import ContentType
+    from apps.tenant_apps.dea.facade import get_loan_journal_entries
 
-    from apps.tenant_apps.dea.models import PaymentVoucher, Voucher
-
-    from .models import JournalEntry
-
-    payment_ids = list(loan.payments.values_list("id", flat=True))
-    if not payment_ids:
-        return JournalEntry.objects.none()
-
-    payment_ct = ContentType.objects.get_for_model(PaymentVoucher)
-    vouchers = Voucher.objects.filter(
-        doc_content_type=payment_ct,
-        doc_object_id__in=payment_ids,
-    )
-    if not vouchers.exists():
-        return JournalEntry.objects.none()
-
-    return (
-        JournalEntry.objects.filter(voucher__in=vouchers)
-        .select_related("voucher", "posted_by")
-        .order_by("-posted_at")
-    )
+    return get_loan_journal_entries(loan)
 
 
 def build_given_loan_detail_read_model(loan):

@@ -252,7 +252,11 @@ def notify_print_v2(request):
         )
     except Exception:
         pass
-    return redirect(batch_result.batch.get_absolute_url())
+    destination = batch_result.batch.get_absolute_url()
+    if request.headers.get("HX-Request") == "true":
+        # HTMX requests from bulk-action dropdown should perform a full navigation.
+        return HttpResponse(status=204, headers={"HX-Redirect": destination})
+    return redirect(destination)
 
 
 import base64

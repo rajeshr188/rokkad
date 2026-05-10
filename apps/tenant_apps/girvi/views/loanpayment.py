@@ -9,8 +9,7 @@ from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from apps.tenant_apps.dea.posting.engine import DjangoPostingEngine
-from apps.tenant_apps.dea.services.post_doc import create_and_post_voucher_for_doc
+from apps.tenant_apps.dea.facade import post_payment_voucher
 
 from ..forms import GivenLoanRepaymentForm, TakenLoanRepaymentForm
 from ..models import GivenLoan, TakenLoan
@@ -81,14 +80,7 @@ def loan_payment_create_view(request, pk=None):
                 created_by=request.user,
             )
             try:
-                create_and_post_voucher_for_doc(
-                    doc=payment,
-                    user=request.user,
-                    voucher_type_input=payment.get_voucher_type(),
-                    engine=DjangoPostingEngine(),
-                )
-                payment.posted = True
-                payment.save(update_fields=["posted"])
+                post_payment_voucher(payment, request.user)
                 messages.success(
                     request,
                     f"Payment {payment.payment_id} recorded and posted to accounting.",
@@ -142,14 +134,7 @@ def taken_loan_payment_create_view(request, pk):
                 created_by=request.user,
             )
             try:
-                create_and_post_voucher_for_doc(
-                    doc=payment,
-                    user=request.user,
-                    voucher_type_input=payment.get_voucher_type(),
-                    engine=DjangoPostingEngine(),
-                )
-                payment.posted = True
-                payment.save(update_fields=["posted"])
+                post_payment_voucher(payment, request.user)
                 messages.success(
                     request,
                     f"Payment {payment.payment_id} recorded and posted to accounting.",

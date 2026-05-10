@@ -84,6 +84,57 @@ def _parse_selected_ids(raw_ids):
     return cleaned, invalid_count
 
 
+def _build_release_action(loan):
+    """Build release CTA metadata for loan detail surfaces."""
+    if getattr(loan, "release", None):
+        return None
+
+    status = str(getattr(loan, "status", "") or "")
+    allowed_statuses = {
+        "Disbursed",
+        "ActiveCurrent",
+        "ActiveOverdue",
+        "ActiveNPA",
+        "ClosurePending",
+    }
+    if status not in allowed_statuses:
+        return None
+
+    outstanding_amount = getattr(loan, "outstanding_amount", None)
+    if outstanding_amount is None:
+        total_due = getattr(loan, "total_due", None)
+        total_payments_getter = getattr(loan, "get_total_payments", None)
+        if total_due is not None and callable(total_payments_getter):
+            try:
+                outstanding_amount = total_due - total_payments_getter()
+            except Exception:
+                outstanding_amount = total_due
+
+    if outstanding_amount is not None:
+        try:
+            outstanding_amount = max(outstanding_amount, 0)
+        except TypeError:
+            amount_value = getattr(outstanding_amount, "amount", None)
+            if amount_value is not None:
+                outstanding_amount = max(amount_value, 0)
+    closure_exception = bool(getattr(loan, "closure_exception_approved", False))
+    needs_settlement = (
+        outstanding_amount is not None
+        and outstanding_amount > 0
+        and not closure_exception
+    )
+
+    return {
+        "title": "Start Release Workflow",
+        "icon": ">",
+        "button_class": "btn-success" if not needs_settlement else "btn-outline-secondary",
+        "href": reverse("girvi:release_loan_check_custody", args=[loan.id]),
+        "disabled": needs_settlement,
+        "outstanding_amount": outstanding_amount,
+        "closure_exception_approved": closure_exception,
+    }
+
+
 def loan_transition_view(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
     raw_transition_name = request.GET.get("transition") or request.POST.get("transition")
@@ -235,6 +286,11 @@ def loan_table_partial(request: HttpRequest):
         "table": table,
         "loan_kind": loan_kind,
         "filter": f,
+        "table_hx_endpoint": reverse("girvi:loan_table_partial"),
+        "table_hx_target": "#loan-table-container",
+        "table_hx_select": "#loan-table-container",
+        "table_hx_disable_select": True,
+        "table_hx_swap": "outerHTML",
         **totals,
     }
     if request.htmx:
@@ -610,6 +666,7 @@ def loan_detail(request, pk):
         transition.label for transition in flow.get_outgoing_transitions()
     ]
     transition_actions = build_transition_actions(loan, possible_transitions)
+    release_action = _build_release_action(loan)
 
     weight_summary = {item["itemtype"]: item for item in loan.get_weight_summary}
     gold_weight = (
@@ -702,6 +759,7 @@ def loan_detail(request, pk):
         ),
         "possible_transitions": possible_transitions,
         "transition_actions": transition_actions,
+        "release_action": release_action,
         "current_status": current_status,
         "change_log": changelog,
         "renewals_as_source": list(loan.renewals_as_source.all()),
@@ -980,5 +1038,9 @@ def loan_detail_release_tab(request, pk):
     return render(
         request,
         "girvi/loan/loan_detail_1.html#release-tab",
-        {"loan": rm["loan"], "summary": rm["summary"]},
+        {
+            "loan": rm["loan"],
+            "summary": rm["summary"],
+            "release_action": _build_release_action(rm["loan"]),
+        },
     )

@@ -21,6 +21,10 @@ def migrate_repledged_items_forward(apps, schema_editor):
     """
     Migrate existing RepledgedLoanItem records to new custody system.
     """
+    # Some legacy tenant schemas never had this table. Skip safely.
+    if "girvi_repledgedloanitem" not in schema_editor.connection.introspection.table_names():
+        return
+
     LoanItem = apps.get_model("girvi", "LoanItem")
     RepledgedLoanItem = apps.get_model("girvi", "RepledgedLoanItem")
     RepledgeHistory = apps.get_model("girvi", "RepledgeHistory")

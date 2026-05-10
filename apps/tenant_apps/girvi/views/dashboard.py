@@ -6,7 +6,7 @@ from ..models import (
     GivenLoan, Release, License, Series, LoanItemStorageBox,
     StatementItem
 )
-from apps.tenant_apps.dea.models import PaymentVoucher
+from django.apps import apps as django_apps
 from apps.tenant_apps.notify.models import Notification
 
 
@@ -41,6 +41,7 @@ def girvi_dashboard(request):
     total_boxes = LoanItemStorageBox.objects.count()
     
     # Payment counts (PaymentVoucher replaces legacy LoanPayment)
+    PaymentVoucher = django_apps.get_model("dea", "PaymentVoucher")
     total_payments = PaymentVoucher.objects.count()
     pending_payments = PaymentVoucher.objects.filter(posted=False).count()
     
