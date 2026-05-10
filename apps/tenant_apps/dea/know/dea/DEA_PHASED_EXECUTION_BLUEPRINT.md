@@ -492,7 +492,7 @@ GL shows accumulated depreciation growing by the correct SLM amount each period.
 
 ---
 
-### 2.3 Prepaid expense scheduler
+### [x] 2.3 Prepaid expense scheduler — done in 3d1542f
 
 **Files to create:**  
 - `apps/tenant_apps/dea/models/prepaid.py` (`PrepaidExpense`, `PrepaidScheduleLine`)  
