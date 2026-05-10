@@ -3,6 +3,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from djmoney.models.fields import MoneyField
 
 User = get_user_model()
 
@@ -116,3 +117,88 @@ class Voucher(models.Model):
             return f"Auto from {self.business_doc.__class__.__name__} #{self.business_doc.id}"
         else:
             return f"Manual entry by {self.created_by}"
+
+
+class VoucherLine(models.Model):
+    class LineSide(models.TextChoices):
+        DR = "Dr", "Debit"
+        CR = "Cr", "Credit"
+
+    voucher = models.ForeignKey(
+        Voucher,
+        on_delete=models.CASCADE,
+        related_name="lines",
+    )
+    line_no = models.PositiveIntegerField(help_text="1-based sequence within voucher")
+    side = models.CharField(max_length=2, choices=LineSide.choices)
+
+    ledger = models.ForeignKey(
+        "Ledger",
+        on_delete=models.PROTECT,
+        related_name="voucher_lines",
+    )
+    account = models.ForeignKey(
+        "Account",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="voucher_lines",
+        help_text="Optional party/subledger attribution",
+    )
+
+    amount = MoneyField(max_digits=14, decimal_places=2, default_currency="INR")
+    amount_base = MoneyField(
+        max_digits=14,
+        decimal_places=2,
+        default_currency="INR",
+        null=True,
+        blank=True,
+        help_text="Base-currency amount for reporting checks",
+    )
+    exchange_rate = models.DecimalField(max_digits=12, decimal_places=6, default=1)
+    xact_type_ext = models.CharField(max_length=4, default="TXN")
+
+    tax_code = models.CharField(max_length=20, blank=True)
+    narration = models.CharField(max_length=255, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["line_no", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["voucher", "line_no"],
+                name="uniq_voucher_line_no",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="voucherline_amount_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["voucher", "side"]),
+            models.Index(fields=["ledger", "side"]),
+            models.Index(fields=["account", "side"]),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if self.voucher_id:
+            voucher = self.voucher
+            if voucher.status in {VoucherStatus.POSTED, VoucherStatus.REVERSED}:
+                raise ValidationError(
+                    "Cannot modify lines for posted/reversed voucher. "
+                    "Create a correcting voucher instead."
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"{self.voucher.voucher_no} L{self.line_no} "
+            f"{self.side} {self.ledger} {self.amount}"
+        )

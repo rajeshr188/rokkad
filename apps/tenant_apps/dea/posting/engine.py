@@ -16,6 +16,10 @@ from django.db import transaction
 import logging
 
 from apps.tenant_apps.dea.posting.types import PostingBundle, PostingError, Side
+from ..services.materialize_journal import (
+    materialize_journal_from_voucher_lines,
+    sync_voucher_lines_from_bundle,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -145,10 +149,15 @@ class BasePostingEngine(ABC):
                         getattr(rule, '__class__', type(rule)).__name__,
                         bundle
                     )
-                    # validations
-                    assert_non_empty(bundle)
-                    assert_currency_fields(bundle)
-                    assert_balanced(bundle)
+                    if bundle.ledger_lines:
+                        # validations for rule-generated bundle
+                        assert_non_empty(bundle)
+                        assert_currency_fields(bundle)
+                        assert_balanced(bundle)
+                    elif not voucher.lines.exists():
+                        raise PostingError(
+                            "Posting rule produced no ledger lines and voucher has no stored lines."
+                        )
                 except Exception as e:
                     import django.db
                     if isinstance(e, django.db.IntegrityError):
@@ -171,8 +180,13 @@ class BasePostingEngine(ABC):
                     )
                     raise PostingError(f"Posting rule or validation failed: {str(e)}") from e
 
-                # write JE and lines onto current voucher
-                je = self._write_journal_entry(ctx, bundle)
+                # normalize into canonical voucher lines and materialize JE from those lines
+                if bundle.ledger_lines:
+                    sync_voucher_lines_from_bundle(voucher, bundle)
+                je = materialize_journal_from_voucher_lines(
+                    voucher=voucher,
+                    posted_by_id=ctx.user_id,
+                )
 
                 # update voucher fingerprint AFTER successful posting
                 voucher.fingerprint = new_fp

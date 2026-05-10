@@ -21,6 +21,8 @@ from .models import (
     JournalEntryVoucher,
     JournalEntryLineItem,
     Ledger,
+    Voucher,
+    VoucherLine,
     SalesInvoiceVoucher,
     SalesInvoiceLineItem,
     PurchaseInvoiceVoucher,
@@ -679,5 +681,43 @@ PurchaseInvoiceLineItemFormSet = inlineformset_factory(
     extra=3,
     can_delete=True,
     min_num=1,
+    validate_min=True,
+)
+
+
+# ============================================================================
+# VOUCHER LINE FORMS
+# ============================================================================
+
+
+class VoucherLineForm(forms.ModelForm):
+    class Meta:
+        model = VoucherLine
+        fields = [
+            "line_no",
+            "side",
+            "ledger",
+            "account",
+            "amount",
+            "tax_code",
+            "narration",
+        ]
+        widgets = {
+            "line_no": forms.NumberInput(attrs={"class": "form-control form-control-sm"}),
+            "side": forms.Select(attrs={"class": "form-select form-select-sm"}),
+            "ledger": forms.Select(attrs={"class": "form-select form-select-sm"}),
+            "account": forms.Select(attrs={"class": "form-select form-select-sm"}),
+            "tax_code": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "narration": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+        }
+
+
+VoucherLineFormSet = inlineformset_factory(
+    Voucher,
+    VoucherLine,
+    form=VoucherLineForm,
+    extra=2,
+    can_delete=True,
+    min_num=2,
     validate_min=True,
 )
