@@ -37,6 +37,18 @@
                     </div>
                 </div>
 
+                {% if pre_close_fatal_count %}
+                <div class="alert alert-danger">
+                    <strong>{{ pre_close_fatal_count }} fatal pre-close check(s) are failing.</strong>
+                    Resolve them before closing this period.
+                </div>
+                {% elif pre_close_warning_count %}
+                <div class="alert alert-warning">
+                    <strong>{{ pre_close_warning_count }} warning check(s) need acknowledgement.</strong>
+                    You can continue after acknowledging warnings in the form below.
+                </div>
+                {% endif %}
+
                 {% if pre_close_summary.draft_vouchers_count %}
                 <div class="alert alert-danger">
                     <strong>Draft vouchers must be resolved before closing.</strong>
@@ -51,17 +63,7 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <h6>Pre-close checklist</h6>
-                        <div class="list-group">
-                            {% for item in pre_close_summary.checklist %}
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ item.label }}</strong><br>
-                                    <small class="text-muted">{{ item.status_text }}</small>
-                                </div>
-                                <span class="badge {% if item.ready %}bg-success{% else %}bg-warning text-dark{% endif %} rounded-pill">{{ item.count }}</span>
-                            </div>
-                            {% endfor %}
-                        </div>
+                        {% include 'dea/period/pre_close_checklist.html' %}
                     </div>
                     <div class="col-md-6">
                         <h6>What will happen on close</h6>

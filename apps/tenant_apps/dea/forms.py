@@ -412,6 +412,11 @@ class PeriodCloseForm(forms.Form):
         required=True,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+    acknowledge_warnings = forms.BooleanField(
+        label="I acknowledge pre-close warnings and want to continue.",
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     notes = forms.CharField(
         label="Closing Notes",
         required=False,
@@ -432,9 +437,27 @@ class PeriodCloseForm(forms.Form):
         help_text="This action will close all revenue and expense accounts to retained earnings",
     )
 
-    def __init__(self, *args, draft_vouchers_count=0, **kwargs):
+    def __init__(
+        self,
+        *args,
+        draft_vouchers_count=0,
+        warning_checks_count=0,
+        fatal_checks_count=0,
+        **kwargs,
+    ):
         self.draft_vouchers_count = draft_vouchers_count
+        self.warning_checks_count = warning_checks_count
+        self.fatal_checks_count = fatal_checks_count
         super().__init__(*args, **kwargs)
+
+        if self.warning_checks_count == 0:
+            self.fields.pop("acknowledge_warnings", None)
+        else:
+            self.fields["acknowledge_warnings"].required = True
+            self.fields[
+                "acknowledge_warnings"
+            ].label = f"I acknowledge {self.warning_checks_count} warning check(s) and want to continue."
+
         self.helper = FormHelper()
         self.helper.form_method = "post"
         self.helper.add_input(
@@ -451,6 +474,10 @@ class PeriodCloseForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
+        if self.fatal_checks_count:
+            raise forms.ValidationError(
+                "Cannot close period while fatal pre-close checks are failing."
+            )
         if self.draft_vouchers_count:
             raise forms.ValidationError(
                 f"This period still has {self.draft_vouchers_count} draft voucher(s). "

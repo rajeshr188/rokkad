@@ -46,6 +46,7 @@ from ..models import (
     VoucherType,
 )
 from ..tables import PeriodTable
+from ..services.pre_close import PreCloseChecklist
 from ..utils.currency import Balance
 
 logger = logging.getLogger(__name__)
@@ -483,11 +484,19 @@ def period_close(request, pk):
         return redirect("dea_period_detail", pk=pk)
 
     pre_close_summary = _build_pre_close_summary(period)
+    pre_close_checklist = PreCloseChecklist().run(
+        period=period,
+        tenant=getattr(request, "tenant", None),
+    )
+    fatal_checks = [c for c in pre_close_checklist if c["is_fatal"] and c["status"] == "fail"]
+    warning_checks = [c for c in pre_close_checklist if c["status"] == "warning"]
 
     if request.method == "POST":
         form = PeriodCloseForm(
             request.POST,
             draft_vouchers_count=pre_close_summary["draft_vouchers_count"],
+            warning_checks_count=len(warning_checks),
+            fatal_checks_count=len(fatal_checks),
         )
         if form.is_valid():
             try:
@@ -569,7 +578,9 @@ def period_close(request, pk):
                 logger.exception(f"Period close exception: {e}")
     else:
         form = PeriodCloseForm(
-            draft_vouchers_count=pre_close_summary["draft_vouchers_count"]
+            draft_vouchers_count=pre_close_summary["draft_vouchers_count"],
+            warning_checks_count=len(warning_checks),
+            fatal_checks_count=len(fatal_checks),
         )
 
     # Get summary for confirmation
@@ -580,6 +591,9 @@ def period_close(request, pk):
         "ledgers_count": Ledger.objects.count(),
         "accounts_count": Account.objects.count(),
         "pre_close_summary": pre_close_summary,
+        "pre_close_checklist": pre_close_checklist,
+        "pre_close_fatal_count": len(fatal_checks),
+        "pre_close_warning_count": len(warning_checks),
         "title": f"Close Period: {period.name}",
     }
 
