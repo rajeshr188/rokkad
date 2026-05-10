@@ -11,3 +11,4 @@ from .journal_entry import *
 from .sales_invoice import *
 from .purchase_invoice import *
 from .numbering import *
+from .asset import *

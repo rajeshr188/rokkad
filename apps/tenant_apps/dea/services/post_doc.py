@@ -140,6 +140,10 @@ def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
             fingerprint=new_fp,
         )
 
+        # Preserve the original business doc instance so any transient posting
+        # context attached by the caller remains visible to the posting rule.
+        voucher.business_doc = doc
+
     je = PostVoucherCommand(engine).execute(voucher, user)
 
     # Safety check: verify only one POSTED voucher exists

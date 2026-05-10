@@ -107,37 +107,25 @@ class PreCloseChecklist:
         )
 
     def _depreciation_posted_check(self, period) -> CheckResult:
-        period_entries = period.journal_entries.count()
-        if period_entries == 0:
-            return CheckResult(
-                key="depreciation_posted",
-                label="Depreciation posted",
-                status="info",
-                is_fatal=False,
-                count=0,
-                status_text="No period activity yet; depreciation check not required",
-            )
+        from apps.tenant_apps.dea.services.depreciation import DepreciationService
 
-        count = JournalEntryVoucher.objects.filter(
-            reference=f"PERIOD:{period.pk}",
-            memo="PRE_CLOSE:DEPRECIATION",
-        ).count()
-        if count:
+        count = DepreciationService.get_unposted_for_period(period).count()
+        if count == 0:
             return CheckResult(
                 key="depreciation_posted",
                 label="Depreciation posted",
                 status="pass",
                 is_fatal=False,
-                count=count,
-                status_text="Depreciation adjustment recorded",
+                count=0,
+                status_text="All depreciable assets are posted for this period",
             )
         return CheckResult(
             key="depreciation_posted",
             label="Depreciation posted",
             status="warning",
             is_fatal=False,
-            count=0,
-            status_text="Review depreciation journals before close",
+            count=count,
+            status_text=f"{count} asset(s) still need depreciation posted",
         )
 
     def _prepaid_expired_check(self, period) -> CheckResult:
