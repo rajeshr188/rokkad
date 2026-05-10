@@ -9,7 +9,21 @@ __pycache__/
 # Django #
 *.log
 db.sqlite3
+*.db
+*.sqlite
+*.sqlite3
 media
+
+# Database backups and dumps #
+*.dump
+*.sql
+*.sql.gz
+*.tar.gz
+*.backup
+*.bak
+*_backup_*.sql
+*_prod_*.dump
+*_prod_*.sql
 
 # Virtual environment
 .venv
