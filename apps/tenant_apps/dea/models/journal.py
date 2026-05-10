@@ -24,6 +24,8 @@ User = get_user_model()
 
 class JournalEntry(models.Model):
     # Audit fields
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
     posted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     posted_at = models.DateTimeField(auto_now_add=True)  # When this JE was created
     desc = models.TextField(blank=True, null=True)

@@ -373,14 +373,11 @@ class PaymentVoucher(BusinessDoc):
 
     @property
     def source_loan(self):
-        """Get the source loan if this is a loan payment"""
-        if self.source_model_name:
-            if self.source_model_name.lower() == "givenloan":
-                from apps.tenant_apps.girvi.models import GivenLoan
+        """Get the source loan if this is a loan payment.
 
-                return GivenLoan.objects.filter(id=self.source_object_id).first()
-            elif self.source_model_name.lower() == "takenloan":
-                from apps.tenant_apps.girvi.models import TakenLoan
-
-                return TakenLoan.objects.filter(id=self.source_object_id).first()
+        Uses the existing source_document GenericForeignKey — no girvi import needed.
+        Django resolves the concrete object via source_content_type + source_object_id.
+        """
+        if self.is_loan_payment:
+            return self.source_document
         return None
