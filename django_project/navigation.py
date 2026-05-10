@@ -1,6 +1,11 @@
 """
 Navigation structure and menu configuration.
 Defines all available navigation items with their properties.
+
+Current status:
+- Not used for live sidebar rendering.
+- Sidebar source-of-truth is templates/components/navigation/sidebar.html.
+- This module is retained for future dynamic navigation rollout.
 """
 
 # Navigation structure for authenticated users
@@ -24,19 +29,21 @@ NAVIGATION_STRUCTURE = {
                 {
                     "id": "workspace-dashboard",
                     "label": "Overview",
-                    "url_name": "company_dashboard",
+                    "url_name": "workspace_dashboard",
+                    "workspace_kwarg": "workspace_id",
                     "required_permission": "workspace_view",
                 },
                 {
                     "id": "workspace-team",
                     "label": "Team",
-                    "url_name": "orgs_membership_list",
+                    "url_name": "team_members_list",
                     "required_permission": "team_view",
                 },
                 {
                     "id": "workspace-settings",
                     "label": "Settings",
-                    "url_name": "company_update",
+                    "url_name": "workspace_update",
+                    "workspace_kwarg": "workspace_id",
                     "required_permission": "workspace_edit",
                 },
             ],
@@ -52,7 +59,7 @@ NAVIGATION_STRUCTURE = {
         {
             "id": "girvi",
             "label": "Loans (गिरवी)",
-            "url_name": "girvi:loan_list",
+            "url_name": "girvi:girvi_loan_list",
             "icon": "cash-coin",
             "section": "data",
             "required_permission": "data_view",
@@ -163,7 +170,7 @@ USER_MENU_ITEMS = [
     {
         "id": "workspaces",
         "label": "My Workspaces",
-        "url_name": "orgs_company_list",
+        "url_name": "workspace_selector",
         "icon": "diagram-3-fill",
     },
     {

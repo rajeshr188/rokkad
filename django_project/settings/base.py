@@ -127,10 +127,10 @@ MIDDLEWARE = [
     # "debug_toolbar.middleware.DebugToolbarMiddleware",  # Django Debug Toolbar
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
     # 🔒 SECURITY FIX: Using secure middleware with membership validation
     "apps.orgs.middleware_v2.SecureWorkspaceMiddleware",
     "apps.tenant_apps.rates.middleware.RateMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
     # Phase 2: Subscription validation (must come after MessageMiddleware)
     "django_project.middleware.SubscriptionValidationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -161,7 +161,6 @@ TEMPLATES = [
                 "apps.orgs.context_processors.theme_processor",
                 # UI/UX enhancements
                 "django_project.context_processors.user_permissions",
-                "django_project.context_processors.navigation_config",
                 "django_project.context_processors.workspace_context",
                 "django_project.context_processors.subscription_context",
                 "django_project.context_processors.google_oauth_context",

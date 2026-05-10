@@ -3,7 +3,8 @@ Context processors for common template variables.
 These provide global context to all templates.
 """
 from django.conf import settings
-from django.contrib.auth.models import Permission
+
+from apps.orgs.permissions import get_effective_permissions, get_workspace_role_name
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
@@ -44,108 +45,25 @@ def user_permissions(request):
             "user_workspace": None,
         }
 
-    try:
-        from apps.orgs.models import Membership
-
-        membership = Membership.objects.get(user=request.user, company=workspace)
-
-        # Get all permissions for user's role
-        # This integrates with the permission system defined in models
-        role = membership.role
-
-        # Always start with the role-matrix permissions (custom string-based,
-        # e.g. 'team_invite', 'workspace_edit') so sidebar gates work correctly.
-        # Then union in any explicit Django Permission codenames from the DB.
-        perms = _get_permissions_for_role(role.name)
-        if hasattr(role, "permissions"):
-            perms |= set(role.permissions.values_list("codename", flat=True))
-
-        return {
-            "user_permissions": perms,
-            "user_role": role.name,
-            "user_workspace": workspace,
-        }
-
-    except (Membership.DoesNotExist, AttributeError):
-        return {
-            "user_permissions": set(),
-            "user_role": None,
-            "user_workspace": workspace,
-        }
-
-
-def _get_permissions_for_role(role_name):
-    """
-    Get default permission set for a role.
-
-    This implements the permission matrix from PERMISSION_MATRIX_GUIDE.md
-    """
-    role_name = role_name.lower() if role_name else ""
-
-    # Base permissions available to all roles
-    BASE_PERMS = {
-        "workspace_view",
-        "data_view",
-        "team_view",
+    return {
+        "user_permissions": get_effective_permissions(request.user, workspace),
+        "user_role": get_workspace_role_name(request.user, workspace),
+        "user_workspace": workspace,
     }
 
-    # Admin permissions
-    ADMIN_PERMS = BASE_PERMS | {
-        "workspace_edit",
-        "team_invite",
-        "billing_view",
-        "data_edit",
-        "data_export",
-        "data_publish",
-        # Feature-specific perms
-        "girvi_loan_view",
-        "sales_invoice_view",
-        "purchase_invoice_view",
-        "dea_journal_view",
-        "contact_view",
-    }
 
-    # Owner permissions (superset of admin)
-    OWNER_PERMS = ADMIN_PERMS | {
-        "workspace_delete",
-        "team_remove",
-        "billing_edit",
-        "billing_delete",
-        "workspace_settings",
-        # All administrative actions
-        "admin_access",
-    }
 
-    # Member permissions (limited)
-    MEMBER_PERMS = BASE_PERMS | {
-        "data_edit",  # Can edit their own data
-        # View-only access to some features
-        "sales_invoice_view",
-        "purchase_invoice_view",
-        "contact_view",
-    }
-
-    permissions_map = {
-        "owner": OWNER_PERMS,
-        "admin": ADMIN_PERMS,
-        "member": MEMBER_PERMS,
-    }
-
-    return permissions_map.get(role_name, BASE_PERMS)
 
 
 def navigation_config(request):
     """
-    Add navigation configuration to context.
+    Deprecated no-op context processor.
 
-    Allows templates to access navigation structure
-    for rendering dynamic menus based on permissions.
+    Sidebar navigation is currently rendered directly from
+    templates/components/navigation/sidebar.html. Keep this function as a
+    compatibility shim until/if dynamic navigation rendering is reintroduced.
     """
-    from .navigation import NAVIGATION_STRUCTURE
-
-    return {
-        "navigation_config": NAVIGATION_STRUCTURE,
-    }
+    return {}
 
 
 def workspace_context(request):

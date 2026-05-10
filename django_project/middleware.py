@@ -66,7 +66,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
         "user_workspaces",
         "workspace_invitations",
         "workspace_select",
-        "orgs_company_create",
+        "workspace_create",
         "workspace_list",
         "onboarding_start",
         "onboarding_profile",
