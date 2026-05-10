@@ -209,6 +209,55 @@ class Migration(migrations.Migration):
                 "ordering": ["-effective_date", "base_currency", "quote_currency"],
             },
         ),
+        migrations.RunSQL(
+            """
+            CREATE TABLE IF NOT EXISTS dea_vouchertype (
+                id bigserial PRIMARY KEY,
+                name varchar(100),
+                description text
+            );
+
+            CREATE TABLE IF NOT EXISTS dea_voucher (
+                id bigserial PRIMARY KEY,
+                voucher_no varchar(100),
+                voucher_date date,
+                status varchar(20) DEFAULT 'DRAFT',
+                created_at timestamp with time zone NULL,
+                updated_at timestamp with time zone NULL,
+                doc_object_id integer DEFAULT 0,
+                fingerprint varchar(128),
+                last_posted_at timestamp with time zone NULL,
+                narration text NULL,
+                created_by_id bigint NULL,
+                doc_content_type_id integer NULL,
+                polymorphic_ctype_id integer NULL,
+                updated_by_id bigint NULL,
+                voucher_type_id bigint NULL
+            );
+
+            ALTER TABLE dea_journalentry
+                ADD COLUMN IF NOT EXISTS posted_at timestamp with time zone NULL,
+                ADD COLUMN IF NOT EXISTS posted_by_id bigint NULL,
+                ADD COLUMN IF NOT EXISTS is_reversal_of_id bigint NULL,
+                ADD COLUMN IF NOT EXISTS voucher_id bigint NULL;
+            UPDATE dea_journalentry
+               SET posted_at = COALESCE(posted_at, NOW())
+             WHERE posted_at IS NULL;
+            ALTER TABLE dea_journalentry
+                ALTER COLUMN posted_at SET NOT NULL;
+
+            CREATE TABLE IF NOT EXISTS dea_businessdoc (
+                id bigserial PRIMARY KEY,
+                created_at timestamp with time zone NULL,
+                auto_post_to_accounting boolean DEFAULT TRUE,
+                created_by_id bigint NULL,
+                polymorphic_ctype_id integer NULL,
+                updated_by_id bigint NULL,
+                voucher_id bigint NULL
+            );
+            """,
+            migrations.RunSQL.noop,
+        ),
         migrations.RemoveField(
             model_name="businessdoc",
             name="created_by",
@@ -274,11 +323,22 @@ class Migration(migrations.Migration):
             name="account_number",
             field=models.CharField(
                 blank=True,
+                null=True,
                 db_index=True,
                 help_text="Auto-generated unique account number",
                 max_length=20,
                 unique=True,
             ),
+        ),
+        migrations.RunSQL(
+            """
+            UPDATE dea_account
+               SET account_number = CONCAT('ACC-', id)
+             WHERE account_number IS NULL OR btrim(account_number) = '';
+            ALTER TABLE dea_account
+                ALTER COLUMN account_number SET NOT NULL;
+            """,
+            migrations.RunSQL.noop,
         ),
         migrations.AddField(
             model_name="account",

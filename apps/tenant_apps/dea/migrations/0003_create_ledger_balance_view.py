@@ -18,6 +18,69 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
+            """
+            DROP VIEW IF EXISTS ledger_balance CASCADE;
+            DROP VIEW IF EXISTS account_balance CASCADE;
+            DROP VIEW IF EXISTS ledger_balances CASCADE;
+            DROP VIEW IF EXISTS account_balances CASCADE;
+
+            ALTER TABLE dea_ledgerstatement
+                ADD COLUMN IF NOT EXISTS "ClosingBalance_currency" varchar(3) DEFAULT 'INR' NOT NULL;
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'dea_ledgerstatement'
+                      AND column_name = 'ClosingBalance'
+                      AND udt_name = '_money_value'
+                ) THEN
+                    ALTER TABLE dea_ledgerstatement
+                        ALTER COLUMN "ClosingBalance" TYPE numeric(13,3)
+                        USING CASE
+                            WHEN "ClosingBalance" IS NULL OR coalesce(array_length("ClosingBalance", 1), 0) = 0 THEN 0
+                            ELSE regexp_replace(("ClosingBalance")[1]::text, '^\\(([-0-9.]+),.*\\)$', '\\1')::numeric
+                        END;
+                END IF;
+            END $$;
+
+            ALTER TABLE dea_accountstatement
+                ADD COLUMN IF NOT EXISTS "ClosingBalance_currency" varchar(3) DEFAULT 'INR' NOT NULL;
+            ALTER TABLE dea_accountstatement
+                ADD COLUMN IF NOT EXISTS "TotalCredit_currency" varchar(3) DEFAULT 'INR' NOT NULL;
+            ALTER TABLE dea_accountstatement
+                ADD COLUMN IF NOT EXISTS "TotalDebit_currency" varchar(3) DEFAULT 'INR' NOT NULL;
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'dea_accountstatement'
+                      AND column_name = 'ClosingBalance'
+                      AND udt_name = '_money_value'
+                ) THEN
+                    ALTER TABLE dea_accountstatement
+                        ALTER COLUMN "ClosingBalance" TYPE numeric(13,3)
+                        USING CASE
+                            WHEN "ClosingBalance" IS NULL OR coalesce(array_length("ClosingBalance", 1), 0) = 0 THEN 0
+                            ELSE regexp_replace(("ClosingBalance")[1]::text, '^\\(([-0-9.]+),.*\\)$', '\\1')::numeric
+                        END,
+                        ALTER COLUMN "TotalCredit" TYPE numeric(13,3)
+                        USING CASE
+                            WHEN "TotalCredit" IS NULL OR coalesce(array_length("TotalCredit", 1), 0) = 0 THEN 0
+                            ELSE regexp_replace(("TotalCredit")[1]::text, '^\\(([-0-9.]+),.*\\)$', '\\1')::numeric
+                        END,
+                        ALTER COLUMN "TotalDebit" TYPE numeric(13,3)
+                        USING CASE
+                            WHEN "TotalDebit" IS NULL OR coalesce(array_length("TotalDebit", 1), 0) = 0 THEN 0
+                            ELSE regexp_replace(("TotalDebit")[1]::text, '^\\(([-0-9.]+),.*\\)$', '\\1')::numeric
+                        END;
+                END IF;
+            END $$;
+            """,
+            migrations.RunSQL.noop,
+        ),
+        migrations.RunSQL(
             # Forward SQL - Create View
             """
                     CREATE OR REPLACE VIEW ledger_balances AS
