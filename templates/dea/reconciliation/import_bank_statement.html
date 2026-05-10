@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Import Bank Statement{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="fas fa-upload"></i> Import Bank Statement
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form id="import-form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="bank-account-select">Bank Account:</label>
+                            <select id="bank-account-select" name="bank_account_id" class="form-control" required>
+                                <option value="">-- Select a bank account --</option>
+                                {% for account in bank_accounts %}
+                                <option value="{{ account.id }}">
+                                    {{ account.name }} ({{ account.bank_name }} - {{ account.account_number }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="csv-file">CSV File:</label>
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="csv-file" name="csv_file" accept=".csv" required>
+                                <label class="custom-file-label" for="csv-file">Choose file...</label>
+                            </div>
+                            <small class="form-text text-muted mt-2">
+                                <strong>CSV Format:</strong> The file must have columns: statement_date, description, amount, running_balance
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <h6>CSV Example:</h6>
+                            <pre class="bg-light p-3"><code>statement_date,description,amount,running_balance
+2026-05-01,Opening Balance,10000.00,10000.00
+2026-05-01,Deposit - Customer Payment,5000.00,15000.00
+2026-05-02,Cheque #1001,2500.00,12500.00
+2026-05-02,Bank Charges,50.00,12450.00</code></pre>
+                        </div>
+
+                        <div id="error-message" class="alert alert-danger" style="display:none;"></div>
+                        <div id="success-message" class="alert alert-success" style="display:none;"></div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Import
+                        </button>
+                        <a href="{% url 'dea:bank-accounts-list' %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('csv-file').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || 'Choose file...';
+    document.querySelector('.custom-file-label').textContent = fileName;
+});
+
+document.getElementById('import-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    
+    fetch('{% url "dea:import-bank-statement" %}', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('success-message').textContent = 
+                data.message || `Successfully imported ${data.lines_created} lines`;
+            document.getElementById('success-message').style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+            
+            if (data.warnings && data.warnings.length > 0) {
+                const warningText = 'Warnings:\n' + data.warnings.join('\n');
+                alert(warningText);
+            }
+
+            setTimeout(() => {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    window.location.href = '{% url "dea:bank-accounts-list" %}';
+                }
+            }, 2000);
+        } else {
+            document.getElementById('error-message').textContent = data.error;
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('success-message').style.display = 'none';
+        }
+    })
+    .catch(error => {
+        document.getElementById('error-message').textContent = 'Error: ' + error;
+        document.getElementById('error-message').style.display = 'block';
+    });
+});
+</script>
+{% endblock %}

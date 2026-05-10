@@ -3,6 +3,7 @@ from django.urls import path
 
 from . import views
 from .views import reports as reports_views
+from .views import reconciliation as reconciliation_views
 from .views import dashboard_enhanced
 
 urlpatterns = [
@@ -374,5 +375,39 @@ urlpatterns += [
         "journal-entry-vouchers/<int:pk>/delete/",
         views.journal_entry_voucher.JournalEntryVoucherDeleteView.as_view(),
         name="dea_journal_entry_voucher_delete",
+    ),
+]
+
+# Bank Reconciliation URLs (Phase 2.4)
+urlpatterns += [
+    path(
+        "reconciliation/",
+        reconciliation_views.BankAccountListView.as_view(),
+        name="bank-accounts-list",
+    ),
+    path(
+        "reconciliation/<int:pk>/",
+        reconciliation_views.BankReconciliationDetailView.as_view(),
+        name="reconciliation-detail",
+    ),
+    path(
+        "reconciliation/import/",
+        reconciliation_views.import_bank_statement,
+        name="import-bank-statement",
+    ),
+    path(
+        "reconciliation/auto-match/<int:bank_account_id>/",
+        reconciliation_views.auto_match_statements,
+        name="auto-match-statements",
+    ),
+    path(
+        "reconciliation/manual-match/",
+        reconciliation_views.manual_match,
+        name="manual-match",
+    ),
+    path(
+        "reconciliation/unmatch/",
+        reconciliation_views.unmatch,
+        name="unmatch",
     ),
 ]
