@@ -3,14 +3,47 @@
 from django.db import migrations, models
 import django.core.validators
 import django.db.models.deletion
+import django.utils.timezone
 
 
 class Migration(migrations.Migration):
+    atomic = False
+
     dependencies = [
         ("contact", "0001_initial"),
     ]
 
     operations = [
+        migrations.RunSQL(
+            sql="""
+            ALTER TABLE contact_customer
+                ADD COLUMN IF NOT EXISTS dob date NULL;
+            ALTER TABLE contact_customer
+                ADD COLUMN IF NOT EXISTS email varchar(254) NULL;
+            ALTER TABLE contact_address
+                ADD COLUMN IF NOT EXISTS state varchar(2) DEFAULT 'TN' NOT NULL;
+            ALTER TABLE contact_address
+                ADD COLUMN IF NOT EXISTS country varchar(2) DEFAULT 'IN' NOT NULL;
+            """,
+            reverse_sql=migrations.RunSQL.noop,
+        ),
+        migrations.RunSQL(
+            sql="""
+            UPDATE contact_address
+               SET state = CASE
+                   WHEN state IS NULL OR btrim(state) = '' THEN 'TN'
+                   WHEN state = 'Tamil Nadu' THEN 'TN'
+                   ELSE state
+               END;
+            UPDATE contact_address
+               SET country = CASE
+                   WHEN country IS NULL OR btrim(country) = '' THEN 'IN'
+                   WHEN country = 'India' THEN 'IN'
+                   ELSE country
+               END;
+            """,
+            reverse_sql=migrations.RunSQL.noop,
+        ),
         # Customer model: First remove the duplicate 'firstname' field, then rename 'name' to 'firstname'
         # Step 1: Remove the existing duplicate 'firstname' field
         # WARNING: This will delete any data in the old 'firstname' field!
@@ -42,7 +75,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="customerrelationship",
             name="created",
-            field=models.DateTimeField(auto_now_add=True, editable=False, default=None),
+            field=models.DateTimeField(
+                auto_now_add=True,
+                editable=False,
+                default=django.utils.timezone.now,
+            ),
             preserve_default=False,
         ),
         migrations.AlterField(

@@ -4,7 +4,7 @@ from venv import logger
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from apps.tenant_apps.dea.models import Account, AccountType_Ext, EntityType
+from apps.tenant_apps.dea.facade import ensure_customer_account
 
 from .models import Customer
 
@@ -32,14 +32,4 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=Customer)
 def add_account(sender, instance, created, **kwargs):
     logger.info("Adding account")
-    entity_t = EntityType.objects.get(name="Person")
-    if instance.customer_type == "W" or instance.customer_type == "R":
-        acct_d = AccountType_Ext.objects.get(description="Debtor")
-        account, created = Account.objects.update_or_create(
-            contact=instance, entity=entity_t, defaults={"AccountType_Ext": acct_d}
-        )
-    else:
-        acct_c = AccountType_Ext.objects.get(description="Creditor")
-        account, created = Account.objects.update_or_create(
-            contact=instance, entity=entity_t, defaults={"AccountType_Ext": acct_c}
-        )
+    ensure_customer_account(instance)

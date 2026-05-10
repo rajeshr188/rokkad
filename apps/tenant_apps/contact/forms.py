@@ -67,6 +67,36 @@ class CustomerWidget(s2forms.ModelSelect2Widget):
         "contactno__phone_number__icontains",
     ]
 
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .prefetch_related("address", "contactno")
+        )
+
+    def label_from_instance(self, obj):
+        parts = [obj.name]
+
+        # Relation: S/o Ramesh
+        if obj.relatedas and obj.relatedto:
+            parts.append(f"{obj.get_relatedas_display()} {obj.relatedto}")
+        elif obj.relatedto:
+            parts.append(obj.relatedto)
+
+        # Default address: area, city
+        addr = obj.get_default_address()
+        if addr:
+            addr_parts = [p for p in [addr.area, addr.city] if p]
+            if addr_parts:
+                parts.append(", ".join(addr_parts))
+
+        # Default phone
+        contact = obj.get_default_contact()
+        if contact:
+            parts.append(str(contact.phone_number))
+
+        return " | ".join(parts)
+
 
 class CustomerReportForm(BaseReportForm, forms.ModelForm):
     start_date = forms.DateField(

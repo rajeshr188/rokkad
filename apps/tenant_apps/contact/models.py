@@ -563,6 +563,8 @@ class Address(models.Model):
         indexes = [
             models.Index(fields=["customer", "-is_default"]),
             models.Index(fields=["city", "state"]),
+            models.Index(fields=["area"]),
+            models.Index(fields=["street"]),
         ]
         verbose_name = _("Address")
         verbose_name_plural = _("Addresses")
@@ -641,6 +643,15 @@ class Contact(models.Model):
         verbose_name=_("Phone Number"),
         help_text=_("Enter phone with country code, e.g., +91 9876543210"),
     )
+    phone_number_normalized = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        editable=False,
+        db_index=True,
+        verbose_name=_("Phone Number Normalized"),
+        help_text=_("Digits-only phone number for fast search"),
+    )
     contact_type = models.CharField(
         max_length=1,
         choices=ContactType.choices,
@@ -693,6 +704,9 @@ class Contact(models.Model):
     def save(self, *args, **kwargs):
         """Save with default handling"""
         self.clean()
+        self.phone_number_normalized = "".join(
+            ch for ch in str(self.phone_number or "") if ch.isdigit()
+        )
         if self.is_default:
             Contact.objects.filter(customer=self.customer, is_default=True).exclude(
                 pk=self.pk

@@ -25,7 +25,7 @@ CUSTOMER_LIST_TEMPLATE = "contact/customer_list_improved.html"
 def _get_customer_list_context(request):
     customer_queryset = Customer.objects.all().prefetch_related("contactno", "address")
     customer_filter = CustomerFilter(request.GET, queryset=customer_queryset)
-    filtered_queryset = customer_filter.qs.distinct()
+    filtered_queryset = customer_filter.qs
     # Determine view preference from query parameter or session
     view_type = request.GET.get('view_type') or request.session.get('customer_view_type', 'card')
     items_per_page = 12 if view_type == 'card' else 25  # Show more items in list view
