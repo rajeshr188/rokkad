@@ -277,7 +277,7 @@ Acceptance add-on:
 
 ---
 
-### 1.5 Idempotency key uniqueness at DB level
+### [x] 1.5 Idempotency key uniqueness at DB level — done in e45883a
 
 **File:** `apps/tenant_apps/dea/models/voucher.py`
 
@@ -309,7 +309,7 @@ DB constraint is the last line of defence.
 
 ---
 
-### 1.6 Remove `print()` calls from hot paths
+### [x] 1.6 Remove `print()` calls from hot paths — done in e45883a
 
 **File:** `apps/tenant_apps/dea/models/ledger.py` → `calculate_balance`
 
@@ -323,7 +323,7 @@ and leaks internal data in logs.
 
 ---
 
-### 1.7 Fix period navigation and remove stale workspace assumptions
+### [x] 1.7 Fix period navigation and remove stale workspace assumptions — done in e45883a
 
 **File:** `apps/tenant_apps/dea/models/period.py`
 
