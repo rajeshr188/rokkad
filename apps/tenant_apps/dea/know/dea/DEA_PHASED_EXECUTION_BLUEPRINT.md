@@ -544,7 +544,7 @@ unmatched items appear in exception list; mark-reconciled flag persists.
 
 ---
 
-### 2.5 Complete financial reports
+### [x] 2.5 Complete financial reports — done in 0d312f7
 
 **Files to update:** `apps/tenant_apps/dea/views/reports.py` + templates under
 `templates/dea/reports/`
@@ -610,7 +610,7 @@ P&L net profit matches retained earnings delta between periods.
 
 ---
 
-### 2.6 Inline VoucherLine formset in the voucher create/edit view
+### [x] 2.6 Inline VoucherLine formset in the voucher create/edit view — done in 77e27d0
 
 **File:** `apps/tenant_apps/dea/views/voucher.py`, `templates/dea/vouchers/voucher_form.html`
 
@@ -627,7 +627,7 @@ green when Dr == Cr; submit creates a voucher with 3 `VoucherLine` rows and a co
 
 ---
 
-### 2.7 AR/AP settlement workflow
+### [x] 2.7 AR/AP settlement workflow — done in 3d40a55
 
 **File:** `apps/tenant_apps/dea/models/payment.py`, `apps/tenant_apps/dea/services/settlement.py`
 
@@ -652,6 +652,28 @@ Call from `posting/rules/sales_invoice.py` and `givenloan_receipt.py` after JE c
 
 ---
 
+### [x] 2.8 Posting rule integration for automatic settlement — done in 2bdb544
+
+**Files:** `apps/tenant_apps/dea/posting/engine.py` (modified), `apps/tenant_apps/dea/test_settlement_integration.py` (new)
+
+**What:**  
+Integrate `SettlementService` into the posting engine to automatically settle invoices when payments are posted.
+After `JournalEntry` materialization in `BasePostingEngine.post()`, check if the voucher's business document is a `PaymentVoucher`.
+If so, call `SettlementService().settle(payment_voucher)` to update invoice state:
+- `SalesInvoiceVoucher.received_amount` += payment amount
+- `PurchaseInvoiceVoucher.paid_amount` += payment amount
+- Set `is_fully_paid = True` when payment >= invoice total
+
+Settlement failures are logged as warnings but do not block posting (JournalEntry always created).
+
+**Why:** Without this integration, the AR/AP settlement service exists but is never called,
+and invoices remain marked unpaid even after full payment posting.
+
+**Acceptance:** Post a `PaymentVoucher` against a `SalesInvoiceVoucher` for the full invoice amount;
+verify `is_fully_paid` becomes `True` and `received_amount` is updated.
+
+---
+
 ### Phase 2 Checkpoint
 
 | Check | How |
@@ -661,7 +683,8 @@ Call from `posting/rules/sales_invoice.py` and `givenloan_receipt.py` after JE c
 | Depreciation posts and accumulates | `test_depreciation_service.py` |
 | Bank reconciliation: import + auto-match | `test_reconciliation.py` |
 | Manual JE via formset, JE materializes | Selenium or manual smoke |
-| AR settlement marks invoice paid | `test_settlement.py` |
+| AR settlement marks invoice paid | `test_settlement.py` + `test_settlement_integration.py` |
+| Payment posting triggers automatic settlement | `test_settlement_integration.py` (5 E2E tests) |
 
 ---
 
