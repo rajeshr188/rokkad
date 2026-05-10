@@ -143,18 +143,20 @@ class AccountingPeriod(models.Model):
         return self.status in [self.PeriodStatus.OPEN]
 
     def get_next_period(self):
-        """Get the next accounting period"""
-        query = AccountingPeriod.objects.filter(start_date__gt=self.end_date)
-        if self.workspace:
-            query = query.filter(workspace=self.workspace)
-        return query.order_by("start_date").first()
+        """Get the next accounting period (schema-local; no workspace filter needed with django-tenants)."""
+        return (
+            AccountingPeriod.objects.filter(start_date__gt=self.end_date)
+            .order_by("start_date")
+            .first()
+        )
 
     def get_previous_period(self):
-        """Get the previous accounting period"""
-        query = AccountingPeriod.objects.filter(end_date__lt=self.start_date)
-        if self.workspace:
-            query = query.filter(workspace=self.workspace)
-        return query.order_by("-end_date").first()
+        """Get the previous accounting period (schema-local; no workspace filter needed with django-tenants)."""
+        return (
+            AccountingPeriod.objects.filter(end_date__lt=self.start_date)
+            .order_by("-end_date")
+            .first()
+        )
 
     @transaction.atomic
     def close_period(self, user, notes=""):

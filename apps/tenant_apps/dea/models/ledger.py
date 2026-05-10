@@ -258,13 +258,14 @@ class Ledger(MPTTModel):
             )["total"]
             or 0
         )
-        print(
-            f"ds:{debit_sum} , cs:{ credit_sum}, ads:{aleg_debit_sum}, acs:{aleg_credit_sum}"
+        logger.debug(
+            "calculate_balance %s: ds=%s cs=%s ads=%s acs=%s",
+            self.name, debit_sum, credit_sum, aleg_debit_sum, aleg_credit_sum,
         )
         m = Money(
             (debit_sum + aleg_debit_sum) - (credit_sum + aleg_credit_sum), currency
         )
-        print(f"calculated balance {self.name} change: {m}")
+        logger.debug("calculated balance %s change: %s", self.name, m)
         return m
 
     def calculate_period_balance(self, period):

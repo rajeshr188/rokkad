@@ -64,6 +64,11 @@ class Voucher(models.Model):
                 condition=models.Q(status="POSTED"),
                 name="unique_posted_voucher_per_doc",
             ),
+            models.UniqueConstraint(
+                fields=["fingerprint"],
+                condition=models.Q(status__in=["POSTED", "CORRECTED"]),
+                name="unique_fingerprint_active",
+            ),
         ]
 
     def __str__(self):
