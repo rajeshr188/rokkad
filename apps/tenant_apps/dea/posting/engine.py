@@ -8,6 +8,7 @@ from ..models import (
     VoucherStatus,
     LedgerTransaction,
     AccountTransaction,
+    PaymentVoucher,
 )
 
 from abc import ABC
@@ -20,6 +21,7 @@ from ..services.materialize_journal import (
     materialize_journal_from_voucher_lines,
     sync_voucher_lines_from_bundle,
 )
+from ..services.settlement import SettlementService
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +195,21 @@ class BasePostingEngine(ABC):
                     voucher=voucher,
                     posted_by_id=ctx.user_id,
                 )
+
+                # Call settlement service if this is a PaymentVoucher
+                try:
+                    if isinstance(ctx.doc, PaymentVoucher):
+                        settlement_service = SettlementService()
+                        settlement_service.settle(ctx.doc)
+                        logger.info(
+                            f"Settlement completed for PaymentVoucher id={ctx.doc.id} "
+                            f"against source_document_type={type(ctx.doc.source_document).__name__}"
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"Settlement failed for PaymentVoucher id={ctx.doc.id}: {e}. "
+                        "JournalEntry was created successfully, but invoice settlement may be pending."
+                    )
 
                 # update voucher fingerprint AFTER successful posting
                 voucher.fingerprint = new_fp
