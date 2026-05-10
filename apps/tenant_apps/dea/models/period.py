@@ -241,11 +241,37 @@ class AccountingPeriod(models.Model):
 
                 self._create_closing_statements()
 
+                previous_state = {
+                    "status": self.status,
+                    "closed_date": self.closed_date.isoformat() if self.closed_date else None,
+                }
+
                 self.status = self.PeriodStatus.CLOSED
                 self.closed_date = timezone.now()
                 self.closed_by = user
                 self.notes = notes
                 self.save()
+
+                # Immutable audit trail for period close action.
+                try:
+                    from ..services.audit import AuditService
+                    from .audit import AccountingAuditEvent
+
+                    AuditService().log_event(
+                        event_type=AccountingAuditEvent.EventType.PERIOD_CLOSED,
+                        actor=user,
+                        obj=self,
+                        payload_before=previous_state,
+                        payload_after={
+                            "status": self.status,
+                            "closed_date": self.closed_date.isoformat() if self.closed_date else None,
+                            "closed_by_id": self.closed_by_id,
+                            "notes": self.notes,
+                        },
+                        description=f"Closed accounting period {self.name}",
+                    )
+                except Exception as audit_err:
+                    logger.warning(f"Failed to log PERIOD_CLOSED audit event for period {self.pk}: {audit_err}")
 
                 logger.info(
                     f"Period {self.name} closed by {user} at {self.closed_date}"
@@ -421,8 +447,24 @@ class AccountingPeriod(models.Model):
                 _("Can only lock CLOSED periods. Current status: ") + self.status
             )
 
+        previous_state = {"status": self.status}
         self.status = self.PeriodStatus.LOCKED
         self.save()
+
+        try:
+            from ..services.audit import AuditService
+            from .audit import AccountingAuditEvent
+
+            AuditService().log_event(
+                event_type=AccountingAuditEvent.EventType.PERIOD_LOCKED,
+                actor=user,
+                obj=self,
+                payload_before=previous_state,
+                payload_after={"status": self.status},
+                description=f"Locked accounting period {self.name}",
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to log PERIOD_LOCKED audit event for period {self.pk}: {audit_err}")
 
         logger.info(f"Period {self.name} locked by {user}")
 
@@ -434,5 +476,21 @@ class AccountingPeriod(models.Model):
         # Log unlock for audit
         logger.warning(f"Period {self.name} unlocked by {user} at {timezone.now()}")
 
+        previous_state = {"status": self.status}
         self.status = self.PeriodStatus.CLOSED
         self.save()
+
+        try:
+            from ..services.audit import AuditService
+            from .audit import AccountingAuditEvent
+
+            AuditService().log_event(
+                event_type=AccountingAuditEvent.EventType.PERIOD_UNLOCKED,
+                actor=user,
+                obj=self,
+                payload_before=previous_state,
+                payload_after={"status": self.status},
+                description=f"Unlocked accounting period {self.name}",
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to log PERIOD_UNLOCKED audit event for period {self.pk}: {audit_err}")

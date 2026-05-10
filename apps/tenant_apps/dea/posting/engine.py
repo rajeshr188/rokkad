@@ -23,6 +23,10 @@ from ..services.materialize_journal import (
 )
 from ..services.settlement import SettlementService
 
+from ..services.audit import AuditService
+from ..models.audit import AccountingAuditEvent
+from django.contrib.auth import get_user_model
+
 logger = logging.getLogger(__name__)
 
 
@@ -212,6 +216,7 @@ class BasePostingEngine(ABC):
                     )
 
                 # update voucher fingerprint AFTER successful posting
+                previous_status = voucher.status
                 voucher.fingerprint = new_fp
                 voucher.last_posted_at = timezone.now()
                 voucher.status = (
@@ -221,6 +226,30 @@ class BasePostingEngine(ABC):
                     else VoucherStatus.CORRECTED.value
                 )
                 voucher.save(update_fields=["fingerprint", "last_posted_at", "status"])
+                
+                # Log audit event for successful posting
+                try:
+                    audit_service = AuditService()
+                    User = get_user_model()
+                    actor = User.objects.filter(pk=ctx.user_id).first() if ctx.user_id else None
+                    
+                    if actor:
+                        audit_service.log_event(
+                            event_type=AccountingAuditEvent.EventType.VOUCHER_POSTED,
+                            actor=actor,
+                            obj=voucher,
+                            payload_before={'status': previous_status},
+                            payload_after={
+                                'status': voucher.status,
+                                'fingerprint': voucher.fingerprint,
+                                'posted_at': voucher.last_posted_at.isoformat() if voucher.last_posted_at else None,
+                                'je_id': je.id if je else None,
+                            },
+                            description=f"Posted voucher {voucher.voucher_no} (type: {voucher.voucher_type.name})"
+                        )
+                except Exception as audit_err:
+                    logger.warning(f"Failed to log audit event for voucher {voucher.pk}: {audit_err}")
+                
                 return je
             except Exception as e:
                 # Log exception or handle as needed
