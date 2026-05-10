@@ -5,8 +5,6 @@ from django.db import models, transaction
 from django.db.models.functions import Coalesce
 from django.shortcuts import reverse
 
-from apps.tenant_apps.dea.models import JournalEntry
-
 from ...utils.friendlyid import encode
 from ..managers import StockManager
 
@@ -336,7 +334,7 @@ class StockTransaction(models.Model):
         help_text="Union FK: either stock_id or stock_item_id must be set"
     )
     journal_entry = models.ForeignKey(
-        JournalEntry, on_delete=models.CASCADE, related_name="stxns", null=True, blank=True
+        "dea.JournalEntry", on_delete=models.CASCADE, related_name="stxns", null=True, blank=True
     )
 
     def __str__(self):

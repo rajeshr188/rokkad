@@ -6,7 +6,6 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import JournalEntry
 from apps.tenant_apps.product.models import Stock
 
 """
@@ -160,7 +159,7 @@ class ApprovalLine(models.Model):
         blank=True,
     )
     journalentry = GenericRelation(
-        JournalEntry,
+        "dea.JournalEntry",
         related_query_name="approval_lineitems",
         # content_type_field='content_type',object_id_field='object_id'
     )

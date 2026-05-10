@@ -140,6 +140,14 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
+            sql="""
+                DROP VIEW IF EXISTS stock_balance CASCADE;
+                DROP VIEW IF EXISTS inventory_balance CASCADE;
+                DROP VIEW IF EXISTS inventory_txn_projection CASCADE;
+            """,
+            reverse_sql=migrations.RunSQL.noop,
+        ),
+        migrations.RunSQL(
             sql=INVENTORY_TXN_PROJECTION_SQL,
             reverse_sql="DROP VIEW IF EXISTS inventory_txn_projection;",
         ),

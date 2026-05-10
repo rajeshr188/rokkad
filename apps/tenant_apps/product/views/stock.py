@@ -18,7 +18,7 @@ from types import SimpleNamespace
 from datetime import timedelta
 from django.utils import timezone
 
-from apps.tenant_apps.dea.models import JournalEntry  # , JournalTypes
+from django.apps import apps as django_apps
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..forms import (
@@ -255,7 +255,7 @@ def stock_in_direct(request):
         journal_entry = None
         if journal_entry_id:
             # Attach to an existing JournalEntry (e.g. from a purchase voucher flow)
-            journal_entry = get_object_or_404(JournalEntry, id=journal_entry_id)
+            journal_entry = get_object_or_404(django_apps.get_model("dea", "JournalEntry"), id=journal_entry_id)
         # When no journal_entry_id is given, journal_entry stays None.
         # StockTransaction.journal_entry is nullable so this is valid for
         # direct / non-accounting stock-in operations.
