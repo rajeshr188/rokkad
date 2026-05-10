@@ -422,7 +422,7 @@ Goal: make the system usable by an accountant end-to-end for a full business mon
 
 ---
 
-### 2.1 Pre-close checklist workflow
+### [x] 2.1 Pre-close checklist workflow — done in 4f5ecff
 
 **Files to create:**  
 - `apps/tenant_apps/dea/services/pre_close.py`  
