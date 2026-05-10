@@ -36,6 +36,7 @@ from apps.tenant_apps.notify_v2.views import (
     batch_mark_posted,
     batch_mark_printed,
     batch_send_digital,
+    settings_overview,
     whatsapp_cloud_webhook,
 )
 
@@ -793,7 +794,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         context = mock_render.call_args.args[2]
-        self.assertEqual(context["entrypoint_url_name"], "girvi:loan_list")
+        self.assertEqual(context["entrypoint_url_name"], "girvi:girvi_loan_list")
         self.assertIn("create", context["entrypoint_text"].lower())
 
     @patch("apps.tenant_apps.notify_v2.views.render")
@@ -937,3 +938,70 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
         self.assertIsInstance(response, HttpResponseRedirect)
         self.assertEqual(response.url, "/notify-v2/batches/11/")
         self.assertEqual(mock_create_batch.call_args.kwargs["channel"], NotificationJob.Channel.EMAIL)
+
+    @patch("apps.tenant_apps.girvi.views.prints.create_girvi_reminder_batch")
+    @patch("apps.tenant_apps.girvi.views.prints.GivenLoan")
+    def test_notify_print_v2_sets_hx_redirect_for_htmx_requests(
+        self, mock_given_loan, mock_create_batch
+    ):
+        request = self.factory.post(
+            "/girvi/outdatedloans/notify-v2/",
+            data={"selection": ["1", "2"], "loan_kind": "given", "medium_type": "E"},
+            HTTP_HX_REQUEST="true",
+        )
+        request.user = self.user
+
+        loan_one = self._build_loan(pk=1, loan_id="GL-001", borrower_name="Asha", amount="1000.00")
+        loan_two = self._build_loan(pk=2, loan_id="GL-002", borrower_name="Bina", amount="500.00")
+        filtered = MagicMock(name="selected_loans")
+        filtered.order_by.return_value = [loan_one, loan_two]
+        filtered.count.return_value = 2
+        mock_given_loan.objects.filter.return_value.filter.return_value = filtered
+        mock_create_batch.return_value = SimpleNamespace(
+            preview=SimpleNamespace(borrower_count=2),
+            batch=SimpleNamespace(pk=11, get_absolute_url=lambda: "/notify-v2/batches/11/"),
+        )
+
+        response = notify_print_v2(request)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response["HX-Redirect"], "/notify-v2/batches/11/")
+
+    @patch("apps.tenant_apps.notify_v2.views.render")
+    @patch("apps.tenant_apps.notify_v2.views.NotificationRecipient.objects.filter")
+    @patch("apps.tenant_apps.notify_v2.views.NotificationTemplate.objects.filter")
+    @patch("apps.tenant_apps.notify_v2.views.NotificationPolicy.objects.filter")
+    @patch("apps.tenant_apps.notify_v2.views.NotificationEventType.objects.filter")
+    @override_settings(
+        NOTIFY_V2_WHATSAPP_PROVIDER="cloud",
+        WHATSAPP_CLOUD_PHONE_NUMBER_ID="123",
+        WHATSAPP_CLOUD_ACCESS_TOKEN="token",
+        WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN="verify",
+    )
+    def test_settings_overview_exposes_counts_and_config(
+        self,
+        mock_event_type_filter,
+        mock_policy_filter,
+        mock_template_filter,
+        mock_recipient_filter,
+        mock_render,
+    ):
+        mock_event_type_filter.return_value.count.return_value = 4
+        mock_policy_filter.return_value.count.return_value = 3
+        mock_template_filter.return_value.count.return_value = 7
+        mock_recipient_filter.return_value.count.return_value = 12
+        mock_render.return_value = HttpResponse("ok")
+
+        request = self.factory.get("/notify-v2/settings/")
+        request.user = self.user
+
+        response = settings_overview(request)
+
+        self.assertEqual(response.status_code, 200)
+        context = mock_render.call_args.args[2]
+        self.assertEqual(context["counts"]["event_types"], 4)
+        self.assertEqual(context["counts"]["policies"], 3)
+        self.assertEqual(context["counts"]["templates"], 7)
+        self.assertEqual(context["counts"]["recipients"], 12)
+        self.assertEqual(context["notify_settings"]["whatsapp_provider"], "cloud")
+        self.assertTrue(context["notify_settings"]["has_whatsapp_cloud_phone_id"])

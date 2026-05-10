@@ -9,10 +9,17 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .models import NotificationBatch
+from .models import (
+    NotificationBatch,
+    NotificationEventType,
+    NotificationPolicy,
+    NotificationRecipient,
+    NotificationTemplate,
+)
 from .services.delivery_service import DIGITAL_CHANNELS, dispatch_batch_jobs, process_whatsapp_cloud_webhook
 from .services import render_batch_pdf
 
@@ -74,9 +81,47 @@ def _read_artifact_bytes(artifact):
     return None
 
 
+def _notify_settings_summary():
+    return {
+        "whatsapp_provider": getattr(settings, "NOTIFY_V2_WHATSAPP_PROVIDER", "twilio"),
+        "has_whatsapp_cloud_phone_id": bool(getattr(settings, "WHATSAPP_CLOUD_PHONE_NUMBER_ID", "")),
+        "has_whatsapp_cloud_access_token": bool(getattr(settings, "WHATSAPP_CLOUD_ACCESS_TOKEN", "")),
+        "has_whatsapp_cloud_verify_token": bool(
+            getattr(settings, "WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN", "")
+        ),
+        "webhook_url": reverse("notify_v2_whatsapp_cloud_webhook"),
+    }
+
+
 @login_required
 def index(_request):
     return redirect("notify_v2_batch_list")
+
+
+@login_required
+def settings_overview(request):
+    settings_summary = _notify_settings_summary()
+    tenant = getattr(request, "tenant", None)
+    can_manage_admin_models = bool(
+        request.user.is_staff and tenant and getattr(tenant, "schema_name", "public") != "public"
+    )
+    context = {
+        "notify_settings": settings_summary,
+        "can_manage_admin_models": can_manage_admin_models,
+        "counts": {
+            "event_types": NotificationEventType.objects.filter(is_active=True).count(),
+            "policies": NotificationPolicy.objects.filter(is_active=True).count(),
+            "templates": NotificationTemplate.objects.filter(is_active=True).count(),
+            "recipients": NotificationRecipient.objects.filter(is_active=True).count(),
+        },
+        "admin_urls": {
+            "templates": reverse("admin:notify_v2_notificationtemplate_changelist"),
+            "policies": reverse("admin:notify_v2_notificationpolicy_changelist"),
+            "event_types": reverse("admin:notify_v2_notificationeventtype_changelist"),
+            "recipients": reverse("admin:notify_v2_notificationrecipient_changelist"),
+        },
+    }
+    return render(request, "notify_v2/settings.html", context)
 
 
 @csrf_exempt
@@ -106,14 +151,16 @@ def batch_list(request):
     batches = NotificationBatch.objects.select_related("event_type", "created_by").prefetch_related(
         "jobs"
     )
+    notify_settings = _notify_settings_summary()
     return render(
         request,
         "notify_v2/batch_list.html",
         {
             "objects": batches,
-            "entrypoint_url_name": "girvi:loan_list",
+            "entrypoint_url_name": "girvi:girvi_loan_list",
             "entrypoint_text": "Create a new reminder batch from selected Girvi loans.",
             "legacy_url_name": "notify_noticegroup_list",
+            "notify_settings": notify_settings,
         },
     )
 

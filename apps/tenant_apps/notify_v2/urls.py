@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="notify_v2_index"),
+    path("settings/", views.settings_overview, name="notify_v2_settings"),
     path("webhooks/whatsapp/cloud/", views.whatsapp_cloud_webhook, name="notify_v2_whatsapp_cloud_webhook"),
     path("batches/", views.batch_list, name="notify_v2_batch_list"),
     path("batches/<int:pk>/", views.batch_detail, name="notify_v2_batch_detail"),
