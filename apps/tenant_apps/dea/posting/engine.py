@@ -68,6 +68,12 @@ class BasePostingEngine(ABC):
     """
 
     def post(self, ctx: PostingContext):
+        from django.db import connection
+        if connection.schema_name == "public":
+            raise RuntimeError(
+                "BasePostingEngine.post() must not be called in the public schema. "
+                "Ensure you are operating inside a tenant schema context."
+            )
         with transaction.atomic():
             try:
                 # lock the voucher we will post

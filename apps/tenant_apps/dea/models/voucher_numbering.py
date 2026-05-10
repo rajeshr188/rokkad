@@ -35,12 +35,18 @@ class VoucherNumberSequence(models.Model):
         blank=True,
         help_text="Custom prefix for this voucher type (e.g., INV, PYT, RCT)",
     )
+    date_key = models.CharField(
+        max_length=8,
+        blank=True,
+        default="",
+        help_text="YYYYMMDD key used by date-based sequences (empty for period/global sequences)",
+    )
 
     class Meta:
         app_label = "dea"
-        unique_together = [("voucher_type", "period")]
+        unique_together = [("voucher_type", "period", "date_key")]
         indexes = [
-            models.Index(fields=["voucher_type", "period"]),
+            models.Index(fields=["voucher_type", "period", "date_key"]),
         ]
         verbose_name = "Voucher Number Sequence"
         verbose_name_plural = "Voucher Number Sequences"

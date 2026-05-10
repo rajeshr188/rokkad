@@ -70,6 +70,9 @@ class VoucherNumberingService:
         """
         Generate date-based voucher number: PREFIX-YYYYMMDD-NNN
 
+        Uses a locked VoucherNumberSequence row per (voucher_type, date_key) to
+        eliminate the TOCTOU race present in a count-based approach.
+
         Args:
             voucher_type: VoucherType instance
             transaction_date: Date of transaction
@@ -78,19 +81,21 @@ class VoucherNumberingService:
         Returns:
             str: Generated voucher number like INV-20240115-001
         """
-        from apps.tenant_apps.dea.models import Voucher
-
         prefix = custom_prefix or voucher_type.name[:3].upper()
         date_str = transaction_date.strftime("%Y%m%d")
 
-        # Get count of vouchers with same prefix and date
-        pattern = f"{prefix}-{date_str}-%"
-        count = Voucher.objects.filter(
-            voucher_type=voucher_type, voucher_no__startswith=f"{prefix}-{date_str}-"
-        ).count()
+        sequence, _ = VoucherNumberSequence.objects.select_for_update().get_or_create(
+            voucher_type=voucher_type,
+            period=None,
+            date_key=date_str,
+            defaults={"next_number": 1, "prefix": prefix},
+        )
 
-        next_seq = count + 1
-        return f"{prefix}-{date_str}-{next_seq:03d}"
+        current_number = sequence.next_number
+        sequence.next_number += 1
+        sequence.save(update_fields=["next_number"])
+
+        return f"{prefix}-{date_str}-{current_number:03d}"
 
     @staticmethod
     def validate_voucher_number(voucher_no, voucher_type, period=None):

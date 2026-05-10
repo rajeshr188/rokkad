@@ -274,10 +274,11 @@ class AccountingPeriodCloseTests(TenantTestCase):
             voucher_no="TEST-PERIOD-1",
             voucher_type=voucher_type,
             voucher_date=period.start_date,
+            status="POSTED",
             created_by=self.user,
             updated_by=self.user,
-            doc_content_type=ContentType.objects.get_for_model(type(period)),
-            doc_object_id=period.pk,
+            doc_content_type=ContentType.objects.get_for_model(customer),
+            doc_object_id=customer.pk,
             fingerprint="test-period-balance",
         )
         journal_entry = JournalEntry.objects.create(

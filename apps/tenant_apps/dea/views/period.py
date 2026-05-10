@@ -493,6 +493,49 @@ def period_close(request, pk):
             try:
                 notes = form.cleaned_data.get("notes", "")
 
+                # 1.8 — Interest accrual catch-up before close.
+                # Run accrual for all unreleased loans up to period.end_date so
+                # that P&L is complete before the closing entries are generated.
+                # Failures are surfaced as warnings and do NOT block the close.
+                try:
+                    from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
+                    from apps.tenant_apps.girvi.service_modules.accrual import (
+                        InterestAccrualCommand,
+                        InterestAccrualService,
+                    )
+
+                    active_loans = GivenLoan.objects.filter(release__isnull=True)
+                    accrual_failures = []
+                    for loan in active_loans:
+                        try:
+                            result = InterestAccrualService.execute(
+                                InterestAccrualCommand(
+                                    loan=loan,
+                                    as_of_date=period.end_date,
+                                    trigger_source="PERIOD_CLOSE",
+                                    created_by=request.user,
+                                    notes=f"Period close catch-up for {period.name}",
+                                    post_to_accounting=True,
+                                )
+                            )
+                            if not result.success:
+                                accrual_failures.append(
+                                    f"Loan {loan.loan_id}: {result.message}"
+                                )
+                        except Exception:
+                            logger.exception(
+                                "Accrual catch-up failed for loan %s during period close %s",
+                                loan.pk,
+                                period.pk,
+                            )
+                            accrual_failures.append(
+                                f"Loan {getattr(loan, 'loan_id', loan.pk)}: accrual catch-up error"
+                            )
+                    for warning_msg in accrual_failures:
+                        messages.warning(request, f"Accrual catch-up: {warning_msg}")
+                except ImportError:
+                    logger.debug("Girvi app not installed; skipping accrual catch-up on period close.")
+
                 # Close the period
                 period.close_period(user=request.user, notes=notes)
                 entries_processed = period.journal_entries.count()

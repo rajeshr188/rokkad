@@ -170,9 +170,33 @@ class AccountingPeriod(models.Model):
             user: User performing the close
             notes: Optional closing notes
         """
+        from django.db import connection
+        if connection.schema_name == "public":
+            raise RuntimeError(
+                "close_period() must not be called in the public schema. "
+                "Ensure you are operating inside a tenant schema context."
+            )
+
         if self.status != self.PeriodStatus.OPEN:
             raise ValidationError(
                 _("Can only close OPEN periods. Current status: ") + self.status
+            )
+
+        # Model-level guard: block close if any DRAFT vouchers fall within this period.
+        # The view/form also checks this, but the model enforces it as a last line of defence.
+        from .voucher import Voucher, VoucherStatus as VS
+
+        draft_count = Voucher.objects.filter(
+            voucher_date__gte=self.start_date,
+            voucher_date__lte=self.end_date,
+            status=VS.DRAFT,
+        ).count()
+        if draft_count > 0:
+            raise ValidationError(
+                _(
+                    f"Cannot close period '{self.name}': {draft_count} draft voucher(s) "
+                    "exist within the period date range. Post or delete them first."
+                )
             )
 
         from .ledger import Ledger
