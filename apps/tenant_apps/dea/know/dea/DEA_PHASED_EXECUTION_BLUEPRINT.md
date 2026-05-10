@@ -25,7 +25,7 @@ the voucher-line gap before building anything new on top.
 
 ---
 
-### 1.1 Fix race-prone voucher numbering
+### [x] 1.1 Fix race-prone voucher numbering — done in 8b7fec5
 
 **File:** `apps/tenant_apps/dea/services/voucher_numbering.py`
 
@@ -45,7 +45,7 @@ zero `IntegrityError`.
 
 ---
 
-### 1.2 Harden tenant context boundaries (django-tenants aware)
+### [x] 1.2 Harden tenant context boundaries (django-tenants aware) — done in 8b7fec5
 
 **Files:**  
 - `apps/tenant_apps/dea/models/period.py`  
@@ -346,7 +346,7 @@ multi-tenant filter model that does not match django-tenants schema isolation.
 
 ---
 
-### 1.8 Wire DEA period-close to interest accrual catch-up
+### [x] 1.8 Wire DEA period-close to interest accrual catch-up — done in 8b7fec5
 
 **File:** `apps/tenant_apps/dea/views/period.py` (close action handler)  
 **Ref:** `/memories/repo/girvi-interest-accrual-notes.md` — "DEA period-close UI in
@@ -375,7 +375,7 @@ auto-post first, then period closes with correct retained-earnings total.
 
 ---
 
-### 1.9 Prevent period close with unposted DRAFT vouchers
+### [x] 1.9 Prevent period close with unposted DRAFT vouchers — done in 8b7fec5
 
 **File:** `apps/tenant_apps/dea/models/period.py` → `close_period`
 
