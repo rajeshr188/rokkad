@@ -13,3 +13,4 @@ from .purchase_invoice import *
 from .numbering import *
 from .asset import *
 from .prepaid import *
+from .bank import *
