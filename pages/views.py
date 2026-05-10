@@ -21,16 +21,15 @@ from apps.tenant_apps.contact.services import (
     get_customers_by_type,
     get_customers_by_year,
 )
+from apps.tenant_apps.dea.facade import Balance
 from apps.tenant_apps.dea.models import (
     AccountStatement,
     AccountTransaction,
-    JournalEntry,
     Ledger,
     LedgerTransaction,
     TransactionType_DE,
     TransactionType_Ext,
 )
-from apps.tenant_apps.dea.utils.currency import Balance
 from apps.tenant_apps.girvi.models import License, GivenLoan, LoanItem, Release
 from apps.tenant_apps.girvi.services import *
 from apps.tenant_apps.purchase.models import Payment, Purchase

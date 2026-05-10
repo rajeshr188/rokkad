@@ -26,36 +26,57 @@ from apps.orgs.tenant_context import resolve_request_workspace
 
 
 class BillingPermissionMixin:
-    """Require billing_view permission in current workspace for billing pages."""
+    """Require workspace owner role in current workspace for billing pages."""
 
-    required_permission = "billing_view"
+    OWNER_ROLE_NAMES = {"Owner"}
 
     def dispatch(self, request, *args, **kwargs):
-        workspace = resolve_request_workspace(request)
-        if not workspace:
-            messages.error(request, "Please select a workspace first.")
-            return redirect("workspace_selector")
+        workspace = resolve_request_workspace(request, allow_profile_fallback=True)
 
         from apps.orgs.models import Membership
 
-        try:
-            membership = Membership.objects.select_related("role").get(
-                user=request.user,
-                company=workspace,
+        membership = None
+        if not workspace:
+            # Public-schema convenience: auto-select first available workspace
+            # so billing links work without forcing an extra click.
+            membership = (
+                Membership.objects.select_related("company", "role")
+                .filter(user=request.user, company__is_deleted=False)
+                .order_by("created")
+                .first()
             )
-        except Membership.DoesNotExist:
-            raise PermissionDenied("Not a workspace member")
+            if membership:
+                workspace = membership.company
+                if hasattr(request.user, "profile"):
+                    request.user.profile.set_workspace(workspace)
+            else:
+                messages.error(request, "Please select a workspace first.")
+                return redirect("workspace_selector")
 
-        has_perm = membership.role.permissions.filter(
-            codename=self.required_permission
-        ).exists()
-        if not has_perm:
-            raise PermissionDenied(f"Permission '{self.required_permission}' required")
+        # Platform admins always have access
+        from apps.orgs.permissions import is_platform_admin
+
+        if is_platform_admin(request.user):
+            return super().dispatch(request, *args, **kwargs)
+
+        if membership is None:
+            try:
+                membership = Membership.objects.select_related("role").get(
+                    user=request.user,
+                    company=workspace,
+                )
+            except Membership.DoesNotExist:
+                raise PermissionDenied("Not a workspace member")
+
+        # Billing is strictly owner-only.
+        role_name = membership.role.name if membership.role else ""
+        if role_name not in self.OWNER_ROLE_NAMES:
+            raise PermissionDenied("Only workspace owners can access billing")
 
         return super().dispatch(request, *args, **kwargs)
 
 
-class SubscriptionPlanListView(LoginRequiredMixin, ListView):
+class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListView):
     """Display available subscription plans"""
 
     model = Plan
@@ -69,7 +90,7 @@ class SubscriptionPlanListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         # Get current subscription if exists (subscription is linked to workspace)
-        workspace = resolve_request_workspace(self.request)
+        workspace = resolve_request_workspace(self.request, allow_profile_fallback=True)
         try:
             if workspace:
                 context["current_subscription"] = workspace.subscription
@@ -94,7 +115,7 @@ class SubscriptionPlanListView(LoginRequiredMixin, ListView):
         return context
 
 
-class CheckoutView(LoginRequiredMixin, TemplateView):
+class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
     """Checkout page - display plan details and payment form"""
 
     template_name = "subscriptions/checkout.html"
@@ -134,7 +155,7 @@ class CheckoutView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class PaymentView(LoginRequiredMixin, CreateView):
+class PaymentView(LoginRequiredMixin, BillingPermissionMixin, CreateView):
     """Process payment and create subscription"""
 
     model = Subscription
@@ -214,7 +235,7 @@ class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, Temp
         context = super().get_context_data(**kwargs)
 
         # Get workspace (subscription is linked to workspace, not user)
-        workspace = resolve_request_workspace(self.request)
+        workspace = resolve_request_workspace(self.request, allow_profile_fallback=True)
         if not workspace:
             context["subscription"] = None
             context["message"] = "Please select a workspace first."
@@ -268,7 +289,7 @@ class InvoiceDetailView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
 
     def get_object(self):
         # Get workspace (subscription is linked to workspace, not user)
-        workspace = resolve_request_workspace(self.request)
+        workspace = resolve_request_workspace(self.request, allow_profile_fallback=True)
         if not workspace:
             raise Http404("No workspace selected")
 
@@ -292,7 +313,7 @@ class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
 
     def get_object(self):
         # Get workspace (subscription is linked to workspace, not user)
-        workspace = resolve_request_workspace(self.request)
+        workspace = resolve_request_workspace(self.request, allow_profile_fallback=True)
         if not workspace:
             raise Http404("No workspace selected")
 
