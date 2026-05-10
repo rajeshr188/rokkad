@@ -165,9 +165,9 @@ See templates/layouts/base.html for the current base template.
               Manage
             </a>
             <ul class="dropdown-menu" aria-labelledby="manageDropdown">
-              <li><a class="dropdown-item" href="{% url 'workspace_list' %}">{% trans "Company" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'orgs_membership_list' %}">{% trans "Membership" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'orgs_company_invitations_list' %}">{% trans "Invitations" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'workspace_selector' %}">{% trans "Company" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'team_members_list' %}">{% trans "My Workspaces" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'team_invitations' %}">{% trans "My Invitations" %}</a></li>
               <li><a class="dropdown-item" href="#">Payments</a></li>
               <li><a class="dropdown-item" href="#">Subscription</a></li>
             </ul>
@@ -179,10 +179,9 @@ See templates/layouts/base.html for the current base template.
               Manage
             </a>
             <ul class="dropdown-menu" aria-labelledby="manageDropdown">
-              <li><a class="dropdown-item" href="{% url 'workspace_list' %}">{% trans "Company" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'orgs_membership_list' %}">{% trans "Membership" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'orgs_company_invitations_list' %}">{% trans "Invitations"
-                  %}</a></li>
+                <li><a class="dropdown-item" href="{% url 'workspace_selector' %}">{% trans "Company" %}</a></li>
+                <li><a class="dropdown-item" href="{% url 'team_members_list' %}">{% trans "My Workspaces" %}</a></li>
+                <li><a class="dropdown-item" href="{% url 'team_invitations' %}">{% trans "My Invitations" %}</a></li>
               <li><a class="dropdown-item" href="#">Payments</a></li>
               <li><a class="dropdown-item" href="#">Subscription</a></li>
             </ul>
@@ -284,7 +283,7 @@ See templates/layouts/base.html for the current base template.
                   <hr class="dropdown-divider">
                 </li>
                 <li><a class="dropdown-item" href="{% url 'userprofile_detail' user.profile.id%}">Profile</a></li>
-                {%if user.profile.workspace and user.profile.workspace.schema_name != 'public'%}
+                {%if user.profile.workspace and user.profile.workspace.schema_name != 'public' and user_role == 'Owner' %}
                 <li><a class="dropdown-item" href="{% url 'company-preferences' %}">{% trans "Preferences" %}</a></li>
                 {%endif%}
                 <li><a class="dropdown-item" href="{% url 'account_change_password' %}">Change password</a></li>

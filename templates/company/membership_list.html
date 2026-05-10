@@ -1,7 +1,8 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/management.html' %}
 {% load orgs_tags %}
 
-{% block title %}My Workspaces - Rokkad{% endblock %}
+{% block title %}Team Members - Rokkad{% endblock %}
+{% block mgmt_content %}
 <div class="container-fluid py-4">
     <!-- Page Header -->
     <div class="row mb-4">
@@ -9,43 +10,54 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h1 class="h3 mb-1">
-                        <i class="bi bi-briefcase"></i> My Workspaces
+                        <i class="bi bi-people"></i> Team Members
                     </h1>
-                    <p class="text-muted">All workspaces where you are a member</p>
+                    <p class="text-muted mb-0">
+                        {{ workspace.name }} · {{ workspace_count }} member{{ workspace_count|pluralize }}
+                    </p>
                 </div>
+                {% if 'team_invite' in user_permissions %}
+                <a href="{% url 'team_invite' workspace_id=workspace.id %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-person-plus"></i> Invite Member
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Memberships List -->
+    <!-- Team Members List -->
     <div class="row">
         <div class="col-12">
-            {% if user.memberships.all %}
+            {% if memberships %}
             <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Workspace</th>
-                                    <th>Your Role</th>
+                                    <th>Member</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
                                     <th>Member Since</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for membership in user.memberships.all %}
+                                {% for membership in memberships %}
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3">
-                                                <i class="bi bi-building text-primary"></i>
+                                                <i class="bi bi-person text-primary"></i>
                                             </div>
                                             <div>
-                                                <div class="fw-medium">{{ membership.company.name }}</div>
-                                                <small class="text-muted">{{ membership.company.num_members }} members</small>
+                                                <div class="fw-medium">{{ membership.user.get_full_name|default:membership.user.username }}</div>
+                                                <small class="text-muted">@{{ membership.user.username }}</small>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ membership.user.email|default:"-" }}</span>
                                     </td>
                                     <td>
                                         {% render_role_badge role=membership.role.name %}
@@ -54,20 +66,23 @@
                                         <span class="text-muted">{{ membership.date_joined|date:"M d, Y" }}</span>
                                     </td>
                                     <td>
-                                        <div class="d-flex gap-2">
-                                            <a href="{% url 'workspace_detail' membership.company.id %}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-box-arrow-in-right"></i> View Details
-                                            </a>
-                                            {% if membership.company == user.profile.workspace %}
-                                            <span class="badge bg-success align-self-center">
-                                                <i class="bi bi-check-circle"></i> Active
-                                            </span>
-                                            {% else %}
-                                            <a href="{% url 'workspace_select' membership.company.id %}" 
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            {% if can_change_role and membership.user != request.user %}
+                                            <a href="{% url 'team_change_role' workspace_id=workspace.id membership_id=membership.id %}"
                                                class="btn btn-sm btn-outline-secondary">
-                                                <i class="bi bi-arrow-repeat"></i> Switch
+                                                <i class="bi bi-shield"></i> Role
                                             </a>
+                                            {% endif %}
+                                            {% if can_remove_member and membership.user != request.user %}
+                                            <a href="{% url 'team_remove_member' workspace_id=workspace.id membership_id=membership.id %}"
+                                               class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-person-dash"></i> Remove
+                                            </a>
+                                            {% endif %}
+                                            {% if membership.user == request.user %}
+                                            <span class="badge bg-success align-self-center">
+                                                <i class="bi bi-check-circle"></i> You
+                                            </span>
                                             {% endif %}
                                         </div>
                                     </td>
@@ -82,7 +97,7 @@
             <!-- Empty State -->
             <div class="card shadow-sm">
                 <div class="card-body">
-                    {% empty_state title="No Workspace Memberships" message="You're not a member of any workspace yet. Create a workspace or accept an invitation to get started." icon="briefcase" action_url="workspace_create" action_label="Create Your First Workspace" action_icon="plus-circle" %}
+                    {% empty_state title="No Team Members" message="No active team members found in this workspace." icon="people" %}
                 </div>
             </div>
             {% endif %}
@@ -91,7 +106,7 @@
             <div class="card mt-4 border-info">
                 <div class="card-body">
                     <h6 class="card-title">
-                        <i class="bi bi-info-circle text-info"></i> About Workspaces
+                        <i class="bi bi-info-circle text-info"></i> Team Roles
                     </h6>
                     <ul class="small mb-0">
                         <li><strong>Owner:</strong> Full control including billing, deletion, and team management</li>

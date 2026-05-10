@@ -1,10 +1,10 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/management.html' %}
 {% load crispy_forms_tags %}
 {% load orgs_tags %}
 
 {% block title %}{% if company %}Edit {{ company.name }}{% else %}Create Workspace{% endif %} - Rokkad{% endblock %}
 
-{% block content %}
+{% block mgmt_content %}
 <div class="container py-4">
     <!-- Breadcrumbs -->
     <nav aria-label="breadcrumb" class="mb-3">

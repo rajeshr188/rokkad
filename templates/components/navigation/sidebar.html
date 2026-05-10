@@ -5,15 +5,14 @@
         {% with effective_workspace=workspace|default:user_workspace %}
         {% firstof user_role "Member" as role_name %}
         <!-- Workspace Info - Using context processor variable -->
-        {% if effective_workspace %}
-        <div class="mb-4 p-3 bg-light rounded border-bottom">
-            <h6 class="mb-2 text-uppercase small text-muted">Current Workspace</h6>
-            <h5 class="mb-0">
-                <i class="bi bi-briefcase-fill text-primary"></i>
-                {{ effective_workspace.name }}
-            </h5>
-            <small class="text-muted d-block mt-2">
-                Role: <span class="badge bg-primary">{{ role_name }}</span>
+        {% if effective_workspace and in_tenant %}
+        <div class="mb-4 p-3 rounded border-bottom" style="background:linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%);border-color:#6ee7b7!important;">
+            <h6 class="mb-1 text-uppercase small fw-bold" style="color:#065f46;letter-spacing:.05em;">
+                <i class="bi bi-database-fill-check me-1"></i> Workspace
+            </h6>
+            <div class="fw-semibold" style="color:#064e3b;">{{ effective_workspace.name }}</div>
+            <small style="color:#047857;">
+                <span class="badge" style="background:rgba(5,150,105,0.2);color:#065f46;">{{ role_name }}</span>
             </small>
         </div>
         {% endif %}
@@ -26,46 +25,24 @@
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
             {% endif %}
-            
-            <!-- Team Management (using context processor permission check) -->
-            {% if 'team_invite' in user_permissions %}
-            <div class="nav-section">
-                <h6 class="nav-section-title">Team</h6>
-                <a class="nav-link {% if request.resolver_match.url_name == 'team_invitations' %}active{% endif %}" 
-                   href="{% url 'team_invitations' %}">
-                    <i class="bi bi-people"></i> Members
-                    {% if pending_invites %}
-                    <span class="badge bg-warning text-dark float-end">{{ pending_invites }}</span>
-                    {% endif %}
-                </a>
-                     {% if effective_workspace %}
-                <a class="nav-link {% if request.resolver_match.url_name == 'team_invite' %}active{% endif %}" 
-                         href="{% url 'team_invite' workspace_id=effective_workspace.id %}">
-                    <i class="bi bi-person-plus"></i> Invite Member
-                </a>
-                {% endif %}
-            </div>
+            <a class="nav-link {% if request.resolver_match.url_name == 'team_invitations' %}active{% endif %}"
+                    href="{% url 'team_invitations' %}">
+                <i class="bi bi-envelope"></i> My Invitations
+            </a>
+
+            {% if role_name == 'Owner' and effective_workspace %}
+            <a class="nav-link {% if request.resolver_match.url_name == 'workspace_detail' %}active{% endif %}"
+               href="{% url 'workspace_detail' workspace_id=effective_workspace.id %}">
+                <i class="bi bi-gear"></i> Company Settings
+            </a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'workspace_preferences' %}active{% endif %}"
+               href="{% url 'workspace_preferences' workspace_id=effective_workspace.id %}">
+                <i class="bi bi-sliders"></i> Preferences
+            </a>
             {% endif %}
             
-            <!-- Workspace Settings (using context processor permission check) -->
-            {% if 'workspace_edit' in user_permissions %}
-            <div class="nav-section">
-                <h6 class="nav-section-title">Workspace</h6>
-                     {% if effective_workspace %}
-                <a class="nav-link {% if request.resolver_match.url_name == 'workspace_detail' %}active{% endif %}" 
-                         href="{% url 'workspace_detail' workspace_id=effective_workspace.id %}">
-                    <i class="bi bi-gear"></i> Settings
-                </a>
-                <a class="nav-link {% if request.resolver_match.url_name == 'workspace_preferences' %}active{% endif %}" 
-                         href="{% url 'workspace_preferences' workspace_id=effective_workspace.id %}">
-                    <i class="bi bi-sliders"></i> Preferences
-                </a>
-                {% endif %}
-            </div>
-            {% endif %}
-            
-            <!-- Billing/Subscription (requires billing_view permission) -->
-            {% if 'billing_view' in user_permissions %}
+            <!-- Billing/Subscription (owner only) -->
+            {% if role_name == 'Owner' %}
             <div class="nav-section">
                 <h6 class="nav-section-title">Billing</h6>
                 <a class="nav-link {% if request.resolver_match.url_name == 'subscriptions:dashboard' or request.resolver_match.namespace == 'subscriptions' %}active{% endif %}" 
@@ -80,8 +57,8 @@
             </div>
             {% endif %}
             
-            <!-- Tenant App Features (only in workspace context) -->
-            {% if effective_workspace and effective_workspace.schema_name != 'public' %}
+            <!-- Tenant App Features (only in data-plane workspace context) -->
+            {% if in_tenant %}
             <div class="nav-section">
                 <h6 class="nav-section-title">Apps</h6>
                 
@@ -100,7 +77,15 @@
                     <i class="bi bi-grid-1x2-fill"></i> Product
                 </a>
                 {% endif %}
-                
+
+                     <!-- Notifications (V2) -->
+                     {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
+                     <a class="nav-link {% if 'notify_v2_' in request.resolver_match.url_name %}active{% endif %}"
+                         href="{% url 'notify_v2_batch_list' %}">
+                          <i class="bi bi-envelope-paper-fill"></i> Notifications (V2)
+                     </a>
+                     {% endif %}
+
                 <!-- Girvi (Loans) -->
                 {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link {% if request.resolver_match.namespace == 'girvi' %}active{% endif %}" 
@@ -140,6 +125,16 @@
                     <i class="bi bi-coin"></i> Rates
                 </a>
                 {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Control-plane link: only show a shortcut to Account Management from tenant sidebar -->
+            {% if in_tenant %}
+            <div class="nav-section mt-2">
+                <a class="nav-link text-muted small"
+                   href="{% url 'workspace_selector' %}">
+                    <i class="bi bi-arrow-left-circle"></i> Account &amp; Workspaces
+                </a>
             </div>
             {% endif %}
         </nav>

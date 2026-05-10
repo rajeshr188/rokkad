@@ -64,9 +64,9 @@
   <div class="collapse mb-3" id="advancedFilterPanel">
     <div class="card card-body">
       {% if filter %}
-      <form id="advanced-filter-form" hx-get="{% url 'girvi:loan_table_partial' %}" hx-target="#loan-table-container" hx-push-url="true" hx-trigger="submit">
+      <form id="advanced-filter-form" hx-get="{% url 'girvi:loan_table_partial' %}" hx-target="#loan-table-container" hx-swap="outerHTML" hx-push-url="true" hx-trigger="submit">
         <input type="hidden" name="loan_kind" value="{{ loan_kind }}">
-        {% crispy filter.form %}
+        {{ filter.form|crispy }}
         <div class="d-flex gap-2">
           <button type="submit" class="btn btn-sm btn-primary">{% trans "Apply Advanced Filters" %}</button>
           <a class="btn btn-sm btn-outline-secondary" href="{% url 'girvi:girvi_loan_list' %}?loan_kind={{ loan_kind }}">{% trans "Reset" %}</a>
@@ -78,12 +78,13 @@
     </div>
   </div>
 
-  <div id="loan-table-container" hx-get="{% url 'girvi:loan_table_partial' %}?{{ request.GET.urlencode }}" hx-trigger="load">
+  <div id="loan-table-container" hx-get="{% url 'girvi:loan_table_partial' %}?{{ request.GET.urlencode }}" hx-trigger="load" hx-swap="outerHTML">
   </div>
 </div>
 {% endpartialdef %}
 
 {% partialdef loan-table %}
+<div id="loan-table-container">
 <div class="card">
   <div class="card-body">
     <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
@@ -163,7 +164,7 @@
       {% endif %}
     </div>
 
-    <div class="table-responsive">
+    <div id="table" class="table-responsive">
       {% render_table table %}
     </div>
 
@@ -176,6 +177,7 @@
       </ul>
     </details>
   </div>
+</div>
 </div>
 {% endpartialdef %}
 

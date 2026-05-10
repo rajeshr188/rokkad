@@ -1,34 +1,33 @@
-{# templates/tables/bootstrap_htmx.html #}
 {% extends "django_tables2/bootstrap5.html" %}
 
 {% load django_tables2 %}
 {% load i18n %}
-{% block table.thead %}
 
+{% block table.thead %}
   {% if table.show_header %}
       <thead {{ table.attrs.thead.as_html }} class="table-group-divider">
       <tr>
           {% for column in table.columns %}
-            {%if column.orderable%}
+            {% if column.orderable %}
               <th {{ column.attrs.th.as_html }}
-                  hx-get="{% if table_hx_endpoint %}{{ table_hx_endpoint }}{% endif %}{% querystring table.prefixed_order_by_field=column.order_by_alias.next %}"
+                  hx-get="{% url 'girvi:loan_table_partial' %}{% querystring table.prefixed_order_by_field=column.order_by_alias.next %}"
                   hx-trigger="click"
-                  {% if not table_hx_disable_select %}hx-select="{{ table_hx_select|default:'#table' }}"{% endif %}
-                  hx-target="{{ table_hx_target|default:'#table' }}"
-                  hx-swap="{{ table_hx_swap|default:'outerHTML' }}"
+                  hx-target="#loan-table-container"
+                  hx-swap="outerHTML"
                   style="cursor: pointer;">
-                  {%trans column.header%}
+                  {% trans column.header %}
               </th>
-            {%else%}
+            {% else %}
             <th {{ column.attrs.th.as_html }}>
-                {%trans column.header%}
+                {% trans column.header %}
             </th>
-            {%endif%}
+            {% endif %}
           {% endfor %}
       </tr>
       </thead>
   {% endif %}
 {% endblock table.thead %}
+
 {% block table.tbody %}
     <tbody {{ table.attrs.tbody.as_html }} id="tbody" class="table-group-divider">
     {% for row in table.paginated_rows %}
@@ -48,14 +47,13 @@
     {% endfor %}
     </tbody>
 {% endblock table.tbody %}
-{# Pagination block overrides #}
+
 {% block pagination.previous %}
     <li class="previous page-item">
-        <div hx-get="{% if table_hx_endpoint %}{{ table_hx_endpoint }}{% endif %}{% querystring table.prefixed_page_field=table.page.previous_page_number %}"
+        <div hx-get="{% url 'girvi:loan_table_partial' %}{% querystring table.prefixed_page_field=table.page.previous_page_number %}"
              hx-trigger="click"
-               hx-target="{{ table_hx_target|default:'#table' }}"
-               {% if not table_hx_disable_select %}hx-select="{{ table_hx_select|default:'#table' }}"{% endif %}
-               hx-swap="{{ table_hx_swap|default:'outerHTML' }}"
+             hx-target="#loan-table-container"
+             hx-swap="outerHTML"
              hx-indicator=".progress"
              style="cursor: pointer;"
              class="page-link">
@@ -64,15 +62,15 @@
         </div>
     </li>
 {% endblock pagination.previous %}
+
 {% block pagination.range %}
     {% for p in table.page|table_page_range:table.paginator %}
         <li class="page-item{% if table.page.number == p %} active{% endif %}">
-            <div class="page-link" 
-                 {% if p != '...' %}hx-get="{% if table_hx_endpoint %}{{ table_hx_endpoint }}{% endif %}{% querystring table.prefixed_page_field=p %}"{% endif %}
+            <div class="page-link"
+                 {% if p != '...' %}hx-get="{% url 'girvi:loan_table_partial' %}{% querystring table.prefixed_page_field=p %}"{% endif %}
                  hx-trigger="click"
-                 {% if not table_hx_disable_select %}hx-select="{{ table_hx_select|default:'#table' }}"{% endif %}
-                 hx-target="{{ table_hx_target|default:'#table' }}"
-                 hx-swap="{{ table_hx_swap|default:'outerHTML' }}"
+                 hx-target="#loan-table-container"
+                 hx-swap="outerHTML"
                  style="cursor: pointer;"
                  hx-indicator=".progress">
                 {{ p }}
@@ -80,13 +78,13 @@
         </li>
     {% endfor %}
 {% endblock pagination.range %}
+
 {% block pagination.next %}
     <li class="next page-item">
-           <div hx-get="{% if table_hx_endpoint %}{{ table_hx_endpoint }}{% endif %}{% querystring table.prefixed_page_field=table.page.next_page_number %}"
+        <div hx-get="{% url 'girvi:loan_table_partial' %}{% querystring table.prefixed_page_field=table.page.next_page_number %}"
              hx-trigger="click"
-               hx-target="{{ table_hx_target|default:'#table' }}"
-               {% if not table_hx_disable_select %}hx-select="{{ table_hx_select|default:'#table' }}"{% endif %}
-               hx-swap="{{ table_hx_swap|default:'outerHTML' }}"
+             hx-target="#loan-table-container"
+             hx-swap="outerHTML"
              hx-indicator=".progress"
              style="cursor: pointer;"
              class="page-link">
@@ -95,4 +93,3 @@
         </div>
     </li>
 {% endblock pagination.next %}
-

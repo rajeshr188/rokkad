@@ -8,6 +8,20 @@
 {% block main_class %}d-flex flex-column min-vh-100{% endblock %}
 
 {% block content %}
+{# ── Workspace context banner (data-plane indicator) ── #}
+{% if in_tenant and workspace %}
+<div style="background:linear-gradient(90deg,#059669 0%,#10b981 100%);color:#fff;font-size:0.78rem;letter-spacing:0.03em;padding:0.35rem 1.25rem;display:flex;align-items:center;justify-content:space-between;">
+    <span>
+        <i class="bi bi-database-fill-check me-1"></i>
+        <strong>Workspace:</strong> {{ workspace.name }}
+        &nbsp;&middot;&nbsp;
+        {% if user_role %}<span style="background:rgba(255,255,255,0.25);border-radius:4px;padding:0 6px;">{{ user_role }}</span>{% endif %}
+    </span>
+    <a href="{% url 'workspace_selector' %}?show_all=1" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:0.75rem;">
+        <i class="bi bi-arrow-left-right me-1"></i>Switch workspace
+    </a>
+</div>
+{% endif %}
 <div class="container-fluid flex-grow-1">
     <div class="row h-100">
         <!-- Sidebar - Hidden on mobile, visible on md+ screens -->

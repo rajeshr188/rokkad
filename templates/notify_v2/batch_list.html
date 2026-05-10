@@ -8,6 +8,9 @@
     <div class="text-muted small">Manual print/post reminder runs created from Girvi selections.</div>
   </div>
   <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'notify_v2_settings' %}">
+      <i class="bi bi-sliders me-1"></i>Settings
+    </a>
     <a class="btn btn-sm btn-primary" href="{% url entrypoint_url_name %}">
       <i class="bi bi-plus-circle me-1"></i>Create from Girvi
     </a>
@@ -25,6 +28,81 @@
   </div>
   <a class="btn btn-sm btn-outline-primary" href="{% url entrypoint_url_name %}">Go to Girvi Loans</a>
 </div>
+
+{% if request.user.is_staff and request.tenant and request.tenant.schema_name != 'public' %}
+<div class="card mb-3 border-warning-subtle">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <h6 class="mb-1">Notify V2 Settings</h6>
+        <p class="text-muted small mb-2">
+          Templates, policies, and event types are currently configured in Django Admin.
+        </p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'notify_v2_settings' %}">
+          Settings
+        </a>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:notify_v2_notificationtemplate_changelist' %}">
+          Templates
+        </a>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:notify_v2_notificationpolicy_changelist' %}">
+          Policies
+        </a>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:notify_v2_notificationeventtype_changelist' %}">
+          Event Types
+        </a>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:notify_v2_notificationrecipient_changelist' %}">
+          Recipients
+        </a>
+      </div>
+    </div>
+
+    <hr>
+    <div class="row g-2 small">
+      <div class="col-md-3">
+        <strong>WhatsApp Provider:</strong>
+        <div class="text-muted">{{ notify_settings.whatsapp_provider|upper }}</div>
+      </div>
+      <div class="col-md-3">
+        <strong>Cloud Phone ID:</strong>
+        <div>
+          {% if notify_settings.has_whatsapp_cloud_phone_id %}
+          <span class="badge bg-success">Set</span>
+          {% else %}
+          <span class="badge bg-secondary">Missing</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-md-3">
+        <strong>Cloud Access Token:</strong>
+        <div>
+          {% if notify_settings.has_whatsapp_cloud_access_token %}
+          <span class="badge bg-success">Set</span>
+          {% else %}
+          <span class="badge bg-secondary">Missing</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-md-3">
+        <strong>Webhook Verify Token:</strong>
+        <div>
+          {% if notify_settings.has_whatsapp_cloud_verify_token %}
+          <span class="badge bg-success">Set</span>
+          {% else %}
+          <span class="badge bg-secondary">Missing</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-2 small text-muted">
+      Webhook endpoint: <code>{{ notify_settings.webhook_url }}</code>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="table-responsive">
     <table class="table table-sm table-hover mb-0">

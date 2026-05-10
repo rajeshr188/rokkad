@@ -137,7 +137,7 @@
           <span class="badge bg-light text-dark border ms-2">{{ object.loan_type }} Loan</span>
         </div>
 
-        {% if transition_actions %}
+        {% if transition_actions or release_action %}
         <div class="ms-xl-auto">
           <div class="text-muted small mb-2">Available transitions</div>
           <div class="d-flex flex-wrap gap-2">
@@ -155,7 +155,24 @@
                 </a>
               {% endif %}
             {% endfor %}
+            {% if release_action %}
+              {% if release_action.disabled %}
+                <button class="btn btn-sm {{ release_action.button_class }}" type="button" disabled>
+                  {{ release_action.icon }} {{ release_action.title }}
+                </button>
+              {% else %}
+                <a class="btn btn-sm {{ release_action.button_class }}"
+                   href="{{ release_action.href }}">
+                  {{ release_action.icon }} {{ release_action.title }}
+                </a>
+              {% endif %}
+            {% endif %}
           </div>
+          {% if release_action and release_action.disabled %}
+            <div class="small text-muted mt-2">
+              Settle outstanding due (currently ₹{{ release_action.outstanding_amount|floatformat:2 }}) using Add Payment, then start release.
+            </div>
+          {% endif %}
         </div>
         {% endif %}
       </div>
@@ -681,6 +698,21 @@
     </div>
     {% else %}
     <p>Yet to be released</p>
+    {% if release_action %}
+      {% if release_action.disabled %}
+      <div class="alert alert-warning py-2 mt-3 mb-2" role="alert">
+        Outstanding due: <strong>₹{{ release_action.outstanding_amount|floatformat:2 }}</strong>.
+        Record payment(s) first, then start release.
+      </div>
+      <button class="btn btn-outline-secondary btn-sm" type="button" disabled>
+        {{ release_action.icon }} {{ release_action.title }}
+      </button>
+      {% else %}
+      <a class="btn btn-success btn-sm" href="{{ release_action.href }}">
+        {{ release_action.icon }} {{ release_action.title }}
+      </a>
+      {% endif %}
+    {% endif %}
     {% endif %}
   </div>
 </div>

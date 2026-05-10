@@ -1,75 +1,118 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/management.html' %}
 {% load i18n %}
+{% load humanize %}
 {% load orgs_tags %}
 
-{% block title %}User Profile - Rokkad{% endblock %}
+{% block title %}My Account - Rokkad{% endblock %}
 
-{% block content %}
-<div class="container-fluid py-5">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">{% trans "Menu" %}</h5>
+{% block mgmt_content %}
+<div class="container-fluid py-2">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:78px;height:78px;">
+                        <i class="bi bi-person-fill text-primary" style="font-size: 2rem;"></i>
+                    </div>
+                    <h5 class="mb-1">{{ user.get_full_name|default:user.username }}</h5>
+                    <p class="text-muted mb-3">@{{ user.username }}</p>
+                    <div class="small text-muted text-start">
+                        <div class="mb-2"><i class="bi bi-envelope me-2"></i>{{ user.email|default:"No email set" }}</div>
+                        <div class="mb-2"><i class="bi bi-telephone me-2"></i>{{ user.profile.phone_number|default:"No phone number" }}</div>
+                        <div class="mb-2"><i class="bi bi-globe me-2"></i>{{ user.profile.timezone|default:"Timezone not set" }}</div>
+                        <div class="mb-2"><i class="bi bi-geo-alt me-2"></i>{{ user.profile.address|default:"No address" }}</div>
+                        <div class="mb-2"><i class="bi bi-calendar3 me-2"></i>Joined {{ user.date_joined|date:"M d, Y" }}</div>
+                        <div><i class="bi bi-clock-history me-2"></i>Last login {{ user.last_login|naturaltime|default:"Never" }}</div>
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{% url 'userprofile_update' user.profile.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil-square me-1"></i>Edit Profile Details
+                        </a>
+                    </div>
                 </div>
-                <nav class="nav flex-column">
-                    <a class="nav-link" href="{% url 'workspace_list' %}">
-                        <i class="bi bi-briefcase"></i> {% trans "Workspaces" %}
-                    </a>
-                    <a class="nav-link" href="{% url 'team_invitations' %}">
-                        <i class="bi bi-envelope"></i> {% trans "Invitations" %}
-                    </a>
-                    <a class="nav-link" href="#">
-                        <i class="bi bi-credit-card"></i> {% trans "Payments" %}
-                    </a>
-                    <a class="nav-link" href="#">
-                        <i class="bi bi-subscribe"></i> {% trans "Subscription" %}
-                    </a>
-                    <a class="nav-link" href="#">
-                        <i class="bi bi-gear"></i> {% trans "Settings" %}
-                    </a>
-                </nav>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="col-md-9">
-            <div class="card">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
                 <div class="card-body">
-                    <h2 class="h2 mb-1">Welcome, {{ user.first_name|default:user.username }}!</h2>
-                    <p class="text-muted">Manage your account and workspaces from here.</p>
-                    
-                    <div class="row mt-4 g-4">
-                        <div class="col-md-6">
-                            <div class="card border-light">
-                                <div class="card-body text-center">
-                                    <h5 class="card-title">
-                                        <i class="bi bi-briefcase text-primary" style="font-size: 2rem;"></i>
-                                    </h5>
-                                    <h6>My Workspaces</h6>
-                                    <p class="text-muted">{{ user.memberships.count }} workspace(s)</p>
-                                    <a href="{% url 'workspace_list' %}" class="btn btn-sm btn-primary">
-                                        {% trans "View All" %}
-                                    </a>
-                                </div>
+                    <h5 class="mb-3"><i class="bi bi-grid-3x3-gap me-2"></i>Account Overview</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded text-center">
+                                <div class="small text-muted">Workspaces</div>
+                                <div class="h4 mb-0">{{ workspace_count }}</div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card border-light">
-                                <div class="card-body text-center">
-                                    <h5 class="card-title">
-                                        <i class="bi bi-envelope text-success" style="font-size: 2rem;"></i>
-                                    </h5>
-                                    <h6>Pending Invitations</h6>
-                                    <p class="text-muted">Check your invitations</p>
-                                    <a href="{% url 'team_invitations' %}" class="btn btn-sm btn-success">
-                                        {% trans "View" %}
-                                    </a>
-                                </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded text-center">
+                                <div class="small text-muted">Pending Invitations</div>
+                                <div class="h4 mb-0">{{ pending_invitation_count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded text-center">
+                                <div class="small text-muted">Active Workspace</div>
+                                <div class="h6 mb-0 text-truncate">{{ workspace.name|default:"Not selected" }}</div>
                             </div>
                         </div>
                     </div>
+                    <div class="d-flex gap-2 flex-wrap mt-3">
+                        <a href="{% url 'workspace_selector' %}?show_all=1" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-briefcase me-1"></i>Manage Workspaces
+                        </a>
+                        <a href="{% url 'my_memberships' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-diagram-3 me-1"></i>My Memberships
+                        </a>
+                        <a href="{% url 'team_invitations' %}" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-envelope me-1"></i>My Invitations
+                        </a>
+                        {% if user_role == 'Owner' %}
+                        <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-credit-card me-1"></i>Billing
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="mb-2"><i class="bi bi-shield-lock me-2"></i>Account Management</h5>
+                    <p class="text-muted small mb-3">Security and login settings are grouped in a dedicated page.</p>
+                    <a href="{% url 'account_settings' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-right-circle me-1"></i>Open Account Settings
+                    </a>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="bi bi-people me-2"></i>Your Workspace Memberships</h5>
+                    {% if memberships %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Workspace</th>
+                                    <th>Role</th>
+                                    <th>Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for membership in memberships %}
+                                <tr>
+                                    <td>{{ membership.company.name }}</td>
+                                    <td>{% render_role_badge role=membership.role.name %}</td>
+                                    <td class="text-muted">{{ membership.date_joined|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No workspace memberships yet.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

@@ -8,555 +8,289 @@
 {% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <div>
         <h1 class="h3 fw-bold mb-1">{{ workspace.name }} Dashboard</h1>
-        <p class="text-muted mb-0">
-            Role: {% include 'components/role_badge.html' with role=role %}
-        </p>
+        <p class="text-muted mb-0">Role: {% include 'components/role_badge.html' with role=role %}</p>
     </div>
-    <div class="btn-group" role="group">
+    <div class="d-flex gap-2">
         {% if can_view %}
-            <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="btn btn-outline-primary">
-                <i class="bi bi-gear me-2"></i>Settings
-            </a>
+        <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-gear me-1"></i>Settings
+        </a>
         {% endif %}
-        <a href="{% url 'workspace_list' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-2"></i>Back to Workspaces
+        <a href="{% url 'workspace_selector' %}?show_all=1" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>All Workspaces
         </a>
     </div>
 </div>
 {% endblock %}
 
 {% block workspace_content %}
-<!-- Subscription Status Alert -->
-{% if workspace.subscription and not workspace.subscription.is_active %}
-    {% include 'components/common/alert.html' with 
-        type='warning' 
-        title='Subscription Inactive' 
-        message='Your subscription is inactive. Please renew to continue using this workspace.' 
-        dismissible=True 
-    %}
-{% endif %}
-
-<!-- Quick Stats Section -->
-<div class="row mb-4">
-    <!-- Team Members Card -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-people-fill text-primary fs-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Team Members</p>
-                        <h4 class="mb-0 fw-bold">{{ team_count }}</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pending Invitations Card -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-envelope-open text-info fs-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Pending Invitations</p>
-                        <h4 class="mb-0 fw-bold">{{ pending_invitations }}</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Total Customers Card -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-person-check text-success fs-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Active Customers</p>
-                        <h4 class="mb-0 fw-bold">{{ total_customers|default:0|intcomma }}</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Unreleased Loans Card -->
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-file-earmark-pdf text-warning fs-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Active Loans</p>
-                        <h4 class="mb-0 fw-bold">{{ loan_count|default:0|intcomma }}</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Current Metal Rates -->
-{% if gold_rate or silver_rate %}
-<div class="row mb-4">
-    {% if gold_rate %}
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card h-100 border-0 shadow-sm border-start border-warning border-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-coin text-warning fs-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Gold 24K (Buy)</p>
-                        <h4 class="mb-0 fw-bold">₹{{ gold_rate.buying_rate }}</h4>
-                        <small class="text-muted">Sell: ₹{{ gold_rate.selling_rate }}</small>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <small class="text-muted">
-                        <i class="bi bi-clock me-1"></i>{{ gold_rate.timestamp|date:"d M, H:i" }}
-                        &mdash; {{ gold_rate.rate_source }}
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    {% if silver_rate %}
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card h-100 border-0 shadow-sm border-start border-secondary border-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-secondary bg-opacity-10 p-3 me-3">
-                        <i class="bi bi-coin text-secondary fs-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Silver {{ silver_rate.purity }} (Buy)</p>
-                        <h4 class="mb-0 fw-bold">₹{{ silver_rate.buying_rate }}</h4>
-                        <small class="text-muted">Sell: ₹{{ silver_rate.selling_rate }}</small>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <small class="text-muted">
-                        <i class="bi bi-clock me-1"></i>{{ silver_rate.timestamp|date:"d M, H:i" }}
-                        &mdash; {{ silver_rate.rate_source }}
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    <div class="col-lg-6 col-md-12 mb-3 d-flex align-items-center">
-        <a href="{% url 'rate_list' %}" class="btn btn-outline-warning btn-sm me-2">
-            <i class="bi bi-list-ul me-1"></i>All Rates
-        </a>
-        <a href="{% url 'rate_create' %}" class="btn btn-warning btn-sm">
-            <i class="bi bi-plus-circle me-1"></i>Add Rate
-        </a>
-    </div>
-</div>
-{% endif %}
-
-<!-- Subscription Status Section (if Owner/Admin) -->
-{% if 'billing_view' in user_permissions %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-bottom py-3">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-credit-card me-2 text-primary"></i>Subscription Status
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        {% if has_active_subscription %}
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-circle bg-success bg-opacity-10 p-3">
-                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1 fw-bold">Active Subscription</h6>
-                                <p class="mb-1 text-muted small">
-                                    plan: <strong>{{ subscription_plan|default:"Standard" }}</strong>
-                                </p>
-                                {% if days_until_renewal %}
-                                <p class="mb-0 text-muted small">
-                                    Renews in: <strong>{{ days_until_renewal }} days</strong>
-                                </p>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-circle bg-warning bg-opacity-10 p-3">
-                                <i class="bi bi-exclamation-circle-fill text-warning fs-5"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1 fw-bold">Subscription Renewal Needed</h6>
-                                <p class="mb-0 text-muted small">
-                                    Please renew to continue accessing workspace features.
-                                </p>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                        <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-primary">
-                            <i class="bi bi-credit-card me-1"></i>Manage Subscription
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Workspace Admin Actions Section (if Owner/Admin) -->
-{% if 'workspace_edit' in user_permissions %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h6 class="mb-3 fw-bold text-muted text-uppercase small">Admin Actions</h6>
-        <div class="row g-3">
-            <!-- Invite Team Member -->
-            <div class="col-md-3">
-                <div class="card h-100 border-0 shadow-sm hover-card" style="cursor: pointer;">
-                    <a href="{% url 'team_invite' workspace_id=workspace.id %}" class="text-decoration-none text-reset stretched-link">
-                        <div class="card-body text-center">
-                            <div class="rounded-circle bg-info bg-opacity-10 d-inline-block p-3 mb-3">
-                                <i class="bi bi-person-plus text-info fs-5"></i>
-                            </div>
-                            <h6 class="card-title mb-2">Invite Team Member</h6>
-                            <p class="card-text text-muted small mb-0">Add a new member to your team</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Manage Team -->
-            <div class="col-md-3">
-                <div class="card h-100 border-0 shadow-sm hover-card" style="cursor: pointer;">
-                    <a href="{% url 'team_invitations' %}" class="text-decoration-none text-reset stretched-link">
-                        <div class="card-body text-center">
-                            <div class="rounded-circle bg-primary bg-opacity-10 d-inline-block p-3 mb-3">
-                                <i class="bi bi-people text-primary fs-5"></i>
-                            </div>
-                            <h6 class="card-title mb-2">Manage Members</h6>
-                            <p class="card-text text-muted small mb-0">View and manage team members</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Workspace Settings -->
-            <div class="col-md-3">
-                <div class="card h-100 border-0 shadow-sm hover-card" style="cursor: pointer;">
-                    <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="text-decoration-none text-reset stretched-link">
-                        <div class="card-body text-center">
-                            <div class="rounded-circle bg-warning bg-opacity-10 d-inline-block p-3 mb-3">
-                                <i class="bi bi-gear text-warning fs-5"></i>
-                            </div>
-                            <h6 class="card-title mb-2">Settings</h6>
-                            <p class="card-text text-muted small mb-0">Configure workspace preferences</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
-
-            <!-- DEA Dashboard -->
-            <div class="col-md-3">
-                <div class="card h-100 border-0 shadow-sm hover-card" style="cursor: pointer;">
-                    <a href="{% url 'dea_dashboard' %}" class="text-decoration-none text-reset stretched-link">
-                        <div class="card-body text-center">
-                            <div class="rounded-circle bg-success bg-opacity-10 d-inline-block p-3 mb-3">
-                                <i class="bi bi-speedometer2 text-success fs-5"></i>
-                            </div>
-                            <h6 class="card-title mb-2">DEA Dashboard</h6>
-                            <p class="card-text text-muted small mb-0">Open accounting metrics, alerts, and reports</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
-.hover-card {
-    transition: all 0.3s ease;
+.dashboard-stat-card { border: 0; box-shadow: 0 6px 20px rgba(2, 6, 23, 0.08); }
+.dashboard-stat-card .icon-wrap {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
 }
-.hover-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-}
-.hover-card a {
-    text-decoration: none;
-    color: inherit;
-}
+.quick-action { border: 1px solid #e5e7eb; border-radius: 12px; transition: all 0.2s ease; }
+.quick-action:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(2, 6, 23, 0.08); border-color: #cbd5e1; }
 </style>
+
+{% if workspace.subscription and not workspace.subscription.is_active %}
+{% include 'components/common/alert.html' with type='warning' title='Subscription Inactive' message='Your subscription is inactive. Please renew to continue using this workspace.' dismissible=True %}
 {% endif %}
 
-<!-- Main Content Section -->
-<div class="row mb-4">
-    <!-- Loan Statistics (Admin/Owner Only) -->
-    {% if can_view %}
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card dashboard-stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon-wrap bg-primary bg-opacity-10 me-3"><i class="bi bi-people-fill text-primary"></i></div>
+                <div>
+                    <div class="text-muted small">Team Members</div>
+                    <div class="h4 mb-0 fw-bold">{{ team_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card dashboard-stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon-wrap bg-info bg-opacity-10 me-3"><i class="bi bi-envelope-open text-info"></i></div>
+                <div>
+                    <div class="text-muted small">Pending Invitations</div>
+                    <div class="h4 mb-0 fw-bold">{{ pending_invitations }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card dashboard-stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon-wrap bg-success bg-opacity-10 me-3"><i class="bi bi-person-check text-success"></i></div>
+                <div>
+                    <div class="text-muted small">Active Customers</div>
+                    <div class="h4 mb-0 fw-bold">{{ total_customers|default:0|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card dashboard-stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="icon-wrap bg-warning bg-opacity-10 me-3"><i class="bi bi-file-earmark-pdf text-warning"></i></div>
+                <div>
+                    <div class="text-muted small">Active Loans</div>
+                    <div class="h4 mb-0 fw-bold">{{ loan_count|default:0|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if can_view %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h6 class="text-uppercase small fw-bold text-muted mb-3">Quick Actions</h6>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <a href="{% url 'team_invite' workspace_id=workspace.id %}" class="quick-action p-3 d-block text-decoration-none text-reset">
+                    <div class="fw-semibold mb-1"><i class="bi bi-person-plus me-1"></i>Invite Member</div>
+                    <small class="text-muted">Send a new team invitation.</small>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{% url 'team_members_list' %}" class="quick-action p-3 d-block text-decoration-none text-reset">
+                    <div class="fw-semibold mb-1"><i class="bi bi-people me-1"></i>Manage Team</div>
+                    <small class="text-muted">Roles, access and membership.</small>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="quick-action p-3 d-block text-decoration-none text-reset">
+                    <div class="fw-semibold mb-1"><i class="bi bi-sliders me-1"></i>Workspace Settings</div>
+                    <small class="text-muted">Preferences and workspace controls.</small>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{% url 'dea_dashboard' %}" class="quick-action p-3 d-block text-decoration-none text-reset">
+                    <div class="fw-semibold mb-1"><i class="bi bi-speedometer2 me-1"></i>DEA Dashboard</div>
+                    <small class="text-muted">Accounting metrics and reports.</small>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white border-bottom py-3">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-graph-up me-2 text-primary"></i>Active Loans Summary
-                </h5>
+                <h5 class="card-title mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>Active Loans Summary</h5>
             </div>
             <div class="card-body">
                 {% if loan_count > 0 %}
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <div class="p-3 bg-light rounded">
-                                <p class="text-muted small mb-1">Total Amount Due</p>
-                                <h5 class="fw-bold text-dark">
-                                    {{ total_loan_amount|default:0|intcomma }} ₹
-                                </h5>
-                            </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Total Amount Due</div>
+                            <div class="h5 fw-bold mb-0">{{ total_loan_amount|default:0|intcomma }} ₹</div>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="p-3 bg-light rounded">
-                                <p class="text-muted small mb-1">Total Interest</p>
-                                <h5 class="fw-bold text-dark">
-                                    {{ total_interest|default:0|intcomma }} ₹
-                                </h5>
-                            </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Total Interest</div>
+                            <div class="h5 fw-bold mb-0">{{ total_interest|default:0|intcomma }} ₹</div>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="p-3 bg-light rounded">
-                                <p class="text-muted small mb-1">Release Progress</p>
-                                <div class="progress" style="height: 24px;">
-                                    <div class="progress-bar" role="progressbar" 
-                                        style="width: {{ loan_progress }}%;" 
-                                        aria-valuenow="{{ loan_progress }}" 
-                                        aria-valuemin="0" 
-                                        aria-valuemax="100">
-                                        {{ loan_progress }}%
-                                    </div>
-                                </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Release Progress</div>
+                            <div class="progress mt-2" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ loan_progress }}%;" aria-valuenow="{{ loan_progress }}" aria-valuemin="0" aria-valuemax="100">{{ loan_progress }}%</div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Metal Weights Section -->
-                    <div class="mt-4 pt-4 border-top">
-                        <h6 class="fw-bold mb-3">Metal Holdings</h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <p class="text-muted small mb-1">Total Weight</p>
-                                <h6 class="fw-bold">{{ weight|default:0 }} gm</h6>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <p class="text-muted small mb-1">Pure Weight</p>
-                                <h6 class="fw-bold">{{ pure_weight|default:0 }} gm</h6>
-                            </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Total Weight</div>
+                            <div class="h6 fw-bold mb-0">{{ weight|default:0 }} gm</div>
                         </div>
                     </div>
-
-                    <!-- Current Value Section -->
-                    <div class="mt-4 pt-4 border-top">
-                        <h6 class="fw-bold mb-3">Current Value</h6>
-                        <p class="text-muted small mb-1">Total Asset Value</p>
-                        <h5 class="fw-bold text-success">₹ {{ current_value|default:0|intcomma }}</h5>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Pure Weight</div>
+                            <div class="h6 fw-bold mb-0">{{ pure_weight|default:0 }} gm</div>
+                        </div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <div class="text-muted small">Current Value</div>
+                            <div class="h6 fw-bold text-success mb-0">₹ {{ current_value|default:0|intcomma }}</div>
+                        </div>
+                    </div>
+                </div>
                 {% else %}
-                    <div class="text-center py-5">
-                        <i class="bi bi-file-earmark-pdf text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
-                        <h5 class="mt-3 text-muted">No Active Loans</h5>
-                        <p class="text-muted mb-3">You do not have any active loans yet.</p>
-                        <a href="{% url 'girvi:girvi_loan_create' %}" class="btn btn-primary">
-                            <i class="bi bi-plus me-1"></i>Create Loan
-                        </a>
-                    </div>
+                <div class="text-center py-5">
+                    <i class="bi bi-file-earmark-pdf text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+                    <h5 class="mt-3 text-muted">No Active Loans</h5>
+                    <p class="text-muted mb-3">Create your first loan to start tracking here.</p>
+                    <a href="{% url 'girvi:girvi_loan_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Create Loan</a>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Team Section -->
     <div class="col-lg-4">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-people me-2 text-primary"></i>Team
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if team_count > 0 %}
-                    <div class="mb-3">
-                        <p class="text-muted small mb-2">{{ team_count }} member{{ team_count|pluralize }}</p>
-                        <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="btn btn-sm btn-outline-primary w-100">
-                            <i class="bi bi-plus me-1"></i>Manage Team
-                        </a>
-                    </div>
-
-                    {% if pending_invitations > 0 %}
-                        <div class="alert alert-info py-2 px-3" role="alert">
-                            <small>
-                                <i class="bi bi-info-circle me-1"></i>
-                                {{ pending_invitations }} pending invitation{{ pending_invitations|pluralize }}
-                            </small>
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="bi bi-people text-muted" style="font-size: 2rem; opacity: 0.5;"></i>
-                        <h6 class="mt-2 text-muted">No Team Members</h6>
-                        <p class="small text-muted mb-2">Invite your team members to collaborate.</p>
-                        <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="btn btn-sm btn-primary">
-                            <i class="bi bi-person-plus me-1"></i>Invite Members
-                        </a>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Recent Customers -->
-        <div class="card border-0 shadow-sm mt-3">
-            <div class="card-header bg-white border-bottom py-3">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-person-check me-2 text-primary"></i>Recent Customers
-                </h5>
+                <h5 class="card-title mb-0"><i class="bi bi-person-check me-2 text-primary"></i>Recent Customers</h5>
             </div>
             <div class="card-body">
                 {% if new_customers %}
-                    <div class="list-group list-group-flush">
-                        {% for customer in new_customers %}
-                            <a href="#" class="list-group-item list-group-item-action py-2 border-0">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <h6 class="mb-1 small">{{ customer.firstname }}</h6>
-                                    <small class="text-muted">{{ customer.customer_type }}</small>
-                                </div>
-                            </a>
-                        {% endfor %}
-                    </div>
+                <div class="list-group list-group-flush">
+                    {% for customer in new_customers %}
+                    <a href="#" class="list-group-item list-group-item-action py-2 border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small fw-semibold">{{ customer.firstname }}</span>
+                            <small class="text-muted">{{ customer.customer_type }}</small>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
                 {% else %}
-                    <div class="text-center py-4">
-                        <i class="bi bi-person-plus text-muted" style="font-size: 2rem; opacity: 0.5;"></i>
-                        <h6 class="mt-2 text-muted">No Customers Yet</h6>
-                        <p class="small text-muted mb-2">Start adding customers to your workspace.</p>
-                        <a href="{% url 'contact_customer_create' %}" class="btn btn-sm btn-primary">
-                            <i class="bi bi-plus me-1"></i>Add Customer
-                        </a>
-                    </div>
+                <div class="text-center py-3">
+                    <p class="text-muted small mb-3">No customers yet.</p>
+                    <a href="{% url 'contact_customer_create' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus me-1"></i>Add Customer</a>
+                </div>
                 {% endif %}
             </div>
         </div>
-    </div>
-    {% else %}
-    <!-- Non-Admin View -->
-    <div class="col-12">
+
+        {% if user_role == 'Owner' %}
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-bottom py-3">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-info-circle me-2 text-info"></i>Workspace Information
-                </h5>
+                <h5 class="card-title mb-0"><i class="bi bi-credit-card me-2 text-primary"></i>Subscription</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted mb-3">
-                    Welcome to <strong>{{ workspace.name }}</strong>. 
-                    {% if role.name == 'Member' %}
-                        You are a team member with limited access. Contact an administrator for managing team settings.
-                    {% else %}
-                        You have {{ role.name }} access to this workspace.
-                    {% endif %}
-                </p>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <strong class="d-block text-muted small mb-1">Team Members</strong>
-                        <p class="h5 mb-0">{{ team_count }}</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <strong class="d-block text-muted small mb-1">Active Customers</strong>
-                        <p class="h5 mb-0">{{ total_customers|default:0|intcomma }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Sunken Loans Section (Admin/Owner Only) -->
-{% if can_view and sunken.loan_count > 0 %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm border-warning">
-            <div class="card-header bg-light border-bottom py-3">
-                <h5 class="card-title mb-0 text-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>Sunken Loans ({{ sunken.loan_count }})
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <p class="text-muted small mb-1">Total Amount</p>
-                        <h6 class="fw-bold">{{ sunken.total_loan_amount|default:0|intcomma }} ₹</h6>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <p class="text-muted small mb-1">Interest Amount</p>
-                        <h6 class="fw-bold">{{ sunken.total_interest|default:0|intcomma }} ₹</h6>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <p class="text-muted small mb-1">Metal Weight</p>
-                        <h6 class="fw-bold">{{ sunken.weight|default:0 }} gm</h6>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <p class="text-muted small mb-1">Current Value</p>
-                        <h6 class="fw-bold text-warning">₹ {{ sunken.current_value|default:0|intcomma }}</h6>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Quick Actions Footer (Admin/Owner Only) -->
-{% if can_view %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="btn btn-primary">
-                <i class="bi bi-gear me-1"></i>Settings
-            </a>
-            <a href="{% url 'dea_dashboard' %}" class="btn btn-outline-success">
-                <i class="bi bi-speedometer2 me-1"></i>DEA Dashboard
-            </a>
-            <a href="#" class="btn btn-outline-primary">
-                <i class="bi bi-download me-1"></i>Export Report
-            </a>
-            {% if role.name == 'Owner' %}
-                <a href="{% url 'workspace_delete' workspace_id=workspace.id %}" 
-                   class="btn btn-outline-danger ms-auto"
-                   onclick="return confirm('Are you sure you want to delete this workspace?')">
-                    <i class="bi bi-trash me-1"></i>Delete Workspace
+                {% if has_active_subscription %}
+                <p class="mb-1 fw-semibold">{{ subscription_plan|default:"Standard" }}</p>
+                <p class="small text-muted mb-3">{% if days_until_renewal %}Renews in {{ days_until_renewal }} days{% else %}Active plan{% endif %}</p>
+                {% else %}
+                <p class="small text-muted mb-3">Subscription renewal needed.</p>
+                {% endif %}
+                <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-primary w-100">
+                    <i class="bi bi-credit-card me-1"></i>Manage Subscription
                 </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if gold_rate or silver_rate %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0"><i class="bi bi-coin me-2 text-warning"></i>Metal Rates</h5>
+        <div class="d-flex gap-2">
+            <a href="{% url 'rate_list' %}" class="btn btn-outline-warning btn-sm">All Rates</a>
+            <a href="{% url 'rate_create' %}" class="btn btn-warning btn-sm">Add Rate</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% if gold_rate %}
+            <div class="col-md-6">
+                <div class="p-3 bg-light rounded border-start border-warning border-4">
+                    <div class="small text-muted">Gold 24K</div>
+                    <div class="h5 mb-1 fw-bold">Buy ₹{{ gold_rate.buying_rate }}</div>
+                    <div class="small text-muted">Sell ₹{{ gold_rate.selling_rate }}</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if silver_rate %}
+            <div class="col-md-6">
+                <div class="p-3 bg-light rounded border-start border-secondary border-4">
+                    <div class="small text-muted">Silver {{ silver_rate.purity }}</div>
+                    <div class="h5 mb-1 fw-bold">Buy ₹{{ silver_rate.buying_rate }}</div>
+                    <div class="small text-muted">Sell ₹{{ silver_rate.selling_rate }}</div>
+                </div>
+            </div>
             {% endif %}
         </div>
     </div>
 </div>
 {% endif %}
 
+{% if can_view and sunken.loan_count > 0 %}
+<div class="card border-0 shadow-sm border-warning mb-2">
+    <div class="card-header bg-light border-bottom py-3">
+        <h5 class="card-title mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Sunken Loans ({{ sunken.loan_count }})</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3"><div class="small text-muted">Total Amount</div><div class="fw-bold">{{ sunken.total_loan_amount|default:0|intcomma }} ₹</div></div>
+            <div class="col-md-3"><div class="small text-muted">Interest Amount</div><div class="fw-bold">{{ sunken.total_interest|default:0|intcomma }} ₹</div></div>
+            <div class="col-md-3"><div class="small text-muted">Metal Weight</div><div class="fw-bold">{{ sunken.weight|default:0 }} gm</div></div>
+            <div class="col-md-3"><div class="small text-muted">Current Value</div><div class="fw-bold text-warning">₹ {{ sunken.current_value|default:0|intcomma }}</div></div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not can_view %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+        <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2 text-info"></i>Workspace Information</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">Welcome to <strong>{{ workspace.name }}</strong>. You currently have {{ role.name }} access.</p>
+        <div class="row g-3">
+            <div class="col-md-6"><div class="small text-muted">Team Members</div><div class="h5 mb-0">{{ team_count }}</div></div>
+            <div class="col-md-6"><div class="small text-muted">Active Customers</div><div class="h5 mb-0">{{ total_customers|default:0|intcomma }}</div></div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

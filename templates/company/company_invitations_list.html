@@ -1,10 +1,10 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/management.html' %}
 {% load i18n %}
 {% load orgs_tags %}
 
-{% block title %}Pending Invitations - Rokkad{% endblock %}
+{% block title %}Sent Invitations - Rokkad{% endblock %}
 
-{% block content %}
+{% block mgmt_content %}
 <div class="container py-4">
     <!-- Page Header -->
     <div class="row mb-4">
@@ -14,7 +14,13 @@
                     <h1 class="h3 mb-1">
                         <i class="bi bi-envelope"></i> {% trans "Pending Invitations" %}
                     </h1>
-                    <p class="text-muted">View all invitations you've sent to team members</p>
+                    <p class="text-muted">
+                        {% if current_workspace %}
+                        View all invitations for {{ current_workspace.name }}
+                        {% else %}
+                        View all invitations you've sent to team members
+                        {% endif %}
+                    </p>
                 </div>
             </div>
         </div>
@@ -39,48 +45,56 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for invitation in invitations %}
+                                {% for item in invitations %}
                                 <tr>
                                     <td>
-                                        <span class="text-muted">{{ invitation.created|date:"M d, Y" }}</span>
+                                        <span class="text-muted">{{ item.invitation.created|date:"M d, Y" }}</span>
                                         <br>
-                                        <small class="text-muted">{{ invitation.created|timesince }} ago</small>
+                                        <small class="text-muted">{{ item.invitation.created|timesince }} ago</small>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-xs bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2">
                                                 <i class="bi bi-building text-primary"></i>
                                             </div>
-                                            <strong>{{ invitation.company.name }}</strong>
+                                            <strong>{{ item.invitation.company.name }}</strong>
                                         </div>
                                     </td>
-                                    <td>{{ invitation.inviter.get_full_name|default:invitation.inviter.username }}</td>
+                                    <td>{{ item.invitation.inviter.get_full_name|default:item.invitation.inviter.username }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <i class="bi bi-envelope me-2 text-muted"></i>
-                                            {{ invitation.email }}
+                                            {{ item.invitation.email }}
                                         </div>
                                     </td>
                                     <td>
-                                        {% if invitation.role.name %}
+                                        {% if item.invitation.role.name %}
                                         <span class="badge 
-                                            {% if invitation.role.name|lower == 'owner' %}bg-danger{% endif %}
-                                            {% if invitation.role.name|lower == 'admin' %}bg-primary{% endif %}
-                                            {% if invitation.role.name|lower == 'member' %}bg-secondary{% endif %}">
-                                            {{ invitation.role.name }}
+                                            {% if item.invitation.role.name|lower == 'owner' %}bg-danger{% endif %}
+                                            {% if item.invitation.role.name|lower == 'admin' %}bg-primary{% endif %}
+                                            {% if item.invitation.role.name|lower == 'member' %}bg-secondary{% endif %}">
+                                            {{ item.invitation.role.name }}
                                         </span>
                                         {% else %}
                                         <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if invitation.accepted %}
+                                        {% if item.state == 'accepted' %}
                                         <span class="badge bg-success">
                                             <i class="bi bi-check-circle"></i> Accepted
                                         </span>
-                                        {% elif invitation.accepted == False %}
+                                        {% elif item.state == 'declined' %}
                                         <span class="badge bg-danger">
                                             <i class="bi bi-x-circle"></i> Declined
+                                        </span>
+                                        {% elif item.state == 'revoked' %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-slash-circle"></i> Revoked
+                                        </span>
+                                        {% elif item.state == 'expired' %}
+                                        <span class="badge bg-dark">
+                                            <i class="bi bi-clock-history"></i> Expired
                                         </span>
                                         {% else %}
                                         <span class="badge bg-warning text-dark">
@@ -114,6 +128,7 @@
                         <li><strong>Pending:</strong> Invitation sent, waiting for user to accept</li>
                         <li><strong>Accepted:</strong> User has joined the workspace</li>
                         <li><strong>Declined:</strong> User has declined the invitation</li>
+                        <li><strong>Revoked:</strong> Invitation was cancelled by inviter/admin</li>
                         <li><strong>Expiration:</strong> Invitations expire after 7 days for security</li>
                     </ul>
                 </div>

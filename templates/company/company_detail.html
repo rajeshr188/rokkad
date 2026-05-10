@@ -1,18 +1,18 @@
-{% extends 'layouts/workspace.html' %}
+{% extends 'layouts/management.html' %}
 {% load i18n %}
 {% load orgs_tags %}
 
-{% block title %}{{ company.name }} - Workspaces - Rokkad{% endblock %}
+{% block title %}{{ company.name }} - Settings - Rokkad{% endblock %}
 {% block breadcrumbs %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'workspace_list' %}">Workspaces</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'workspace_selector' %}">My Workspaces</a></li>
         <li class="breadcrumb-item active">{{ company.name }}</li>
     </ol>
 </nav>
 {% endblock %}
 
-{% block workspace_content %}
+{% block mgmt_content %}
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm">
@@ -31,7 +31,7 @@
                             </div>
                         </div>
                         
-                        {% if request.user|has_permission:"orgs.change_company" %}
+                        {% if user_role == 'Owner' %}
                         <div>
                             <a href="{% url 'workspace_update' workspace_id=company.id %}" class="btn btn-outline-primary">
                                 <i class="bi bi-pencil-square"></i> Edit Workspace
@@ -208,17 +208,23 @@
                                             <td>{{ invitation.inviter.get_full_name|default:invitation.inviter.username }}</td>
                                             <td>{{ invitation.created|date:"M d, Y" }}</td>
                                             <td>
-                                                {% if invitation.accepted %}
-                                                <span class="badge bg-success">Accepted</span>
-                                                {% elif invitation.accepted == False %}
-                                                <span class="badge bg-danger">Declined</span>
-                                                {% else %}
-                                                <span class="badge bg-warning text-dark">Pending</span>
-                                                {% endif %}
+                                                {% with state=invitation.lifecycle_state %}
+                                                    {% if state == 'accepted' %}
+                                                    <span class="badge bg-success">Accepted</span>
+                                                    {% elif state == 'declined' %}
+                                                    <span class="badge bg-danger">Declined</span>
+                                                    {% elif state == 'revoked' %}
+                                                    <span class="badge bg-secondary">Revoked</span>
+                                                    {% elif state == 'expired' %}
+                                                    <span class="badge bg-dark">Expired</span>
+                                                    {% else %}
+                                                    <span class="badge bg-warning text-dark">Pending</span>
+                                                    {% endif %}
+                                                {% endwith %}
                                             </td>
                                             <td>
-                                                {% if request.user|has_permission:"company.add_companymember" and not invitation.accepted %}
-                                                <button hx-post="{% url 'orgs_invite_delete' invitation.id %}" 
+                                                {% if request.user|has_permission:"company.add_companymember" and invitation.is_pending %}
+                                                <button hx-post="{% url 'team_delete_invitation' invitation.id %}" 
                                                         hx-target="closest tr" hx-swap="outerHTML"
                                                         hx-confirm="Cancel invitation to {{ invitation.email }}?"
                                                         class="btn btn-sm btn-outline-danger">

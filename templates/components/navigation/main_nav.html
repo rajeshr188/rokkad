@@ -1,28 +1,67 @@
 {% load static %}
 {% load i18n %}
-<!-- Main Navigation Bar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-        <!-- Brand -->
+
+<style>
+.modern-nav {
+    background: linear-gradient(90deg, #111827 0%, #1f2937 55%, #0f172a 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.modern-nav .navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+.modern-nav .nav-pill {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    color: #f9fafb;
+}
+.modern-nav .nav-pill:hover,
+.modern-nav .nav-pill:focus {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+.modern-nav .dropdown-menu {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+}
+.modern-nav .dropdown-item i {
+    width: 1.1rem;
+}
+.modern-nav .user-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #334155;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+</style>
+
+<nav class="navbar navbar-expand-lg navbar-dark modern-nav">
+    <div class="container-fluid px-3 px-lg-4">
         <a class="navbar-brand" href="{% url 'home' %}">
-            <i class="bi bi-building"></i> Rokkad
+            <i class="bi bi-building me-1"></i> Rokkad
         </a>
-        
-        <!-- Toggler for mobile -->
+
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        
-        <!-- Navigation Items -->
+
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
                 {% if user.is_authenticated %}
-                    <!-- Workspace Switcher -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="workspaceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-briefcase"></i>
+                        <a class="nav-link dropdown-toggle nav-pill" href="#" id="workspaceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-briefcase me-1"></i>
                             {% if request.user.profile.workspace %}
-                                {{ request.user.profile.workspace.name }}
+                                {{ request.user.profile.workspace.name|truncatechars:22 }}
                             {% else %}
                                 Select Workspace
                             {% endif %}
@@ -30,8 +69,7 @@
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="workspaceDropdown">
                             {% for membership in request.user.memberships.all %}
                                 <li>
-                                    <a class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}" 
-                                       href="{% url 'workspace_select' membership.company.id %}">
+                                    <a class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}" href="{% url 'workspace_select' membership.company.id %}">
                                         {{ membership.company.name }}
                                         {% if request.user.profile.workspace.id == membership.company.id %}
                                             <i class="bi bi-check-lg ms-2"></i>
@@ -41,63 +79,65 @@
                             {% endfor %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item" href="{% url 'workspace_list' %}">
-                                    <i class="bi bi-plus-circle"></i> All Workspaces
+                                <a class="dropdown-item" href="{% url 'workspace_selector' %}?show_all=1">
+                                    <i class="bi bi-grid-3x3-gap me-1"></i>All Workspaces
                                 </a>
                             </li>
                             {% if request.user.profile.workspace and request.user.profile.workspace.schema_name != 'public' %}
                             <li>
                                 <a class="dropdown-item" href="{% url 'clear_workspace' %}">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Clear Workspace
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Clear Workspace
                                 </a>
                             </li>
                             {% endif %}
                         </ul>
                     </li>
-                    
-                    <!-- User Menu -->
+
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i> {{ request.user.first_name|default:request.user.username }}
+                        <a class="nav-link dropdown-toggle nav-pill" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="user-chip me-1">{{ request.user.username|first|upper }}</span>
+                            {{ request.user.first_name|default:request.user.username|truncatechars:18 }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="{% url 'userprofile_detail' request.user.profile.id %}"><i class="bi bi-person"></i> Profile</a></li>
+                            <li><h6 class="dropdown-header text-uppercase small">Profile</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="bi bi-person"></i> View Profile</a></li>
+                            <li><a class="dropdown-item" href="{% url 'my_memberships' %}"><i class="bi bi-diagram-3"></i> My Memberships</a></li>
+                            <li><a class="dropdown-item" href="{% url 'userprofile_update' request.user.profile.id %}"><i class="bi bi-pencil-square"></i> Edit Profile</a></li>
                             <li><a class="dropdown-item" href="{% url 'workspace_management' %}"><i class="bi bi-briefcase-fill"></i> Workspace Management</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <!-- Language Switcher in User Menu -->
-                            <li class="dropdown-submenu">
-                                <a class="dropdown-item dropdown-toggle" href="#"><i class="bi bi-globe"></i> Language</a>
-                                <ul class="dropdown-menu">
-                                    {% get_available_languages as LANGUAGES %}
-                                    {% get_current_language as LANGUAGE_CODE %}
-                                    {% get_language_info_list for LANGUAGES as languages %}
-                                    {% for lang in languages %}
-                                    <li>
-                                        <form method="post" action="{% url 'set_language' %}" style="display: inline;">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="language" value="{{ lang.code }}">
-                                            <button type="submit" class="dropdown-item {% if lang.code == LANGUAGE_CODE %}active{% endif %}" style="border: none; background: none; cursor: pointer; text-align: left; padding: 0.5rem 1rem;">
-                                                {{ lang.name_local }}
-                                            </button>
-                                        </form>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </li>
+                            <li><h6 class="dropdown-header text-uppercase small">Account</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'account_settings' %}"><i class="bi bi-shield-lock"></i> Account Settings</a></li>
+                            <li><a class="dropdown-item" href="{% url 'account_email' %}"><i class="bi bi-envelope"></i> Email Addresses</a></li>
+                            <li><a class="dropdown-item" href="{% url 'account_change_password' %}"><i class="bi bi-key"></i> Change Password</a></li>
+                            <li><a class="dropdown-item" href="{% url 'socialaccount_connections' %}"><i class="bi bi-link-45deg"></i> Connected Accounts</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'account_logout' %}"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
                         </ul>
                     </li>
                 {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'account_login' %}"><i class="bi bi-box-arrow-in-right"></i> Sign In</a>
+                        <a class="nav-link nav-pill" href="{% url 'account_login' %}"><i class="bi bi-box-arrow-in-right me-1"></i>Sign In</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'account_signup' %}"><i class="bi bi-person-plus"></i> Sign Up</a>
+                        <a class="nav-link nav-pill" href="{% url 'account_signup' %}"><i class="bi bi-person-plus me-1"></i>Sign Up</a>
                     </li>
                 {% endif %}
             </ul>
+
+            <form class="d-flex ms-lg-3 mt-2 mt-lg-0" method="post" action="{% url 'set_language' %}">
+                {% csrf_token %}
+                {% get_available_languages as LANGUAGES %}
+                {% get_current_language as LANGUAGE_CODE %}
+                <label for="navbar-language" class="visually-hidden">Language</label>
+                <select id="navbar-language" name="language" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 9rem;">
+                    {% get_language_info_list for LANGUAGES as languages %}
+                    {% for lang in languages %}
+                    <option {% if lang.code == LANGUAGE_CODE %}selected{% endif %} value="{{ lang.code }}">
+                        {{ lang.name_local }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
         </div>
     </div>
 </nav>
