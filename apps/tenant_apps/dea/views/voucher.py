@@ -34,6 +34,7 @@ from ..models import (
     Voucher,
     VoucherType,
     VoucherStatus,
+    VoucherLine,
     JournalEntry,
     LedgerTransaction,
     AccountTransaction,
@@ -42,6 +43,7 @@ from ..models import (
     AccountingPeriod,
 )
 from ..forms import VoucherForm, LedgerTransactionForm, AccountTransactionForm
+from ..forms_vouchers import VoucherLineFormSet
 from ..tables import VoucherTable
 from ..filters import VoucherFilter
 from apps.tenant_apps.utils.htmx_utils import for_htmx
@@ -173,12 +175,12 @@ class VoucherDetailView(LoginRequiredMixin, DetailView):
 
 class VoucherCreateView(LoginRequiredMixin, CreateView):
     """
-    Create a new voucher for a specific voucher type.
+    Create a new voucher for a specific voucher type with inline VoucherLine formset.
 
     Steps:
-    1. Select voucher type
-    2. Enter header information
-    3. Add line items (debit/credit entries)
+    1. Enter header information (type, date, narration)
+    2. Add line items (debit/credit entries) via inline formset
+    3. Balance check: Dr = Cr (enforced by JS and form validation)
     4. Save as DRAFT
     """
 
@@ -193,33 +195,60 @@ class VoucherCreateView(LoginRequiredMixin, CreateView):
         initial["status"] = VoucherStatus.DRAFT
         return initial
 
-    def form_valid(self, form):
-        """Set created_by and save"""
-        form.instance.created_by = self.request.user
-        form.instance.status = VoucherStatus.DRAFT
-        return super().form_valid(form)
-
     def get_context_data(self, **kwargs):
-        """Add voucher types to context"""
+        """Add voucher types and formset to context"""
         context = super().get_context_data(**kwargs)
         context["voucher_types"] = VoucherType.objects.all()
+        context["ledgers"] = Ledger.objects.all()
+        context["accounts"] = Account.objects.all()
+        
+        if self.request.POST:
+            context["formset"] = VoucherLineFormSet(self.request.POST, instance=self.object)
+        else:
+            context["formset"] = VoucherLineFormSet(instance=self.object)
+        
         return context
+
+    def form_valid(self, form):
+        """Save voucher and associated VoucherLine items"""
+        context = self.get_context_data()
+        formset = context["formset"]
+        
+        # Validate that formset is valid
+        if formset.is_valid():
+            # Set created_by and status before saving
+            form.instance.created_by = self.request.user
+            form.instance.status = VoucherStatus.DRAFT
+            
+            # Save parent voucher first
+            self.object = form.save()
+            
+            # Save formset with the parent voucher
+            formset.instance = self.object
+            formset.save()
+            
+            messages.success(
+                self.request, 
+                f"Voucher {self.object.voucher_no} created successfully with {formset.forms.__len__()} line items"
+            )
+            return super().form_valid(form)
+        else:
+            # Formset has errors, re-render with errors
+            return self.form_invalid(form)
 
     def get_success_url(self):
         """Redirect to voucher detail after creation"""
-        messages.success(
-            self.request, f"Voucher {self.object.voucher_no} created successfully"
-        )
         return reverse("dea_voucher_detail", args=[self.object.pk])
 
 
 class VoucherUpdateView(LoginRequiredMixin, UpdateView):
     """
-    Edit an existing DRAFT voucher.
+    Edit an existing DRAFT voucher including line items.
 
     Constraints:
     - Only DRAFT vouchers can be edited
     - Cannot edit POSTED or REVERSED vouchers
+    - Can modify/add/delete VoucherLine items
     """
 
     model = Voucher
@@ -230,13 +259,42 @@ class VoucherUpdateView(LoginRequiredMixin, UpdateView):
         """Only allow editing DRAFT vouchers"""
         return Voucher.objects.filter(status=VoucherStatus.DRAFT)
 
+    def get_context_data(self, **kwargs):
+        """Add formset to context for line items"""
+        context = super().get_context_data(**kwargs)
+        context["ledgers"] = Ledger.objects.all()
+        context["accounts"] = Account.objects.all()
+        
+        if self.request.POST:
+            context["formset"] = VoucherLineFormSet(self.request.POST, instance=self.object)
+        else:
+            context["formset"] = VoucherLineFormSet(instance=self.object)
+        
+        return context
+
     def form_valid(self, form):
-        """Update the edited_by field"""
-        form.instance.updated_by = self.request.user
-        messages.success(
-            self.request, f"Voucher {form.instance.voucher_no} updated successfully"
-        )
-        return super().form_valid(form)
+        """Update voucher and line items"""
+        context = self.get_context_data()
+        formset = context["formset"]
+        
+        if formset.is_valid():
+            form.instance.updated_by = self.request.user
+            
+            # Save parent form
+            self.object = form.save()
+            
+            # Save formset
+            formset.instance = self.object
+            formset.save()
+            
+            messages.success(
+                self.request, 
+                f"Voucher {form.instance.voucher_no} updated successfully"
+            )
+            return super().form_valid(form)
+        else:
+            # Formset has errors, re-render with errors
+            return self.form_invalid(form)
 
     def get_success_url(self):
         return reverse("dea_voucher_detail", args=[self.object.pk])
