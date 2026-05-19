@@ -208,6 +208,11 @@ LOAN_URLPATTERNS = [
         views.LoanListReport.as_view(),
         name="girvi_loan_list_report",
     ),
+    path(
+        "girvi/loan/inventory-audit/export/",
+        views.export_active_loans_inventory_audit,
+        name="girvi_inventory_audit_export",
+    ),
     path("girvi/ledger/", views.export_loans_to_excel, name="girvi_ledger"),
     path("girvi/unreleased/", views.generate_unreleased_pdf, name="girvi_unreleased"),
     path("girvi/grid-template/", views.print_grid_template, name="girvi_grid_template"),

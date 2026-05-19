@@ -2,9 +2,13 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import CharField, Count, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from reportlab.lib.pagesizes import A4
+from openpyxl import Workbook
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch, mm
 from reportlab.pdfgen import canvas
@@ -15,6 +19,8 @@ from reportlab.platypus import (
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
+    Table,
+    TableStyle,
 )
 
 from apps.tenant_apps.girvi.documents.loan_ticket import (
@@ -579,9 +585,6 @@ def generate_unreleased_pdf(request):
     doc.build(elements)
     return response
 
-
-from openpyxl import Workbook
-
 from ..models import GivenLoan, Series
 from ..resources import LedgerResource
 
@@ -623,4 +626,374 @@ def export_loans_to_excel(request):
     ] = f'attachment; filename="{request.user.profile.workspace.name}_ledger.xlsx"'
     wb.save(response)
 
+    return response
+
+
+def _inventory_audit_queryset(scope="all", from_date=None, to_date=None):
+    from apps.tenant_apps.contact.models import Address
+
+    default_address_qs = Address.objects.filter(customer_id=OuterRef("borrower_id")).order_by(
+        "-is_default", "-created", "-pk"
+    )
+
+    loans = (
+        GivenLoan.objects.select_related("series", "borrower", "release")
+        .prefetch_related("loanitems")
+        .annotate(
+            borrower_door=Coalesce(
+                Subquery(default_address_qs.values("door_number")[:1]),
+                Value(""),
+                output_field=CharField(),
+            ),
+            borrower_street=Coalesce(
+                Subquery(default_address_qs.values("street")[:1]),
+                Value(""),
+                output_field=CharField(),
+            ),
+            borrower_area=Coalesce(
+                Subquery(default_address_qs.values("area")[:1]),
+                Value(""),
+                output_field=CharField(),
+            ),
+            borrower_city=Coalesce(
+                Subquery(default_address_qs.values("city")[:1]),
+                Value(""),
+                output_field=CharField(),
+            ),
+            borrower_state=Coalesce(
+                Subquery(default_address_qs.values("state")[:1]),
+                Value(""),
+                output_field=CharField(),
+            ),
+            borrower_zip=Coalesce(
+                Subquery(default_address_qs.values("zip_code")[:1]),
+                Value(""),
+                output_field=CharField(),
+            ),
+            item_count=Count("loanitems", distinct=True),
+            principal_amount=Sum("loanitems__loanamount"),
+            total_weight=Sum("loanitems__weight"),
+            in_vault=Count(
+                "loanitems",
+                filter=Q(loanitems__custody_status="in_vault"),
+                distinct=True,
+            ),
+            with_lender=Count(
+                "loanitems",
+                filter=Q(loanitems__custody_status="with_lender"),
+                distinct=True,
+            ),
+            with_customer=Count(
+                "loanitems",
+                filter=Q(loanitems__custody_status="with_customer"),
+                distinct=True,
+            ),
+        )
+        .order_by("series__name", "loan_id")
+    )
+
+    if scope == "unreleased":
+        loans = loans.filter(release__isnull=True)
+    elif scope == "released":
+        loans = loans.filter(release__isnull=False)
+
+    # Apply date range filter if provided
+    if from_date:
+        loans = loans.filter(loan_date__gte=from_date)
+    if to_date:
+        loans = loans.filter(loan_date__lte=to_date)
+
+    return loans
+
+
+def _build_inventory_audit_rows(*, scope="all", from_date=None, to_date=None):
+    loans = _inventory_audit_queryset(scope, from_date=from_date, to_date=to_date)
+
+    rows = []
+    for loan in loans:
+        # Build item details from prefetched items (no additional DB hits)
+        items = list(loan.loanitems.all())
+        item_details = []
+        for item in items:
+            detail = f"{item.itemtype}"
+            if item.itemdesc:
+                detail += f" ({item.itemdesc})"
+            if item.weight:
+                detail += f" {item.weight}g"
+            item_details.append(detail)
+
+        items_description = " | ".join(item_details) if item_details else "N/A"
+
+        borrower_name = str(getattr(loan, "borrower", ""))
+        address_parts = [
+            loan.borrower_door,
+            loan.borrower_street,
+            loan.borrower_area,
+            loan.borrower_city,
+            loan.borrower_state,
+            loan.borrower_zip,
+        ]
+        borrower_address = ", ".join(part for part in address_parts if part)
+
+        item_count = loan.item_count or 0
+        in_vault = loan.in_vault or 0
+        with_lender = loan.with_lender or 0
+        with_customer = loan.with_customer or 0
+        physical_expected = in_vault + with_lender
+
+        is_released = hasattr(loan, "release")
+
+        # For unreleased loans, customer custody is a strong signal to review.
+        if not is_released and with_customer > 0:
+            audit_flag = "REVIEW"
+            audit_note = "Unreleased loan has item(s) with customer"
+        elif physical_expected != item_count:
+            audit_flag = "REVIEW"
+            audit_note = "Custody totals do not match item count"
+        else:
+            audit_flag = "OK"
+            audit_note = "In sync"
+
+        rows.append(
+            {
+                "series": getattr(getattr(loan, "series", None), "name", ""),
+                "loan_id": loan.loan_id,
+                "loan_date": loan.loan_date,
+                "borrower": borrower_name,
+                "borrower_address": borrower_address,
+                "pawner_full": (
+                    f"{borrower_name}, {borrower_address}"
+                    if borrower_address
+                    else borrower_name
+                ),
+                "principal_amount": loan.principal_amount or 0,
+                "total_weight": loan.total_weight or 0,
+                "items_description": items_description,
+                "status": loan.status,
+                "release_id": getattr(getattr(loan, "release", None), "release_id", ""),
+                "release_date": getattr(getattr(loan, "release", None), "release_date", None),
+                "item_count": item_count,
+                "in_vault": in_vault,
+                "with_lender": with_lender,
+                "with_customer": with_customer,
+                "physical_expected": physical_expected,
+                "audit_flag": audit_flag,
+                "audit_note": audit_note,
+            }
+        )
+    return rows
+
+
+@login_required
+def export_active_loans_inventory_audit(request):
+    from datetime import datetime
+    
+    export_format = (request.GET.get("format") or "xlsx").strip().lower()
+    scope = (request.GET.get("scope") or "all").strip().lower()
+    if scope not in {"all", "released", "unreleased"}:
+        scope = "all"
+
+    # Parse date range parameters
+    from_date = None
+    to_date = None
+    try:
+        if request.GET.get("from_date"):
+            from_date = datetime.strptime(request.GET.get("from_date"), "%Y-%m-%d").date()
+        if request.GET.get("to_date"):
+            to_date = datetime.strptime(request.GET.get("to_date"), "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        pass
+
+    rows = _build_inventory_audit_rows(scope=scope, from_date=from_date, to_date=to_date)
+
+    scope_title_map = {
+        "all": "Released + Unreleased Given Loans",
+        "released": "Released Given Loans",
+        "unreleased": "Unreleased Given Loans",
+    }
+    scope_filename_map = {
+        "all": "all_loans_inventory_audit",
+        "released": "released_loans_inventory_audit",
+        "unreleased": "unreleased_loans_inventory_audit",
+    }
+    scope_title = scope_title_map[scope]
+    scope_filename = scope_filename_map[scope]
+
+    headers = [
+        "Series",
+        "Loan ID",
+        "Loan Date",
+        "Borrower",
+        "Status",
+        "Release ID",
+        "Release Date",
+        "Item Count",
+        "In Vault",
+        "With Lender",
+        "With Customer",
+        "Expected Physical Count",
+        "Audit Flag",
+        "Audit Note",
+    ]
+
+    if export_format == "pdf":
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'attachment; filename="{scope_filename}.pdf"'
+        )
+
+        # Pledgebook-style renderer with fixed columns and fast canvas drawing.
+        pdf = canvas.Canvas(response, pagesize=landscape(A4))
+        width, height = landscape(A4)
+        left = 16
+        right = width - 16
+        top = height - 16
+
+        col_widths = [52, 130, 52, 58, 64, 42, 58, 116, 52, 86, 86]
+        x_positions = [left]
+        for w in col_widths:
+            x_positions.append(x_positions[-1] + w)
+
+        def _truncate(value, max_len):
+            text = "" if value is None else str(value)
+            return text if len(text) <= max_len else f"{text[:max_len-1]}…"
+
+        def _draw_title_block():
+            # Title block is 72pt tall to accommodate multi-line notes on the right
+            block_h = 72
+            pdf.setStrokeColor(colors.black)
+            pdf.setLineWidth(0.8)
+            pdf.rect(left, top - block_h, right - left, block_h, stroke=1, fill=0)
+
+            # Centre title
+            mid_x = (left + right) / 2
+            pdf.setFont("Helvetica-Bold", 13)
+            pdf.drawCentredString(mid_x, top - 18, "FORM E  Pledge Book")
+            pdf.setFont("Helvetica", 8)
+            pdf.drawCentredString(mid_x, top - 30, "(Section 10(1) (a) & Rule 7)")
+
+            # Right-side notes column
+            notes_x = right - 220
+            note_lines = [
+                "Rules framed under the Chennai Pawn Brokers Act",
+                "Note: All entries in the pledge book except items 5, 9 and 11",
+                "respecting each pledge shall be made on the day of pawning thereof.",
+                "(4) Rate of interest charged: 16%",
+                "(5) The time agreed upon for the redemption of pawn is 12 months.",
+            ]
+            pdf.setFont("Helvetica", 6.5)
+            for idx, line in enumerate(note_lines):
+                pdf.drawString(notes_x, top - 12 - (idx * 10), line)
+
+            # Scope label bottom-left
+            pdf.setFont("Helvetica", 7.5)
+            pdf.drawString(left + 6, top - block_h + 8, f"Scope: {scope_title}")
+
+
+        def _draw_table_header(y):
+            headers_pledgebook = [
+                "No. of\nPledge",
+                "Name of pawner\nand full address",
+                "Date of\nLoan",
+                "Amount of\nPrincipal\nRs.",
+                "Amount of every\npayment received\nRs.",
+                "Weight\n(g)",
+                "Present\nValue\nRs.",
+                "Full and detailed\ndescription of\narticles",
+                "Date of\nrelease",
+                "Name and address\nof owner if\nnot redeemed",
+                "Name and address\nof person\nredeeming",
+            ]
+            row_h = 32
+            for i, text in enumerate(headers_pledgebook):
+                x0 = x_positions[i]
+                cw = col_widths[i]
+                pdf.rect(x0, y - row_h, cw, row_h, stroke=1, fill=0)
+                pdf.setFont("Helvetica", 6.7)
+                lines = text.split("\n")
+                for li, line in enumerate(lines):
+                    pdf.drawString(x0 + 2, y - 9 - (li * 8), line)
+            return y - row_h
+
+        def _draw_data_row(y, row):
+            row_h = 14
+            values = [
+                _truncate(row["loan_id"], 11),
+                _truncate(row["pawner_full"], 42),
+                row["loan_date"].strftime("%d/%m/%y") if row["loan_date"] else "",
+                str(row["principal_amount"]),
+                "-",
+                _truncate(f"{row['total_weight']}", 8),
+                str(row["principal_amount"]),
+                _truncate(row["items_description"], 38),
+                row["release_date"].strftime("%d/%m/%y") if row["release_date"] else "",
+                _truncate(row["borrower"] if not row["release_date"] else "-", 28),
+                _truncate(row["borrower"] if row["release_date"] else "-", 28),
+            ]
+
+            pdf.setFont("Helvetica", 6.8)
+            for i, value in enumerate(values):
+                x0 = x_positions[i]
+                cw = col_widths[i]
+                pdf.rect(x0, y - row_h, cw, row_h, stroke=1, fill=0)
+                pdf.drawString(x0 + 2, y - 10, _truncate(value, max(5, int(cw / 4))))
+            return y - row_h
+
+        _draw_title_block()
+        y = top - 76
+        y = _draw_table_header(y)
+
+        prev_series = None
+        for row in rows:
+            # Start new page when series changes
+            if prev_series is not None and prev_series != row["series"]:
+                pdf.showPage()
+                _draw_title_block()
+                y = top - 76
+                y = _draw_table_header(y)
+            
+            if y < 24:
+                pdf.showPage()
+                _draw_title_block()
+                y = top - 76
+                y = _draw_table_header(y)
+
+            y = _draw_data_row(y, row)
+            prev_series = row["series"]
+
+        pdf.save()
+        return response
+
+    # Default: xlsx
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet("Loan Inventory")
+    ws.append(headers)
+
+    for row in rows:
+        ws.append(
+            [
+                row["series"],
+                row["loan_id"],
+                row["loan_date"].strftime("%Y-%m-%d") if row["loan_date"] else "",
+                row["borrower"],
+                row["status"],
+                row["release_id"],
+                row["release_date"].strftime("%Y-%m-%d") if row["release_date"] else "",
+                row["item_count"],
+                row["in_vault"],
+                row["with_lender"],
+                row["with_customer"],
+                row["physical_expected"],
+                row["audit_flag"],
+                row["audit_note"],
+            ]
+        )
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="{scope_filename}.xlsx"'
+    )
+    wb.save(response)
     return response
