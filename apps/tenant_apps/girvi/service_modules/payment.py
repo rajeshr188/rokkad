@@ -1,10 +1,13 @@
 """Payment and accounting side-effect services for Girvi loan lifecycle operations."""
 
+from django.contrib.contenttypes.models import ContentType
+
 from apps.tenant_apps.dea.facade import (
     create_and_post_payment,
     has_other_posted_payments,
     reverse_payment_by_marker,
 )
+from apps.tenant_apps.dea.models.payment import PaymentVoucher
 from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, TakenLoan
 
 
@@ -35,7 +38,7 @@ def record_loan_disbursal(loan, user):
     )
     amount = loan.get_loan_amount_with_currency
 
-    return create_and_post_payment(
+    return create_and_post_voucher_for_doc(
         loan,
         direction=direction,
         payment_type="DISBURSAL",
@@ -84,7 +87,7 @@ def record_loan_release(release, created_by):
     total_money = Money(total_val, "INR")
     interest_money = Money(interest_val, "INR")
 
-    return create_and_post_payment(
+    return create_and_post_voucher_for_doc(
         loan,
         direction="RECEIPT",
         payment_type="RECEIPT",
@@ -97,6 +100,7 @@ def record_loan_release(release, created_by):
         reference_number=marker,
         description=f"Loan release receipt for {loan.loan_id} ({release.release_id})",
         is_final_payment=True,
+        create_release=True,
         created_by=created_by,
     )
 
@@ -151,3 +155,6 @@ __all__ = [
     "reverse_loan_disbursal",
     "reverse_loan_release",
 ]
+
+
+create_and_post_voucher_for_doc = create_and_post_payment

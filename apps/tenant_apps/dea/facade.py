@@ -42,6 +42,7 @@ def create_and_post_payment(
     description: str,
     created_by,
     updated_by=None,
+    create_release: bool = False,
     # Optional fields
     principal_amount=None,
     interest_amount=None,
@@ -68,6 +69,7 @@ def create_and_post_payment(
         description:        human-readable label for the voucher
         created_by:         User who triggered the action
         updated_by:         User to record as updater (defaults to created_by)
+        create_release:     True when this receipt represents a GivenLoan release
         principal_amount:   optional principal portion (Money)
         interest_amount:    optional interest portion (Money)
         is_final_payment:   True if this closes the source document
@@ -95,6 +97,7 @@ def create_and_post_payment(
         reference_number=reference_number,
         description=description,
         is_final_payment=is_final_payment,
+        create_release=create_release,
         created_by=created_by,
         updated_by=updated_by,
     )

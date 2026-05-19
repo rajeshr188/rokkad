@@ -17,7 +17,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from djmoney.models.fields import MoneyField
-from moneyed import Money, get_currency
+from moneyed import Money
 
 from .doc import BusinessDoc
 
@@ -197,7 +197,7 @@ class PaymentVoucher(BusinessDoc):
 
     create_release = models.BooleanField(
         default=False,
-        help_text="If True and GivenLoan, creates Release record after posting",
+        help_text="If True and GivenLoan, this receipt is classified as a release receipt",
     )
 
     # === Accounting Status ===
@@ -295,6 +295,12 @@ class PaymentVoucher(BusinessDoc):
             )
 
         source_type = self.source_content_type.model.upper()
+        if (
+            source_type == "GIVENLOAN"
+            and self.direction == CashFlowDirection.RECEIPT
+            and self.create_release
+        ):
+            return "GIVENLOAN_RELEASE"
         return f"{source_type}_{self.direction}"
 
     def get_economic_payload(self) -> dict:
