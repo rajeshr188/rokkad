@@ -2,6 +2,7 @@ from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseRedirect
 from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase
@@ -52,6 +53,21 @@ class PR1FormAndModelGuardTests(SimpleTestCase):
 
         voucher.clean()
 
+    def test_paymentvoucher_classifies_givenloan_release_when_flagged(self):
+        voucher = PaymentVoucher(
+            direction="RECEIPT",
+            create_release=True,
+            source_object_id=1,
+            total_amount=Money(100, "INR"),
+            amount_in_base_currency=Money(100, "INR"),
+        )
+        voucher.source_content_type_id = 1
+        voucher._state.fields_cache["source_content_type"] = ContentType(
+            app_label="girvi", model="givenloan"
+        )
+
+        self.assertEqual(voucher.get_voucher_type(), "GIVENLOAN_RELEASE")
+
 
 class PR1RepaymentViewTests(SimpleTestCase):
     def setUp(self):
@@ -59,24 +75,75 @@ class PR1RepaymentViewTests(SimpleTestCase):
         self.user = SimpleNamespace(id=1, is_authenticated=True)
 
     @patch("apps.tenant_apps.girvi.views.loanpayment.reverse", return_value="/girvi/loan/1/")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.messages.warning")
     @patch("apps.tenant_apps.girvi.views.loanpayment.messages.success")
-    @patch("apps.tenant_apps.girvi.views.loanpayment.create_and_post_voucher_for_doc")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.post_payment_voucher")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.CompanyPreferences")
     @patch("apps.tenant_apps.girvi.views.loanpayment.get_object_or_404")
     def test_repayment_create_posts_and_redirects(
         self,
         mock_get_object_or_404,
-        mock_create_and_post,
+        mock_company_preferences,
+        mock_post_payment,
         mock_success,
+        mock_warning,
         _mock_reverse,
     ):
         payment = MagicMock()
         payment.payment_id = "RCP-123"
-        payment.get_voucher_type.return_value = "GIVENLOAN_RECEIPT"
 
         loan = MagicMock()
         loan.pk = 1
         loan.create_payment.return_value = payment
         mock_get_object_or_404.return_value = loan
+        mock_company_preferences.return_value = SimpleNamespace(loan_catchup_on_receipt=False)
+
+        request = self.factory.post(
+            "/girvi/loanpayment/1/create/",
+            data={
+                "total_amount": "1000.00",
+                "payment_date": "2026-03-23T10:30",
+                "payment_method": "CASH",
+                "reference_number": "REF-1",
+                "interest_amount": "100.00",
+                "description": "test",
+                "is_final_payment": "on",
+            },
+        )
+        request.user = self.user
+        request.htmx = False
+
+        response = loan_payment_create_view.__wrapped__(request, pk=1)
+
+        self.assertIsInstance(response, HttpResponseRedirect)
+        self.assertEqual(response.url, "/girvi/loan/1/")
+        mock_post_payment.assert_called_once_with(payment, self.user)
+        mock_success.assert_called_once()
+        mock_warning.assert_not_called()
+
+    @patch("apps.tenant_apps.girvi.views.loanpayment.reverse", return_value="/girvi/loan/1/")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.messages.warning")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.messages.success")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.post_payment_voucher")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.CompanyPreferences")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.get_object_or_404")
+    def test_repayment_ignores_create_release_payload_key(
+        self,
+        mock_get_object_or_404,
+        mock_company_preferences,
+        mock_post_payment,
+        mock_success,
+        mock_warning,
+        _mock_reverse,
+    ):
+        payment = MagicMock()
+        payment.payment_id = "RCP-124"
+
+        loan = MagicMock()
+        loan.pk = 1
+        loan.create_payment.return_value = payment
+        mock_get_object_or_404.return_value = loan
+        mock_company_preferences.return_value = SimpleNamespace(loan_catchup_on_receipt=False)
 
         request = self.factory.post(
             "/girvi/loanpayment/1/create/",
@@ -97,10 +164,9 @@ class PR1RepaymentViewTests(SimpleTestCase):
         response = loan_payment_create_view.__wrapped__(request, pk=1)
 
         self.assertIsInstance(response, HttpResponseRedirect)
-        self.assertEqual(response.url, "/girvi/loan/1/")
-        mock_create_and_post.assert_called_once()
-        payment.save.assert_called_once_with(update_fields=["posted"])
+        mock_post_payment.assert_called_once_with(payment, self.user)
         mock_success.assert_called_once()
+        mock_warning.assert_not_called()
 
 
 class PR3TakenLoanRepaymentViewTests(SimpleTestCase):
@@ -109,12 +175,12 @@ class PR3TakenLoanRepaymentViewTests(SimpleTestCase):
         self.user = SimpleNamespace(id=1, is_authenticated=True)
 
     @patch("apps.tenant_apps.girvi.views.loanpayment.messages.success")
-    @patch("apps.tenant_apps.girvi.views.loanpayment.create_and_post_voucher_for_doc")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.post_payment_voucher")
     @patch("apps.tenant_apps.girvi.views.loanpayment.get_object_or_404")
     def test_takenloan_repayment_create_posts_and_redirects(
         self,
         mock_get_object_or_404,
-        mock_create_and_post,
+        mock_post_payment,
         mock_success,
     ):
         payment = MagicMock()
@@ -147,8 +213,7 @@ class PR3TakenLoanRepaymentViewTests(SimpleTestCase):
 
         self.assertIsInstance(response, HttpResponseRedirect)
         self.assertEqual(response.url, "/girvi/custody/taken-loans/2/collateral/")
-        mock_create_and_post.assert_called_once()
-        payment.save.assert_called_once_with(update_fields=["posted"])
+        mock_post_payment.assert_called_once_with(payment, self.user)
         mock_success.assert_called_once()
 
 
@@ -171,6 +236,10 @@ class PR2DisbursalServiceTests(SimpleTestCase):
             FakeTakenLoan = type("FakeTakenLoan", (), {})
             loan = FakeGivenLoan()
             loan.pk = 10
+            loan.loan_id = "GL-10"
+            loan.loan_date = "2026-03-23"
+            loan.get_loan_amount_with_currency = "1000 INR"
+            mock_post.return_value = (existing, False)
             with patch(
                 "apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan
             ), patch(
@@ -180,7 +249,7 @@ class PR2DisbursalServiceTests(SimpleTestCase):
 
         self.assertEqual(result, existing)
         self.assertFalse(created)
-        mock_post.assert_not_called()
+        mock_post.assert_called_once()
 
     @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
     @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
@@ -204,6 +273,7 @@ class PR2DisbursalServiceTests(SimpleTestCase):
         mock_content_type.objects.get_for_model.return_value = object()
         mock_payment_voucher.objects.filter.return_value.first.return_value = None
         mock_payment_voucher.objects.create.return_value = created_payment
+        mock_post.return_value = (created_payment, True)
 
         with patch(
             "apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan
@@ -214,9 +284,10 @@ class PR2DisbursalServiceTests(SimpleTestCase):
 
         self.assertEqual(result, created_payment)
         self.assertTrue(created)
-        mock_payment_voucher.objects.create.assert_called_once()
         mock_post.assert_called_once()
-        created_payment.save.assert_called_once_with(update_fields=["posted"])
+        call_kwargs = mock_post.call_args.kwargs
+        self.assertEqual(call_kwargs["direction"], "PAYMENT")
+        self.assertEqual(call_kwargs["payment_type"], "DISBURSAL")
 
     @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
     @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
@@ -240,6 +311,7 @@ class PR2DisbursalServiceTests(SimpleTestCase):
         mock_content_type.objects.get_for_model.return_value = object()
         mock_payment_voucher.objects.filter.return_value.first.return_value = None
         mock_payment_voucher.objects.create.return_value = created_payment
+        mock_post.return_value = (created_payment, True)
 
         with patch(
             "apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan
@@ -250,10 +322,10 @@ class PR2DisbursalServiceTests(SimpleTestCase):
 
         self.assertEqual(result, created_payment)
         self.assertTrue(created)
-        create_kwargs = mock_payment_voucher.objects.create.call_args.kwargs
-        self.assertEqual(create_kwargs["direction"], "RECEIPT")
-        self.assertEqual(create_kwargs["payment_type"], "DISBURSAL")
         mock_post.assert_called_once()
+        call_kwargs = mock_post.call_args.kwargs
+        self.assertEqual(call_kwargs["direction"], "RECEIPT")
+        self.assertEqual(call_kwargs["payment_type"], "DISBURSAL")
 
 
 class PR2TransitionHookTests(SimpleTestCase):
@@ -454,8 +526,10 @@ class PR4ReleaseServiceTests(SimpleTestCase):
             FakeGivenLoan = type("FakeGivenLoan", (), {})
             loan = FakeGivenLoan()
             loan.pk = 20
+            loan.loan_id = "GL-20"
             loan.outstanding_principal = Money(250, "INR")
             loan.interest_due = lambda: 0
+            mock_post.return_value = (existing, False)
 
             release = SimpleNamespace(
                 pk=31,
@@ -472,7 +546,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
 
         self.assertEqual(result, existing)
         self.assertFalse(created)
-        mock_post.assert_not_called()
+        mock_post.assert_called_once()
 
     @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
     @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
@@ -494,6 +568,7 @@ class PR4ReleaseServiceTests(SimpleTestCase):
         mock_content_type.objects.get_for_model.return_value = object()
         mock_payment_voucher.objects.filter.return_value.first.return_value = None
         mock_payment_voucher.objects.create.return_value = created_payment
+        mock_post.return_value = (created_payment, True)
 
         release = SimpleNamespace(
             pk=32,
@@ -510,13 +585,11 @@ class PR4ReleaseServiceTests(SimpleTestCase):
 
         self.assertEqual(result, created_payment)
         self.assertTrue(created)
-        mock_payment_voucher.objects.create.assert_called_once()
-        create_kwargs = mock_payment_voucher.objects.create.call_args.kwargs
-        self.assertEqual(create_kwargs["direction"], "RECEIPT")
-        self.assertEqual(create_kwargs["payment_type"], "RECEIPT")
-        self.assertEqual(create_kwargs["reference_number"], "RELEASE-32")
         mock_post.assert_called_once()
-        created_payment.save.assert_called_once_with(update_fields=["posted"])
+        call_kwargs = mock_post.call_args.kwargs
+        self.assertEqual(call_kwargs["direction"], "RECEIPT")
+        self.assertEqual(call_kwargs["payment_type"], "RECEIPT")
+        self.assertTrue(call_kwargs["create_release"])
 
     @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
     @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
@@ -549,6 +622,4 @@ class PR4ReleaseServiceTests(SimpleTestCase):
 
         self.assertIsNone(result)
         self.assertFalse(created)
-        mock_payment_voucher.objects.create.assert_not_called()
-        mock_content_type.objects.get_for_model.assert_not_called()
         mock_post.assert_not_called()
