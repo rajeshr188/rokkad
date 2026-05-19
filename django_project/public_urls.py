@@ -8,9 +8,11 @@ from django.urls import include, path
 env = environ.Env()
 environ.Env.read_env()
 
+secret_admin_url = env("SECRET_ADMIN_URL", default="admin")
+
 urlpatterns = [
     path("i18n/", include(i18n)),
-    path(env("SECRET_ADMIN_URL") + "/", admin.site.urls),
+    path(secret_admin_url + "/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("accounts/", include("allauth.socialaccount.urls")),
     path("select2/", include("django_select2.urls")),

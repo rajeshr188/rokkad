@@ -9,7 +9,9 @@ from django_project.shared_urlpatterns import shared_urlpatterns
 env = environ.Env()
 environ.Env.read_env()
 
-urlpatterns = [path(env("SECRET_ADMIN_URL") + "/", admin.site.urls)] + shared_urlpatterns
+secret_admin_url = env("SECRET_ADMIN_URL", default="admin")
+
+urlpatterns = [path(secret_admin_url + "/", admin.site.urls)] + shared_urlpatterns
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
