@@ -1565,11 +1565,6 @@ class GivenLoanRepaymentForm(forms.Form):
         required=False,
         initial=False,
     )
-    create_release = forms.BooleanField(
-        label="Also create Release record",
-        required=False,
-        initial=False,
-    )
 
     def clean(self):
         cleaned_data = super().clean()

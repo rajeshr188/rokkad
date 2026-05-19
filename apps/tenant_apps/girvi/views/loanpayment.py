@@ -2,6 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 
 from apps.orgs.preferences import CompanyPreferences
@@ -54,7 +55,6 @@ def loan_payment_create_view(request, pk=None):
                         messages.warning(
                             request,
                             f"Interest accrual catch-up could not be completed before posting the receipt: {accrual_result.message}",
-                            fail_silently=True,
                         )
                 except Exception as exc:
                     logger.exception(
@@ -64,7 +64,6 @@ def loan_payment_create_view(request, pk=None):
                     messages.warning(
                         request,
                         f"Interest accrual catch-up failed before posting the receipt: {exc}",
-                        fail_silently=True,
                     )
 
             payment = loan.create_payment(
@@ -76,7 +75,6 @@ def loan_payment_create_view(request, pk=None):
                 principal=principal,
                 description=cd.get("description", ""),
                 is_final=cd.get("is_final_payment", False),
-                create_release=cd.get("create_release", False),
                 created_by=request.user,
             )
             try:
