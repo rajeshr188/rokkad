@@ -27,6 +27,8 @@ from .models import Company, CompanyInvitation, Membership, Role
 from .permissions import get_effective_permissions, is_platform_admin
 from .registries import company_preference_registry
 from .services import control_plane
+from .services import role_policy
+from .services.dashboard_selectors import get_workspace_dashboard_context
 from .tenant_context import resolve_request_workspace
 
 # Create your views here.
@@ -35,29 +37,17 @@ User = get_user_model()
 
 
 def has_permission(user, tenant, permission_codename):
-    try:
-        # Get the user's role in the tenant
-        membership = Membership.objects.get(user=user, tenant=tenant)
-        role = membership.role
-    except Membership.DoesNotExist:
-        # The user does not have a role in the tenant
-        return False
-
-    # Check if the role has the permission
-    return role.permissions.filter(codename=permission_codename).exists()
+    return permission_codename in get_effective_permissions(user, tenant)
 
 
 def has_role(user, tenant, role_name):
-    try:
-        # Get the user's role in the tenant
-        membership = Membership.objects.get(user=user, tenant=tenant)
-        role = membership.role
-    except Membership.DoesNotExist:
-        # The user does not have a role in the tenant
-        return False
-
-    # Check if the role has the permission
-    return role.name == role_name
+    if is_platform_admin(user) and role_name == "Superuser":
+        return True
+    return Membership.objects.filter(
+        user=user,
+        company=tenant,
+        role__name__iexact=role_name,
+    ).exists()
 
 
 def _assert_workspace_access(
@@ -101,15 +91,11 @@ def _assert_workspace_access(
 
 
 def _is_owner_membership(membership):
-    return bool(
-        membership
-        and getattr(membership, "role", None)
-        and getattr(membership.role, "name", "").lower() == "owner"
-    )
+    return role_policy.is_owner_membership(membership)
 
 
 def _owner_membership_count(workspace):
-    return Membership.objects.filter(company=workspace, role__name__iexact="owner").count()
+    return role_policy.owner_membership_count(workspace)
 
 
 def _assert_owner_access(request, workspace, allow_platform_admin=True):
@@ -135,11 +121,15 @@ def workspace_create(request):
     if request.method == "POST":
         form = CompanyForm(request.POST, request.FILES)
         if form.is_valid():
-            company = control_plane.create_workspace_from_form(
-                form=form,
-                user=request.user,
-                request=request,
-            )
+            try:
+                company = control_plane.create_workspace_from_form(
+                    form=form,
+                    user=request.user,
+                    request=request,
+                )
+            except ValidationError as exc:
+                form.add_error(None, exc)
+                return render(request, "company/company_form.html", {"form": form})
             request.user.profile.set_workspace(company)
             return redirect("workspace_list")
         else:
@@ -398,8 +388,6 @@ class CompanyPreferenceBuilder(PreferenceFormView):
             required_permissions={"workspace_settings"},
             allow_platform_admin=True,
         )
-        _assert_owner_access(request, workspace, allow_platform_admin=True)
-
         return super().dispatch(request, *args, **kwargs)
 
     def get_section(self):
@@ -482,27 +470,15 @@ def team_remove_member(request, workspace_id=None, membership_id=None, company_i
     membership = get_object_or_404(Membership, id=membership_id, company=company)
 
     is_self_leave = membership.user == request.user
-    if _is_owner_membership(membership):
-        owner_count = _owner_membership_count(company)
-        if owner_count <= 1:
-            messages.error(
-                request,
-                "Cannot remove the last owner. Transfer ownership first.",
-            )
-            return redirect("workspace_detail", workspace_id=workspace_id)
-
-        if is_self_leave:
-            messages.error(
-                request,
-                "Owner must transfer ownership before leaving the workspace.",
-            )
-            return redirect("workspace_detail", workspace_id=workspace_id)
-
-    control_plane.remove_membership(
-        membership=membership,
-        actor=request.user,
-        request=request,
-    )
+    try:
+        control_plane.remove_membership(
+            membership=membership,
+            actor=request.user,
+            request=request,
+        )
+    except PermissionDenied as exc:
+        messages.error(request, str(exc))
+        return redirect("workspace_detail", workspace_id=workspace_id)
 
     # If removed member had this workspace selected, clear stale selection.
     if hasattr(membership.user, "profile") and membership.user.profile.workspace == company:
@@ -536,34 +512,27 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
     )
 
     membership = get_object_or_404(Membership, id=membership_id, company=company)
-    roles = Role.objects.all()
+    roles = role_policy.allowed_invitation_roles(actor=request.user, workspace=company)
 
     if request.method in ["POST", "PATCH"]:
         role_id = request.POST.get("role")
         role = get_object_or_404(Role, id=role_id)
 
-        demoting_owner = (
-            _is_owner_membership(membership)
-            and role.name.lower() != "owner"
-        )
-        if demoting_owner and _owner_membership_count(company) <= 1:
-            messages.error(
-                request,
-                "Cannot demote the last owner. Transfer ownership first.",
+        try:
+            control_plane.change_membership_role(
+                membership=membership,
+                new_role=role,
+                actor=request.user,
+                request=request,
             )
+        except PermissionDenied as exc:
+            messages.error(request, str(exc))
             if request.htmx:
                 return JsonResponse(
-                    {"success": False, "error": "last_owner_cannot_be_demoted"},
+                    {"success": False, "error": str(exc)},
                     status=400,
                 )
             return redirect("workspace_detail", workspace_id=workspace_id)
-
-        control_plane.change_membership_role(
-            membership=membership,
-            new_role=role,
-            actor=request.user,
-            request=request,
-        )
 
         if request.htmx:
             return JsonResponse({"success": True, "role": role.name})
@@ -666,11 +635,15 @@ def workspace_leave(request, workspace_id):
             )
             return redirect("workspace_detail", workspace_id=workspace_id)
 
-        control_plane.remove_membership(
-            membership=membership,
-            actor=request.user,
-            request=request,
-        )
+        try:
+            control_plane.remove_membership(
+                membership=membership,
+                actor=request.user,
+                request=request,
+            )
+        except PermissionDenied as exc:
+            messages.error(request, str(exc))
+            return redirect("workspace_detail", workspace_id=workspace_id)
 
         if request.user.profile.workspace == company:
             request.user.profile.workspace = None
@@ -1057,24 +1030,6 @@ def workspace_dashboard(request, workspace_id):
     Requires: User must be a member of the workspace (Owner/Admin/Member)
 
     """
-    from apps.tenant_apps.contact.models import Customer
-    from apps.tenant_apps.contact.services import (
-        active_customers,
-        get_customers_by_type,
-        get_customers_by_year,
-    )
-    from apps.tenant_apps.girvi.models import License, GivenLoan, LoanItem, Release
-    from apps.tenant_apps.girvi.services import (
-        get_itemtype_averages,
-        get_loans_by_year,
-        get_loanamount_by_itemtype,
-        get_average_loan_instance_per_day,
-        get_loan_cumulative_amount,
-    )
-    from apps.tenant_apps.rates.models import Rate
-    from django.db.models import Sum, Count, Exists, OuterRef
-    from datetime import date
-
     # Get workspace and validate access policy.
     workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
 
@@ -1109,201 +1064,7 @@ def workspace_dashboard(request, workspace_id):
 
     # Check if user can view detailed metrics (Owner/Admin)
     context["can_view"] = role_name in ["Owner", "Admin", "Superuser"]
-
-    # Customer statistics
-    customers = Customer.objects.all()
-    context["total_customers"] = customers.filter(active=True).count()
-    context["item_loanamount_avg"] = get_itemtype_averages()
-    context["new_customers"] = customers.only(
-        "id", "firstname", "customer_type"
-    ).prefetch_related("address")[:5]
-    context["customer_count"] = customers.values("customer_type").annotate(
-        count=Count("id")
-    )
-
-    # Loan statistics
-    loan = GivenLoan.objects.for_table_display()
-    released = loan.released()
-    unreleased = loan.unreleased()
-    sunken = unreleased
-    today = date.today()
-
-    # Today's activity
-    today_loan = LoanItem.objects.filter(loan__loan_date__gte=today).aggregate(
-        amount=Sum("loanamount"), interest=Sum("interest")
-    )
-    today_release_loans = Release.objects.filter(release_date__gte=today).values_list(
-        "loan_id", flat=True
-    )
-    today_release = LoanItem.objects.filter(loan_id__in=today_release_loans).aggregate(
-        amount=Sum("loanamount"), interest=Sum("interest")
-    )
-    context["today_loan"] = today_loan
-    context["loan_count"] = unreleased.count()
-
-    # Unreleased loan amounts
-    due_amount_calc = LoanItem.objects.filter(loan__in=unreleased).aggregate(
-        loan_amount__sum=Sum("loanamount"), total_interest__sum=Sum("interest")
-    )
-    context["due_amount"] = due_amount_calc
-    context["total_loan_amount"] = due_amount_calc.get("loan_amount__sum") or 0
-    context["total_interest"] = due_amount_calc.get("total_interest__sum") or 0
-
-    context["assets"] = unreleased.with_itemwise_amounts().total_itemwise_loanamount()
-    context["loanbyitemtype"] = get_loanamount_by_itemtype()
-
-    # Weight statistics
-    weight_stats = unreleased.with_metal_weights().aggregate(
-        gold=Sum("gold_weight"),
-        silver=Sum("silver_weight"),
-        bronze=Sum("bronze_weight"),
-        pure_gold=Sum("pure_gold_weight"),
-        pure_silver=Sum("pure_silver_weight"),
-        pure_bronze=Sum("pure_bronze_weight"),
-    )
-    context["weight"] = (
-        (weight_stats.get("gold") or 0)
-        + (weight_stats.get("silver") or 0)
-        + (weight_stats.get("bronze") or 0)
-    )
-    context["pure_weight"] = (
-        (weight_stats.get("pure_gold") or 0)
-        + (weight_stats.get("pure_silver") or 0)
-        + (weight_stats.get("pure_bronze") or 0)
-    )
-
-    # Current value statistics
-    value_stats = (
-        unreleased.with_metal_weights()
-        .with_current_value()
-        .aggregate(total_current=Sum("total_current_value"))
-    )
-    context["current_value"] = value_stats.get("total_current") or 0
-
-    # Itemwise value statistics
-    itemwise_stats = (
-        unreleased.with_itemwise_amounts()
-        .with_current_value()
-        .aggregate(
-            gold=Sum("gold_value"),
-            silver=Sum("silver_value"),
-            bronze=Sum("bronze_value"),
-        )
-    )
-    context["itemwise_value"] = itemwise_stats
-    context["total_current_value"] = value_stats.get("total_current") or 0
-
-    # Sunken loan statistics
-    context["sunken"] = {}
-    context["sunken"]["loan_count"] = sunken.count()
-    context["sunken"]["total_loan_amount"] = sunken.total_loanamount()
-    context["sunken"][
-        "assets"
-    ] = sunken.with_itemwise_amounts().total_itemwise_loanamount()
-
-    # Sunken weight statistics
-    sunken_weight_stats = sunken.with_metal_weights().aggregate(
-        gold=Sum("gold_weight"),
-        silver=Sum("silver_weight"),
-        bronze=Sum("bronze_weight"),
-        pure_gold=Sum("pure_gold_weight"),
-        pure_silver=Sum("pure_silver_weight"),
-        pure_bronze=Sum("pure_bronze_weight"),
-    )
-    context["sunken"]["weight"] = (
-        (sunken_weight_stats.get("gold") or 0)
-        + (sunken_weight_stats.get("silver") or 0)
-        + (sunken_weight_stats.get("bronze") or 0)
-    )
-
-    # Sunken loan amounts
-    sunken_amount_calc = LoanItem.objects.filter(loan__in=sunken).aggregate(
-        loan_amount__sum=Sum("loanamount"), total_interest__sum=Sum("interest")
-    )
-    context["sunken"]["due_amount"] = sunken_amount_calc
-
-    # Sunken value statistics
-    sunken_value_stats = (
-        sunken.with_metal_weights()
-        .with_current_value()
-        .aggregate(total_current=Sum("total_current_value"))
-    )
-    context["sunken"]["current_value"] = sunken_value_stats.get("total_current") or 0
-
-    # Sunken itemwise values
-    sunken_itemwise_stats = (
-        sunken.with_itemwise_amounts()
-        .with_current_value()
-        .aggregate(
-            gold=Sum("gold_value"),
-            silver=Sum("silver_value"),
-            bronze=Sum("bronze_value"),
-        )
-    )
-    context["sunken"]["itemwise_value"] = sunken_itemwise_stats
-    context["sunken"]["total_current_value"] = (
-        sunken_value_stats.get("total_current") or 0
-    )
-    context["sunken"]["total_interest"] = (
-        sunken_amount_calc.get("total_interest__sum") or 0
-    )
-    context["sunken"]["pure_weight"] = (
-        (sunken_weight_stats.get("pure_gold") or 0)
-        + (sunken_weight_stats.get("pure_silver") or 0)
-        + (sunken_weight_stats.get("pure_bronze") or 0)
-    )
-
-    # Loan progress
-    try:
-        context["loan_progress"] = round(released.count() / loan.count() * 100, 2)
-    except ZeroDivisionError:
-        context["loan_progress"] = 0.0
-
-    # Additional analytics
-    context["loan_data_by_year"] = get_loans_by_year()
-    context["customer_data_by_year"] = get_customers_by_year()
-    context["customer_data_by_type"] = get_customers_by_type()
-    context["active_customers"] = active_customers()
-    context["avg_loan_per_day"] = get_average_loan_instance_per_day()
-
-    # Max loans by customer
-    context["maxloans"] = (
-        Customer.objects.filter(
-            ~Exists(Release.objects.filter(loan__borrower=OuterRef("pk")))
-        )
-        .annotate(
-            num_loans=Count("loans_received", distinct=True),
-            sum_loans=Sum("loans_received__loanitems__loanamount"),
-            tint=Sum("loans_received__loanitems__interest"),
-        )
-        .values("firstname", "num_loans", "sum_loans", "tint")
-        .order_by("-num_loans", "sum_loans", "tint")
-    )
-    context["loan_cumsum"] = list(get_loan_cumulative_amount())
-
-    # License data
-    licenses = License.objects.all()
-    license_data = [license.get_unreleased_loan_data() for license in licenses]
-    context["license_data"] = license_data
-
-    # Team information
-    context["team_count"] = workspace.memberships.count()
-    context["pending_invitations"] = workspace.invitations.filter(
-        status=CompanyInvitation.Status.PENDING,
-        accepted=False,
-    ).count()
-
-    # Current metal rates
-    context["gold_rate"] = (
-        Rate.objects.filter(metal=Rate.Metal.GOLD, purity=Rate.Purity.K24)
-        .order_by("-timestamp")
-        .first()
-    )
-    context["silver_rate"] = (
-        Rate.objects.filter(metal=Rate.Metal.SILVER)
-        .order_by("-timestamp")
-        .first()
-    )
+    context.update(get_workspace_dashboard_context(workspace=workspace))
 
     # Breadcrumb context
     context["breadcrumb_items"] = [

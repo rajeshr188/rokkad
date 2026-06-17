@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django_select2.forms import Select2Widget
 from dynamic_preferences.forms import (
@@ -13,6 +14,7 @@ from invitations.utils import get_invitation_model
 
 from .models import Company, CompanyPreferenceModel, Membership, Role
 from .registries import company_preference_registry
+from .services.role_policy import allowed_invitation_roles
 
 Invitation = get_invitation_model()
 
@@ -95,6 +97,11 @@ class CompanyInvitationForm(forms.ModelForm):
         self.request = kwargs.pop("request", None)
         self.company = kwargs.pop("company", None)
         super(CompanyInvitationForm, self).__init__(*args, **kwargs)
+        if self.inviter and self.company:
+            self.fields["role"].queryset = allowed_invitation_roles(
+                actor=self.inviter,
+                workspace=self.company,
+            )
         if self.inviter:
             # self.fields["company"].queryset = Company.objects.filter(owner=self.inviter)
             self.fields["inviter"].widget = forms.HiddenInput()
@@ -131,6 +138,8 @@ class CompanyInvitationForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         email = cleaned_data.get("email")
+        if not email:
+            return cleaned_data
         company = self.company
         errors = {
             "already_invited": _(
@@ -231,7 +240,6 @@ class CompanyForm(forms.ModelForm):
             # Check if the form is updating an existing instance
             if self.instance.pk:
                 # Allow the current instance's name
-                print("form is updating an existing instance")
                 if (
                     Company.objects.all_with_deleted()
                     .filter(name=name)
@@ -244,12 +252,19 @@ class CompanyForm(forms.ModelForm):
             else:
                 # Check for new instances
                 if Company.objects.all_with_deleted().filter(name=name).exists():
-                    print("Company with this name already exists.")
                     raise forms.ValidationError(
                         "Company with this name already exists."
                     )
-                print("Company with this name does not exist.")
         return name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        name = cleaned_data.get("name")
+        if name and not slugify(name).replace("-", "_"):
+            raise forms.ValidationError(
+                "Business name must contain letters or numbers for workspace setup."
+            )
+        return cleaned_data
 
 
 class CompanySinglePreferenceForm(SinglePerInstancePreferenceForm):

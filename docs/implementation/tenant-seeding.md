@@ -19,6 +19,12 @@ Tenant setup should make required system data available before business workflow
 - Commodity/rates prerequisites, including rate sources.
 - Subscription/access defaults.
 
+## Workspace Provisioning Checks
+
+Workspace creation should build a safe tenant schema name from the workspace name, reject reserved names such as `public`, and check schema/domain collisions before saving. Owner membership creation and audit logging belong in orgs control-plane services.
+
+The first dashboard should surface setup/readiness state through selectors and facades rather than letting orgs query tenant business models directly.
+
 ## Principle
 
 Missing setup should produce a visible setup action or self-healing seed path. It should not silently produce zero values or confusing business validation errors.

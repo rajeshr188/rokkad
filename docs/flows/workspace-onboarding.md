@@ -19,4 +19,12 @@ Workspace onboarding covers company creation, invitation acceptance, team setup,
 5. Subscription/access state is checked.
 6. User lands on a dashboard with setup actions surfaced.
 
+## Team And Invitation Flow
+
+Owners manage elevated roles. Admins can help with ordinary team setup only within the permissions granted to them; they cannot grant Owner/Admin roles or bypass last-owner protections. Invitation acceptance creates membership through orgs control-plane services and should write audit events using the normalized `TEAM_*` action vocabulary.
+
+## Workspace Creation Guardrails
+
+Workspace creation must validate the derived schema/domain name before tenant provisioning. Unsafe, empty, reserved, or colliding schema/domain values should fail early with a clear form error.
+
 Archived sources are in [archive/django-project](../archive/django-project/), [archive/orgs](../archive/orgs/), and [archive/onboarding](../archive/onboarding/).

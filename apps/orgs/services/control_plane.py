@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError
+from django.utils.text import slugify
 from django_tenants.utils import get_public_schema_name, remove_www, schema_context
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import Company, CompanyInvitation, Domain, Membership, Role
+from apps.orgs.services import role_policy
 
 
 def _public_schema_context():
@@ -14,13 +17,17 @@ def create_workspace_from_form(*, form, user, request):
     """Create workspace and owner membership in public schema."""
     with _public_schema_context():
         company = form.save(commit=False)
-        company.schema_name = company.name.lower().replace(" ", "_")
+        company.schema_name = build_schema_name(company.name)
         company.creator = user
         company.owner = user
+        if Company.all_objects.filter(schema_name=company.schema_name).exists():
+            raise ValidationError("Workspace schema name already exists.")
         company.save()
 
         domain = remove_www(request.get_host().split(":")[0]).lower()
         company_domain = f"{company.schema_name}.{domain}"
+        if Domain.objects.filter(domain=company_domain).exists():
+            raise ValidationError("Workspace domain already exists.")
         Domain.objects.create(tenant=company, domain=company_domain, is_primary=True)
 
         owner_role = Role.objects.get(name="Owner")
@@ -35,6 +42,17 @@ def create_workspace_from_form(*, form, user, request):
         success=True,
     )
     return company
+
+
+def build_schema_name(name):
+    schema_name = slugify(name).replace("-", "_")
+    if not schema_name:
+        raise ValidationError("Workspace name must contain letters or numbers.")
+    if schema_name[0].isdigit():
+        schema_name = f"ws_{schema_name}"
+    if schema_name == get_public_schema_name():
+        raise ValidationError("Workspace schema name cannot be public.")
+    return schema_name[:63]
 
 
 def save_workspace_update_form(*, form, actor, request):
@@ -93,6 +111,11 @@ def create_membership(*, user, company, role, request, actor=None, invite_reason
 
 def remove_membership(*, membership, actor, request):
     """Remove membership in public schema."""
+    role_policy.assert_can_remove_membership(
+        actor=actor,
+        workspace=membership.company,
+        membership=membership,
+    )
     company = membership.company
     removed_user = membership.user
 
@@ -112,6 +135,12 @@ def remove_membership(*, membership, actor, request):
 
 def change_membership_role(*, membership, new_role, actor, request):
     """Change membership role in public schema."""
+    role_policy.assert_can_change_role(
+        actor=actor,
+        workspace=membership.company,
+        membership=membership,
+        new_role=new_role,
+    )
     old_role = membership.role.name
     company = membership.company
     target_user = membership.user
@@ -134,6 +163,11 @@ def change_membership_role(*, membership, new_role, actor, request):
 
 def send_team_invitation(*, form, actor, company, request):
     """Create and send invitation in public schema."""
+    role_policy.assert_can_invite_role(
+        actor=actor,
+        workspace=company,
+        role=form.cleaned_data["role"],
+    )
     with _public_schema_context():
         invitation = form.save()
 

@@ -28,6 +28,7 @@ Rokkad is moving toward a layered architecture:
 - Girvi disbursal can self-heal missing voucher types and ensure customer accounts before posting.
 - Dashboard numeric values such as pure weight and current value are formatted to two decimal places.
 - Agent-facing documentation was split by purpose: root `AGENTS.md` now contains operating rules, `docs/AGENT_MEMORY.md` contains durable project context, and `docs/constitution.md` contains non-negotiable accounting principles.
+- Orgs now has a centralized role policy for membership and invitation changes, named integrity constraints for workspace membership/invitations, corrected sidebar permission codenames, and dashboard reads routed through app facades/selectors.
 
 ## Known Pressure Points
 
@@ -36,5 +37,6 @@ Rokkad is moving toward a layered architecture:
 - Some archived docs contain older naming, model shapes, and implementation assumptions.
 - More cross-app reads should be audited and moved behind facades/selectors.
 - Period-lock validation should remain inside the posting engine for all accounting paths.
+- Orgs service extraction is started but not complete; workspace/team mutation views should continue moving toward thin request/response coordinators.
 
 Historical assessments are preserved in [archive/root](archive/root/).

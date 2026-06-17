@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.sites.shortcuts import get_current_site
 from django.db import IntegrityError, models, transaction
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -61,7 +62,6 @@ class Company(TenantMixin):
     all_objects = models.Manager()  # Include soft-deleted instances
 
     class Meta:
-        unique_together = ("name", "owner")
         verbose_name = _("Company")
         verbose_name_plural = _("Companies")
         # permissions = [
@@ -131,7 +131,12 @@ class CompanyOwnership(models.Model):
     end_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("user", "company")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "company"],
+                name="orgs_companyownership_unique_user_company",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.user} owns {self.company} since {self.start_date}"
@@ -178,7 +183,12 @@ class Membership(models.Model):
     )
 
     class Meta:
-        unique_together = ("user", "company")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "company"],
+                name="orgs_membership_unique_user_company",
+            ),
+        ]
         # permissions = [
         #     ("invite_to_company", "Can invite to company"),
         #     ("remove_from_company", "Can remove from company"),
@@ -238,7 +248,12 @@ class CompanyInvitation(AbstractBaseInvitation):
     responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("email", "company")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["email", "company"],
+                name="orgs_companyinvitation_unique_email_company",
+            ),
+        ]
 
     @classmethod
     def pending_queryset(cls):
@@ -279,7 +294,7 @@ class CompanyInvitation(AbstractBaseInvitation):
                     **kwargs,
                 )
         except IntegrityError:
-            return ValueError("This email address is already invited for this company.")
+            raise ValidationError("This email address is already invited for this company.")
         return instance
 
     def key_expired(self):
@@ -346,7 +361,12 @@ class PendingInvitation(models.Model):
     created = models.DateTimeField(auto_now_add=True, verbose_name=_("created"))
 
     class Meta:
-        unique_together = ("email", "company")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["email", "company"],
+                name="orgs_pendinginvitation_unique_email_company",
+            ),
+        ]
 
     def __str__(self):
         return f"Pending invitation for {self.email} to {self.company}"

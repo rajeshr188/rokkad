@@ -70,10 +70,13 @@ class AuditLog(models.Model):
         ("COMPANY_RESTORE", "Company Restored"),
         ("WORKSPACE_ACCESS", "Workspace Accessed"),
         # Team Management
-        ("MEMBER_INVITE", "Member Invited"),
-        ("MEMBER_JOIN", "Member Joined"),
-        ("MEMBER_REMOVE", "Member Removed"),
-        ("MEMBER_ROLE_CHANGE", "Member Role Changed"),
+        ("TEAM_INVITE", "Member Invited"),
+        ("TEAM_MEMBER_ADD", "Member Added"),
+        ("TEAM_MEMBER_REMOVE", "Member Removed"),
+        ("TEAM_ROLE_CHANGE", "Member Role Changed"),
+        ("TEAM_INVITE_ACCEPT", "Invitation Accepted"),
+        ("TEAM_INVITE_DECLINE", "Invitation Declined"),
+        ("TEAM_INVITE_REVOKE", "Invitation Revoked"),
         # Permissions & Security
         ("PERMISSION_GRANT", "Permission Granted"),
         ("PERMISSION_REVOKE", "Permission Revoked"),

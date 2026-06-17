@@ -103,7 +103,7 @@
                 {% endif %}
                 
                 <!-- Purchase -->
-                {% if 'purchase_invoice_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
+                {% if 'purchase_order_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link {% if request.resolver_match.namespace == 'purchase' %}active{% endif %}" 
                    href="{% url 'purchase:purchase_invoice_list' %}">
                     <i class="bi bi-bag"></i> Purchase
@@ -111,7 +111,7 @@
                 {% endif %}
                 
                 <!-- Accounting/DEA -->
-                {% if 'dea_journal_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
+                {% if 'dea_entry_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link" 
                    href="{% url 'dea_journal_entries_list' %}">
                     <i class="bi bi-graph-up"></i> Accounting

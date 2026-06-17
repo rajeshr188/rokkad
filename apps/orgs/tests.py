@@ -1,8 +1,10 @@
 import contextlib
+import re
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import IntegrityError
 from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
@@ -11,12 +13,14 @@ from django_tenants.utils import get_public_schema_name
 from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
 from apps.orgs.models import CompanyInvitation, Membership
 from apps.orgs.permissions import (
+	ALL_PERMISSIONS,
 	get_all_permission_codenames,
 	get_effective_permissions,
 	is_platform_admin,
 	get_workspace_role_name,
 )
 from apps.orgs.services import control_plane
+from apps.orgs.services import role_policy
 from apps.orgs.views import CompanyPreferenceBuilder, _assert_workspace_access
 from apps.orgs import signals as org_signals
 from apps.orgs.tenant_context import resolve_request_workspace
@@ -351,6 +355,91 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		mock_redirect.assert_called_once_with("workspace_dashboard", workspace_id=12)
 
 
+class RolePolicyTests(SimpleTestCase):
+	def test_non_owner_cannot_grant_admin_role(self):
+		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
+		workspace = SimpleNamespace(id=1)
+		role = SimpleNamespace(name="Admin")
+
+		with patch("apps.orgs.services.role_policy.get_effective_permissions", return_value={"team_invite"}), \
+			 patch("apps.orgs.services.role_policy._actor_is_owner", return_value=False):
+			self.assertFalse(
+				role_policy.actor_can_grant_role(
+					actor=actor,
+					workspace=workspace,
+					role=role,
+				)
+			)
+
+	def test_owner_can_grant_admin_role_with_admin_invite_permission(self):
+		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
+		workspace = SimpleNamespace(id=1)
+		role = SimpleNamespace(name="Admin")
+
+		with patch("apps.orgs.services.role_policy.get_effective_permissions", return_value={"team_invite", "team_invite_admin"}), \
+			 patch("apps.orgs.services.role_policy._actor_is_owner", return_value=True):
+			self.assertTrue(
+				role_policy.actor_can_grant_role(
+					actor=actor,
+					workspace=workspace,
+					role=role,
+				)
+			)
+
+	def test_non_owner_cannot_change_member_role(self):
+		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
+		workspace = SimpleNamespace(id=1)
+		membership = SimpleNamespace(
+			company=workspace,
+			user=SimpleNamespace(id=2),
+			role=SimpleNamespace(name="Member"),
+		)
+
+		with patch("apps.orgs.services.role_policy._actor_is_owner", return_value=False):
+			with self.assertRaises(PermissionDenied):
+				role_policy.assert_can_change_role(
+					actor=actor,
+					workspace=workspace,
+					membership=membership,
+					new_role=SimpleNamespace(name="Admin"),
+				)
+
+	def test_last_owner_cannot_be_demoted(self):
+		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
+		workspace = SimpleNamespace(id=1)
+		membership = SimpleNamespace(
+			company=workspace,
+			user=SimpleNamespace(id=2),
+			role=SimpleNamespace(name="Owner"),
+		)
+
+		with patch("apps.orgs.services.role_policy._actor_is_owner", return_value=True), \
+			 patch("apps.orgs.services.role_policy.owner_membership_count", return_value=1):
+			with self.assertRaises(PermissionDenied):
+				role_policy.assert_can_change_role(
+					actor=actor,
+					workspace=workspace,
+					membership=membership,
+					new_role=SimpleNamespace(name="Member"),
+				)
+
+	def test_owner_self_leave_is_blocked(self):
+		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
+		workspace = SimpleNamespace(id=1)
+		membership = SimpleNamespace(
+			company=workspace,
+			user=actor,
+			role=SimpleNamespace(name="Owner"),
+		)
+
+		with self.assertRaises(PermissionDenied):
+			role_policy.assert_can_remove_membership(
+				actor=actor,
+				workspace=workspace,
+				membership=membership,
+			)
+
+
 class OrgNavigationFlowTests(SimpleTestCase):
 	"""D2: Route and userflow verification for navigation links and canonical routes."""
 	
@@ -424,6 +513,39 @@ class OrgNavigationFlowTests(SimpleTestCase):
 			except FileNotFoundError:
 				# Some templates may not exist, skip them
 				pass
+
+	def test_sidebar_permission_codenames_are_registered(self):
+		"""Permission codenames referenced by live sidebar must exist."""
+		with open("templates/components/navigation/sidebar.html", "r") as f:
+			sidebar_html = f.read()
+
+		registered = {codename for codename, _name, _description in ALL_PERMISSIONS}
+		referenced = set(
+			re.findall(r"'([^']+)'\s+in\s+user_permissions", sidebar_html)
+		)
+
+		self.assertTrue(referenced)
+		self.assertTrue(
+			referenced.issubset(registered),
+			f"Unknown sidebar permission codenames: {sorted(referenced - registered)}",
+		)
+
+	def test_sidebar_uses_current_purchase_and_dea_permission_names(self):
+		with open("templates/components/navigation/sidebar.html", "r") as f:
+			sidebar_html = f.read()
+
+		self.assertIn("purchase_order_view", sidebar_html)
+		self.assertIn("dea_entry_view", sidebar_html)
+		self.assertNotIn("purchase_invoice_view", sidebar_html)
+		self.assertNotIn("dea_journal_view", sidebar_html)
+
+	def test_workspace_dashboard_view_does_not_import_tenant_business_models(self):
+		with open("apps/orgs/views.py", "r") as f:
+			views_py = f.read()
+
+		self.assertNotIn("apps.tenant_apps.contact.models", views_py)
+		self.assertNotIn("apps.tenant_apps.girvi.models", views_py)
+		self.assertNotIn("apps.tenant_apps.rates.models", views_py)
 
 
 class DomainPathMismatchTests(SimpleTestCase):
@@ -723,7 +845,7 @@ class MembershipLifecycleGuardrailTests(SimpleTestCase):
 
 		with patch("apps.orgs.views.get_object_or_404", side_effect=[company, owner_membership]), \
 			 patch("apps.orgs.views._assert_workspace_access", return_value={"role_name": "Owner"}), \
-			 patch("apps.orgs.views._owner_membership_count", return_value=1):
+			 patch("apps.orgs.views.control_plane.remove_membership", side_effect=PermissionDenied("Cannot remove the last owner. Transfer ownership first.")):
 			self._remove_member_view()(request, workspace_id=9, membership_id=5)
 
 		mock_messages.error.assert_called_once()
@@ -745,7 +867,7 @@ class MembershipLifecycleGuardrailTests(SimpleTestCase):
 
 		with patch("apps.orgs.views.get_object_or_404", side_effect=[company, membership]), \
 			 patch("apps.orgs.views._assert_workspace_access", return_value={"role_name": "Owner"}), \
-			 patch("apps.orgs.views._owner_membership_count", return_value=2):
+			 patch("apps.orgs.views.control_plane.remove_membership", side_effect=PermissionDenied("Owners must transfer ownership before leaving the workspace.")):
 			self._remove_member_view()(request, workspace_id=9, membership_id=5)
 
 		mock_messages.error.assert_called_once()
@@ -826,7 +948,8 @@ class MembershipLifecycleGuardrailTests(SimpleTestCase):
 
 		with patch("apps.orgs.views.get_object_or_404", side_effect=[company, owner_membership, member_role]), \
 			 patch("apps.orgs.views._assert_workspace_access", return_value={"role_name": "Owner"}), \
-			 patch("apps.orgs.views._owner_membership_count", return_value=1):
+			 patch("apps.orgs.views.role_policy.allowed_invitation_roles", return_value=[member_role]), \
+			 patch("apps.orgs.views.control_plane.change_membership_role", side_effect=PermissionDenied("Cannot demote the last owner. Transfer ownership first.")):
 			self._change_role_view()(request, workspace_id=9, membership_id=5)
 
 		mock_messages.error.assert_called_once()
@@ -850,6 +973,8 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		owner_role = SimpleNamespace(name="Owner")
 
 		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
+			 patch.object(control_plane.Company.all_objects, "filter", return_value=SimpleNamespace(exists=lambda: False)), \
+			 patch.object(control_plane.Domain.objects, "filter", return_value=SimpleNamespace(exists=lambda: False)), \
 			 patch.object(control_plane.Domain.objects, "create") as mock_domain_create, \
 			 patch.object(control_plane.Role.objects, "get", return_value=owner_role) as mock_role_get, \
 			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create, \
@@ -883,6 +1008,8 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 
 		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
 			 patch.object(control_plane.Membership.objects, "get_or_create", return_value=(membership, True)), \
+			 patch("apps.orgs.services.control_plane.role_policy.assert_can_change_role"), \
+			 patch("apps.orgs.services.control_plane.role_policy.assert_can_remove_membership"), \
 			 patch("apps.orgs.services.control_plane.AuditLog.log"):
 			control_plane.create_membership(
 				user=membership.user,
@@ -930,6 +1057,30 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		self.assertIn("TEAM_INVITE_ACCEPT", actions)
 		self.assertIn("TEAM_INVITE_DECLINE", actions)
 		self.assertIn("TEAM_INVITE_REVOKE", actions)
+
+	def test_audit_actions_match_declared_choices(self):
+		from apps.orgs.audit import AuditLog
+
+		declared = {action for action, _label in AuditLog.ACTION_CHOICES}
+		self.assertIn("TEAM_INVITE", declared)
+		self.assertIn("TEAM_MEMBER_ADD", declared)
+		self.assertIn("TEAM_MEMBER_REMOVE", declared)
+		self.assertIn("TEAM_ROLE_CHANGE", declared)
+		self.assertIn("TEAM_INVITE_ACCEPT", declared)
+
+	def test_duplicate_invitation_create_raises_validation_error(self):
+		with patch.object(
+			CompanyInvitation._default_manager,
+			"create",
+			side_effect=IntegrityError,
+		), patch("apps.orgs.models.transaction.atomic", return_value=contextlib.nullcontext()):
+			with self.assertRaises(ValidationError):
+				CompanyInvitation.create(
+					email="member@example.com",
+					company=SimpleNamespace(id=9),
+					role=SimpleNamespace(name="Member"),
+					inviter=SimpleNamespace(id=1),
+				)
 
 
 class CompanyPreferenceBuilderTests(SimpleTestCase):
