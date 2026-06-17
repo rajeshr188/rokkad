@@ -1,0 +1,393 @@
+﻿---
+status: archived
+owner: project
+updated: 2026-06-17
+tags: [archive]
+related: []
+---
+
+# GivenLoan Lifecycle â€” States & Transitions
+
+> **Source of truth:** `apps/tenant_apps/girvi/flows.py` (`LoanFlow`) and
+> `apps/tenant_apps/girvi/models/loan_refactored.py` (`LoanStatus`).
+
+---
+
+## State Diagram
+
+```
+              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+              â”‚  CREATED â”‚ â† initial state on loan creation
+              â””â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”˜
+                   â”‚ approve
+                   â–¼
+              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+              â”‚ APPROVED â”‚
+              â””â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”˜
+                   â”‚ disburse â† accounting (GIVENLOAN_DISBURSAL)
+                   â–¼
+         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+         â”‚   DISBURSED     â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+         â””â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜                       â”‚
+            â”‚      â”‚                               â”‚ (REPLEDGED is a
+            â”‚      â”‚ mark_defaulted                â”‚  sub-state; repledge
+            â”‚      â–¼                               â”‚  transitions back to
+            â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                        â”‚  DISBURSED on return)
+            â”‚  â”‚ DEFAULTEDâ”‚                        â”‚
+            â”‚  â””â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”˜                    â”Œâ”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
+            â”‚       â”‚ mark_auctioned â†acctg    â”‚REPLEDGED â”‚
+            â”‚       â–¼                           â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+            â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+            â”‚  â”‚ AUCTIONEDâ”‚
+            â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+            â”‚
+            â”‚ mark_sold â†acctg
+            â–¼
+         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”
+         â”‚  SOLD  â”‚
+         â””â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+
+    CREATED â”€â”€cancelâ”€â”€â–º CANCELLED
+    APPROVED â”€â”€cancelâ”€â”€â–º CANCELLED
+
+    DISBURSED â”€â”€(Release form)â”€â”€â–º RELEASED
+
+    DISBURSED â”€â”€repledgeâ”€â”€â–º REPLEDGED
+    REPLEDGED â”€â”€undo_repledgeâ”€â”€â–º DISBURSED
+
+    DISBURSED â”€â”€undo_disburseâ”€â”€â–º APPROVED     (reversal; only if no repayments posted)
+    RELEASED  â”€â”€undo_releaseâ”€â”€â–º  DISBURSED    (reversal; deletes Release record)
+```
+
+---
+
+## States Reference
+
+| Status | Meaning |
+|---|---|
+| `Created` | Loan created; not yet reviewed |
+| `Approved` | Reviewed and approved for disbursement |
+| `Disbursed` | Cash paid to borrower; collateral in vault |
+| `Repledged` | Some/all collateral items pledged to a lender (TakenLoan) |
+| `Released` | Loan repaid; collateral returned to borrower |
+| `Defaulted` | Borrower failed to repay; awaiting recovery action |
+| `Auctioned` | Collateral auctioned off to recover the loan |
+| `Sold` | Collateral directly sold |
+| `Cancelled` | Loan voided before disbursement |
+| `Rejected` | Loan rejected at review (no FSM transition currently) |
+| `Closed` | Legacy terminal state (not used in current FSM) |
+
+---
+
+## Transitions Reference
+
+### `approve`
+| | |
+|---|---|
+| **Source** | `CREATED` |
+| **Target** | `APPROVED` |
+| **Permission** | `can_approve_loan` |
+| **Accounting** | None |
+| **UI trigger** | "âœ“ Approve" button â†’ `loan_transition_view?transition=approve` |
+| **Form fields** | `approved_by` (injected from `request.user`) |
+| **What happens** | Status advances; `LoanChangeLog` entry created with `approved_by` + timestamp. No voucher, no cash movement. |
+
+---
+
+### `disburse`
+| | |
+|---|---|
+| **Source** | `APPROVED` |
+| **Target** | `DISBURSED` |
+| **Permission** | `can_disburse_loan` |
+| **Accounting** | âœ… `GIVENLOAN_DISBURSAL` PaymentVoucher posted by `record_loan_disbursal()` |
+| **UI trigger** | "ðŸ’³ Disburse" button â†’ `loan_transition_view?transition=disburse` |
+| **Form fields** | `disbursed_by` (injected from `request.user`) |
+| **What happens** | 1. `flow.disburse()` advances status. 2. View calls `record_loan_disbursal(loan, user)` which creates a `PaymentVoucher(direction=PAYMENT, payment_type=DISBURSAL)` and posts via `GivenLoanDisbursalRule`. Journal entries: `Dr LOAN_PRINCIPAL_CTRL / Cr CASH` + subledger `Dr BORROWER_LOAN_CTRL`. |
+| **Idempotency** | Reference marker `DISBURSAL-GIVENLOAN-<pk>` prevents double-posting. |
+
+---
+
+### `deliver`  *(internal â€” do not call directly from UI)*
+| | |
+|---|---|
+| **Source** | `DISBURSED` |
+| **Target** | `RELEASED` |
+| **Permission** | `can_release_loan` |
+| **Accounting** | âœ… `GIVENLOAN_RELEASE` PaymentVoucher posted by `record_loan_release()` **inside `Release.save()`** |
+| **UI trigger** | "ðŸ“¦ Release" button â†’ `release_loan_check_custody` â†’ `girvi_release_create` â†’ `Release.save()` |
+| **Form fields** | `created_by`, `released_by`, `release_date` (all supplied by `Release.save()`) |
+| **What happens** | `Release.save()` fires `flow.deliver()` to advance status, then calls `record_loan_release()`. Journal entries: `Dr CASH / Cr LOAN_PRINCIPAL_CTRL` (principal) + `Dr CASH / Cr INTEREST_INCOME` (interest) + subledger `Cr BORROWER_LOAN_CTRL`. |
+| **âš  Important** | `deliver` is intentionally excluded from the transition registry endpoint (`loan_transition_view`). It must never be triggered as a standalone action â€” doing so would advance the status without creating the `Release` document or posting accounting. Always go through the Release create form. |
+| **Custody check** | Before the Release form, `release_loan_check_custody` verifies all items are back in the vault. If any are still with lenders, items must be returned first. |
+| **Idempotency** | Reference marker `RELEASE-<release.pk>` prevents double-posting. |
+
+---
+
+### `cancel`
+| | |
+|---|---|
+| **Source** | `CREATED`, `APPROVED` |
+| **Target** | `CANCELLED` |
+| **Permission** | `can_cancel_loan` |
+| **Accounting** | None |
+| **UI trigger** | "âœ• Cancel" button â†’ `loan_transition_view?transition=cancel` |
+| **Form fields** | `cancelled_by` (from `request.user`), `reason` (text) |
+| **What happens** | Status advances to CANCELLED; reason recorded in `LoanChangeLog`. No voucher â€” no cash has moved yet (loan was never disbursed). |
+
+---
+
+### `undo_disburse`
+| | |
+|---|---|
+| **Source** | `DISBURSED` |
+| **Target** | `APPROVED` |
+| **Permission** | `can_disburse_loan` |
+| **Accounting** | âœ… Reverses `GIVENLOAN_DISBURSAL` via `DjangoPostingEngine.reverse_voucher()` |
+| **UI trigger** | "â†© Undo Disbursal" button â†’ `loan_transition_view?transition=undo_disburse` |
+| **Form fields** | `undone_by` (from `request.user`), `reason` (text) |
+| **What happens** | 1. Guard: fails if any other posted PaymentVouchers exist (repayments or release must be reversed first). 2. `flow.undo_disburse()` sets status to APPROVED. 3. `reverse_loan_disbursal(loan, user)` finds the `DISBURSAL-GIVENLOAN-<pk>` PaymentVoucher, calls `DjangoPostingEngine().reverse_voucher()` which creates mirror JEs (reversing Dr/Cr), marks the original Voucher as `REVERSED`, and sets `payment.posted = False`. All steps are atomic. |
+| **Guard** | Blocked by any `PaymentVoucher(posted=True)` on the loan other than the disbursal itself. |
+| **Use case** | Disbursal entered for the wrong loan; needs to be un-done before re-doing correctly. |
+
+---
+
+### `undo_release`
+| | |
+|---|---|
+| **Source** | `RELEASED` |
+| **Target** | `DISBURSED` |
+| **Permission** | `can_release_loan` |
+| **Accounting** | âœ… Reverses `GIVENLOAN_RELEASE` via `DjangoPostingEngine.reverse_voucher()` |
+| **UI trigger** | "â†© Undo Release" button â†’ `loan_transition_view?transition=undo_release` |
+| **Form fields** | `undone_by` (from `request.user`), `reason` (text) |
+| **What happens** | 1. `flow.undo_release()` sets status to DISBURSED. 2. `reverse_loan_release(loan, user)` finds the `RELEASE-<release.pk>` PaymentVoucher and calls `DjangoPostingEngine().reverse_voucher()`. 3. The `Release` document is deleted. All steps are atomic. The reversal JEs and the REVERSED Voucher remain in the audit log; the original Release PK is preserved in the reversal Voucher metadata. |
+| **Audit trail** | `LoanChangeLog` records the `undo_release` transition with `undone_by`, timestamp, and reason. The original GIVENLOAN_RELEASE Voucher is marked `REVERSED` (not deleted). |
+| **Use case** | Release entered by mistake; collateral was not actually returned, or wrong loan was released. |
+
+---
+
+### `mark_defaulted`
+| | |
+|---|---|
+| **Source** | `DISBURSED` |
+| **Target** | `DEFAULTED` |
+| **Permission** | `can_mark_defaulted` |
+| **Accounting** | None (event recorded only) |
+| **UI trigger** | "âš  Mark Defaulted" button â†’ `loan_transition_view?transition=mark_defaulted` |
+| **Form fields** | `marked_by` (from `request.user`), `reason` (text) |
+| **What happens** | Status advances; reason + timestamp recorded in `LoanChangeLog`. No GL impact at this point â€” recovery action (auction or sale) triggers accounting. |
+
+---
+
+### `mark_auctioned`
+| | |
+|---|---|
+| **Source** | `DEFAULTED` |
+| **Target** | `AUCTIONED` |
+| **Permission** | `can_mark_auctioned` |
+| **Accounting** | âš  Not implemented yet (status changes, warning returned) |
+| **UI trigger** | "ðŸ”¨ Auction" button â†’ `loan_transition_view?transition=mark_auctioned` |
+| **Form fields** | `auctioned_by` (from `request.user`), `amount` (auction proceeds) |
+| **What happens** | Status advances via `LoanTransitionService`. Auction amount recorded in `LoanChangeLog` metadata. Service returns a warning message that accounting posting is not implemented yet. |
+
+---
+
+### `mark_sold`
+| | |
+|---|---|
+| **Source** | `DISBURSED` |
+| **Target** | `SOLD` |
+| **Permission** | `can_mark_sold` |
+| **Accounting** | âš  Not implemented yet (status changes, warning returned) |
+| **UI trigger** | "ðŸ’° Sell" button â†’ `loan_transition_view?transition=mark_sold` |
+| **Form fields** | `sold_by` (from `request.user`), `amount` (sale proceeds) |
+| **What happens** | Status advances directly from DISBURSED (bypasses DEFAULTED). Service returns a warning message that accounting posting is not implemented yet. |
+
+---
+
+### `repledge`
+| | |
+|---|---|
+| **Source** | `DISBURSED` |
+| **Target** | `REPLEDGED` |
+| **Permission** | `can_release_loan` |
+| **Accounting** | None (renewal workflow handles financial postings separately) |
+| **UI trigger** | "ðŸ” Repledge" button â†’ `loan_transition_view?transition=repledge` |
+| **Form fields** | `created_by` (from `request.user`) |
+| **What happens** | Source loan is marked REPLEDGED to indicate collateral remains in custody under renewed/repledged lifecycle. |
+
+---
+
+### `undo_repledge`
+| | |
+|---|---|
+| **Source** | `REPLEDGED` |
+| **Target** | `DISBURSED` |
+| **Permission** | `can_release_loan` |
+| **Accounting** | Renewal reversal path (handled in service) |
+| **UI trigger** | "â†© Undo Repledge" button â†’ `loan_transition_view?transition=undo_repledge` |
+| **Form fields** | `undone_by` (from `request.user`), `reason` (optional) |
+| **What happens** | Reversal workflow restores source loan to DISBURSED and rolls back renewal linkage for correction flows. |
+
+---
+
+## How Transitions Are Processed
+
+### Standard path (approve / disburse / cancel / mark_defaulted / mark_auctioned / mark_sold / repledge / undo_*)
+
+```
+User clicks button
+  â†’ loan_transition_view (views/loan.py)
+    â†’ transition_registry resolves FormClass(request.POST)
+      â†’ LoanTransitionService(loan, user, tenant).execute(transition, **data)
+          â†’ LoanFlow(loan, user, tenant)
+          â†’ flow.<transition>(**payload)
+              â†’ viewflow FSM validates source state + permission
+              â†’ transition body sets _additional_data
+              â†’ _on_success_transition fires (atomic):
+                  â†’ loan.save()
+                  â†’ LoanChangeLog.objects.create(...)
+          â†’ if transition == "disburse":
+              record_loan_disbursal(loan, user)   # posts PaymentVoucher
+          â†’ if transition in {"mark_auctioned", "mark_sold"}:
+              returns warning (accounting for these transitions not implemented)
+  â†’ redirect to loan detail
+```
+
+### Undo paths (undo_disburse / undo_release)
+
+```
+User clicks "â†© Undo ..."
+    â†’ loan_transition_view (views/loan.py)
+            â†’ FormClass(request.POST)
+            â†’ LoanFlow(loan, user, tenant)
+            â†’ flow.undo_* (status rollback + LoanChangeLog)
+            â†’ reverse_loan_* (find original PaymentVoucher)
+                    â†’ DjangoPostingEngine.reverse_voucher(voucher.pk, user)
+                            â†’ reversal JournalEntries created
+                            â†’ original Voucher.status = REVERSED
+                    â†’ original PaymentVoucher.posted = False
+            â†’ if undo_release: delete Release document
+    â†’ redirect to loan detail
+```
+
+### Release path (deliver)
+
+```
+User clicks "ðŸ“¦ Release"
+  â†’ release_loan_check_custody (views/custody_views.py)
+      â†’ if items with lenders â†’ return flow first
+      â†’ redirect to girvi_release_create
+  â†’ Release form submitted
+  â†’ Release.save()
+      â†’ flow.deliver(created_by, released_by, release_date)
+          â†’ loan.status = RELEASED
+          â†’ LoanChangeLog created
+      â†’ record_loan_release(release, created_by)
+          â†’ PaymentVoucher(direction=RECEIPT, principal_amount, interest_amount)
+          â†’ GivenLoanReleaseRule posts:
+              Dr CASH / Cr LOAN_PRINCIPAL_CTRL  (principal)
+              Dr CASH / Cr INTEREST_INCOME      (interest)
+              AT: Cr BORROWER_LOAN_CTRL
+```
+
+---
+
+## Permission Codenames
+
+| Codename | Guards |
+|---|---|
+| `can_approve_loan` | `approve` |
+| `can_disburse_loan` | `disburse` |
+| `can_release_loan` | `deliver` |
+| `can_cancel_loan` | `cancel` |
+| `can_mark_defaulted` | `mark_defaulted` |
+| `can_mark_auctioned` | `mark_auctioned` |
+| `can_mark_sold` | `mark_sold` |
+| `can_release_loan` | `repledge` |
+| `can_release_loan` | `undo_repledge` |
+| `can_disburse_loan` | `undo_disburse` |
+| `can_release_loan` | `undo_release` |
+
+Permissions are checked against `Membership.role.permissions` for the user's active workspace. See `flows.py:has_permission()`.
+
+---
+
+## Key Files
+
+| File | Purpose |
+|---|---|
+| `apps/tenant_apps/girvi/flows.py` | `LoanFlow` FSM â€” all transitions defined here |
+| `apps/tenant_apps/girvi/models/loan_refactored.py` | `LoanStatus` enum |
+| `apps/tenant_apps/girvi/views/loan.py` | `loan_transition_view` â€” handles all UI-driven transitions |
+| `apps/tenant_apps/girvi/transition_registry.py` | Transition wiring registry (form/UI dispatch metadata) |
+| `apps/tenant_apps/girvi/models/release.py` | `Release.save()` â€” triggers `deliver` + `record_loan_release` |
+| `apps/tenant_apps/girvi/payment_service.py` | `record_loan_disbursal`, `record_loan_release` |
+| `apps/tenant_apps/girvi/views/custody_views.py` | `release_loan_check_custody` â€” pre-release custody gate |
+| `apps/tenant_apps/dea/posting/rules/givenloan_disbursal.py` | DEA rule for GIVENLOAN_DISBURSAL voucher |
+| `apps/tenant_apps/dea/posting/rules/givenloan_release.py` | DEA rule for GIVENLOAN_RELEASE voucher |
+| `apps/tenant_apps/girvi/forms.py` | All transition forms (`ApproveLoanForm`, `DisburseLoanForm`, etc.) |
+
+---
+
+## Lifecycle Review (March 2026)
+
+This review summarizes current gaps/shortcomings found in the loan lifecycle,
+what has already been fixed, and what still needs work.
+
+### Fixed In Current Iteration
+
+1. **Release lifecycle now runs atomically with accounting posting**
+     - `Release.save()` now enforces creation-only side effects, requires `created_by`,
+         and wraps release creation + `flow.deliver()` + `record_loan_release()` inside
+         one `transaction.atomic()` block.
+     - Result: no more silent partial success where release/status changed but release
+         accounting failed.
+
+2. **Transition orchestration moved out of HTTP view into service layer**
+     - `loan_transition_view` now delegates to `LoanTransitionService.execute(...)`.
+     - Result: transition branching, reversal handling, and disbursal posting are
+         centralized/testable and view remains a thin adapter.
+
+3. **`mark_sold` permission gap closed**
+     - `mark_sold` now requires `can_mark_sold` permission in `LoanFlow`.
+
+4. **Release creation surfaces validation failures to users**
+     - `release_create` catches `ValidationError`, adds a form non-field error,
+         and shows a user-facing message.
+
+### Remaining Gaps (Needs Future Fix)
+
+1. **Accounting not implemented for `mark_auctioned` and `mark_sold`**
+     - Current behavior: status transition succeeds, service returns warning.
+     - Needed: implement voucher posting + idempotent markers + reversal design
+         for each transition.
+
+2. **Dead states in `LoanStatus` (`REJECTED`, `CLOSED`)**
+     - Present in enum but no FSM transition targets them.
+     - Needed: either add explicit transitions and business rules, or remove from
+         active enum to avoid ambiguity.
+
+3. **Missing reversal transitions for pre-disbursement workflow**
+     - No `undo_approve` or reopen flow from `CANCELLED`.
+     - Needed: confirm product policy and add controlled reversal transitions if required.
+
+4. **`REPLEDGED` status ownership is not fully FSM-driven**
+     - `deliver` accepts `REPLEDGED` as source, but transition into `REPLEDGED`
+         is not represented in `LoanFlow`.
+     - Needed: either formalize a `mark_repledged` transition or document why this
+         state is managed elsewhere and ensure changelog parity.
+
+5. **Payment/outstanding principal consistency review still needed**
+     - `outstanding_principal` relies on total RECEIPT-based amounts.
+     - Needed: verify behavior with mixed partial repayments + final release receipt
+         to ensure no double subtraction in edge cases.
+
+### Recommended Priority
+
+1. Implement auction/sold accounting postings and tests.
+2. Decide lifecycle policy for `REJECTED`, `CLOSED`, `undo_approve`, and cancelled reopen.
+3. Formalize REPLEDGED entry/exit in FSM or explicitly codify non-FSM ownership.
+4. Add scenario tests around `outstanding_principal` with partial payment timelines.
+
