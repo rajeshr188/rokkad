@@ -225,7 +225,15 @@ class LoanItemStorageBox(models.Model):
     )
 
     def __str__(self):
-        return f"{self.name} at {self.location} (Items {self.start_item_id} to {self.end_item_id})"
+        return f"{self.name} at {self.location} (Items {self.start_loan_id or '-'} to {self.end_loan_id or '-'})"
+
+    @property
+    def start_loan_id(self):
+        return self.start_item.loan.loan_id if self.start_item_id and self.start_item else None
+
+    @property
+    def end_loan_id(self):
+        return self.end_item.loan.loan_id if self.end_item_id and self.end_item else None
 
     def clean(self):
         """
@@ -310,6 +318,8 @@ class LoanItemStorageBox(models.Model):
         super().save(*args, **kwargs)
 
     def position_for_item(self, item_id):
+        if not self.start_loan_id or not self.end_loan_id:
+            return None
         items_in_box = self.items().order_by("loan_id")
         item_ids = list(items_in_box.values_list("loan_id", flat=True))
         try:
@@ -322,9 +332,11 @@ class LoanItemStorageBox(models.Model):
         from django.apps import apps
 
         GivenLoan = apps.get_model("girvi", "GivenLoan")
+        if not self.start_loan_id or not self.end_loan_id:
+            return GivenLoan.objects.none()
         return GivenLoan.objects.unreleased().filter(
-            loan_id__gte=self.start_item_id,
-            loan_id__lte=self.end_item_id,
+            loan_id__gte=self.start_loan_id,
+            loan_id__lte=self.end_loan_id,
             loanitems__itemtype=self.item_type,
         )
 

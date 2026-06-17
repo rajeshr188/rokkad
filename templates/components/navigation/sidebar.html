@@ -119,7 +119,7 @@
                 {% endif %}
 
                 <!-- Rates -->
-                {% if role_name == 'Owner' or role_name == 'Admin' %}
+                {% if 'data_view' in user_permissions or 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link {% if request.resolver_match.url_name == 'rate_list' or 'rate' in request.resolver_match.url_name %}active{% endif %}"
                    href="{% url 'rate_list' %}">
                     <i class="bi bi-coin"></i> Rates

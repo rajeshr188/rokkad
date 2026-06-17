@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+import logging
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Button, Column, Layout, Row, Submit
@@ -13,7 +14,10 @@ from django_select2.forms import ModelSelect2Widget
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
-from apps.tenant_apps.rates.models import Rate
+from apps.tenant_apps.girvi.services import RateCacheService
+
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     GivenLoan,
@@ -552,11 +556,13 @@ class LoanItemForm(forms.ModelForm):
         if None in (loanamount, itemtype, weight, purity):
             return cleaned_data
 
-        rate = (
-            Rate.objects.filter(metal=itemtype).latest("timestamp").buying_rate
-            if Rate.objects.filter(metal=itemtype).exists()
-            else 0
-        )
+        rate = RateCacheService.get_rate_or_none(itemtype)
+        if rate is None:
+            raise forms.ValidationError(
+                f"{itemtype} rate is not configured. Add the current metal rate "
+                "from Rates before creating this loan item."
+            )
+
         value = round(weight * purity * Decimal(0.01) * rate)
 
         if value < loanamount:
@@ -980,14 +986,18 @@ class LoanItemStorageBoxForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
-            print(self.instance.start_item_id)
-            print(self.instance.end_item_id)
-            self.initial["start_item_id"] = GivenLoan.objects.get(
-                loan_id=self.instance.start_item_id
-            ).id
-            self.initial["end_item_id"] = GivenLoan.objects.get(
-                loan_id=self.instance.end_item_id
-            ).id
+            logger.debug(
+                "Initializing storage box loan range",
+                extra={
+                    "storage_box_id": self.instance.pk,
+                    "start_loan_id": self.instance.start_loan_id,
+                    "end_loan_id": self.instance.end_loan_id,
+                },
+            )
+            if self.instance.start_item_id:
+                self.initial["start_item_id"] = self.instance.start_item.loan_id
+            if self.instance.end_item_id:
+                self.initial["end_item_id"] = self.instance.end_item.loan_id
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1001,24 +1011,26 @@ class LoanItemStorageBoxForm(forms.ModelForm):
         end_loan = cleaned_data.get("end_item_id")
 
         if start_loan and end_loan:
-            start_loan_id = start_loan.loan_id
-            end_loan_id = end_loan.loan_id
-
-            if start_loan_id > end_loan_id:
+            if start_loan.loan_id > end_loan.loan_id:
                 raise forms.ValidationError(
                     "Start Loan ID must be less than End Loan ID."
                 )
-
-            cleaned_data["start_item_id"] = start_loan_id
-            cleaned_data["end_item_id"] = end_loan_id
 
         return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
 
-        instance.start_item_id = self.cleaned_data["start_item_id"]
-        instance.end_item_id = self.cleaned_data["end_item_id"]
+        start_loan = self.cleaned_data["start_item_id"]
+        end_loan = self.cleaned_data["end_item_id"]
+        instance.start_item = start_loan.loanitems.filter(
+            itemtype=instance.item_type
+        ).first()
+        instance.end_item = end_loan.loanitems.filter(itemtype=instance.item_type).last()
+        if not instance.start_item or not instance.end_item:
+            raise forms.ValidationError(
+                "Selected loans must contain items matching the storage box item type."
+            )
         if commit:
             instance.save()
         return instance

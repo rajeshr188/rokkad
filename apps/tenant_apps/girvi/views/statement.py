@@ -1,9 +1,14 @@
+import logging
+
 from django.contrib import messages
 from django.db.models import Count, F
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..models import GivenLoan, Statement, StatementItem
+
+
+logger = logging.getLogger(__name__)
 
 
 def verification_session_list(request):
@@ -103,7 +108,10 @@ def statement_item_add(request, pk):
                     descrepancy_note="Loan already released",
                 )
                 messages.error(request, f"Loan {loan_id} already released.")
-                print(item)
+                logger.info(
+                    "Statement item discrepancy recorded",
+                    extra={"statement_item_id": item.pk, "loan_id": loan_id},
+                )
             # Construct the HTML snippet using the item attributes
             # item_html = f"""
             # <li class="list-group-item d-flex justify-content-between align-items-center">

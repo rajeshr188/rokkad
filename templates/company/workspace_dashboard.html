@@ -160,13 +160,13 @@
                     <div class="col-md-4">
                         <div class="p-3 bg-light rounded">
                             <div class="text-muted small">Pure Weight</div>
-                            <div class="h6 fw-bold mb-0">{{ pure_weight|default:0 }} gm</div>
+                            <div class="h6 fw-bold mb-0">{{ pure_weight|default:0|floatformat:2 }} gm</div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="p-3 bg-light rounded">
                             <div class="text-muted small">Current Value</div>
-                            <div class="h6 fw-bold text-success mb-0">₹ {{ current_value|default:0|intcomma }}</div>
+                            <div class="h6 fw-bold text-success mb-0">₹ {{ current_value|default:0|floatformat:2|intcomma }}</div>
                         </div>
                     </div>
                 </div>
@@ -229,7 +229,6 @@
     </div>
 </div>
 
-{% if gold_rate or silver_rate %}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0"><i class="bi bi-coin me-2 text-warning"></i>Metal Rates</h5>
@@ -258,10 +257,23 @@
                 </div>
             </div>
             {% endif %}
+            {% if not gold_rate and not silver_rate %}
+            <div class="col-12">
+                <div class="p-3 bg-warning bg-opacity-10 border border-warning rounded">
+                    <div class="fw-semibold mb-1">Metal rates are not configured</div>
+                    <div class="small text-muted mb-3">Add current rates before creating Girvi loan items so collateral values can be checked correctly.</div>
+                    <a href="{% url 'ratesource_create' %}" class="btn btn-outline-warning btn-sm me-2">
+                        <i class="bi bi-plus-circle me-1"></i>Add Rate Source
+                    </a>
+                    <a href="{% url 'rate_create' %}" class="btn btn-warning btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Add Rate
+                    </a>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
-{% endif %}
 
 {% if can_view and sunken.loan_count > 0 %}
 <div class="card border-0 shadow-sm border-warning mb-2">
@@ -273,7 +285,7 @@
             <div class="col-md-3"><div class="small text-muted">Total Amount</div><div class="fw-bold">{{ sunken.total_loan_amount|default:0|intcomma }} ₹</div></div>
             <div class="col-md-3"><div class="small text-muted">Interest Amount</div><div class="fw-bold">{{ sunken.total_interest|default:0|intcomma }} ₹</div></div>
             <div class="col-md-3"><div class="small text-muted">Metal Weight</div><div class="fw-bold">{{ sunken.weight|default:0 }} gm</div></div>
-            <div class="col-md-3"><div class="small text-muted">Current Value</div><div class="fw-bold text-warning">₹ {{ sunken.current_value|default:0|intcomma }}</div></div>
+            <div class="col-md-3"><div class="small text-muted">Current Value</div><div class="fw-bold text-warning">₹ {{ sunken.current_value|default:0|floatformat:2|intcomma }}</div></div>
         </div>
     </div>
 </div>

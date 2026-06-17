@@ -507,39 +507,14 @@ def period_close(request, pk):
                 # that P&L is complete before the closing entries are generated.
                 # Failures are surfaced as warnings and do NOT block the close.
                 try:
-                    from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
-                    from apps.tenant_apps.girvi.service_modules.accrual import (
-                        InterestAccrualCommand,
-                        InterestAccrualService,
+                    from apps.tenant_apps.girvi.facade import (
+                        run_period_close_interest_accrual,
                     )
 
-                    active_loans = GivenLoan.objects.filter(release__isnull=True)
-                    accrual_failures = []
-                    for loan in active_loans:
-                        try:
-                            result = InterestAccrualService.execute(
-                                InterestAccrualCommand(
-                                    loan=loan,
-                                    as_of_date=period.end_date,
-                                    trigger_source="PERIOD_CLOSE",
-                                    created_by=request.user,
-                                    notes=f"Period close catch-up for {period.name}",
-                                    post_to_accounting=True,
-                                )
-                            )
-                            if not result.success:
-                                accrual_failures.append(
-                                    f"Loan {loan.loan_id}: {result.message}"
-                                )
-                        except Exception:
-                            logger.exception(
-                                "Accrual catch-up failed for loan %s during period close %s",
-                                loan.pk,
-                                period.pk,
-                            )
-                            accrual_failures.append(
-                                f"Loan {getattr(loan, 'loan_id', loan.pk)}: accrual catch-up error"
-                            )
+                    accrual_failures = run_period_close_interest_accrual(
+                        period=period,
+                        user=request.user,
+                    )
                     for warning_msg in accrual_failures:
                         messages.warning(request, f"Accrual catch-up: {warning_msg}")
                 except ImportError:

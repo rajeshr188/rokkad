@@ -1,4 +1,10 @@
-# accounting/posting/engine.py
+"""
+Legacy direct-write posting engine.
+
+This module is kept only as historical reference for the pre-voucher-line
+posting path. Runtime code must import from apps.tenant_apps.dea.posting.engine.
+"""
+
 from .context import PostingContext, compute_fingerprint
 from .registry import registry
 from .validate import assert_balanced, assert_non_empty, assert_currency_fields

@@ -8,10 +8,12 @@ from apps.tenant_apps.girvi.transitions.commands import (
     DisburseTransitionCommand,
     GenericForwardTransitionCommand,
     MarkAuctionedTransitionCommand,
+    MarkSoldTransitionCommand,
     UndoReleaseTransitionCommand,
 )
 from apps.tenant_apps.girvi.transitions.payloads import CancelPayload
 from apps.tenant_apps.girvi.transitions.payloads import MarkAuctionedPayload
+from apps.tenant_apps.girvi.transitions.payloads import MarkSoldPayload
 from apps.tenant_apps.girvi.transitions.types import TransitionResult
 
 
@@ -81,20 +83,25 @@ class TransitionCommandBehaviorTests(TestCase):
         self.assertEqual(result.level, "error")
         self.assertIn("posting failed", result.message)
 
-    def test_mark_auctioned_is_warning_transition(self):
+    @patch("apps.tenant_apps.girvi.transitions.commands.post_auction_recovery_for_transition")
+    def test_mark_auctioned_posts_recovery_voucher(self, mock_post_auction):
         loan = self._loan(status="Defaulted")
         cmd = MarkAuctionedTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
+        mock_post_auction.return_value = (SimpleNamespace(payment_id="AUC-001"), True)
 
         called = {"ok": False}
 
         def transition_method(**_payload):
             called["ok"] = True
+            loan.status = "Auctioned"
 
         payload = MarkAuctionedPayload(auctioned_by="auditor", amount=100)
         result = cmd.execute(transition_method, payload=payload)
         self.assertTrue(called["ok"])
         self.assertTrue(result.success)
-        self.assertEqual(result.level, "warning")
+        self.assertEqual(result.level, "success")
+        self.assertIn("posted", result.message)
+        mock_post_auction.assert_called_once_with(loan, payload.amount, cmd.user)
 
     @patch("apps.tenant_apps.notify.services.create_loan_auction_notice")
     def test_mark_auctioned_creates_auction_notice_for_borrower(self, mock_create_notice):
@@ -109,11 +116,37 @@ class TransitionCommandBehaviorTests(TestCase):
             loan.status = "Auctioned"
 
         payload = MarkAuctionedPayload(auctioned_by="auditor", amount=100)
-        result = cmd.execute(transition_method, payload=payload)
+        with patch(
+            "apps.tenant_apps.girvi.transitions.commands.post_auction_recovery_for_transition"
+        ) as mock_post_auction:
+            mock_post_auction.return_value = (
+                SimpleNamespace(payment_id="AUC-002"),
+                True,
+            )
+            result = cmd.execute(transition_method, payload=payload)
 
         self.assertTrue(result.success)
         mock_create_notice.assert_called_once()
         self.assertIn("Auction notice", result.message)
+
+    @patch("apps.tenant_apps.girvi.transitions.commands.post_sale_recovery_for_transition")
+    def test_mark_sold_posts_recovery_voucher(self, mock_post_sale):
+        loan = self._loan(status="Disbursed")
+        cmd = MarkSoldTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
+        mock_post_sale.return_value = (SimpleNamespace(payment_id="SOLD-001"), True)
+
+        def transition_method(**_payload):
+            loan.status = "Sold"
+
+        result = cmd.execute(
+            transition_method,
+            payload=MarkSoldPayload(sold_by="checker", amount=250),
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.level, "success")
+        self.assertIn("posted", result.message)
+        mock_post_sale.assert_called_once_with(loan, 250, cmd.user)
 
     def test_undo_release_returns_error_on_validation_exception(self):
         loan = self._loan(status="Released")

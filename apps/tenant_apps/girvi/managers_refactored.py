@@ -53,32 +53,25 @@ class BaseLoanQuerySet(models.QuerySet):
 
     def released(self):
         """Filter to loans that have been released."""
+        from .lifecycle import RELEASED_COMPAT_STATUSES
+
         if self._supports_release_relation():
             return self.filter(release__isnull=False)
-        return self.filter(status="Released")
+        return self.filter(status__in=RELEASED_COMPAT_STATUSES)
 
     def unreleased(self):
         """Filter to loans that have NOT been released."""
+        from .lifecycle import UNRELEASED_EXCLUDED_STATUSES
+
         if self._supports_release_relation():
             return self.filter(release__isnull=True)
-        return self.exclude(status="Released")
+        return self.exclude(status__in=UNRELEASED_EXCLUDED_STATUSES)
 
     def active(self):
         """Filter to loans in active or pre-closure lifecycle status."""
-        return self.filter(
-            status__in=[
-                "Created",
-                "Draft",
-                "PendingApproval",
-                "Approved",
-                "Disbursed",
-                "ActiveCurrent",
-                "ActiveOverdue",
-                "ActiveNPA",
-                "ClosurePending",
-                "RenewalPending",
-            ]
-        ).unreleased()
+        from .lifecycle import ACTIVE_LOAN_STATUSES
+
+        return self.filter(status__in=ACTIVE_LOAN_STATUSES).unreleased()
 
     def overdue(self):
         """Loans in non-performing states."""
@@ -116,7 +109,11 @@ class BaseLoanQuerySet(models.QuerySet):
         """
         from .services import InterestCalculationService
 
-        annotations = InterestCalculationService.get_duration_annotations()
+        loan_kind = {
+            "GivenLoan": "given",
+            "TakenLoan": "taken",
+        }.get(self.model.__name__, "legacy")
+        annotations = InterestCalculationService.get_duration_annotations(loan_kind)
         return self.annotate(**annotations)
 
     def with_interest_metrics(self):
@@ -125,12 +122,26 @@ class BaseLoanQuerySet(models.QuerySet):
         REQUIRES: with_duration_metrics() first!
 
         Annotations:
+        - loan_amount
+        - interest_amount
         - total_interest
         - total_due
         """
         from .services import InterestCalculationService
 
-        return self.annotate(**InterestCalculationService.get_interest_annotations())
+        loan_kind = {
+            "GivenLoan": "given",
+            "TakenLoan": "taken",
+        }.get(self.model.__name__)
+
+        if loan_kind is None:
+            raise TypeError("Interest metrics require GivenLoan or TakenLoan querysets.")
+
+        return self.annotate(
+            **InterestCalculationService.get_interest_base_annotations(loan_kind)
+        ).annotate(
+            **InterestCalculationService.get_interest_total_annotations(loan_kind)
+        )
 
     def with_payment_metrics(self):
         """
@@ -289,9 +300,11 @@ class GivenLoanQuerySet(BaseLoanQuerySet):
         In the refactored models, overdue/non-performing state is represented
         by status rather than collateral-vs-due annotations.
         """
+        from .lifecycle import OVERDUE_LOAN_STATUSES
+
         return self.annotate(
             is_overdue=Case(
-                When(status__in=["Defaulted", "Auctioned"], then=True),
+                When(status__in=OVERDUE_LOAN_STATUSES, then=True),
                 default=False,
                 output_field=BooleanField(),
             )
@@ -485,9 +498,11 @@ class TakenLoanQuerySet(BaseLoanQuerySet):
 
     def with_overdue_status(self):
         """Determine if loan is overdue using lifecycle status."""
+        from .lifecycle import OVERDUE_LOAN_STATUSES
+
         return self.annotate(
             is_overdue=Case(
-                When(status__in=["Defaulted", "Auctioned"], then=True),
+                When(status__in=OVERDUE_LOAN_STATUSES, then=True),
                 default=False,
                 output_field=BooleanField(),
             )

@@ -168,7 +168,7 @@ class QueryHelpers:
             "relationships_created",
             "relationships_received",
             "proofs",
-            "loan_set",
+            "loans_received",
         ).get(id=customer_id)
 
     @staticmethod

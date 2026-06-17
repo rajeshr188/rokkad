@@ -15,6 +15,26 @@ This note clarifies the separated lifecycles in Girvi after repayment/release is
 - Repayment path does not create or trigger release.
 - Release path owns release creation, custody return, lifecycle transition, and optional release receipt posting.
 
+## Quick Flowchart
+
+```mermaid
+flowchart TD
+   A[User Action] --> B{Repay or Release?}
+
+   B -->|Repay| C[loan_payment_create_view]
+   C --> D[create_payment]
+   D --> E[post_payment_voucher]
+   E --> F[GIVENLOAN_RECEIPT]
+
+   B -->|Release| G[release_create]
+   G --> H[ReleaseLifecycleService.execute]
+   H --> I[Create Release + Transitions + Custody Return]
+   I --> J{Total due > 0?}
+   J -->|Yes| K[record_loan_release create_release=True]
+   K --> L[GIVENLOAN_RELEASE]
+   J -->|No| M[Skip receipt posting]
+```
+
 ## Event Matrix
 
 | User intent | Entry point | Domain write | DEA event created | Voucher classification |

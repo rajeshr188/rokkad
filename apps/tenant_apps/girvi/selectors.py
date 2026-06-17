@@ -23,6 +23,7 @@ Layer boundary:
 
 from collections import Counter
 from decimal import Decimal
+import logging
 
 from django.db.models import (
     Case,
@@ -41,7 +42,11 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce, ExtractYear, TruncDate
 
-from .models import GivenLoan, LoanStatus, TakenLoan
+from .lifecycle import RELEASED_COMPAT_STATUSES, UNRELEASED_EXCLUDED_STATUSES
+from .models import GivenLoan, TakenLoan
+
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -118,10 +123,10 @@ def filter_unified_loans(given_qs, taken_qs, *, query="", status="All"):
 
     if status == "Released":
         given_qs = given_qs.filter(release__isnull=False)
-        taken_qs = taken_qs.filter(status=LoanStatus.RELEASED)
+        taken_qs = taken_qs.filter(status__in=RELEASED_COMPAT_STATUSES)
     elif status == "UnReleased":
         given_qs = given_qs.filter(release__isnull=True)
-        taken_qs = taken_qs.exclude(status=LoanStatus.RELEASED)
+        taken_qs = taken_qs.exclude(status__in=UNRELEASED_EXCLUDED_STATUSES)
 
     return given_qs, taken_qs
 
@@ -350,8 +355,8 @@ def get_itemtype_averages():
             }
             for item in stats
         }
-    except Exception as e:
-        print(f"Error calculating averages: {e}")
+    except Exception:
+        logger.exception("Error calculating item type averages.")
         return {}
 
 

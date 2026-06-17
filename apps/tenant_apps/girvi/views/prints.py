@@ -28,9 +28,11 @@ from apps.tenant_apps.girvi.documents.loan_ticket import (
     grid_template,
     print_labels_pdf,
 )
-from apps.tenant_apps.girvi.filters import LoanFilter
 from apps.tenant_apps.girvi.models.template import LoanTemplate
 from apps.tenant_apps.girvi.service_modules.printing import LoanPrintService
+from apps.tenant_apps.girvi.service_modules.print_selection import (
+    unreleased_given_loan_selection,
+)
 from apps.tenant_apps.notify.models import Notification
 from apps.tenant_apps.notify.services import (
     DEFAULT_LOAN_REMINDER_CODE,
@@ -40,8 +42,6 @@ from apps.tenant_apps.notify_v2.models import NotificationJob
 from apps.tenant_apps.notify_v2.services import create_girvi_reminder_batch
 
 from ..forms import LoanSelectionForm
-from ..models import GivenLoan
-
 
 logger = logging.getLogger(__name__)
 
@@ -61,58 +61,18 @@ _NOTIFY_V2_CHANNEL_MAP = {
 }
 
 
-def _parse_selected_ids(raw_ids):
-    cleaned = []
-    invalid_count = 0
-    for raw_id in raw_ids:
-        try:
-            parsed = int(raw_id)
-            if parsed > 0:
-                cleaned.append(parsed)
-            else:
-                invalid_count += 1
-        except (TypeError, ValueError):
-            invalid_count += 1
-    return list(dict.fromkeys(cleaned)), invalid_count
-
-
 def print_labels(request):
-    loan_kind = request.POST.get("loan_kind", "given")
-    if loan_kind != "given":
-        return HttpResponse(status=400, content="Print labels is available only for Given loans.")
+    selection = unreleased_given_loan_selection(
+        post_data=request.POST,
+        query_data=request.GET,
+    )
+    if not selection.is_valid:
+        if selection.invalid_ids:
+            logger.warning("print_labels rejected invalid IDs: %s", selection.invalid_ids)
+        return HttpResponse(status=400, content=selection.error)
 
-    # check if user wanted all rows to be selected
-    all = request.POST.get("selectall")
-    selected_loans = None
-
-    if all == "selected":
-        filter = LoanFilter(
-            request.GET,
-            queryset=GivenLoan.objects.filter(release__isnull=True)
-            .select_related("borrower")
-            .prefetch_related("notifications", "loanitems"),
-        )
-
-        selected_loans = filter.qs.order_by("borrower")
-    else:
-        selection, invalid_count = _parse_selected_ids(request.POST.getlist("selection"))
-        if invalid_count:
-            logger.warning("print_labels rejected invalid IDs: %s", request.POST.getlist("selection"))
-            return HttpResponse(status=400, content="Invalid loan selection.")
-        if not selection:
-            return HttpResponse(status=400, content="Please select at least one unreleased given loan.")
-
-        selected_loans = (
-            GivenLoan.objects.filter(release__isnull=True)
-            .filter(id__in=selection)
-            .order_by("borrower")
-        )
-
-        if selected_loans.count() != len(selection):
-            return HttpResponse(status=400, content="Some selected loans are not eligible for printing.")
-
-    if selected_loans:
-        form = LoanSelectionForm(initial={"loans": selected_loans})
+    if selection.loans:
+        form = LoanSelectionForm(initial={"loans": selection.loans})
         template_name = "girvi/loan/print_labels.html#content" if request.htmx else "girvi/loan/print_labels.html"
         return render(request, template_name, {"form": form})
 
@@ -137,41 +97,16 @@ def print_label(request):
 
 @login_required
 def notify_print(request):
-    loan_kind = request.POST.get("loan_kind", "given")
-    if loan_kind != "given":
-        return HttpResponse(status=400, content="Notifications can be created only for Given loans.")
+    selection = unreleased_given_loan_selection(
+        post_data=request.POST,
+        query_data=request.GET,
+    )
+    if not selection.is_valid:
+        if selection.invalid_ids:
+            logger.warning("notify_print rejected invalid IDs: %s", selection.invalid_ids)
+        return HttpResponse(status=400, content=selection.error)
 
-    # check if user wanted all rows to be selected
-    all = request.POST.get("selectall")
-    selected_loans = None
-
-    if all == "selected":
-        filter = LoanFilter(
-            request.GET,
-            queryset=GivenLoan.objects.filter(release__isnull=True)
-            .select_related("borrower")
-            .prefetch_related("notifications", "loanitems"),
-        )
-
-        selected_loans = filter.qs.order_by("borrower")
-    else:
-        selection, invalid_count = _parse_selected_ids(request.POST.getlist("selection"))
-        if invalid_count:
-            logger.warning("notify_print rejected invalid IDs: %s", request.POST.getlist("selection"))
-            return HttpResponse(status=400, content="Invalid loan selection.")
-        if not selection:
-            return HttpResponse(status=400, content="Please select at least one unreleased given loan.")
-
-        selected_loans = (
-            GivenLoan.objects.filter(release__isnull=True)
-            .filter(id__in=selection)
-            .order_by("borrower")
-        )
-
-        if selected_loans.count() != len(selection):
-            return HttpResponse(status=400, content="Some selected loans are not eligible for notifications.")
-
-    if selected_loans:
+    if selection.loans:
         notice_code = request.POST.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
         medium_type = request.POST.get(
             "medium_type",
@@ -180,7 +115,7 @@ def notify_print(request):
 
         try:
             ng = create_bulk_loan_reminder_group(
-                selected_loans,
+                selection.loans,
                 notice_code=notice_code,
                 medium_type=medium_type,
             )
@@ -197,39 +132,16 @@ def notify_print(request):
 
 @login_required
 def notify_print_v2(request):
-    loan_kind = request.POST.get("loan_kind", "given")
-    if loan_kind != "given":
-        return HttpResponse(status=400, content="Notify V2 batches can be created only for Given loans.")
+    selection = unreleased_given_loan_selection(
+        post_data=request.POST,
+        query_data=request.GET,
+    )
+    if not selection.is_valid:
+        if selection.invalid_ids:
+            logger.warning("notify_print_v2 rejected invalid IDs: %s", selection.invalid_ids)
+        return HttpResponse(status=400, content=selection.error)
 
-    select_all = request.POST.get("selectall")
-    selected_loans = None
-
-    if select_all == "selected":
-        filterset = LoanFilter(
-            request.GET,
-            queryset=GivenLoan.objects.filter(release__isnull=True)
-            .select_related("borrower")
-            .prefetch_related("notifications", "loanitems"),
-        )
-        selected_loans = list(filterset.qs.order_by("borrower"))
-    else:
-        selection, invalid_count = _parse_selected_ids(request.POST.getlist("selection"))
-        if invalid_count:
-            logger.warning("notify_print_v2 rejected invalid IDs: %s", request.POST.getlist("selection"))
-            return HttpResponse(status=400, content="Invalid loan selection.")
-        if not selection:
-            return HttpResponse(status=400, content="Please select at least one unreleased given loan.")
-
-        selected_queryset = (
-            GivenLoan.objects.filter(release__isnull=True)
-            .filter(id__in=selection)
-        )
-
-        if selected_queryset.count() != len(selection):
-            return HttpResponse(status=400, content="Some selected loans are not eligible for notifications.")
-
-        selected_loans = list(selected_queryset.order_by("borrower"))
-
+    selected_loans = list(selection.loans or [])
     if not selected_loans:
         return HttpResponse(status=200, content="No unreleased loans selected.")
 

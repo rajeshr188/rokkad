@@ -1,8 +1,6 @@
 import uuid
 
 from django.db import models, transaction
-from django.db.models import Avg, F, ExpressionWrapper, DurationField, Sum
-from django.db.models.functions import Coalesce
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.urls import reverse
@@ -126,7 +124,12 @@ class Customer(models.Model):
 
     class Meta:
         ordering = ("-created", "firstname", "lastname")
-        unique_together = ("firstname", "lastname", "relatedas", "relatedto")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["firstname", "lastname", "relatedas", "relatedto"],
+                name="contact_customer_identity_uniq",
+            ),
+        ]
         indexes = [
             models.Index(fields=["firstname", "lastname"]),
             models.Index(fields=["-created"]),
@@ -198,7 +201,11 @@ class Customer(models.Model):
         """Merge duplicate customer into this customer"""
         with transaction.atomic():
             # Transfer simple related objects first.
-            dup.loan_set.update(customer=self)
+            if hasattr(dup, "loans_received"):
+                dup.loans_received.update(borrower=self)
+            # Legacy Loan model compatibility. New Girvi code uses loans_received.
+            if hasattr(dup, "loan_set"):
+                dup.loan_set.update(customer=self)
             dup.pics.all().update(customer=self)
 
             # Move addresses one-by-one so default enforcement in save() is honored.
@@ -206,7 +213,7 @@ class Customer(models.Model):
                 dup_address.customer = self
                 dup_address.save(update_fields=["customer"])
 
-            # Contacts have unique_together(customer, phone_number, contact_type).
+            # Contacts are unique by customer, phone number, and contact type.
             # Merge conflicting duplicates instead of bulk reassigning.
             for dup_contact in dup.contactno.all():
                 existing_contact = self.contactno.filter(
@@ -229,7 +236,7 @@ class Customer(models.Model):
                     dup_contact.customer = self
                     dup_contact.save(update_fields=["customer"])
 
-            # Proofs have unique_together(customer, proof_type).
+            # Proofs are unique by customer and proof type.
             for dup_proof in dup.proofs.all():
                 existing_proof = self.proofs.filter(proof_type=dup_proof.proof_type).first()
                 if existing_proof:
@@ -247,7 +254,7 @@ class Customer(models.Model):
                     dup_proof.customer = self
                     dup_proof.save(update_fields=["customer"])
 
-            # Relationships have unique_together(customer, related_customer, relationship).
+            # Relationships are unique by customer, related customer, and relationship.
             for rel in dup.relationships_created.all():
                 new_related_customer = (
                     self if rel.related_customer_id == dup.id else rel.related_customer
@@ -320,30 +327,24 @@ class Customer(models.Model):
     @property
     def get_loans(self):
         """Get all unreleased loans"""
-        return self.loan_set.unreleased()
+        return self.loan_summary.loans
 
     def get_total_loanamount(self):
         """Get total loan amount for unreleased loans"""
-        amount = self.loan_set.unreleased().aggregate(
-            total=Coalesce(Sum("loan_amount"), 0)
-        )
-        return amount["total"]
+        return self.loan_summary.total_loan_amount
 
     def get_total_interest_due(self):
         """Calculate total interest due on unreleased loans"""
-        total_int = 0
-        for loan in self.get_loans:
-            total_int += loan.interestdue()
-        return total_int
+        return self.loan_summary.total_interest_due
 
     @property
     def get_loans_count(self):
         """Get count of unreleased loans"""
-        return self.loan_set.unreleased().count()
+        return self.loan_summary.loans_count
 
     def get_interestdue(self):
         """Get total interest due from unreleased loans"""
-        return self.loan_set.unreleased().aggregate(total=Sum("interest"))["total"]
+        return self.loan_summary.base_interest_due
 
     def get_weight(self):
         """Get total weight - placeholder for future implementation"""
@@ -352,22 +353,18 @@ class Customer(models.Model):
     @property
     def get_release_average(self):
         """Calculate average time to release loans in months"""
-        average_release_time = (
-            self.loan_set.released()
-            .annotate(
-                duration=ExpressionWrapper(
-                    F("release__release_date") - F("loan_date"),
-                    output_field=DurationField(),
-                )
-            )
-            .aggregate(average=Avg("duration"))["average"]
-        )
+        return self.loan_summary.release_average_months
 
-        if average_release_time is None:
-            return 0
+    def _given_loans(self):
+        """Return this customer's current Girvi pawn loans."""
+        return self.loans_received.all()
 
-        # Convert to months (approximate)
-        return round(average_release_time.days / 30.44)
+    @property
+    def loan_summary(self):
+        """Read-side Girvi loan metrics for this customer."""
+        from .services import get_customer_loan_summary
+
+        return get_customer_loan_summary(self)
 
 
 def customer_pic_upload_to(instance, filename):
@@ -388,6 +385,13 @@ class CustomerPic(models.Model):
     class Meta:
         verbose_name = _("Customer Picture")
         verbose_name_plural = _("Customer Pictures")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer"],
+                condition=models.Q(is_default=True),
+                name="contact_one_default_pic_per_customer",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         """Ensure only one default picture per customer"""
@@ -436,7 +440,12 @@ class CustomerRelationship(models.Model):
     created = models.DateTimeField(auto_now_add=True, editable=False)
 
     class Meta:
-        unique_together = ("customer", "related_customer", "relationship")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "related_customer", "relationship"],
+                name="contact_customer_relationship_uniq",
+            ),
+        ]
         indexes = [
             models.Index(fields=["customer", "relationship"]),
             models.Index(fields=["related_customer"]),
@@ -566,6 +575,13 @@ class Address(models.Model):
             models.Index(fields=["area"]),
             models.Index(fields=["street"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer"],
+                condition=models.Q(is_default=True),
+                name="contact_one_default_address_per_customer",
+            ),
+        ]
         verbose_name = _("Address")
         verbose_name_plural = _("Addresses")
 
@@ -666,10 +682,20 @@ class Contact(models.Model):
     last_updated = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        unique_together = ("customer", "phone_number", "contact_type")
         ordering = ["-is_default", "-created"]
         indexes = [
             models.Index(fields=["customer", "-is_default"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "phone_number", "contact_type"],
+                name="contact_customer_phone_type_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=["customer"],
+                condition=models.Q(is_default=True),
+                name="contact_one_default_contact_per_customer",
+            ),
         ]
         verbose_name = _("Contact")
         verbose_name_plural = _("Contacts")
@@ -726,19 +752,6 @@ class Proof(models.Model):
         VOTER_ID = "VI", _("Voter ID")
         PASSPORT = "PP", _("Passport")
 
-    # Validators for different document types
-    PROOF_VALIDATORS = {
-        "AA": RegexValidator(regex=r"^\d{12}$", message=_("Aadhaar must be 12 digits")),
-        "PN": RegexValidator(
-            regex=r"^[A-Z]{5}[0-9]{4}[A-Z]$",
-            message=_("PAN must be in format: ABCDE1234F"),
-        ),
-        "DL": RegexValidator(
-            regex=r"^[A-Z]{2}[0-9]{13}$",
-            message=_("Driving License format: TN1234567890123"),
-        ),
-    }
-
     # Relationships
     customer = models.ForeignKey(
         "contact.Customer",
@@ -765,10 +778,15 @@ class Proof(models.Model):
     last_updated = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        unique_together = ("customer", "proof_type")
         ordering = ["-created"]
         indexes = [
             models.Index(fields=["customer", "proof_type"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "proof_type"],
+                name="contact_customer_proof_type_uniq",
+            ),
         ]
         verbose_name = _("Identity Proof")
         verbose_name_plural = _("Identity Proofs")
@@ -784,16 +802,21 @@ class Proof(models.Model):
 
     def clean(self):
         """Validate proof number based on type"""
-        if self.proof_type in self.PROOF_VALIDATORS:
-            validator = self.PROOF_VALIDATORS[self.proof_type]
-            try:
-                validator(self.proof_number)
-            except ValidationError as e:
-                raise ValidationError({"proof_number": e.message})
+        from .document_services import ProofDocumentValue, find_duplicate_proofs
 
-        # Normalize PAN to uppercase
-        if self.proof_type == self.DocType.PAN:
-            self.proof_number = self.proof_number.upper()
+        proof_value = ProofDocumentValue.from_raw(self.proof_type, self.proof_number)
+        self.proof_number = proof_value.number
+        proof_value.validate()
+
+        duplicate = find_duplicate_proofs(self).exclude(customer_id=self.customer_id).first()
+        if duplicate:
+            raise ValidationError(
+                {
+                    "proof_number": _(
+                        "This document number is already assigned to another customer."
+                    )
+                }
+            )
 
     def save(self, *args, **kwargs):
         """Save with validation"""
@@ -820,3 +843,10 @@ class Proof(models.Model):
     def doc(self):
         """Backward compatibility for doc field"""
         return self.document
+
+    @property
+    def masked_proof_number(self):
+        """Safe display form for sensitive document numbers."""
+        from .document_services import mask_proof_number
+
+        return mask_proof_number(self.proof_type, self.proof_number)

@@ -4,6 +4,51 @@ Rokkad is a schema-per-tenant Django application for finance/inventory workflows
 
 The project is built on `django-tenants`, with explicit tenant bootstrap and seeding commands for deterministic tenant provisioning.
 
+Yes, I can access the project files. This project is **Rokkad**, a multi-tenant Django business application for finance, pawn/girvi lending, inventory, accounting, purchases, sales, notifications, and workspace management.
+
+At a high level, it is a **schema-per-tenant SaaS-style Django app** using `django-tenants`. Each company/workspace gets its own PostgreSQL schema, while shared/public apps handle users, companies, onboarding, subscriptions, invitations, and permissions.
+
+The main business domain appears to be **Girvi**, meaning pawn/gold-loan style workflows. The app tracks:
+
+- Loans given to customers against pledged items
+- Loans taken/repledged against existing collateral
+- Gold/silver item weights, purity, valuation, custody, release, renewal, split/merge flows
+- Loan lifecycle states, interest accrual, payments, notices, labels, PDFs, statements, and inventory checks
+
+The project also includes a substantial accounting system under **DEA**. That handles:
+
+- Chart of accounts
+- Ledgers and accounts
+- Journal entries
+- Payment vouchers
+- Expense vouchers
+- Sales/purchase invoice vouchers
+- Trial balance, balance sheet, P&L, income statement, cash flow
+- Accounting periods, opening balances, reconciliation, audit trails
+
+There is also a product/inventory system for jewelry-like stock:
+
+- Categories such as gold/silver
+- Product types and variants
+- Attributes and attribute values
+- Stock, stock lots, stock items
+- Purchase posting into inventory
+- Weight/touch/net weight calculations
+
+The shared/platform side includes:
+
+- `apps/orgs`: company/tenant model, domains, memberships, roles, invitations
+- `apps/onboarding`: workspace creation/provisioning
+- `apps/subscriptions`: Razorpay-backed subscriptions/billing
+- `accounts`: custom user/account handling
+- `django_project/settings`: tenant-aware Django configuration
+- `templates`, `static`, HTMX, Bootstrap/crispy forms for the UI
+
+So the shortest description is:
+
+**Rokkad is a multi-tenant Django ERP/finance platform, specialized for Indian jewelry/girvi businesses, combining pawn-loan management, gold/silver inventory, double-entry accounting, purchases/sales, customer workflows, notifications, and subscription-based workspace management.**
+
+
 ## What This Project Includes
 
 - Multi-tenant architecture with PostgreSQL schemas (`public` + per-tenant schemas)

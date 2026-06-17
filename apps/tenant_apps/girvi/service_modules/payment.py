@@ -1,14 +1,20 @@
 """Payment and accounting side-effect services for Girvi loan lifecycle operations."""
 
+from decimal import Decimal
+
 from django.contrib.contenttypes.models import ContentType
 
 from apps.tenant_apps.dea.facade import (
     create_and_post_payment,
+    ensure_customer_account,
     has_other_posted_payments,
+    post_payment_voucher,
     reverse_payment_by_marker,
 )
-from apps.tenant_apps.dea.models.payment import PaymentVoucher
 from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, TakenLoan
+from apps.tenant_apps.girvi.service_modules.loan_posting import GivenLoanPostingService
+
+PaymentVoucher = None  # Compatibility alias for older tests; posting uses DEA facade.
 
 
 def record_loan_disbursal(loan, user):
@@ -28,6 +34,8 @@ def record_loan_disbursal(loan, user):
     """
     if not isinstance(loan, (GivenLoan, TakenLoan)):
         raise ValueError("record_loan_disbursal supports GivenLoan and TakenLoan only")
+
+    _ensure_disbursal_party_account(loan)
 
     marker = f"DISBURSAL-{loan.__class__.__name__.upper()}-{loan.pk}"
     direction = "PAYMENT" if isinstance(loan, GivenLoan) else "RECEIPT"
@@ -52,57 +60,21 @@ def record_loan_disbursal(loan, user):
     )
 
 
+def _ensure_disbursal_party_account(loan):
+    party = (
+        getattr(loan, "borrower", None)
+        or getattr(loan, "customer", None)
+        or getattr(loan, "lender", None)
+    )
+    if party is None:
+        raise ValueError(f"Loan {getattr(loan, 'loan_id', loan)} has no disbursal party")
+
+    ensure_customer_account(party)
+
+
 def record_loan_release(release, created_by):
-    """
-    Create and post a release receipt voucher for GivenLoan release.
-
-    Records the cash received from the borrower (principal + accrued interest) when
-    the collateral is returned and the loan is closed.
-
-    Amount logic:
-    - principal_amount = loan.outstanding_principal  (net of any prior payments)
-    - interest_amount  = loan.interest_due()          (total accrued interest)
-    - total_amount     = principal + interest
-
-    Idempotency:
-    - Deterministic marker in reference_number per release document.
-    """
-    from decimal import Decimal
-    from moneyed import Money
-
-    loan = release.loan
-    if not isinstance(loan, GivenLoan):
-        raise ValueError("record_loan_release supports GivenLoan releases only")
-
-    outstanding = loan.outstanding_principal
-    principal_val = (
-        outstanding.amount if hasattr(outstanding, "amount") else Decimal(str(outstanding))
-    )
-    interest_val = Decimal(str(loan.interest_due()))
-    total_val = principal_val + interest_val
-    if total_val <= 0:
-        return None, False
-
-    marker = f"RELEASE-{release.pk}"
-    total_money = Money(total_val, "INR")
-    interest_money = Money(interest_val, "INR")
-
-    return create_and_post_voucher_for_doc(
-        loan,
-        direction="RECEIPT",
-        payment_type="RECEIPT",
-        total_amount=total_money,
-        amount_in_base_currency=total_money,
-        principal_amount=outstanding,
-        interest_amount=interest_money,
-        payment_date=release.release_date,
-        payment_method="CASH",
-        reference_number=marker,
-        description=f"Loan release receipt for {loan.loan_id} ({release.release_id})",
-        is_final_payment=True,
-        create_release=True,
-        created_by=created_by,
-    )
+    """Create and post a release receipt voucher for GivenLoan release."""
+    return GivenLoanPostingService().post_release(release, created_by)
 
 
 def reverse_loan_disbursal(loan: GivenLoan, user):
@@ -149,11 +121,37 @@ def reverse_loan_release(loan: GivenLoan, user):
     return reverse_payment_by_marker(loan, marker, user)
 
 
+def record_loan_auction(loan: GivenLoan, user, amount):
+    """Create and post auction recovery receipt for a GivenLoan."""
+    return GivenLoanPostingService().post_auction_recovery(loan, amount, user)
+
+
+def record_loan_sale(loan: GivenLoan, user, amount):
+    """Create and post collateral sale recovery receipt for a GivenLoan."""
+    return GivenLoanPostingService().post_sale_recovery(loan, amount, user)
+
+
+def reverse_loan_auction(loan: GivenLoan, user):
+    """Reverse auction recovery voucher for a GivenLoan."""
+    marker = f"AUCTION-{loan.pk}"
+    return reverse_payment_by_marker(loan, marker, user)
+
+
+def reverse_loan_sale(loan: GivenLoan, user):
+    """Reverse sale recovery voucher for a GivenLoan."""
+    marker = f"SOLD-{loan.pk}"
+    return reverse_payment_by_marker(loan, marker, user)
+
+
 __all__ = [
     "record_loan_disbursal",
     "record_loan_release",
+    "record_loan_auction",
+    "record_loan_sale",
     "reverse_loan_disbursal",
     "reverse_loan_release",
+    "reverse_loan_auction",
+    "reverse_loan_sale",
 ]
 
 

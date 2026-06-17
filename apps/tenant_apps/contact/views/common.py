@@ -14,6 +14,7 @@ def get_customer_for_detail(pk):
             "contactno",
             "proofs",
             "pics",
+            "loans_received",
             "relationships_created__related_customer",
         ),
         pk=pk,

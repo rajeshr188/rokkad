@@ -3,18 +3,18 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect, render, reverse
+from django.shortcuts import get_object_or_404, redirect, reverse
 
 from apps.orgs.preferences import CompanyPreferences
 from django.template.response import TemplateResponse
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods
 
 from apps.tenant_apps.dea.facade import post_payment_voucher
 
 from ..forms import GivenLoanRepaymentForm, TakenLoanRepaymentForm
 from ..models import GivenLoan, TakenLoan
 from ..service_modules.accrual import InterestAccrualCommand, InterestAccrualService
+from ..service_modules.loan_posting import GivenLoanPostingService
 
 logger = logging.getLogger(__name__)
 
@@ -66,30 +66,32 @@ def loan_payment_create_view(request, pk=None):
                         f"Interest accrual catch-up failed before posting the receipt: {exc}",
                     )
 
-            payment = loan.create_payment(
-                amount=total,
-                payment_date=cd["payment_date"],
-                payment_method=cd["payment_method"],
-                reference_number=cd.get("reference_number", ""),
-                interest=interest,
-                principal=principal,
-                description=cd.get("description", ""),
-                is_final=cd.get("is_final_payment", False),
-                created_by=request.user,
-            )
+            payment_payload = {
+                "total_amount": total,
+                "interest_amount": interest,
+                "principal_amount": principal,
+                "payment_date": cd["payment_date"],
+                "payment_method": cd["payment_method"],
+                "reference_number": cd.get("reference_number", ""),
+                "description": cd.get("description", ""),
+                "is_final_payment": cd.get("is_final_payment", False),
+            }
+            payment = None
             try:
-                post_payment_voucher(payment, request.user)
+                payment, created = GivenLoanPostingService().post_repayment(
+                    loan, payment_payload, request.user
+                )
                 messages.success(
                     request,
                     f"Payment {payment.payment_id} recorded and posted to accounting.",
                 )
             except Exception as exc:
                 logger.exception(
-                    "Accounting post failed for payment %s", payment.payment_id
+                    "Accounting post failed for payment %s", getattr(payment, "payment_id", "unknown")
                 )
                 messages.warning(
                     request,
-                    f"Payment {payment.payment_id} saved but accounting posting failed: {exc}",
+                    f"Payment saved but accounting posting failed: {exc}",
                 )
             return redirect(reverse("girvi:girvi_loan_detail", args=[loan.pk]))
     else:

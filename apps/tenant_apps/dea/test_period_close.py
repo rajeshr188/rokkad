@@ -12,6 +12,7 @@ from django_tenants.test.cases import TenantTestCase
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.dea.facade import ensure_customer_account
 
 from .models import (
     AccountStatement,
@@ -267,6 +268,7 @@ class AccountingPeriodCloseTests(TenantTestCase):
         self.assertFalse(Ledger.objects.filter(name="Retained Earnings").exists())
 
         customer = Customer.objects.create(firstname="Account Holder")
+        ensure_customer_account(customer)
         account = customer.account
 
         voucher_type = VoucherType.objects.create(name="TEST_PERIOD", description="Test")

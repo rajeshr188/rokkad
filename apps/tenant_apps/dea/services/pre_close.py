@@ -64,7 +64,7 @@ class PreCloseChecklist:
 
     def _interest_accrual_check(self, period) -> CheckResult:
         try:
-            from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
+            from apps.tenant_apps.girvi.facade import count_unreleased_given_loans
         except ImportError:
             return CheckResult(
                 key="interest_accrual",
@@ -75,7 +75,7 @@ class PreCloseChecklist:
                 status_text="Girvi app not installed; check skipped",
             )
 
-        unreleased_loans = GivenLoan.objects.filter(release__isnull=True).count()
+        unreleased_loans = count_unreleased_given_loans()
         if unreleased_loans:
             return CheckResult(
                 key="interest_accrual",

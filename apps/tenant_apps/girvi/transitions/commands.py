@@ -5,6 +5,10 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
+from apps.tenant_apps.girvi.service_modules.transition_posting import (
+    post_auction_recovery_for_transition,
+    post_sale_recovery_for_transition,
+)
 from .types import TransitionResult
 
 logger = logging.getLogger(__name__)
@@ -163,24 +167,137 @@ class AuctionNoticeTransitionCommand(AuctionNoticeMixin, GenericForwardTransitio
         return self._attach_notice_message(result)
 
 
-class MarkAuctionedTransitionCommand(AuctionNoticeMixin, WarningTransitionCommand):
+class MarkAuctionedTransitionCommand(AuctionNoticeMixin, BaseLoanTransitionCommand):
     transition_name = "mark_auctioned"
-    warning_message = (
-        "Loan status updated, but accounting posting for this "
-        "transition is not implemented yet."
-    )
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
-        result = super().execute(transition_method, payload=payload)
+        from apps.tenant_apps.girvi.models import LoanStatus
+        from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+
+        payload_kwargs = self._payload_to_kwargs(payload)
+        amount = payload_kwargs.get("amount") or payload_kwargs.get("recovery_amount")
+        if amount is None:
+            return TransitionResult(
+                success=False,
+                level="error",
+                message="Auction recovery amount is required.",
+            )
+
+        try:
+            with transaction.atomic():
+                transition_method(**payload_kwargs)
+                if self.loan.status not in {
+                    LoanStatus.AUCTIONED,
+                    LoanLifecycleState.AUCTION_COMPLETE,
+                }:
+                    result = TransitionResult(
+                        success=True,
+                        level="success",
+                        message=str(_("Loan status updated successfully.")),
+                    )
+                    return self._attach_notice_message(result)
+
+                payment, created = post_auction_recovery_for_transition(
+                    self.loan, amount, self.user
+                )
+
+            if created:
+                message = str(
+                    _(
+                        f"Loan status updated successfully. "
+                        f"Auction recovery voucher {payment.payment_id} posted."
+                    )
+                )
+            else:
+                message = str(
+                    _(
+                        f"Loan status updated successfully. "
+                        f"Auction recovery already recorded as {payment.payment_id}."
+                    )
+                )
+
+            result = TransitionResult(
+                success=True,
+                level="success",
+                message=message,
+                payment=payment,
+                created=created,
+            )
+        except Exception as exc:
+            result = TransitionResult(
+                success=False,
+                level="error",
+                message=str(
+                    _(
+                        f"Auction posting failed. Loan status was not changed: {exc}"
+                    )
+                ),
+            )
+
         return self._attach_notice_message(result)
 
 
-class MarkSoldTransitionCommand(WarningTransitionCommand):
+class MarkSoldTransitionCommand(BaseLoanTransitionCommand):
     transition_name = "mark_sold"
-    warning_message = (
-        "Loan status updated, but accounting posting for this "
-        "transition is not implemented yet."
-    )
+
+    def execute(self, transition_method, payload=None) -> TransitionResult:
+        from apps.tenant_apps.girvi.models import LoanStatus
+
+        payload_kwargs = self._payload_to_kwargs(payload)
+        amount = payload_kwargs.get("amount") or payload_kwargs.get("recovery_amount")
+        if amount is None:
+            return TransitionResult(
+                success=False,
+                level="error",
+                message="Sale recovery amount is required.",
+            )
+
+        try:
+            with transaction.atomic():
+                transition_method(**payload_kwargs)
+                if self.loan.status != LoanStatus.SOLD:
+                    return TransitionResult(
+                        success=True,
+                        level="success",
+                        message=str(_("Loan status updated successfully.")),
+                    )
+
+                payment, created = post_sale_recovery_for_transition(
+                    self.loan, amount, self.user
+                )
+
+            if created:
+                msg = str(
+                    _(
+                        f"Loan status updated successfully. "
+                        f"Sale recovery voucher {payment.payment_id} posted."
+                    )
+                )
+            else:
+                msg = str(
+                    _(
+                        f"Loan status updated successfully. "
+                        f"Sale recovery already recorded as {payment.payment_id}."
+                    )
+                )
+
+            return TransitionResult(
+                success=True,
+                level="success",
+                message=msg,
+                payment=payment,
+                created=created,
+            )
+        except Exception as exc:
+            return TransitionResult(
+                success=False,
+                level="error",
+                message=str(
+                    _(
+                        f"Sale posting failed. Loan status was not changed: {exc}"
+                    )
+                ),
+            )
 
 
 class UndoDisburseTransitionCommand(BaseLoanTransitionCommand):

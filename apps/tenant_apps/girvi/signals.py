@@ -47,8 +47,10 @@ def update_loan(sender, instance, **kwargs):
             return
         # logger.warning(f"Updating Loan with id {loan.loan_id}")
 
-        loan.update()
-        # logger.warning(f"Loan with id {loan.loan_id} updated")
+        update = getattr(loan, "update", None)
+        if callable(update):
+            update()
+        # Refactored GivenLoan/TakenLoan models derive totals from item relations.
     except Exception as e:
         logger.warning(f"Error: {e}")
 

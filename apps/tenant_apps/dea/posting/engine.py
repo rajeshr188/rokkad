@@ -3,6 +3,7 @@ from .context import PostingContext, compute_fingerprint
 from .registry import registry
 from .validate import assert_balanced, assert_non_empty, assert_currency_fields
 from ..models import (
+    AccountingPeriod,
     JournalEntry,
     Voucher,
     VoucherStatus,
@@ -84,6 +85,7 @@ class BasePostingEngine(ABC):
             try:
                 # lock the voucher we will post
                 voucher = self._lock_voucher(ctx)
+                self._validate_accounting_period_open(voucher)
                 rule = registry.get(
                     getattr(voucher.voucher_type, "name", voucher.voucher_type)
                 )
@@ -99,6 +101,7 @@ class BasePostingEngine(ABC):
                         Voucher.objects.filter(
                             doc_content_type=voucher.doc_content_type,
                             doc_object_id=voucher.doc_object_id,
+                            voucher_type=voucher.voucher_type,
                         )
                         .exclude(pk=voucher.pk)
                         .filter(
@@ -260,6 +263,7 @@ class BasePostingEngine(ABC):
 
     def reverse_voucher(self, voucher_id, user):
         voucher = Voucher.objects.get(pk=voucher_id)
+        self._validate_accounting_period_open(voucher)
         last_je = voucher.journal_entries.order_by("-id").first()
         if not last_je:
             return None
@@ -278,6 +282,19 @@ class BasePostingEngine(ABC):
     # hooks
     def _lock_voucher(self, ctx: PostingContext) -> Voucher:
         return Voucher.objects.select_for_update().get(pk=ctx.voucher.pk)
+
+    def _validate_accounting_period_open(self, voucher: Voucher):
+        period = AccountingPeriod.objects.get_period_for_date(voucher.voucher_date)
+        if not period:
+            raise PostingError(
+                f"No accounting period found for voucher date {voucher.voucher_date}"
+            )
+        if not period.can_modify_transactions():
+            raise PostingError(
+                f"Cannot post voucher {voucher.voucher_no} dated {voucher.voucher_date}: "
+                f"accounting period '{period.name}' is {period.status}."
+            )
+        return period
 
     def _build_fingerprint_payload(self, ctx: PostingContext, rule) -> dict:
         """

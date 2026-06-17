@@ -9,6 +9,7 @@ from apps.tenant_apps.dea.posting.context import PostingContext, compute_fingerp
 from apps.tenant_apps.dea.posting.registry import registry
 from apps.tenant_apps.dea.posting.types import PostingError
 from apps.tenant_apps.dea.models import Voucher, VoucherStatus, VoucherType
+from apps.tenant_apps.dea.services.voucher_type_seed import ensure_seeded_voucher_type
 from apps.tenant_apps.dea.services.voucher_numbering import generate_date_based_voucher_number
 
 
@@ -28,7 +29,10 @@ def _resolve_voucher_type(voucher_type_input):
         try:
             return VoucherType.objects.get(name=voucher_type_input)
         except VoucherType.DoesNotExist:
-            raise ValueError(f"VoucherType with name '{voucher_type_input}' not found")
+            try:
+                return ensure_seeded_voucher_type(voucher_type_input)
+            except VoucherType.DoesNotExist:
+                raise ValueError(f"VoucherType with name '{voucher_type_input}' not found")
 
     if isinstance(voucher_type_input, int):
         try:
@@ -106,7 +110,10 @@ def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
     # find latest posted voucher / JE for this business doc (if any)
     prev_voucher = (
         Voucher.objects.filter(
-            doc_content_type=ct, doc_object_id=doc.pk, status=VoucherStatus.POSTED
+            doc_content_type=ct,
+            doc_object_id=doc.pk,
+            voucher_type=voucher_type,
+            status=VoucherStatus.POSTED,
         )
         .order_by("-last_posted_at")
         .select_related("voucher_type")
@@ -137,7 +144,6 @@ def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
             doc_content_type=ct,
             doc_object_id=doc.pk,
             corrected_from=prev_voucher if prev_voucher else None,
-            fingerprint=new_fp,
         )
 
         # Preserve the original business doc instance so any transient posting
@@ -150,6 +156,7 @@ def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
     posted_count = Voucher.objects.filter(
         doc_content_type=ct,
         doc_object_id=doc.pk,
+        voucher_type=voucher_type,
         status=VoucherStatus.POSTED,
     ).count()
 

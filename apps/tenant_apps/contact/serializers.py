@@ -4,7 +4,11 @@ from . import models
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-    loan_set = serializers.StringRelatedField(many=True)
+    loan_set = serializers.SerializerMethodField()
+
+    def get_loan_set(self, obj):
+        """Backward-compatible API field backed by GivenLoan.loans_received."""
+        return [str(loan) for loan in obj.loans_received.all()]
 
     class Meta:
         model = models.Customer

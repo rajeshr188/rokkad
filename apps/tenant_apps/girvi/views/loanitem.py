@@ -12,6 +12,7 @@ from apps.tenant_apps.girvi.forms import (
     LoanItemForm,
     RepledgedLoanItemForm,
 )
+from apps.tenant_apps.girvi.lifecycle import EDITABLE_ITEM_STATUSES
 from apps.tenant_apps.girvi.models import (
     BaseLoan,
     GivenLoan,
@@ -81,7 +82,7 @@ def loanitem_create_update(request, parent_id, id=None):
         parent_obj = get_object_or_404(TakenLoan, id=parent_id)
         is_given_loan = False
 
-    if parent_obj.status not in ["Created", "Draft", "PendingApproval", "Approved"]:
+    if parent_obj.status not in EDITABLE_ITEM_STATUSES:
         messages.error(request, "Cannot add or edit items after loan is disbursed or closed.")
         return redirect(parent_obj.get_absolute_url())
 

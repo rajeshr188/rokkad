@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 import django_tables2 as tables
 import pytz
@@ -7,6 +8,15 @@ from django.utils.html import format_html, mark_safe
 from django.utils.timesince import timesince
 
 from .models import GivenLoan, LoanItem, Release, TakenLoan
+
+
+def _format_decimal_2(value):
+    if value is None:
+        value = 0
+    try:
+        return f"{Decimal(str(value)).quantize(Decimal('0.01'))}"
+    except (InvalidOperation, TypeError, ValueError):
+        return value
 
 
 class ImageColumn(tables.Column):
@@ -163,7 +173,7 @@ class LoanTable(tables.Table):
         value = getattr(record, "total_current_value", None)
         if value is None:
             value = getattr(record, "current_value", None)
-        return value if value is not None else 0
+        return _format_decimal_2(value)
 
     def value_total_current_value(self, record):
         return record.total_current_value
@@ -288,6 +298,12 @@ class TakenLoanTable(tables.Table):
 
     total_due = tables.Column(verbose_name="Due", localize=True)
     total_current_value = tables.Column(verbose_name="Value")
+
+    def render_total_current_value(self, record):
+        value = getattr(record, "total_current_value", None)
+        if value is None:
+            value = getattr(record, "current_value", None)
+        return _format_decimal_2(value)
 
     def render_months_since_created(self, record):
         now = datetime.now()

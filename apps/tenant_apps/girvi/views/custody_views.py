@@ -8,7 +8,6 @@ Handles:
 - Viewing custody history
 """
 
-from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -22,6 +21,15 @@ from apps.tenant_apps.girvi.models import GivenLoan, TakenLoan, LoanItem
 from apps.tenant_apps.girvi.models.custody_tracking import (
     ItemCustodyStatus,
     RepledgeHistory,
+)
+from apps.tenant_apps.girvi.service_modules.custody import (
+    build_loan_custody_summary,
+    build_release_custody_check,
+    build_repledge_selection_context,
+    build_taken_loan_collateral_context,
+    create_repledge_from_items,
+    release_loan_with_custody_return,
+    return_all_items_from_taken_loan,
 )
 
 
@@ -61,34 +69,7 @@ def loan_custody_summary(request, loan_id):
     GET /girvi/loans/<id>/custody/
     """
     loan = get_object_or_404(GivenLoan, pk=loan_id)
-
-    items_by_custody = {"in_vault": [], "with_lender": [], "with_customer": []}
-
-    for item in loan.loanitems.all():
-        status = item.custody_status
-        items_by_custody[status].append(item)
-
-    # Group items with lenders by lender
-    by_lender = {}
-    for item in items_by_custody["with_lender"]:
-        if item.repledged_to:
-            lender_name = item.repledged_to.lender.name
-            if lender_name not in by_lender:
-                by_lender[lender_name] = []
-            by_lender[lender_name].append(item)
-
-    can_release, release_message = (
-        loan.can_release() if hasattr(loan, "can_release") else (True, "")
-    )
-
-    context = {
-        "loan": loan,
-        "items_by_custody": items_by_custody,
-        "items_by_lender": by_lender,
-        "can_release": can_release,
-        "release_message": release_message,
-        "total_items": loan.loanitems.count(),
-    }
+    context = build_loan_custody_summary(loan)
 
     template_name = "girvi/loan_custody_summary.html"
     if getattr(request, "htmx", False):
@@ -136,32 +117,21 @@ def return_all_items_from_lender(request, loan_id, taken_loan_id):
     loan = get_object_or_404(GivenLoan, pk=loan_id)
     taken_loan = get_object_or_404(TakenLoan, pk=taken_loan_id)
 
-    items = loan.loanitems.filter(
-        repledged_to=taken_loan, custody_status=ItemCustodyStatus.WITH_LENDER
+    result = return_all_items_from_taken_loan(
+        loan=loan,
+        taken_loan=taken_loan,
+        user=request.user,
     )
 
-    returned_count = 0
-    errors = []
-
-    with transaction.atomic():
-        for item in items:
-            try:
-                item.return_from_lender(
-                    user=request.user,
-                    notes=f"Bulk return from {taken_loan.lender.name}",
-                )
-                returned_count += 1
-            except ValidationError as e:
-                errors.append(f"{item.itemdesc}: {e}")
-
-    if returned_count:
+    if result.returned_count:
         messages.success(
-            request, f"Returned {returned_count} item(s) from {taken_loan.lender.name}"
+            request,
+            f"Returned {result.returned_count} item(s) from {taken_loan.lender.name}",
         )
 
-    if errors:
+    if result.errors:
         messages.warning(
-            request, "Some items could not be returned: " + "; ".join(errors)
+            request, "Some items could not be returned: " + "; ".join(result.errors)
         )
 
     return redirect("girvi:loan_custody_summary", loan_id=loan_id)
@@ -185,35 +155,8 @@ def release_loan_check_custody(request, loan_id):
         messages.info(request, "Loan already released")
         return redirect("girvi:girvi_loan_detail", pk=loan_id)
 
-    items_by_custody = {
-        status: list(loan.loanitems.filter(custody_status=status))
-        for status in [
-            ItemCustodyStatus.IN_VAULT,
-            ItemCustodyStatus.WITH_LENDER,
-            ItemCustodyStatus.WITH_CUSTOMER,
-        ]
-    }
-
-    with_lender = items_by_custody[ItemCustodyStatus.WITH_LENDER]
-
-    if with_lender:
-        # Group by lender for display
-        by_lender = {}
-        for item in with_lender:
-            if item.repledged_to:
-                lender_name = item.repledged_to.lender.name
-                if lender_name not in by_lender:
-                    by_lender[lender_name] = []
-                by_lender[lender_name].append(item)
-
-        context = {
-            "loan": loan,
-            "items_by_custody": items_by_custody,
-            "items_by_lender": by_lender,
-            "needs_return": True,
-            "total_with_lenders": len(with_lender),
-        }
-
+    context = build_release_custody_check(loan)
+    if context["needs_return"]:
         return render(request, "girvi/release_custody_check.html", context)
 
     # All items in vault - proceed to normal release
@@ -243,39 +186,12 @@ def release_loan_with_return(request, loan_id):
     released_by = request.POST.get("released_by")
 
     try:
-        with transaction.atomic():
-            # Use the enhanced release method if available
-            if hasattr(loan, "release_with_return_workflow"):
-                release = loan.release_with_return_workflow(
-                    release_date=release_date,
-                    released_by=released_by,
-                    created_by=request.user,
-                )
-            else:
-                # Manual workflow
-                # Step 1: Return items from lenders
-                items_with_lender = loan.loanitems.filter(
-                    custody_status=ItemCustodyStatus.WITH_LENDER
-                )
-                for item in items_with_lender:
-                    item.return_from_lender(
-                        user=request.user,
-                        notes=f"Returned for loan {loan.loan_id} release",
-                    )
-
-                # Step 2: Release items to customer
-                items_in_vault = loan.loanitems.filter(
-                    custody_status=ItemCustodyStatus.IN_VAULT
-                )
-                for item in items_in_vault:
-                    item.release_to_customer(user=request.user)
-
-                # Step 3: Create release document
-                release = loan.create_release(
-                    release_date=release_date,
-                    released_by=released_by,
-                    created_by=request.user,
-                )
+        release = release_loan_with_custody_return(
+            loan=loan,
+            release_date=release_date,
+            released_by=released_by,
+            user=request.user,
+        )
 
         messages.success(
             request,
@@ -301,28 +217,11 @@ def create_repledge_select_items(request):
 
     GET /girvi/repledge/create/
     """
-    # Get all items available for repledge
-    available_items = LoanItem.objects.filter(
-        custody_status=ItemCustodyStatus.IN_VAULT,
-        repledged_to__isnull=True,
-        loan__release__isnull=True,
-    ).select_related("loan", "loan__borrower")
-
-    # Group by customer for easier selection
-    by_customer = {}
-    for item in available_items:
-        customer = item.loan.borrower
-        if customer not in by_customer:
-            by_customer[customer] = []
-        by_customer[customer].append(item)
-
-    context = {
-        "available_items": available_items,
-        "items_by_customer": by_customer,
-        "total_value": sum(item.current_value() for item in available_items),
-    }
-
-    return render(request, "girvi/repledge_select_items.html", context)
+    return render(
+        request,
+        "girvi/repledge_select_items.html",
+        build_repledge_selection_context(),
+    )
 
 
 @login_required
@@ -343,53 +242,21 @@ def create_repledge_with_items(request):
     """
     item_ids = request.POST.getlist("item_ids")
     lender_id = request.POST.get("lender_id")
-    loan_amount = Decimal(request.POST.get("loan_amount", 0))
-
-    if not item_ids:
-        messages.error(request, "No items selected")
-        return redirect("girvi:create_repledge_select_items")
+    loan_amount = request.POST.get("loan_amount", 0)
 
     try:
-        with transaction.atomic():
-            # Get items
-            items = LoanItem.objects.filter(id__in=item_ids)
-
-            # Validate all items
-            for item in items:
-                if not item.is_available_for_repledge:
-                    raise ValidationError(
-                        f"Item {item.itemdesc} is not available for repledge"
-                    )
-
-            # Create TakenLoan
-            taken_loan = TakenLoan.objects.create(
-                lender_id=lender_id,
-                loan_date=request.POST.get("loan_date"),
-                # ... other fields
-            )
-
-            # Add collateral using enhanced method
-            if hasattr(taken_loan, "add_collateral"):
-                taken_loan.add_collateral(
-                    loan_items=list(items),
-                    user=request.user,
-                    notes=request.POST.get("notes", ""),
-                )
-            else:
-                # Manual repledge
-                total_value = sum(item.current_value() for item in items)
-                for item in items:
-                    item_amount = (item.current_value() / total_value) * loan_amount
-                    item.repledge_to(
-                        taken_loan=taken_loan,
-                        amount=item_amount,
-                        user=request.user,
-                        notes=request.POST.get("notes", ""),
-                    )
+        taken_loan = create_repledge_from_items(
+            item_ids=item_ids,
+            lender_id=lender_id,
+            loan_amount=loan_amount,
+            loan_date=request.POST.get("loan_date"),
+            notes=request.POST.get("notes", ""),
+            user=request.user,
+        )
 
         messages.success(
             request,
-            f"TakenLoan {taken_loan.loan_id} created with {len(items)} collateral item(s)",
+            f"TakenLoan {taken_loan.loan_id} created with {len(item_ids)} collateral item(s)",
         )
         return redirect("girvi:taken_loan_collateral_detail", loan_id=taken_loan.id)
 
@@ -411,42 +278,8 @@ def taken_loan_collateral_detail(request, loan_id):
     GET /girvi/taken-loans/<id>/collateral/
     """
     loan = get_object_or_404(TakenLoan, pk=loan_id)
-
-    # Get collateral items
-    collateral = (
-        loan.collateral_items.all() if hasattr(loan, "collateral_items") else []
-    )
-
-    # Group by source customer
-    by_customer = {}
-    for item in collateral:
-        customer = item.loan.borrower
-        if customer not in by_customer:
-            by_customer[customer] = {"items": [], "total_value": Decimal(0), "count": 0}
-        by_customer[customer]["items"].append(item)
-        by_customer[customer]["total_value"] += item.current_value()
-        by_customer[customer]["count"] += 1
-
-    # Calculate LTV ratio
-    total_collateral_value = sum(item.current_value() for item in collateral)
-    loan_amount = (
-        loan.get_loan_amount if hasattr(loan, "get_loan_amount") else loan.loan_amount
-    )
-    ltv_ratio = (
-        (loan_amount / total_collateral_value * 100)
-        if total_collateral_value > 0
-        else 0
-    )
-
-    context = {
-        "loan": loan,
-        "collateral_items": collateral,
-        "by_customer": by_customer,
-        "total_collateral_value": total_collateral_value,
-        "loan_amount": loan_amount,
-        "ltv_ratio": ltv_ratio,
-        "can_return_all": collateral.exists(),
-    }
+    context = build_taken_loan_collateral_context(loan)
+    context["can_return_all"] = context["collateral_items"].exists()
 
     template_name = "girvi/taken_loan_collateral.html"
     if getattr(request, "htmx", False):

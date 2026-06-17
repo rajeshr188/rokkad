@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django_tenants.utils import get_public_schema_name, schema_context
 
-from apps.tenant_apps.dea.models import VoucherType
+from apps.tenant_apps.dea.services.voucher_type_seed import seed_voucher_types
 from apps.tenant_apps.notify.models import NoticeTypeConfig, NotificationTemplate as LegacyNotificationTemplate
 from apps.tenant_apps.notify_v2.models import (
     NotificationEventType as NotifyV2EventType,
@@ -141,54 +141,7 @@ class Command(BaseCommand):
 
     def _seed_dea_voucher_types(self):
         """Extracted from dea migration RunPython seeds (idempotent)."""
-        seeds = [
-            (
-                "GIVENLOAN_RECEIPT",
-                "GivenLoan repayment receipt (cash received from borrower)",
-            ),
-            (
-                "GIVENLOAN_PAYMENT",
-                "GivenLoan disbursal payment (cash paid to borrower)",
-            ),
-            (
-                "TAKENLOAN_RECEIPT",
-                "TakenLoan disbursal receipt (cash received from lender)",
-            ),
-            (
-                "TAKENLOAN_PAYMENT",
-                "TakenLoan repayment payment (cash paid to lender)",
-            ),
-            (
-                "GIVENLOAN_RELEASE",
-                "GivenLoan release write-off / closure entry",
-            ),
-            (
-                "EXPENSE_EMP_CLAIM",
-                "Expense voucher for employee claims (reimbursements)",
-            ),
-            (
-                "EXPENSE_VENDOR_BILL",
-                "Expense voucher for vendor bills (accounts payable)",
-            ),
-            (
-                "EXPENSE_DIRECT_PAYMENT",
-                "Expense voucher for direct payments/cash expenses",
-            ),
-            (
-                "EXPENSE_REIMBURSEMENT",
-                "Expense voucher for reimbursement requests",
-            ),
-            (
-                "EXPENSE_OTHER",
-                "Expense voucher for other miscellaneous expenses",
-            ),
-        ]
-
-        for name, description in seeds:
-            VoucherType.objects.update_or_create(
-                name=name,
-                defaults={"description": description},
-            )
+        seed_voucher_types()
 
     def _seed_product_defaults(self):
         """

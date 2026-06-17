@@ -6,6 +6,7 @@ from django.db import transaction
 
 from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
+from apps.tenant_apps.girvi.lifecycle import V2_CLOSURE_STATUSES
 
 from .accrual import InterestAccrualCommand, InterestAccrualService
 from .payment import record_loan_release
@@ -73,12 +74,7 @@ class ReleaseLifecycleService:
                 workspace,
             )
             can_release = False
-            use_v2_closure = str(getattr(loan, "status", "")) in {
-                "ActiveCurrent",
-                "ActiveOverdue",
-                "ActiveNPA",
-                "ClosurePending",
-            }
+            use_v2_closure = str(getattr(loan, "status", "")) in V2_CLOSURE_STATUSES
             deliver = getattr(flow, "deliver", None)
             request_closure = getattr(flow, "request_closure", None)
             complete_closure = getattr(flow, "complete_closure", None)
@@ -168,12 +164,9 @@ class ReleaseLifecycleService:
                         except Exception:
                             pass  # WITH_CUSTOMER already, or validation error – skip silently
 
-                use_v2_closure = str(getattr(command.loan, "status", "")) in {
-                    "ActiveCurrent",
-                    "ActiveOverdue",
-                    "ActiveNPA",
-                    "ClosurePending",
-                }
+                use_v2_closure = (
+                    str(getattr(command.loan, "status", "")) in V2_CLOSURE_STATUSES
+                )
                 deliver = getattr(flow, "deliver", None)
                 complete_closure = getattr(flow, "complete_closure", None)
                 request_closure = getattr(flow, "request_closure", None)

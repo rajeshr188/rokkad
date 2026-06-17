@@ -25,7 +25,11 @@ def get_latest_rate(request):
 
 def rate_list(request):
     rates = Rate.objects.all()
-    return render(request, "rates/rate_list.html", {"rates": rates})
+    return render(
+        request,
+        "rates/rate_list.html",
+        {"rates": rates, "has_rate_sources": RateSource.objects.exists()},
+    )
 
 
 def rate_detail(request, pk):
@@ -41,7 +45,11 @@ def rate_create(request):
             return redirect("rate_detail", pk=rate.pk)
     else:
         form = RateForm()
-    return render(request, "rates/rate_form.html", {"form": form})
+    return render(
+        request,
+        "rates/rate_form.html",
+        {"form": form, "has_rate_sources": RateSource.objects.exists()},
+    )
 
 
 def rate_update(request, pk):
@@ -53,7 +61,11 @@ def rate_update(request, pk):
             return redirect("rate_detail", pk=rate.pk)
     else:
         form = RateForm(instance=rate)
-    return render(request, "rates/rate_form.html", {"form": form})
+    return render(
+        request,
+        "rates/rate_form.html",
+        {"form": form, "has_rate_sources": RateSource.objects.exists()},
+    )
 
 
 def rate_delete(request, pk):

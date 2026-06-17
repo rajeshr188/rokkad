@@ -335,3 +335,17 @@ class DirectExpensePaymentRule(BasePostingRule):
         from ..resolver import get_ledger_id_by_key
 
         return get_ledger_id_by_key(ledger_key)
+
+
+@register_rule("EXPENSE_REIMBURSEMENT")
+class ExpenseReimbursementRule(EmployeeExpenseClaimRule):
+    """Alias seeded reimbursement vouchers to the employee claim posting pattern."""
+
+    voucher_type = "EXPENSE_REIMBURSEMENT"
+
+
+@register_rule("EXPENSE_OTHER")
+class OtherExpenseRule(DirectExpensePaymentRule):
+    """Alias miscellaneous expense vouchers to the direct payment posting pattern."""
+
+    voucher_type = "EXPENSE_OTHER"

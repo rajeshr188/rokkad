@@ -2,17 +2,17 @@ import django_filters
 from django.db.models import Q
 from django_filters.widgets import RangeWidget
 
+from apps.tenant_apps.contact.facade import customer_queryset
 from apps.tenant_apps.contact.forms import CustomerWidget
-from apps.tenant_apps.contact.models import Customer
 
 from .forms import LoansWidget
+from .lifecycle import RELEASED_COMPAT_STATUSES, UNRELEASED_EXCLUDED_STATUSES
 from .models import (
     ItemType,
     GivenLoan,
     LoanItem,
     Release,
     TakenLoan,
-    LoanStatus,
 )
 
 
@@ -54,7 +54,7 @@ class BaseLoanFilter(django_filters.FilterSet):
 
 class LoanFilter(BaseLoanFilter):
     borrower = django_filters.ModelChoiceFilter(
-        queryset=Customer.objects.all(),
+        queryset=customer_queryset(),
         widget=CustomerWidget(),
     )
 
@@ -102,15 +102,15 @@ class LoanFilter(BaseLoanFilter):
 
 class TakenLoanFilter(BaseLoanFilter):
     lender = django_filters.ModelChoiceFilter(
-        queryset=Customer.objects.all(),
+        queryset=customer_queryset(),
         widget=CustomerWidget(),
     )
 
     def filter_status(self, queryset, name, value):
         if value == "Released":
-            return queryset.filter(status=LoanStatus.RELEASED)
+            return queryset.filter(status__in=RELEASED_COMPAT_STATUSES)
         elif value == "UnReleased":
-            return queryset.exclude(status=LoanStatus.RELEASED)
+            return queryset.exclude(status__in=UNRELEASED_EXCLUDED_STATUSES)
         return queryset
 
     class Meta:

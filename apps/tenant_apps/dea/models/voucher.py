@@ -53,16 +53,16 @@ class Voucher(models.Model):
         on_delete=models.PROTECT,
         related_name="corrections",
     )
-    fingerprint = models.CharField(max_length=128, db_index=True)
+    fingerprint = models.CharField(max_length=128, db_index=True, blank=True, null=True)
     last_posted_at = models.DateTimeField(null=True, blank=True)
     narration = models.TextField(null=True, blank=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["doc_content_type", "doc_object_id"],
+                fields=["doc_content_type", "doc_object_id", "voucher_type"],
                 condition=models.Q(status="POSTED"),
-                name="unique_posted_voucher_per_doc",
+                name="unique_posted_voucher_per_doc_type",
             ),
             models.UniqueConstraint(
                 fields=["fingerprint"],
@@ -78,12 +78,13 @@ class Voucher(models.Model):
         return f"/dea/vouchers/{self.pk}/"
 
     def clean(self):
-        """Validate that only one POSTED voucher exists per business doc."""
+        """Validate that only one POSTED voucher exists per business doc/type."""
         if self.status == VoucherStatus.POSTED:
             other_posted = (
                 Voucher.objects.filter(
                     doc_content_type=self.doc_content_type,
                     doc_object_id=self.doc_object_id,
+                    voucher_type=self.voucher_type,
                     status=VoucherStatus.POSTED,
                 )
                 .exclude(pk=self.pk)
@@ -92,7 +93,7 @@ class Voucher(models.Model):
 
             if other_posted:
                 raise ValidationError(
-                    f"Cannot have multiple POSTED vouchers for the same business document. "
+                    f"Cannot have multiple POSTED vouchers for the same business document/type. "
                     f"Reverse the previous one first or let the posting engine handle it."
                 )
 

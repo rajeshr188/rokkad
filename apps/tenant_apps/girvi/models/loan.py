@@ -16,9 +16,9 @@ from django.utils.translation import gettext_lazy as _
 from moneyed import Money
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (
-    AccountTransaction,
-    LedgerTransaction,
+from apps.tenant_apps.dea.facade import (
+    get_account_transactions_for_journal_entries,
+    get_ledger_transactions_for_journal_entries,
 )
 
 # Import constants from refactored models (but NOT the new model classes - they're defined in loan_refactored.py)
@@ -438,19 +438,17 @@ class Loan(_LoanAuditMixin):
     def get_atxns(self):
         """Retrieve all AccountTransactions for this loan's journal entries (audit/view purposes)."""
         journal_entries = self.journal_entries.all()
-        account_transactions = (
-            AccountTransaction.objects.filter(journal_entry__in=journal_entries)
-            .select_related("Account", "ledgerno")
-            .order_by("id")
+        account_transactions = get_account_transactions_for_journal_entries(
+            journal_entries
         )
         return list(account_transactions)
 
     def get_ltxns(self):
         """Retrieve all LedgerTransactions for this loan's journal entries (audit/view purposes)."""
         journal_entries = self.journal_entries.all()
-        ledger_transactions = LedgerTransaction.objects.filter(
-            journal_entry__in=journal_entries
-        ).select_related("ledgerno", "ledgerno_dr")
+        ledger_transactions = get_ledger_transactions_for_journal_entries(
+            journal_entries
+        )
         return list(ledger_transactions)
 
     def get_storage_box(self):

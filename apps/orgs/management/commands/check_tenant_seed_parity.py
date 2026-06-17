@@ -71,6 +71,8 @@ class Command(BaseCommand):
                 "TAKENLOAN_RECEIPT",
                 "TAKENLOAN_PAYMENT",
                 "GIVENLOAN_RELEASE",
+                "GIVENLOAN_AUCTION",
+                "GIVENLOAN_SOLD",
                 "EXPENSE_EMP_CLAIM",
                 "EXPENSE_VENDOR_BILL",
                 "EXPENSE_DIRECT_PAYMENT",

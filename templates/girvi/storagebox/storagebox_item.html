@@ -3,7 +3,7 @@
         <div>
             <h6 class="mb-1">{{ storage_box.name }}</h6>
             <div class="text-muted small">Location: {{ storage_box.location|default:"-" }}</div>
-            <div class="text-muted small">Items: {{ storage_box.start_item_id }} to {{ storage_box.end_item_id }}</div>
+            <div class="text-muted small">Items: {{ storage_box.start_loan_id|default:"-" }} to {{ storage_box.end_loan_id|default:"-" }}</div>
             <div class="text-muted small">Count: {{ storage_box.items_count }}</div>
         </div>
         <div class="btn-group btn-group-sm">

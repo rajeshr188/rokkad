@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -20,7 +21,11 @@ from .models import (
     VoucherType,
     Ledger,
 )
-from .services.materialize_journal import materialize_journal_from_voucher_lines
+from .services.materialize_journal import (
+    materialize_journal_from_voucher_lines,
+    sync_voucher_lines_from_bundle,
+)
+from apps.tenant_apps.dea.posting.types import AccountLine, DualLedgerLine, PostingBundle
 
 
 User = get_user_model()
@@ -155,3 +160,42 @@ class VoucherLineMaterializationTests(TenantTestCase):
         self.assertEqual(account_txn.ledgerno_id, self.cash.id)
         self.assertEqual(account_txn.XactTypeCode_id, "Dr")
         self.assertEqual(account_txn.amount, Money(500, "INR"))
+
+    def test_sync_voucher_lines_from_bundle_preserves_unmatched_account_lines(self):
+        bundle = PostingBundle(
+            ledger_lines=[
+                DualLedgerLine(
+                    debit_ledger_id=self.cash.id,
+                    credit_ledger_id=self.capital.id,
+                    currency="INR",
+                    amount=Decimal("500"),
+                    amount_base=Decimal("500"),
+                )
+            ],
+            account_lines=[
+                AccountLine(
+                    ledger_id=self.capital.id,
+                    account_id=self.account.id,
+                    side="Dr",
+                    currency="INR",
+                    amount=Decimal("500"),
+                    amount_base=Decimal("500"),
+                    xact_type_ext="TXN",
+                )
+            ],
+        )
+
+        # Use a voucher that is still draft-like for line sync
+        sync_voucher_lines_from_bundle(self.voucher, bundle)
+
+        lines = list(VoucherLine.objects.filter(voucher=self.voucher).order_by("line_no"))
+        self.assertEqual(len(lines), 3)
+        self.assertEqual(lines[0].ledger_id, self.cash.id)
+        self.assertEqual(lines[0].side, VoucherLine.LineSide.DR)
+        self.assertIsNone(lines[0].account_id)
+        self.assertEqual(lines[1].ledger_id, self.capital.id)
+        self.assertEqual(lines[1].side, VoucherLine.LineSide.CR)
+        self.assertIsNone(lines[1].account_id)
+        self.assertEqual(lines[2].ledger_id, self.capital.id)
+        self.assertEqual(lines[2].side, VoucherLine.LineSide.DR)
+        self.assertEqual(lines[2].account_id, self.account.id)

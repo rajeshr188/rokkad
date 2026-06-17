@@ -24,27 +24,44 @@ def _validate_voucher_line_balance(voucher: Voucher, lines):
     if not lines:
         raise ValidationError("Voucher has no lines to post.")
 
-    seen_dr = False
-    seen_cr = False
+    def _compute_balance(check_lines):
+        seen_dr = False
+        seen_cr = False
+        totals = {}
+        base_totals = {}
+        for line in check_lines:
+            side_mult = Decimal("1") if line.side == VoucherLine.LineSide.DR else Decimal("-1")
+            currency = str(line.amount.currency)
 
-    totals = {}
-    base_totals = {}
-    for line in lines:
-        side_mult = Decimal("1") if line.side == VoucherLine.LineSide.DR else Decimal("-1")
-        currency = str(line.amount.currency)
+            seen_dr = seen_dr or line.side == VoucherLine.LineSide.DR
+            seen_cr = seen_cr or line.side == VoucherLine.LineSide.CR
 
-        seen_dr = seen_dr or line.side == VoucherLine.LineSide.DR
-        seen_cr = seen_cr or line.side == VoucherLine.LineSide.CR
+            totals[currency] = totals.get(currency, Decimal("0")) + (line.amount.amount * side_mult)
 
-        totals[currency] = totals.get(currency, Decimal("0")) + (line.amount.amount * side_mult)
+            base_value = (
+                line.amount_base.amount
+                if line.amount_base is not None
+                else line.amount.amount
+            )
+            base_totals[currency] = base_totals.get(currency, Decimal("0")) + (base_value * side_mult)
 
-        base_value = (
-            line.amount_base.amount
-            if line.amount_base is not None
-            else line.amount.amount
-        )
-        base_totals[currency] = base_totals.get(currency, Decimal("0")) + (base_value * side_mult)
+        return seen_dr, seen_cr, totals, base_totals
 
+    seen_dr, seen_cr, totals, base_totals = _compute_balance(lines)
+    all_balanced = (
+        seen_dr
+        and seen_cr
+        and all(abs(total) <= Decimal("0.01") for total in totals.values())
+        and all(abs(total) <= Decimal("0.01") for total in base_totals.values())
+    )
+    if all_balanced:
+        return
+
+    ledger_only_lines = [line for line in lines if not line.account_id]
+    if not ledger_only_lines:
+        raise ValidationError("Voucher lines must include at least one debit and one credit.")
+
+    seen_dr, seen_cr, totals, base_totals = _compute_balance(ledger_only_lines)
     if not (seen_dr and seen_cr):
         raise ValidationError("Voucher lines must include at least one debit and one credit.")
 
@@ -57,6 +74,39 @@ def _validate_voucher_line_balance(voucher: Voucher, lines):
             raise ValidationError(
                 f"Voucher base totals are unbalanced for {currency}: {total}"
             )
+
+
+def _lines_are_balanced(lines) -> bool:
+    if not lines:
+        return False
+
+    seen_dr = False
+    seen_cr = False
+    totals = {}
+    base_totals = {}
+    for line in lines:
+        side_mult = Decimal("1") if line.side == VoucherLine.LineSide.DR else Decimal("-1")
+        currency = str(line.amount.currency)
+        seen_dr = seen_dr or line.side == VoucherLine.LineSide.DR
+        seen_cr = seen_cr or line.side == VoucherLine.LineSide.CR
+        totals[currency] = totals.get(currency, Decimal("0")) + (
+            line.amount.amount * side_mult
+        )
+        base_value = (
+            line.amount_base.amount
+            if line.amount_base is not None
+            else line.amount.amount
+        )
+        base_totals[currency] = base_totals.get(currency, Decimal("0")) + (
+            base_value * side_mult
+        )
+
+    return (
+        seen_dr
+        and seen_cr
+        and all(abs(total) <= Decimal("0.01") for total in totals.values())
+        and all(abs(total) <= Decimal("0.01") for total in base_totals.values())
+    )
 
 
 @transaction.atomic
@@ -116,6 +166,25 @@ def sync_voucher_lines_from_bundle(voucher: Voucher, bundle) -> int:
             )
             line_no += 1
 
+    # Preserve unmatched account-only lines by creating explicit voucher lines.
+    for key, account_entries in account_map.items():
+        side, ledger_id, currency, amount = key
+        for account_id, xact_type_ext in account_entries:
+            new_lines.append(
+                VoucherLine(
+                    voucher=voucher,
+                    line_no=line_no,
+                    side=side,
+                    ledger_id=ledger_id,
+                    account_id=account_id,
+                    amount=_money(amount, currency),
+                    amount_base=_money(amount, "INR"),
+                    xact_type_ext=xact_type_ext,
+                    exchange_rate=Decimal("1"),
+                )
+            )
+            line_no += 1
+
     VoucherLine.objects.bulk_create(new_lines)
     return len(new_lines)
 
@@ -151,7 +220,10 @@ def materialize_journal_from_voucher_lines(*, voucher: Voucher, posted_by_id: in
 
     txn_type_ext_cache = {}
 
-    currencies = sorted({str(line.amount.currency) for line in lines})
+    ledger_only_lines = [line for line in lines if not line.account_id]
+    gl_lines = ledger_only_lines if _lines_are_balanced(ledger_only_lines) else lines
+
+    currencies = sorted({str(line.amount.currency) for line in gl_lines})
     for currency in currencies:
         dr_lines = [
             {
@@ -161,7 +233,7 @@ def materialize_journal_from_voucher_lines(*, voucher: Voucher, posted_by_id: in
                     str(line.amount_base.amount if line.amount_base is not None else line.amount.amount)
                 ),
             }
-            for line in lines
+            for line in gl_lines
             if str(line.amount.currency) == currency and line.side == VoucherLine.LineSide.DR
         ]
         cr_lines = [
@@ -172,7 +244,7 @@ def materialize_journal_from_voucher_lines(*, voucher: Voucher, posted_by_id: in
                     str(line.amount_base.amount if line.amount_base is not None else line.amount.amount)
                 ),
             }
-            for line in lines
+            for line in gl_lines
             if str(line.amount.currency) == currency and line.side == VoucherLine.LineSide.CR
         ]
 

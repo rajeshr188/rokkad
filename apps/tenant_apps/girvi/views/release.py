@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -22,6 +23,9 @@ from ..services import (
     ReleaseLifecycleService,
 )
 from ..tables import ReleaseTable
+
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -149,7 +153,7 @@ def release_detail(request, pk):
 @login_required
 def release_update_view(request, pk):
     release = get_object_or_404(Release, pk=pk)
-    print("Release:", release)  # Debugging statement
+    logger.debug("Editing release %s", release.pk)
     if request.method == "POST":
         form = ReleaseForm(request.POST or None, instance=release)
         if form.is_valid():
@@ -158,9 +162,13 @@ def release_update_view(request, pk):
     else:
         form = ReleaseForm(instance=release)
         # form.fields['loan'].initial = release.loan.id  # Explicitly set the initial value
-        print("Form:", form)  # Debugging statement
-        print("Form instance:", form.instance)  # Debugging statement
-        print("Form loan field:", form["loan"].value())  # Debugging statement
+        logger.debug(
+            "Release update form initialized",
+            extra={
+                "release_id": release.pk,
+                "loan_field": form["loan"].value(),
+            },
+        )
     return render(request, "girvi/release/release_form.html", {"form": form})
 
 

@@ -1,10 +1,24 @@
 {% extends 'layouts/workspace.html' %}
 
 {% block content %}
-  <div class="container">
-    <h1>Rate List</h1>
-    <a href="{% url 'ratesource_list'%}">Ratesource List</a>
-  <a href="{% url 'rate_create'%}">Add Rates</a>
+<div class="container">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="h3 mb-1">Rates</h1>
+      <div class="text-muted">Current metal rates used by Girvi collateral valuation.</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'ratesource_list' %}">Rate Sources</a>
+      <a class="btn btn-outline-primary" href="{% url 'ratesource_create' %}">Add Source</a>
+      <a class="btn btn-primary" href="{% url 'rate_create' %}">Add Rate</a>
+    </div>
+  </div>
+  {% if not has_rate_sources %}
+  <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>No rate source exists yet. Add a source before adding metal rates.</div>
+    <a class="btn btn-sm btn-warning" href="{% url 'ratesource_create' %}">Add Rate Source</a>
+  </div>
+  {% endif %}
   <table class="table table-sm table-hover">
     <thead>
         <tr>
@@ -39,5 +53,5 @@
         {% endfor %}
     </tbody>
   </table>
-  </div>  
+</div>  
 {% endblock %}
