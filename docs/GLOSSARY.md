@@ -1,9 +1,9 @@
 ---
 status: active
 owner: project
-updated: 2026-06-17
+updated: 2026-06-18
 tags: [glossary, domain-language]
-related: [domain/accounting.md, domain/girvi.md, domain/contact.md]
+related: [domain/accounting.md, domain/girvi.md, domain/contact.md, domain/party.md]
 ---
 
 # Glossary
@@ -21,7 +21,13 @@ related: [domain/accounting.md, domain/girvi.md, domain/contact.md]
 - **Loan item**: Collateral item attached to a Girvi loan.
 - **Pure weight**: Metal content weight after purity adjustment.
 - **Current value**: Collateral valuation using current commodity/rate data.
-- **Contact**: Customer, supplier, lender, borrower, staff, or other business party.
+- **Contact**: Current compatibility app/model for customer profile, address, contact, proof, and picture data.
+- **Party**: Long-term external/internal business entity model. One party can have multiple roles.
+- **Party role**: The reason a party participates in a workflow, such as customer, supplier, borrower, lender, employee, agent, broker, or bank.
+- **Party type**: The legal/natural form of a party, such as individual, organization, bank, government body, or internal workspace entity.
+- **Customer segment**: Commercial grouping such as retail or wholesale. This is not the same as party type.
+- **Subledger account**: Party-specific accounting account used under a control ledger for a specific purpose.
+- **Control account**: General ledger account that summarizes a group of subledger accounts, such as Accounts Receivable or Accounts Payable.
 - **Workspace/company**: Tenant-scoped operating entity.
 - **Rate source**: Source/master record used for commodity rate entry.
 - **Facade**: Public app boundary used by other apps instead of importing internals.

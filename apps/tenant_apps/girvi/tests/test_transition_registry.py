@@ -4,7 +4,13 @@ from apps.tenant_apps.girvi.models.loan_refactored import LoanStatus
 from apps.tenant_apps.girvi.transition_registry import (
     build_transition_actions,
     build_transition_payload,
+    LEGACY_TRANSITION_FORM_UI_COMPAT_REGISTRY,
+    LEGACY_TRANSITION_STATE_COMPAT_REGISTRY,
+    LEGACY_TRANSITION_UI_COMPAT_REGISTRY,
+    TRANSITION_FORM_UI_REGISTRY,
     TRANSITION_REGISTRY,
+    TRANSITION_STATE_REGISTRY,
+    TRANSITION_UI_REGISTRY,
     get_transition_form_ui,
     get_transition_form_class,
     get_transition_state_spec,
@@ -17,8 +23,9 @@ class _DummyLoan:
     pk = 99
     id = 99
 
-    def __init__(self, status=None):
+    def __init__(self, status=None, loan_type="Given"):
         self.status = status
+        self.loan_type = loan_type
 
 
 class TransitionRegistryTests(SimpleTestCase):
@@ -26,25 +33,26 @@ class TransitionRegistryTests(SimpleTestCase):
         self.assertEqual(normalize_transition_name("mark sold"), "mark_sold")
 
     def test_release_alias_is_normalized_to_deliver(self):
-        self.assertEqual(normalize_transition_name("release"), "deliver")
+        self.assertEqual(normalize_transition_name("release"), "request_closure")
 
     def test_registry_has_core_given_loan_transitions(self):
         expected = {
-            "approve",
-            "disburse",
-            "cancel",
-            "mark_defaulted",
-            "mark_auctioned",
-            "mark_sold",
-            "undo_disburse",
-            "undo_release",
-            "repledge",
-            "undo_repledge",
+            "submit_for_approval",
+            "approve_loan",
+            "reject_loan",
+            "cancel_loan",
+            "disburse_loan",
+            "undo_disbursal",
+            "mark_npa",
+            "request_closure",
+            "request_renewal",
+            "complete_auction",
+            "write_off_loan",
         }
         self.assertTrue(expected.issubset(set(TRANSITION_REGISTRY.keys())))
 
-    def test_deliver_is_not_exposed_via_transition_view(self):
-        self.assertIsNone(get_transition_form_class("deliver"))
+    def test_legacy_approve_alias_resolves_to_canonical_form(self):
+        self.assertIs(get_transition_form_class("approve"), get_transition_form_class("approve_loan"))
 
     def test_transition_form_ui_metadata_exists_for_registered_transition(self):
         ui = get_transition_form_ui("mark_sold")
@@ -55,9 +63,9 @@ class TransitionRegistryTests(SimpleTestCase):
     def test_transition_state_spec_clarifies_release_contract(self):
         spec = get_transition_state_spec("release")
         self.assertIsNotNone(spec)
-        self.assertEqual(spec.key, "deliver")
-        self.assertEqual(spec.target_status, "Released")
-        self.assertEqual(spec.execution_mode, "release-flow")
+        self.assertEqual(spec.key, "request_closure")
+        self.assertEqual(spec.target_status, "ClosurePending")
+        self.assertEqual(spec.execution_mode, "closure-flow")
 
     def test_transition_state_spec_supports_new_closure_flow(self):
         spec = get_transition_state_spec("request_closure")
@@ -68,7 +76,7 @@ class TransitionRegistryTests(SimpleTestCase):
 
     def test_build_transition_payload_returns_typed_dto(self):
         payload = build_transition_payload(
-            "cancel",
+            "cancel_loan",
             {"cancelled_by": "alice", "reason": "duplicate entry"},
         )
         self.assertIsInstance(payload, CancelPayload)
@@ -98,3 +106,52 @@ class TransitionRegistryTests(SimpleTestCase):
         )
         self.assertEqual([action["key"] for action in actions], ["disburse_loan"])
         self.assertIn("transition=disburse_loan", actions[0]["href"])
+
+    def test_build_transition_actions_canonicalizes_taken_disburse_alias(self):
+        actions = build_transition_actions(
+            _DummyLoan(status="Draft", loan_type="Taken"),
+            ["disburse"],
+        )
+
+        self.assertEqual([action["key"] for action in actions], ["activate"])
+        self.assertEqual(actions[0]["title"], "Activate Taken Loan")
+        self.assertIn("transition=activate", actions[0]["href"])
+
+    def test_taken_loan_transition_state_specs_are_canonical(self):
+        activate = get_transition_state_spec("activate")
+        settlement = get_transition_state_spec("request_settlement")
+        complete = get_transition_state_spec("complete_settlement")
+
+        self.assertEqual(activate.target_status, "Active")
+        self.assertEqual(activate.execution_mode, "transition-with-accounting")
+        self.assertEqual(settlement.target_status, "SettlementPending")
+        self.assertEqual(complete.target_status, "Closed")
+
+    def test_legacy_keys_are_not_primary_registry_entries(self):
+        self.assertNotIn("approve", TRANSITION_REGISTRY)
+        self.assertNotIn("disburse", TRANSITION_REGISTRY)
+        self.assertNotIn("cancel", TRANSITION_REGISTRY)
+
+    def test_legacy_keys_are_not_primary_ui_or_state_entries(self):
+        legacy_keys = {
+            "approve",
+            "disburse",
+            "deliver",
+            "cancel",
+            "mark_defaulted",
+            "mark_auctioned",
+            "undo_disburse",
+        }
+
+        self.assertTrue(legacy_keys.isdisjoint(TRANSITION_STATE_REGISTRY))
+        self.assertTrue(legacy_keys.isdisjoint(TRANSITION_UI_REGISTRY))
+        self.assertTrue(legacy_keys.isdisjoint(TRANSITION_FORM_UI_REGISTRY))
+
+    def test_legacy_only_transition_metadata_is_explicitly_compatibility_scoped(self):
+        for key in {"mark_sold", "repledge", "undo_release", "undo_repledge"}:
+            self.assertNotIn(key, TRANSITION_STATE_REGISTRY)
+            self.assertNotIn(key, TRANSITION_UI_REGISTRY)
+            self.assertNotIn(key, TRANSITION_FORM_UI_REGISTRY)
+            self.assertIn(key, LEGACY_TRANSITION_STATE_COMPAT_REGISTRY)
+            self.assertIn(key, LEGACY_TRANSITION_UI_COMPAT_REGISTRY)
+            self.assertIn(key, LEGACY_TRANSITION_FORM_UI_COMPAT_REGISTRY)

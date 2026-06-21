@@ -1,0 +1,565 @@
+{% extends 'layouts/workspace.html' %}
+
+{% block title %}{{ party.display_name }}{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-3">
+    <div class="d-flex align-items-center gap-3">
+        {% if party.profile_photo %}
+            <img src="{{ party.profile_photo.url }}" alt="" class="rounded-circle border" style="width:72px;height:72px;object-fit:cover;">
+        {% else %}
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:72px;height:72px;font-size:1.75rem;">
+                {{ party.display_name|first|upper }}
+            </div>
+        {% endif %}
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <h1 class="h3 mb-0">{{ party.display_name }}</h1>
+                <span class="badge {% if party.status == 'ACTIVE' %}text-bg-success{% elif party.status == 'BLOCKED' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">
+                    {{ party.get_status_display }}
+                </span>
+                {% if party.credit_hold %}<span class="badge text-bg-warning">Credit Hold</span>{% endif %}
+            </div>
+            <div class="text-muted small mt-1">{{ party.party_code }} &middot; {{ party.get_party_type_display }}</div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'party:party_list' %}">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <a class="btn btn-primary" href="{% url 'party:party_update' party.pk %}">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+    </div>
+</div>
+
+<ul class="nav nav-tabs" id="party-tabs" role="tablist">
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'overview' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#overview" type="button">Overview</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'roles' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#roles" type="button">Roles</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'relationships' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#relationships" type="button">Relationships</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'contacts' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#contacts" type="button">Contacts</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'addresses' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#addresses" type="button">Addresses</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'accounts' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#accounts" type="button">Accounts / Ledger</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'transactions' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#transactions" type="button">Transactions</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'loans' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#loans" type="button">Loans</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'kyc' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#kyc" type="button">Documents / KYC</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'activity' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#activity" type="button">Notes / Activity</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'merge' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#merge" type="button">Merge</button></li>
+</ul>
+
+<div class="tab-content border border-top-0 rounded-bottom p-3 bg-white">
+    <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" id="overview">
+        <div class="border rounded p-3 mb-3">
+            <form id="party-photo-form" method="post" enctype="multipart/form-data" action="{% url 'party:party_photo_update' party.pk %}" class="row g-3 align-items-end">
+                {% csrf_token %}
+                <input type="hidden" id="party-photo-image-data" name="image_data">
+                <div class="col-lg-5">
+                    <label class="form-label">Camera</label>
+                    <div id="party-camera-panel" class="border rounded bg-light d-flex align-items-center justify-content-center mb-2" style="min-height: 220px;">
+                        <span class="text-muted">Camera preview</span>
+                    </div>
+                    <video id="party-camera-video" class="d-none w-100 rounded" autoplay playsinline></video>
+                    <canvas id="party-camera-canvas" class="d-none" width="480" height="360"></canvas>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="party-camera-start">
+                            <i class="bi bi-camera"></i> Start Camera
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" type="button" id="party-camera-capture" disabled>
+                            <i class="bi bi-camera-fill"></i> Capture
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="party-camera-retake" disabled>
+                            <i class="bi bi-arrow-counterclockwise"></i> Retake
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" type="button" id="party-camera-stop" disabled>
+                            <i class="bi bi-stop-circle"></i> Stop
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <label class="form-label" for="{{ photo_form.profile_photo.id_for_label }}">Profile Photo</label>
+                    {{ photo_form.profile_photo }}
+                    {{ photo_form.profile_photo.errors }}
+                    <div class="form-text">Use camera capture or choose an image file.</div>
+                </div>
+                <div class="col-lg-2">
+                    <button class="btn btn-outline-primary" type="submit"><i class="bi bi-upload"></i> Save Photo</button>
+                </div>
+            </form>
+            {% if party.profile_photo %}
+            <form method="post" action="{% url 'party:party_photo_remove' party.pk %}" class="mt-2">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i> Remove Photo</button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4"><div class="text-muted small">Legal Name</div><div class="fw-semibold">{{ party.legal_name|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Relation</div><div class="fw-semibold">{{ party.relation_display|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Phone</div><div class="fw-semibold">{{ party.primary_phone|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Email</div><div class="fw-semibold">{{ party.primary_email|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">PAN</div><div class="fw-semibold">{{ party.tax_pan|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">GSTIN</div><div class="fw-semibold">{{ party.gstin|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Risk Level</div><div class="fw-semibold">{{ party.risk_level|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Legacy Customer</div><div class="fw-semibold">{{ activity.customer|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Created</div><div class="fw-semibold">{{ party.created_at|date:"d M Y H:i" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Updated</div><div class="fw-semibold">{{ party.updated_at|date:"d M Y H:i" }}</div></div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'roles' %}show active{% endif %}" id="roles">
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Role</th><th>Segment</th><th>Status</th><th>From</th><th>To</th><th></th></tr></thead>
+                        <tbody>
+                            {% for role in party.roles.all %}
+                            <tr>
+                                <td class="fw-semibold">{{ role.role_type.label }}</td>
+                                <td>{{ role.segment|default:"-" }}</td>
+                                <td><span class="badge {% if role.status == 'ACTIVE' %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ role.get_status_display }}</span></td>
+                                <td>{{ role.effective_from|default:"-" }}</td>
+                                <td>{{ role.effective_to|default:"-" }}</td>
+                                <td class="text-end">
+                                    {% if role.status == "ACTIVE" %}
+                                    <form method="post" action="{% url 'party:party_role_end' party.pk role.pk %}">
+                                        {% csrf_token %}
+                                        <button class="btn btn-sm btn-outline-secondary" type="submit">End</button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-muted">No roles found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <form method="post" action="{% url 'party:party_role_add' party.pk %}" class="border rounded p-3">
+                    {% csrf_token %}
+                    <h2 class="h6 mb-3">Add Role</h2>
+                    <div class="mb-2">{{ role_form.role_type.label_tag }}{{ role_form.role_type }}</div>
+                    <div class="mb-2">{{ role_form.segment.label_tag }}{{ role_form.segment }}</div>
+                    <div class="row g-2">
+                        <div class="col">{{ role_form.effective_from.label_tag }}{{ role_form.effective_from }}</div>
+                        <div class="col">{{ role_form.effective_to.label_tag }}{{ role_form.effective_to }}</div>
+                    </div>
+                    <div class="mt-2">{{ role_form.status.label_tag }}{{ role_form.status }}</div>
+                    <button class="btn btn-primary mt-3" type="submit"><i class="bi bi-plus-lg"></i> Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'relationships' %}show active{% endif %}" id="relationships">
+        <form method="post" action="{% if edit_relationship %}{% url 'party:party_relationship_update' party.pk edit_relationship.pk %}{% else %}{% url 'party:party_relationship_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+            {% csrf_token %}
+            {{ relationship_form.non_field_errors }}
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">{{ relationship_form.relationship_type.label_tag }}{{ relationship_form.relationship_type }}{{ relationship_form.relationship_type.errors }}</div>
+                <div class="col-md-4">{{ relationship_form.to_party.label_tag }}{{ relationship_form.to_party }}{{ relationship_form.to_party.errors }}</div>
+                <div class="col-md-3">{{ relationship_form.notes.label_tag }}{{ relationship_form.notes }}{{ relationship_form.notes.errors }}</div>
+                <div class="col-md-1">
+                    <div class="form-check mb-2">{{ relationship_form.is_active }} <label class="form-check-label" for="{{ relationship_form.is_active.id_for_label }}">Active</label></div>
+                </div>
+                <div class="col-md-1 d-flex gap-2">
+                    <button class="btn btn-primary" type="submit">{% if edit_relationship %}Save{% else %}Add{% endif %}</button>
+                </div>
+                {% if edit_relationship %}
+                <div class="col-12"><a class="btn btn-outline-secondary btn-sm" href="{% url 'party:party_detail' party.pk %}?tab=relationships">Cancel</a></div>
+                {% endif %}
+            </div>
+        </form>
+
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <h2 class="h6">Related Parties</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Relationship</th><th>Party</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+                        <tbody>
+                            {% for relationship in party.relationships_from.all %}
+                            <tr>
+                                <td>{{ relationship.get_relationship_type_display }}</td>
+                                <td><a href="{% url 'party:party_detail' relationship.to_party.pk %}">{{ relationship.to_party.display_name }}</a></td>
+                                <td>{{ relationship.is_active|yesno:"Active,Inactive" }}</td>
+                                <td>{{ relationship.notes|default:"-" }}</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=relationships&edit_relationship={{ relationship.pk }}"><i class="bi bi-pencil"></i></a>
+                                    <form method="post" action="{% url 'party:party_relationship_delete' party.pk relationship.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                                </td>
+                            </tr>
+                            {% empty %}<tr><td colspan="5" class="text-muted">No outgoing relationships found.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <h2 class="h6">Linked From</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Party</th><th>Relationship</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {% for relationship in party.relationships_to.all %}
+                            <tr>
+                                <td><a href="{% url 'party:party_detail' relationship.from_party.pk %}">{{ relationship.from_party.display_name }}</a></td>
+                                <td>{{ relationship.get_relationship_type_display }}</td>
+                                <td>{{ relationship.is_active|yesno:"Active,Inactive" }}</td>
+                            </tr>
+                            {% empty %}<tr><td colspan="3" class="text-muted">No incoming relationships found.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'contacts' %}show active{% endif %}" id="contacts">
+        <form method="post" action="{% if edit_contact %}{% url 'party:party_contact_update' party.pk edit_contact.pk %}{% else %}{% url 'party:party_contact_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+            {% csrf_token %}
+            {{ contact_form.non_field_errors }}
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">{{ contact_form.contact_type.label_tag }}{{ contact_form.contact_type }}{{ contact_form.contact_type.errors }}</div>
+                <div class="col-md-2">{{ contact_form.label.label_tag }}{{ contact_form.label }}{{ contact_form.label.errors }}</div>
+                <div class="col-md-4">{{ contact_form.value.label_tag }}{{ contact_form.value }}{{ contact_form.value.errors }}</div>
+                <div class="col-md-2">
+                    <div class="form-check mb-2">{{ contact_form.is_primary }} <label class="form-check-label" for="{{ contact_form.is_primary.id_for_label }}">Primary</label></div>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn btn-primary" type="submit">{% if edit_contact %}Save{% else %}Add{% endif %}</button>
+                    {% if edit_contact %}<a class="btn btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=contacts">Cancel</a>{% endif %}
+                </div>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Type</th><th>Label</th><th>Value</th><th>Primary</th><th>Verified</th><th></th></tr></thead>
+                <tbody>
+                    {% for contact in party.contact_methods.all %}
+                    <tr>
+                        <td>{{ contact.get_contact_type_display }}</td>
+                        <td>{{ contact.label|default:"-" }}</td>
+                        <td>{{ contact.value }}</td>
+                        <td>{{ contact.is_primary|yesno:"Yes,No" }}</td>
+                        <td>{{ contact.is_verified|yesno:"Yes,No" }}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=contacts&edit_contact={{ contact.pk }}"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{% url 'party:party_contact_delete' party.pk contact.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                        </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="6" class="text-muted">No contact methods found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'addresses' %}show active{% endif %}" id="addresses">
+        <form method="post" action="{% if edit_address %}{% url 'party:party_address_update' party.pk edit_address.pk %}{% else %}{% url 'party:party_address_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+            {% csrf_token %}
+            {{ address_form.non_field_errors }}
+            <div class="row g-2">
+                <div class="col-md-2">{{ address_form.address_type.label_tag }}{{ address_form.address_type }}</div>
+                <div class="col-md-5">{{ address_form.line1.label_tag }}{{ address_form.line1 }}{{ address_form.line1.errors }}</div>
+                <div class="col-md-5">{{ address_form.line2.label_tag }}{{ address_form.line2 }}</div>
+                <div class="col-md-3">{{ address_form.area.label_tag }}{{ address_form.area }}</div>
+                <div class="col-md-3">{{ address_form.city.label_tag }}{{ address_form.city }}{{ address_form.city.errors }}</div>
+                <div class="col-md-2">{{ address_form.state.label_tag }}{{ address_form.state }}</div>
+                <div class="col-md-2">{{ address_form.postal_code.label_tag }}{{ address_form.postal_code }}</div>
+                <div class="col-md-1">{{ address_form.country.label_tag }}{{ address_form.country }}</div>
+                <div class="col-md-1 d-flex align-items-end"><div class="form-check mb-2">{{ address_form.is_default }} <label class="form-check-label" for="{{ address_form.is_default.id_for_label }}">Default</label></div></div>
+                <div class="col-12 d-flex gap-2">
+                    <button class="btn btn-primary" type="submit">{% if edit_address %}Save{% else %}Add{% endif %}</button>
+                    {% if edit_address %}<a class="btn btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=addresses">Cancel</a>{% endif %}
+                </div>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Type</th><th>Address</th><th>City</th><th>Default</th><th>Verified</th><th></th></tr></thead>
+                <tbody>
+                    {% for address in party.addresses.all %}
+                    <tr>
+                        <td>{{ address.get_address_type_display }}</td>
+                        <td>{{ address.line1 }}{% if address.line2 %}, {{ address.line2 }}{% endif %}</td>
+                        <td>{{ address.city }}{% if address.state %}, {{ address.state }}{% endif %}</td>
+                        <td>{{ address.is_default|yesno:"Yes,No" }}</td>
+                        <td>{{ address.is_verified|yesno:"Yes,No" }}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=addresses&edit_address={{ address.pk }}"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{% url 'party:party_address_delete' party.pk address.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                        </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="6" class="text-muted">No addresses found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'accounts' %}show active{% endif %}" id="accounts">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Role</th><th>Purpose</th><th>Account</th><th>Control Ledger</th><th>Status</th><th>Default</th></tr></thead>
+                <tbody>
+                    {% for mapping in account_mappings %}
+                    <tr>
+                        <td>{{ mapping.role_key }}</td>
+                        <td>{{ mapping.get_purpose_display }}</td>
+                        <td><a href="{% url 'dea_account_detail' mapping.account.pk %}">{{ mapping.account }}</a></td>
+                        <td>{% if mapping.control_ledger %}<a href="{% url 'dea_ledger_detail' mapping.control_ledger.pk %}">{{ mapping.control_ledger }}</a>{% else %}-{% endif %}</td>
+                        <td>{{ mapping.get_status_display }}</td>
+                        <td>{{ mapping.is_default|yesno:"Yes,No" }}</td>
+                    </tr>
+                    {% empty %}<tr><td colspan="6" class="text-muted">No account mappings found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'transactions' %}show active{% endif %}" id="transactions">
+        <div class="row g-3">
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Account Mappings</div><div class="h4 mb-0">{{ account_mappings|length }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Loans</div><div class="h4 mb-0">{{ activity.counts.given_loans|add:activity.counts.taken_loans }}</div></div></div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'loans' %}show active{% endif %}" id="loans">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <h2 class="h6">Given Loans</h2>
+                {% include 'party/partials/linked_object_table.html' with objects=activity.given_loans empty_text='No given loans found.' %}
+            </div>
+            <div class="col-lg-6">
+                <h2 class="h6">Taken Loans</h2>
+                {% include 'party/partials/linked_object_table.html' with objects=activity.taken_loans empty_text='No taken loans found.' %}
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'kyc' %}show active{% endif %}" id="kyc">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <h2 class="h6">Identifiers</h2>
+                <form method="post" action="{% if edit_identifier %}{% url 'party:party_identifier_update' party.pk edit_identifier.pk %}{% else %}{% url 'party:party_identifier_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+                    {% csrf_token %}
+                    {{ identifier_form.non_field_errors }}
+                    <div class="row g-2">
+                        <div class="col-md-6">{{ identifier_form.identifier_type.label_tag }}{{ identifier_form.identifier_type }}{{ identifier_form.identifier_type.errors }}</div>
+                        <div class="col-md-6">{{ identifier_form.value.label_tag }}{{ identifier_form.value }}{{ identifier_form.value.errors }}</div>
+                        <div class="col-md-6">{{ identifier_form.masked_value.label_tag }}{{ identifier_form.masked_value }}</div>
+                        <div class="col-md-6">{{ identifier_form.expires_on.label_tag }}{{ identifier_form.expires_on }}</div>
+                        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">{% if edit_identifier %}Save{% else %}Add{% endif %}</button>{% if edit_identifier %}<a class="btn btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=kyc">Cancel</a>{% endif %}</div>
+                    </div>
+                </form>
+                <table class="table table-sm">
+                    <tbody>
+                        {% for identifier in party.identifiers.all %}
+                        <tr>
+                            <td>{{ identifier.get_identifier_type_display }}</td>
+                            <td>{{ identifier.masked_value|default:identifier.value }}</td>
+                            <td>{{ identifier.is_verified|yesno:"Verified,Pending" }}</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=kyc&edit_identifier={{ identifier.pk }}"><i class="bi bi-pencil"></i></a>
+                                <form method="post" action="{% url 'party:party_identifier_delete' party.pk identifier.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                            </td>
+                        </tr>
+                        {% empty %}<tr><td class="text-muted">No identifiers found.</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-lg-6">
+                <h2 class="h6">Documents</h2>
+                <form method="post" enctype="multipart/form-data" action="{% if edit_document %}{% url 'party:party_document_update' party.pk edit_document.pk %}{% else %}{% url 'party:party_document_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+                    {% csrf_token %}
+                    {{ document_form.non_field_errors }}
+                    <div class="row g-2">
+                        <div class="col-md-6">{{ document_form.document_type.label_tag }}{{ document_form.document_type }}</div>
+                        <div class="col-md-6">{{ document_form.title.label_tag }}{{ document_form.title }}{{ document_form.title.errors }}</div>
+                        <div class="col-md-6">{{ document_form.identifier.label_tag }}{{ document_form.identifier }}</div>
+                        <div class="col-md-6">{{ document_form.expires_on.label_tag }}{{ document_form.expires_on }}</div>
+                        <div class="col-12">{{ document_form.file.label_tag }}{{ document_form.file }}{{ document_form.file.errors }}</div>
+                        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">{% if edit_document %}Save{% else %}Add{% endif %}</button>{% if edit_document %}<a class="btn btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=kyc">Cancel</a>{% endif %}</div>
+                    </div>
+                </form>
+                <table class="table table-sm">
+                    <tbody>
+                        {% for document in party.documents.all %}
+                        <tr>
+                            <td>{{ document.get_document_type_display }}</td>
+                            <td>{% if document.file %}<a href="{{ document.file.url }}">{{ document.title }}</a>{% else %}{{ document.title }}{% endif %}</td>
+                            <td>{{ document.is_verified|yesno:"Verified,Pending" }}</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary" href="{% url 'party:party_detail' party.pk %}?tab=kyc&edit_document={{ document.pk }}"><i class="bi bi-pencil"></i></a>
+                                <form method="post" action="{% url 'party:party_document_delete' party.pk document.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                            </td>
+                        </tr>
+                        {% empty %}<tr><td class="text-muted">No documents found.</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'activity' %}show active{% endif %}" id="activity">
+        <div class="row g-3">
+            <div class="col-md-6"><div class="text-muted small">Created By</div><div class="fw-semibold">{{ party.created_by|default:"-" }}</div></div>
+            <div class="col-md-6"><div class="text-muted small">Updated By</div><div class="fw-semibold">{{ party.updated_by|default:"-" }}</div></div>
+            <div class="col-12">
+                <div class="text-muted small">Metadata</div>
+                <pre class="border rounded p-3 bg-light small mb-0">{{ party.metadata }}</pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'merge' %}show active{% endif %}" id="merge">
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <form method="post" action="{% url 'party:party_merge' party.pk %}" class="border rounded p-3">
+                    {% csrf_token %}
+                    <h2 class="h6 mb-3">Merge Duplicate Party Into This Party</h2>
+                    {{ merge_form.non_field_errors }}
+                    <div class="mb-3">
+                        {{ merge_form.source_party.label_tag }}
+                        {{ merge_form.source_party }}
+                        {{ merge_form.source_party.errors }}
+                    </div>
+                    <div class="form-check mb-3">
+                        {{ merge_form.confirm }}
+                        <label class="form-check-label" for="{{ merge_form.confirm.id_for_label }}">{{ merge_form.confirm.label }}</label>
+                        {{ merge_form.confirm.errors }}
+                    </div>
+                    <button class="btn btn-danger" type="submit">
+                        <i class="bi bi-intersect"></i> Merge
+                    </button>
+                </form>
+            </div>
+            <div class="col-lg-5">
+                <div class="border rounded p-3 bg-light">
+                    <h2 class="h6 mb-2">Merge Guardrails</h2>
+                    <ul class="small mb-0">
+                        <li>The duplicate party is archived, not deleted.</li>
+                        <li>Contacts, addresses, documents, relationships, roles, and non-conflicting account mappings are moved.</li>
+                        <li>Conflicting legacy customers, identifiers, or DEA account mappings stop the merge.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(() => {
+    const form = document.getElementById("party-photo-form");
+    const panel = document.getElementById("party-camera-panel");
+    const video = document.getElementById("party-camera-video");
+    const canvas = document.getElementById("party-camera-canvas");
+    const imageDataInput = document.getElementById("party-photo-image-data");
+    const fileInput = document.getElementById("{{ photo_form.profile_photo.id_for_label }}");
+    const startButton = document.getElementById("party-camera-start");
+    const captureButton = document.getElementById("party-camera-capture");
+    const retakeButton = document.getElementById("party-camera-retake");
+    const stopButton = document.getElementById("party-camera-stop");
+
+    if (!form || !panel || !video || !canvas || !imageDataInput || !startButton || !captureButton || !retakeButton || !stopButton) {
+        return;
+    }
+
+    let stream = null;
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+            stream = null;
+        }
+        video.srcObject = null;
+        captureButton.disabled = true;
+        retakeButton.disabled = !imageDataInput.value;
+        stopButton.disabled = true;
+        startButton.disabled = false;
+    }
+
+    function resetPanel(message) {
+        panel.innerHTML = "";
+        const span = document.createElement("span");
+        span.className = "text-muted";
+        span.textContent = message;
+        panel.appendChild(span);
+    }
+
+    startButton.addEventListener("click", async () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            resetPanel("Camera is not available in this browser.");
+            return;
+        }
+        try {
+            stopCamera();
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user" },
+                audio: false,
+            });
+            video.srcObject = stream;
+            panel.innerHTML = "";
+            panel.appendChild(video);
+            video.classList.remove("d-none");
+            await video.play();
+            startButton.disabled = true;
+            captureButton.disabled = false;
+            retakeButton.disabled = true;
+            stopButton.disabled = false;
+        } catch (error) {
+            resetPanel("Could not access camera. Use file upload instead.");
+        }
+    });
+
+    captureButton.addEventListener("click", () => {
+        const context = canvas.getContext("2d");
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL("image/jpeg", 0.9);
+        imageDataInput.value = imageData;
+        if (fileInput) {
+            fileInput.value = "";
+        }
+        panel.innerHTML = "";
+        const img = document.createElement("img");
+        img.src = imageData;
+        img.alt = "Captured profile photo";
+        img.className = "img-fluid rounded";
+        img.style.maxHeight = "220px";
+        panel.appendChild(img);
+        stopCamera();
+        retakeButton.disabled = false;
+    });
+
+    retakeButton.addEventListener("click", () => {
+        imageDataInput.value = "";
+        resetPanel("Camera preview");
+        startButton.click();
+    });
+
+    stopButton.addEventListener("click", () => {
+        stopCamera();
+        resetPanel("Camera stopped");
+    });
+
+    if (fileInput) {
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files.length) {
+                imageDataInput.value = "";
+                stopCamera();
+            }
+        });
+    }
+
+    form.addEventListener("submit", (event) => {
+        const hasCapture = Boolean(imageDataInput.value);
+        const hasFile = Boolean(fileInput && fileInput.files.length);
+        if (!hasCapture && !hasFile) {
+            event.preventDefault();
+            resetPanel("Capture a photo or choose an image file.");
+        }
+    });
+
+    window.addEventListener("beforeunload", stopCamera);
+})();
+</script>
+{% endblock %}

@@ -478,6 +478,28 @@ class PurchaseInvoiceLineItemAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(models.PartyAccountMapping)
+class PartyAccountMappingAdmin(admin.ModelAdmin):
+    list_display = (
+        "party",
+        "role_key",
+        "purpose",
+        "account",
+        "control_ledger",
+        "status",
+        "is_default",
+    )
+    list_filter = ("status", "purpose", "role_key", "is_default")
+    search_fields = (
+        "party__display_name",
+        "party__party_code",
+        "account__account_number",
+        "role_key",
+        "purpose",
+    )
+    raw_id_fields = ("party", "account", "control_ledger")
+
+
 # Register your models here.
 admin.site.register(models.Account)
 admin.site.register(models.AccountType)

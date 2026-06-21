@@ -17,6 +17,7 @@ Migration Notes:
 """
 
 from decimal import Decimal
+from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -30,6 +31,19 @@ class ItemCustodyStatus(models.TextChoices):
     IN_VAULT = "in_vault", "In Our Vault"
     WITH_LENDER = "with_lender", "Pledged to Lender"
     WITH_CUSTOMER = "with_customer", "Released to Customer"
+
+
+def _get_loan_item_model():
+    return apps.get_model("girvi", "LoanItem")
+
+
+def _loan_customer_or_borrower(loan):
+    return getattr(loan, "borrower", None) or getattr(loan, "customer", None)
+
+
+def _taken_loan_lender_name(taken_loan):
+    lender = getattr(taken_loan, "lender", None)
+    return getattr(lender, "name", None) or "Unknown"
 
 
 # ============================================================================
@@ -59,11 +73,11 @@ class LoanItemWithCustody(models.Model):
 
     # Repledge tracking (if currently repledged)
     repledged_to = models.ForeignKey(
-        "girvi.Loan",  # Will be TakenLoan in refactored version
+        "girvi.TakenLoan",
         null=True,
         blank=True,
         on_delete=models.PROTECT,  # Can't delete loan if items still pledged
-        related_name="collateral_items",
+        related_name="active_custody_items",
         help_text="Active repledge - item is currently with this lender",
     )
 
@@ -284,7 +298,7 @@ class RepledgeHistory(models.Model):
     )
 
     taken_loan = models.ForeignKey(
-        "girvi.Loan",  # Will be TakenLoan in refactored version
+        "girvi.TakenLoan",
         on_delete=models.CASCADE,
         related_name="repledge_history_items",
         help_text="The TakenLoan where this item was used as collateral",
@@ -347,8 +361,8 @@ class RepledgeHistory(models.Model):
 
     def __str__(self):
         status = "Active" if self.is_active else "Returned"
-        lender_name = getattr(self.taken_loan, "lender", {}).get("name", "Unknown")
-        return f"{self.loan_item.itemdesc} → {lender_name} ({status})"
+        lender_name = _taken_loan_lender_name(self.taken_loan)
+        return f"{self.loan_item.itemdesc} -> {lender_name} ({status})"
 
     # === PROPERTIES ===
 
@@ -385,7 +399,7 @@ class TakenLoanCollateralMixin:
     @property
     def collateral_items(self):
         """Get all items currently pledged as collateral"""
-        from apps.tenant_apps.girvi.models.loan import LoanItem
+        LoanItem = _get_loan_item_model()
 
         return LoanItem.objects.filter(
             repledged_to=self, custody_status=ItemCustodyStatus.WITH_LENDER
@@ -412,7 +426,7 @@ class TakenLoanCollateralMixin:
         summary = defaultdict(lambda: {"count": 0, "value": 0})
 
         for item in self.collateral_items:
-            customer = item.loan.customer
+            customer = _loan_customer_or_borrower(item.loan)
             summary[customer]["count"] += 1
             summary[customer]["value"] += item.current_value()
 
@@ -590,7 +604,7 @@ def migrate_repledged_loan_items():
 
     Call this in a data migration after adding new fields to LoanItem.
     """
-    from apps.tenant_apps.girvi.models.loan import LoanItem, RepledgedLoanItem
+    RepledgedLoanItem = apps.get_model("girvi", "RepledgedLoanItem")
 
     migrated_count = 0
 
@@ -655,4 +669,4 @@ class ItemCustodyQuerySet(models.QuerySet):
 
     def by_customer(self, customer):
         """Items from specific customer's loans"""
-        return self.filter(loan__customer=customer)
+        return self.filter(loan__borrower=customer)

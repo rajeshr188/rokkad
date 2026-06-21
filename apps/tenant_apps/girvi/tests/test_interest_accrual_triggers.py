@@ -32,17 +32,20 @@ class InterestAccrualTriggerTests(SimpleTestCase):
 
     @patch("apps.tenant_apps.girvi.views.loanpayment.reverse", return_value="/girvi/loan/1/")
     @patch("apps.tenant_apps.girvi.views.loanpayment.messages.success")
-    @patch("apps.tenant_apps.girvi.views.loanpayment.create_and_post_voucher_for_doc")
+    @patch("apps.tenant_apps.girvi.service_modules.repayment.GivenLoanPostingService.post_repayment")
+    @patch("apps.tenant_apps.girvi.service_modules.repayment.CompanyPreferences")
     @patch("apps.tenant_apps.girvi.views.loanpayment.get_object_or_404")
     def test_payment_view_triggers_interest_catchup_before_receipt(
         self,
         mock_get_object_or_404,
-        mock_create_and_post,
+        mock_company_preferences,
+        mock_post_repayment,
         _mock_success,
         _mock_reverse,
     ):
         payment = MagicMock(payment_id="PAY-1")
-        payment.get_voucher_type.return_value = "GIVENLOAN_RECEIPT"
+        mock_post_repayment.return_value = (payment, True)
+        mock_company_preferences.return_value = SimpleNamespace(loan_catchup_on_receipt=True)
 
         loan = MagicMock()
         loan.pk = 1
@@ -65,7 +68,7 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         request.htmx = False
 
         with patch(
-            "apps.tenant_apps.girvi.views.loanpayment.InterestAccrualService.execute"
+            "apps.tenant_apps.girvi.service_modules.repayment.InterestAccrualService.execute"
         ) as mock_accrue:
             response = loan_payment_create_view.__wrapped__(request, pk=1)
 
@@ -75,7 +78,7 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         self.assertEqual(command.loan, loan)
         self.assertEqual(command.trigger_source, "RECEIPT")
         self.assertTrue(command.post_to_accounting)
-        mock_create_and_post.assert_called_once()
+        mock_post_repayment.assert_called_once()
 
     def test_release_lifecycle_triggers_interest_catchup_before_release_posting(self):
         loan = SimpleNamespace(loan_id="GL-002", status="Disbursed")
@@ -94,10 +97,13 @@ class InterestAccrualTriggerTests(SimpleTestCase):
             errors=[],
         )
 
+        request_closure = MagicMock()
+        request_closure.can_proceed.return_value = True
+        complete_closure = MagicMock()
+        complete_closure.can_proceed.return_value = True
         flow = SimpleNamespace(
-            deliver=SimpleNamespace(can_proceed=lambda: True),
-            request_closure=None,
-            complete_closure=None,
+            request_closure=request_closure,
+            complete_closure=complete_closure,
         )
         release = MagicMock(release_id="REL-002")
 
@@ -164,13 +170,16 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         new_loan.pk = 8
         new_loan.loan_id = "GL-008"
 
-        source_flow = SimpleNamespace(repledge=MagicMock())
+        request_renewal = MagicMock()
+        request_renewal.can_proceed.return_value = True
+        source_flow = SimpleNamespace(
+            request_renewal=request_renewal,
+            complete_renewal=MagicMock(),
+        )
         new_flow = SimpleNamespace(
             submit_for_approval=SimpleNamespace(can_proceed=lambda: False),
             approve_loan=SimpleNamespace(can_proceed=lambda: False),
-            approve=SimpleNamespace(can_proceed=lambda: False),
             disburse_loan=SimpleNamespace(can_proceed=lambda: False),
-            disburse=SimpleNamespace(can_proceed=lambda: False),
         )
 
         with patch.object(service, "preview", return_value=preview), patch(
@@ -190,11 +199,8 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.girvi.service_modules.renewal.InterestAccrualService.execute"
         ) as mock_accrue, patch(
-            "apps.tenant_apps.girvi.service_modules.renewal.LoanFlow",
-            return_value=source_flow,
-        ), patch(
             "apps.tenant_apps.girvi.service_modules.renewal.build_runtime_loan_flow",
-            side_effect=[new_flow],
+            side_effect=[source_flow, new_flow],
         ):
             mock_select_for_update.return_value.get.return_value = source_loan
             result = service.execute(command)

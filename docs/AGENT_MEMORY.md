@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-17
+updated: 2026-06-21
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
@@ -12,9 +12,9 @@ This document stores durable project context for AI agents. The root [AGENTS.md]
 
 ## Project Identity
 
-Rokkad is a tenant-aware SaaS mini ERP for small businesses, especially jewellery, pawn/loan, commodity, inventory, sales, and purchase businesses.
+Rokkad is a tenant-aware SaaS mini ERP for small businesses, especially jewellery, pawn/loan, commodity, inventory, and future commerce workflows.
 
-Accounting is the central source of truth. Sales, purchases, loans, inventory, and commodity transactions are business documents that produce accounting, stock, and commodity ledger effects.
+Accounting is the central source of truth. Loans, inventory, future sales/purchase documents, and commodity transactions are business documents that produce accounting, stock, and commodity ledger effects.
 
 The product must feel document-centric, not module-centric.
 
@@ -37,8 +37,8 @@ Users should create business documents, not manual journal entries.
 - Accounting
 - Loans / Girvi
 - Inventory
-- Sales
-- Purchase
+- Future sales/commerce
+- Future purchase/procurement
 - Commodity management
 - Workspace management
 - Subscription management
@@ -119,9 +119,37 @@ Each document should expose `get_economic_payload()` or equivalent structured da
 - Other apps should import DEA through `apps.tenant_apps.dea.facade`.
 - Other apps should import Girvi cross-domain reads through `apps.tenant_apps.girvi.facade` or selectors.
 - Girvi lifecycle work should prefer command/use-case services over model methods or large view logic.
+- Girvi runtime lifecycle is canonicalized: `GivenLoan` uses `LoanLifecycleState`, legacy loan statuses/actions are compatibility aliases, and `TakenLoan` uses a smaller dedicated lifecycle.
+- Girvi app analysis docs live under `docs/apps/girvi/` and should be updated when Girvi models, workflows, UI routes, services, or lifecycle behavior change.
 - Contacts should not directly know Girvi internals for loan summary data.
 - Tenant seed/setup failures should surface as actionable setup messages, not silent zero values.
 - Posting logic belongs in DEA posting services/rules, not views or templates.
+- Current Girvi borrower/lender posting paths resolve DEA subledger accounts by party role and purpose (`BORROWER_LOAN_RECEIVABLE`, `LENDER_LOAN_PAYABLE`) instead of reading `Customer.account` directly.
+- Current DEA sales/purchase invoice posting paths resolve customer/supplier accounts by party role and purpose (`CUSTOMER_RECEIVABLE`, `SUPPLIER_PAYABLE`) instead of direct `Customer.account` reads.
+- Experimental operational `sales`, `purchase`, and `approval` tenant apps were removed from runtime on 2026-06-19. DEA `SalesInvoiceVoucher` and `PurchaseInvoiceVoucher` remain accounting documents; future commerce/procurement apps must be rebuilt around commodity, inventory, settlement, and DEA posting boundaries rather than gold/silver-as-currency balances.
+- Party has a tenant UI at `/party/` for list/search/filter, create/edit, detail tabs, role add/end, read-only contact/address/KYC data, DEA party account mapping visibility, and linked customer loan activity.
+- Party profile data is editable from Party detail: single profile photo, contact methods, addresses, identifiers, and documents can be maintained directly before Phase 9 operational foreign-key migration work.
+- Party profile photos can be maintained from Party detail by either choosing an image file or capturing an image from the device camera.
+- Party contact forms validate phone/mobile/WhatsApp through `django-phonenumber-field` with region `IN`, store phone numbers in E.164 format, and Party relationships are maintained from the Party detail Relationships tab.
+- Party stores textual relation identity directly on `Party` through `relation_label` and `relation_name` for values like `S/o Kumar`; structured `PartyRelationship` remains for links to saved Party records.
+- Party duplicate merge is service-backed and conservative: source parties are archived, non-conflicting profile children and DEA mappings are moved, and merges stop on legacy-customer, identifier, or active DEA mapping conflicts.
+- Party list has filtered CSV/XLSX export for Owner/Admin users. The first version is intentionally flat: Party identity fields, contact summary, active roles, and legacy customer linkage; child profile tables remain separate.
+- Party Phase 9 uses nullable shadow FKs on operational documents first. Current shadow links include Girvi borrower/lender loans and DEA sales/purchase invoice vouchers; DEA account resolution prefers explicit Party links and falls back to Customer.
+- Girvi given-loan creation is Party-first while still compatibility-safe: users select an active Party, the create path ensures a legacy `Customer` bridge as needed, and `GivenLoan.borrower` plus `GivenLoan.borrower_party` are both populated.
+- Party codes are tenant-local stable identifiers. Normal creation auto-generates sequential `P-000001` style codes when blank; manual/custom codes remain supported for imports and legacy bridge records.
+- Girvi TakenLoan amount, weight, current-value, and item-interest read models should use `RepledgeHistory` plus linked `LoanItem` data; `RepledgedLoanItem` is retained only as readable legacy/import compatibility data.
+- Refactored Girvi interest query annotations use `calculated_*` names to avoid shadowing read-only model properties such as `loan_amount`, `total_interest`, and `total_due`.
+- Girvi transition registries should keep canonical state/UI/form metadata as primary. Legacy transition metadata belongs only in explicit compatibility registries while aliases remain accepted for old URLs/imported values.
+- Girvi active list/detail/transition UI should render canonical lifecycle labels through lifecycle display helpers rather than raw persisted status values.
+- Girvi transition matrix tests derive canonical transition source/target states from `flows.py`; adding or changing a canonical `GivenLoanFlow` or `TakenLoanFlow` transition should update registry state metadata in the same change.
+- Current Girvi-to-DEA synchronous posting/read integration should go through `apps.tenant_apps.girvi.integrations.dea_adapter`; `service_modules.posting_adapter` exists only as a compatibility import path.
+- Girvi refactored loan model payment methods are compatibility wrappers only; voucher creation logic belongs in `service_modules.payment_voucher_creation` and the DEA adapter boundary.
+- Girvi P3 adapter cleanup is complete for refactored runtime paths. Deprecated `models/loan.py` may still import DEA directly until P5 legacy model containment.
+- Girvi loan detail display data belongs in selectors/read models. Current detail metrics, storage position lookup, interest reporting, and release CTA metadata are built by `apps.tenant_apps.girvi.selectors` and consumed by thin view rendering.
+- Girvi repayment use cases belong in `service_modules.repayment`: GivenLoan receipt catch-up accrual, repayment payload shaping, DEA posting delegation, TakenLoan repayment posting, and result messages should stay out of `views.loanpayment`.
+- Girvi bulk merge/delete use cases belong in `service_modules.bulk_operations`: selection parsing, guard validation, merge orchestration, delete orchestration, and structured operation errors should stay out of `views.loan`.
+- Deprecated Girvi `Loan` / `LoanPayment` must not be imported from `apps.tenant_apps.girvi.models`; use `apps.tenant_apps.girvi.models.legacy` only for explicit historical compatibility surfaces. Runtime code should use `GivenLoan`, `TakenLoan`, and DEA `PaymentVoucher` paths.
+- Girvi legacy payment import/export is intentionally labelled as `LegacyLoanPaymentResource`; `LoanPaymentResource` is only a compatibility alias for old import/export callers.
 
 ## Multi-tenant SaaS Assumptions
 

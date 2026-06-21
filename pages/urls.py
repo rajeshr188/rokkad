@@ -14,7 +14,6 @@ from .views import (
     FaqPageView,
     Dashboard,
     company_dashboard,  # DEPRECATED - kept for backward compatibility
-    maxx_files_upload,
 )
 
 # Import workspace views from apps.orgs
@@ -54,8 +53,6 @@ urlpatterns = [
         workspace_select,
         name="workspace_select",
     ),  # Select workspace
-    # Utility views
-    path("maxxupload/", maxx_files_upload, name="maxx_upload"),
     # DEPRECATED: keep legacy starter-pack URL working while Girvi owns the feature
     path("download-templates/", download_template_pack, name="download_template_pack"),
 ]

@@ -1,0 +1,10 @@
+{% if fields %}
+    <p class="mb-2">Fields available on this model:</p>
+    <ul class="mb-0">
+        {% for field in fields %}
+            <li><code>{{ field }}</code></li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="mb-0">No fields found for the selected model.</p>
+{% endif %}

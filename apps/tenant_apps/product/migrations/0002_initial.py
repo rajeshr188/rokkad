@@ -12,21 +12,9 @@ class Migration(migrations.Migration):
         ("contact", "0001_initial"),
         ("dea", "0001_initial"),
         ("product", "0001_initial"),
-        ("purchase", "0001_initial"),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="stock",
-            name="purchase_item",
-            field=models.OneToOneField(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="stock_item",
-                to="purchase.purchaseitem",
-            ),
-        ),
         migrations.AddField(
             model_name="attributevalue",
             name="attribute",

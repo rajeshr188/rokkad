@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.tenant_apps.girvi.models import LoanItem, TakenLoan
+from apps.tenant_apps.girvi.models import LoanItem, Series, TakenLoan
 from apps.tenant_apps.girvi.models.custody_tracking import ItemCustodyStatus
 
 
@@ -127,20 +127,47 @@ def build_repledge_selection_context():
         "available_items": available_items,
         "items_by_customer": by_customer,
         "total_value": sum(item.current_value() for item in available_items),
+        "series_options": _active_taken_loan_series_queryset(),
     }
 
 
-def create_repledge_from_items(*, item_ids, lender_id, loan_amount, loan_date, notes, user):
+def _active_taken_loan_series_queryset():
+    return Series.objects.active_for_loans().filter(loan_type=Series.LoanType.TAKEN)
+
+
+def _resolve_repledge_series(series_id=None):
+    if series_id:
+        series = _active_taken_loan_series_queryset().filter(pk=series_id).first()
+        if not series:
+            raise ValidationError("Selected series is not active for loan creation")
+        return series
+
+    series = _active_taken_loan_series_queryset().order_by("created", "id").first()
+    if series:
+        return series
+
+    series = Series.objects.active_for_loans().order_by("created", "id").first()
+    if series:
+        return series
+
+    raise ValidationError("No active loan series is available for repledge creation")
+
+
+def create_repledge_from_items(
+    *, item_ids, lender_id, loan_amount, loan_date, notes, user, series_id=None
+):
     if not item_ids:
         raise ValidationError("No items selected")
 
     with transaction.atomic():
+        series = _resolve_repledge_series(series_id)
         items = list(LoanItem.objects.filter(id__in=item_ids))
         for item in items:
             if not item.is_available_for_repledge:
                 raise ValidationError(f"Item {item.itemdesc} is not available for repledge")
 
         taken_loan = TakenLoan.objects.create(
+            series=series,
             lender_id=lender_id,
             loan_date=loan_date,
         )

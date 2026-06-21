@@ -1,10 +1,12 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
 from .inventory.services import InventoryMovementService
 from .models import Category, Product, ProductType, ProductVariant, Stock, StockItem, StockStatement, StockTransaction
+from .tests_utils import ensure_inventory_movements
 
 
 User = get_user_model()
@@ -27,6 +29,8 @@ class PhysicalAuditReconciliationTests(TenantTestCase):
         tenant.creator = user
 
     def setUp(self):
+        connection.set_tenant(self.tenant)
+        ensure_inventory_movements()
         suffix = str(abs(hash(self._testMethodName)))[:6]
         self.category = Category.objects.create(name=f"PR7 Gold {suffix}")
         self.product_type = ProductType.objects.create(name=f"PR7 Type {suffix}")

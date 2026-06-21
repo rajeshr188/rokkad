@@ -105,15 +105,9 @@ class GivenLoanPostingServiceTests(TestCase):
             "apps.tenant_apps.girvi.service_modules.loan_posting.GivenLoan",
             FakeGivenLoan,
         ), patch(
-            "apps.tenant_apps.girvi.service_modules.loan_posting.ContentType"
-        ) as mock_ct, patch(
-            "apps.tenant_apps.girvi.service_modules.loan_posting.PaymentVoucher"
-        ) as mock_payment_voucher_class:
-            mock_ct.objects.get_for_model.return_value = SimpleNamespace()
-            mock_queryset = MagicMock()
-            mock_queryset.first.return_value = existing_payment
-            mock_payment_voucher_class.objects.filter.return_value = mock_queryset
-
+            "apps.tenant_apps.girvi.service_modules.loan_posting.find_payment_by_marker",
+            return_value=existing_payment,
+        ):
             payment, created = GivenLoanPostingService().post_auction_recovery(
                 loan, 100, self._fake_user()
             )
@@ -135,17 +129,11 @@ class GivenLoanPostingServiceTests(TestCase):
             "apps.tenant_apps.girvi.service_modules.loan_posting.GivenLoan",
             FakeGivenLoan,
         ), patch(
-            "apps.tenant_apps.girvi.service_modules.loan_posting.ContentType"
-        ) as mock_ct, patch(
-            "apps.tenant_apps.girvi.service_modules.loan_posting.PaymentVoucher"
-        ) as mock_payment_voucher_class, patch(
+            "apps.tenant_apps.girvi.service_modules.loan_posting.find_payment_by_marker",
+            return_value=None,
+        ), patch(
             "apps.tenant_apps.girvi.service_modules.loan_posting.post_payment_voucher"
         ) as mock_post:
-            mock_ct.objects.get_for_model.return_value = SimpleNamespace()
-            mock_queryset = MagicMock()
-            mock_queryset.first.return_value = None
-            mock_payment_voucher_class.objects.filter.return_value = mock_queryset
-
             payment, created = GivenLoanPostingService().post_sale_recovery(
                 loan, 250, self._fake_user()
             )

@@ -6,12 +6,14 @@ from typing import Optional
 from django.db import transaction
 
 from apps.orgs.preferences import CompanyPreferences
-from apps.tenant_apps.girvi.flows import LoanFlow, build_runtime_loan_flow
+from apps.tenant_apps.girvi.flows import (
+    build_runtime_loan_flow,
+    normalize_legacy_given_loan_status,
+)
 from apps.tenant_apps.girvi.models.loan_item import LoanItem
 from apps.tenant_apps.girvi.models.loan_refactored import (
     GivenLoan,
     LoanLifecycleState,
-    LoanStatus,
 )
 from apps.tenant_apps.girvi.models.renewal import LoanRenewal
 
@@ -163,12 +165,11 @@ class LoanRenewalService:
                         warns.extend(accrual_result.warnings)
 
                 allowed_statuses = {
-                    LoanStatus.DISBURSED,
                     LoanLifecycleState.ACTIVE_CURRENT,
                     LoanLifecycleState.ACTIVE_OVERDUE,
                     LoanLifecycleState.ACTIVE_NPA,
                 }
-                if loan.status not in allowed_statuses:
+                if normalize_legacy_given_loan_status(loan.status) not in allowed_statuses:
                     return LoanRenewalResult(
                         success=False,
                         message=(
@@ -221,22 +222,18 @@ class LoanRenewalService:
                         itemdesc=item.itemdesc,
                     )
 
-                if loan.status == LoanStatus.DISBURSED:
-                    source_flow = LoanFlow(loan, command.created_by, tenant=None)
-                    source_flow.repledge(created_by=command.created_by)
-                else:
-                    source_flow = build_runtime_loan_flow(
-                        loan,
-                        command.created_by,
-                        tenant=None,
-                        transition_name="complete_renewal",
-                    )
-                    if source_flow.request_renewal.can_proceed():
-                        source_flow.request_renewal(requested_by=command.created_by)
-                    source_flow.complete_renewal(
-                        completed_by=command.created_by,
-                        successor_loan_id=getattr(new_loan, "loan_id", None) or str(new_loan.pk),
-                    )
+                source_flow = build_runtime_loan_flow(
+                    loan,
+                    command.created_by,
+                    tenant=None,
+                    transition_name="complete_renewal",
+                )
+                if source_flow.request_renewal.can_proceed():
+                    source_flow.request_renewal(requested_by=command.created_by)
+                source_flow.complete_renewal(
+                    completed_by=command.created_by,
+                    successor_loan_id=getattr(new_loan, "loan_id", None) or str(new_loan.pk),
+                )
 
                 new_flow = build_runtime_loan_flow(
                     new_loan,
@@ -249,13 +246,9 @@ class LoanRenewalService:
 
                 if hasattr(new_flow, "approve_loan") and new_flow.approve_loan.can_proceed():
                     new_flow.approve_loan(approved_by=command.created_by)
-                elif hasattr(new_flow, "approve") and new_flow.approve.can_proceed():
-                    new_flow.approve(approved_by=command.created_by)
 
                 if hasattr(new_flow, "disburse_loan") and new_flow.disburse_loan.can_proceed():
                     new_flow.disburse_loan(disbursed_by=command.created_by)
-                elif hasattr(new_flow, "disburse") and new_flow.disburse.can_proceed():
-                    new_flow.disburse(disbursed_by=command.created_by)
 
                 try:
                     record_loan_disbursal(new_loan, command.created_by)

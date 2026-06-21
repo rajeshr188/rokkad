@@ -13,6 +13,8 @@ from django_select2.forms import ModelSelect2Widget
 
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.party.selectors import active_parties
 from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.girvi.services import RateCacheService
 
@@ -41,6 +43,29 @@ class LoansWidget(s2forms.ModelSelect2Widget):
 
 class SeriesWidget(s2forms.ModelSelect2Widget):
     search_fields = ["name__icontains"]
+
+
+class BorrowerPartyWidget(s2forms.ModelSelect2Widget):
+    search_fields = [
+        "party_code__icontains",
+        "display_name__icontains",
+        "relation_name__icontains",
+        "primary_phone__icontains",
+        "primary_email__icontains",
+    ]
+
+    def get_queryset(self):
+        return active_parties().order_by("display_name", "party_code")
+
+    def label_from_instance(self, obj):
+        parts = [obj.display_name]
+        if obj.relation_display:
+            parts.append(obj.relation_display)
+        if obj.primary_phone:
+            parts.append(obj.primary_phone)
+        if obj.party_code:
+            parts.append(obj.party_code)
+        return " | ".join(parts)
 
 
 class MultipleLoansWidget(s2forms.ModelSelect2MultipleWidget):
@@ -403,6 +428,106 @@ class LoanForm(forms.ModelForm):
         # if Loan.objects.filter(loan_id=cleaned_data['loan_id']).exists():
         #     self.add_error("loan_id", "A loan with this LoanID already exists.")
         # raise forms.ValidationError("A loan with this LoanID already exists.")
+
+
+class LoanCreateForm(forms.Form):
+    series = forms.ModelChoiceField(
+        queryset=Series.objects.active_for_loans(),
+        widget=forms.Select(
+            attrs={
+                "hx-get": reverse_lazy("girvi:girvi_series_next_loanid"),
+                "hx-target": "#div_id_loan_id",
+                "hx-trigger": "change",
+                "hx-swap": "innerHTML",
+                "autofocus": True,
+            }
+        ),
+    )
+    loan_id = forms.CharField(required=False)
+    borrower_party = forms.ModelChoiceField(
+        label="Borrower",
+        queryset=Party.objects.none(),
+        widget=BorrowerPartyWidget(
+            attrs={
+                "autofocus": True,
+                "name": "borrower_party",
+            }
+        ),
+    )
+    loan_date = forms.DateTimeField(
+        input_formats=["%d-%m-%Y %H:%M", "%Y-%m-%dT%H:%M"],
+        widget=forms.DateTimeInput(
+            attrs={
+                "type": "datetime-local",
+                "data-date-format": "DD MMMM YYYY",
+            },
+            format="%Y-%m-%dT%H:%M",
+        ),
+    )
+    tenure = forms.IntegerField(initial=3, min_value=1)
+    interest_type = forms.ChoiceField(
+        choices=GivenLoan._meta.get_field("interest_type").choices,
+        initial=GivenLoan._meta.get_field("interest_type").default,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["borrower_party"].queryset = active_parties().order_by(
+            "display_name",
+            "party_code",
+        )
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Row(
+                Column("series", css_class="form-group col-md-6 mb-0"),
+                Column("loan_id", css_class="form-group col-md-6 mb-0"),
+                css_class="form-row",
+            ),
+            Row(
+                Column("borrower_party", css_class="form-group col-md-8 mb-0"),
+                Column("loan_date", css_class="form-group col-md-4 mb-0"),
+                css_class="form-row",
+            ),
+            HTML(
+                '<div class="mb-2"><a class="small" href="{% url \'party:party_create\' %}" target="_blank" rel="noopener">+ Add Party</a></div>'
+            ),
+            Row(
+                Column("tenure", css_class="form-group col-md-6 mb-0"),
+                Column("interest_type", css_class="form-group col-md-6 mb-0"),
+                css_class="form-row",
+            ),
+            HTML("<br/>"),
+        )
+        self.post_url = reverse("girvi:girvi_loan_create")
+        self.helper.attrs = {
+            "hx-post": self.post_url,
+            "hx-target": "#modal-content",
+        }
+
+    def clean_loan_id(self):
+        loan_id = self.cleaned_data.get("loan_id")
+        if loan_id:
+            loan_exists = (
+                GivenLoan.objects.filter(loan_id=loan_id).exists()
+                or TakenLoan.objects.filter(loan_id=loan_id).exists()
+            )
+            if loan_exists:
+                raise forms.ValidationError("A loan with this LoanID already exists.")
+        return loan_id
+
+    def clean_loan_date(self):
+        loan_date = self.cleaned_data.get("loan_date")
+        if loan_date and loan_date > timezone.now():
+            raise forms.ValidationError("Date cannot be in the future.")
+        return loan_date
+
+    def clean(self):
+        cleaned_data = super().clean()
+        series = cleaned_data.get("series")
+        if series and not series.is_active:
+            self.add_error("series", f"Series {series} is Inactive")
+        return cleaned_data
 
 
 class LoanRenewForm(forms.Form):

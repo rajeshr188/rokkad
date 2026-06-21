@@ -44,14 +44,6 @@ class Migration(migrations.Migration):
                     default='Available',
                     max_length=10
                 )),
-                ('purchase_item', models.ForeignKey(
-                    blank=True,
-                    help_text='Original purchase source if applicable',
-                    null=True,
-                    on_delete=django.db.models.deletion.SET_NULL,
-                    related_name='stock_items',
-                    to='purchase.purchaseitem'
-                )),
                 ('parent_stock', models.ForeignKey(
                     blank=True,
                     help_text='Parent lot if created via split operation',

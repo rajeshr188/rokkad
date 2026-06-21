@@ -73,8 +73,8 @@ class Account(models.Model):
     AccountType_Ext = models.ForeignKey(
         AccountType_Ext, on_delete=models.CASCADE, verbose_name=_("Account Type")
     )
-    contact = models.OneToOneField(
-        Customer, on_delete=models.CASCADE, related_name="account"
+    contact = models.ForeignKey(
+        Customer, on_delete=models.CASCADE, related_name="accounts"
     )
 
     # Account identification
@@ -120,7 +120,6 @@ class Account(models.Model):
     class Meta:
         ordering = ("account_number",)
         constraints = [
-            models.UniqueConstraint(fields=["contact"], name="unique_contact_account")
         ]
         indexes = [
             models.Index(fields=["account_number", "status"]),

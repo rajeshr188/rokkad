@@ -16,6 +16,13 @@ from decimal import Decimal
 from .doc import BusinessDoc
 
 
+def _party_from_customer(customer):
+    if not customer:
+        return None
+    party_id = getattr(customer, "party_id", None)
+    return customer.party if party_id else None
+
+
 class PurchaseType(models.TextChoices):
     """Type of purchase"""
 
@@ -67,6 +74,14 @@ class PurchaseInvoiceVoucher(BusinessDoc):
         related_name="purchase_invoices",
         limit_choices_to={"customer_type": "S"},
         help_text="Vendor who supplied",
+    )
+    party = models.ForeignKey(
+        "party.Party",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="dea_purchase_invoices",
+        help_text="Shadow Party link for the vendor during Customer migration.",
     )
 
     # === Purchase Type ===
@@ -187,6 +202,7 @@ class PurchaseInvoiceVoucher(BusinessDoc):
         verbose_name_plural = "Purchase Invoice Vouchers"
         indexes = [
             models.Index(fields=["invoice_date", "vendor"]),
+            models.Index(fields=["invoice_date", "party"]),
             models.Index(fields=["purchase_type", "is_fully_paid"]),
             models.Index(fields=["created_at"]),
         ]
@@ -223,6 +239,14 @@ class PurchaseInvoiceVoucher(BusinessDoc):
 
     def save(self, *args, **kwargs):
         """Auto-generate internal number and calculate amounts"""
+        if not self.party_id:
+            party = _party_from_customer(getattr(self, "vendor", None))
+            if party:
+                self.party = party
+                update_fields = kwargs.get("update_fields")
+                if update_fields is not None:
+                    kwargs["update_fields"] = set(update_fields) | {"party"}
+
         if not self.internal_number:
             self.internal_number = self._generate_internal_number()
 

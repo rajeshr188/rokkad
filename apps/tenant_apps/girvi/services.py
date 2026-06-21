@@ -29,6 +29,14 @@ from .service_modules.accrual import (
     InterestAccrualService,
 )
 from .service_modules.bulk_release import BulkReleaseService
+from .service_modules.bulk_operations import (
+    BulkLoanOperationError,
+    LoanBulkDeleteCommand,
+    LoanBulkDeleteResult,
+    LoanBulkOperationService,
+    LoanMergeCommand,
+    LoanMergeResult,
+)
 from .service_modules.creation import (
     LoanCreateCommand,
     LoanCreatePreview,
@@ -65,6 +73,12 @@ __all__ = [
     "InterestAccrualResult",
     "InterestAccrualService",
     "BulkReleaseService",
+    "BulkLoanOperationError",
+    "LoanBulkDeleteCommand",
+    "LoanBulkDeleteResult",
+    "LoanBulkOperationService",
+    "LoanMergeCommand",
+    "LoanMergeResult",
     "LoanCreateCommand",
     "LoanCreatePreview",
     "LoanCreateResult",
@@ -325,12 +339,12 @@ class InterestCalculationService:
         """
         if loan_kind == "given":
             return {
-                "loan_amount": Coalesce(
+                "calculated_loan_amount": Coalesce(
                     Sum("loanitems__loanamount"),
                     Value(0),
                     output_field=DecimalField(max_digits=15, decimal_places=2),
                 ),
-                "interest_amount": Coalesce(
+                "calculated_interest_amount": Coalesce(
                     Sum("loanitems__interest"),
                     Value(0),
                     output_field=DecimalField(max_digits=15, decimal_places=2),
@@ -338,14 +352,20 @@ class InterestCalculationService:
             }
 
         if loan_kind == "taken":
+            interest_expression = ExpressionWrapper(
+                F("repledge_history_items__repledged_amount")
+                * F("repledge_history_items__loan_item__interestrate")
+                / Value(100),
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            )
             return {
-                "loan_amount": Coalesce(
-                    Sum("repledgedloanitems__repledged_loanamount"),
+                "calculated_loan_amount": Coalesce(
+                    Sum("repledge_history_items__repledged_amount"),
                     Value(0),
                     output_field=DecimalField(max_digits=15, decimal_places=2),
                 ),
-                "interest_amount": Coalesce(
-                    Sum("repledgedloanitems__interest"),
+                "calculated_interest_amount": Coalesce(
+                    Sum(interest_expression),
                     Value(0),
                     output_field=DecimalField(max_digits=15, decimal_places=2),
                 ),
@@ -359,17 +379,24 @@ class InterestCalculationService:
         Calculate total interest accrued based on months and interest rate.
 
         Returns:
-        - total_interest: interest * months_since_created
-        - total_due: loan_amount + total_interest
+        - total_interest / total_due for legacy Loan querysets
+        - calculated_total_interest / calculated_total_due for refactored querysets
         """
-        interest_field = "interest" if loan_kind == "legacy" else "interest_amount"
+        principal_field = "loan_amount" if loan_kind == "legacy" else "calculated_loan_amount"
+        interest_field = (
+            "interest" if loan_kind == "legacy" else "calculated_interest_amount"
+        )
+        total_interest_field = (
+            "total_interest" if loan_kind == "legacy" else "calculated_total_interest"
+        )
+        due_field = "total_due" if loan_kind == "legacy" else "calculated_total_due"
         return {
-            "total_interest": ExpressionWrapper(
+            total_interest_field: ExpressionWrapper(
                 F(interest_field) * F("months_since_created"),
                 output_field=DecimalField(max_digits=12, decimal_places=2),
             ),
-            "total_due": ExpressionWrapper(
-                F("loan_amount") + F("total_interest"),
+            due_field: ExpressionWrapper(
+                F(principal_field) + F(total_interest_field),
                 output_field=DecimalField(max_digits=12, decimal_places=2),
             ),
         }
@@ -460,29 +487,29 @@ class LoanMetalWeightService:
 
     @staticmethod
     def get_taken_loan_weight_annotations():
-        """Weight annotations for TakenLoan (uses repledgedloanitems -> original_loanitem)."""
+        """Weight annotations for TakenLoan from custody repledge history."""
         return {
             # Gross weights from original items
             "gold_weight": Coalesce(
                 Sum(
-                    "repledgedloanitems__original_loanitem__weight",
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Gold"),
+                    "repledge_history_items__loan_item__weight",
+                    filter=Q(repledge_history_items__loan_item__itemtype="Gold"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
             ),
             "silver_weight": Coalesce(
                 Sum(
-                    "repledgedloanitems__original_loanitem__weight",
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Silver"),
+                    "repledge_history_items__loan_item__weight",
+                    filter=Q(repledge_history_items__loan_item__itemtype="Silver"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
             ),
             "bronze_weight": Coalesce(
                 Sum(
-                    "repledgedloanitems__original_loanitem__weight",
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Bronze"),
+                    "repledge_history_items__loan_item__weight",
+                    filter=Q(repledge_history_items__loan_item__itemtype="Bronze"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
@@ -491,12 +518,12 @@ class LoanMetalWeightService:
             "pure_gold_weight": Coalesce(
                 Sum(
                     ExpressionWrapper(
-                        F("repledgedloanitems__original_loanitem__weight")
-                        * F("repledgedloanitems__original_loanitem__purity")
+                        F("repledge_history_items__loan_item__weight")
+                        * F("repledge_history_items__loan_item__purity")
                         / 100,
                         output_field=DecimalField(max_digits=10, decimal_places=3),
                     ),
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Gold"),
+                    filter=Q(repledge_history_items__loan_item__itemtype="Gold"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
@@ -504,12 +531,12 @@ class LoanMetalWeightService:
             "pure_silver_weight": Coalesce(
                 Sum(
                     ExpressionWrapper(
-                        F("repledgedloanitems__original_loanitem__weight")
-                        * F("repledgedloanitems__original_loanitem__purity")
+                        F("repledge_history_items__loan_item__weight")
+                        * F("repledge_history_items__loan_item__purity")
                         / 100,
                         output_field=DecimalField(max_digits=10, decimal_places=3),
                     ),
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Silver"),
+                    filter=Q(repledge_history_items__loan_item__itemtype="Silver"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
@@ -517,12 +544,12 @@ class LoanMetalWeightService:
             "pure_bronze_weight": Coalesce(
                 Sum(
                     ExpressionWrapper(
-                        F("repledgedloanitems__original_loanitem__weight")
-                        * F("repledgedloanitems__original_loanitem__purity")
+                        F("repledge_history_items__loan_item__weight")
+                        * F("repledge_history_items__loan_item__purity")
                         / 100,
                         output_field=DecimalField(max_digits=10, decimal_places=3),
                     ),
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Bronze"),
+                    filter=Q(repledge_history_items__loan_item__itemtype="Bronze"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
@@ -552,28 +579,28 @@ class LoanMetalWeightService:
 
     @staticmethod
     def get_taken_loan_amount_annotations():
-        """Loan amount annotations for TakenLoan (from repledgedloanitems)."""
+        """Loan amount annotations for TakenLoan from custody repledge history."""
         return {
             "gold_loanamount": Coalesce(
                 Sum(
-                    "repledgedloanitems__repledged_loanamount",
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Gold"),
+                    "repledge_history_items__repledged_amount",
+                    filter=Q(repledge_history_items__loan_item__itemtype="Gold"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=12, decimal_places=2),
             ),
             "silver_loanamount": Coalesce(
                 Sum(
-                    "repledgedloanitems__repledged_loanamount",
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Silver"),
+                    "repledge_history_items__repledged_amount",
+                    filter=Q(repledge_history_items__loan_item__itemtype="Silver"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=12, decimal_places=2),
             ),
             "bronze_loanamount": Coalesce(
                 Sum(
-                    "repledgedloanitems__repledged_loanamount",
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Bronze"),
+                    "repledge_history_items__repledged_amount",
+                    filter=Q(repledge_history_items__loan_item__itemtype="Bronze"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=12, decimal_places=2),
@@ -654,12 +681,12 @@ class LoanMetalWeightService:
             Coalesce(
                 Sum(
                     ExpressionWrapper(
-                        F("repledgedloanitems__original_loanitem__weight")
-                        * F("repledgedloanitems__original_loanitem__purity")
+                        F("repledge_history_items__loan_item__weight")
+                        * F("repledge_history_items__loan_item__purity")
                         / 100,
                         output_field=DecimalField(max_digits=10, decimal_places=3),
                     ),
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Gold"),
+                    filter=Q(repledge_history_items__loan_item__itemtype="Gold"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
@@ -672,12 +699,12 @@ class LoanMetalWeightService:
             Coalesce(
                 Sum(
                     ExpressionWrapper(
-                        F("repledgedloanitems__original_loanitem__weight")
-                        * F("repledgedloanitems__original_loanitem__purity")
+                        F("repledge_history_items__loan_item__weight")
+                        * F("repledge_history_items__loan_item__purity")
                         / 100,
                         output_field=DecimalField(max_digits=10, decimal_places=3),
                     ),
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Silver"),
+                    filter=Q(repledge_history_items__loan_item__itemtype="Silver"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
@@ -690,12 +717,12 @@ class LoanMetalWeightService:
             Coalesce(
                 Sum(
                     ExpressionWrapper(
-                        F("repledgedloanitems__original_loanitem__weight")
-                        * F("repledgedloanitems__original_loanitem__purity")
+                        F("repledge_history_items__loan_item__weight")
+                        * F("repledge_history_items__loan_item__purity")
                         / 100,
                         output_field=DecimalField(max_digits=10, decimal_places=3),
                     ),
-                    filter=Q(repledgedloanitems__original_loanitem__itemtype="Bronze"),
+                    filter=Q(repledge_history_items__loan_item__itemtype="Bronze"),
                 ),
                 Value(0),
                 output_field=DecimalField(max_digits=10, decimal_places=3),
@@ -766,7 +793,7 @@ class DashboardMetricsService:
     def _stats_payload(metrics, rates, extra=None):
         payload = {
             "count": metrics["count"] or 0,
-            "total_due": metrics["total_due"] or 0,
+            "total_due": metrics["calculated_total_due"] or 0,
             "metals": {
                 "Gold": {
                     "weight": metrics["gold_weight"] or 0,
@@ -803,7 +830,7 @@ class DashboardMetricsService:
     def _aggregate_dashboard_metrics(queryset):
         fields = [
             "id",
-            "total_due",
+            "calculated_total_due",
             "gold_weight",
             "silver_weight",
             "bronze_weight",
@@ -845,7 +872,7 @@ class DashboardMetricsService:
             queryset = GivenLoan.objects.all()
 
         non_perf = DashboardMetricsService._dashboard_queryset(queryset).filter(
-            total_current_value__lt=F("total_due")
+            total_current_value__lt=F("calculated_total_due")
         )
 
         metrics = DashboardMetricsService._aggregate_dashboard_metrics(non_perf)

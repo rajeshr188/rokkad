@@ -530,12 +530,13 @@ class OrgNavigationFlowTests(SimpleTestCase):
 			f"Unknown sidebar permission codenames: {sorted(referenced - registered)}",
 		)
 
-	def test_sidebar_uses_current_purchase_and_dea_permission_names(self):
+	def test_sidebar_uses_current_runtime_permission_names(self):
 		with open("templates/components/navigation/sidebar.html", "r") as f:
 			sidebar_html = f.read()
 
-		self.assertIn("purchase_order_view", sidebar_html)
 		self.assertIn("dea_entry_view", sidebar_html)
+		self.assertNotIn("sales_invoice_view", sidebar_html)
+		self.assertNotIn("purchase_order_view", sidebar_html)
 		self.assertNotIn("purchase_invoice_view", sidebar_html)
 		self.assertNotIn("dea_journal_view", sidebar_html)
 

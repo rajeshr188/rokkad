@@ -10,7 +10,6 @@ from django_tables2 import RequestConfig
 
 from apps.tenant_apps.girvi.forms import (
     LoanItemForm,
-    RepledgedLoanItemForm,
 )
 from apps.tenant_apps.girvi.lifecycle import EDITABLE_ITEM_STATUSES
 from apps.tenant_apps.girvi.models import (
@@ -64,12 +63,11 @@ def repledgedloanitem_detail(request, pk):
 
 @login_required
 def repledged_loanitem_delete(request, parent_id, id):
-    item = get_object_or_404(RepledgedLoanItem, id=id, loan_id=parent_id)
-    loan = item.loan
-    item.delete()
-    messages.error(request, f"Repledged Item {item} Deleted")
-    loan.save()
-    return HttpResponse(status=204, headers={"HX-Trigger": "loanChanged"})
+    messages.error(
+        request,
+        "Legacy repledged item rows are read-only. Return collateral through custody.",
+    )
+    return HttpResponse(status=410)
 
 
 @login_required
@@ -82,19 +80,22 @@ def loanitem_create_update(request, parent_id, id=None):
         parent_obj = get_object_or_404(TakenLoan, id=parent_id)
         is_given_loan = False
 
+    if not is_given_loan:
+        messages.error(
+            request,
+            "TakenLoan collateral is managed through custody/repledge workflows.",
+        )
+        return HttpResponse(status=410)
+
     if parent_obj.status not in EDITABLE_ITEM_STATUSES:
         messages.error(request, "Cannot add or edit items after loan is disbursed or closed.")
         return redirect(parent_obj.get_absolute_url())
 
     instance = None
     message = "Item Created"
-    form_class = LoanItemForm if is_given_loan else RepledgedLoanItemForm
-    model_class = LoanItem if is_given_loan else RepledgedLoanItem
-    template_name = (
-        "girvi/partials/item-form.html"
-        if is_given_loan
-        else "girvi/partials/repledged_item_form.html"
-    )
+    form_class = LoanItemForm
+    model_class = LoanItem
+    template_name = "girvi/partials/item-form.html"
 
     if id:
         instance = get_object_or_404(model_class, id=id, loan=parent_obj)
@@ -106,11 +107,6 @@ def loanitem_create_update(request, parent_id, id=None):
         if form.is_valid():
             new_obj = form.save(commit=False)
             new_obj.loan = parent_obj
-            if not is_given_loan:
-                new_obj.new_loan = parent_obj
-                # Use custody status instead of boolean field
-                new_obj.original_loanitem.custody_status = "with_lender"
-                new_obj.original_loanitem.save()
 
             new_obj.save()
             
@@ -121,9 +117,6 @@ def loanitem_create_update(request, parent_id, id=None):
                 return HttpResponse(status=204, headers={"HX-Trigger": "loanChanged"})
             if is_given_loan:
                 return render(request, "girvi/partials/item-inline-new.html", context)
-            return render(
-                request, "girvi/partials/repledged_item_inline_new.html", context
-            )
     else:
         form = form_class(instance=instance)
 

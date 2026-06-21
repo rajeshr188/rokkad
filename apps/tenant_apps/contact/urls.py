@@ -1,17 +1,46 @@
-from django.urls import path
+from django.urls import path, reverse_lazy
+from django.views.generic import RedirectView
 
 from . import views
 
 urlpatterns = (
     # urls for Customer
-    path("export/", views.export_form, name="export_form"),
+    path(
+        "export/",
+        RedirectView.as_view(
+            url=reverse_lazy("data_import:export_form"),
+            permanent=False,
+            query_string=True,
+        ),
+        name="export_form",
+    ),
     path(
         "export/<str:model_name>/<str:export_format>/",
-        views.export_data,
+        RedirectView.as_view(
+            pattern_name="data_import:export_data",
+            permanent=False,
+            query_string=True,
+        ),
         name="export_data",
     ),
-    path("import/", views.import_data, name="import_data"),
-    path("get_model_fields/", views.get_model_fields, name="get_model_fields"),
+    path(
+        "import/",
+        RedirectView.as_view(
+            url=reverse_lazy("data_import:import_data"),
+            permanent=False,
+            query_string=True,
+        ),
+        name="import_data",
+    ),
+    path(
+        "get_model_fields/",
+        RedirectView.as_view(
+            url=reverse_lazy("data_import:get_model_fields"),
+            permanent=False,
+            query_string=True,
+        ),
+        name="get_model_fields",
+    ),
     path("customer/", views.customer_list, name="contact_customer_list"),
     path("customer/create/", views.customer_save, name="contact_customer_create"),
     path(

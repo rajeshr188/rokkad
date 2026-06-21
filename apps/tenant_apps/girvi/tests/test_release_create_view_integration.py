@@ -20,7 +20,7 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
         )
 
     def _loan(self):
-        return SimpleNamespace(pk=42, loan_id="GL-42", status="DISBURSED")
+        return SimpleNamespace(pk=42, loan_id="GL-42", status="Disbursed")
 
     def test_release_create_get_renders_preview_feedback(self):
         loan = self._loan()
@@ -77,19 +77,21 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
                 return None
 
         flow = MagicMock()
-        flow.deliver.can_proceed.return_value = True
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
 
         with patch("apps.tenant_apps.girvi.views.release.ReleaseForm", return_value=fake_form), patch(
             "apps.tenant_apps.girvi.services.transaction.atomic", side_effect=lambda: nullcontext()
         ), patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
-            "apps.tenant_apps.girvi.flows.LoanFlow", return_value=flow
-        ), patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_release") as post_release:
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow", return_value=flow
+        ), patch("apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release") as post_release:
             response = release_create(request)
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/girvi/loan/detail/42/", response["Location"])
         self.assertIn("/girvi/loan/detail/42/", response["HX-Push-Url"])
-        flow.deliver.assert_called_once()
+        flow.request_closure.assert_called_once()
+        flow.complete_closure.assert_called_once()
         created_release = post_release.call_args.args[0]
         self.assertEqual(created_release.loan, loan)
         post_release.assert_called_once()

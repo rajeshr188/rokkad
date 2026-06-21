@@ -8,7 +8,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.management import call_command
-from django.db import transaction
 from django.shortcuts import redirect, render
 from django_tenants.clone import CloneSchema
 from django_tenants.utils import get_public_schema_name, remove_www, schema_context
@@ -152,75 +151,76 @@ def onboarding_company(request):
     if request.method == "POST":
         form = CompanySetupForm(request.POST, request.FILES)
         if form.is_valid():
-            with transaction.atomic():
-                with schema_context(get_public_schema_name()):
-                    # Create company
-                    company = form.save(commit=False)
-                    company.schema_name = company.name.lower().replace(" ", "_")
-                    company.creator = request.user
-                    company.owner = request.user
-                    provisioning_mode = _provision_company_schema(company)
-                    _seed_company_schema_defaults(company)
+            with schema_context(get_public_schema_name()):
+                # Do not wrap tenant schema creation/migration in an outer atomic block.
+                # PostgreSQL can reject later ALTER TABLE operations when earlier seed
+                # data leaves pending FK trigger events in the same transaction.
+                company = form.save(commit=False)
+                company.schema_name = company.name.lower().replace(" ", "_")
+                company.creator = request.user
+                company.owner = request.user
+                provisioning_mode = _provision_company_schema(company)
+                _seed_company_schema_defaults(company)
 
-                    # Create domain
-                    domain = remove_www(request.get_host().split(":")[0]).lower()
-                    company_domain = f"{company.schema_name}.{domain}"
-                    Domain.objects.create(
-                        tenant=company, domain=company_domain, is_primary=True
+                # Create domain
+                domain = remove_www(request.get_host().split(":")[0]).lower()
+                company_domain = f"{company.schema_name}.{domain}"
+                Domain.objects.create(
+                    tenant=company, domain=company_domain, is_primary=True
+                )
+
+                # Create Owner membership
+                Membership.objects.create(
+                    user=request.user,
+                    company=company,
+                    role=Role.objects.get(name="Owner"),
+                )
+
+                # Set as active workspace
+                request.user.profile.set_workspace(company)
+
+                # Save onboarding choices
+                industry = form.cleaned_data.get("industry")
+                company_size = form.cleaned_data.get("company_size")
+
+                if industry:
+                    OnboardingChoice.objects.create(
+                        progress=progress,
+                        step=2,
+                        choice_key="industry",
+                        choice_value=industry,
                     )
 
-                    # Create Owner membership
-                    Membership.objects.create(
-                        user=request.user,
-                        company=company,
-                        role=Role.objects.get(name="Owner"),
+                if company_size:
+                    OnboardingChoice.objects.create(
+                        progress=progress,
+                        step=2,
+                        choice_key="company_size",
+                        choice_value=company_size,
                     )
 
-                    # Set as active workspace
-                    request.user.profile.set_workspace(company)
+                # Mark step complete
+                progress.mark_step_complete(2)
 
-                    # Save onboarding choices
-                    industry = form.cleaned_data.get("industry")
-                    company_size = form.cleaned_data.get("company_size")
+                # Log completion
+                AuditLog.log(
+                    "ONBOARDING_COMPANY_COMPLETE",
+                    user=request.user,
+                    company=company,
+                    description=f"Created workspace: {company.name}",
+                    request=request,
+                    success=True,
+                    data={
+                        "industry": industry,
+                        "company_size": company_size,
+                        "provisioning_mode": provisioning_mode,
+                    },
+                )
 
-                    if industry:
-                        OnboardingChoice.objects.create(
-                            progress=progress,
-                            step=2,
-                            choice_key="industry",
-                            choice_value=industry,
-                        )
-
-                    if company_size:
-                        OnboardingChoice.objects.create(
-                            progress=progress,
-                            step=2,
-                            choice_key="company_size",
-                            choice_value=company_size,
-                        )
-
-                    # Mark step complete
-                    progress.mark_step_complete(2)
-
-                    # Log completion
-                    AuditLog.log(
-                        "ONBOARDING_COMPANY_COMPLETE",
-                        user=request.user,
-                        company=company,
-                        description=f"Created workspace: {company.name}",
-                        request=request,
-                        success=True,
-                        data={
-                            "industry": industry,
-                            "company_size": company_size,
-                            "provisioning_mode": provisioning_mode,
-                        },
-                    )
-
-                    messages.success(
-                        request, f'Workspace "{company.name}" created successfully!'
-                    )
-                    return redirect(progress.next_step_url)
+                messages.success(
+                    request, f'Workspace "{company.name}" created successfully!'
+                )
+                return redirect(progress.next_step_url)
     else:
         form = CompanySetupForm()
 

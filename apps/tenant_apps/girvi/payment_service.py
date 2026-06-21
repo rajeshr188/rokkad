@@ -7,11 +7,11 @@ callers and tests.
 
 from apps.tenant_apps.girvi.service_modules import payment as _payment
 
-ContentType = _payment.ContentType
-PaymentVoucher = _payment.PaymentVoucher
-Voucher = _payment.Voucher
-VoucherStatus = _payment.VoucherStatus
-DjangoPostingEngine = _payment.DjangoPostingEngine
+ContentType = getattr(_payment, "ContentType", None)
+PaymentVoucher = getattr(_payment, "PaymentVoucher", None)
+Voucher = getattr(_payment, "Voucher", None)
+VoucherStatus = getattr(_payment, "VoucherStatus", None)
+DjangoPostingEngine = getattr(_payment, "DjangoPostingEngine", None)
 create_and_post_voucher_for_doc = _payment.create_and_post_voucher_for_doc
 GivenLoan = _payment.GivenLoan
 TakenLoan = _payment.TakenLoan

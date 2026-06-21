@@ -5,7 +5,15 @@ from ..models.ledger import Ledger
 
 CACHE_TTL = 300  # seconds
 LEDGER_KEY_ALIASES = {
+    "ACCOUNTS_RECEIVABLE": ["ACCOUNTS_RECEIVABLE", "Accounts Receivable"],
+    "CGST_OUTPUT": ["CGST_OUTPUT", "Output CGST"],
+    "FIXED_ASSETS": ["FIXED_ASSETS", "Fixed Assets"],
+    "IGST_OUTPUT": ["IGST_OUTPUT", "Output IGST"],
     "INTEREST_RECEIVABLE": ["INTEREST_RECEIVABLE", "Interest Receivables"],
+    "SALES_REVENUE": ["SALES_REVENUE", "Sales"],
+    "SERVICES_EXPENSE": ["SERVICES_EXPENSE", "Professional Services"],
+    "SGST_OUTPUT": ["SGST_OUTPUT", "Output SGST"],
+    "TCS_PAYABLE": ["TCS_PAYABLE", "Tax Liability"],
 }
 
 

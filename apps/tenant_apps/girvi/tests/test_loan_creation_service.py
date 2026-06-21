@@ -139,8 +139,10 @@ class LoanCreationServiceTests(SimpleTestCase):
         self.assertContains(response, 'value="2.25"')
 
     def test_execute_records_creation_audit_log(self):
+        borrower_party = SimpleNamespace(pk=31)
         command = LoanCreateCommand(
             borrower=SimpleNamespace(pk=1),
+            borrower_party=borrower_party,
             series=SimpleNamespace(is_active=True, name="A"),
             loan_date=timezone.now(),
             tenure=3,
@@ -166,6 +168,7 @@ class LoanCreationServiceTests(SimpleTestCase):
 
         self.assertTrue(result.success)
         self.assertEqual(given_loan_cls.call_args.kwargs["status"], LoanLifecycleState.DRAFT)
+        self.assertEqual(given_loan_cls.call_args.kwargs["borrower_party"], borrower_party)
         log_create.assert_called_once()
         self.assertEqual(log_create.call_args.kwargs["source"], "Initial")
         self.assertEqual(log_create.call_args.kwargs["target"], "Draft")
@@ -358,8 +361,10 @@ class LoanCreationServiceTests(SimpleTestCase):
 
         fake_form = MagicMock()
         fake_form.is_valid.return_value = True
+        borrower_party = SimpleNamespace(pk=31)
+        bridge_customer = SimpleNamespace(pk=1)
         fake_form.cleaned_data = {
-            "borrower": SimpleNamespace(pk=1),
+            "borrower_party": borrower_party,
             "series": SimpleNamespace(is_active=True, name="A"),
             "loan_date": "2026-04-02T10:00",
             "tenure": 3,
@@ -386,9 +391,12 @@ class LoanCreationServiceTests(SimpleTestCase):
             loan=SimpleNamespace(id=42, loan_id="A0001"),
         )
 
-        with patch("apps.tenant_apps.girvi.views.loan.LoanForm", return_value=fake_form), patch(
+        with patch("apps.tenant_apps.girvi.views.loan.LoanCreateForm", return_value=fake_form), patch(
             "apps.tenant_apps.girvi.views.loan.build_initial_loan_item_formset",
             return_value=lambda *args, **kwargs: fake_item_formset,
+        ), patch(
+            "apps.tenant_apps.girvi.views.loan.ensure_party_customer",
+            return_value={"customer": bridge_customer},
         ), patch(
             "apps.tenant_apps.girvi.views.loan.LoanCreationService.execute",
             return_value=fake_result,
@@ -399,6 +407,8 @@ class LoanCreationServiceTests(SimpleTestCase):
 
         execute_mock.assert_called_once()
         command = execute_mock.call_args.args[0]
+        self.assertEqual(command.borrower, bridge_customer)
+        self.assertEqual(command.borrower_party, borrower_party)
         self.assertEqual(len(command.initial_items), 1)
         self.assertEqual(command.initial_items[0].itemdesc, "Gold ring")
         self.assertIn("/loan/detail/42/", response["HX-Redirect"])
@@ -432,7 +442,7 @@ class LoanCreationServiceTests(SimpleTestCase):
     def test_live_preview_endpoint_renders_preview_partial(self):
         request = self.factory.get(
             "/girvi/loan/create/preview/",
-            data={"borrower": "1", "series": "7", "loan_id": "A0005"},
+            data={"borrower_party": "1", "series": "7", "loan_id": "A0005"},
         )
         request.user = SimpleNamespace(is_authenticated=True)
 

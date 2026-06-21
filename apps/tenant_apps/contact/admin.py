@@ -101,6 +101,7 @@ class CustomerAdmin(ImportExportActionModelAdmin):
         "created",
         "updated",
         "customer_type",
+        "party",
         "relatedas",
         "relatedto",
     ]

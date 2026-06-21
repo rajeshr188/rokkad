@@ -57,10 +57,10 @@
 
   <div
     hx-get="{% url 'get_customer_balance' %}"
-    hx-trigger="change from:select[name='borrower']"
+    hx-trigger="change from:select[name='borrower_party']"
     hx-target="this"
     hx-swap="innerHTML"
-    hx-include="[name='borrower']">
+    hx-include="[name='borrower_party']">
   </div>
 </div>
 
@@ -75,7 +75,7 @@
       jq('#id_series').off('select2:select.loanform').on('select2:select.loanform', function () {
         this.dispatchEvent(new Event('change', { bubbles: true }));
       });
-      jq('select[name="borrower"]').off('change.loanform').on('change.loanform', function () {
+      jq('select[name="borrower_party"]').off('change.loanform').on('change.loanform', function () {
         this.dispatchEvent(new Event('change', { bubbles: true }));
       });
     }

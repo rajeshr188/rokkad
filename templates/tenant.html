@@ -92,7 +92,7 @@
                 hx-vals='{"use_block": "content"}' hx-push-url="true">{% trans "Loans" %}</a></li>
               <li><a class="dropdown-item" href="{% url 'girvi:girvi_release_list' %}">{% trans "Release" %}</a></li>
               <li><a class="dropdown-item" href="{% url 'girvi:girvi_license_list' %}">{% trans "License" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'girvi:storage_boxes' %}">{% trans "Storage" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'girvi:girvi_storage_boxes' %}">{% trans "Storage" %}</a></li>
               <li><a class="dropdown-item" href="{% url 'notify_noticegroup_list' %}">{% trans "Notice" %}</a></li>
             </ul>
           </li>
@@ -120,26 +120,6 @@
                 hx-push-url="true">Price Overrides</a></li>
             </ul>
           </li>
-          <!-- <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="salesDropdown" role="button" data-bs-toggle="dropdown"
-              aria-expanded="false">
-              Sales
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="salesDropdown">
-              <li><a class="dropdown-item" href="{% url 'sales:sales_invoice_list' %}">Sales</a></li>
-              <li><a class="dropdown-item" href="{% url 'sales:sales_receipt_list' %}">Receipt</a></li>
-            </ul>
-          </li> -->
-          <!-- <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="purchaseDropdown" role="button" data-bs-toggle="dropdown"
-              aria-expanded="false">
-              Purchase
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="purchaseDropdown">
-              <li><a class="dropdown-item" href="{% url 'purchase:purchase_invoice_list' %}">Purchase</a></li>
-              <li><a class="dropdown-item" href="{% url 'purchase:purchase_payment_list' %}">Payment</a></li>
-            </ul>
-          </li> -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="deaDropdown" role="button" data-bs-toggle="dropdown"
               aria-expanded="false">
@@ -155,16 +135,6 @@
               <li><a class="dropdown-item" href="{% url 'dea_daybook' %}">Daybook</a></li>
             </ul>
           </li>
-          <!-- <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="approvalsDropdown" role="button" data-bs-toggle="dropdown"
-              aria-expanded="false">
-              Approvals
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="approvalsDropdown">
-              <li><a class="dropdown-item" href="#">Level 1</a></li>
-              <li><a class="dropdown-item" href="#">Level 2</a></li>
-            </ul>
-          </li> -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
               {%trans "Rates"%}

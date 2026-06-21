@@ -57,6 +57,7 @@ class LoanCreateCommand:
     tenure: int
     interest_type: str
     created_by: object
+    borrower_party: object | None = None
     loan_id: str = ""
     initial_items: list[LoanItemCreateInput] = dc_field(default_factory=list)
 
@@ -297,6 +298,7 @@ class LoanCreationService:
             with transaction.atomic():
                 loan = GivenLoan(
                     borrower=command.borrower,
+                    borrower_party=command.borrower_party,
                     series=command.series,
                     loan_date=preview.loan_date,
                     tenure=command.tenure,

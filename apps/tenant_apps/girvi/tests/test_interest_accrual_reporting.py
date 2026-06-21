@@ -6,7 +6,11 @@ from unittest.mock import MagicMock, patch
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase
 
-from apps.tenant_apps.girvi.selectors import build_given_loan_detail_read_model
+from apps.tenant_apps.girvi.selectors import (
+    build_given_loan_detail_display,
+    build_given_loan_detail_read_model,
+    build_given_loan_release_action,
+)
 from apps.tenant_apps.girvi.views.loan import loan_detail
 
 
@@ -25,6 +29,9 @@ class InterestAccrualReadModelTests(SimpleTestCase):
         loan.renewals_as_source.all.return_value = []
         loan.renewal_record.first.return_value = None
         loan.status = "Disbursed"
+        loan.current_value = Decimal("1500.00")
+        loan.get_loan_amount = Decimal("1000.00")
+        loan.get_weight_summary = []
         loan.is_released = False
         loan.is_overdue = False
         loan.interest_due.return_value = Decimal("125.00")
@@ -49,6 +56,75 @@ class InterestAccrualReadModelTests(SimpleTestCase):
         self.assertEqual(summary["interest_receivable_balance"], Decimal("70.00"))
         self.assertEqual(summary["last_accrual_date"], date(2026, 3, 31))
 
+    def test_build_given_loan_detail_display_formats_metrics(self):
+        storage_box = SimpleNamespace(position_for_item=lambda _loan_id: "A-02")
+        loan = SimpleNamespace(
+            id=1,
+            get_weight_summary=[
+                {
+                    "itemtype": "Gold",
+                    "total_weight": Decimal("12.50"),
+                    "pure_weight": Decimal("11.8754"),
+                },
+                {
+                    "itemtype": "Silver",
+                    "total_weight": Decimal("5.00"),
+                    "pure_weight": Decimal("4.25"),
+                },
+            ],
+            current_value=Decimal("2000.00"),
+            get_loan_amount=Decimal("1000.00"),
+            total_due=Decimal("1250.00"),
+            get_storage_box=lambda: storage_box,
+            gross_accrued_interest=Decimal("150.00"),
+            interest_paid_total=lambda: Decimal("60.00"),
+            outstanding_interest=Decimal("90.00"),
+            interest_receivable_balance=lambda: Decimal("70.00"),
+            last_accrual_date=date(2026, 3, 31),
+        )
+
+        display = build_given_loan_detail_display(loan)
+
+        self.assertEqual(display["weight"], "G:12.50 gms S:5.00 gms")
+        self.assertEqual(display["pure"], "G:11.875 gms S:4.250 gms")
+        self.assertEqual(display["lvratio"], 50.0)
+        self.assertEqual(display["dvratio"], 62.0)
+        self.assertEqual(display["location"], storage_box)
+        self.assertEqual(display["position"], "A-02")
+        self.assertEqual(display["interest_reporting"]["outstanding"], Decimal("90.00"))
+
+    def test_build_given_loan_release_action_blocks_when_settlement_is_due(self):
+        loan = SimpleNamespace(
+            id=1,
+            status="ActiveCurrent",
+            release=None,
+            total_due=Decimal("1250.00"),
+            get_total_payments=lambda: Decimal("1000.00"),
+            closure_exception_approved=False,
+        )
+
+        action = build_given_loan_release_action(loan)
+
+        self.assertTrue(action["disabled"])
+        self.assertEqual(action["outstanding_amount"], Decimal("250.00"))
+        self.assertEqual(action["button_class"], "btn-outline-secondary")
+
+    def test_build_given_loan_release_action_allows_zero_balance(self):
+        loan = SimpleNamespace(
+            id=1,
+            status="ActiveCurrent",
+            release=None,
+            total_due=Decimal("1000.00"),
+            get_total_payments=lambda: Decimal("1000.00"),
+            closure_exception_approved=False,
+        )
+
+        action = build_given_loan_release_action(loan)
+
+        self.assertFalse(action["disabled"])
+        self.assertEqual(action["outstanding_amount"], Decimal("0.00"))
+        self.assertEqual(action["button_class"], "btn-success")
+
 
 class InterestAccrualReportingViewTests(SimpleTestCase):
     def setUp(self):
@@ -58,14 +134,14 @@ class InterestAccrualReportingViewTests(SimpleTestCase):
     @patch("apps.tenant_apps.girvi.views.loan.render", return_value=HttpResponse("ok"))
     @patch("apps.tenant_apps.girvi.views.loan.build_transition_actions", return_value=[])
     @patch("apps.tenant_apps.girvi.views.loan.build_runtime_loan_flow")
-    @patch("apps.tenant_apps.girvi.views.loan.get_object_or_404")
+    @patch("apps.tenant_apps.girvi.views.loan.get_given_loan_detail_read_model")
     @patch("apps.tenant_apps.girvi.views.loan.ContentType.objects.get_for_model")
     @patch("apps.tenant_apps.girvi.views.loan.LoanChangeLog.objects.filter")
     def test_loan_detail_context_includes_interest_reporting_summary(
         self,
         mock_changelog_filter,
         _mock_content_type,
-        mock_get_object_or_404,
+        mock_get_read_model,
         mock_build_runtime_flow,
         _mock_actions,
         mock_render,
@@ -93,7 +169,13 @@ class InterestAccrualReportingViewTests(SimpleTestCase):
         loan.outstanding_interest = Decimal("90.00")
         loan.interest_receivable_balance.return_value = Decimal("70.00")
         loan.last_accrual_date = date(2026, 3, 31)
-        mock_get_object_or_404.return_value = loan
+        mock_get_read_model.return_value = {
+            "loan": loan,
+            "display": build_given_loan_detail_display(loan),
+            "release_action": None,
+            "renewals_as_source": [],
+            "origin_renewal": None,
+        }
 
         request = self.factory.get("/girvi/loan/detail/1/")
         request.user = self.user

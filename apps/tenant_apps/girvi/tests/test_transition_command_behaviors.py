@@ -11,6 +11,7 @@ from apps.tenant_apps.girvi.transitions.commands import (
     MarkSoldTransitionCommand,
     UndoReleaseTransitionCommand,
 )
+from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
 from apps.tenant_apps.girvi.transitions.payloads import CancelPayload
 from apps.tenant_apps.girvi.transitions.payloads import MarkAuctionedPayload
 from apps.tenant_apps.girvi.transitions.payloads import MarkSoldPayload
@@ -18,7 +19,7 @@ from apps.tenant_apps.girvi.transitions.types import TransitionResult
 
 
 class TransitionCommandBehaviorTests(TestCase):
-    def _loan(self, status="Disbursed"):
+    def _loan(self, status=LoanLifecycleState.ACTIVE_CURRENT):
         return SimpleNamespace(
             status=status,
             pk=1,
@@ -27,11 +28,11 @@ class TransitionCommandBehaviorTests(TestCase):
         )
 
     def test_disburse_command_success_with_created_voucher(self):
-        loan = self._loan(status="Disbursed")
+        loan = self._loan(status=LoanLifecycleState.ACTIVE_CURRENT)
         cmd = DisburseTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
 
         def transition_method(**_payload):
-            loan.status = "Disbursed"
+            loan.status = LoanLifecycleState.ACTIVE_CURRENT
 
         payment = SimpleNamespace(payment_id="PV-001")
         with patch(
@@ -47,11 +48,11 @@ class TransitionCommandBehaviorTests(TestCase):
         self.assertEqual(result.payment, payment)
 
     def test_disburse_command_idempotent_existing_voucher(self):
-        loan = self._loan(status="Disbursed")
+        loan = self._loan(status=LoanLifecycleState.ACTIVE_CURRENT)
         cmd = DisburseTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
 
         def transition_method(**_payload):
-            loan.status = "Disbursed"
+            loan.status = LoanLifecycleState.ACTIVE_CURRENT
 
         payment = SimpleNamespace(payment_id="PV-EXIST")
         with patch(
@@ -67,11 +68,11 @@ class TransitionCommandBehaviorTests(TestCase):
         self.assertIn("already recorded", result.message)
 
     def test_disburse_command_returns_error_when_posting_fails(self):
-        loan = self._loan(status="Disbursed")
+        loan = self._loan(status=LoanLifecycleState.ACTIVE_CURRENT)
         cmd = DisburseTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
 
         def transition_method(**_payload):
-            loan.status = "Disbursed"
+            loan.status = LoanLifecycleState.ACTIVE_CURRENT
 
         with patch(
             "apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal",
@@ -85,7 +86,7 @@ class TransitionCommandBehaviorTests(TestCase):
 
     @patch("apps.tenant_apps.girvi.transitions.commands.post_auction_recovery_for_transition")
     def test_mark_auctioned_posts_recovery_voucher(self, mock_post_auction):
-        loan = self._loan(status="Defaulted")
+        loan = self._loan(status=LoanLifecycleState.AUCTION_IN_PROGRESS)
         cmd = MarkAuctionedTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
         mock_post_auction.return_value = (SimpleNamespace(payment_id="AUC-001"), True)
 
@@ -93,7 +94,7 @@ class TransitionCommandBehaviorTests(TestCase):
 
         def transition_method(**_payload):
             called["ok"] = True
-            loan.status = "Auctioned"
+            loan.status = LoanLifecycleState.AUCTION_COMPLETE
 
         payload = MarkAuctionedPayload(auctioned_by="auditor", amount=100)
         result = cmd.execute(transition_method, payload=payload)
@@ -106,14 +107,14 @@ class TransitionCommandBehaviorTests(TestCase):
     @patch("apps.tenant_apps.notify.services.create_loan_auction_notice")
     def test_mark_auctioned_creates_auction_notice_for_borrower(self, mock_create_notice):
         borrower = SimpleNamespace(name="Asha")
-        loan = self._loan(status="Defaulted")
+        loan = self._loan(status=LoanLifecycleState.AUCTION_IN_PROGRESS)
         loan.borrower = borrower
         loan.loan_id = "GL-001"
 
         cmd = MarkAuctionedTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
 
         def transition_method(**_payload):
-            loan.status = "Auctioned"
+            loan.status = LoanLifecycleState.AUCTION_COMPLETE
 
         payload = MarkAuctionedPayload(auctioned_by="auditor", amount=100)
         with patch(
@@ -131,12 +132,12 @@ class TransitionCommandBehaviorTests(TestCase):
 
     @patch("apps.tenant_apps.girvi.transitions.commands.post_sale_recovery_for_transition")
     def test_mark_sold_posts_recovery_voucher(self, mock_post_sale):
-        loan = self._loan(status="Disbursed")
+        loan = self._loan(status=LoanLifecycleState.AUCTION_IN_PROGRESS)
         cmd = MarkSoldTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
         mock_post_sale.return_value = (SimpleNamespace(payment_id="SOLD-001"), True)
 
         def transition_method(**_payload):
-            loan.status = "Sold"
+            loan.status = LoanLifecycleState.AUCTION_COMPLETE
 
         result = cmd.execute(
             transition_method,
@@ -149,7 +150,7 @@ class TransitionCommandBehaviorTests(TestCase):
         mock_post_sale.assert_called_once_with(loan, 250, cmd.user)
 
     def test_undo_release_returns_error_on_validation_exception(self):
-        loan = self._loan(status="Released")
+        loan = self._loan(status=LoanLifecycleState.CLOSED)
         cmd = UndoReleaseTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
 
         def transition_method(**_payload):

@@ -121,6 +121,13 @@ class LoanItem(LoanItemWithCustody):
 
 
 class RepledgedLoanItem(models.Model):
+    """
+    Legacy compatibility record for historical repledged collateral.
+
+    Active repledge workflows should use LoanItem custody fields plus
+    RepledgeHistory. Keep this model readable for import/backfill and old rows.
+    """
+
     original_loanitem = models.ForeignKey(
         "LoanItem", on_delete=models.CASCADE, related_name="repledged_items"
     )

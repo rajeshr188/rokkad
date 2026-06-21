@@ -1,0 +1,28 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Import Complete{% endblock %}
+
+{% block workspace_content %}
+<div class="container py-3">
+    <h1 class="h4 mb-3">Import Complete</h1>
+    <div class="alert alert-success">
+        Imported rows: <strong>{{ rows_imported|length }}</strong>
+    </div>
+
+    {% if rows_imported %}
+    <div class="card">
+        <div class="card-body">
+            <h2 class="h6">Imported Rows</h2>
+            <ul class="mb-0">
+                {% for row in rows_imported %}
+                    <li>
+                        Row {{ row.number }}: {{ row.import_type }}
+                        {% if row.diff %}<div class="small text-muted">{{ row.diff|safe }}</div>{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

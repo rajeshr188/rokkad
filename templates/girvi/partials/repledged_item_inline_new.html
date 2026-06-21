@@ -5,9 +5,8 @@
             <p><strong>Original Item:</strong> {{ object.original_loanitem.itemdesc }} - {{ object.original_loanitem.weight }}g</p>
             <p><strong>Repledged Amount:</strong> {{ object.repledged_loanamount }}</p>
         </div>
-        <div class="col-4 text-end">
-            <button hx-get="{% url 'girvi:loanitem_create_update' parent_id=object.loan.id id=object.id %}" class="btn btn-sm btn-secondary">Edit</button>
-            <button hx-confirm='Delete item?' hx-delete="{% url 'girvi:repledgedloanitem_delete' parent_id=object.loan.id id=object.id %}" class="btn btn-sm btn-danger">Delete</button>
+        <div class="col-4 text-end text-muted small">
+            Legacy read-only
         </div>
     </div>
 </li>

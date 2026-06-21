@@ -243,6 +243,7 @@ def create_repledge_with_items(request):
     item_ids = request.POST.getlist("item_ids")
     lender_id = request.POST.get("lender_id")
     loan_amount = request.POST.get("loan_amount", 0)
+    series_id = request.POST.get("series_id") or request.POST.get("series")
 
     try:
         taken_loan = create_repledge_from_items(
@@ -252,6 +253,7 @@ def create_repledge_with_items(request):
             loan_date=request.POST.get("loan_date"),
             notes=request.POST.get("notes", ""),
             user=request.user,
+            series_id=series_id,
         )
 
         messages.success(

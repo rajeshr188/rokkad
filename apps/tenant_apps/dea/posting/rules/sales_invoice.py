@@ -1,139 +1,128 @@
 """
-Sales Invoice Posting Rule
+Sales invoice posting rule.
 
-Posts sales revenue and GST output tax liability.
+Posts sales revenue, output taxes, and customer receivable attribution.
 """
 
 from decimal import Decimal
+
 from django.core.exceptions import ValidationError
-from ..types import PostingBundle, DualLedgerLine, AccountLine
-from .base import BasePostingRule
-from ..resolver import get_ledger_id_by_key
+
 from ..registry import register_rule
+from ..resolver import get_ledger_id_by_key
+from ..types import AccountLine, DualLedgerLine, PostingBundle
+from .base import BasePostingRule
+from .party_accounts import resolve_sales_customer_account
 
 
 @register_rule("SALES_INVOICE")
 class SalesInvoiceRule(BasePostingRule):
-    """
-    Posting rule for sales invoices.
-
-    ACCOUNTING ENTRIES:
-    DR: Accounts Receivable (Customer)
-    CR: Sales Revenue
-    CR: CGST Output
-    CR: SGST Output
-    CR: IGST Output
-    CR: TCS Payable
-
-    Example:
-    Sold goods for ₹100,000 + GST ₹18,000
-    DR: AR ₹118,000
-    CR: Sales Revenue ₹100,000
-    CR: GST Output ₹18,000
-    """
+    voucher_type = "SALES_INVOICE"
+    rule_version = "2"
 
     def should_run(self, doc) -> bool:
-        """Only run for sales invoices"""
         from apps.tenant_apps.dea.models import SalesInvoiceVoucher
 
         return isinstance(doc, SalesInvoiceVoucher)
 
-    def build_posting(self, doc, context=None) -> PostingBundle:
-        """Build posting for sales invoice"""
-        from apps.tenant_apps.dea.models import SalesInvoiceVoucher
+    def build_posting(self, ctx) -> PostingBundle:
+        doc = ctx.doc if hasattr(ctx, "doc") else ctx
+        tenant_id = getattr(ctx, "tenant_id", None)
 
-        if not isinstance(doc, SalesInvoiceVoucher):
-            raise ValidationError("Document must be SalesInvoiceVoucher")
+        total = _money_amount(doc.total_amount)
+        taxable = _money_amount(doc.taxable_amount)
+        cgst = _money_amount(doc.cgst_amount)
+        sgst = _money_amount(doc.sgst_amount)
+        igst = _money_amount(doc.igst_amount)
+        tcs = _money_amount(doc.tcs_amount)
+        currency = str(doc.total_amount.currency)
 
-        # Get  account IDs
-        ar_ledger = get_ledger_id_by_key("ACCOUNTS_RECEIVABLE")
-        sales_ledger = get_ledger_id_by_key("SALES_REVENUE")
-        cgst_output_ledger = get_ledger_id_by_key("CGST_OUTPUT")
-        sgst_output_ledger = get_ledger_id_by_key("SGST_OUTPUT")
-        igst_output_ledger = get_ledger_id_by_key("IGST_OUTPUT")
-        tcs_payable_ledger = get_ledger_id_by_key("TCS_PAYABLE")
+        if total <= 0:
+            raise ValidationError("Sales invoice total must be positive")
 
-        lines = []
+        customer_account = resolve_sales_customer_account(doc)
+        ar_ledger = get_ledger_id_by_key("ACCOUNTS_RECEIVABLE", tenant_id=tenant_id)
 
-        # DR: Accounts Receivable (total invoice amount)
-        lines.append(
-            DualLedgerLine(
-                ledger_dr=ar_ledger,
-                ledger_cr=None,
-                amount=doc.total_amount.amount,
-                memo=f"Sale to {doc.customer} - Invoice {doc.invoice_number}",
-            )
+        ledger_lines = []
+        _append_credit_split(
+            ledger_lines,
+            debit_ledger_id=ar_ledger,
+            credit_ledger_id=get_ledger_id_by_key("SALES_REVENUE", tenant_id=tenant_id),
+            amount=taxable,
+            currency=currency,
+        )
+        _append_credit_split(
+            ledger_lines,
+            debit_ledger_id=ar_ledger,
+            credit_ledger_id=get_ledger_id_by_key("CGST_OUTPUT", tenant_id=tenant_id),
+            amount=cgst,
+            currency=currency,
+        )
+        _append_credit_split(
+            ledger_lines,
+            debit_ledger_id=ar_ledger,
+            credit_ledger_id=get_ledger_id_by_key("SGST_OUTPUT", tenant_id=tenant_id),
+            amount=sgst,
+            currency=currency,
+        )
+        _append_credit_split(
+            ledger_lines,
+            debit_ledger_id=ar_ledger,
+            credit_ledger_id=get_ledger_id_by_key("IGST_OUTPUT", tenant_id=tenant_id),
+            amount=igst,
+            currency=currency,
+        )
+        _append_credit_split(
+            ledger_lines,
+            debit_ledger_id=ar_ledger,
+            credit_ledger_id=get_ledger_id_by_key("TCS_PAYABLE", tenant_id=tenant_id),
+            amount=tcs,
+            currency=currency,
         )
 
-        # CR: Sales Revenue (taxable amount)
-        lines.append(
-            DualLedgerLine(
-                ledger_dr=None,
-                ledger_cr=sales_ledger,
-                amount=doc.taxable_amount.amount,
-                memo=f"Sales revenue - Invoice {doc.invoice_number}",
-            )
-        )
+        if not ledger_lines:
+            raise ValidationError("Sales invoice has no postable amount")
 
-        # CR: CGST Output
-        if doc.cgst_amount.amount > 0:
-            lines.append(
-                DualLedgerLine(
-                    ledger_dr=None,
-                    ledger_cr=cgst_output_ledger,
-                    amount=doc.cgst_amount.amount,
-                    memo=f"CGST collected - Invoice {doc.invoice_number}",
-                )
-            )
-
-        # CR: SGST Output
-        if doc.sgst_amount.amount > 0:
-            lines.append(
-                DualLedgerLine(
-                    ledger_dr=None,
-                    ledger_cr=sgst_output_ledger,
-                    amount=doc.sgst_amount.amount,
-                    memo=f"SGST collected - Invoice {doc.invoice_number}",
-                )
-            )
-
-        # CR: IGST Output
-        if doc.igst_amount.amount > 0:
-            lines.append(
-                DualLedgerLine(
-                    ledger_dr=None,
-                    ledger_cr=igst_output_ledger,
-                    amount=doc.igst_amount.amount,
-                    memo=f"IGST collected - Invoice {doc.invoice_number}",
-                )
-            )
-
-        # CR: TCS Payable
-        if doc.tcs_amount.amount > 0:
-            lines.append(
-                DualLedgerLine(
-                    ledger_dr=None,
-                    ledger_cr=tcs_payable_ledger,
-                    amount=doc.tcs_amount.amount,
-                    memo=f"TCS collected - Invoice {doc.invoice_number}",
-                )
-            )
-
-        # Subledger: Customer account
         account_lines = [
             AccountLine(
-                account_dr=doc.customer.id,
-                account_cr=None,
-                amount=doc.total_amount.amount,
-                memo=f"Invoice {doc.invoice_number}",
+                ledger_id=ar_ledger,
+                account_id=customer_account.id,
+                side="Dr",
+                currency=currency,
+                amount=total,
+                amount_base=total,
+                xact_type_ext="CRSL",
             )
         ]
 
-        return PostingBundle(
-            voucher_type="SALES_INVOICE",
-            voucher_number=doc.invoice_number,
-            voucher_date=doc.invoice_date,
-            description=f"Sales to {doc.customer}",
-            lines=lines,
-            account_lines=account_lines,
+        return PostingBundle(ledger_lines=ledger_lines, account_lines=account_lines)
+
+    def fingerprint_payload(self, ctx):
+        doc = ctx.doc
+        return {
+            "voucher_type": self.voucher_type,
+            "rule_version": self.rule_version,
+            "invoice_id": getattr(doc, "id", None),
+            "invoice_number": getattr(doc, "invoice_number", None),
+            "customer_id": getattr(doc, "customer_id", None),
+            "total_amount": str(getattr(doc.total_amount, "amount", "")),
+            "currency": str(getattr(doc.total_amount, "currency", "")),
+        }
+
+
+def _money_amount(value):
+    return Decimal(str(value.amount if hasattr(value, "amount") else value))
+
+
+def _append_credit_split(lines, *, debit_ledger_id, credit_ledger_id, amount, currency):
+    if amount <= 0:
+        return
+    lines.append(
+        DualLedgerLine(
+            debit_ledger_id=debit_ledger_id,
+            credit_ledger_id=credit_ledger_id,
+            currency=currency,
+            amount=amount,
+            amount_base=amount,
         )
+    )

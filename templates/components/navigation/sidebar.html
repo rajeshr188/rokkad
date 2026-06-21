@@ -68,6 +68,10 @@
                    href="{% url 'contact_customer_list' %}">
                     <i class="bi bi-people-fill"></i> Contacts
                 </a>
+                <a class="nav-link {% if request.resolver_match.namespace == 'party' %}active{% endif %}"
+                   href="{% url 'party:party_list' %}">
+                    <i class="bi bi-person-vcard"></i> Parties
+                </a>
                 {% endif %}
 
                 <!-- Product/Catalog -->
@@ -94,22 +98,6 @@
                 </a>
                 {% endif %}
                 
-                <!-- Sales -->
-                {% if 'sales_invoice_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="nav-link {% if request.resolver_match.namespace == 'sales' %}active{% endif %}" 
-                   href="{% url 'sales:sales_invoice_list' %}">
-                    <i class="bi bi-receipt"></i> Sales
-                </a>
-                {% endif %}
-                
-                <!-- Purchase -->
-                {% if 'purchase_order_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="nav-link {% if request.resolver_match.namespace == 'purchase' %}active{% endif %}" 
-                   href="{% url 'purchase:purchase_invoice_list' %}">
-                    <i class="bi bi-bag"></i> Purchase
-                </a>
-                {% endif %}
-                
                 <!-- Accounting/DEA -->
                 {% if 'dea_entry_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="nav-link" 
@@ -123,6 +111,13 @@
                 <a class="nav-link {% if request.resolver_match.url_name == 'rate_list' or 'rate' in request.resolver_match.url_name %}active{% endif %}"
                    href="{% url 'rate_list' %}">
                     <i class="bi bi-coin"></i> Rates
+                </a>
+                {% endif %}
+
+                {% if 'data_import' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
+                <a class="nav-link {% if request.resolver_match.namespace == 'data_import' %}active{% endif %}"
+                   href="{% url 'data_import:import_data' %}">
+                    <i class="bi bi-arrow-down-up"></i> Data Tools
                 </a>
                 {% endif %}
             </div>

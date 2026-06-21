@@ -153,6 +153,19 @@
                             <div id="hidden-item-inputs"></div>
                             
                             <div class="form-group">
+                                <label for="series_id">Series</label>
+                                <select class="form-control" id="series_id" name="series_id">
+                                    <option value="">Use default TakenLoan series</option>
+                                    {% for series in series_options %}
+                                        <option value="{{ series.id }}">{{ series }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">
+                                    Leave blank to use the first active TakenLoan series.
+                                </small>
+                            </div>
+
+                            <div class="form-group">
                                 <label for="lender_id">Lender</label>
                                 <select class="form-control" id="lender_id" name="lender_id" required>
                                     <option value="">Select lender...</option>

@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from django_tenants.test.cases import TenantTestCase
 
 from .models import Category, Price, PricingTier, PricingTierProductPrice, Product, ProductType, ProductVariant
@@ -12,6 +12,10 @@ User = get_user_model()
 
 
 class PricingHardeningTests(TenantTestCase):
+    @staticmethod
+    def get_test_schema_name():
+        return "test_product_pr10"
+
     @classmethod
     def setup_tenant(cls, tenant):
         user = User.objects.create_user(
@@ -26,6 +30,7 @@ class PricingHardeningTests(TenantTestCase):
     def setUp(self):
         from apps.tenant_apps.contact.models import Customer
 
+        connection.set_tenant(self.tenant)
         self.Customer = Customer
         self.category = Category.objects.create(name="Pricing Category")
         self.product_type = ProductType.objects.create(name="Pricing Type", has_variants=True)

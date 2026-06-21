@@ -8,7 +8,7 @@ from django_tenants.utils import tenant_context
 
 from apps.orgs.models import Company
 from apps.orgs.preferences import CompanyPreferences
-from apps.tenant_apps.girvi.models import GivenLoan, LoanLifecycleState, LoanStatus
+from apps.tenant_apps.girvi.models import GivenLoan, LoanLifecycleState
 from apps.tenant_apps.girvi.service_modules.accrual import (
     AccrualTriggerSource,
     InterestAccrualCommand,
@@ -92,10 +92,6 @@ class Command(BaseCommand):
 
     def _loan_queryset(self, loan_id=None):
         closed_statuses = {
-            LoanStatus.CLOSED,
-            LoanStatus.RELEASED,
-            LoanStatus.CANCELLED,
-            LoanStatus.REJECTED,
             LoanLifecycleState.CLOSED,
             LoanLifecycleState.RENEWED,
             LoanLifecycleState.CANCELLED,
@@ -229,7 +225,7 @@ class Command(BaseCommand):
                         self.stdout.write(
                             self.style.SUCCESS(
                                 f"  {loan.loan_id}: would create {preview.pending_periods} period(s) "
-                                f"for ₹{preview.newly_accrued_amount}"
+                                f"for INR {preview.newly_accrued_amount}"
                             )
                         )
                         continue
@@ -254,7 +250,7 @@ class Command(BaseCommand):
                     self.stdout.write(
                         self.style.SUCCESS(
                             f"  {loan.loan_id}: created {result.created_count} period(s) "
-                            f"for ₹{result.total_created_amount}"
+                            f"for INR {result.total_created_amount}"
                         )
                     )
 
@@ -265,7 +261,7 @@ class Command(BaseCommand):
                 f"loans_scanned={summary['loans_considered']}, "
                 f"loans_accrued={summary['loans_with_new_accruals']}, "
                 f"periods={summary['periods_created']}, "
-                f"amount=₹{summary['total_amount']}, "
+                f"amount=INR {summary['total_amount']}, "
                 f"errors={summary['errors']}"
             )
         )

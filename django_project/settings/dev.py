@@ -9,7 +9,7 @@ ALLOWED_HOSTS = [
 DATABASES = {
     "default": {
         "ENGINE": "django_tenants.postgresql_backend",
-        "NAME": "prod-rehearsal",  # "NAME": "rokkad.com",
+        "NAME": "fresh_clean",#"prod-rehearsal",  # "NAME": "rokkad.com",
         "USER": "postgres",
         "PASSWORD": "kanchan",
         "HOST": "localhost",

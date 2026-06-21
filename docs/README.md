@@ -32,6 +32,15 @@ This folder is the living documentation system. Historical notes, audits, and su
 - [Subscriptions](domain/subscriptions.md)
 - [Notifications](domain/notifications.md)
 
+## App Internals
+
+- [Girvi app overview](apps/girvi/README.md)
+- [Girvi architecture](apps/girvi/architecture.md)
+- [Girvi models](apps/girvi/models.md)
+- [Girvi workflows](apps/girvi/workflows.md)
+- [Girvi userflows](apps/girvi/userflows.md)
+- [Girvi refactor plan](apps/girvi/refactor-plan.md)
+
 ## Flow Docs
 
 - [User flow](flows/user-flow.md)

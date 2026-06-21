@@ -3,14 +3,11 @@ import datetime
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Column, HTML, Layout, Row, Submit
 from django import forms
-from django.apps import apps
 
 # from product.models import PricingTier
-from django.conf import settings
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.urls import reverse
 from django_select2 import forms as s2forms
-from import_export.formats import base_formats
 from slick_reporting.forms import BaseReportForm
 from phonenumber_field.formfields import PhoneNumberField
 from .models import (
@@ -22,40 +19,6 @@ from .models import (
     Proof,
     RelationType,
 )
-
-
-class ExportForm(forms.Form):
-    model_names = forms.MultipleChoiceField(
-        choices=[
-            (model.__name__, model.__name__)
-            for app in settings.TENANT_APPS
-            for model in apps.get_app_config(app.split(".")[-1]).models.values()
-        ],
-        widget=forms.CheckboxSelectMultiple,
-        label="Select Models to Export",
-    )
-    export_format = forms.ChoiceField(
-        choices=[
-            (fmt().get_title(), fmt().get_title())
-            for fmt in [
-                base_formats.CSV,
-                base_formats.JSON,
-                base_formats.XLS,
-                base_formats.HTML,
-            ]
-        ]
-    )
-
-
-class ImportForm(forms.Form):
-    model_name = forms.ChoiceField(
-        choices=[
-            (model.__name__, model.__name__)
-            for app in settings.TENANT_APPS
-            for model in apps.get_app_config(app.split(".")[-1]).models.values()
-        ]
-    )
-    import_file = forms.FileField()
 
 
 class CustomerWidget(s2forms.ModelSelect2Widget):

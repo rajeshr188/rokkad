@@ -387,6 +387,9 @@ class UnifiedLoanTable(tables.Table):
             record.get("loan_id"),
         )
 
+    def render_status(self, record):
+        return record.get("status_label") or record.get("status")
+
     class Meta:
         fields = (
             "selection",

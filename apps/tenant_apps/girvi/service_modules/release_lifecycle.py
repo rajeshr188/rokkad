@@ -5,7 +5,10 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.orgs.preferences import CompanyPreferences
-from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
+from apps.tenant_apps.girvi.flows import (
+    build_runtime_loan_flow,
+    normalize_legacy_given_loan_status,
+)
 from apps.tenant_apps.girvi.lifecycle import V2_CLOSURE_STATUSES
 
 from .accrual import InterestAccrualCommand, InterestAccrualService
@@ -74,7 +77,10 @@ class ReleaseLifecycleService:
                 workspace,
             )
             can_release = False
-            use_v2_closure = str(getattr(loan, "status", "")) in V2_CLOSURE_STATUSES
+            current_status = normalize_legacy_given_loan_status(
+                getattr(loan, "status", "")
+            )
+            use_v2_closure = current_status in V2_CLOSURE_STATUSES
             deliver = getattr(flow, "deliver", None)
             request_closure = getattr(flow, "request_closure", None)
             complete_closure = getattr(flow, "complete_closure", None)
@@ -164,9 +170,10 @@ class ReleaseLifecycleService:
                         except Exception:
                             pass  # WITH_CUSTOMER already, or validation error – skip silently
 
-                use_v2_closure = (
-                    str(getattr(command.loan, "status", "")) in V2_CLOSURE_STATUSES
+                current_status = normalize_legacy_given_loan_status(
+                    getattr(command.loan, "status", "")
                 )
+                use_v2_closure = current_status in V2_CLOSURE_STATUSES
                 deliver = getattr(flow, "deliver", None)
                 complete_closure = getattr(flow, "complete_closure", None)
                 request_closure = getattr(flow, "request_closure", None)

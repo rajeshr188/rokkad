@@ -15,3 +15,4 @@ from .numbering import *
 from .asset import *
 from .prepaid import *
 from .bank import *
+from .party_account import *

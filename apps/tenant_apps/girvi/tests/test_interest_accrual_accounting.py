@@ -55,36 +55,32 @@ class InterestAccrualAccountingTests(SimpleTestCase):
             "apps.tenant_apps.girvi.service_modules.accrual.LoanInterestAccrual.objects.create",
             side_effect=created_rows,
         ), patch(
-            "apps.tenant_apps.girvi.service_modules.accrual.JournalEntryVoucher.objects.create",
-            return_value=MagicMock(pk=10, get_voucher_type=lambda: "JOURNAL_ENTRY_ACCRUAL"),
-        ) as mock_je_create, patch(
-            "apps.tenant_apps.girvi.service_modules.accrual.JournalEntryLineItem"
-        ) as mock_line_item_cls, patch(
-            "apps.tenant_apps.girvi.service_modules.accrual.VoucherType.objects.get_or_create",
-            return_value=(SimpleNamespace(name="JOURNAL_ENTRY_ACCRUAL"), True),
-        ), patch(
-            "apps.tenant_apps.girvi.service_modules.accrual.get_ledger_id_by_key",
-            side_effect=lambda key, tenant_id=None: {
-                "INTEREST_RECEIVABLE": 4,
-                "INTEREST_INCOME": 5,
-            }[key],
-        ), patch(
-            "apps.tenant_apps.girvi.service_modules.accrual.create_and_post_voucher_for_doc",
-            return_value=(MagicMock(), MagicMock()),
+            "apps.tenant_apps.girvi.service_modules.accrual.post_interest_accrual_batch",
+            return_value=(MagicMock(), MagicMock(), MagicMock()),
         ) as mock_post:
-            mock_line_item_cls.side_effect = lambda **kwargs: SimpleNamespace(**kwargs)
             result = InterestAccrualService.execute(command)
 
         self.assertTrue(result.success)
-        mock_je_create.assert_called_once()
-        mock_line_item_cls.objects.bulk_create.assert_called_once()
-        mock_post.assert_called_once()
+        mock_post.assert_called_once_with(
+            command,
+            result.loan and InterestAccrualService.preview(command),
+            created_rows,
+            posted_status_value="POSTED",
+        )
         self.assertEqual(result.created_count, 2)
 
 
 class GivenLoanAccrualAwarePostingRuleTests(SimpleTestCase):
+    @patch(
+        "apps.tenant_apps.dea.posting.rules.givenloan_receipt.resolve_given_loan_borrower_account",
+        return_value=SimpleNamespace(id=77),
+    )
     @patch("apps.tenant_apps.dea.posting.rules.givenloan_receipt.get_ledger_id_by_key")
-    def test_receipt_rule_clears_receivable_before_new_income(self, mock_get_ledger_id_by_key):
+    def test_receipt_rule_clears_receivable_before_new_income(
+        self,
+        mock_get_ledger_id_by_key,
+        _mock_resolve_account,
+    ):
         mock_get_ledger_id_by_key.side_effect = lambda key, tenant_id=None: {
             "CASH": 1,
             "LOAN_PRINCIPAL_CTRL": 2,
@@ -93,10 +89,7 @@ class GivenLoanAccrualAwarePostingRuleTests(SimpleTestCase):
             "INTEREST_INCOME": 5,
         }[key]
 
-        loan = SimpleNamespace(
-            borrower=SimpleNamespace(account=SimpleNamespace(id=77)),
-            interest_receivable_balance=lambda: Decimal("80.00"),
-        )
+        loan = SimpleNamespace(interest_receivable_balance=lambda: Decimal("80.00"))
         payment = SimpleNamespace(
             total_amount=Money(600, "INR"),
             principal_amount=Money(500, "INR"),
@@ -114,8 +107,16 @@ class GivenLoanAccrualAwarePostingRuleTests(SimpleTestCase):
         self.assertEqual(bundle.ledger_lines[2].credit_ledger_id, 5)
         self.assertEqual(bundle.ledger_lines[2].amount, Decimal("20"))
 
+    @patch(
+        "apps.tenant_apps.dea.posting.rules.givenloan_release.resolve_given_loan_borrower_account",
+        return_value=SimpleNamespace(id=77),
+    )
     @patch("apps.tenant_apps.dea.posting.rules.givenloan_release.get_ledger_id_by_key")
-    def test_release_rule_clears_receivable_before_new_income(self, mock_get_ledger_id_by_key):
+    def test_release_rule_clears_receivable_before_new_income(
+        self,
+        mock_get_ledger_id_by_key,
+        _mock_resolve_account,
+    ):
         mock_get_ledger_id_by_key.side_effect = lambda key, tenant_id=None: {
             "CASH": 1,
             "LOAN_PRINCIPAL_CTRL": 2,
@@ -124,10 +125,7 @@ class GivenLoanAccrualAwarePostingRuleTests(SimpleTestCase):
             "INTEREST_INCOME": 5,
         }[key]
 
-        loan = SimpleNamespace(
-            borrower=SimpleNamespace(account=SimpleNamespace(id=77)),
-            interest_receivable_balance=lambda: Decimal("60.00"),
-        )
+        loan = SimpleNamespace(interest_receivable_balance=lambda: Decimal("60.00"))
         payment = SimpleNamespace(
             total_amount=Money(560, "INR"),
             principal_amount=Money(500, "INR"),

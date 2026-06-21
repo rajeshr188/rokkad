@@ -122,10 +122,10 @@ class BaseLoanQuerySet(models.QuerySet):
         REQUIRES: with_duration_metrics() first!
 
         Annotations:
-        - loan_amount
-        - interest_amount
-        - total_interest
-        - total_due
+        - calculated_loan_amount
+        - calculated_interest_amount
+        - calculated_total_interest
+        - calculated_total_due
         """
         from .services import InterestCalculationService
 
@@ -213,7 +213,7 @@ class BaseLoanQuerySet(models.QuerySet):
         """Total principal across all loans in queryset."""
         # Use database aggregation on related items
         # For GivenLoan: sum loanitems.loanamount
-        # For TakenLoan: sum repledgedloanitems.repledged_loanamount
+        # For TakenLoan: sum repledge_history_items.repledged_amount
         # This is handled by subclass-specific implementations
         raise NotImplementedError("Subclass must implement")
 
@@ -463,7 +463,7 @@ class TakenLoanQuerySet(BaseLoanQuerySet):
 
     def with_metal_weights(self):
         """
-        Add weight metrics from RepledgedLoanItem -> original LoanItem.
+        Add weight metrics from custody repledge history items.
 
         Annotations:
         - gold_weight, silver_weight, bronze_weight
@@ -476,7 +476,7 @@ class TakenLoanQuerySet(BaseLoanQuerySet):
 
     def with_itemwise_amounts(self):
         """
-        Add loan amounts by metal type from RepledgedLoanItem.
+        Add loan amounts by metal type from custody repledge history.
 
         Annotations:
         - gold_loanamount, silver_loanamount, bronze_loanamount
@@ -509,17 +509,17 @@ class TakenLoanQuerySet(BaseLoanQuerySet):
         )
 
     def total_loan_amount(self):
-        """Total principal from all RepledgedLoanItems."""
+        """Total principal from custody repledge history."""
         return self.aggregate(
             total=Coalesce(
-                Sum("repledgedloanitems__repledged_loanamount"),
+                Sum("repledge_history_items__repledged_amount"),
                 Value(0),
                 output_field=DecimalField(max_digits=15, decimal_places=2),
             )
         )["total"]
 
     def total_weight(self):
-        """Total gross weight from all RepledgedLoanItems."""
+        """Total gross weight from custody repledge history."""
         return (
             self.with_metal_weights().aggregate(
                 total=Round(
@@ -530,7 +530,7 @@ class TakenLoanQuerySet(BaseLoanQuerySet):
         )
 
     def total_pure_weight(self):
-        """Total pure weight from all RepledgedLoanItems."""
+        """Total pure weight from custody repledge history."""
         return (
             self.with_metal_weights().aggregate(
                 total=Round(
@@ -544,7 +544,7 @@ class TakenLoanQuerySet(BaseLoanQuerySet):
         )
 
     def total_current_value(self):
-        """Total current collateral value from all RepledgedLoanItems."""
+        """Total current collateral value from custody repledge history."""
         return (
             self.with_metal_weights()
             .with_current_value()
@@ -597,7 +597,7 @@ class TakenLoanManager(models.Manager):
     def for_table_display(self):
         """
         Return queryset optimized for table display.
-        For TakenLoan (with RepledgedLoanItems), returns base queryset.
+        For TakenLoan, returns base queryset.
         """
         return self.get_queryset()
 

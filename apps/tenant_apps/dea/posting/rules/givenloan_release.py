@@ -20,6 +20,7 @@ from ..resolver import get_ledger_id_by_key
 from ..registry import register_rule
 from ..types import AccountLine, DualLedgerLine, PostingBundle
 from .base import BasePostingRule
+from .party_accounts import resolve_given_loan_borrower_account
 
 
 @register_rule("GIVENLOAN_RELEASE")
@@ -36,14 +37,7 @@ class GivenLoanReleaseRule(BasePostingRule):
         if not source_loan:
             raise ValidationError("Cannot find source GivenLoan for release posting")
 
-        party = getattr(source_loan, "borrower", None) or getattr(source_loan, "customer", None)
-        if not party:
-            raise ValidationError("GivenLoan has no borrower")
-
-        if not hasattr(party, "account") or not party.account:
-            raise ValidationError(
-                f"Borrower {party} has no account for release posting"
-            )
+        borrower_account = resolve_given_loan_borrower_account(source_loan)
 
         # Split principal and interest from the voucher (set by record_loan_release).
         # Fall back to total_amount as principal if components are not set.
@@ -126,7 +120,7 @@ class GivenLoanReleaseRule(BasePostingRule):
             account_lines.append(
                 AccountLine(
                     ledger_id=borrower_loan_ctrl_id,
-                    account_id=party.account.id,
+                    account_id=borrower_account.id,
                     side="Cr",
                     currency=currency,
                     amount=principal_decimal,

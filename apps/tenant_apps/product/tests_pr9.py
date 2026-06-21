@@ -7,9 +7,14 @@ from django_tenants.utils import schema_context
 
 from .inventory.services import InventoryMovementService
 from .models import Category, Product, ProductType, ProductVariant, Stock, StockItem
+from .tests_utils import ensure_inventory_movements
 
 
 class InventoryCleanupAndHardeningTests(TenantTestCase):
+    @staticmethod
+    def get_test_schema_name():
+        return "test_product_pr9"
+
     @classmethod
     def setup_tenant(cls, tenant):
         from django.contrib.auth import get_user_model
@@ -27,6 +32,7 @@ class InventoryCleanupAndHardeningTests(TenantTestCase):
         suffix = str(abs(hash(self._testMethodName)))[:6]
         self._schema_name = self.tenant.schema_name
         with schema_context(self._schema_name):
+            ensure_inventory_movements()
             self.category = Category.objects.create(name=f"PR9 Gold {suffix}")
             self.product_type = ProductType.objects.create(name=f"PR9 Type {suffix}")
             self.product = Product.objects.create(

@@ -13,6 +13,7 @@ from apps.tenant_apps.notify_v2.models import (
     NotificationTemplate as NotifyV2Template,
 )
 from apps.tenant_apps.notify_v2.services.batch_service import seed_girvi_batch_defaults
+from apps.tenant_apps.party.services import seed_party_roles
 from apps.tenant_apps.product.models import Attribute, Category, Movement, ProductType
 
 
@@ -51,6 +52,11 @@ class Command(BaseCommand):
             help="Skip product fixture seeding.",
         )
         parser.add_argument(
+            "--skip-party",
+            action="store_true",
+            help="Skip party role baseline seeding.",
+        )
+        parser.add_argument(
             "--skip-notify",
             action="store_true",
             help="Skip notify fixture seeding.",
@@ -87,6 +93,8 @@ class Command(BaseCommand):
             actions.append("seed_rates")
         if not options["skip_product"]:
             actions.append("seed_product")
+        if not options["skip_party"]:
+            actions.append("seed_party")
         if not options["skip_notify"]:
             actions.append("seed_notify")
         if not options["skip_notify_v2"]:
@@ -121,6 +129,9 @@ class Command(BaseCommand):
                 if "seed_product" in actions:
                     self._seed_product_defaults()
 
+                if "seed_party" in actions:
+                    self._seed_party_defaults()
+
                 if "seed_notify" in actions:
                     self._seed_notify_defaults()
 
@@ -142,6 +153,15 @@ class Command(BaseCommand):
     def _seed_dea_voucher_types(self):
         """Extracted from dea migration RunPython seeds (idempotent)."""
         seed_voucher_types()
+
+    def _seed_party_defaults(self):
+        result = seed_party_roles()
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Party roles ready: "
+                f"created={result['created']} updated={result['updated']} total={result['total']}"
+            )
+        )
 
     def _seed_product_defaults(self):
         """

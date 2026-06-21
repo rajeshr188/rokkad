@@ -6,7 +6,11 @@ implementation lives in apps.tenant_apps.dea.facades.* so the public API stays
 stable while the internal use cases remain small.
 """
 
-from apps.tenant_apps.dea.facades.accounts import ensure_customer_account
+from apps.tenant_apps.dea.facades.accounts import (
+    ensure_customer_account,
+    resolve_customer_account,
+    resolve_party_account,
+)
 from apps.tenant_apps.dea.facades.journals import (
     post_interest_accrual_batch,
     post_journal_entry_voucher,
@@ -38,6 +42,8 @@ __all__ = [
     "post_interest_accrual_batch",
     "post_journal_entry_voucher",
     "post_payment_voucher",
+    "resolve_customer_account",
+    "resolve_party_account",
     "resolve_posted_journal_entry",
     "reverse_payment_by_marker",
 ]

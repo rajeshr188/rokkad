@@ -1,10 +1,10 @@
 {% if not loan %}
 <div id="loan-creation-preview"
      hx-get="{% url 'girvi:girvi_loan_create_preview' %}"
-     hx-trigger="change from:#id_series, change from:select[name='borrower'], change from:#id_loan_date, change from:#id_tenure, change from:#id_interest_type, change from:[name^='items-']"
+     hx-trigger="change from:#id_series, change from:select[name='borrower_party'], change from:#id_loan_date, change from:#id_tenure, change from:#id_interest_type, change from:[name^='items-']"
      hx-target="this"
      hx-swap="outerHTML"
-     hx-include="[name='series'], [name='borrower'], [name='loan_date'], [name='tenure'], [name='interest_type'], [name='loan_id'], [name^='items-']">
+     hx-include="[name='series'], [name='borrower_party'], [name='loan_date'], [name='tenure'], [name='interest_type'], [name='loan_id'], [name^='items-']">
   {% if creation_preview %}
   <div class="card mb-3 {% if creation_preview.is_valid %}border-success{% else %}border-warning{% endif %}">
     <div class="card-header py-2 fw-semibold">

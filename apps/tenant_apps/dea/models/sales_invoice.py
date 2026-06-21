@@ -16,6 +16,13 @@ from decimal import Decimal
 from .doc import BusinessDoc
 
 
+def _party_from_customer(customer):
+    if not customer:
+        return None
+    party_id = getattr(customer, "party_id", None)
+    return customer.party if party_id else None
+
+
 class SalesInvoiceVoucher(BusinessDoc):
     """
     Sales Invoice Voucher - Records revenue from sales.
@@ -48,6 +55,14 @@ class SalesInvoiceVoucher(BusinessDoc):
         on_delete=models.PROTECT,
         related_name="sales_invoices",
         help_text="Customer who purchased",
+    )
+    party = models.ForeignKey(
+        "party.Party",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="dea_sales_invoices",
+        help_text="Shadow Party link for the customer during Customer migration.",
     )
 
     # === Reference to Sales Order (optional) ===
@@ -155,6 +170,7 @@ class SalesInvoiceVoucher(BusinessDoc):
         verbose_name_plural = "Sales Invoice Vouchers"
         indexes = [
             models.Index(fields=["invoice_date", "customer"]),
+            models.Index(fields=["invoice_date", "party"]),
             models.Index(fields=["is_fully_paid"]),
             models.Index(fields=["created_at"]),
         ]
@@ -197,6 +213,14 @@ class SalesInvoiceVoucher(BusinessDoc):
 
     def save(self, *args, **kwargs):
         """Auto-generate invoice number and calculate amounts"""
+        if not self.party_id:
+            party = _party_from_customer(getattr(self, "customer", None))
+            if party:
+                self.party = party
+                update_fields = kwargs.get("update_fields")
+                if update_fields is not None:
+                    kwargs["update_fields"] = set(update_fields) | {"party"}
+
         if not self.invoice_number:
             self.invoice_number = self._generate_invoice_number()
 

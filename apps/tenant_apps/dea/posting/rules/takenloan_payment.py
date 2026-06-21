@@ -14,6 +14,7 @@ from moneyed import Money
 
 from ..types import PostingBundle, DualLedgerLine, AccountLine
 from .base import BasePostingRule
+from .party_accounts import resolve_taken_loan_lender_account
 from ..resolver import get_ledger_id_by_key
 from ..registry import register_rule
 
@@ -63,11 +64,7 @@ class TakenLoanPaymentRule(BasePostingRule):
         if not source_loan:
             raise ValidationError("Cannot find source TakenLoan")
 
-        if not hasattr(source_loan, "lender") or not source_loan.lender:
-            raise ValidationError("Loan has no lender")
-
-        if not hasattr(source_loan.lender, "account") or not source_loan.lender.account:
-            raise ValidationError(f"Lender {source_loan.lender} has no account")
+        lender_account = resolve_taken_loan_lender_account(source_loan)
 
         # Resolve ledgers
         cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
@@ -120,7 +117,7 @@ class TakenLoanPaymentRule(BasePostingRule):
             account_lines.append(
                 AccountLine(
                     ledger_id=lender_account_ctrl_id,
-                    account_id=source_loan.lender.account.id,
+                    account_id=lender_account.id,
                     side="Dr",
                     currency=str(payment.total_amount.currency),
                     amount=principal_decimal,

@@ -68,6 +68,15 @@ class Customer(models.Model):
         verbose_name=_("Created By"),
         related_name="customers_created",
     )
+    party = models.OneToOneField(
+        "party.Party",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="legacy_customer",
+        verbose_name=_("Party"),
+        help_text=_("Compatibility bridge to the long-term Party model."),
+    )
 
     # Personal Information
     firstname = models.CharField(max_length=255, verbose_name=_("First Name"))
@@ -155,6 +164,22 @@ class Customer(models.Model):
 
     def get_update_url(self):
         return reverse("contact_customer_update", args=(self.pk,))
+
+    @property
+    def account(self):
+        """Compatibility alias for legacy DEA callers.
+
+        DEA now supports multiple party-role account mappings. Older code that
+        still reads ``customer.account`` receives the first active mapped account.
+        New accounting code should resolve accounts through ``dea.facade``.
+        """
+        if hasattr(self, "accounts"):
+            return (
+                self.accounts.filter(status="ACTIVE")
+                .order_by("id")
+                .first()
+            ) or self.accounts.order_by("id").first()
+        return None
 
     def clean(self):
         """Validate customer data"""

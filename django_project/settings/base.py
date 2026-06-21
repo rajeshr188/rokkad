@@ -75,8 +75,8 @@ SHARED_APPS = [
 ]
 
 TENANT_APPS = [
-    "apps.tenant_apps.approval",
     "apps.tenant_apps.contact",
+    "apps.tenant_apps.party",
     "apps.tenant_apps.girvi",
     "apps.tenant_apps.product",
     "apps.tenant_apps.terms",
@@ -84,8 +84,6 @@ TENANT_APPS = [
     "apps.tenant_apps.notify",
     "apps.tenant_apps.notify_v2",
     "apps.tenant_apps.dea",
-    "apps.tenant_apps.purchase",
-    "apps.tenant_apps.sales",
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]

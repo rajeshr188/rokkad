@@ -65,19 +65,21 @@ class GenericForwardTransitionCommand(BaseLoanTransitionCommand):
 
 
 class DisburseTransitionCommand(BaseLoanTransitionCommand):
-    transition_name = "disburse"
+    transition_name = "disburse_loan"
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
-        from apps.tenant_apps.girvi.models import LoanStatus
-        from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+        from apps.tenant_apps.girvi.models.loan_refactored import (
+            LoanLifecycleState,
+            TakenLoanLifecycleState,
+        )
         from apps.tenant_apps.girvi.service_modules.payment import record_loan_disbursal
 
         try:
             with transaction.atomic():
                 transition_method(**self._payload_to_kwargs(payload))
                 if self.loan.status not in {
-                    LoanStatus.DISBURSED,
                     LoanLifecycleState.ACTIVE_CURRENT,
+                    TakenLoanLifecycleState.ACTIVE,
                 }:
                     return TransitionResult(
                         success=True,
@@ -168,10 +170,9 @@ class AuctionNoticeTransitionCommand(AuctionNoticeMixin, GenericForwardTransitio
 
 
 class MarkAuctionedTransitionCommand(AuctionNoticeMixin, BaseLoanTransitionCommand):
-    transition_name = "mark_auctioned"
+    transition_name = "complete_auction"
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
-        from apps.tenant_apps.girvi.models import LoanStatus
         from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
 
         payload_kwargs = self._payload_to_kwargs(payload)
@@ -186,10 +187,7 @@ class MarkAuctionedTransitionCommand(AuctionNoticeMixin, BaseLoanTransitionComma
         try:
             with transaction.atomic():
                 transition_method(**payload_kwargs)
-                if self.loan.status not in {
-                    LoanStatus.AUCTIONED,
-                    LoanLifecycleState.AUCTION_COMPLETE,
-                }:
+                if self.loan.status != LoanLifecycleState.AUCTION_COMPLETE:
                     result = TransitionResult(
                         success=True,
                         level="success",
@@ -241,7 +239,7 @@ class MarkSoldTransitionCommand(BaseLoanTransitionCommand):
     transition_name = "mark_sold"
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
-        from apps.tenant_apps.girvi.models import LoanStatus
+        from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
 
         payload_kwargs = self._payload_to_kwargs(payload)
         amount = payload_kwargs.get("amount") or payload_kwargs.get("recovery_amount")
@@ -255,7 +253,7 @@ class MarkSoldTransitionCommand(BaseLoanTransitionCommand):
         try:
             with transaction.atomic():
                 transition_method(**payload_kwargs)
-                if self.loan.status != LoanStatus.SOLD:
+                if self.loan.status != LoanLifecycleState.AUCTION_COMPLETE:
                     return TransitionResult(
                         success=True,
                         level="success",
@@ -356,7 +354,7 @@ class UndoRepledgeTransitionCommand(BaseLoanTransitionCommand):
     def execute(self, transition_method, payload=None) -> TransitionResult:
         from django.core.exceptions import ValidationError
 
-        from apps.tenant_apps.girvi.models.loan_refactored import LoanStatus
+        from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
         from apps.tenant_apps.girvi.models.renewal import LoanRenewal
 
         try:
@@ -367,9 +365,10 @@ class UndoRepledgeTransitionCommand(BaseLoanTransitionCommand):
 
                 new_loan = renewal.renewed_loan
                 if new_loan and new_loan.status in {
-                    LoanStatus.CREATED,
-                    LoanStatus.APPROVED,
-                    LoanStatus.DISBURSED,
+                    LoanLifecycleState.DRAFT,
+                    LoanLifecycleState.PENDING_APPROVAL,
+                    LoanLifecycleState.APPROVED,
+                    LoanLifecycleState.ACTIVE_CURRENT,
                 }:
                     new_loan.loanitems.all().delete()
                     new_loan.delete()
@@ -407,17 +406,9 @@ class UndoRepledgeTransitionCommand(BaseLoanTransitionCommand):
 
 
 TRANSITION_COMMAND_REGISTRY = {
-    "approve": GenericForwardTransitionCommand,
-    "disburse": DisburseTransitionCommand,
-    "cancel": GenericForwardTransitionCommand,
-    "mark_defaulted": GenericForwardTransitionCommand,
-    "mark_auctioned": MarkAuctionedTransitionCommand,
     "mark_sold": MarkSoldTransitionCommand,
-    "repledge": GenericForwardTransitionCommand,
-    "undo_disburse": UndoDisburseTransitionCommand,
     "undo_release": UndoReleaseTransitionCommand,
     "undo_repledge": UndoRepledgeTransitionCommand,
-    # V2 lifecycle commands
     "submit_for_approval": GenericForwardTransitionCommand,
     "return_to_draft": GenericForwardTransitionCommand,
     "approve_loan": GenericForwardTransitionCommand,
@@ -440,6 +431,9 @@ TRANSITION_COMMAND_REGISTRY = {
     "complete_auction": MarkAuctionedTransitionCommand,
     "close_after_auction": GenericForwardTransitionCommand,
     "write_off_loan": GenericForwardTransitionCommand,
+    "activate": DisburseTransitionCommand,
+    "request_settlement": GenericForwardTransitionCommand,
+    "complete_settlement": GenericForwardTransitionCommand,
 }
 
 

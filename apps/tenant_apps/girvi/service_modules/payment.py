@@ -4,11 +4,10 @@ from decimal import Decimal
 
 from django.contrib.contenttypes.models import ContentType
 
-from apps.tenant_apps.dea.facade import (
-    create_and_post_payment,
-    ensure_customer_account,
+from apps.tenant_apps.girvi.integrations.dea_adapter import (
+    create_and_post_voucher_for_doc,
     has_other_posted_payments,
-    post_payment_voucher,
+    resolve_customer_account,
     reverse_payment_by_marker,
 )
 from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, TakenLoan
@@ -61,15 +60,25 @@ def record_loan_disbursal(loan, user):
 
 
 def _ensure_disbursal_party_account(loan):
-    party = (
-        getattr(loan, "borrower", None)
-        or getattr(loan, "customer", None)
-        or getattr(loan, "lender", None)
-    )
-    if party is None:
-        raise ValueError(f"Loan {getattr(loan, 'loan_id', loan)} has no disbursal party")
+    if isinstance(loan, GivenLoan):
+        party = getattr(loan, "borrower", None) or getattr(loan, "customer", None)
+        if party is None:
+            raise ValueError(f"Loan {getattr(loan, 'loan_id', loan)} has no borrower")
+        resolve_customer_account(
+            party,
+            role_key="BORROWER",
+            purpose="BORROWER_LOAN_RECEIVABLE",
+        )
+        return
 
-    ensure_customer_account(party)
+    party = getattr(loan, "lender", None)
+    if party is None:
+        raise ValueError(f"Loan {getattr(loan, 'loan_id', loan)} has no lender")
+    resolve_customer_account(
+        party,
+        role_key="LENDER",
+        purpose="LENDER_LOAN_PAYABLE",
+    )
 
 
 def record_loan_release(release, created_by):
@@ -153,6 +162,3 @@ __all__ = [
     "reverse_loan_auction",
     "reverse_loan_sale",
 ]
-
-
-create_and_post_voucher_for_doc = create_and_post_payment

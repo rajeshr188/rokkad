@@ -49,13 +49,6 @@ class Stock(models.Model):
         default=StockStatusChoices.EMPTY,
     )
 
-    purchase_item = models.OneToOneField(
-        "purchase.PurchaseItem",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="stock_item",
-    )
     variant = models.ForeignKey(
         "product.ProductVariant",
         on_delete=models.CASCADE,
@@ -103,16 +96,7 @@ class Stock(models.Model):
         if self.huid:
             self.serial_no = self.huid
         if not self.lot_no:
-            if self.purchase_item is not None:
-                self.lot_no = "-".join(
-                    [
-                        self.purchase_item.invoice.supplier.name[:4].upper(),
-                        self.purchase_item.invoice.created.strftime("%d%m%y"),
-                        str(self.pk),
-                    ]
-                )
-            else:
-                self.lot_no = datetime.now().strftime("%d%m%y") + "-" + str(self.pk)
+            self.lot_no = datetime.now().strftime("%d%m%y") + "-" + str(self.pk)
 
         # Save again with updated lot_no and serial_no
         super().save(update_fields=["lot_no", "serial_no"])
@@ -247,14 +231,6 @@ class Stock(models.Model):
         else:
             self.status = "Available"
         self.save()
-
-    def get_total_sold(self):
-        return self.sold_items.aggregate(
-            qty=Coalesce(models.Sum("quantity", output_field=models.IntegerField()), 0),
-            wt=Coalesce(
-                models.Sum("weight", output_field=models.DecimalField()), Decimal(0.0)
-            ),
-        )
 
     @transaction.atomic
     def merge(self, lot: "Stock"):
@@ -450,15 +426,6 @@ class StockItem(models.Model):
     purchase_rate = models.DecimalField(
         max_digits=10, decimal_places=3, null=True, blank=True
     )
-    purchase_item = models.ForeignKey(
-        "purchase.PurchaseItem",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="stock_items",
-        help_text="Original purchase source if applicable"
-    )
-    
     # Variant and lineage
     variant = models.ForeignKey(
         "product.ProductVariant",

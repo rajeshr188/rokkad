@@ -73,22 +73,6 @@ NAVIGATION_STRUCTURE = {
             "required_permission": "data_view",
         },
         {
-            "id": "sales",
-            "label": "Sales",
-            "url_name": "sales:invoice_list",
-            "icon": "graph-up-arrow",
-            "section": "data",
-            "required_permission": "data_view",
-        },
-        {
-            "id": "purchase",
-            "label": "Purchase",
-            "url_name": "purchase:invoice_list",
-            "icon": "cart-fill",
-            "section": "data",
-            "required_permission": "data_view",
-        },
-        {
             "id": "accounting",
             "label": "Accounting (DEA)",
             "url_name": "dea_home",

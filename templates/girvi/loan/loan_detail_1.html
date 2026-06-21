@@ -119,21 +119,7 @@
       <div class="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-start">
         <div>
           <div class="text-muted small mb-2">Lifecycle</div>
-          {% if current_status == "Disbursed" %}
-            <span class="badge bg-primary fs-6">{{ current_status }}</span>
-          {% elif current_status == "Approved" %}
-            <span class="badge bg-success fs-6">{{ current_status }}</span>
-          {% elif current_status == "Released" %}
-            <span class="badge bg-info fs-6">{{ current_status }}</span>
-          {% elif current_status == "Cancelled" %}
-            <span class="badge bg-danger fs-6">{{ current_status }}</span>
-          {% elif current_status == "Defaulted" %}
-            <span class="badge bg-warning text-dark fs-6">{{ current_status }}</span>
-          {% elif current_status == "Auctioned" or current_status == "Sold" %}
-            <span class="badge bg-dark fs-6">{{ current_status }}</span>
-          {% else %}
-            <span class="badge bg-secondary fs-6">{{ current_status }}</span>
-          {% endif %}
+          <span class="badge {{ current_status_badge_class }} fs-6">{{ current_status_label }}</span>
           <span class="badge bg-light text-dark border ms-2">{{ object.loan_type }} Loan</span>
         </div>
 
@@ -511,7 +497,7 @@
 {% endpartialdef %}
 
 {% partialdef items-tab %}
-{% if not loan.is_released %}
+{% if not loan.is_released and loan.loan_type == 'Given' %}
 <div class="text-end mb-2">
   <button class="btn btn-success btn-sm" hx-trigger="click"
     hx-get="{% url 'girvi:loanitem_create_update' loan.id %}" hx-target="#form" hx-swap="innerHTML">

@@ -10,7 +10,7 @@ from django_tenants.utils import schema_context
 
 from apps.orgs.models import Company
 from apps.tenant_apps.girvi.models import (
-    Loan,  # Adjust the import as needed
+    GivenLoan,
     Statement,
     StatementItem,
 )
@@ -61,7 +61,7 @@ class Command(BaseCommand):
                 if match:
                     loan_id = match.group(1)
                     try:
-                        loan = Loan.objects.get(loan_id=loan_id)
+                        loan = GivenLoan.objects.get(loan_id=loan_id)
                         if not loan.is_released:
                             try:
                                 StatementItem.objects.create(
@@ -91,7 +91,7 @@ class Command(BaseCommand):
                                         f"Duplicate entry for loan ID {loan_id} in statement {statement.id}."
                                     )
                                 )
-                    except Loan.DoesNotExist:
+                    except GivenLoan.DoesNotExist:
                         self.stdout.write(
                             self.style.ERROR(f"Loan with ID {loan_id} does not exist.")
                         )

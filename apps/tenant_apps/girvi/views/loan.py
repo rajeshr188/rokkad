@@ -1,4 +1,3 @@
-import decimal
 import logging
 from datetime import datetime
 
@@ -8,7 +7,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
@@ -24,11 +22,15 @@ from moneyed import Money
 from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.models.license import Series
+from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.party.services.customer_bridge import ensure_party_customer
 
 from ..filters import LoanFilter
 from ..filters import TakenLoanFilter
 from ..flows import build_runtime_loan_flow, resolve_runtime_transition_name
+from ..lifecycle import lifecycle_status_badge_class, lifecycle_status_label
 from ..forms import (
+    LoanCreateForm,
     LoanForm,
     LoanItemForm,
     LoanRenewForm,
@@ -37,7 +39,6 @@ from ..forms import (
 from ..models import (
     GivenLoan,
     LoanChangeLog,
-    LoanStatus,
     TakenLoan,
 )
 from ..selectors import (
@@ -63,80 +64,19 @@ from ..transition_registry import (
     get_transition_form_ui,
     normalize_transition_name,
 )
+from ..service_modules.bulk_operations import (
+    BulkLoanOperationError,
+    LoanBulkDeleteCommand,
+    LoanBulkOperationService,
+    LoanMergeCommand,
+)
 logger = logging.getLogger(__name__)
-
-
-def _parse_selected_ids(raw_ids):
-    """Return cleaned integer IDs and count of invalid tokens."""
-    cleaned = []
-    invalid_count = 0
-    for raw_id in raw_ids:
-        try:
-            parsed = int(raw_id)
-            if parsed > 0:
-                cleaned.append(parsed)
-            else:
-                invalid_count += 1
-        except (TypeError, ValueError):
-            invalid_count += 1
-    # Preserve order, remove duplicates
-    cleaned = list(dict.fromkeys(cleaned))
-    return cleaned, invalid_count
-
-
-def _build_release_action(loan):
-    """Build release CTA metadata for loan detail surfaces."""
-    if getattr(loan, "release", None):
-        return None
-
-    status = str(getattr(loan, "status", "") or "")
-    allowed_statuses = {
-        "Disbursed",
-        "ActiveCurrent",
-        "ActiveOverdue",
-        "ActiveNPA",
-        "ClosurePending",
-    }
-    if status not in allowed_statuses:
-        return None
-
-    outstanding_amount = getattr(loan, "outstanding_amount", None)
-    if outstanding_amount is None:
-        total_due = getattr(loan, "total_due", None)
-        total_payments_getter = getattr(loan, "get_total_payments", None)
-        if total_due is not None and callable(total_payments_getter):
-            try:
-                outstanding_amount = total_due - total_payments_getter()
-            except Exception:
-                outstanding_amount = total_due
-
-    if outstanding_amount is not None:
-        try:
-            outstanding_amount = max(outstanding_amount, 0)
-        except TypeError:
-            amount_value = getattr(outstanding_amount, "amount", None)
-            if amount_value is not None:
-                outstanding_amount = max(amount_value, 0)
-    closure_exception = bool(getattr(loan, "closure_exception_approved", False))
-    needs_settlement = (
-        outstanding_amount is not None
-        and outstanding_amount > 0
-        and not closure_exception
-    )
-
-    return {
-        "title": "Start Release Workflow",
-        "icon": ">",
-        "button_class": "btn-success" if not needs_settlement else "btn-outline-secondary",
-        "href": reverse("girvi:release_loan_check_custody", args=[loan.id]),
-        "disabled": needs_settlement,
-        "outstanding_amount": outstanding_amount,
-        "closure_exception_approved": closure_exception,
-    }
 
 
 def loan_transition_view(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
+    status_label = lifecycle_status_label(loan.status)
+    status_badge_class = lifecycle_status_badge_class(loan.status)
     raw_transition_name = request.GET.get("transition") or request.POST.get("transition")
     transition_name = normalize_transition_name(raw_transition_name)
     transition_name = resolve_runtime_transition_name(loan, transition_name)
@@ -166,6 +106,8 @@ def loan_transition_view(request, pk):
             "loan": loan,
             "transition_name": transition_name,
             "transition_ui": transition_ui,
+            "status_label": status_label,
+            "status_badge_class": status_badge_class,
         },
     )
 
@@ -324,8 +266,11 @@ def _extract_initial_item_inputs(item_formset):
 
 
 def _build_loan_create_command(form, user, item_formset=None):
+    borrower_party = form.cleaned_data["borrower_party"]
+    bridge = ensure_party_customer(borrower_party, created_by=user)
     return LoanCreateCommand(
-        borrower=form.cleaned_data["borrower"],
+        borrower=bridge["customer"],
+        borrower_party=borrower_party,
         series=form.cleaned_data["series"],
         loan_date=form.cleaned_data["loan_date"],
         tenure=form.cleaned_data["tenure"],
@@ -380,14 +325,20 @@ def _build_preview_initial_item_inputs(data):
 
 def _build_create_preview_from_data(data, user):
     borrower = None
+    borrower_party = None
     series = None
 
-    borrower_id = data.get("borrower")
-    if borrower_id:
+    borrower_party_id = data.get("borrower_party") or data.get("borrower")
+    if borrower_party_id:
         try:
-            borrower = Customer.objects.select_related("account").filter(pk=int(borrower_id)).first()
+            borrower_party = Party.objects.filter(pk=int(borrower_party_id)).first()
+            try:
+                borrower = borrower_party.legacy_customer if borrower_party else None
+            except Customer.DoesNotExist:
+                borrower = borrower_party
         except (TypeError, ValueError):
             borrower = None
+            borrower_party = None
 
     series_id = data.get("series")
     if series_id:
@@ -409,6 +360,7 @@ def _build_create_preview_from_data(data, user):
     return LoanCreationService.preview(
         LoanCreateCommand(
             borrower=borrower,
+            borrower_party=borrower_party,
             series=series,
             loan_date=_parse_preview_loan_date(data.get("loan_date")),
             tenure=tenure,
@@ -445,14 +397,20 @@ def _render_loan_form_response(
                 return HttpResponse(
                     headers={"HX-Redirect": reverse("girvi:girvi_license_list")}
                 )
-            form = LoanForm(initial=initial_data)
+            form = LoanCreateForm(initial=initial_data)
             item_formset = item_formset or item_formset_class(prefix="items")
             creation_preview = initial_data.get("creation_preview")
         else:
             form = LoanForm(instance=loan)
     elif loan is None and form.is_bound:
         item_formset = item_formset or item_formset_class(request.POST or None, prefix="items")
-        preview_fields = {"borrower", "series", "loan_date", "tenure", "interest_type"}
+        preview_fields = {
+            "borrower_party",
+            "series",
+            "loan_date",
+            "tenure",
+            "interest_type",
+        }
         if preview_fields.issubset(form.cleaned_data.keys()):
             creation_preview = LoanCreationService.preview(
                 _build_loan_create_command(form, request.user, item_formset)
@@ -473,7 +431,7 @@ def _render_loan_form_response(
 
 def _handle_loan_create_post(request):
     item_formset_class = build_initial_loan_item_formset()
-    form = LoanForm(request.POST)
+    form = LoanCreateForm(request.POST)
     item_formset = item_formset_class(request.POST, prefix="items")
 
     form_is_valid = form.is_valid()
@@ -593,8 +551,10 @@ def _get_initial_loan_data(request, customer_pk=None):
             if customer_pk
             else None
         )
+        borrower_party = getattr(borrower, "party", None) if borrower else None
         preview_command = LoanCreateCommand(
             borrower=borrower,
+            borrower_party=borrower_party,
             series=series,
             loan_date=timezone.now(),
             tenure=3,
@@ -612,8 +572,8 @@ def _get_initial_loan_data(request, customer_pk=None):
         }
 
         # Add customer if provided
-        if borrower:
-            initial["borrower"] = borrower
+        if borrower_party:
+            initial["borrower_party"] = borrower_party
 
         return initial
 
@@ -639,19 +599,14 @@ def loan_delete(request, pk=None):
 
 @login_required
 def loan_detail(request, pk):
-    loan = get_object_or_404(
-        GivenLoan.objects.select_related(
-            "borrower", "created_by", "series"
-        ).prefetch_related(
-            "loanitems",
-            "renewals_as_source__renewed_loan",
-            "renewal_record__source_loan",
-        ),
-        pk=pk,
-    )
+    rm = get_given_loan_detail_read_model(pk)
+    loan = rm["loan"]
+    display = rm["display"]
 
     flow = build_runtime_loan_flow(loan, request.user, request.tenant)
     current_status = flow.status
+    current_status_label = lifecycle_status_label(current_status)
+    current_status_badge_class = lifecycle_status_badge_class(current_status)
 
     # Full changelog objects for timeline display
     changelog = (
@@ -666,105 +621,34 @@ def loan_detail(request, pk):
         transition.label for transition in flow.get_outgoing_transitions()
     ]
     transition_actions = build_transition_actions(loan, possible_transitions)
-    release_action = _build_release_action(loan)
-
-    weight_summary = {item["itemtype"]: item for item in loan.get_weight_summary}
-    gold_weight = (
-        f"G:{weight_summary.get('Gold', {}).get('total_weight', 0)} gms"
-        if weight_summary.get("Gold", {}).get("total_weight", 0) > 0
-        else ""
-    )
-    silver_weight = (
-        f"S:{weight_summary.get('Silver', {}).get('total_weight', 0)} gms"
-        if weight_summary.get("Silver", {}).get("total_weight", 0) > 0
-        else ""
-    )
-    bronze_weight = (
-        f"B:{weight_summary.get('Bronze', {}).get('total_weight', 0)} gms"
-        if weight_summary.get("Bronze", {}).get("total_weight", 0) > 0
-        else ""
-    )
-
-    # Combine the weights, ensuring there are no extra spaces
-    weight = " ".join(filter(None, [gold_weight, silver_weight, bronze_weight]))
-
-    gold_pure = (
-        f"G:{round(weight_summary.get('Gold', {}).get('pure_weight', 0), 3)} gms"
-        if weight_summary.get("Gold", {}).get("pure_weight", 0) > 0
-        else ""
-    )
-    silver_pure = (
-        f"S:{round(weight_summary.get('Silver', {}).get('pure_weight', 0), 3)} gms"
-        if weight_summary.get("Silver", {}).get("pure_weight", 0) > 0
-        else ""
-    )
-    bronze_pure = (
-        f"B:{round(weight_summary.get('Bronze', {}).get('pure_weight', 0), 3)} gms"
-        if weight_summary.get("Bronze", {}).get("pure_weight", 0) > 0
-        else ""
-    )
-
-    # Combine the weights, ensuring there are no extra spaces
-    pure = " ".join(filter(None, [gold_pure, silver_pure, bronze_pure]))
-    value = loan.current_value
-
-    if value > 0 and loan.get_loan_amount is not None:
-        lvratio = round(float(loan.get_loan_amount) / float(value) * 100, 2)
-    else:
-        lvratio = 0
-
-    due = loan.total_due
-    # due = loan.total_due
-    dvratio = 0
-    if due > 0 and value > 0:
-        try:
-            dvratio = round(due / value, 2) * 100
-        except (decimal.DivisionUndefined, ZeroDivisionError):
-            dvratio = 0
-    get_storage_box = getattr(loan, "get_storage_box", None)
-    location = get_storage_box() if get_storage_box else None
-    if location:
-        position = location.position_for_item(loan.id)
-    else:
-        position = None
-
-    interest_reporting = {
-        "gross_accrued": getattr(loan, "gross_accrued_interest", decimal.Decimal("0.00")),
-        "paid": loan.interest_paid_total()
-        if hasattr(loan, "interest_paid_total")
-        else decimal.Decimal("0.00"),
-        "outstanding": getattr(loan, "outstanding_interest", decimal.Decimal("0.00")),
-        "receivable_balance": loan.interest_receivable_balance()
-        if hasattr(loan, "interest_receivable_balance")
-        else decimal.Decimal("0.00"),
-        "last_accrual_date": getattr(loan, "last_accrual_date", None),
-    }
 
     context = {
         "object": loan,
         "loan": loan,
         "customer": loan.borrower,
-        "value": Money(value, "INR"),
-        "worth": value - due,
-        "lvratio": lvratio,
-        "dvratio": dvratio,
-        "weight": weight,
-        "pure": pure,
-        "location": location,
-        "position": position,
+        "value": Money(display["value"], "INR"),
+        "worth": display["worth"],
+        "lvratio": display["lvratio"],
+        "dvratio": display["dvratio"],
+        "weight": display["weight"],
+        "pure": display["pure"],
+        "location": display["location"],
+        "position": display["position"],
         "expires": (
-            loan.calculate_months_to_exceed_value(value, due)
+            loan.calculate_months_to_exceed_value(display["value"], display["due"])
             if hasattr(loan, "calculate_months_to_exceed_value")
             else 0
         ),
         "possible_transitions": possible_transitions,
         "transition_actions": transition_actions,
-        "release_action": release_action,
+        "release_action": rm["release_action"],
         "current_status": current_status,
+        "current_status_label": current_status_label,
+        "current_status_badge_class": current_status_badge_class,
         "change_log": changelog,
-        "renewals_as_source": list(loan.renewals_as_source.all()),
-        "origin_renewal": loan.renewal_record.first(),
-        "interest_reporting": interest_reporting,
+        "renewals_as_source": list(rm["renewals_as_source"]),
+        "origin_renewal": rm["origin_renewal"],
+        "interest_reporting": display["interest_reporting"],
     }
 
     if request.htmx:
@@ -793,62 +677,34 @@ def split_loan_items(request, pk):
 @require_http_methods(["POST"])
 def merge_loans(request):
     """Handle loan merge action"""
-    from ..services import LoanMergeService
-
     loan_kind = request.POST.get("loan_kind", "given")
-    if loan_kind != "given":
-        messages.error(request, "Merge is available only for Given loans")
-        return HttpResponse(status=400)
-
-    raw_loan_ids = request.POST.getlist("selection")
-    loan_ids, invalid_count = _parse_selected_ids(raw_loan_ids)
-    if invalid_count:
-        logger.warning("merge_loans rejected invalid IDs: %s", raw_loan_ids)
-        messages.error(request, "Invalid loan selection.")
-        return HttpResponse(status=400, content="Invalid loan selection.")
-
-    if len(loan_ids) < 2:
-        messages.error(request, "Please select at least 2 loans to merge")
-        return HttpResponse(status=400, content="Please select at least 2 loans to merge")
 
     try:
-        loans = GivenLoan.objects.filter(id__in=loan_ids)
-        if loans.count() != len(loan_ids):
-            messages.error(request, "Some selected loans no longer exist")
-            return HttpResponse(status=400, content="Some selected loans no longer exist")
+        result = LoanBulkOperationService.merge_given_loans(
+            LoanMergeCommand(
+                raw_ids=request.POST.getlist("selection"),
+                loan_kind=loan_kind,
+                merged_by=request.user,
+            )
+        )
 
-        if loans.count() < 2:
-            messages.error(request, "Please select at least 2 loans to merge")
-            return HttpResponse(status=400, content="Please select at least 2 loans to merge")
-
-        base_loan = loans.earliest("loan_date")
-        borrowers = set(loans.values_list("borrower_id", flat=True))
-        if len(borrowers) > 1:
-            messages.error(request, "Selected loans must belong to the same borrower")
-            return HttpResponse(status=400, content="Selected loans must belong to the same borrower")
-
-        if loans.filter(Q(release__isnull=False) | Q(status=LoanStatus.RELEASED)).exists():
-            messages.error(request, "Cannot merge released loans")
-            return HttpResponse(status=400, content="Cannot merge released loans")
-
-        loans_to_merge = loans.exclude(id=base_loan.id)
-
-        # Use service for merge
-        service = LoanMergeService(target_loan=base_loan, merged_by=request.user)
-        service.merge(source_loans=list(loans_to_merge))
-
-        messages.success(request, f"Successfully merged {loans_to_merge.count()} loans")
+        messages.success(request, f"Successfully merged {result.merged_count} loans")
         return HttpResponse(
             headers={
                 "HX-Redirect": reverse(
-                    "girvi:girvi_loan_detail", kwargs={"pk": base_loan.id}
+                    "girvi:girvi_loan_detail", kwargs={"pk": result.target_loan.id}
                 )
             }
         )
 
-    except ValidationError as e:
-        messages.error(request, str(e))
-        return HttpResponse(status=400, content=str(e))
+    except BulkLoanOperationError as e:
+        if e.message == "Invalid loan selection.":
+            logger.warning(
+                "merge_loans rejected invalid IDs: %s",
+                request.POST.getlist("selection"),
+            )
+        messages.error(request, e.message)
+        return HttpResponse(status=e.status_code, content=e.message)
 
     except Exception as e:
         logger.error(f"Error in merge_loans: {str(e)}")
@@ -913,44 +769,26 @@ def loan_renew(request, pk):
 @login_required
 def deleteLoan(request):
     loan_kind = request.POST.get("loan_kind", "given")
-    raw_ids = request.POST.getlist("selection")
-    id_list, invalid_count = _parse_selected_ids(raw_ids)
+    try:
+        result = LoanBulkOperationService.delete_selected_loans(
+            LoanBulkDeleteCommand(
+                raw_ids=request.POST.getlist("selection"),
+                loan_kind=loan_kind,
+            )
+        )
+    except BulkLoanOperationError as e:
+        if e.message == "Invalid loan selection.":
+            logger.warning(
+                "deleteLoan rejected invalid IDs: %s",
+                request.POST.getlist("selection"),
+            )
+        messages.error(request, e.message)
+        return HttpResponse(status=e.status_code, content=e.message)
 
-    if invalid_count:
-        logger.warning("deleteLoan rejected invalid IDs: %s", raw_ids)
-        messages.error(request, "Invalid loan selection.")
-        return HttpResponse(status=400, content="Invalid loan selection.")
-
-    if not id_list:
-        messages.error(request, "Please select at least one loan to delete.")
-        return HttpResponse(status=400, content="Please select at least one loan to delete.")
-
-    if loan_kind == "taken":
-        loans = TakenLoan.objects.filter(id__in=id_list)
-        if loans.count() != len(id_list):
-            messages.error(request, "Some selected taken loans no longer exist")
-            return HttpResponse(status=400, content="Some selected taken loans no longer exist")
-        if loans.filter(status=LoanStatus.RELEASED).exists():
-            messages.error(request, "Cannot bulk delete released taken loans")
-            return HttpResponse(status=400, content="Cannot bulk delete released taken loans")
-    elif loan_kind == "all":
-        messages.error(request, "Delete from All tab is disabled. Use Given or Taken tab.")
-        return HttpResponse(status=400, content="Delete from All tab is disabled. Use Given or Taken tab.")
-    else:
-        loans = GivenLoan.objects.filter(id__in=id_list)
-        if loans.count() != len(id_list):
-            messages.error(request, "Some selected given loans no longer exist")
-            return HttpResponse(status=400, content="Some selected given loans no longer exist")
-        if loans.filter(release__isnull=False).exists():
-            messages.error(request, "Cannot bulk delete released given loans")
-            return HttpResponse(status=400, content="Cannot bulk delete released given loans")
-
-    deleted_count = loans.count()
-    loans.delete()
-    messages.success(request, f"Deleted {deleted_count} loans")
+    messages.success(request, f"Deleted {result.deleted_count} loans")
     return HttpResponse(
         headers={
-            "HX-Redirect": f"{reverse('girvi:girvi_loan_list')}?loan_kind={loan_kind}"
+            "HX-Redirect": f"{reverse('girvi:girvi_loan_list')}?loan_kind={result.loan_kind}"
         }
     )
 
@@ -1041,6 +879,6 @@ def loan_detail_release_tab(request, pk):
         {
             "loan": rm["loan"],
             "summary": rm["summary"],
-            "release_action": _build_release_action(rm["loan"]),
+            "release_action": rm["release_action"],
         },
     )

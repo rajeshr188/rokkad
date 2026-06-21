@@ -1,0 +1,23 @@
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead><tr><th>ID</th><th>Date</th><th>Status</th><th class="text-end">Open</th></tr></thead>
+        <tbody>
+            {% for object in objects %}
+            <tr>
+                <td class="fw-semibold">{{ object }}</td>
+                <td>{{ object.created|default:object.created_at|default:object.loan_date|date:"d M Y" }}</td>
+                <td>{{ object.status|default:"-" }}</td>
+                <td class="text-end">
+                    {% if object.get_absolute_url %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ object.get_absolute_url }}" title="Open">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-muted">{{ empty_text }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

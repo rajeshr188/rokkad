@@ -147,40 +147,6 @@ DEA_PERMISSIONS: List[PermissionDef] = [
     ("dea_report_export", "Can export financial reports", "Export financial reports"),
 ]
 
-# ============================================================================
-# FEATURE-SPECIFIC PERMISSIONS (SALES MODULE)
-# ============================================================================
-
-SALES_PERMISSIONS: List[PermissionDef] = [
-    # Invoice Management
-    ("sales_invoice_view", "Can view invoices", "View sales invoices"),
-    ("sales_invoice_create", "Can create invoices", "Create sales invoices"),
-    ("sales_invoice_edit", "Can edit invoices", "Edit sales invoices"),
-    ("sales_invoice_delete", "Can delete invoices", "Delete sales invoices"),
-    # Payment Operations
-    ("sales_payment_record", "Can record payments", "Record sales payments"),
-    ("sales_discount_apply", "Can apply discounts", "Apply discounts to invoices"),
-    # Reports
-    ("sales_report_view", "Can view sales reports", "View sales analytics"),
-]
-
-# ============================================================================
-# FEATURE-SPECIFIC PERMISSIONS (PURCHASE MODULE)
-# ============================================================================
-
-PURCHASE_PERMISSIONS: List[PermissionDef] = [
-    # Purchase Management
-    ("purchase_order_view", "Can view purchase orders", "View purchase orders"),
-    ("purchase_order_create", "Can create purchase orders", "Create purchase orders"),
-    ("purchase_order_edit", "Can edit purchase orders", "Edit purchase orders"),
-    ("purchase_order_delete", "Can delete purchase orders", "Delete purchase orders"),
-    # Approval
-    ("purchase_order_approve", "Can approve purchases", "Approve purchase orders"),
-    # Reports
-    ("purchase_report_view", "Can view purchase reports", "View purchase analytics"),
-]
-
-# ============================================================================
 # FEATURE-SPECIFIC PERMISSIONS (CONTACT MODULE)
 # ============================================================================
 
@@ -207,8 +173,6 @@ ALL_PERMISSIONS: List[PermissionDef] = (
     + REPORT_PERMISSIONS
     + GIRVI_PERMISSIONS
     + DEA_PERMISSIONS
-    + SALES_PERMISSIONS
-    + PURCHASE_PERMISSIONS
     + CONTACT_PERMISSIONS
 )
 
@@ -280,21 +244,6 @@ class RolePermissions:
         "dea_close_period",
         "dea_report_view",
         "dea_report_export",
-        # Sales - Full Access
-        "sales_invoice_view",
-        "sales_invoice_create",
-        "sales_invoice_edit",
-        "sales_invoice_delete",
-        "sales_payment_record",
-        "sales_discount_apply",
-        "sales_report_view",
-        # Purchase - Full Access
-        "purchase_order_view",
-        "purchase_order_create",
-        "purchase_order_edit",
-        "purchase_order_delete",
-        "purchase_order_approve",
-        "purchase_report_view",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -356,21 +305,6 @@ class RolePermissions:
         "dea_close_period",
         "dea_report_view",
         "dea_report_export",
-        # Sales - Full operational access
-        "sales_invoice_view",
-        "sales_invoice_create",
-        "sales_invoice_edit",
-        "sales_invoice_delete",
-        "sales_payment_record",
-        "sales_discount_apply",
-        "sales_report_view",
-        # Purchase - Full operational access including approval
-        "purchase_order_view",
-        "purchase_order_create",
-        "purchase_order_edit",
-        "purchase_order_delete",
-        "purchase_order_approve",
-        "purchase_report_view",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -408,14 +342,6 @@ class RolePermissions:
         "dea_entry_view",
         "dea_entry_create",
         "dea_entry_edit",
-        # Sales - Basic operations
-        "sales_invoice_view",
-        "sales_invoice_create",
-        "sales_invoice_edit",
-        "sales_payment_record",
-        # Purchase - View and create only
-        "purchase_order_view",
-        "purchase_order_create",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -439,8 +365,6 @@ class RolePermissions:
         "girvi_loan_view",
         "girvi_report_view",
         "dea_entry_view",
-        "sales_invoice_view",
-        "purchase_order_view",
         "contact_view",
     ]
 
@@ -541,7 +465,5 @@ def get_permissions_by_category() -> Dict[str, List[PermissionDef]]:
         "Reports": REPORT_PERMISSIONS,
         "Girvi (Loans)": GIRVI_PERMISSIONS,
         "DEA (Accounting)": DEA_PERMISSIONS,
-        "Sales": SALES_PERMISSIONS,
-        "Purchase": PURCHASE_PERMISSIONS,
         "Contacts": CONTACT_PERMISSIONS,
     }

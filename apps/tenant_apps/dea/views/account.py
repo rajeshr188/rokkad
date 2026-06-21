@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,6 +10,7 @@ from django_tables2.export.export import TableExport
 from moneyed import Money
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
+from apps.tenant_apps.party.models import Party
 
 from ..filters import AccountFilter
 from ..forms import AccountStatementForm, AccountTransactionForm
@@ -102,11 +104,32 @@ def account_list(request):
 @login_required
 def get_customer_balance(request):
     customer = request.GET.get("customer")
-    acc = get_object_or_404(Account, contact__pk=customer)
+    borrower_party = request.GET.get("borrower_party")
+    account_filter = {}
+
+    if borrower_party and not customer:
+        party = get_object_or_404(Party, pk=borrower_party)
+        try:
+            customer = party.legacy_customer.pk
+        except ObjectDoesNotExist:
+            customer = None
+
+    if not customer:
+        return HttpResponse(
+            """
+            <div class="alert alert-secondary" role="alert">
+                <h4 class="alert-heading">Borrower Balance</h4>
+                <p>Balance is not available until this Party is bridged to a customer account.</p>
+            </div>
+            """
+        )
+
+    account_filter["contact__pk"] = customer
+    acc = get_object_or_404(Account, **account_filter)
     # Construct the HTML for the Bootstrap 5 alert
     alert_html = f"""
     <div class="alert alert-info" role="alert">
-        <h4 class="alert-heading">Customer Balance</h4>
+        <h4 class="alert-heading">Borrower Balance</h4>
         
         <p>Balance: {acc.current_balance()}</p>
     </div>

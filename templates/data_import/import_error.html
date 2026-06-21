@@ -1,0 +1,17 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Import Failed{% endblock %}
+
+{% block workspace_content %}
+<div class="container py-3">
+    <h1 class="h4 mb-3">Import Failed</h1>
+    <div class="alert alert-danger">
+        The import could not be completed.
+    </div>
+    <ul>
+        {% for error in errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

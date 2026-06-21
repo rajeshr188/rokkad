@@ -22,7 +22,7 @@ Layer boundary:
 """
 
 from collections import Counter
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import logging
 
 from django.db.models import (
@@ -41,8 +41,10 @@ from django.db.models import (
     Window,
 )
 from django.db.models.functions import Coalesce, ExtractYear, TruncDate
+from django.urls import reverse
 
 from .lifecycle import RELEASED_COMPAT_STATUSES, UNRELEASED_EXCLUDED_STATUSES
+from .lifecycle import lifecycle_status_badge_class, lifecycle_status_label
 from .models import GivenLoan, TakenLoan
 
 
@@ -85,7 +87,7 @@ def taken_loan_base_qs():
         .with_current_value()
         .order_by("-id")
         .select_related("lender", "series", "created_by")
-        .prefetch_related("repledgedloanitems")
+        .prefetch_related("repledge_history_items")
     )
 
 
@@ -151,6 +153,7 @@ def build_unified_loan_rows(given_qs, taken_qs):
             "loan_date": loan.loan_date,
             "party": loan.borrower.name,
             "status": loan.status,
+            "status_label": lifecycle_status_label(loan.status),
             "loan_amount": loan.get_loan_amount,
         }
         for loan in given_qs
@@ -162,6 +165,7 @@ def build_unified_loan_rows(given_qs, taken_qs):
             "loan_date": loan.loan_date,
             "party": loan.lender.name,
             "status": loan.status,
+            "status_label": lifecycle_status_label(loan.status, loan_kind="taken"),
             "loan_amount": loan.get_loan_amount,
         }
         for loan in taken_qs
@@ -203,14 +207,20 @@ def get_loan_totals(*, given_qs=None, taken_qs=None):
         )
 
     if taken_qs is not None:
+        taken_interest_expression = ExpressionWrapper(
+            F("repledge_history_items__repledged_amount")
+            * F("repledge_history_items__loan_item__interestrate")
+            / Value(100),
+            output_field=DecimalField(max_digits=15, decimal_places=2),
+        )
         taken_amount = (
             taken_qs.aggregate(
-                total=Sum("repledgedloanitems__repledged_loanamount")
+                total=Sum("repledge_history_items__repledged_amount")
             )["total"]
             or 0
         )
         taken_interest = (
-            taken_qs.aggregate(total=Sum("repledgedloanitems__interest"))["total"] or 0
+            taken_qs.aggregate(total=Sum(taken_interest_expression))["total"] or 0
         )
 
     return {
@@ -323,7 +333,7 @@ def get_itemtype_averages():
 
     try:
         stats = (
-            LoanItem.objects.filter(loan__release__isnull=True, loan__loan_type="Given")
+            LoanItem.objects.filter(loan__release__isnull=True)
             .values("itemtype")
             .annotate(
                 total_weight=Coalesce(Sum("weight"), Decimal("0.00")),
@@ -360,6 +370,15 @@ def get_itemtype_averages():
         return {}
 
 
+def get_dashboard_payment_counts():
+    """Return dashboard payment counts through the Girvi DEA adapter boundary."""
+    from apps.tenant_apps.girvi.integrations.dea_adapter import (
+        get_payment_voucher_counts,
+    )
+
+    return get_payment_voucher_counts()
+
+
 # ---------------------------------------------------------------------------
 # Loan detail (cross-domain read model)
 # ---------------------------------------------------------------------------
@@ -393,9 +412,159 @@ def get_given_loan_journal_entries(loan):
     Resolve loan-linked JournalEntry records through payment and voucher links:
       GivenLoan -> PaymentVoucher -> Voucher -> JournalEntry
     """
-    from apps.tenant_apps.dea.facade import get_loan_journal_entries
+    from apps.tenant_apps.girvi.integrations.dea_adapter import get_loan_journal_entries
 
     return get_loan_journal_entries(loan)
+
+
+def _as_decimal(value, default=Decimal("0.00")):
+    amount = getattr(value, "amount", value)
+    if amount is None:
+        return default
+    try:
+        return Decimal(str(amount))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
+
+
+def _is_positive(value):
+    return _as_decimal(value) > 0
+
+
+def _non_negative_amount(value):
+    if value is None:
+        return None
+    try:
+        return max(value, 0)
+    except TypeError:
+        amount_value = getattr(value, "amount", None)
+        if amount_value is not None:
+            return max(amount_value, 0)
+    return value
+
+
+def _metal_weight_part(weight_summary, item_type, label, field_name, *, places=None):
+    value = weight_summary.get(item_type, {}).get(field_name, 0)
+    if not _is_positive(value):
+        return ""
+    if places is not None:
+        value = round(value, places)
+    return f"{label}:{value} gms"
+
+
+def build_given_loan_release_action(loan):
+    """Build release CTA metadata for loan detail surfaces."""
+    if getattr(loan, "release", None):
+        return None
+
+    status = str(getattr(loan, "status", "") or "")
+    allowed_statuses = {
+        "Disbursed",
+        "ActiveCurrent",
+        "ActiveOverdue",
+        "ActiveNPA",
+        "ClosurePending",
+    }
+    if status not in allowed_statuses:
+        return None
+
+    outstanding_amount = getattr(loan, "outstanding_amount", None)
+    if outstanding_amount is None:
+        total_due = getattr(loan, "total_due", None)
+        total_payments_getter = getattr(loan, "get_total_payments", None)
+        if total_due is not None and callable(total_payments_getter):
+            try:
+                outstanding_amount = total_due - total_payments_getter()
+            except Exception:
+                outstanding_amount = total_due
+
+    outstanding_amount = _non_negative_amount(outstanding_amount)
+    closure_exception = bool(getattr(loan, "closure_exception_approved", False))
+    needs_settlement = (
+        outstanding_amount is not None
+        and _is_positive(outstanding_amount)
+        and not closure_exception
+    )
+
+    return {
+        "title": "Start Release Workflow",
+        "icon": ">",
+        "button_class": "btn-success" if not needs_settlement else "btn-outline-secondary",
+        "href": reverse("girvi:release_loan_check_custody", args=[loan.id]),
+        "disabled": needs_settlement,
+        "outstanding_amount": outstanding_amount,
+        "closure_exception_approved": closure_exception,
+    }
+
+
+def build_given_loan_detail_display(loan):
+    """Build display-only loan detail metrics used by the full detail view."""
+    raw_weight_summary = getattr(loan, "get_weight_summary", []) or []
+    weight_summary = {item["itemtype"]: item for item in raw_weight_summary}
+
+    weight = " ".join(
+        filter(
+            None,
+            [
+                _metal_weight_part(weight_summary, "Gold", "G", "total_weight"),
+                _metal_weight_part(weight_summary, "Silver", "S", "total_weight"),
+                _metal_weight_part(weight_summary, "Bronze", "B", "total_weight"),
+            ],
+        )
+    )
+    pure = " ".join(
+        filter(
+            None,
+            [
+                _metal_weight_part(weight_summary, "Gold", "G", "pure_weight", places=3),
+                _metal_weight_part(weight_summary, "Silver", "S", "pure_weight", places=3),
+                _metal_weight_part(weight_summary, "Bronze", "B", "pure_weight", places=3),
+            ],
+        )
+    )
+
+    value = getattr(loan, "current_value", Decimal("0.00"))
+    value_decimal = _as_decimal(value)
+    loan_amount_decimal = _as_decimal(getattr(loan, "get_loan_amount", None), default=None)
+    lvratio = 0
+    if value_decimal > 0 and loan_amount_decimal is not None:
+        lvratio = round(float(loan_amount_decimal) / float(value_decimal) * 100, 2)
+
+    due = getattr(loan, "total_due", Decimal("0.00"))
+    due_decimal = _as_decimal(due)
+    dvratio = 0
+    if due_decimal > 0 and value_decimal > 0:
+        dvratio = round(float(due_decimal) / float(value_decimal), 2) * 100
+
+    get_storage_box = getattr(loan, "get_storage_box", None)
+    location = get_storage_box() if callable(get_storage_box) else None
+    position = location.position_for_item(loan.id) if location else None
+
+    interest_reporting = {
+        "gross_accrued": getattr(loan, "gross_accrued_interest", Decimal("0.00")),
+        "paid": loan.interest_paid_total()
+        if hasattr(loan, "interest_paid_total")
+        else Decimal("0.00"),
+        "outstanding": getattr(loan, "outstanding_interest", Decimal("0.00")),
+        "receivable_balance": loan.interest_receivable_balance()
+        if hasattr(loan, "interest_receivable_balance")
+        else Decimal("0.00"),
+        "last_accrual_date": getattr(loan, "last_accrual_date", None),
+    }
+
+    return {
+        "weight_summary": weight_summary,
+        "weight": weight,
+        "pure": pure,
+        "value": value,
+        "due": due,
+        "worth": value - due,
+        "lvratio": lvratio,
+        "dvratio": dvratio,
+        "location": location,
+        "position": position,
+        "interest_reporting": interest_reporting,
+    }
 
 
 def build_given_loan_detail_read_model(loan):
@@ -409,6 +578,7 @@ def build_given_loan_detail_read_model(loan):
     journal_entries = get_given_loan_journal_entries(loan)
     statement_items = loan.statementitem_set.select_related("statement").all()
     notifications = loan.notifications.all()
+    display = build_given_loan_detail_display(loan)
 
     return {
         "loan": loan,
@@ -417,10 +587,14 @@ def build_given_loan_detail_read_model(loan):
         "journal_entries": journal_entries,
         "statement_items": statement_items,
         "notifications": notifications,
-            "renewals_as_source": loan.renewals_as_source.all(),
-            "origin_renewal": loan.renewal_record.first(),
+        "renewals_as_source": loan.renewals_as_source.all(),
+        "origin_renewal": loan.renewal_record.first(),
+        "display": display,
+        "release_action": build_given_loan_release_action(loan),
         "summary": {
             "status": loan.status,
+            "status_label": lifecycle_status_label(loan.status),
+            "status_badge_class": lifecycle_status_badge_class(loan.status),
             "is_released": loan.is_released,
             "is_overdue": loan.is_overdue,
             "payment_count": payments.count(),

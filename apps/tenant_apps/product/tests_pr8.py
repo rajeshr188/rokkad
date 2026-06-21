@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.db.models import Max
 from django.urls import reverse
 from django_tenants.test.cases import TenantTestCase
@@ -9,6 +10,7 @@ from apps.orgs.models import Membership, Role
 
 from .inventory.services import InventoryMovementService
 from .models import Category, Product, ProductType, ProductVariant, Stock, StockItem
+from .tests_utils import ensure_inventory_movements
 
 
 User = get_user_model()
@@ -31,6 +33,8 @@ class InventoryListingModesTests(TenantTestCase):
         tenant.creator = user
 
     def setUp(self):
+        connection.set_tenant(self.tenant)
+        ensure_inventory_movements()
         suffix = str(abs(hash(self._testMethodName)))[:6]
         self.user = User.objects.create_user(
             username=f"pr8_user_{suffix}",

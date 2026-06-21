@@ -1,7 +1,7 @@
 """Central registry for GivenLoan transition wiring.
 
 This module intentionally separates:
-1) legal state transitions (defined in LoanFlow), and
+1) legal state transitions (defined in the canonical Girvi lifecycle flows), and
 2) app-layer wiring (form class + endpoint support).
 
 Keeping this map in one place reduces flow/view/template drift.
@@ -51,9 +51,17 @@ class TransitionFormUISpec:
 
 
 TRANSITION_ALIAS_MAP = {
+    "approve": "approve_loan",
+    "reject": "reject_loan",
+    "cancel": "cancel_loan",
+    "disburse": "disburse_loan",
+    "undo_disburse": "undo_disbursal",
+    "mark_defaulted": "mark_npa",
+    "mark_auctioned": "complete_auction",
     "mark sold": "mark_sold",
-    "release": "deliver",
-    "release_to_customer": "deliver",
+    "release": "request_closure",
+    "release_to_customer": "request_closure",
+    "deliver": "request_closure",
     "close": "request_closure",
     "renew": "request_renewal",
     "writeoff": "write_off_loan",
@@ -61,18 +69,8 @@ TRANSITION_ALIAS_MAP = {
 
 
 TRANSITION_REGISTRY: dict[str, TransitionSpec] = {
-    "approve": TransitionSpec("approve", "apps.tenant_apps.girvi.forms.ApproveLoanForm", "apps.tenant_apps.girvi.transitions.payloads.ApprovePayload", get_transition_command_class("approve")),
-    "disburse": TransitionSpec("disburse", "apps.tenant_apps.girvi.forms.DisburseLoanForm", "apps.tenant_apps.girvi.transitions.payloads.DisbursePayload", get_transition_command_class("disburse")),
-    "cancel": TransitionSpec("cancel", "apps.tenant_apps.girvi.forms.CancelLoanForm", "apps.tenant_apps.girvi.transitions.payloads.CancelPayload", get_transition_command_class("cancel")),
-    "mark_defaulted": TransitionSpec("mark_defaulted", "apps.tenant_apps.girvi.forms.MarkDefaultedLoanForm", "apps.tenant_apps.girvi.transitions.payloads.MarkDefaultedPayload", get_transition_command_class("mark_defaulted")),
-    "mark_auctioned": TransitionSpec("mark_auctioned", "apps.tenant_apps.girvi.forms.MarkAuctionedLoanForm", "apps.tenant_apps.girvi.transitions.payloads.MarkAuctionedPayload", get_transition_command_class("mark_auctioned")),
-    "mark_sold": TransitionSpec("mark_sold", "apps.tenant_apps.girvi.forms.MarkSoldLoanForm", "apps.tenant_apps.girvi.transitions.payloads.MarkSoldPayload", get_transition_command_class("mark_sold")),
-    "undo_disburse": TransitionSpec("undo_disburse", "apps.tenant_apps.girvi.forms.UndoDisburseLoanForm", "apps.tenant_apps.girvi.transitions.payloads.UndoDisbursePayload", get_transition_command_class("undo_disburse")),
     "undo_release": TransitionSpec("undo_release", "apps.tenant_apps.girvi.forms.UndoReleaseLoanForm", "apps.tenant_apps.girvi.transitions.payloads.UndoReleasePayload", get_transition_command_class("undo_release")),
-    "repledge": TransitionSpec("repledge", "apps.tenant_apps.girvi.forms.RepledgeLoanForm", "apps.tenant_apps.girvi.transitions.payloads.RepledgePayload", get_transition_command_class("repledge")),
     "undo_repledge": TransitionSpec("undo_repledge", "apps.tenant_apps.girvi.forms.UndoRepledgeLoanForm", "apps.tenant_apps.girvi.transitions.payloads.UndoRepledgePayload", get_transition_command_class("undo_repledge")),
-    # Next-generation lifecycle transitions are registered for service/runtime use
-    # but remain hidden from the generic transition form until dedicated UI is added.
     "submit_for_approval": TransitionSpec("submit_for_approval", "apps.tenant_apps.girvi.forms.SubmitForApprovalLoanForm", "apps.tenant_apps.girvi.transitions.payloads.SubmitForApprovalPayload", get_transition_command_class("submit_for_approval"), enabled_in_loan_transition_view=True),
     "return_to_draft": TransitionSpec("return_to_draft", "", "apps.tenant_apps.girvi.transitions.payloads.ReturnToDraftPayload", get_transition_command_class("return_to_draft"), enabled_in_loan_transition_view=False),
     "approve_loan": TransitionSpec("approve_loan", "apps.tenant_apps.girvi.forms.ApproveLoanForm", "apps.tenant_apps.girvi.transitions.payloads.ApproveLoanPayload", get_transition_command_class("approve_loan"), enabled_in_loan_transition_view=True),
@@ -95,101 +93,13 @@ TRANSITION_REGISTRY: dict[str, TransitionSpec] = {
     "complete_auction": TransitionSpec("complete_auction", "", "apps.tenant_apps.girvi.transitions.payloads.CompleteAuctionPayload", get_transition_command_class("complete_auction"), enabled_in_loan_transition_view=False),
     "close_after_auction": TransitionSpec("close_after_auction", "", None, get_transition_command_class("close_after_auction"), enabled_in_loan_transition_view=False),
     "write_off_loan": TransitionSpec("write_off_loan", "apps.tenant_apps.girvi.forms.WriteOffLoanForm", "apps.tenant_apps.girvi.transitions.payloads.WriteOffLoanPayload", get_transition_command_class("write_off_loan"), enabled_in_loan_transition_view=True),
-    # Deliver/release is intentionally excluded from this endpoint.
-    # It must run through Release create flow for custody + accounting checks.
+    "activate": TransitionSpec("activate", "apps.tenant_apps.girvi.forms.DisburseLoanForm", "apps.tenant_apps.girvi.transitions.payloads.DisbursePayload", get_transition_command_class("activate"), enabled_in_loan_transition_view=True),
+    "request_settlement": TransitionSpec("request_settlement", "", None, get_transition_command_class("request_settlement"), enabled_in_loan_transition_view=False),
+    "complete_settlement": TransitionSpec("complete_settlement", "", None, get_transition_command_class("complete_settlement"), enabled_in_loan_transition_view=False),
 }
 
 
 TRANSITION_STATE_REGISTRY: dict[str, TransitionStateSpec] = {
-    "approve": TransitionStateSpec(
-        key="approve",
-        display_name="Approve Loan",
-        source_statuses=("Created",),
-        target_status="Approved",
-        execution_mode="generic-transition",
-        notes="Administrative approval only; no accounting impact.",
-    ),
-    "disburse": TransitionStateSpec(
-        key="disburse",
-        display_name="Disburse Funds",
-        source_statuses=("Approved",),
-        target_status="Disbursed",
-        execution_mode="transition-with-accounting",
-        notes="Moves an approved loan into an active disbursed state and posts the disbursal entry.",
-    ),
-    "deliver": TransitionStateSpec(
-        key="deliver",
-        display_name="Release to Customer",
-        source_statuses=("Disbursed",),
-        target_status="Released",
-        execution_mode="release-flow",
-        notes="Business release action: create the Release document, run the deliver FSM transition, and post release accounting.",
-    ),
-    "cancel": TransitionStateSpec(
-        key="cancel",
-        display_name="Cancel Loan",
-        source_statuses=("Created", "Approved"),
-        target_status="Cancelled",
-        execution_mode="generic-transition",
-        notes="Cancels a loan before it is disbursed.",
-    ),
-    "mark_defaulted": TransitionStateSpec(
-        key="mark_defaulted",
-        display_name="Mark Defaulted",
-        source_statuses=("Disbursed",),
-        target_status="Defaulted",
-        execution_mode="generic-transition",
-        notes="Flags a disbursed loan as defaulted; follow-up recovery action may occur later.",
-    ),
-    "mark_auctioned": TransitionStateSpec(
-        key="mark_auctioned",
-        display_name="Record Auction",
-        source_statuses=("Defaulted",),
-        target_status="Auctioned",
-        execution_mode="warning-transition",
-        notes="Records auction outcome after default and may require downstream accounting handling.",
-    ),
-    "mark_sold": TransitionStateSpec(
-        key="mark_sold",
-        display_name="Record Sale",
-        source_statuses=("Disbursed",),
-        target_status="Sold",
-        execution_mode="warning-transition",
-        notes="Records a sale of collateral from the disbursed state.",
-    ),
-    "undo_disburse": TransitionStateSpec(
-        key="undo_disburse",
-        display_name="Undo Disbursal",
-        source_statuses=("Disbursed",),
-        target_status="Approved",
-        execution_mode="reversal-transition",
-        notes="Reverses the disbursal and its accounting entry.",
-    ),
-    "undo_release": TransitionStateSpec(
-        key="undo_release",
-        display_name="Undo Release",
-        source_statuses=("Released",),
-        target_status="Disbursed",
-        execution_mode="reversal-transition",
-        notes="Reverses the release document and related accounting entry.",
-    ),
-    "repledge": TransitionStateSpec(
-        key="repledge",
-        display_name="Mark Repledged",
-        source_statuses=("Disbursed",),
-        target_status="Repledged",
-        execution_mode="renewal-flow",
-        notes="Used when a disbursed loan is renewed/repledged while collateral remains in custody.",
-    ),
-    "undo_repledge": TransitionStateSpec(
-        key="undo_repledge",
-        display_name="Undo Repledge",
-        source_statuses=("Repledged",),
-        target_status="Disbursed",
-        execution_mode="reversal-transition",
-        notes="Cancels the renewal linkage and returns the source loan to Disbursed.",
-    ),
-    # Next-generation lifecycle contract (implementation scaffold)
     "submit_for_approval": TransitionStateSpec(
         key="submit_for_approval",
         display_name="Submit for Approval",
@@ -197,6 +107,14 @@ TRANSITION_STATE_REGISTRY: dict[str, TransitionStateSpec] = {
         target_status="PendingApproval",
         execution_mode="approval-flow",
         notes="Moves a draft loan into checker review once borrower, collateral, and terms are present.",
+    ),
+    "return_to_draft": TransitionStateSpec(
+        key="return_to_draft",
+        display_name="Return to Draft",
+        source_statuses=("PendingApproval",),
+        target_status="Draft",
+        execution_mode="approval-flow",
+        notes="Returns a pending approval loan to editable draft state for correction.",
     ),
     "approve_loan": TransitionStateSpec(
         key="approve_loan",
@@ -358,31 +276,70 @@ TRANSITION_STATE_REGISTRY: dict[str, TransitionStateSpec] = {
         execution_mode="loss-recognition-flow",
         notes="Terminates the loan with loss recognition once the unrecoverable balance is approved for write-off.",
     ),
+    "activate": TransitionStateSpec(
+        key="activate",
+        display_name="Activate Taken Loan",
+        source_statuses=("Draft",),
+        target_status="Active",
+        execution_mode="transition-with-accounting",
+        notes="Activates a TakenLoan and records the lender disbursal through the current posting path.",
+    ),
+    "request_settlement": TransitionStateSpec(
+        key="request_settlement",
+        display_name="Request Settlement",
+        source_statuses=("Active",),
+        target_status="SettlementPending",
+        execution_mode="settlement-flow",
+        notes="Starts lender settlement once repayment checks are ready.",
+    ),
+    "complete_settlement": TransitionStateSpec(
+        key="complete_settlement",
+        display_name="Complete Settlement",
+        source_statuses=("SettlementPending",),
+        target_status="Closed",
+        execution_mode="settlement-flow",
+        notes="Closes a TakenLoan after settlement is completed.",
+    ),
+}
+
+
+LEGACY_TRANSITION_STATE_COMPAT_REGISTRY: dict[str, TransitionStateSpec] = {
+    "mark_sold": TransitionStateSpec(
+        key="mark_sold",
+        display_name="Record Sale",
+        source_statuses=("Disbursed",),
+        target_status="Sold",
+        execution_mode="warning-transition",
+        notes="Compatibility-only sale recovery transition pending canonical recovery flow cleanup.",
+    ),
+    "undo_release": TransitionStateSpec(
+        key="undo_release",
+        display_name="Undo Release",
+        source_statuses=("Released",),
+        target_status="Disbursed",
+        execution_mode="reversal-transition",
+        notes="Compatibility-only reversal for legacy release rows.",
+    ),
+    "repledge": TransitionStateSpec(
+        key="repledge",
+        display_name="Mark Repledged",
+        source_statuses=("Disbursed",),
+        target_status="Repledged",
+        execution_mode="renewal-flow",
+        notes="Compatibility-only renewal/repledge marker; active custody uses repledge workflows.",
+    ),
+    "undo_repledge": TransitionStateSpec(
+        key="undo_repledge",
+        display_name="Undo Repledge",
+        source_statuses=("Repledged",),
+        target_status="Disbursed",
+        execution_mode="reversal-transition",
+        notes="Compatibility-only renewal rollback transition.",
+    ),
 }
 
 
 TRANSITION_UI_REGISTRY: dict[str, TransitionUISpec] = {
-    "approve": TransitionUISpec("approve", "Approve", "btn-success", "✓"),
-    "disburse": TransitionUISpec("disburse", "Disburse Funds", "btn-primary", "💳"),
-    "deliver": TransitionUISpec("deliver", "Release to Customer", "btn-info", "📦"),
-    "cancel": TransitionUISpec("cancel", "Cancel", "btn-danger", "✕"),
-    "mark_defaulted": TransitionUISpec(
-        "mark_defaulted", "Mark Defaulted", "btn-warning", "⚠"
-    ),
-    "mark_auctioned": TransitionUISpec(
-        "mark_auctioned", "Record Auction", "btn-dark", "🔨"
-    ),
-    "mark_sold": TransitionUISpec("mark_sold", "Record Sale", "btn-secondary", "💰"),
-    "repledge": TransitionUISpec("repledge", "Mark Repledged", "btn-info", "🔁"),
-    "undo_disburse": TransitionUISpec(
-        "undo_disburse", "Undo Disbursal", "btn-outline-warning", "↩"
-    ),
-    "undo_release": TransitionUISpec(
-        "undo_release", "Undo Release", "btn-outline-secondary", "↩"
-    ),
-    "undo_repledge": TransitionUISpec(
-        "undo_repledge", "Undo Repledge", "btn-outline-secondary", "↩"
-    ),
     "submit_for_approval": TransitionUISpec("submit_for_approval", "Submit for Approval", "btn-primary", "📝"),
     "approve_loan": TransitionUISpec("approve_loan", "Approve Loan", "btn-success", "✓"),
     "reject_loan": TransitionUISpec("reject_loan", "Reject Loan", "btn-danger", "✕"),
@@ -404,32 +361,25 @@ TRANSITION_UI_REGISTRY: dict[str, TransitionUISpec] = {
     "complete_auction": TransitionUISpec("complete_auction", "Complete Auction", "btn-dark", "🏁"),
     "close_after_auction": TransitionUISpec("close_after_auction", "Close After Auction", "btn-success", "✅"),
     "write_off_loan": TransitionUISpec("write_off_loan", "Write Off Loan", "btn-danger", "🧾"),
+    "activate": TransitionUISpec("activate", "Activate Taken Loan", "btn-primary", ">"),
+    "request_settlement": TransitionUISpec("request_settlement", "Request Settlement", "btn-info", ">"),
+    "complete_settlement": TransitionUISpec("complete_settlement", "Complete Settlement", "btn-success", ">"),
+}
+
+
+LEGACY_TRANSITION_UI_COMPAT_REGISTRY: dict[str, TransitionUISpec] = {
+    "mark_sold": TransitionUISpec("mark_sold", "Record Sale", "btn-secondary", "💰"),
+    "repledge": TransitionUISpec("repledge", "Mark Repledged", "btn-info", "🔁"),
+    "undo_release": TransitionUISpec(
+        "undo_release", "Undo Release", "btn-outline-secondary", "↩"
+    ),
+    "undo_repledge": TransitionUISpec(
+        "undo_repledge", "Undo Repledge", "btn-outline-secondary", "↩"
+    ),
 }
 
 
 TRANSITION_FORM_UI_REGISTRY: dict[str, TransitionFormUISpec] = {
-    "approve": TransitionFormUISpec("approve", "Approve Loan", "✓", "bg-success"),
-    "disburse": TransitionFormUISpec(
-        "disburse", "Disburse Loan", "💳", "bg-primary"
-    ),
-    "cancel": TransitionFormUISpec("cancel", "Cancel Loan", "✕", "bg-danger"),
-    "mark_defaulted": TransitionFormUISpec(
-        "mark_defaulted", "Mark as Defaulted", "⚠", "bg-warning"
-    ),
-    "mark_auctioned": TransitionFormUISpec(
-        "mark_auctioned", "Record Auction", "🔨", "bg-dark"
-    ),
-    "mark_sold": TransitionFormUISpec("mark_sold", "Record Sale", "💰", "bg-secondary"),
-    "repledge": TransitionFormUISpec("repledge", "Repledge Loan", "🔁", "bg-info"),
-    "undo_disburse": TransitionFormUISpec(
-        "undo_disburse", "Undo Disbursal", "↩", "bg-warning"
-    ),
-    "undo_release": TransitionFormUISpec(
-        "undo_release", "Undo Release", "↩", "bg-secondary"
-    ),
-    "undo_repledge": TransitionFormUISpec(
-        "undo_repledge", "Undo Repledge", "↩", "bg-secondary"
-    ),
     "submit_for_approval": TransitionFormUISpec("submit_for_approval", "Submit for Approval", "📝", "bg-primary"),
     "approve_loan": TransitionFormUISpec("approve_loan", "Approve Loan", "✓", "bg-success"),
     "reject_loan": TransitionFormUISpec("reject_loan", "Reject Loan", "✕", "bg-danger"),
@@ -451,6 +401,21 @@ TRANSITION_FORM_UI_REGISTRY: dict[str, TransitionFormUISpec] = {
     "complete_auction": TransitionFormUISpec("complete_auction", "Complete Auction", "🏁", "bg-dark"),
     "close_after_auction": TransitionFormUISpec("close_after_auction", "Close After Auction", "✅", "bg-success"),
     "write_off_loan": TransitionFormUISpec("write_off_loan", "Write Off Loan", "🧾", "bg-danger"),
+    "activate": TransitionFormUISpec("activate", "Activate Taken Loan", ">", "bg-primary"),
+    "request_settlement": TransitionFormUISpec("request_settlement", "Request Settlement", ">", "bg-info"),
+    "complete_settlement": TransitionFormUISpec("complete_settlement", "Complete Settlement", ">", "bg-success"),
+}
+
+
+LEGACY_TRANSITION_FORM_UI_COMPAT_REGISTRY: dict[str, TransitionFormUISpec] = {
+    "mark_sold": TransitionFormUISpec("mark_sold", "Record Sale", "💰", "bg-secondary"),
+    "repledge": TransitionFormUISpec("repledge", "Repledge Loan", "🔁", "bg-info"),
+    "undo_release": TransitionFormUISpec(
+        "undo_release", "Undo Release", "↩", "bg-secondary"
+    ),
+    "undo_repledge": TransitionFormUISpec(
+        "undo_repledge", "Undo Repledge", "↩", "bg-secondary"
+    ),
 }
 
 
@@ -497,7 +462,10 @@ def build_transition_payload(transition_name: str, payload_dict: dict):
 
 def get_transition_state_spec(transition_name: str) -> TransitionStateSpec | None:
     """Return the canonical state contract for a transition key or alias."""
-    return TRANSITION_STATE_REGISTRY.get(normalize_transition_name(transition_name))
+    key = normalize_transition_name(transition_name)
+    return TRANSITION_STATE_REGISTRY.get(
+        key
+    ) or LEGACY_TRANSITION_STATE_COMPAT_REGISTRY.get(key)
 
 
 def build_transition_actions(loan, raw_transitions):
@@ -510,14 +478,16 @@ def build_transition_actions(loan, raw_transitions):
         if spec and not spec.enabled_in_loan_transition_view:
             continue
 
-        ui = TRANSITION_UI_REGISTRY.get(
-            key,
+        ui = (
+            TRANSITION_UI_REGISTRY.get(key)
+            or LEGACY_TRANSITION_UI_COMPAT_REGISTRY.get(key)
+            or
             TransitionUISpec(
                 key=key,
                 title=key.replace("_", " ").title(),
                 button_class="btn-outline-secondary",
                 icon="→",
-            ),
+            )
         )
 
         if key == "deliver":
@@ -550,12 +520,14 @@ def build_transition_actions(loan, raw_transitions):
 def get_transition_form_ui(transition_name: str) -> TransitionFormUISpec:
     """Return form-page UI metadata for a transition, with safe default fallback."""
     key = normalize_transition_name(transition_name)
-    return TRANSITION_FORM_UI_REGISTRY.get(
-        key,
+    return (
+        TRANSITION_FORM_UI_REGISTRY.get(key)
+        or LEGACY_TRANSITION_FORM_UI_COMPAT_REGISTRY.get(key)
+        or
         TransitionFormUISpec(
             key=key,
             heading=key.replace("_", " ").title() if key else "Transition",
             icon="→",
             badge_class="bg-secondary",
-        ),
+        )
     )

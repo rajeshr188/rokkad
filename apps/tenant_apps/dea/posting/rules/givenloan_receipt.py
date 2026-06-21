@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 
 from ..types import PostingBundle, DualLedgerLine, AccountLine
 from .base import BasePostingRule
+from .party_accounts import resolve_given_loan_borrower_account
 from ..resolver import get_ledger_id_by_key
 from ..registry import register_rule
 
@@ -62,15 +63,7 @@ class GivenLoanReceiptRule(BasePostingRule):
         if not source_loan:
             raise ValidationError("Cannot find source GivenLoan")
 
-        # Current GivenLoan model uses borrower; keep customer as legacy fallback.
-        party = getattr(source_loan, "borrower", None) or getattr(
-            source_loan, "customer", None
-        )
-        if not party:
-            raise ValidationError("Loan has no borrower/customer")
-
-        if not hasattr(party, "account") or not party.account:
-            raise ValidationError(f"Borrower/customer {party} has no account")
+        borrower_account = resolve_given_loan_borrower_account(source_loan)
 
         # Resolve ledgers
         cash_id = get_ledger_id_by_key("CASH", tenant_id=tenant_id)
@@ -148,7 +141,7 @@ class GivenLoanReceiptRule(BasePostingRule):
             account_lines.append(
                 AccountLine(
                     ledger_id=borrower_loan_ctrl_id,
-                    account_id=party.account.id,
+                    account_id=borrower_account.id,
                     side="Cr",
                     currency=str(payment.total_amount.currency),
                     amount=principal_decimal,

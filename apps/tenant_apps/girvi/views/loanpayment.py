@@ -1,22 +1,18 @@
-import logging
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, reverse
 
-from apps.orgs.preferences import CompanyPreferences
 from django.template.response import TemplateResponse
 from django.utils import timezone
 
-from apps.tenant_apps.dea.facade import post_payment_voucher
-
 from ..forms import GivenLoanRepaymentForm, TakenLoanRepaymentForm
 from ..models import GivenLoan, TakenLoan
-from ..service_modules.accrual import InterestAccrualCommand, InterestAccrualService
-from ..service_modules.loan_posting import GivenLoanPostingService
-
-logger = logging.getLogger(__name__)
+from ..service_modules.repayment import (
+    GivenLoanRepaymentService,
+    RepaymentCommand,
+    TakenLoanRepaymentService,
+)
 
 
 @login_required
@@ -29,70 +25,17 @@ def loan_payment_create_view(request, pk=None):
     if request.method == "POST":
         form = GivenLoanRepaymentForm(request.POST)
         if form.is_valid():
-            cd = form.cleaned_data
-            total = cd["total_amount"]
-            interest = cd.get("interest_amount")
-            principal = (total - interest) if interest is not None else None
-
-            prefs = CompanyPreferences(
-                getattr(getattr(request.user, "profile", None), "workspace", None)
+            result = GivenLoanRepaymentService.execute(
+                RepaymentCommand(
+                    loan=loan,
+                    cleaned_data=form.cleaned_data,
+                    created_by=request.user,
+                )
             )
-            if prefs.loan_catchup_on_receipt:
-                try:
-                    accrual_result = InterestAccrualService.execute(
-                        InterestAccrualCommand(
-                            loan=loan,
-                            as_of_date=cd["payment_date"],
-                            trigger_source="RECEIPT",
-                            created_by=request.user,
-                            notes=(
-                                f"Catch-up accrual before receipt {cd.get('reference_number', '')}".strip()
-                            ),
-                            post_to_accounting=True,
-                        )
-                    )
-                    if not accrual_result.success:
-                        messages.warning(
-                            request,
-                            f"Interest accrual catch-up could not be completed before posting the receipt: {accrual_result.message}",
-                        )
-                except Exception as exc:
-                    logger.exception(
-                        "Interest accrual catch-up failed before loan payment for loan %s",
-                        loan.pk,
-                    )
-                    messages.warning(
-                        request,
-                        f"Interest accrual catch-up failed before posting the receipt: {exc}",
-                    )
-
-            payment_payload = {
-                "total_amount": total,
-                "interest_amount": interest,
-                "principal_amount": principal,
-                "payment_date": cd["payment_date"],
-                "payment_method": cd["payment_method"],
-                "reference_number": cd.get("reference_number", ""),
-                "description": cd.get("description", ""),
-                "is_final_payment": cd.get("is_final_payment", False),
-            }
-            payment = None
-            try:
-                payment, created = GivenLoanPostingService().post_repayment(
-                    loan, payment_payload, request.user
-                )
-                messages.success(
-                    request,
-                    f"Payment {payment.payment_id} recorded and posted to accounting.",
-                )
-            except Exception as exc:
-                logger.exception(
-                    "Accounting post failed for payment %s", getattr(payment, "payment_id", "unknown")
-                )
-                messages.warning(
-                    request,
-                    f"Payment saved but accounting posting failed: {exc}",
-                )
+            for warning in result.warnings:
+                messages.warning(request, warning)
+            if result.success_message:
+                messages.success(request, result.success_message)
             return redirect(reverse("girvi:girvi_loan_detail", args=[loan.pk]))
     else:
         form = GivenLoanRepaymentForm(initial={"payment_date": timezone.now()})
@@ -117,37 +60,17 @@ def taken_loan_payment_create_view(request, pk):
     if request.method == "POST":
         form = TakenLoanRepaymentForm(request.POST)
         if form.is_valid():
-            cd = form.cleaned_data
-            total = cd["total_amount"]
-            interest = cd.get("interest_amount")
-            principal = (total - interest) if interest is not None else None
-
-            payment = loan.create_payment(
-                amount=total,
-                payment_date=cd["payment_date"],
-                payment_method=cd["payment_method"],
-                reference_number=cd.get("reference_number", ""),
-                interest=interest,
-                principal=principal,
-                description=cd.get("description", ""),
-                is_final=cd.get("is_final_payment", False),
-                created_by=request.user,
+            result = TakenLoanRepaymentService.execute(
+                RepaymentCommand(
+                    loan=loan,
+                    cleaned_data=form.cleaned_data,
+                    created_by=request.user,
+                )
             )
-            try:
-                post_payment_voucher(payment, request.user)
-                messages.success(
-                    request,
-                    f"Payment {payment.payment_id} recorded and posted to accounting.",
-                )
-            except Exception as exc:
-                logger.exception(
-                    "Accounting post failed for taken loan payment %s",
-                    payment.payment_id,
-                )
-                messages.warning(
-                    request,
-                    f"Payment {payment.payment_id} saved but accounting posting failed: {exc}",
-                )
+            for warning in result.warnings:
+                messages.warning(request, warning)
+            if result.success_message:
+                messages.success(request, result.success_message)
             return redirect(loan.get_absolute_url())
     else:
         form = TakenLoanRepaymentForm(initial={"payment_date": timezone.now()})

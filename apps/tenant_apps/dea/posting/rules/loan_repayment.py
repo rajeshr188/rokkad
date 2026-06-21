@@ -2,6 +2,10 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from ..types import PostingBundle, DualLedgerLine, AccountLine
 from .base import BasePostingRule
+from .party_accounts import (
+    resolve_given_loan_borrower_account,
+    resolve_taken_loan_lender_account,
+)
 from ..resolver import get_ledger_id_by_key
 from ..registry import register_rule
 
@@ -42,22 +46,13 @@ class LoanRepaymentRule(BasePostingRule):
 
         # Resolve the correct party account based on loan type
         if loan_type == "Given":
-            # Given loan: attribute to borrower
-            party = getattr(loan, "borrower", None) or getattr(loan, "customer", None)
-            if not party:
-                raise ValidationError("Loan has no borrower/customer")
+            account = resolve_given_loan_borrower_account(loan)
         elif loan_type == "Taken":
-            # Taken loan: attribute to lender
-            party = getattr(loan, "lender", None)
-            if not party:
-                raise ValidationError("Loan has no lender")
+            account = resolve_taken_loan_lender_account(loan)
         else:
             raise ValidationError(f"Invalid loan_type: {loan_type}. Must be 'Given' or 'Taken'")
 
-        if not hasattr(party, "account") or not party.account:
-            raise ValidationError(f"Party {party} has no account")
-
-        account_id = party.account.id
+        account_id = account.id
 
         # Validation
         if principal_component < 0 or interest_component < 0:

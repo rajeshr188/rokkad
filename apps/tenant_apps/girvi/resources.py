@@ -7,7 +7,8 @@ from import_export.widgets import DateTimeWidget, ForeignKeyWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 
-from .models import GivenLoan, License, LoanItem, LoanPayment, Release, Series
+from .models import GivenLoan, License, LoanItem, Release, Series
+from .models.legacy import Loan, LoanPayment
 
 
 class LicenseResource(resources.ModelResource):
@@ -172,7 +173,9 @@ class LoanItemResource(resources.ModelResource):
         model = LoanItem
 
 
-class LoanPaymentResource(resources.ModelResource):
+class LegacyLoanPaymentResource(resources.ModelResource):
+    """Historical import/export resource for deprecated LoanPayment rows."""
+
     created_at = Field(
         attribute="created_at",
         column_name="created_at",
@@ -184,11 +187,14 @@ class LoanPaymentResource(resources.ModelResource):
         widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
     )
     loan = fields.Field(
-        column_name="loan", attribute="loan", widget=ForeignKeyWidget(GivenLoan, "pk")
+        column_name="loan", attribute="loan", widget=ForeignKeyWidget(Loan, "pk")
     )
 
     class Meta:
         model = LoanPayment
+
+
+LoanPaymentResource = LegacyLoanPaymentResource
 
 
 class ReleaseResource(resources.ModelResource):

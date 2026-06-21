@@ -4,7 +4,7 @@
 def customer_queryset():
     from apps.tenant_apps.contact.models import Customer
 
-    return Customer.objects.with_contacts().active()
+    return Customer.objects.select_related("party").with_contacts().active()
 
 
 def get_workspace_customer_dashboard_summary():

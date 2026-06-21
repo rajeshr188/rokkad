@@ -11,6 +11,7 @@ from apps.tenant_apps.girvi.models import (
     GivenLoan,
     License,
     LoanItem,
+    RepledgeHistory,
     RepledgedLoanItem,
     Series,
     TakenLoan,
@@ -110,6 +111,12 @@ class DashboardMetricsServiceTests(TenantTestCase):
             original_loanitem=original_item,
             repledged_loanamount=Decimal("800.00"),
             interest_rate=Decimal("1.00"),
+        )
+        RepledgeHistory.objects.create(
+            loan_item=original_item,
+            taken_loan=taken_loan,
+            repledged_amount=Decimal("800.00"),
+            item_value_at_repledge=Decimal("1000.00"),
         )
 
         given_stats = DashboardMetricsService.get_non_performing_loans_stats(

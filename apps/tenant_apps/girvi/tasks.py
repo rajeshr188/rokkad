@@ -1,19 +1,30 @@
 from __future__ import absolute_import, unicode_literals
 
-import datetime
-
-from celery import shared_task
 from django.core.management import call_command
 from django.utils import timezone
-from celery.utils.log import get_task_logger
+
+try:
+    from celery import shared_task
+    from celery.utils.log import get_task_logger
+except ImportError:
+    import logging
+
+    def shared_task(*decorator_args, **decorator_kwargs):
+        def decorator(func):
+            func.run = func
+            return func
+
+        if decorator_args and callable(decorator_args[0]):
+            return decorator(decorator_args[0])
+        return decorator
+
+    get_task_logger = logging.getLogger
 
 from apps.tenant_apps.notify.models import Notification
 from apps.tenant_apps.notify.services import (
     DEFAULT_LOAN_REMINDER_CODE,
     create_bulk_loan_reminder_group,
 )
-
-from .msg import notify_msg
 
 logger = get_task_logger(__name__)
 
@@ -68,53 +79,28 @@ def export_table(export_format, query_params):
 # this runs at the start of everymonth
 @shared_task(name="pending_loans")
 def notify_pending_loans():
-    # Get all the users who have pending loans
-    unreleased_loans = Loan.unreleased.order_by("customer")
-    customers_with_pending_loans = Customer.objects.filter(
-        loan__in=unreleased_loans
-    ).distinct()
-
-    # Iterate over each user and send them a notification email
-    for customer in customers_with_pending_loans:
-        # Get the user's pending loans
-        pending_loans = pending_loans.filter(customer=customer)
-
-        # Compose the message
-        message = f"Dear {customer.name},\n\n"
-        message += f"You have {pending_loans.count()} pending loan(s) as of {datetime.now().strftime('%Y-%m-%d')}."
-        message += (
-            "Please make a payment as soon as possible to avoid additional fees.\n\n"
-        )
-        message += "Thank you for your cooperation.\n\n"
-        message += "Best regards,\nThe Loan Department"
-        notify_msg(number=customer.contactno.first().phone_number, content=message)
+    logger.warning(
+        "Legacy pending_loans task is disabled. Use notify_Loan_reminder or "
+        "notify_v2 reminder batches for active Girvi reminder generation."
+    )
+    return {
+        "status": "disabled",
+        "reason": "legacy_pending_loans_task_references_removed_loan_models",
+    }
 
 
 # this runs everyday selecting the loans that were created on this day of month and notify users the no of months
 @shared_task(name="interest_overdue_permonth")
 def notify_interest_overdue():
-    unreleased_loans = Loan.unreleased.filter(
-        created__day=datetime.datetime.date().today.day
-    ).order_by("customer")
-    logger.info("msg")
-    customers_with_pending_loans = Customer.objects.filter(
-        loan__in=unreleased_loans
-    ).distinct()
-
-    # Iterate over each user and send them a notification
-    for customer in customers_with_pending_loans:
-        # Get the user's pending loans
-        pending_loans = pending_loans.filter(customer=customer)
-
-        # Compose the message
-        message = f"Dear {customer.name},\n\n"
-        # message += f"You have {pending_loans.count()} pending loan(s) as of {datetime.now().strftime('%Y-%m-%d')}."
-        for i in pending_loans:
-            message += f"your loan {i.loanid} is completing {i.noofmonths|add:'1'}"
-        message += "Please make a interest payment as soon as possible to avoid additional fees.\n\n"
-        message += "Thank you for your cooperation.\n\n"
-        message += "Best regards,\nThe Loan Department"
-        notify_msg(number=customer.contactno.first().phone_number, content=message)
+    logger.warning(
+        "Legacy interest_overdue_permonth task is disabled. Use "
+        "accrue_loan_interest_batch for interest recognition and notify_v2 "
+        "reminder batches for borrower communication."
+    )
+    return {
+        "status": "disabled",
+        "reason": "legacy_interest_overdue_task_references_removed_loan_models",
+    }
 
 
 @shared_task(name="one_year_reminder")

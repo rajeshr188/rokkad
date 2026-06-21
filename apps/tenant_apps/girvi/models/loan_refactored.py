@@ -22,7 +22,7 @@ from decimal import Decimal
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.db.models import DecimalField, ExpressionWrapper, F, Func, Sum
+from django.db.models import DecimalField, ExpressionWrapper, F, Func, Sum, Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils import timezone
@@ -40,6 +40,13 @@ from ..managers_refactored import GivenLoanManager, TakenLoanManager
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+def _party_from_customer(customer):
+    if not customer:
+        return None
+    party_id = getattr(customer, "party_id", None)
+    return customer.party if party_id else None
 
 
 class LoanStatus(models.TextChoices):
@@ -82,8 +89,20 @@ class LoanLifecycleState(models.TextChoices):
     CANCELLED = "Cancelled", "Cancelled"
 
 
+class TakenLoanLifecycleState(models.TextChoices):
+    """Minimal lifecycle states for loans taken from a lender."""
+
+    DRAFT = "Draft", "Draft"
+    ACTIVE = "Active", "Active"
+    SETTLEMENT_PENDING = "SettlementPending", "Settlement Pending"
+    CLOSED = "Closed", "Closed"
+    CANCELLED = "Cancelled", "Cancelled"
+
+
 ALL_LOAN_STATUS_CHOICES = tuple(
-    dict.fromkeys([*LoanStatus.choices, *LoanLifecycleState.choices])
+    dict.fromkeys(
+        [*LoanStatus.choices, *LoanLifecycleState.choices, *TakenLoanLifecycleState.choices]
+    )
 )
 
 
@@ -145,11 +164,13 @@ class BaseLoan(models.Model):
     )
     tenure = models.PositiveIntegerField(default=3, help_text="Loan tenure in months")
 
-    # Status
+    # Status. Concrete loan types override choices/defaults with their canonical
+    # lifecycle vocabulary; the broad choices remain here for compatibility with
+    # abstract BaseLoan usage and legacy helper code.
     status = models.CharField(
         max_length=20,
         choices=ALL_LOAN_STATUS_CHOICES,
-        default=LoanStatus.CREATED,
+        default=LoanLifecycleState.DRAFT,
         db_index=True,
     )
 
@@ -198,7 +219,7 @@ class BaseLoan(models.Model):
                 raise ValueError("Series is required to create a loan")
 
             # Generate formatted loan ID using series
-            self.loan_id = LoanIDGenerator.generate(self.series)
+            self.loan_id = LoanIDGenerator.generate(self.series, loan_model=self.__class__)
 
         super().save(*args, **kwargs)
 
@@ -499,6 +520,12 @@ class BaseLoan(models.Model):
 
 
 class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
+    status = models.CharField(
+        max_length=20,
+        choices=LoanLifecycleState.choices,
+        default=LoanLifecycleState.DRAFT,
+        db_index=True,
+    )
 
     def create_release_payment(
         self,
@@ -510,50 +537,22 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         description="",
         created_by=None,
     ):
-        """
-        Create a PaymentVoucher for releasing this loan (cash in on closure).
-        Ensures direction is 'RECEIPT', payment_type is 'RECEIPT', and principal/interest are set.
-        """
-        from decimal import Decimal
-        from moneyed import Money
-        from django.apps import apps as _apps; PaymentVoucher = _apps.get_model("dea", "PaymentVoucher")
+        """Compatibility wrapper for release receipt voucher creation."""
+        from apps.tenant_apps.girvi.service_modules.payment_voucher_creation import (
+            create_given_loan_release_payment,
+        )
 
-        if not created_by:
-            raise ValidationError("created_by user is required")
-
-        # Compute principal and interest if not provided
-        if principal is None:
-            principal = self.outstanding_principal
-        if interest is None:
-            interest = self.interest_due()
-        if isinstance(principal, Decimal):
-            principal = Money(principal, "INR")
-        elif not isinstance(principal, Money):
-            principal = Money(Decimal(str(principal)), "INR")
-        if isinstance(interest, Decimal):
-            interest = Money(interest, "INR")
-        elif not isinstance(interest, Money):
-            interest = Money(Decimal(str(interest)), "INR")
-
-        total = principal + interest
-
-        payment = PaymentVoucher.objects.create(
-            source_document=self,
-            total_amount=total,
-            principal_amount=principal,
-            interest_amount=interest,
-            direction="RECEIPT",  # Cash in
-            payment_type="RECEIPT",
+        return create_given_loan_release_payment(
+            self,
+            principal=principal,
+            interest=interest,
+            payment_date=payment_date,
             payment_method=payment_method,
             reference_number=reference_number,
             description=description,
-            payment_date=payment_date or timezone.now(),
             created_by=created_by,
-            updated_by=created_by,
         )
-        return payment
 
-        
     """
     Loan given TO a customer (pawn/pledge loan).
 
@@ -573,6 +572,15 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         related_name="loans_received",
         verbose_name="Borrower",
         help_text="Customer receiving this loan",
+    )
+    borrower_party = models.ForeignKey(
+        "party.Party",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="given_loans",
+        verbose_name="Borrower Party",
+        help_text="Shadow Party link for the borrower during Customer migration.",
     )
 
     # Override series from BaseLoan with explicit related_name
@@ -609,8 +617,19 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         ]
         indexes = [
             models.Index(fields=["borrower", "status"]),
+            models.Index(fields=["borrower_party", "status"]),
             models.Index(fields=["status", "loan_date"]),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.borrower_party_id:
+            borrower_party = _party_from_customer(getattr(self, "borrower", None))
+            if borrower_party:
+                self.borrower_party = borrower_party
+                update_fields = kwargs.get("update_fields")
+                if update_fields is not None:
+                    kwargs["update_fields"] = set(update_fields) | {"borrower_party"}
+        super().save(*args, **kwargs)
 
     # ========================================================================
     # Implement abstract properties
@@ -752,40 +771,21 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         description="",
         created_by=None,
     ):
-        """
-        Create a PaymentVoucher for disbursing this loan (cash out).
-        Ensures direction is 'PAYMENT' and payment_type is 'DISBURSAL',
-        so DEA posting engine uses 'GIVENLOAN_PAYMENT' as voucher type.
-        """
-        from decimal import Decimal
-        from moneyed import Money
-        from django.apps import apps as _apps; PaymentVoucher = _apps.get_model("dea", "PaymentVoucher")
+        """Compatibility wrapper for disbursal voucher creation."""
+        from apps.tenant_apps.girvi.service_modules.payment_voucher_creation import (
+            create_given_loan_disbursal_payment,
+        )
 
-        if not created_by:
-            raise ValidationError("created_by user is required")
-
-        # Default to full loan amount if not specified
-        if amount is None:
-            amount = self.get_loan_amount_with_currency
-        elif isinstance(amount, Decimal):
-            amount = Money(amount, "INR")
-        elif not isinstance(amount, Money):
-            amount = Money(Decimal(str(amount)), "INR")
-
-        payment = PaymentVoucher.objects.create(
-            source_document=self,
-            total_amount=amount,
-            principal_amount=amount,
-            direction="PAYMENT",  # Cash out
-            payment_type="DISBURSAL",
+        return create_given_loan_disbursal_payment(
+            self,
+            amount=amount,
+            payment_date=payment_date,
             payment_method=payment_method,
             reference_number=reference_number,
             description=description,
-            payment_date=payment_date or timezone.now(),
             created_by=created_by,
-            updated_by=created_by,
         )
-        return payment
+
     def create_payment(
         self,
         amount,
@@ -799,61 +799,24 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         create_release=False,
         created_by=None,
     ):
-        """
-        Create a payment voucher for this loan.
-
-        PAYMENT-CENTRIC ARCHITECTURE:
-        - Only creates PaymentVoucher when cash actually moves
-        - Automatically posts to accounting via posting rules
-        - Handles IFRS 9 compliance (recognizes at cash transfer)
-
-        Args:
-            amount: Total payment amount (Decimal or Money)
-            payment_date: When payment was made (default: now)
-            payment_method: How payment was made (CASH, BANK, CHEQUE, UPI, CARD)
-            reference_number: Bank reference, cheque num, etc
-            interest: Interest portion (if None, uses total_amount)
-            principal: Principal portion
-            description: Additional notes
-            is_final: Mark if this closes the loan
-            create_release: If True, creates Release record after posting
-            created_by: User making the payment (required)
-
-        Returns:
-            PaymentVoucher instance that has been posted to accounting
-        """
-        from decimal import Decimal
-        from moneyed import Money
-        from django.apps import apps as _apps; PaymentVoucher = _apps.get_model("dea", "PaymentVoucher")
-
-        if not created_by:
-            raise ValidationError("created_by user is required")
-
-        # Normalize amount to Money object
-        if isinstance(amount, Decimal):
-            amount = Money(amount, "INR")
-        elif not isinstance(amount, Money):
-            amount = Money(Decimal(str(amount)), "INR")
-
-        # Create payment voucher
-        payment = PaymentVoucher.objects.create(
-            source_document=self,
-            total_amount=amount,
-            principal_amount=principal or amount,
-            interest_amount=interest,
-            direction="RECEIPT",  # We receive money
-            payment_type="RECEIPT",
-            payment_method=payment_method,
-            reference_number=reference_number,
-            description=description,
-            is_final_payment=is_final,
-            create_release=create_release,
-            payment_date=payment_date or timezone.now(),
-            created_by=created_by,
-            updated_by=created_by,
+        """Compatibility wrapper for borrower receipt voucher creation."""
+        from apps.tenant_apps.girvi.service_modules.payment_voucher_creation import (
+            create_given_loan_receipt_payment,
         )
 
-        return payment
+        return create_given_loan_receipt_payment(
+            self,
+            amount=amount,
+            payment_date=payment_date,
+            payment_method=payment_method,
+            reference_number=reference_number,
+            interest=interest,
+            principal=principal,
+            description=description,
+            is_final=is_final,
+            create_release=create_release,
+            created_by=created_by,
+        )
 
     @property
     def total_received(self):
@@ -895,12 +858,19 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
     - Customer is the lender
     - We are the borrower
     - Customer receives collateral and gives money
-    - Items tracked via RepledgedLoanItem (references original LoanItem)
+    - Items tracked through LoanItem custody fields and RepledgeHistory
 
     Key Fields:
     - lender: The customer providing this loan
     - original_loan: The GivenLoan being repledged (optional reference)
     """
+
+    status = models.CharField(
+        max_length=20,
+        choices=TakenLoanLifecycleState.choices,
+        default=TakenLoanLifecycleState.DRAFT,
+        db_index=True,
+    )
 
     lender = models.ForeignKey(
         Customer,
@@ -908,6 +878,15 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
         related_name="loans_given",
         verbose_name="Lender",
         help_text="Customer providing this loan to us",
+    )
+    lender_party = models.ForeignKey(
+        "party.Party",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="taken_loans",
+        verbose_name="Lender Party",
+        help_text="Shadow Party link for the lender during Customer migration.",
     )
 
     original_loan = models.ForeignKey(
@@ -953,8 +932,19 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
         ]
         indexes = [
             models.Index(fields=["lender", "status"]),
+            models.Index(fields=["lender_party", "status"]),
             models.Index(fields=["original_loan"]),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.lender_party_id:
+            lender_party = _party_from_customer(getattr(self, "lender", None))
+            if lender_party:
+                self.lender_party = lender_party
+                update_fields = kwargs.get("update_fields")
+                if update_fields is not None:
+                    kwargs["update_fields"] = set(update_fields) | {"lender_party"}
+        super().save(*args, **kwargs)
 
     # ========================================================================
     # Implement abstract properties
@@ -962,9 +952,9 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
 
     @property
     def get_loan_amount(self) -> Decimal:
-        """Sum of all repledged item amounts."""
-        return self.repledgedloanitems.aggregate(Sum("repledged_loanamount"))[
-            "repledged_loanamount__sum"
+        """Sum of all repledged item amounts from custody history."""
+        return self.repledge_history_items.aggregate(Sum("repledged_amount"))[
+            "repledged_amount__sum"
         ] or Decimal(0)
 
     @property
@@ -973,21 +963,34 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
 
     @property
     def get_interest_amount(self) -> Decimal:
-        """Sum of interest from repledged items."""
-        return self.repledgedloanitems.aggregate(Sum("interest"))[
-            "interest__sum"
-        ] or Decimal(0)
+        """Monthly interest derived from custody history repledged amounts."""
+        interest_expression = ExpressionWrapper(
+            F("repledged_amount") * F("loan_item__interestrate") / Value(100),
+            output_field=DecimalField(max_digits=15, decimal_places=2),
+        )
+        return (
+            self.repledge_history_items.aggregate(
+                interest=Coalesce(
+                    Sum(interest_expression),
+                    Value(0),
+                    output_field=DecimalField(max_digits=15, decimal_places=2),
+                )
+            )["interest"]
+            or Decimal(0)
+        )
 
     @property
     def get_weight_summary(self) -> dict:
-        """Weight breakdown from original items."""
-        return self.repledgedloanitems.values("original_loanitem__itemtype").annotate(
-            total_weight=Sum("original_loanitem__weight"),
+        """Weight breakdown from custody history items."""
+        return self.repledge_history_items.values(
+            itemtype=F("loan_item__itemtype")
+        ).annotate(
+            total_weight=Sum("loan_item__weight"),
             pure_weight=Sum(
                 Func(
                     ExpressionWrapper(
-                        F("original_loanitem__weight")
-                        * F("original_loanitem__purity")
+                        F("loan_item__weight")
+                        * F("loan_item__purity")
                         / 100,
                         output_field=DecimalField(max_digits=10, decimal_places=3),
                     ),
@@ -999,20 +1002,20 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
 
     @property
     def get_item_description(self) -> str:
-        """Descriptions from original items."""
+        """Descriptions from custody history items."""
         return ", ".join(
-            self.repledgedloanitems.select_related("original_loanitem").values_list(
-                "original_loanitem__itemdesc", flat=True
+            self.repledge_history_items.select_related("loan_item").values_list(
+                "loan_item__itemdesc", flat=True
             )
         )
 
     @property
     def current_value(self) -> Decimal:
-        """Current value of repledged items."""
+        """Current value of custody history items."""
         return sum(
-            item.original_loanitem.current_value()
-            for item in self.repledgedloanitems.select_related(
-                "original_loanitem__item"
+            history.loan_item.current_value()
+            for history in self.repledge_history_items.select_related(
+                "loan_item__item"
             ).all()
         )
 
@@ -1032,59 +1035,23 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
         is_final=False,
         created_by=None,
     ):
-        """
-        Create a payment voucher for repaying this loan.
-
-        PAYMENT-CENTRIC ARCHITECTURE:
-        - Only creates PaymentVoucher when cash actually moves
-        - Automatically posts to accounting via posting rules
-        - Handles IFRS 9 compliance
-
-        Args:
-            amount: Total payment amount (Decimal or Money)
-            payment_date: When payment was made (default: now)
-            payment_method: How payment was made (CASH, BANK, CHEQUE, UPI, CARD)
-            reference_number: Bank reference, cheque num, etc
-            interest: Interest portion (if None, uses total_amount)
-            principal: Principal portion
-            description: Additional notes
-            is_final: Mark if this closes the loan
-            created_by: User making the payment (required)
-
-        Returns:
-            PaymentVoucher instance that has been posted to accounting
-        """
-        from decimal import Decimal
-        from moneyed import Money
-        from django.apps import apps as _apps; PaymentVoucher = _apps.get_model("dea", "PaymentVoucher")
-
-        if not created_by:
-            raise ValidationError("created_by user is required")
-
-        # Normalize amount to Money object
-        if isinstance(amount, Decimal):
-            amount = Money(amount, "INR")
-        elif not isinstance(amount, Money):
-            amount = Money(Decimal(str(amount)), "INR")
-
-        # Create payment voucher (we pay back the lender)
-        payment = PaymentVoucher.objects.create(
-            source_document=self,
-            total_amount=amount,
-            principal_amount=principal or amount,
-            interest_amount=interest,
-            direction="PAYMENT",  # We pay money
-            payment_type="RECEIPT",
-            payment_method=payment_method,
-            reference_number=reference_number,
-            description=description,
-            is_final_payment=is_final,
-            payment_date=payment_date or timezone.now(),
-            created_by=created_by,
-            updated_by=created_by,
+        """Compatibility wrapper for lender repayment voucher creation."""
+        from apps.tenant_apps.girvi.service_modules.payment_voucher_creation import (
+            create_taken_loan_repayment_payment,
         )
 
-        return payment
+        return create_taken_loan_repayment_payment(
+            self,
+            amount=amount,
+            payment_date=payment_date,
+            payment_method=payment_method,
+            reference_number=reference_number,
+            interest=interest,
+            principal=principal,
+            description=description,
+            is_final=is_final,
+            created_by=created_by,
+        )
 
     @property
     def total_paid(self):

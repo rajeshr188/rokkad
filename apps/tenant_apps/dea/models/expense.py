@@ -70,7 +70,7 @@ class ExpenseVoucher(BusinessDoc):
     Examples:
     - Employee travel claim: Travel Exp + GST Input → Employee Payable
     - Vendor professional service: Professional Exp + GST Input + TDS → Vendor Payable
-    - Office supplies purchase: Office Exp + GST Input → AP
+    - Office supplies bill: Office Exp + GST Input -> AP
     """
 
     # === Core Identity ===

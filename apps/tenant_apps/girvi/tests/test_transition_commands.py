@@ -3,8 +3,12 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from apps.tenant_apps.girvi.flows import GivenLoanFlowV2, build_runtime_loan_flow
-from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState, LoanStatus
+from apps.tenant_apps.girvi.flows import GivenLoanFlow, TakenLoanFlow, build_runtime_loan_flow
+from apps.tenant_apps.girvi.models.loan_refactored import (
+    LoanLifecycleState,
+    LoanStatus,
+    TakenLoanLifecycleState,
+)
 from apps.tenant_apps.girvi.service_modules.transitions import LoanTransitionService
 from apps.tenant_apps.girvi.transitions.commands import (
     DisburseTransitionCommand,
@@ -20,8 +24,9 @@ from apps.tenant_apps.girvi.transition_registry import TRANSITION_REGISTRY
 
 
 class _DummyLoan:
-    def __init__(self, status):
+    def __init__(self, status, loan_type="Given"):
         self.status = status
+        self.loan_type = loan_type
 
     def save(self, *args, **kwargs):
         return None
@@ -33,17 +38,17 @@ class _DummyUser:
 
 class TransitionCommandRegistryTests(SimpleTestCase):
     def test_transition_command_lookup(self):
-        self.assertIs(get_transition_command_class("approve"), GenericForwardTransitionCommand)
-        self.assertIs(get_transition_command_class("disburse"), DisburseTransitionCommand)
-        self.assertIs(get_transition_command_class("mark_auctioned"), MarkAuctionedTransitionCommand)
+        self.assertIs(get_transition_command_class("approve_loan"), GenericForwardTransitionCommand)
+        self.assertIs(get_transition_command_class("disburse_loan"), DisburseTransitionCommand)
+        self.assertIs(get_transition_command_class("complete_auction"), MarkAuctionedTransitionCommand)
         self.assertIs(get_transition_command_class("mark_sold"), MarkSoldTransitionCommand)
-        self.assertIs(get_transition_command_class("undo_disburse"), UndoDisburseTransitionCommand)
+        self.assertIs(get_transition_command_class("undo_disbursal"), UndoDisburseTransitionCommand)
         self.assertIs(get_transition_command_class("undo_release"), UndoReleaseTransitionCommand)
         self.assertIs(get_transition_command_class("undo_repledge"), UndoRepledgeTransitionCommand)
 
     def test_registry_binds_command_classes_for_core_transitions(self):
-        self.assertIs(TRANSITION_REGISTRY["approve"].command_class, GenericForwardTransitionCommand)
-        self.assertIs(TRANSITION_REGISTRY["disburse"].command_class, DisburseTransitionCommand)
+        self.assertIs(TRANSITION_REGISTRY["approve_loan"].command_class, GenericForwardTransitionCommand)
+        self.assertIs(TRANSITION_REGISTRY["disburse_loan"].command_class, DisburseTransitionCommand)
         self.assertIs(TRANSITION_REGISTRY["undo_release"].command_class, UndoReleaseTransitionCommand)
         self.assertIs(TRANSITION_REGISTRY["undo_repledge"].command_class, UndoRepledgeTransitionCommand)
 
@@ -139,4 +144,37 @@ class TransitionCommandRegistryTests(SimpleTestCase):
             _DummyUser(),
             tenant=None,
         )
-        self.assertIsInstance(flow, GivenLoanFlowV2)
+        self.assertIsInstance(flow, GivenLoanFlow)
+
+    def test_build_runtime_flow_routes_taken_loan_to_minimal_flow(self):
+        flow = build_runtime_loan_flow(
+            _DummyLoan(TakenLoanLifecycleState.DRAFT, loan_type="Taken"),
+            _DummyUser(),
+            tenant=None,
+        )
+        self.assertIsInstance(flow, TakenLoanFlow)
+
+    @patch(
+        "apps.tenant_apps.girvi.transitions.commands.transaction.atomic",
+        side_effect=lambda: nullcontext(),
+    )
+    @patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal")
+    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
+    def test_taken_loan_disburse_alias_activates_taken_lifecycle(
+        self,
+        _mock_has_permission,
+        mock_record_disbursal,
+        _mock_atomic,
+    ):
+        payment = type("Payment", (), {"payment_id": "TL-001"})()
+        mock_record_disbursal.return_value = (payment, True)
+        loan = _DummyLoan(TakenLoanLifecycleState.DRAFT, loan_type="Taken")
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "disburse",
+            disbursed_by="cashier",
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(loan.status, TakenLoanLifecycleState.ACTIVE)
+        mock_record_disbursal.assert_called_once()

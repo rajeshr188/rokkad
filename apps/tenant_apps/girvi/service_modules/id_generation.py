@@ -20,13 +20,16 @@ class LoanIDGenerator:
     """
 
     @staticmethod
-    def generate(series: Series) -> str:
+    def generate(series: Series, loan_model=None) -> str:
         if not series:
             raise ValueError("Series is required for loan ID generation")
 
+        loan_model = loan_model or GivenLoan
         with transaction.atomic():
             series = Series.objects.select_for_update().get(id=series.id)
-            last_loan = GivenLoan.objects.filter(series=series).order_by("-loan_id").first()
+            last_loan = (
+                loan_model.objects.filter(series=series).order_by("-loan_id").first()
+            )
 
             if last_loan:
                 try:

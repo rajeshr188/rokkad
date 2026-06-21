@@ -18,12 +18,42 @@ Girvi manages pledged-loan operations: given loans, taken loans, collateral, cus
 - Rates and rate sources: required for collateral valuation.
 - License and series: numbering and compliance controls for loan IDs/documents.
 
+## Canonical Lifecycle
+
+`GivenLoan` uses the canonical loan lifecycle:
+
+`Draft -> PendingApproval -> Approved -> ActiveCurrent -> ClosurePending -> Closed`
+
+Additional servicing/recovery states are used when the workflow requires them:
+
+- `ActiveOverdue`
+- `ActiveNPA`
+- `RenewalPending`
+- `Renewed`
+- `AuctionInitiated`
+- `AuctionInProgress`
+- `AuctionComplete`
+- `WrittenOff`
+- `Rejected`
+- `Cancelled`
+
+Legacy values such as `Created`, `Disbursed`, `Released`, `Defaulted`, `Auctioned`,
+and `Repledged` are compatibility inputs only. Runtime flows normalize them to
+the canonical lifecycle before deciding legal transitions.
+
+`TakenLoan` uses a smaller lifecycle because borrowed/repledged loans do not share
+the same release and auction semantics as customer pawn loans:
+
+`Draft -> Active -> SettlementPending -> Closed`
+
+`Cancelled` is allowed before activation.
+
 ## Architecture Direction
 
 - Use command/use-case services for lifecycle transitions.
 - Keep accounting effects out of models and views; delegate posting to DEA through facade/services.
 - Use `girvi.facade` for cross-app reads.
-- Standardize lifecycle language; avoid mixing old statuses such as `Created`, `Approved`, `Disbursed` with next-generation states such as `Draft`, `PendingApproval`, and `ActiveCurrent`.
+- Standardize lifecycle language; old status values are accepted only through compatibility mappings.
 
 ## Current Active Work
 

@@ -9,7 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 from moneyed import Money
 
-from apps.tenant_apps.dea.facade import post_interest_accrual_batch
+from apps.tenant_apps.girvi.integrations.dea_adapter import post_interest_accrual_batch
 from apps.tenant_apps.girvi.models.accrual import (
     AccrualStatus,
     AccrualTriggerSource,

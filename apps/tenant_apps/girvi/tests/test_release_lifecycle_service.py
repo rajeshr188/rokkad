@@ -15,7 +15,7 @@ class ReleaseLifecycleServiceTests(TestCase):
         return SimpleNamespace(profile=SimpleNamespace(workspace="tenant-1"))
 
     def _fake_loan(self):
-        return SimpleNamespace(loan_id="L-001", status="DISBURSED")
+        return SimpleNamespace(loan_id="L-001", status="Disbursed")
 
     def test_preview_rejects_missing_actor(self):
         preview = ReleaseLifecycleService.preview(
@@ -42,11 +42,12 @@ class ReleaseLifecycleServiceTests(TestCase):
                 self.saved = True
 
         flow = MagicMock()
-        flow.deliver.can_proceed.return_value = True
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
 
         with patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
-            "apps.tenant_apps.girvi.flows.LoanFlow", return_value=flow
-        ), patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_release") as post_release:
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow", return_value=flow
+        ), patch("apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release") as post_release:
             release = ReleaseLifecycleService.create_release(
                 loan=loan,
                 created_by=user,
@@ -55,7 +56,8 @@ class ReleaseLifecycleServiceTests(TestCase):
             )
 
         self.assertTrue(release.saved)
-        flow.deliver.assert_called_once()
+        flow.request_closure.assert_called_once()
+        flow.complete_closure.assert_called_once()
         post_release.assert_called_once_with(release, created_by=user)
 
     def test_execute_returns_structured_result(self):
@@ -72,13 +74,14 @@ class ReleaseLifecycleServiceTests(TestCase):
                 self.saved = True
 
         flow = MagicMock()
-        flow.deliver.can_proceed.return_value = True
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
         fake_payment = SimpleNamespace(payment_id="PAY-1")
 
         with patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
-            "apps.tenant_apps.girvi.flows.LoanFlow", return_value=flow
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow", return_value=flow
         ), patch(
-            "apps.tenant_apps.girvi.service_modules.payment.record_loan_release",
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release",
             return_value=(fake_payment, True),
         ):
             result = ReleaseLifecycleService.execute(
@@ -107,11 +110,12 @@ class ReleaseLifecycleServiceTests(TestCase):
                 raise AssertionError("save should not be called")
 
         flow = MagicMock()
-        flow.deliver.can_proceed.return_value = False
+        flow.request_closure.can_proceed.return_value = False
+        flow.complete_closure.can_proceed.return_value = False
 
         with patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
-            "apps.tenant_apps.girvi.flows.LoanFlow", return_value=flow
-        ), patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_release") as post_release:
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow", return_value=flow
+        ), patch("apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release") as post_release:
             with self.assertRaises(ValidationError):
                 ReleaseLifecycleService.create_release(
                     loan=loan,
@@ -141,9 +145,9 @@ class ReleaseLifecycleServiceTests(TestCase):
         fake_payment = SimpleNamespace(payment_id="PAY-V2")
 
         with patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
-            "apps.tenant_apps.girvi.flows.build_runtime_loan_flow", return_value=flow
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow", return_value=flow
         ), patch(
-            "apps.tenant_apps.girvi.service_modules.payment.record_loan_release",
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release",
             return_value=(fake_payment, True),
         ):
             result = ReleaseLifecycleService.execute(

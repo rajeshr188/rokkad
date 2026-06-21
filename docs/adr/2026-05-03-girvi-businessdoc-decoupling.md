@@ -9,7 +9,7 @@ related: []
 # ADR: Girvi BusinessDoc Decoupling
 
 Date: 2026-05-03
-Status: Proposed
+Status: Accepted
 Owners: Girvi Team, DEA Team, Platform Architecture
 Tags: girvi, dea, event-driven, coupling, migration
 Related:
@@ -85,6 +85,8 @@ Constraints:
 3. Requires UI handling for posting pending state.
 
 ## Rollout / Migration Plan
+
+Execution note (2026-06-21): implementation of the async event-driven cutover is currently paused; this ADR remains the accepted architecture direction.
 
 1. Phase A: add outbox, consumer, idempotency, DLQ (no behavior change).
 2. Phase B: dual-write events from Girvi while sync posting remains enabled.
