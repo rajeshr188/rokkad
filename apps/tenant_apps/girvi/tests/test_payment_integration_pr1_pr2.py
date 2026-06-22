@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -31,6 +32,50 @@ class PR1FormAndModelGuardTests(SimpleTestCase):
                 "payment_method": "CASH",
                 "interest_amount": "101.00",
             }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("interest_amount", form.errors)
+
+    def test_given_loan_repayment_form_rejects_overpayment_when_loan_supplied(self):
+        loan = SimpleNamespace(
+            pk=None,
+            get_loan_amount=Decimal("1000.00"),
+            outstanding_interest=Decimal("100.00"),
+            get_total_principal_payments=lambda: Decimal("0.00"),
+            get_total_interest_payments=lambda: Decimal("0.00"),
+            get_total_payments=lambda: Decimal("0.00"),
+        )
+        form = GivenLoanRepaymentForm(
+            data={
+                "total_amount": "1100.01",
+                "payment_date": "2026-03-23T10:30",
+                "payment_method": "CASH",
+                "interest_amount": "100.00",
+            },
+            loan=loan,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("total_amount", form.errors)
+
+    def test_given_loan_repayment_form_rejects_interest_over_allocation(self):
+        loan = SimpleNamespace(
+            pk=None,
+            get_loan_amount=Decimal("1000.00"),
+            outstanding_interest=Decimal("100.00"),
+            get_total_principal_payments=lambda: Decimal("0.00"),
+            get_total_interest_payments=lambda: Decimal("0.00"),
+            get_total_payments=lambda: Decimal("0.00"),
+        )
+        form = GivenLoanRepaymentForm(
+            data={
+                "total_amount": "500.00",
+                "payment_date": "2026-03-23T10:30",
+                "payment_method": "CASH",
+                "interest_amount": "101.00",
+            },
+            loan=loan,
         )
 
         self.assertFalse(form.is_valid())
@@ -74,6 +119,36 @@ class PR1RepaymentViewTests(SimpleTestCase):
         self.factory = RequestFactory()
         self.user = SimpleNamespace(id=1, is_authenticated=True)
 
+    @patch("apps.tenant_apps.girvi.views.loanpayment.get_object_or_404")
+    def test_repayment_get_context_includes_settlement_preview(self, mock_get_object_or_404):
+        loan = SimpleNamespace(
+            pk=1,
+            loan_id="GL-001",
+            borrower="Asha",
+            get_loan_amount=Decimal("1000.00"),
+            outstanding_interest=Decimal("100.00"),
+            get_total_principal_payments=lambda: Decimal("200.00"),
+            get_total_interest_payments=lambda: Decimal("20.00"),
+            get_total_payments=lambda: Decimal("220.00"),
+        )
+        mock_get_object_or_404.return_value = loan
+
+        request = self.factory.get("/girvi/loanpayment/1/create/")
+        request.user = self.user
+        request.htmx = False
+
+        response = loan_payment_create_view.__wrapped__(request, pk=1)
+
+        self.assertEqual(response.context_data["settlement"].total_outstanding, Decimal("900.00"))
+        self.assertEqual(
+            response.context_data["repayment_preview"].suggested_interest_amount,
+            Decimal("100.00"),
+        )
+        self.assertEqual(
+            response.context_data["form"].initial["interest_amount"],
+            Decimal("100.00"),
+        )
+
     @patch("apps.tenant_apps.girvi.views.loanpayment.reverse", return_value="/girvi/loan/1/")
     @patch("apps.tenant_apps.girvi.views.loanpayment.messages.warning")
     @patch("apps.tenant_apps.girvi.views.loanpayment.messages.success")
@@ -93,9 +168,14 @@ class PR1RepaymentViewTests(SimpleTestCase):
         loan = MagicMock()
         loan.pk = 1
         loan.create_payment.return_value = payment
+        loan.get_loan_amount = Decimal("1000.00")
+        loan.outstanding_interest = Decimal("100.00")
+        loan.get_total_principal_payments.return_value = Decimal("0.00")
+        loan.get_total_interest_payments.return_value = Decimal("0.00")
         mock_get_object_or_404.return_value = loan
         mock_execute.return_value = SimpleNamespace(
             warnings=[],
+            errors=[],
             success_message="Payment RCP-123 recorded and posted to accounting.",
         )
 
@@ -141,9 +221,14 @@ class PR1RepaymentViewTests(SimpleTestCase):
         loan = MagicMock()
         loan.pk = 1
         loan.create_payment.return_value = payment
+        loan.get_loan_amount = Decimal("1000.00")
+        loan.outstanding_interest = Decimal("100.00")
+        loan.get_total_principal_payments.return_value = Decimal("0.00")
+        loan.get_total_interest_payments.return_value = Decimal("0.00")
         mock_get_object_or_404.return_value = loan
         mock_execute.return_value = SimpleNamespace(
             warnings=[],
+            errors=[],
             success_message="Payment RCP-124 recorded and posted to accounting.",
         )
 
@@ -193,9 +278,15 @@ class PR3TakenLoanRepaymentViewTests(SimpleTestCase):
         loan = MagicMock()
         loan.create_payment.return_value = payment
         loan.get_absolute_url.return_value = "/girvi/custody/taken-loans/2/collateral/"
+        loan.pk = 2
+        loan.get_loan_amount = Decimal("800.00")
+        loan.outstanding_interest = Decimal("80.00")
+        loan.get_total_principal_payments.return_value = Decimal("0.00")
+        loan.get_total_interest_payments.return_value = Decimal("0.00")
         mock_get_object_or_404.return_value = loan
         mock_execute.return_value = SimpleNamespace(
             warnings=[],
+            errors=[],
             success_message="Payment PAY-123 recorded and posted to accounting.",
         )
 
@@ -363,7 +454,7 @@ class PR2TransitionHookTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.user = SimpleNamespace(id=1, is_authenticated=True, username="tester")
-        self.tenant = SimpleNamespace()
+        self.tenant = SimpleNamespace(schema_name="tenant1", owner=self.user)
 
     def test_request_closure_form_renders_plain_cancel_link(self):
         loan = SimpleNamespace(
@@ -495,6 +586,7 @@ class CustodySummaryViewTests(SimpleTestCase):
 
         request = self.factory.get("/girvi/loans/1/custody/")
         request.user = self.user
+        request.tenant = SimpleNamespace(schema_name="tenant1", owner=self.user)
         request.htmx = True
 
         response = loan_custody_summary(request, loan_id=1)

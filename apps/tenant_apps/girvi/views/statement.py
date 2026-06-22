@@ -6,11 +6,13 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..models import GivenLoan, Statement, StatementItem
+from .access import girvi_workspace_required
 
 
 logger = logging.getLogger(__name__)
 
 
+@girvi_workspace_required
 def verification_session_list(request):
     sessions = Statement.objects.all()
     return render(
@@ -20,11 +22,13 @@ def verification_session_list(request):
     )
 
 
+@girvi_workspace_required
 def verification_session_create(request):
     v_session = Statement.objects.create(created_by=request.user)
     return redirect(v_session.get_absolute_url())
 
 
+@girvi_workspace_required
 def verification_session_toggle(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
     statement.toggle_complete(completed_by=request.user)
@@ -35,6 +39,7 @@ def verification_session_toggle(request, pk):
     return redirect(statement.get_absolute_url())
 
 
+@girvi_workspace_required
 def verification_session_detail(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
     # form = StatementItemForm(statement=statement)
@@ -75,6 +80,7 @@ def verification_session_detail(request, pk):
 #     return redirect(statement.get_absolute_url())
 
 
+@girvi_workspace_required
 def statement_delete(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
     statement.delete()
@@ -85,6 +91,7 @@ def statement_delete(request, pk):
 from django.template.loader import render_to_string
 
 
+@girvi_workspace_required
 def statement_item_add(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
     if request.method == "POST":
@@ -134,6 +141,7 @@ def statement_item_add(request, pk):
     return HttpResponse("")
 
 
+@girvi_workspace_required
 def statement_item_delete(request, pk):
     item = get_object_or_404(StatementItem, pk=pk)
     item.delete()

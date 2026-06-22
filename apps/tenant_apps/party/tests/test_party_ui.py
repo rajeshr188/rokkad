@@ -1,5 +1,6 @@
 import tempfile
 import uuid
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -11,6 +12,7 @@ from django_tenants.test.client import TenantClient
 
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.girvi.models import GivenLoan, License, LoanItem, Series, TakenLoan
 from apps.tenant_apps.party.models import (
     Party,
     PartyAddress,
@@ -224,6 +226,64 @@ class PartyUITests(TenantTestCase):
         self.assertContains(response, "No account mappings found.")
         self.assertContains(response, "Save Photo")
         self.assertContains(response, "Merge")
+
+    def test_party_detail_loans_tab_shows_active_closed_with_operational_metrics(self):
+        party = Party.objects.create(party_code="P1020", display_name="Loan Party")
+        customer = Customer.objects.create(firstname="Loan", lastname="Customer", party=party)
+
+        license_record = License.objects.create(
+            name="Loan Party License",
+            license_number=f"LPL-{uuid.uuid4().hex[:6]}",
+        )
+        given_series = Series.objects.create(
+            license=license_record,
+            name="Given Series",
+            prefix="LG",
+            loan_type=Series.LoanType.GIVEN,
+        )
+        taken_series = Series.objects.create(
+            license=license_record,
+            name="Taken Series",
+            prefix="LT",
+            loan_type=Series.LoanType.TAKEN,
+        )
+
+        active_given = GivenLoan.objects.create(
+            loan_id="LG0001",
+            series=given_series,
+            borrower=customer,
+            status="Draft",
+        )
+        LoanItem.objects.create(
+            loan=active_given,
+            itemtype="Gold",
+            quantity=1,
+            weight=Decimal("10.000"),
+            purity=Decimal("91.60"),
+            loanamount=Decimal("1000.00"),
+            interestrate=Decimal("2.00"),
+            itemdesc="Ring",
+        )
+        active_given.status = "ActiveCurrent"
+        active_given.save(update_fields=["status"])
+
+        TakenLoan.objects.create(
+            loan_id="LT0001",
+            series=taken_series,
+            lender=customer,
+            status="Closed",
+        )
+
+        response = self.client.get(reverse("party:party_detail", args=[party.pk]), {"tab": "loans"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Active Loans")
+        self.assertContains(response, "Closed Loans")
+        self.assertContains(response, "Payments")
+        self.assertContains(response, "Notices")
+        self.assertContains(response, "Collateral Summary")
+        self.assertContains(response, "LG0001")
+        self.assertContains(response, "LT0001")
 
     def test_party_role_add_and_end(self):
         party = Party.objects.create(party_code="P1004", display_name="Ravi")

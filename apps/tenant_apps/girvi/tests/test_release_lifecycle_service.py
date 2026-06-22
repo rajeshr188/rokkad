@@ -8,6 +8,7 @@ from apps.tenant_apps.girvi.services import (
     ReleaseCreateCommand,
     ReleaseLifecycleService,
 )
+from apps.tenant_apps.girvi.models.custody_tracking import ItemCustodyStatus
 
 
 class ReleaseLifecycleServiceTests(TestCase):
@@ -16,6 +17,18 @@ class ReleaseLifecycleServiceTests(TestCase):
 
     def _fake_loan(self):
         return SimpleNamespace(loan_id="L-001", status="Disbursed")
+
+    def _fake_release_model(self):
+        class FakeRelease:
+            def __init__(self, **kwargs):
+                self.__dict__.update(kwargs)
+                self.saved = False
+                self.release_id = "RL0001"
+
+            def save(self):
+                self.saved = True
+
+        return FakeRelease
 
     def test_preview_rejects_missing_actor(self):
         preview = ReleaseLifecycleService.preview(
@@ -164,4 +177,115 @@ class ReleaseLifecycleServiceTests(TestCase):
         flow.complete_closure.assert_called_once_with(
             completed_by=user,
             release_id="RLV2-1",
+        )
+
+    def test_execute_stops_before_closure_and_posting_when_item_release_fails(self):
+        item = MagicMock(itemdesc="Chain")
+        item.custody_status = ItemCustodyStatus.WITH_LENDER
+        item.release_to_customer.side_effect = ValidationError("still with lender")
+        loan = SimpleNamespace(
+            loan_id="L-001",
+            status="ActiveCurrent",
+            loanitems=SimpleNamespace(all=lambda: [item]),
+        )
+        user = self._fake_user()
+        flow = MagicMock()
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
+
+        with patch(
+            "apps.tenant_apps.girvi.services.apps.get_model",
+            return_value=self._fake_release_model(),
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow",
+            return_value=flow,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release"
+        ) as post_release:
+            result = ReleaseLifecycleService.execute(
+                ReleaseCreateCommand(
+                    loan=loan,
+                    created_by=user,
+                    release_date="2026-04-01",
+                    released_by=None,
+                )
+            )
+
+        self.assertFalse(result.success)
+        self.assertIn("collateral custody update failed", result.message)
+        self.assertIn("Chain", result.message)
+        item.release_to_customer.assert_called_once_with(user=user)
+        flow.request_closure.assert_not_called()
+        flow.complete_closure.assert_not_called()
+        post_release.assert_not_called()
+
+    def test_execute_rejects_duplicate_release_before_side_effects(self):
+        loan = SimpleNamespace(
+            loan_id="L-001",
+            status="Closed",
+            release=SimpleNamespace(release_id="RL0001"),
+        )
+        user = self._fake_user()
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow"
+        ) as flow_builder, patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release"
+        ) as post_release:
+            result = ReleaseLifecycleService.execute(
+                ReleaseCreateCommand(
+                    loan=loan,
+                    created_by=user,
+                    release_date="2026-04-01",
+                    released_by=None,
+                )
+            )
+
+        self.assertFalse(result.success)
+        self.assertIn("already has a release", result.message)
+        flow_builder.assert_not_called()
+        post_release.assert_not_called()
+
+    def test_execute_allows_item_already_with_customer_as_idempotent(self):
+        item = MagicMock(itemdesc="Ring")
+        item.custody_status = ItemCustodyStatus.WITH_CUSTOMER
+        item.release_to_customer.side_effect = ValidationError(
+            "already released to customer"
+        )
+        loan = SimpleNamespace(
+            loan_id="L-001",
+            status="ActiveCurrent",
+            loanitems=SimpleNamespace(all=lambda: [item]),
+        )
+        user = self._fake_user()
+        flow = MagicMock()
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
+        fake_payment = SimpleNamespace(payment_id="PAY-1")
+
+        with patch(
+            "apps.tenant_apps.girvi.services.apps.get_model",
+            return_value=self._fake_release_model(),
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow",
+            return_value=flow,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release",
+            return_value=(fake_payment, True),
+        ):
+            result = ReleaseLifecycleService.execute(
+                ReleaseCreateCommand(
+                    loan=loan,
+                    created_by=user,
+                    release_date="2026-04-01",
+                    released_by=None,
+                )
+            )
+
+        self.assertTrue(result.success)
+        item.release_to_customer.assert_called_once_with(user=user)
+        flow.request_closure.assert_called_once_with(requested_by=user)
+        flow.complete_closure.assert_called_once_with(
+            completed_by=user,
+            release_id="RL0001",
         )

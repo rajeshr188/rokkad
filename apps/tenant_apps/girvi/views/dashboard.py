@@ -1,5 +1,4 @@
 """Girvi Dashboard and Navigation Views"""
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from ..models import (
@@ -7,10 +6,14 @@ from ..models import (
     StatementItem
 )
 from apps.tenant_apps.notify.models import Notification
-from apps.tenant_apps.girvi.selectors import get_dashboard_payment_counts
+from apps.tenant_apps.girvi.selectors import (
+    build_dashboard_operational_queue,
+    get_dashboard_payment_counts,
+)
+from .access import girvi_workspace_required
 
 
-@login_required
+@girvi_workspace_required
 def girvi_dashboard(request):
     """
     Girvi Dashboard: Central hub showing all available operations,
@@ -41,6 +44,10 @@ def girvi_dashboard(request):
     total_boxes = LoanItemStorageBox.objects.count()
     
     payment_counts = get_dashboard_payment_counts()
+    operational_queue = build_dashboard_operational_queue(
+        user=request.user,
+        workspace=getattr(request, "tenant", None),
+    )
     
     # Statement counts
     total_statements = StatementItem.objects.count()
@@ -84,6 +91,8 @@ def girvi_dashboard(request):
         # Notification section
         'total_notifications': total_notifications,
         'pending_notifications': pending_notifications,
+        'operational_queue': operational_queue,
+        'queue_counts': operational_queue["counts"],
     }
     
     return render(request, 'girvi/dashboard.html', context)

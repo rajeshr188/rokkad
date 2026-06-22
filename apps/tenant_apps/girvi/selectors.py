@@ -22,6 +22,7 @@ Layer boundary:
 """
 
 from collections import Counter
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import logging
 
@@ -42,13 +43,47 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce, ExtractYear, TruncDate
 from django.urls import reverse
+from django.utils import timezone
 
 from .lifecycle import RELEASED_COMPAT_STATUSES, UNRELEASED_EXCLUDED_STATUSES
 from .lifecycle import lifecycle_status_badge_class, lifecycle_status_label
+from .lifecycle import (
+    CANONICAL_ACTIVE_CURRENT,
+    CANONICAL_ACTIVE_NPA,
+    CANONICAL_ACTIVE_OVERDUE,
+    CANONICAL_CLOSURE_PENDING,
+    CANONICAL_DRAFT,
+    CANONICAL_PENDING_APPROVAL,
+    CANONICAL_APPROVED,
+    CANONICAL_REJECTED,
+    CANONICAL_CANCELLED,
+    canonical_status,
+)
 from .models import GivenLoan, TakenLoan
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class LoanSettlementBalance:
+    principal_due: Decimal
+    interest_due: Decimal
+    principal_paid: Decimal
+    interest_paid: Decimal
+    total_paid: Decimal
+    total_due: Decimal
+    total_outstanding: Decimal
+    overpayment: Decimal
+
+
+@dataclass(frozen=True)
+class RepaymentPreview:
+    settlement: LoanSettlementBalance
+    suggested_total_amount: Decimal
+    suggested_interest_amount: Decimal
+    suggested_principal_amount: Decimal
+    is_settled: bool
 
 
 # ---------------------------------------------------------------------------
@@ -379,6 +414,431 @@ def get_dashboard_payment_counts():
     return get_payment_voucher_counts()
 
 
+def _queue_transition_url(loan, transition_name):
+    return f"{reverse('girvi:girvi_loan_transition', args=[loan.pk])}?transition={transition_name}"
+
+
+def _build_operational_queue_entry(loan, *, settlement, policy, draft_notice_exists):
+    return {
+        "loan": loan,
+        "loan_id": getattr(loan, "loan_id", ""),
+        "borrower_name": getattr(getattr(loan, "borrower", None), "name", ""),
+        "status": getattr(loan, "status", ""),
+        "status_label": lifecycle_status_label(getattr(loan, "status", "")),
+        "status_badge_class": lifecycle_status_badge_class(getattr(loan, "status", "")),
+        "maturity_date": policy.maturity_date,
+        "total_outstanding": settlement.total_outstanding,
+        "settlement_amount": policy.settlement_amount,
+        "current_value": policy.current_value,
+        "undersecured": policy.undersecured,
+        "has_draft_notice": draft_notice_exists,
+        "detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
+    }
+
+
+def build_dashboard_operational_queue(
+    *,
+    user=None,
+    workspace=None,
+    as_of_date=None,
+    limit=10,
+    loans=None,
+):
+    """Build the dashboard queue for due/overdue/NPA/cure/notice workflows."""
+    from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
+    from apps.tenant_apps.girvi.service_modules.overdue_policy import evaluate_overdue_policy
+    from apps.tenant_apps.notify.models import Notification
+
+    if loans is None:
+        loans = (
+            GivenLoan.objects.filter(
+                status__in=(
+                    CANONICAL_ACTIVE_CURRENT,
+                    CANONICAL_ACTIVE_OVERDUE,
+                    CANONICAL_ACTIVE_NPA,
+                    CANONICAL_CLOSURE_PENDING,
+                )
+            )
+            .select_related("borrower")
+            .order_by("loan_date")[: max(limit * 8, 40)]
+        )
+
+    today = as_of_date or timezone.localdate()
+    due_today = []
+    overdue_candidates = []
+    npa_candidates = []
+    cure_candidates = []
+    notice_candidates = []
+
+    for loan in loans:
+        try:
+            settlement = build_loan_settlement_balance(loan)
+            policy = evaluate_overdue_policy(loan, as_of_date=today)
+            flow = build_runtime_loan_flow(loan, user, workspace)
+        except Exception:
+            continue
+
+        notifications = getattr(loan, "notifications", None)
+        draft_notice_exists = False
+        if notifications is not None:
+            try:
+                draft_notice_exists = notifications.filter(
+                    status=Notification.StatusType.Draft
+                ).exists()
+            except Exception:
+                draft_notice_exists = False
+
+        entry = _build_operational_queue_entry(
+            loan,
+            settlement=settlement,
+            policy=policy,
+            draft_notice_exists=draft_notice_exists,
+        )
+
+        mark_overdue = getattr(flow, "mark_overdue", None)
+        mark_npa = getattr(flow, "mark_npa", None)
+        cure_to_current = getattr(flow, "cure_to_current", None)
+
+        if (
+            getattr(loan, "status", None) == CANONICAL_ACTIVE_CURRENT
+            and policy.maturity_date == today
+            and settlement.total_outstanding > Decimal("0.00")
+        ):
+            due_today.append(entry)
+
+        if mark_overdue and mark_overdue.can_proceed() and policy.is_overdue:
+            overdue_entry = dict(entry)
+            overdue_entry["action_url"] = _queue_transition_url(loan, "mark_overdue")
+            overdue_entry["action_label"] = "Mark Overdue"
+            overdue_candidates.append(overdue_entry)
+
+        if mark_npa and mark_npa.can_proceed() and policy.is_npa:
+            npa_entry = dict(entry)
+            npa_entry["action_url"] = _queue_transition_url(loan, "mark_npa")
+            npa_entry["action_label"] = "Mark NPA"
+            npa_candidates.append(npa_entry)
+
+        if cure_to_current and cure_to_current.can_proceed():
+            cure_entry = dict(entry)
+            cure_entry["action_url"] = _queue_transition_url(loan, "cure_to_current")
+            cure_entry["action_label"] = "Cure to Current"
+            cure_candidates.append(cure_entry)
+
+        if (
+            getattr(loan, "status", None)
+            in (CANONICAL_ACTIVE_OVERDUE, CANONICAL_ACTIVE_NPA)
+            and not draft_notice_exists
+        ):
+            notice_entry = dict(entry)
+            notice_entry["action_url"] = reverse("girvi:girvi_loan_notice", args=[loan.pk])
+            notice_entry["action_label"] = "Create Notice"
+            notice_candidates.append(notice_entry)
+
+    return {
+        "due_today": due_today[:limit],
+        "overdue_candidates": overdue_candidates[:limit],
+        "npa_candidates": npa_candidates[:limit],
+        "cure_candidates": cure_candidates[:limit],
+        "notice_candidates": notice_candidates[:limit],
+        "counts": {
+            "due_today": len(due_today),
+            "overdue_candidates": len(overdue_candidates),
+            "npa_candidates": len(npa_candidates),
+            "cure_candidates": len(cure_candidates),
+            "notice_candidates": len(notice_candidates),
+        },
+    }
+
+
+def _should_have_disbursal_voucher(loan):
+    status = canonical_status(getattr(loan, "status", ""))
+    return status not in {
+        CANONICAL_DRAFT,
+        CANONICAL_PENDING_APPROVAL,
+        CANONICAL_APPROVED,
+        CANONICAL_REJECTED,
+        CANONICAL_CANCELLED,
+    }
+
+
+def _is_release_payment(payment):
+    if getattr(payment, "create_release", False):
+        return True
+    marker = str(getattr(payment, "reference_number", "") or "")
+    return marker.startswith("RELEASE-")
+
+
+def build_loan_accounting_reconciliation_report(*, limit=200, loans=None):
+    """Return loans with accounting mismatches for operational reconciliation."""
+    if loans is None:
+        loans = (
+            GivenLoan.objects.select_related("borrower")
+            .prefetch_related("payments")
+            .order_by("-loan_date")[: max(limit * 4, 200)]
+        )
+
+    issue_rows = []
+    issue_counts = Counter()
+
+    for loan in loans:
+        payments = list(getattr(loan, "payments", []).all()) if hasattr(getattr(loan, "payments", None), "all") else list(getattr(loan, "payments", []) or [])
+
+        posted_disbursal = any(
+            getattr(payment, "posted", False)
+            and getattr(payment, "payment_type", "") == "DISBURSAL"
+            and getattr(payment, "direction", "") == "PAYMENT"
+            and getattr(payment, "reversal_of_id", None) is None
+            for payment in payments
+        )
+        unposted_payments = [payment for payment in payments if not getattr(payment, "posted", False)]
+        posted_release_receipt = any(
+            getattr(payment, "posted", False)
+            and getattr(payment, "direction", "") == "RECEIPT"
+            and _is_release_payment(payment)
+            and getattr(payment, "reversal_of_id", None) is None
+            for payment in payments
+        )
+
+        has_release = False
+        try:
+            has_release = bool(getattr(loan, "release", None))
+        except Exception:
+            has_release = False
+
+        base_payload = {
+            "loan": loan,
+            "loan_id": getattr(loan, "loan_id", ""),
+            "borrower_name": getattr(getattr(loan, "borrower", None), "name", ""),
+            "status": getattr(loan, "status", ""),
+            "status_label": lifecycle_status_label(getattr(loan, "status", "")),
+            "status_badge_class": lifecycle_status_badge_class(getattr(loan, "status", "")),
+            "loan_detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
+        }
+
+        if _should_have_disbursal_voucher(loan) and not posted_disbursal:
+            issue_counts["missing_disbursal_voucher"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "missing_disbursal_voucher",
+                    "issue_label": "Missing disbursal voucher",
+                    "severity": "high",
+                    "details": "Loan moved beyond approval but no posted disbursal voucher exists.",
+                }
+            )
+
+        for payment in unposted_payments:
+            issue_counts["failed_payment_posting"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "failed_payment_posting",
+                    "issue_label": "Failed payment posting",
+                    "severity": "high",
+                    "details": f"Unposted payment voucher {getattr(payment, 'payment_id', payment.pk)}.",
+                }
+            )
+
+        if has_release and not posted_release_receipt:
+            issue_counts["release_without_voucher"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "release_without_voucher",
+                    "issue_label": "Release without voucher",
+                    "severity": "high",
+                    "details": "Release document exists but posted release receipt voucher is missing.",
+                }
+            )
+
+        if posted_disbursal and not _should_have_disbursal_voucher(loan):
+            issue_counts["posted_voucher_state_mismatch"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "posted_voucher_state_mismatch",
+                    "issue_label": "Posted voucher state mismatch",
+                    "severity": "medium",
+                    "details": "Posted disbursal voucher exists while loan is in a pre-disbursal status.",
+                }
+            )
+
+        if posted_release_receipt and not has_release:
+            issue_counts["posted_voucher_state_mismatch"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "posted_voucher_state_mismatch",
+                    "issue_label": "Posted voucher state mismatch",
+                    "severity": "medium",
+                    "details": "Posted release receipt exists but no release document is linked to this loan.",
+                }
+            )
+
+    return {
+        "rows": issue_rows[:limit],
+        "counts": {
+            "missing_disbursal_voucher": issue_counts["missing_disbursal_voucher"],
+            "failed_payment_posting": issue_counts["failed_payment_posting"],
+            "release_without_voucher": issue_counts["release_without_voucher"],
+            "posted_voucher_state_mismatch": issue_counts["posted_voucher_state_mismatch"],
+        },
+        "total_issues": sum(issue_counts.values()),
+        "generated_at": timezone.now(),
+        "scanned_loans": len(loans),
+    }
+
+
+def _aging_bucket_label(days_overdue):
+    if days_overdue <= 0:
+        return "current"
+    if days_overdue <= 30:
+        return "1-30"
+    if days_overdue <= 60:
+        return "31-60"
+    if days_overdue <= 90:
+        return "61-90"
+    return "90+"
+
+
+def build_operational_controls_report(*, limit=200, loans=None, as_of_date=None):
+    """Return essential operational control reports for MVP monitoring."""
+    from apps.tenant_apps.girvi.models.custody_tracking import ItemCustodyStatus
+    from apps.tenant_apps.girvi.service_modules.overdue_policy import evaluate_overdue_policy
+    from apps.tenant_apps.girvi.services import RateCacheService
+
+    if loans is None:
+        loans = (
+            GivenLoan.objects.select_related("borrower")
+            .prefetch_related("loanitems")
+            .order_by("-loan_date")[: max(limit * 3, 300)]
+        )
+
+    aging_rows = []
+    custody_rows = []
+    release_ready_rows = []
+    rate_exception_rows = []
+    aging_buckets = Counter()
+    today = as_of_date or timezone.localdate()
+
+    for loan in loans:
+        try:
+            settlement = build_loan_settlement_balance(loan)
+        except Exception:
+            continue
+
+        try:
+            policy = evaluate_overdue_policy(loan, as_of_date=today)
+            maturity_date = policy.maturity_date
+        except Exception:
+            maturity_date = None
+
+        days_overdue = 0
+        if maturity_date and settlement.total_outstanding > Decimal("0.00"):
+            days_overdue = max((today - maturity_date).days, 0)
+        aging_bucket = _aging_bucket_label(days_overdue)
+        aging_buckets[aging_bucket] += 1
+        aging_rows.append(
+            {
+                "loan": loan,
+                "loan_id": getattr(loan, "loan_id", ""),
+                "borrower_name": getattr(getattr(loan, "borrower", None), "name", ""),
+                "maturity_date": maturity_date,
+                "days_overdue": days_overdue,
+                "bucket": aging_bucket,
+                "outstanding": settlement.total_outstanding,
+                "detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
+            }
+        )
+
+        items_relation = getattr(loan, "loanitems", None)
+        if items_relation is not None:
+            in_vault = items_relation.filter(custody_status=ItemCustodyStatus.IN_VAULT).count()
+            with_lender = items_relation.filter(custody_status=ItemCustodyStatus.WITH_LENDER).count()
+            with_customer = items_relation.filter(custody_status=ItemCustodyStatus.WITH_CUSTOMER).count()
+            total_items = in_vault + with_lender + with_customer
+            custody_rows.append(
+                {
+                    "loan": loan,
+                    "loan_id": getattr(loan, "loan_id", ""),
+                    "borrower_name": getattr(getattr(loan, "borrower", None), "name", ""),
+                    "in_vault": in_vault,
+                    "with_lender": with_lender,
+                    "with_customer": with_customer,
+                    "total_items": total_items,
+                    "detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
+                }
+            )
+
+            can_release = (
+                settlement.total_outstanding <= Decimal("0.00")
+                and with_lender == 0
+                and not getattr(loan, "is_released", False)
+            )
+            release_ready_rows.append(
+                {
+                    "loan": loan,
+                    "loan_id": getattr(loan, "loan_id", ""),
+                    "borrower_name": getattr(getattr(loan, "borrower", None), "name", ""),
+                    "outstanding": settlement.total_outstanding,
+                    "with_lender": with_lender,
+                    "can_release": can_release,
+                    "detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
+                }
+            )
+
+            for item in items_relation.all():
+                market_rate = RateCacheService.get_rate_or_none(getattr(item, "itemtype", ""))
+                interest_rate = _as_decimal(getattr(item, "interestrate", Decimal("0.00")))
+                if market_rate is None or interest_rate <= Decimal("0.00"):
+                    rate_exception_rows.append(
+                        {
+                            "loan": loan,
+                            "loan_id": getattr(loan, "loan_id", ""),
+                            "item_id": getattr(item, "pk", None),
+                            "item_type": getattr(item, "itemtype", ""),
+                            "item_desc": getattr(item, "itemdesc", ""),
+                            "configured_interest_rate": interest_rate,
+                            "market_rate": market_rate,
+                            "issue": "missing_market_rate" if market_rate is None else "invalid_interest_rate",
+                            "detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
+                        }
+                    )
+
+    aging_rows.sort(key=lambda row: row["days_overdue"], reverse=True)
+    custody_rows.sort(key=lambda row: row["with_lender"], reverse=True)
+    release_ready_rows.sort(
+        key=lambda row: (row["can_release"], -_as_decimal(row["outstanding"])),
+        reverse=True,
+    )
+
+    return {
+        "aging": {
+            "rows": aging_rows[:limit],
+            "bucket_counts": {
+                "current": aging_buckets["current"],
+                "b1_30": aging_buckets["1-30"],
+                "b31_60": aging_buckets["31-60"],
+                "b61_90": aging_buckets["61-90"],
+                "b90_plus": aging_buckets["90+"],
+            },
+        },
+        "custody": {
+            "rows": custody_rows[:limit],
+        },
+        "release_ready": {
+            "rows": release_ready_rows[:limit],
+            "ready_count": sum(1 for row in release_ready_rows if row["can_release"]),
+        },
+        "rate_exceptions": {
+            "rows": rate_exception_rows[:limit],
+            "total": len(rate_exception_rows),
+        },
+        "generated_at": timezone.now(),
+        "scanned_loans": len(loans),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Loan detail (cross-domain read model)
 # ---------------------------------------------------------------------------
@@ -427,6 +887,130 @@ def _as_decimal(value, default=Decimal("0.00")):
         return default
 
 
+def _decimal_round(value):
+    return _as_decimal(value).quantize(Decimal("0.01"))
+
+
+def _sum_payment_component(loan, *, direction, field_name):
+    payments_relation = getattr(loan, "payments", None)
+    if payments_relation is None or not getattr(loan, "pk", None):
+        return Decimal("0.00")
+
+    try:
+        queryset = payments_relation.filter(direction=direction)
+        total = queryset.aggregate(total=Sum(field_name))["total"]
+        return _decimal_round(total)
+    except Exception:
+        return Decimal("0.00")
+
+
+def build_loan_settlement_balance(loan, *, loan_kind="given", as_of_date=None):
+    """
+    Return one canonical money split for repayment, release, closure, and UI reads.
+
+    The calculation prefers voucher component fields because total receipts can
+    include both principal and interest. Legacy helper methods remain as a
+    fallback for old rows and lightweight tests.
+    """
+    loan_amount_attr = getattr(loan, "get_loan_amount", None)
+    has_loan_amount = loan_amount_attr is not None
+    explicit_attrs = vars(loan) if hasattr(loan, "__dict__") else {}
+    outstanding_interest = explicit_attrs.get("outstanding_interest")
+    if outstanding_interest is not None:
+        interest_due = _decimal_round(outstanding_interest)
+    else:
+        interest_due_getter = getattr(loan, "interest_outstanding", None)
+        if callable(interest_due_getter):
+            interest_due = _decimal_round(interest_due_getter(as_of_date))
+        else:
+            outstanding_interest = getattr(loan, "outstanding_interest", None)
+            if outstanding_interest is not None:
+                interest_due = _decimal_round(outstanding_interest)
+            else:
+                interest_due_attr = getattr(loan, "interest_due", None)
+                if callable(interest_due_attr):
+                    interest_due = _decimal_round(interest_due_attr(as_of_date))
+                else:
+                    interest_due = _decimal_round(interest_due_attr)
+
+    payment_direction = "PAYMENT" if loan_kind == "taken" else "RECEIPT"
+    principal_paid = _sum_payment_component(
+        loan, direction=payment_direction, field_name="principal_amount"
+    )
+    interest_paid = _sum_payment_component(
+        loan, direction=payment_direction, field_name="interest_amount"
+    )
+    total_paid = _sum_payment_component(
+        loan, direction=payment_direction, field_name="amount_in_base_currency"
+    )
+
+    if principal_paid == Decimal("0.00"):
+        principal_getter = getattr(loan, "get_total_principal_payments", None)
+        if callable(principal_getter):
+            principal_paid = _decimal_round(principal_getter())
+    if interest_paid == Decimal("0.00"):
+        interest_getter = getattr(loan, "get_total_interest_payments", None)
+        if callable(interest_getter):
+            interest_paid = _decimal_round(interest_getter())
+    if total_paid == Decimal("0.00"):
+        total_getter = getattr(loan, "get_total_payments", None)
+        if callable(total_getter):
+            total_paid = _decimal_round(total_getter())
+        else:
+            total_attr = getattr(loan, "total_paid", None)
+            total_paid = _decimal_round(total_attr)
+
+    total_due_attr = getattr(loan, "total_due", None)
+    if callable(total_due_attr):
+        total_due_attr = total_due_attr()
+    legacy_total_due = _decimal_round(total_due_attr)
+
+    principal_base = _decimal_round(loan_amount_attr) if has_loan_amount else Decimal("0.00")
+    if not has_loan_amount and legacy_total_due > 0:
+        principal_base = max(legacy_total_due - interest_due, Decimal("0.00"))
+
+    principal_outstanding = max(principal_base - principal_paid, Decimal("0.00"))
+    total_due = principal_base + interest_due
+    if not has_loan_amount and legacy_total_due > 0:
+        total_due = legacy_total_due
+    component_outstanding = principal_outstanding + interest_due
+    total_outstanding = max(total_due - total_paid, Decimal("0.00"))
+    if principal_paid or interest_paid:
+        total_outstanding = max(component_outstanding, Decimal("0.00"))
+    overpayment = max(total_paid - total_due, Decimal("0.00"))
+
+    return LoanSettlementBalance(
+        principal_due=principal_outstanding,
+        interest_due=interest_due,
+        principal_paid=principal_paid,
+        interest_paid=interest_paid,
+        total_paid=total_paid,
+        total_due=total_due,
+        total_outstanding=total_outstanding,
+        overpayment=overpayment,
+    )
+
+
+def build_repayment_preview(loan, *, loan_kind="given", as_of_date=None):
+    settlement = build_loan_settlement_balance(
+        loan,
+        loan_kind=loan_kind,
+        as_of_date=as_of_date,
+    )
+    suggested_interest = min(settlement.interest_due, settlement.total_outstanding)
+    suggested_principal = max(
+        settlement.total_outstanding - suggested_interest,
+        Decimal("0.00"),
+    )
+    return RepaymentPreview(
+        settlement=settlement,
+        suggested_total_amount=settlement.total_outstanding,
+        suggested_interest_amount=suggested_interest,
+        suggested_principal_amount=suggested_principal,
+        is_settled=settlement.total_outstanding <= Decimal("0.00"),
+    )
+
+
 def _is_positive(value):
     return _as_decimal(value) > 0
 
@@ -468,17 +1052,8 @@ def build_given_loan_release_action(loan):
     if status not in allowed_statuses:
         return None
 
-    outstanding_amount = getattr(loan, "outstanding_amount", None)
-    if outstanding_amount is None:
-        total_due = getattr(loan, "total_due", None)
-        total_payments_getter = getattr(loan, "get_total_payments", None)
-        if total_due is not None and callable(total_payments_getter):
-            try:
-                outstanding_amount = total_due - total_payments_getter()
-            except Exception:
-                outstanding_amount = total_due
-
-    outstanding_amount = _non_negative_amount(outstanding_amount)
+    settlement = build_loan_settlement_balance(loan)
+    outstanding_amount = _non_negative_amount(settlement.total_outstanding)
     closure_exception = bool(getattr(loan, "closure_exception_approved", False))
     needs_settlement = (
         outstanding_amount is not None
@@ -530,7 +1105,8 @@ def build_given_loan_detail_display(loan):
     if value_decimal > 0 and loan_amount_decimal is not None:
         lvratio = round(float(loan_amount_decimal) / float(value_decimal) * 100, 2)
 
-    due = getattr(loan, "total_due", Decimal("0.00"))
+    settlement = build_loan_settlement_balance(loan)
+    due = settlement.total_due
     due_decimal = _as_decimal(due)
     dvratio = 0
     if due_decimal > 0 and value_decimal > 0:
@@ -579,6 +1155,7 @@ def build_given_loan_detail_read_model(loan):
     statement_items = loan.statementitem_set.select_related("statement").all()
     notifications = loan.notifications.all()
     display = build_given_loan_detail_display(loan)
+    settlement = build_loan_settlement_balance(loan)
 
     return {
         "loan": loan,
@@ -599,9 +1176,11 @@ def build_given_loan_detail_read_model(loan):
             "is_overdue": loan.is_overdue,
             "payment_count": payments.count(),
             "journal_entry_count": journal_entries.count(),
-            "interest_due": loan.interest_due(),
-            "total_due": loan.total_due,
-            "outstanding_principal": getattr(loan, "outstanding_principal", None),
+            "interest_due": settlement.interest_due,
+            "total_due": settlement.total_due,
+            "outstanding_principal": settlement.principal_due,
+            "total_outstanding": settlement.total_outstanding,
+            "overpayment": settlement.overpayment,
             "gross_accrued_interest": getattr(loan, "gross_accrued_interest", Decimal("0.00")),
             "interest_paid_total": loan.interest_paid_total()
             if hasattr(loan, "interest_paid_total")

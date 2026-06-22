@@ -17,6 +17,7 @@ from apps.orgs.models import Membership
 from ..forms import LoanTemplateForm, TemplateFrameForm
 from ..models import GivenLoan, LoanTemplate, TemplateFrame
 from ..service_modules.printing import LoanPrintService
+from .access import GirviWorkspaceRequiredMixin, girvi_workspace_required
 
 
 def _require_template_admin(request):
@@ -270,7 +271,7 @@ def _starter_frame_blueprint(template_obj):
     ]
 
 
-class TemplateWorkspaceAdminMixin(LoginRequiredMixin):
+class TemplateWorkspaceAdminMixin(GirviWorkspaceRequiredMixin, LoginRequiredMixin):
     workspace = None
 
     def dispatch(self, request, *args, **kwargs):
@@ -351,7 +352,7 @@ class LoanTemplatePreviewView(TemplateWorkspaceAdminMixin, DetailView):
         return context
 
 
-@login_required
+@girvi_workspace_required
 def template_preview_pdf(request, pk):
     workspace = _require_template_admin(request)
     if workspace is None:
@@ -391,7 +392,7 @@ def template_preview_pdf(request, pk):
     return response
 
 
-@login_required
+@girvi_workspace_required
 def template_test_print(request, pk):
     workspace = _require_template_admin(request)
     if workspace is None:
@@ -431,7 +432,7 @@ def template_test_print(request, pk):
     return response
 
 
-@login_required
+@girvi_workspace_required
 def download_template_pack(request):
     workspace = _require_template_admin(request)
     if workspace is None:
@@ -457,7 +458,7 @@ def download_template_pack(request):
         raise Http404(f"Error downloading template pack: {str(exc)}")
 
 
-@login_required
+@girvi_workspace_required
 @require_POST
 def template_set_default(request, pk):
     workspace = _require_template_admin(request)
@@ -484,7 +485,7 @@ def template_set_default(request, pk):
     return redirect(template_obj)
 
 
-@login_required
+@girvi_workspace_required
 @require_POST
 def template_toggle_active(request, pk):
     workspace = _require_template_admin(request)
@@ -502,7 +503,7 @@ def template_toggle_active(request, pk):
     return redirect(template_obj)
 
 
-@login_required
+@girvi_workspace_required
 @require_POST
 def template_clone(request, pk):
     workspace = _require_template_admin(request)
@@ -550,7 +551,7 @@ def template_clone(request, pk):
     return redirect(cloned_template)
 
 
-@login_required
+@girvi_workspace_required
 def template_frame_create(request, template_pk):
     workspace = _require_template_admin(request)
     if workspace is None:
@@ -580,7 +581,7 @@ def template_frame_create(request, template_pk):
     )
 
 
-@login_required
+@girvi_workspace_required
 def template_frame_update(request, template_pk, pk):
     workspace = _require_template_admin(request)
     if workspace is None:
@@ -611,7 +612,7 @@ def template_frame_update(request, template_pk, pk):
     )
 
 
-@login_required
+@girvi_workspace_required
 @require_POST
 def template_frame_delete(request, template_pk, pk):
     workspace = _require_template_admin(request)
@@ -626,7 +627,7 @@ def template_frame_delete(request, template_pk, pk):
     return redirect(template_obj)
 
 
-@login_required
+@girvi_workspace_required
 @require_POST
 def template_create_starter_frames(request, pk):
     workspace = _require_template_admin(request)

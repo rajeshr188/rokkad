@@ -1,18 +1,35 @@
 from dateutil.relativedelta import relativedelta
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.tenant_apps.notify.models import Notification
 from apps.tenant_apps.notify.services import (
     DEFAULT_LOAN_REMINDER_CODE,
-    create_loan_reminder_notification,
 )
+from apps.tenant_apps.notify_v2.models import NotificationJob
+from apps.tenant_apps.notify_v2.services import create_girvi_reminder_batch
 
 from ..models import Customer, GivenLoan
+from .access import girvi_permission_required, girvi_workspace_required
 
 
-@login_required
+_NOTIFY_V2_EVENT_MAP = {
+    "LOAN_FIRST_REMINDER": "loan.first_reminder_due",
+    "LOAN_SECOND_REMINDER": "loan.second_reminder_due",
+    "LOAN_FINAL_NOTICE": "loan.final_notice_due",
+    "LOAN_AUCTION_NOTICE": "loan.auction_notice_due",
+}
+
+_NOTIFY_V2_CHANNEL_MAP = {
+    Notification.MediumType.Email: NotificationJob.Channel.EMAIL,
+    Notification.MediumType.Letter: NotificationJob.Channel.LETTER,
+    Notification.MediumType.Post: NotificationJob.Channel.POST,
+    Notification.MediumType.SMS: NotificationJob.Channel.SMS,
+    Notification.MediumType.Whatsapp: NotificationJob.Channel.WHATSAPP,
+}
+
+
+@girvi_permission_required("girvi_report_view")
 def create_loan_notification(request, pk=None):
     loan = get_object_or_404(GivenLoan.objects.select_related("borrower"), pk=pk)
     notice_code = request.GET.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
@@ -20,17 +37,20 @@ def create_loan_notification(request, pk=None):
         "medium_type",
         Notification.MediumType.Letter,
     )
+    event_key = _NOTIFY_V2_EVENT_MAP.get(notice_code, "loan.first_reminder_due")
+    channel = _NOTIFY_V2_CHANNEL_MAP.get(medium_type, NotificationJob.Channel.LETTER)
 
-    notification = create_loan_reminder_notification(
-        customer=loan.borrower,
+    batch_result = create_girvi_reminder_batch(
         loans=[loan],
-        notice_code=notice_code,
-        medium_type=medium_type,
+        created_by=request.user,
+        event_key=event_key,
+        channel=channel,
+        notes="Created from single-loan notice entrypoint.",
     )
-    return redirect(notification.get_absolute_url())
+    return redirect(batch_result.batch.get_absolute_url())
 
 
-@login_required
+@girvi_workspace_required
 def notice(request):
     qyr = request.GET.get("qyr", 0)
 

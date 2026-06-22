@@ -24,13 +24,14 @@ from apps.tenant_apps.girvi.models.custody_tracking import (
 )
 from apps.tenant_apps.girvi.service_modules.custody import (
     build_loan_custody_summary,
-    build_release_custody_check,
+    build_release_readiness_checklist,
     build_repledge_selection_context,
     build_taken_loan_collateral_context,
     create_repledge_from_items,
     release_loan_with_custody_return,
     return_all_items_from_taken_loan,
 )
+from apps.tenant_apps.girvi.views.access import girvi_workspace_required
 
 
 # ============================================================================
@@ -38,7 +39,7 @@ from apps.tenant_apps.girvi.service_modules.custody import (
 # ============================================================================
 
 
-@login_required
+@girvi_workspace_required
 def item_custody_status(request, item_id):
     """
     Show custody status and history for a single item.
@@ -61,7 +62,7 @@ def item_custody_status(request, item_id):
     return render(request, "girvi/item_custody_status.html", context)
 
 
-@login_required
+@girvi_workspace_required
 def loan_custody_summary(request, loan_id):
     """
     Show custody summary for all items in a GivenLoan.
@@ -83,7 +84,7 @@ def loan_custody_summary(request, loan_id):
 # ============================================================================
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["POST"])
 def return_item_from_lender(request, item_id):
     """
@@ -106,7 +107,7 @@ def return_item_from_lender(request, item_id):
     return redirect("girvi:girvi_loanitem_detail", pk=item_id)
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["POST"])
 def return_all_items_from_lender(request, loan_id, taken_loan_id):
     """
@@ -142,7 +143,7 @@ def return_all_items_from_lender(request, loan_id, taken_loan_id):
 # ============================================================================
 
 
-@login_required
+@girvi_workspace_required
 def release_loan_check_custody(request, loan_id):
     """
     Pre-release check: Show custody status and confirm auto-return if needed.
@@ -155,15 +156,14 @@ def release_loan_check_custody(request, loan_id):
         messages.info(request, "Loan already released")
         return redirect("girvi:girvi_loan_detail", pk=loan_id)
 
-    context = build_release_custody_check(loan)
-    if context["needs_return"]:
-        return render(request, "girvi/release_custody_check.html", context)
+    context = build_release_readiness_checklist(loan)
+    if context["can_release"]:
+        return redirect("girvi:girvi_release_create", pk=loan_id)
 
-    # All items in vault - proceed to normal release
-    return redirect("girvi:girvi_release_create", pk=loan_id)
+    return render(request, "girvi/release/release_custody_check.html", context)
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["POST"])
 def release_loan_with_return(request, loan_id):
     """
@@ -181,6 +181,16 @@ def release_loan_with_return(request, loan_id):
     if loan.is_released:
         messages.error(request, "Loan already released")
         return redirect("girvi:girvi_loan_detail", pk=loan_id)
+
+    checklist = build_release_readiness_checklist(loan)
+    if not checklist["dues_clear"]:
+        messages.error(
+            request,
+            "Release is blocked until settlement dues are cleared.",
+        )
+        return redirect("girvi:release_loan_check_custody", loan_id=loan_id)
+    if not checklist["needs_return"]:
+        return redirect("girvi:girvi_release_create", pk=loan_id)
 
     release_date = request.POST.get("release_date")
     released_by = request.POST.get("released_by")
@@ -210,7 +220,7 @@ def release_loan_with_return(request, loan_id):
 # ============================================================================
 
 
-@login_required
+@girvi_workspace_required
 def create_repledge_select_items(request):
     """
     Step 1: Select items from multiple GivenLoans to use as collateral.
@@ -224,7 +234,7 @@ def create_repledge_select_items(request):
     )
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["POST"])
 def create_repledge_with_items(request):
     """
@@ -272,7 +282,7 @@ def create_repledge_with_items(request):
 # ============================================================================
 
 
-@login_required
+@girvi_workspace_required
 def taken_loan_collateral_detail(request, loan_id):
     """
     Show all collateral items for a TakenLoan.
@@ -290,7 +300,7 @@ def taken_loan_collateral_detail(request, loan_id):
     return render(request, template_name, context)
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["POST"])
 def return_taken_loan_collateral(request, loan_id):
     """
@@ -328,7 +338,7 @@ def return_taken_loan_collateral(request, loan_id):
 # ============================================================================
 
 
-@login_required
+@girvi_workspace_required
 def repledge_history_report(request):
     """
     Report showing all repledge history with filters.
@@ -378,7 +388,7 @@ def repledge_history_report(request):
 # ============================================================================
 
 
-@login_required
+@girvi_workspace_required
 def api_check_release_custody(request, loan_id):
     """
     API endpoint to check custody status before release.
@@ -421,7 +431,7 @@ def api_check_release_custody(request, loan_id):
     )
 
 
-@login_required
+@girvi_workspace_required
 def api_item_custody_status(request, item_id):
     """
     API endpoint for item custody status.

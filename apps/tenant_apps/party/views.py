@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST
 from apps.orgs.models import Membership
 from apps.orgs.permissions import is_platform_admin
 from apps.orgs.tenant_context import resolve_request_workspace
+from apps.tenant_apps.girvi.facade import get_party_loan_history_summary
 
 from .forms import (
     CustomerConversionForm,
@@ -227,10 +228,12 @@ def _party_detail_context(
     )
 
     active_tab = active_tab or request.GET.get("tab") or "overview"
+    loan_history = get_party_loan_history_summary(party, limit=20)
     return {
         "party": party,
         "role_form": PartyRoleForm(),
         "activity": _legacy_activity(party),
+        "loan_history": loan_history,
         "account_mappings": party.dea_account_mappings.all(),
         "active_tab": active_tab,
         "photo_form": photo_form or PartyProfilePhotoForm(instance=party),

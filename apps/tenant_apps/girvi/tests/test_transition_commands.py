@@ -1,4 +1,7 @@
 from contextlib import nullcontext
+from datetime import datetime
+from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase
@@ -136,6 +139,146 @@ class TransitionCommandRegistryTests(SimpleTestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.level, "error")
         self.assertIn("Loan must be fully settled before closure request.", result.message)
+        self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_CURRENT)
+
+    def test_mark_overdue_rejects_current_loan_before_tenure_end(self):
+        loan = _DummyLoan(LoanLifecycleState.ACTIVE_CURRENT)
+        loan.loan_date = datetime(2026, 6, 1)
+        loan.tenure = 3
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "mark_overdue",
+            marked_by="collector",
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.level, "error")
+        self.assertIn("maturity has not passed", result.message)
+        self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_CURRENT)
+
+    @patch("apps.tenant_apps.girvi.flows.evaluate_overdue_policy")
+    def test_mark_overdue_allows_undersecured_loan_before_maturity(self, mock_policy):
+        mock_policy.return_value = SimpleNamespace(
+            maturity_date=datetime(2026, 9, 1).date(),
+            is_overdue=True,
+        )
+        loan = _DummyLoan(LoanLifecycleState.ACTIVE_CURRENT)
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "mark_overdue",
+            marked_by="collector",
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_OVERDUE)
+
+    @patch("apps.tenant_apps.girvi.flows.evaluate_overdue_policy")
+    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
+    def test_mark_npa_rejects_when_collateral_covers_settlement(
+        self,
+        _mock_permission,
+        mock_policy,
+    ):
+        mock_policy.return_value = SimpleNamespace(is_npa=False)
+        loan = _DummyLoan(LoanLifecycleState.ACTIVE_OVERDUE)
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "mark_npa",
+            marked_by="collector",
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.level, "error")
+        self.assertIn("settlement amount is covered", result.message)
+        self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_OVERDUE)
+
+    @patch("apps.tenant_apps.girvi.flows.evaluate_overdue_policy")
+    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
+    def test_mark_npa_allows_undersecured_loan(self, _mock_permission, mock_policy):
+        mock_policy.return_value = SimpleNamespace(is_npa=True)
+        loan = _DummyLoan(LoanLifecycleState.ACTIVE_OVERDUE)
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "mark_npa",
+            marked_by="collector",
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_NPA)
+
+    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
+    def test_write_off_rejects_missing_reason(self, _mock_permission):
+        loan = _DummyLoan(LoanLifecycleState.ACTIVE_NPA)
+        loan.outstanding_amount = Decimal("100.00")
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "write_off_loan",
+            written_off_by="manager",
+            reason="",
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.level, "error")
+        self.assertIn("reason is required", result.message)
+        self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_NPA)
+
+    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
+    def test_write_off_rejects_fully_settled_loan(self, _mock_permission):
+        loan = _DummyLoan(LoanLifecycleState.AUCTION_COMPLETE)
+        loan.outstanding_amount = Decimal("0.00")
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "write_off_loan",
+            written_off_by="manager",
+            reason="approved loss decision",
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.level, "error")
+        self.assertIn("must be closed, not written off", result.message)
+        self.assertEqual(loan.status, LoanLifecycleState.AUCTION_COMPLETE)
+
+    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
+    def test_write_off_allows_residual_balance_with_reason(self, _mock_permission):
+        loan = _DummyLoan(LoanLifecycleState.AUCTION_COMPLETE)
+        loan.outstanding_amount = Decimal("100.00")
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "write_off_loan",
+            written_off_by="manager",
+            reason="approved loss decision",
+        )
+
+        self.assertTrue(result.success)
+        self.assertEqual(loan.status, LoanLifecycleState.WRITTEN_OFF)
+
+    def test_cure_to_current_rejects_when_balance_outstanding(self):
+        loan = _DummyLoan(LoanLifecycleState.ACTIVE_OVERDUE)
+        loan.outstanding_amount = Decimal("1.00")
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "cure_to_current",
+            cured_by="collector",
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.level, "error")
+        self.assertIn("dues are outstanding", result.message)
+        self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_OVERDUE)
+
+    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
+    def test_request_renewal_rejects_already_released_loan(self, _mock_has_permission):
+        loan = _DummyLoan(LoanLifecycleState.ACTIVE_CURRENT)
+        loan.is_released = True
+
+        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
+            "request_renewal",
+            requested_by="collector",
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.level, "error")
+        self.assertIn("Released loans cannot be renewed", result.message)
         self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_CURRENT)
 
     def test_build_runtime_flow_routes_approved_status_to_v2(self):

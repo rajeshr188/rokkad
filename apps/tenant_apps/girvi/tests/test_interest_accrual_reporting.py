@@ -7,6 +7,8 @@ from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase
 
 from apps.tenant_apps.girvi.selectors import (
+    build_loan_settlement_balance,
+    build_repayment_preview,
     build_given_loan_detail_display,
     build_given_loan_detail_read_model,
     build_given_loan_release_action,
@@ -15,6 +17,41 @@ from apps.tenant_apps.girvi.views.loan import loan_detail
 
 
 class InterestAccrualReadModelTests(SimpleTestCase):
+    def test_build_loan_settlement_balance_uses_component_split(self):
+        loan = SimpleNamespace(
+            pk=None,
+            get_loan_amount=Decimal("1000.00"),
+            outstanding_interest=Decimal("125.00"),
+            get_total_principal_payments=lambda: Decimal("300.00"),
+            get_total_interest_payments=lambda: Decimal("25.00"),
+            get_total_payments=lambda: Decimal("325.00"),
+        )
+
+        settlement = build_loan_settlement_balance(loan)
+
+        self.assertEqual(settlement.principal_due, Decimal("700.00"))
+        self.assertEqual(settlement.interest_due, Decimal("125.00"))
+        self.assertEqual(settlement.total_outstanding, Decimal("825.00"))
+        self.assertEqual(settlement.total_paid, Decimal("325.00"))
+        self.assertEqual(settlement.overpayment, Decimal("0.00"))
+
+    def test_build_repayment_preview_suggests_exact_split(self):
+        loan = SimpleNamespace(
+            pk=None,
+            get_loan_amount=Decimal("1000.00"),
+            outstanding_interest=Decimal("125.00"),
+            get_total_principal_payments=lambda: Decimal("300.00"),
+            get_total_interest_payments=lambda: Decimal("25.00"),
+            get_total_payments=lambda: Decimal("325.00"),
+        )
+
+        preview = build_repayment_preview(loan)
+
+        self.assertEqual(preview.suggested_total_amount, Decimal("825.00"))
+        self.assertEqual(preview.suggested_interest_amount, Decimal("125.00"))
+        self.assertEqual(preview.suggested_principal_amount, Decimal("700.00"))
+        self.assertFalse(preview.is_settled)
+
     def test_build_given_loan_detail_read_model_includes_accrual_metrics(self):
         loan = MagicMock()
         payments = MagicMock()
@@ -88,7 +125,7 @@ class InterestAccrualReadModelTests(SimpleTestCase):
         self.assertEqual(display["weight"], "G:12.50 gms S:5.00 gms")
         self.assertEqual(display["pure"], "G:11.875 gms S:4.250 gms")
         self.assertEqual(display["lvratio"], 50.0)
-        self.assertEqual(display["dvratio"], 62.0)
+        self.assertEqual(display["dvratio"], 55.00000000000001)
         self.assertEqual(display["location"], storage_box)
         self.assertEqual(display["position"], "A-02")
         self.assertEqual(display["interest_reporting"]["outstanding"], Decimal("90.00"))

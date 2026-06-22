@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mt-4">
   <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
+    <div class="col-md-10 col-lg-8">
 
       {# Loan summary card #}
       <div class="card border-0 shadow-sm mb-4">
@@ -14,10 +14,12 @@
           <p class="text-muted mb-0">
             Loan <strong>{{ loan.loan_id }}</strong> &middot;
             {{ loan.borrower }} &middot;
-            Outstanding: <strong>{{ loan.outstanding_principal }}</strong>
+            Outstanding: <strong>{{ settlement.total_outstanding }}</strong>
           </p>
         </div>
       </div>
+
+      {% include "girvi/loanpayment/_repayment_preview.html" %}
 
       {# Payment form #}
       <div class="card border-0 shadow-sm">
@@ -69,6 +71,7 @@
 
 {% partialdef content %}
 <div class="modal-body">
+  {% include "girvi/loanpayment/_repayment_preview.html" %}
   <form method="post" id="repayment-form">
     {% csrf_token %}
     {{ form.non_field_errors }}

@@ -47,6 +47,33 @@ class GivenLoanPostingServiceTests(TestCase):
         self.assertTrue(created)
         mock_create.assert_called_once()
 
+    def test_post_repayment_returns_existing_payment_for_duplicate_reference(self):
+        loan = self._fake_loan()
+        existing = SimpleNamespace(payment_id="PAY-EXIST")
+        loan.payments = MagicMock()
+        loan.payments.filter.return_value.order_by.return_value.first.return_value = existing
+        payload = {
+            "total_amount": 100,
+            "interest_amount": 10,
+            "principal_amount": 90,
+            "payment_date": "2026-06-15",
+            "payment_method": "CASH",
+            "reference_number": "REF-001",
+            "description": "Test repayment",
+            "is_final_payment": True,
+        }
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.loan_posting.create_and_post_voucher_for_doc"
+        ) as mock_create:
+            payment, created = GivenLoanPostingService().post_repayment(
+                loan, payload, self._fake_user()
+            )
+
+        self.assertEqual(payment, existing)
+        self.assertFalse(created)
+        mock_create.assert_not_called()
+
     def test_post_repayment_posts_using_post_payment_voucher_when_no_reference_number(self):
         loan = self._fake_loan()
         loan.create_payment.return_value = SimpleNamespace(payment_id="PAY-001")

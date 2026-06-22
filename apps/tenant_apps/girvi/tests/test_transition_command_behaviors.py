@@ -104,8 +104,25 @@ class TransitionCommandBehaviorTests(TestCase):
         self.assertIn("posted", result.message)
         mock_post_auction.assert_called_once_with(loan, payload.amount, cmd.user)
 
-    @patch("apps.tenant_apps.notify.services.create_loan_auction_notice")
-    def test_mark_auctioned_creates_auction_notice_for_borrower(self, mock_create_notice):
+    def test_mark_auctioned_requires_positive_recovery_amount(self):
+        loan = self._loan(status=LoanLifecycleState.AUCTION_IN_PROGRESS)
+        cmd = MarkAuctionedTransitionCommand(loan=loan, user=SimpleNamespace(), tenant=None)
+
+        def transition_method(**_payload):
+            loan.status = LoanLifecycleState.AUCTION_COMPLETE
+
+        payload = MarkAuctionedPayload(auctioned_by="auditor", amount=0)
+        result = cmd.execute(transition_method, payload=payload)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.level, "error")
+        self.assertIn("greater than zero", result.message)
+
+    @patch("apps.tenant_apps.girvi.transitions.commands.create_girvi_reminder_batch")
+    def test_mark_auctioned_creates_notify_v2_auction_notice_for_borrower(
+        self,
+        mock_create_notice,
+    ):
         borrower = SimpleNamespace(name="Asha")
         loan = self._loan(status=LoanLifecycleState.AUCTION_IN_PROGRESS)
         loan.borrower = borrower
@@ -128,7 +145,54 @@ class TransitionCommandBehaviorTests(TestCase):
 
         self.assertTrue(result.success)
         mock_create_notice.assert_called_once()
+        self.assertEqual(
+            mock_create_notice.call_args.kwargs["event_key"],
+            "loan.auction_notice_due",
+        )
+        self.assertEqual(mock_create_notice.call_args.kwargs["loans"], [loan])
         self.assertIn("Auction notice", result.message)
+
+    @patch("apps.tenant_apps.girvi.transitions.commands.LoanChangeLog.objects.create")
+    @patch("apps.tenant_apps.girvi.transitions.commands.ContentType.objects.get_for_model")
+    @patch(
+        "apps.tenant_apps.girvi.transitions.commands.create_girvi_reminder_batch",
+        side_effect=Exception("notify unavailable"),
+    )
+    def test_auction_notice_failure_records_visible_change_log(
+        self,
+        _mock_create_notice,
+        mock_content_type,
+        mock_log_create,
+    ):
+        borrower = SimpleNamespace(name="Asha")
+        loan = self._loan(status=LoanLifecycleState.AUCTION_IN_PROGRESS)
+        loan.borrower = borrower
+        loan.loan_id = "GL-001"
+        mock_content_type.return_value = SimpleNamespace(pk=44)
+        user = SimpleNamespace(pk=7)
+
+        cmd = MarkAuctionedTransitionCommand(loan=loan, user=user, tenant=None)
+
+        def transition_method(**_payload):
+            loan.status = LoanLifecycleState.AUCTION_COMPLETE
+
+        payload = MarkAuctionedPayload(auctioned_by="auditor", amount=100)
+        with patch(
+            "apps.tenant_apps.girvi.transitions.commands.post_auction_recovery_for_transition"
+        ) as mock_post_auction:
+            mock_post_auction.return_value = (
+                SimpleNamespace(payment_id="AUC-003"),
+                True,
+            )
+            result = cmd.execute(transition_method, payload=payload)
+
+        self.assertTrue(result.success)
+        mock_log_create.assert_called_once()
+        self.assertEqual(
+            mock_log_create.call_args.kwargs["metadata"]["event"],
+            "auction_notice_failed",
+        )
+        self.assertIn("notify unavailable", mock_log_create.call_args.kwargs["notes"])
 
     @patch("apps.tenant_apps.girvi.transitions.commands.post_sale_recovery_for_transition")
     def test_mark_sold_posts_recovery_voucher(self, mock_post_sale):

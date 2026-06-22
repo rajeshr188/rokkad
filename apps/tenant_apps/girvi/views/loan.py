@@ -41,6 +41,7 @@ from ..models import (
     LoanChangeLog,
     TakenLoan,
 )
+from ..policies import assert_loan_header_editable
 from ..selectors import (
     build_unified_loan_rows,
     get_given_loan_detail_read_model,
@@ -70,9 +71,11 @@ from ..service_modules.bulk_operations import (
     LoanBulkOperationService,
     LoanMergeCommand,
 )
+from .access import girvi_permission_required, girvi_workspace_required
 logger = logging.getLogger(__name__)
 
 
+@girvi_permission_required("girvi_loan_approve")
 def loan_transition_view(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
     status_label = lifecycle_status_label(loan.status)
@@ -116,6 +119,7 @@ def get_loan_history(loan):
     return loan.loanchangelog_set.all().select_related("author").order_by("-changed")
 
 
+@girvi_workspace_required
 def loans_created_on_day_excluding_current_month(request):
     today = timezone.now()
     loans = GivenLoan.objects.filter(
@@ -145,6 +149,7 @@ def ld(request):
         return loan_time.strftime("%Y-%m-%dT%H:%M")
 
 
+@girvi_workspace_required
 def get_interestrate(request):
     metal = request.GET.get("itemtype")
     field_prefix = ""
@@ -172,7 +177,7 @@ def get_interestrate(request):
     return render(request, "girvi/partials/field.html", context)
 
 
-@login_required
+@girvi_workspace_required
 def loan_list(request: HttpRequest):
     loan_kind = request.GET.get("loan_kind", "given")
 
@@ -200,7 +205,7 @@ def loan_list(request: HttpRequest):
     return render(request, "girvi/loan/loan_list.html", context)
 
 
-@login_required
+@girvi_workspace_required
 def loan_table_partial(request: HttpRequest):
     loan_kind = request.GET.get("loan_kind", "given")
 
@@ -452,6 +457,7 @@ def _handle_loan_create_post(request):
 
 
 def _handle_loan_update_post(request, loan):
+    assert_loan_header_editable(loan)
     form = LoanForm(request.POST, instance=loan)
     if form.is_valid():
         with transaction.atomic():
@@ -467,7 +473,7 @@ def _handle_loan_update_post(request, loan):
     return _render_loan_form_response(request, loan=loan, form=form)
 
 
-@login_required
+@girvi_workspace_required
 def loan_save(request, id=None, pk=None):
     """Backward-compatible dispatcher. Prefer `loan_create` / `loan_update`."""
     if id is not None:
@@ -477,7 +483,7 @@ def loan_save(request, id=None, pk=None):
     return loan_create(request)
 
 
-@login_required
+@girvi_permission_required("girvi_loan_create")
 @require_http_methods(["GET"])
 def loan_create_preview(request):
     preview = _build_create_preview_from_data(request.GET, request.user)
@@ -488,7 +494,7 @@ def loan_create_preview(request):
     )
 
 
-@login_required
+@girvi_permission_required("girvi_loan_create")
 def loan_create(request):
     """Dedicated create endpoint using LoanCreationService for POST writes."""
     try:
@@ -501,7 +507,7 @@ def loan_create(request):
         return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
 
 
-@login_required
+@girvi_permission_required("girvi_loan_create")
 def loan_create_for_customer(request, customer_pk):
     """Dedicated create endpoint with borrower preselection."""
     try:
@@ -514,14 +520,20 @@ def loan_create_for_customer(request, customer_pk):
         return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
 
 
-@login_required
+@girvi_permission_required("girvi_loan_edit")
 def loan_update(request, pk):
     """Dedicated update endpoint for existing loans."""
     try:
         loan = get_object_or_404(GivenLoan, id=pk)
+        assert_loan_header_editable(loan)
         if request.method == "POST":
             return _handle_loan_update_post(request, loan)
         return _render_loan_form_response(request, loan=loan)
+    except ValidationError as e:
+        messages.error(request, "; ".join(getattr(e, "messages", None) or [str(e)]))
+        return HttpResponse(
+            headers={"HX-Redirect": reverse("girvi:girvi_loan_detail", args=(pk,))}
+        )
     except Exception as e:
         logger.warning(f"Error in loan_update: {str(e)}")
         messages.error(request, "An error occurred while saving loan")
@@ -583,7 +595,7 @@ def _get_initial_loan_data(request, customer_pk=None):
 
 
 @require_http_methods(["DELETE"])
-@login_required
+@girvi_permission_required("girvi_loan_delete")
 def loan_delete(request, pk=None):
     obj = get_object_or_404(GivenLoan, id=pk)
     messages.error(request, f" Loan {obj} Deleted")
@@ -597,7 +609,7 @@ def loan_delete(request, pk=None):
     )
 
 
-@login_required
+@girvi_workspace_required
 def loan_detail(request, pk):
     rm = get_given_loan_detail_read_model(pk)
     loan = rm["loan"]
@@ -656,7 +668,7 @@ def loan_detail(request, pk):
     return render(request, "girvi/loan/loan_detail_1.html", context)
 
 
-@login_required
+@girvi_permission_required("girvi_loan_bulk", "girvi_loan_edit", require_all=False)
 def split_loan_items(request, pk):
     from ..services import LoanSplitService
 
@@ -673,7 +685,7 @@ def split_loan_items(request, pk):
         return redirect("girvi:girvi_loan_detail", pk=pk)
 
 
-@login_required
+@girvi_permission_required("girvi_loan_bulk")
 @require_http_methods(["POST"])
 def merge_loans(request):
     """Handle loan merge action"""
@@ -712,7 +724,7 @@ def merge_loans(request):
         return HttpResponse(status=500, content="An error occurred while merging loans")
 
 
-@login_required
+@girvi_permission_required("girvi_loan_edit")
 def loan_renew(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
 
@@ -766,7 +778,7 @@ def loan_renew(request, pk):
 
 
 @require_http_methods("POST")
-@login_required
+@girvi_permission_required("girvi_loan_delete")
 def deleteLoan(request):
     loan_kind = request.POST.get("loan_kind", "given")
     try:
@@ -798,7 +810,7 @@ def deleteLoan(request):
 # ---------------------------------------------------------------------------
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["GET"])
 def loan_detail_items_tab(request, pk):
     rm = get_given_loan_detail_read_model(pk)
@@ -809,7 +821,7 @@ def loan_detail_items_tab(request, pk):
     )
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["GET"])
 def loan_detail_payments_tab(request, pk):
     rm = get_given_loan_detail_read_model(pk)
@@ -824,7 +836,7 @@ def loan_detail_payments_tab(request, pk):
     )
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["GET"])
 def loan_detail_transactions_tab(request, pk):
     rm = get_given_loan_detail_read_model(pk)
@@ -839,7 +851,7 @@ def loan_detail_transactions_tab(request, pk):
     )
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["GET"])
 def loan_detail_statement_tab(request, pk):
     rm = get_given_loan_detail_read_model(pk)
@@ -854,7 +866,7 @@ def loan_detail_statement_tab(request, pk):
     )
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["GET"])
 def loan_detail_notices_tab(request, pk):
     rm = get_given_loan_detail_read_model(pk)
@@ -869,7 +881,7 @@ def loan_detail_notices_tab(request, pk):
     )
 
 
-@login_required
+@girvi_workspace_required
 @require_http_methods(["GET"])
 def loan_detail_release_tab(request, pk):
     rm = get_given_loan_detail_read_model(pk)

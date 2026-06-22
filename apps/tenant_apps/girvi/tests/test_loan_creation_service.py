@@ -420,6 +420,7 @@ class LoanCreationServiceTests(SimpleTestCase):
         existing_loan = SimpleNamespace(
             id=42,
             loan_id="A0001",
+            status=LoanLifecycleState.DRAFT,
             created_by=SimpleNamespace(),
             save=MagicMock(),
         )

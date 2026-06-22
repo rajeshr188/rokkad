@@ -231,9 +231,161 @@ def run_period_close_interest_accrual(*, period, user) -> list[str]:
     return accrual_failures
 
 
+def get_party_loan_history_summary(party, *, limit=20):
+    """Return party-centric loan history for Party detail pages."""
+    from django.db.models import Count, Q, Sum
+
+    from apps.tenant_apps.girvi.lifecycle import (
+        CANONICAL_ACTIVE_CURRENT,
+        CANONICAL_ACTIVE_NPA,
+        CANONICAL_ACTIVE_OVERDUE,
+        CANONICAL_AUCTION_COMPLETE,
+        CANONICAL_CLOSED,
+        CANONICAL_CLOSURE_PENDING,
+        CANONICAL_RENEWAL_PENDING,
+        CANONICAL_RENEWED,
+        CANONICAL_WRITTEN_OFF,
+        TAKEN_ACTIVE,
+        TAKEN_CLOSED,
+        TAKEN_SETTLEMENT_PENDING,
+        canonical_status,
+        taken_canonical_status,
+    )
+    from apps.tenant_apps.girvi.models import GivenLoan, TakenLoan
+
+    customer = getattr(party, "legacy_customer", None)
+    given_filter = Q(borrower_party=party)
+    taken_filter = Q(lender_party=party)
+    if customer is not None:
+        given_filter = given_filter | Q(borrower=customer)
+        taken_filter = taken_filter | Q(lender=customer)
+
+    given_qs = (
+        GivenLoan.objects.filter(given_filter)
+        .select_related("borrower")
+        .annotate(
+            payment_count=Count("payments", distinct=True),
+            unposted_payment_count=Count(
+                "payments",
+                filter=Q(payments__posted=False),
+                distinct=True,
+            ),
+            total_payment_amount=Sum("payments__amount_in_base_currency"),
+            notice_count=Count("notifications", distinct=True),
+            collateral_items_count=Count("loanitems", distinct=True),
+            collateral_loan_amount=Sum("loanitems__loanamount"),
+        )
+        .order_by("-loan_date")
+    )
+
+    taken_qs = (
+        TakenLoan.objects.filter(taken_filter)
+        .select_related("lender")
+        .annotate(
+            payment_count=Count("payments", distinct=True),
+            unposted_payment_count=Count(
+                "payments",
+                filter=Q(payments__posted=False),
+                distinct=True,
+            ),
+            total_payment_amount=Sum("payments__amount_in_base_currency"),
+            collateral_items_count=Count("repledge_history_items", distinct=True),
+            collateral_loan_amount=Sum("repledge_history_items__repledged_amount"),
+        )
+        .order_by("-loan_date")
+    )
+
+    def _given_row(loan):
+        return {
+            "loan": loan,
+            "loan_id": loan.loan_id,
+            "loan_type": "Given",
+            "status": loan.status,
+            "loan_date": loan.loan_date,
+            "detail_url": loan.get_absolute_url(),
+            "payment_count": getattr(loan, "payment_count", 0) or 0,
+            "unposted_payment_count": getattr(loan, "unposted_payment_count", 0) or 0,
+            "total_payment_amount": getattr(loan, "total_payment_amount", 0) or 0,
+            "notice_count": getattr(loan, "notice_count", 0) or 0,
+            "collateral_items_count": getattr(loan, "collateral_items_count", 0) or 0,
+            "collateral_loan_amount": getattr(loan, "collateral_loan_amount", 0) or 0,
+        }
+
+    def _taken_row(loan):
+        return {
+            "loan": loan,
+            "loan_id": loan.loan_id,
+            "loan_type": "Taken",
+            "status": loan.status,
+            "loan_date": loan.loan_date,
+            "detail_url": loan.get_absolute_url(),
+            "payment_count": getattr(loan, "payment_count", 0) or 0,
+            "unposted_payment_count": getattr(loan, "unposted_payment_count", 0) or 0,
+            "total_payment_amount": getattr(loan, "total_payment_amount", 0) or 0,
+            "notice_count": 0,
+            "collateral_items_count": getattr(loan, "collateral_items_count", 0) or 0,
+            "collateral_loan_amount": getattr(loan, "collateral_loan_amount", 0) or 0,
+        }
+
+    active_given_states = {
+        CANONICAL_ACTIVE_CURRENT,
+        CANONICAL_ACTIVE_OVERDUE,
+        CANONICAL_ACTIVE_NPA,
+        CANONICAL_CLOSURE_PENDING,
+        CANONICAL_RENEWAL_PENDING,
+    }
+    closed_given_states = {
+        CANONICAL_CLOSED,
+        CANONICAL_RENEWED,
+        CANONICAL_WRITTEN_OFF,
+        CANONICAL_AUCTION_COMPLETE,
+    }
+    active_taken_states = {TAKEN_ACTIVE, TAKEN_SETTLEMENT_PENDING}
+    closed_taken_states = {TAKEN_CLOSED}
+
+    active_rows = []
+    closed_rows = []
+
+    for loan in given_qs:
+        row = _given_row(loan)
+        state = canonical_status(loan.status)
+        if state in active_given_states:
+            active_rows.append(row)
+        elif state in closed_given_states:
+            closed_rows.append(row)
+
+    for loan in taken_qs:
+        row = _taken_row(loan)
+        state = taken_canonical_status(loan.status)
+        if state in active_taken_states:
+            active_rows.append(row)
+        elif state in closed_taken_states:
+            closed_rows.append(row)
+
+    active_rows.sort(key=lambda item: item["loan_date"], reverse=True)
+    closed_rows.sort(key=lambda item: item["loan_date"], reverse=True)
+
+    limited_active = active_rows[:limit]
+    limited_closed = closed_rows[:limit]
+    return {
+        "active_loans": limited_active,
+        "closed_loans": limited_closed,
+        "counts": {
+            "active_loans": len(active_rows),
+            "closed_loans": len(closed_rows),
+            "payments": sum(row["payment_count"] for row in active_rows + closed_rows),
+            "notices": sum(row["notice_count"] for row in active_rows + closed_rows),
+            "collateral_items": sum(
+                row["collateral_items_count"] for row in active_rows + closed_rows
+            ),
+        },
+    }
+
+
 __all__ = [
     "count_customers_with_active_given_loans",
     "count_unreleased_given_loans",
+    "get_party_loan_history_summary",
     "get_workspace_loan_dashboard_summary",
     "run_period_close_interest_accrual",
 ]

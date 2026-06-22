@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import reverse
 from django.utils import timezone
 from .custody_tracking import LoanItemWithCustody
+from ..lifecycle import EDITABLE_ITEM_STATUSES
 import logging
 
 logger = logging.getLogger(__name__)
@@ -89,19 +90,26 @@ class LoanItem(LoanItemWithCustody):
     def pure_weight(self):
         return (self.weight * self.purity / 100).quantize(Decimal("0.001"))
 
+    def _assert_loan_items_editable(self):
+        loan = getattr(self, "loan", None)
+        if not loan:
+            return
+        if getattr(loan, "is_released", False):
+            raise ValidationError(
+                "Cannot modify LoanItem because related Loan has a Release."
+            )
+        if getattr(loan, "status", None) not in EDITABLE_ITEM_STATUSES:
+            raise ValidationError(
+                "Cannot modify LoanItem after loan approval/disbursal workflow has advanced."
+            )
+
     def save(self, *args, **kwargs):
-        # if self.loan.is_released:
-        #     raise ValidationError(
-        #         "Cannot modify LoanItem because related Loan has a Release."
-        #     )
+        self._assert_loan_items_editable()
         self.interest = (self.interestrate / 100) * self.loanamount
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if self.loan.is_released:
-            raise ValidationError(
-                "Cannot delete LoanItem because related Loan has a Release."
-            )
+        self._assert_loan_items_editable()
         # loan = self.loan
         super().delete(*args, **kwargs)
         # loan.update()

@@ -22,13 +22,19 @@ from ..services import (
     ReleaseCreateCommand,
     ReleaseLifecycleService,
 )
+from ..service_modules.custody import build_release_readiness_checklist
 from ..tables import ReleaseTable
+from .access import (
+    GirviPermissionRequiredMixin,
+    girvi_permission_required,
+    girvi_workspace_required,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-@login_required
+@girvi_workspace_required
 def release_list(request):
     filter = ReleaseFilter(
         request.GET,
@@ -81,9 +87,10 @@ def _build_release_preview(form, user):
     )
 
 
-@login_required
+@girvi_permission_required("girvi_loan_release")
 def release_create(request, pk=None):
     release_preview = None
+    release_checklist = None
 
     if request.POST:
         form = ReleaseForm(request.POST or None)
@@ -91,30 +98,41 @@ def release_create(request, pk=None):
         release_preview = _build_release_preview(form, request.user)
 
         if form_is_valid:
-            result = ReleaseLifecycleService.execute(
-                ReleaseCreateCommand(
-                    loan=form.cleaned_data["loan"],
-                    created_by=request.user,
-                    release_date=form.cleaned_data["release_date"],
-                    released_by=form.cleaned_data.get("released_by"),
-                )
+            release_checklist = build_release_readiness_checklist(
+                form.cleaned_data["loan"]
             )
-            if result.success:
-                for warning in result.warnings:
-                    messages.warning(request, warning)
-                messages.success(request, result.message)
-                response = redirect("girvi:girvi_loan_detail", pk=result.release.loan.pk)
-                response["HX-Push-Url"] = reverse(
-                    "girvi:girvi_loan_detail", kwargs={"pk": result.release.loan.pk}
+            if not release_checklist["can_release"]:
+                for blocker in release_checklist["blockers"]:
+                    form.add_error(None, blocker)
+                messages.error(request, "Release checklist is not ready.")
+            else:
+                result = ReleaseLifecycleService.execute(
+                    ReleaseCreateCommand(
+                        loan=form.cleaned_data["loan"],
+                        created_by=request.user,
+                        release_date=form.cleaned_data["release_date"],
+                        released_by=form.cleaned_data.get("released_by"),
+                    )
                 )
-                return response
+                if result.success:
+                    for warning in result.warnings:
+                        messages.warning(request, warning)
+                    messages.success(request, result.message)
+                    response = redirect("girvi:girvi_loan_detail", pk=result.release.loan.pk)
+                    response["HX-Push-Url"] = reverse(
+                        "girvi:girvi_loan_detail", kwargs={"pk": result.release.loan.pk}
+                    )
+                    return response
 
-            form.add_error(None, result.message)
-            messages.error(request, result.message)
+                form.add_error(None, result.message)
+                messages.error(request, result.message)
     else:
         loan = None
         if pk:
             loan = get_object_or_404(GivenLoan, pk=pk)
+            release_checklist = build_release_readiness_checklist(loan)
+            if not release_checklist["can_release"]:
+                return redirect("girvi:release_loan_check_custody", loan_id=loan.pk)
             form = ReleaseForm(
                 initial={
                     "loan": loan,
@@ -130,7 +148,11 @@ def release_create(request, pk=None):
             )
         release_preview = _build_release_preview(form, request.user)
 
-    context = {"form": form, "release_preview": release_preview}
+    context = {
+        "form": form,
+        "release_preview": release_preview,
+        "release_checklist": release_checklist,
+    }
     if getattr(request, "htmx", False):
         return TemplateResponse(
             request, "girvi/release/release_form.html#release-form-content", context=context
@@ -138,7 +160,7 @@ def release_create(request, pk=None):
     return TemplateResponse(request, "girvi/release/release_form.html", context=context)
 
 
-@login_required
+@girvi_workspace_required
 def release_detail(request, pk):
     release = get_object_or_404(Release, pk=pk)
     if request.htmx:
@@ -150,7 +172,7 @@ def release_detail(request, pk):
     )
 
 
-@login_required
+@girvi_permission_required("girvi_loan_release")
 def release_update_view(request, pk):
     release = get_object_or_404(Release, pk=pk)
     logger.debug("Editing release %s", release.pk)
@@ -172,10 +194,11 @@ def release_update_view(request, pk):
     return render(request, "girvi/release/release_form.html", {"form": form})
 
 
-class ReleaseDeleteView(LoginRequiredMixin, DeleteView):
+class ReleaseDeleteView(GirviPermissionRequiredMixin, LoginRequiredMixin, DeleteView):
     model = Release
     success_url = reverse_lazy("girvi:girvi_release_list")
     template_name = "girvi/release/release_confirm_delete.html"
+    required_permissions = ("girvi_loan_release",)
 
 
 # def bulk_release(request):
@@ -228,6 +251,7 @@ class ReleaseDeleteView(LoginRequiredMixin, DeleteView):
 #     return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form, "form_g": form_g})
 
 
+@girvi_permission_required("girvi_loan_release")
 def bulk_release(request):
     if request.method == "POST":
         form = BulkReleaseForm(request.POST)
@@ -253,6 +277,7 @@ def bulk_release(request):
     return TemplateResponse(request, "girvi/release/bulk_release.html", {"form": form})
 
 
+@girvi_permission_required("girvi_loan_release")
 def submit_release_formset(request):
     if request.method == "POST":
         formset = BulkReleaseService.bind_submit_formset(request.POST)
@@ -277,6 +302,7 @@ def submit_release_formset(request):
 
 
 @require_POST
+@girvi_permission_required("girvi_loan_release")
 def get_release_details(request):
     # get the loans from request
     loan_ids = request.POST.getlist("loans")  # list of loan ids

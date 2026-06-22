@@ -6,6 +6,7 @@ release, auction recovery, and sale recovery events.
 
 from decimal import Decimal
 
+from django.db import transaction
 from django.utils import timezone
 from moneyed import Money
 
@@ -35,39 +36,55 @@ class GivenLoanPostingService:
         elif interest_amount is not None:
             principal_amount = total_amount - interest_amount
 
-        reference_number = payment_payload.get("reference_number", "")
-        if reference_number:
-            return create_and_post_voucher_for_doc(
-                loan,
-                direction="RECEIPT",
-                payment_type="RECEIPT",
-                total_amount=total_amount,
-                amount_in_base_currency=total_amount,
+        with transaction.atomic():
+            reference_number = payment_payload.get("reference_number", "")
+            if reference_number:
+                existing = None
+                payments = getattr(loan, "payments", None)
+                if payments is not None:
+                    existing = (
+                        payments.filter(
+                            direction="RECEIPT",
+                            reference_number=reference_number,
+                        )
+                        .order_by("pk")
+                        .first()
+                    )
+                if existing:
+                    return existing, False
+
+            if reference_number:
+                return create_and_post_voucher_for_doc(
+                    loan,
+                    direction="RECEIPT",
+                    payment_type="RECEIPT",
+                    total_amount=total_amount,
+                    amount_in_base_currency=total_amount,
+                    payment_date=payment_payload.get("payment_date", timezone.now()),
+                    payment_method=payment_payload.get("payment_method", "CASH"),
+                    reference_number=reference_number,
+                    description=payment_payload.get("description", ""),
+                    is_final_payment=bool(payment_payload.get("is_final_payment", False)),
+                    create_release=False,
+                    principal_amount=principal_amount,
+                    interest_amount=interest_amount,
+                    created_by=user,
+                )
+
+            payment = loan.create_payment(
+                amount=total_amount,
+                principal=principal_amount,
+                interest=interest_amount,
                 payment_date=payment_payload.get("payment_date", timezone.now()),
                 payment_method=payment_payload.get("payment_method", "CASH"),
                 reference_number=reference_number,
                 description=payment_payload.get("description", ""),
-                is_final_payment=bool(payment_payload.get("is_final_payment", False)),
+                is_final=bool(payment_payload.get("is_final_payment", False)),
                 create_release=False,
-                principal_amount=principal_amount,
-                interest_amount=interest_amount,
                 created_by=user,
             )
-
-        payment = loan.create_payment(
-            amount=total_amount,
-            principal=principal_amount,
-            interest=interest_amount,
-            payment_date=payment_payload.get("payment_date", timezone.now()),
-            payment_method=payment_payload.get("payment_method", "CASH"),
-            reference_number=reference_number,
-            description=payment_payload.get("description", ""),
-            is_final=bool(payment_payload.get("is_final_payment", False)),
-            create_release=False,
-            created_by=user,
-        )
-        post_payment_voucher(payment, user)
-        return payment, True
+            post_payment_voucher(payment, user)
+            return payment, True
 
     def post_release(self, release, user):
         """Create and post a GivenLoan release receipt."""

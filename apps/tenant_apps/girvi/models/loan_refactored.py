@@ -303,8 +303,11 @@ class BaseLoan(models.Model):
         """
         from ..services import InterestCalculationService
 
-        months = InterestCalculationService.months_between(self.loan_date, as_of_date)
-        return round(self.get_interest_amount * months, 2)
+        return InterestCalculationService.interest_due(
+            self.get_interest_amount,
+            self.loan_date,
+            as_of_date,
+        )
 
     @property
     def total_due(self) -> Decimal:

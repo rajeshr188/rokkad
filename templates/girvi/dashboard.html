@@ -101,6 +101,133 @@
     </div>
   </section>
 
+  <section class="mb-5">
+    <h3 class="mb-3">Operational Queue</h3>
+    <div class="row g-3 mb-3">
+      <div class="col-md-2 col-6">
+        <div class="card h-100">
+          <div class="card-body py-3 text-center">
+            <div class="small text-muted">Due Today</div>
+            <div class="h4 mb-0">{{ queue_counts.due_today }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="card h-100">
+          <div class="card-body py-3 text-center">
+            <div class="small text-muted">Mark Overdue</div>
+            <div class="h4 mb-0">{{ queue_counts.overdue_candidates }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="card h-100">
+          <div class="card-body py-3 text-center">
+            <div class="small text-muted">NPA Candidates</div>
+            <div class="h4 mb-0">{{ queue_counts.npa_candidates }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="card h-100">
+          <div class="card-body py-3 text-center">
+            <div class="small text-muted">Cure Candidates</div>
+            <div class="h4 mb-0">{{ queue_counts.cure_candidates }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6">
+        <div class="card h-100">
+          <div class="card-body py-3 text-center">
+            <div class="small text-muted">Notices Pending</div>
+            <div class="h4 mb-0">{{ queue_counts.notice_candidates }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Overdue and NPA Actions</h5>
+          </div>
+          <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+              {% for row in operational_queue.overdue_candidates %}
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                  <div>
+                    <a href="{{ row.detail_url }}" class="fw-semibold text-decoration-none">{{ row.loan_id }}</a>
+                    <span class="badge {{ row.status_badge_class }} ms-2">{{ row.status_label }}</span>
+                    <div class="small text-muted">Outstanding: {{ row.total_outstanding }}</div>
+                  </div>
+                  <a href="{{ row.action_url }}" class="btn btn-sm btn-warning">{{ row.action_label }}</a>
+                </li>
+              {% empty %}
+                <li class="list-group-item text-muted">No loans are currently eligible for Mark Overdue.</li>
+              {% endfor %}
+              {% for row in operational_queue.npa_candidates %}
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                  <div>
+                    <a href="{{ row.detail_url }}" class="fw-semibold text-decoration-none">{{ row.loan_id }}</a>
+                    <span class="badge {{ row.status_badge_class }} ms-2">{{ row.status_label }}</span>
+                    <div class="small text-muted">Outstanding: {{ row.total_outstanding }} | Current value: {{ row.current_value }}</div>
+                  </div>
+                  <a href="{{ row.action_url }}" class="btn btn-sm btn-dark">{{ row.action_label }}</a>
+                </li>
+              {% endfor %}
+              {% for row in operational_queue.cure_candidates %}
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                  <div>
+                    <a href="{{ row.detail_url }}" class="fw-semibold text-decoration-none">{{ row.loan_id }}</a>
+                    <span class="badge {{ row.status_badge_class }} ms-2">{{ row.status_label }}</span>
+                    <div class="small text-muted">Outstanding: {{ row.total_outstanding }}</div>
+                  </div>
+                  <a href="{{ row.action_url }}" class="btn btn-sm btn-success">{{ row.action_label }}</a>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header">
+            <h5 class="mb-0">Due Today and Notice Queue</h5>
+          </div>
+          <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+              {% for row in operational_queue.due_today %}
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                  <div>
+                    <a href="{{ row.detail_url }}" class="fw-semibold text-decoration-none">{{ row.loan_id }}</a>
+                    <span class="badge {{ row.status_badge_class }} ms-2">{{ row.status_label }}</span>
+                    <div class="small text-muted">Maturity: {{ row.maturity_date }} | Outstanding: {{ row.total_outstanding }}</div>
+                  </div>
+                  <a href="{{ row.detail_url }}" class="btn btn-sm btn-outline-primary">Review</a>
+                </li>
+              {% empty %}
+                <li class="list-group-item text-muted">No loans are due today.</li>
+              {% endfor %}
+
+              {% for row in operational_queue.notice_candidates %}
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                  <div>
+                    <a href="{{ row.detail_url }}" class="fw-semibold text-decoration-none">{{ row.loan_id }}</a>
+                    <span class="badge {{ row.status_badge_class }} ms-2">{{ row.status_label }}</span>
+                    <div class="small text-muted">No draft notice exists for this loan.</div>
+                  </div>
+                  <a href="{{ row.action_url }}" class="btn btn-sm btn-outline-secondary">{{ row.action_label }}</a>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Master Data Management -->
   <section class="mb-5">
     <h3 class="mb-3">Master Data Management</h3>
@@ -221,6 +348,9 @@
             <div class="d-grid gap-2">
               <a href="{% url 'girvi:loan_archive' %}" class="btn btn-sm btn-outline-secondary">View Archive</a>
               <a href="{% url 'girvi:girvi_ledger' %}" class="btn btn-sm btn-outline-secondary">Ledger</a>
+              <a href="{% url 'girvi:loan_accounting_reconciliation_report' %}" class="btn btn-sm btn-outline-danger">Reconciliation</a>
+              <a href="{% url 'girvi:loan_operational_controls_report' %}" class="btn btn-sm btn-outline-danger">Operational Controls</a>
+              <a href="{% url 'girvi:girvi_operations_console' %}" class="btn btn-sm btn-outline-dark">Operations Console</a>
             </div>
           </div>
         </div>

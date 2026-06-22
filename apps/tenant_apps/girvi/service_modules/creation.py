@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from apps.tenant_apps.girvi.models.loan_item import LoanItem
 from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, LoanLifecycleState
-from .id_generation import LoanIDGenerator
+from .id_generation import LoanIDGenerator, validate_loan_id_unique_across_loan_tables
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +221,11 @@ class LoanCreationService:
             errors.append("Loan date cannot be in the future.")
 
         expected_loan_id = command.loan_id or ""
+        if expected_loan_id and getattr(command.series, "pk", None):
+            try:
+                validate_loan_id_unique_across_loan_tables(expected_loan_id)
+            except ValidationError as exc:
+                errors.extend(list(getattr(exc, "messages", None) or [str(exc)]))
         if not expected_loan_id and command.series and getattr(command.series, "is_active", False):
             try:
                 expected_loan_id = LoanIDGenerator.generate(command.series)

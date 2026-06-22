@@ -250,7 +250,13 @@ class Loan(_LoanAuditMixin):
         return InterestCalculationService.months_between(self.loan_date, date)
 
     def interestdue(self, date=None):
-        return round(self.interest * self.noofmonths(date))
+        from ..services import InterestCalculationService
+
+        return InterestCalculationService.interest_due(
+            self.interest,
+            self.loan_date,
+            date,
+        )
 
     def get_current_value(self):
         try:

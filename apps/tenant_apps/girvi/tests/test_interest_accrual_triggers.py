@@ -51,6 +51,10 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         loan.pk = 1
         loan.loan_id = "GL-001"
         loan.create_payment.return_value = payment
+        loan.get_loan_amount = Decimal("1000.00")
+        loan.outstanding_interest = Decimal("100.00")
+        loan.get_total_principal_payments.return_value = Decimal("0.00")
+        loan.get_total_interest_payments.return_value = Decimal("0.00")
         mock_get_object_or_404.return_value = loan
 
         request = self.factory.post(

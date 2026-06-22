@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-21
+updated: 2026-06-22
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -65,6 +65,24 @@ Rokkad is moving toward a layered architecture:
 - Girvi cleanup P6 internal reverse canonicalization has started: base navigation template links now use canonical `girvi_*` storage-box route names, while alias routes remain in place for compatibility.
 - Girvi cleanup P7 scaffolding has started: a tenant outbox model/migration for posting events, outbox enqueue helper, and draft Girvi posting event contract payload helpers were added without changing current synchronous posting execution paths.
 - Girvi cleanup P7 execution is currently paused by project decision; existing synchronous Girvi to DEA posting remains the runtime path while outbox scaffolding stays in place.
+- Girvi Phase 1 safety work has started from `docs/roadmaps/girvi_refactor_plan.md`: release creation now fails closed when collateral custody cannot be moved to the customer, preventing closure transitions and release accounting from continuing after item-level custody errors.
+- Girvi Phase 1 repayment safety now fails closed for GivenLoan and TakenLoan repayment posting paths: payment creation and DEA posting are wrapped in atomic boundaries where the service creates the payment, and posting failures surface as errors instead of "payment saved but accounting failed" warnings.
+- Girvi Phase 1 safety pass completed the safe code slices from the roadmap: settlement balance is centralized in selectors, repayment overpayment/interest over-allocation is blocked in forms and services, release/closure checks use the settlement read model, loan items are immutable after the loan leaves editable states, overdue/cure/renewal/auction transitions have stronger preconditions, renewal disbursal posting now fails closed, repayment duplicate reference numbers are idempotent, and loan ID generation scans GivenLoan and TakenLoan sequences under the locked series.
+- Girvi Phase 1 interest policy is now explicit: `InterestCalculationService` codifies a minimum first-month charge for any positive duration, treats partial months as full months, applies a 3-calendar-day grace window before adding an extra partial-month charge, and routes refactored plus legacy loan interest due helpers through that shared calculation.
+- Girvi Phase 1 tenant-access route coverage is closed for Phase 1.5: `views.access.assert_girvi_workspace_access` now fails closed when a Girvi request has no tenant workspace or the user is not a member, and dashboard, main loan, transition/detail tabs, repayment, release, notices, reports, prints/PDF exports, custody, statement, and template/document routes use that guard.
+- Girvi Phase 1 overdue/NPA policy is explicit: overdue is allowed when maturity date is before today or settlement amount exceeds current collateral value; NPA is allowed only when settlement amount exceeds current collateral value; new Girvi auction notices use `notify_v2`, and notice failures do not block lifecycle transitions but are recorded in `LoanChangeLog`.
+- Girvi Phase 1 auction/sale recovery guardrails are complete for MVP safety: auction/sale recovery amounts must be present and positive, close-after-auction requires the settlement balance to be clear, and write-off requires both a documented reason and a residual outstanding balance.
+- Girvi Phase 1 duplicate-submit and immutability guardrails are closed for MVP safety: manual/imported loan IDs validate across GivenLoan and TakenLoan tables, release duplicate submits are rejected before custody/accounting side effects, and `policies.py` blocks direct GivenLoan header edits once the loan leaves editable pre-disbursal states.
+- Girvi Phase 2 has started: GivenLoan and TakenLoan repayment screens now render a settlement preview showing principal due, interest due, paid amount, outstanding amount, and suggested exact-payment split from the shared repayment read model.
+- Girvi Phase 2 task 17 release checklist is now implemented: release entry paths now use a shared readiness checklist that blocks release when settlement dues remain or collateral is still with lenders, the custody check route renders a checklist-first screen under `templates/girvi/release/release_custody_check.html`, and integration tests cover blocked-vs-ready release create behavior.
+- Girvi Phase 2 task 18 overdue/NPA operational queue is now implemented: dashboard context now includes a selector-backed queue for due-today, overdue transition candidates, NPA candidates, cure candidates, and notice candidates, with action links guarded by runtime transition readiness and draft-notice presence.
+- Girvi Phase 2 task 19 loan/accounting reconciliation report is now implemented: a selector-backed report route and template list loans with missing disbursal vouchers, failed payment posting rows, release-without-voucher mismatches, and posted-voucher/state mismatches, with dashboard navigation and focused selector/view tests.
+- Girvi Phase 2 task 20 customer/Party loan history view is now implemented: Party detail loans tab now uses Girvi facade read models to show active and closed Given/Taken loans, payment and notice counts, and collateral summaries for Party-linked and compatibility-bridged customer records, with focused Party UI coverage.
+- Girvi Phase 2 task 21 permission hardening is now implemented: Girvi workspace access now supports explicit permission gates for create/edit/delete, transition/disbursal, repayment, release workflows, and report endpoints via shared access decorators/mixins, with focused permission-denial tests to prevent login-only operational access.
+- Girvi Phase 2 task 22 notice-flow standardization is now implemented: both legacy and v2 Girvi bulk notice actions now converge on a single notify_v2 batch dispatch path that records intent/events, keeps loan linkage in selection snapshots/payloads, surfaces delivery status through notify_v2 job states, and preserves legacy URL compatibility as an alias.
+- Girvi Phase 2 task 23 document/PDF standardization is now implemented for MVP document surfaces: `GirviDocumentService` is the shared entry point for loan ticket, release Form H, and repayment receipt PDFs; existing loan/release routes now call the shared service; and loan-detail payment rows now expose receipt printing through a permission-gated Girvi endpoint.
+- Girvi Phase 2 task 24 safe operations tooling is now implemented: a permission-gated Operations Console report route exposes payment posting status, outbox status, controlled retry for failed/dead-letter Girvi posting outbox events, setup health summaries (series/rates), and recent loan audit events, with focused permission and retry behavior tests.
+- Girvi Phase 2 task 25 essential reports are now implemented: a permission-gated Operational Controls report consolidates outstanding aging buckets, collateral custody distribution, release-ready checks, and rate exceptions alongside the existing reconciliation report surface.
 
 ## Known Pressure Points
 
@@ -77,5 +95,7 @@ Rokkad is moving toward a layered architecture:
 - Period-lock validation should remain inside the posting engine for all accounting paths.
 - Orgs service extraction is started but not complete; workspace/team mutation views should continue moving toward thin request/response coordinators.
 - Party Phase 9 still needs remaining notification document surfaces reviewed before cutover planning, plus additional operational create/edit surfaces beyond Girvi given-loan creation.
+- Girvi Phase 1 remaining hardening items need separate design/test setup before implementation: true cross-tenant integration tests are still missing, durable notice/audit timelines require schema decisions, a stronger loan-number registry/DB constraint would require tenant migrations, and generic UI idempotency keys should wait for Phase 2/3 workflow screens.
+- Deferred follow-up (shelved): add explicit `LoanChangeLog` entries for each Operations Console outbox retry action (previous Option 2). Current retry is controlled and permission-gated, but retry-attempt audit event emission is postponed for a later slice.
 
 Historical assessments are preserved in [archive/root](archive/root/).

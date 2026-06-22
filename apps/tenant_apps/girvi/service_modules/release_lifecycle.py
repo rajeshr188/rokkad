@@ -10,6 +10,7 @@ from apps.tenant_apps.girvi.flows import (
     normalize_legacy_given_loan_status,
 )
 from apps.tenant_apps.girvi.lifecycle import V2_CLOSURE_STATUSES
+from apps.tenant_apps.girvi.models.custody_tracking import ItemCustodyStatus
 
 from .accrual import InterestAccrualCommand, InterestAccrualService
 from .payment import record_loan_release
@@ -51,6 +52,48 @@ class ReleaseLifecycleService:
     """Command-style release creation for GivenLoan lifecycle writes."""
 
     @staticmethod
+    def _existing_release(loan):
+        try:
+            return getattr(loan, "release", None)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _exception_messages(exc):
+        return list(getattr(exc, "messages", None) or [str(exc)])
+
+    @staticmethod
+    def _release_items_to_customer(loan, created_by):
+        loan_items = getattr(loan, "loanitems", None)
+        if loan_items is None:
+            return
+
+        errors = []
+        for item in loan_items.all():
+            release_to_customer = getattr(item, "release_to_customer", None)
+            if not callable(release_to_customer):
+                continue
+
+            try:
+                release_to_customer(user=created_by)
+            except Exception as exc:
+                if (
+                    getattr(item, "custody_status", None)
+                    == ItemCustodyStatus.WITH_CUSTOMER
+                ):
+                    continue
+
+                item_label = getattr(item, "itemdesc", None) or str(item)
+                for message in ReleaseLifecycleService._exception_messages(exc):
+                    errors.append(f"{item_label}: {message}")
+
+        if errors:
+            raise ValidationError(
+                ["Cannot release loan because collateral custody update failed."]
+                + errors
+            )
+
+    @staticmethod
     def preview(command: ReleaseCreateCommand) -> ReleaseCreatePreview:
         errors = []
         warnings = []
@@ -63,13 +106,27 @@ class ReleaseLifecycleService:
         if not created_by:
             errors.append("created_by is required for release creation.")
 
-        outstanding_amount = getattr(loan, "total_due", None) if loan else None
+        existing_release = ReleaseLifecycleService._existing_release(loan) if loan else None
+        if existing_release is not None:
+            release_id = getattr(existing_release, "release_id", None) or getattr(
+                existing_release, "pk", ""
+            )
+            errors.append(
+                f"Loan {getattr(loan, 'loan_id', '')} already has a release"
+                f"{f' ({release_id})' if release_id else ''}."
+            )
+
+        outstanding_amount = None
+        if loan and existing_release is None:
+            from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
+
+            outstanding_amount = build_loan_settlement_balance(loan).total_outstanding
         if outstanding_amount is not None and outstanding_amount <= 0:
             warnings.append(
                 "Loan has no outstanding balance. Release accounting may be skipped."
             )
 
-        if loan and created_by:
+        if loan and created_by and existing_release is None:
             workspace = getattr(getattr(created_by, "profile", None), "workspace", None)
             flow = build_runtime_loan_flow(
                 loan,
@@ -159,16 +216,10 @@ class ReleaseLifecycleService:
                     created_by=created_by,
                 )
                 release.save()
-
-                # Update custody: move all items from vault/lender → customer
-                loan_items = getattr(command.loan, "loanitems", None)
-                if loan_items is not None:
-                    for item in loan_items.all():
-                        try:
-                            if hasattr(item, "release_to_customer"):
-                                item.release_to_customer(user=created_by)
-                        except Exception:
-                            pass  # WITH_CUSTOMER already, or validation error – skip silently
+                ReleaseLifecycleService._release_items_to_customer(
+                    command.loan,
+                    created_by,
+                )
 
                 current_status = normalize_legacy_given_loan_status(
                     getattr(command.loan, "status", "")

@@ -1,6 +1,8 @@
 import logging
 from dataclasses import asdict, is_dataclass
+from decimal import Decimal, InvalidOperation
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -9,9 +11,21 @@ from apps.tenant_apps.girvi.service_modules.transition_posting import (
     post_auction_recovery_for_transition,
     post_sale_recovery_for_transition,
 )
+from apps.tenant_apps.girvi.models.loan import LoanChangeLog
+from apps.tenant_apps.notify_v2.models import NotificationJob
+from apps.tenant_apps.notify_v2.services import create_girvi_reminder_batch
 from .types import TransitionResult
 
 logger = logging.getLogger(__name__)
+
+AUCTION_NOTICE_EVENT_KEY = "loan.auction_notice_due"
+
+
+def _positive_recovery_amount(value):
+    try:
+        return Decimal(str(value)) > 0
+    except (InvalidOperation, TypeError, ValueError):
+        return False
 
 
 class BaseLoanTransitionCommand:
@@ -138,21 +152,51 @@ class WarningTransitionCommand(BaseLoanTransitionCommand):
 class AuctionNoticeMixin:
     notice_success_suffix = " Auction notice created."
 
+    def _record_notice_failure(self, exc):
+        if not getattr(self.loan, "pk", None) or not getattr(self.user, "pk", None):
+            return
+
+        try:
+            LoanChangeLog.objects.create(
+                content_type=ContentType.objects.get_for_model(self.loan),
+                object_id=self.loan.pk,
+                source=str(getattr(self.loan, "status", "")),
+                target=str(getattr(self.loan, "status", "")),
+                author=self.user,
+                diff="Auction notice creation failed.",
+                notes=str(exc),
+                metadata={
+                    "event": "auction_notice_failed",
+                    "event_key": AUCTION_NOTICE_EVENT_KEY,
+                    "error": str(exc),
+                },
+            )
+        except Exception:
+            logger.exception(
+                "Failed to record auction notice failure for loan %s",
+                getattr(self.loan, "loan_id", getattr(self.loan, "pk", "unknown")),
+            )
+
     def _create_auction_notice(self) -> bool:
         borrower = getattr(self.loan, "borrower", None)
         if borrower is None:
             return False
 
         try:
-            from apps.tenant_apps.notify.services import create_loan_auction_notice
-
-            create_loan_auction_notice(loan=self.loan)
+            create_girvi_reminder_batch(
+                loans=[self.loan],
+                created_by=self.user,
+                event_key=AUCTION_NOTICE_EVENT_KEY,
+                channel=NotificationJob.Channel.LETTER,
+                notes="Generated from Girvi auction lifecycle transition.",
+            )
             return True
-        except Exception:
+        except Exception as exc:
             logger.exception(
                 "Auction notice trigger failed for loan %s",
                 getattr(self.loan, "loan_id", getattr(self.loan, "pk", "unknown")),
             )
+            self._record_notice_failure(exc)
             return False
 
     def _attach_notice_message(self, result: TransitionResult) -> TransitionResult:
@@ -176,12 +220,25 @@ class MarkAuctionedTransitionCommand(AuctionNoticeMixin, BaseLoanTransitionComma
         from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
 
         payload_kwargs = self._payload_to_kwargs(payload)
-        amount = payload_kwargs.get("amount") or payload_kwargs.get("recovery_amount")
+        amount = (
+            payload_kwargs["amount"]
+            if "amount" in payload_kwargs
+            else payload_kwargs.get("recovery_amount")
+        )
+        if amount is not None:
+            payload_kwargs["recovery_amount"] = amount
+            payload_kwargs.pop("amount", None)
         if amount is None:
             return TransitionResult(
                 success=False,
                 level="error",
                 message="Auction recovery amount is required.",
+            )
+        if not _positive_recovery_amount(amount):
+            return TransitionResult(
+                success=False,
+                level="error",
+                message="Auction recovery amount must be greater than zero.",
             )
 
         try:
@@ -242,12 +299,25 @@ class MarkSoldTransitionCommand(BaseLoanTransitionCommand):
         from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
 
         payload_kwargs = self._payload_to_kwargs(payload)
-        amount = payload_kwargs.get("amount") or payload_kwargs.get("recovery_amount")
+        amount = (
+            payload_kwargs["amount"]
+            if "amount" in payload_kwargs
+            else payload_kwargs.get("recovery_amount")
+        )
+        if amount is not None:
+            payload_kwargs["recovery_amount"] = amount
+            payload_kwargs.pop("amount", None)
         if amount is None:
             return TransitionResult(
                 success=False,
                 level="error",
                 message="Sale recovery amount is required.",
+            )
+        if not _positive_recovery_amount(amount):
+            return TransitionResult(
+                success=False,
+                level="error",
+                message="Sale recovery amount must be greater than zero.",
             )
 
         try:

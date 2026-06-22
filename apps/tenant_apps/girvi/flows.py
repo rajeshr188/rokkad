@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -5,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from viewflow import fsm
 
 from apps.orgs.models import Membership
+from apps.tenant_apps.girvi.service_modules.overdue_policy import evaluate_overdue_policy
 
 from .models.loan import LoanChangeLog
 from .models.loan_refactored import (
@@ -214,6 +217,13 @@ class GivenLoanFlow(BaseLifecycleFlow):
         if amount is not None:
             return amount
 
+        try:
+            from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
+
+            return build_loan_settlement_balance(self.loan).total_outstanding
+        except Exception:
+            pass
+
         total_due = getattr(self.loan, "total_due", None)
         total_payments_getter = getattr(self.loan, "get_total_payments", None)
         if total_due is not None and callable(total_payments_getter):
@@ -266,6 +276,12 @@ class GivenLoanFlow(BaseLifecycleFlow):
     def _assert_can_request_renewal(self):
         if not self._collateral_exists():
             raise ValidationError("Renewal requires valid collateral.")
+        if getattr(self.loan, "is_released", False) or getattr(self.loan, "release", None):
+            raise ValidationError("Released loans cannot be renewed.")
+        renewal_manager = getattr(self.loan, "renewals_as_source", None)
+        exists = getattr(renewal_manager, "exists", None)
+        if callable(exists) and exists():
+            raise ValidationError("Loan already has a renewal record.")
 
     def _assert_can_complete_renewal(self, successor_loan_id=None):
         if successor_loan_id:
@@ -283,18 +299,52 @@ class GivenLoanFlow(BaseLifecycleFlow):
         }:
             raise ValidationError("Only NPA loans can be sent to auction.")
 
+    def _assert_can_mark_overdue(self):
+        policy = evaluate_overdue_policy(self.loan)
+        if policy.maturity_date is None:
+            raise ValidationError("Loan date and tenure are required to mark overdue.")
+        if not policy.is_overdue:
+            raise ValidationError(
+                "Loan is not overdue: maturity has not passed and settlement does not exceed collateral value."
+            )
+
+    def _assert_can_cure_to_current(self):
+        outstanding = self._outstanding_amount()
+        if outstanding is not None and outstanding > 0:
+            raise ValidationError("Loan cannot be cured while dues are outstanding.")
+
+    def _assert_can_mark_npa(self):
+        policy = evaluate_overdue_policy(self.loan)
+        if not policy.is_npa:
+            raise ValidationError(
+                "Loan cannot be marked NPA while settlement amount is covered by current collateral value."
+            )
+
+    def _assert_can_complete_auction(self, recovery_amount=None):
+        try:
+            amount = Decimal(str(recovery_amount))
+        except (InvalidOperation, TypeError, ValueError):
+            amount = Decimal("0")
+        if amount <= 0:
+            raise ValidationError("Auction recovery amount must be greater than zero.")
+
     def _assert_recovery_clears_balance(self):
         outstanding = self._outstanding_amount()
         if outstanding is not None and outstanding > 0:
             raise ValidationError("Auction recovery must clear the balance before closing.")
 
-    def _assert_can_write_off(self):
+    def _assert_can_write_off(self, reason=""):
         if self._current_state() not in {
             LoanLifecycleState.ACTIVE_NPA,
             LoanLifecycleState.AUCTION_COMPLETE,
             LoanLifecycleState.WRITTEN_OFF,
         }:
             raise ValidationError("Only NPA or auction-complete loans can be written off.")
+        if not str(reason or "").strip():
+            raise ValidationError("Write-off reason is required.")
+        outstanding = self._outstanding_amount()
+        if outstanding is not None and outstanding <= 0:
+            raise ValidationError("Fully settled loans must be closed, not written off.")
 
     def get_transitions(self):
         return [
@@ -355,14 +405,17 @@ class GivenLoanFlow(BaseLifecycleFlow):
 
     @status.transition(source=LoanLifecycleState.ACTIVE_CURRENT, target=LoanLifecycleState.ACTIVE_OVERDUE, label=_("mark_overdue"))
     def mark_overdue(self, marked_by=None):
+        self._assert_can_mark_overdue()
         self._record_meta(marked_by=marked_by, marked_at=timezone.now().isoformat())
 
     @status.transition(source=[LoanLifecycleState.ACTIVE_OVERDUE, LoanLifecycleState.ACTIVE_NPA], target=LoanLifecycleState.ACTIVE_CURRENT, label=_("cure_to_current"))
     def cure_to_current(self, cured_by=None, note=""):
+        self._assert_can_cure_to_current()
         self._record_meta(cured_by=cured_by, note=note)
 
     @status.transition(source=LoanLifecycleState.ACTIVE_OVERDUE, target=LoanLifecycleState.ACTIVE_NPA, label=_("mark_npa"), permission=lambda flow, user: has_permission(user, "can_mark_defaulted"))
     def mark_npa(self, marked_by=None, reason=""):
+        self._assert_can_mark_npa()
         self._record_meta(marked_by=marked_by, reason=reason)
 
     @status.transition(source=[LoanLifecycleState.ACTIVE_CURRENT, LoanLifecycleState.ACTIVE_OVERDUE, LoanLifecycleState.ACTIVE_NPA], target=LoanLifecycleState.CLOSURE_PENDING, label=_("request_closure"), permission=lambda flow, user: has_permission(user, "can_release_loan"))
@@ -408,6 +461,7 @@ class GivenLoanFlow(BaseLifecycleFlow):
 
     @status.transition(source=LoanLifecycleState.AUCTION_IN_PROGRESS, target=LoanLifecycleState.AUCTION_COMPLETE, label=_("complete_auction"), permission=lambda flow, user: has_permission(user, "can_mark_auctioned"))
     def complete_auction(self, completed_by=None, recovery_amount=None):
+        self._assert_can_complete_auction(recovery_amount=recovery_amount)
         self._record_meta(completed_by=completed_by, recovery_amount=recovery_amount)
 
     @status.transition(source=LoanLifecycleState.AUCTION_COMPLETE, target=LoanLifecycleState.CLOSED, label=_("close_after_auction"), permission=lambda flow, user: has_permission(user, "can_mark_auctioned"))
@@ -417,7 +471,7 @@ class GivenLoanFlow(BaseLifecycleFlow):
 
     @status.transition(source=[LoanLifecycleState.ACTIVE_NPA, LoanLifecycleState.AUCTION_COMPLETE], target=LoanLifecycleState.WRITTEN_OFF, label=_("write_off_loan"), permission=lambda flow, user: has_permission(user, "can_mark_defaulted"))
     def write_off_loan(self, written_off_by=None, reason=""):
-        self._assert_can_write_off()
+        self._assert_can_write_off(reason=reason)
         self._record_meta(written_off_by=written_off_by, reason=reason)
 
 

@@ -3,10 +3,10 @@ import re
 from typing import Optional
 
 from django.apps import apps
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.tenant_apps.girvi.models import Series
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
 
 logger = logging.getLogger(__name__)
 
@@ -24,23 +24,54 @@ class LoanIDGenerator:
         if not series:
             raise ValueError("Series is required for loan ID generation")
 
-        loan_model = loan_model or GivenLoan
         with transaction.atomic():
             series = Series.objects.select_for_update().get(id=series.id)
-            last_loan = (
-                loan_model.objects.filter(series=series).order_by("-loan_id").first()
-            )
-
-            if last_loan:
-                try:
-                    last_num = int(last_loan.loan_id[len(series.prefix) :])
-                    next_num = last_num + 1
-                except (ValueError, IndexError):
-                    next_num = 1
-            else:
-                next_num = 1
+            GivenLoan = apps.get_model("girvi", "GivenLoan")
+            TakenLoan = apps.get_model("girvi", "TakenLoan")
+            last_num = 0
+            for model in (GivenLoan, TakenLoan):
+                for loan_id in model.objects.filter(series=series).values_list(
+                    "loan_id", flat=True
+                ):
+                    try:
+                        last_num = max(last_num, int(str(loan_id)[len(series.prefix) :]))
+                    except (ValueError, IndexError, TypeError):
+                        continue
+            next_num = last_num + 1
 
             return series.format_loan_id(next_num)
+
+
+def validate_loan_id_unique_across_loan_tables(
+    loan_id: str,
+    *,
+    exclude_given_pk=None,
+    exclude_taken_pk=None,
+) -> None:
+    """
+    Validate a manual/imported loan ID against both runtime loan tables.
+
+    The database currently guarantees uniqueness inside each concrete loan table.
+    Until a tenant-local registry table exists, command/form code must also
+    reject cross-table duplicates deterministically before save.
+    """
+    normalized = (loan_id or "").strip()
+    if not normalized:
+        return
+
+    GivenLoan = apps.get_model("girvi", "GivenLoan")
+    TakenLoan = apps.get_model("girvi", "TakenLoan")
+
+    given_qs = GivenLoan.objects.filter(loan_id=normalized)
+    if exclude_given_pk:
+        given_qs = given_qs.exclude(pk=exclude_given_pk)
+
+    taken_qs = TakenLoan.objects.filter(loan_id=normalized)
+    if exclude_taken_pk:
+        taken_qs = taken_qs.exclude(pk=exclude_taken_pk)
+
+    if given_qs.exists() or taken_qs.exists():
+        raise ValidationError("A loan with this LoanID already exists.")
 
 
 class ReleaseIDGenerator:

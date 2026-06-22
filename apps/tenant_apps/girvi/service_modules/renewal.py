@@ -80,12 +80,19 @@ class LoanRenewalService:
                 errors=["Loan not found"],
             )
 
-        outstanding = loan.outstanding_principal.amount
-        interest_due = Decimal(str(loan.interest_due()))
+        from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
+
+        settlement = build_loan_settlement_balance(loan)
+        outstanding = settlement.principal_due
+        interest_due = settlement.interest_due
         collateral_value = Decimal(str(loan.current_value))
 
         errors = []
         new_principal = Decimal("0")
+        if getattr(loan, "is_released", False):
+            errors.append("Released loans cannot be renewed.")
+        if LoanRenewal.objects.filter(source_loan=loan).exists():
+            errors.append("Loan already has a renewal record.")
 
         if command.principal_paid > outstanding:
             errors.append(
@@ -105,6 +112,12 @@ class LoanRenewalService:
                 )
         else:
             errors.append(f"Unknown renewal mode: {command.mode!r}")
+
+        if command.interest_paid > interest_due:
+            errors.append(
+                f"Interest paid ({command.interest_paid}) exceeds "
+                f"outstanding interest ({interest_due})."
+            )
 
         if new_principal < Decimal("0"):
             errors.append("Computed new principal cannot be negative.")
@@ -257,7 +270,9 @@ class LoanRenewalService:
                         "Renewal disbursal accounting failed for new loan %s",
                         new_loan.pk,
                     )
-                    warns.append(f"Loan renewed but disbursal accounting failed: {acc_exc}")
+                    raise DjangoValidationError(
+                        f"Renewal disbursal accounting failed: {acc_exc}"
+                    ) from acc_exc
 
                 LoanRenewal.objects.create(
                     source_loan=loan,

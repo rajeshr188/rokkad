@@ -1,8 +1,11 @@
-"""Application service for Girvi ticket printing workflows."""
+"""Application service for Girvi ticket and document printing workflows."""
 
 from dataclasses import dataclass
+from django.http import HttpResponse
 
 from apps.tenant_apps.girvi.documents.loan_ticket import build_loan_ticket_pdf
+from apps.tenant_apps.girvi.documents.payment_receipt import generate_payment_receipt_pdf
+from apps.tenant_apps.girvi.documents.release_forms import generate_form_h
 from apps.tenant_apps.girvi.models.template import LoanTemplate
 
 
@@ -245,3 +248,63 @@ class LoanPrintService:
             return None, None
         pdf = cls.render_pdf(loan, active_template, renderer=renderer)
         return active_template, pdf
+
+
+@dataclass
+class GirviDocumentResult:
+    document_type: str
+    file_name: str
+    pdf: bytes | None = None
+    error_message: str = ""
+
+    @property
+    def ok(self):
+        return self.pdf is not None
+
+
+class GirviDocumentService:
+    """Single entry point for Girvi printable document generation."""
+
+    @staticmethod
+    def render_loan_ticket(loan, *, template=None, template_resolver=None, renderer=None):
+        print_result = LoanPrintService.build_print_result(
+            loan,
+            template=template,
+            template_resolver=template_resolver,
+            renderer=renderer or build_loan_ticket_pdf,
+        )
+        return GirviDocumentResult(
+            document_type="loan_ticket",
+            file_name=f"loan_ticket_{getattr(loan, 'loan_id', getattr(loan, 'pk', 'loan'))}.pdf",
+            pdf=print_result.pdf,
+            error_message=print_result.error_message,
+        )
+
+    @staticmethod
+    def render_release_form_h(release):
+        pdf = generate_form_h(release)
+        return GirviDocumentResult(
+            document_type="release_form_h",
+            file_name=f"form_h_{getattr(release, 'pk', 'release')}.pdf",
+            pdf=pdf,
+            error_message="" if pdf else "Failed to generate Form H PDF.",
+        )
+
+    @staticmethod
+    def render_payment_receipt(payment):
+        pdf = generate_payment_receipt_pdf(payment)
+        payment_identifier = getattr(payment, "payment_id", None) or getattr(payment, "pk", "payment")
+        return GirviDocumentResult(
+            document_type="payment_receipt",
+            file_name=f"payment_receipt_{payment_identifier}.pdf",
+            pdf=pdf,
+            error_message="" if pdf else "Failed to generate payment receipt PDF.",
+        )
+
+    @staticmethod
+    def build_pdf_response(document_result, *, inline=True):
+        disposition = "inline" if inline else "attachment"
+        response = HttpResponse(document_result.pdf or b"", content_type="application/pdf")
+        response["Content-Disposition"] = f'{disposition}; filename="{document_result.file_name}"'
+        response["Content-Transfer-Encoding"] = "binary"
+        return response

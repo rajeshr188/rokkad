@@ -19,10 +19,12 @@ class GirviDashboardViewTests(SimpleTestCase):
     @patch("apps.tenant_apps.girvi.views.dashboard.License")
     @patch("apps.tenant_apps.girvi.views.dashboard.Release")
     @patch("apps.tenant_apps.girvi.views.dashboard.GivenLoan")
+    @patch("apps.tenant_apps.girvi.views.dashboard.build_dashboard_operational_queue")
     @patch("apps.tenant_apps.girvi.views.dashboard.get_dashboard_payment_counts")
     def test_dashboard_uses_payment_count_selector(
         self,
         mock_payment_counts,
+        mock_operational_queue,
         mock_given_loan,
         mock_release,
         mock_license,
@@ -34,6 +36,12 @@ class GirviDashboardViewTests(SimpleTestCase):
     ):
         request = self.factory.get("/girvi/")
         request.user = self.user
+        request.tenant = SimpleNamespace(
+            schema_name="test",
+            owner=SimpleNamespace(is_authenticated=True),
+            theme=None,
+            logo=None,
+        )
 
         given_manager = mock_given_loan.objects
         given_manager.count.return_value = 3
@@ -57,6 +65,20 @@ class GirviDashboardViewTests(SimpleTestCase):
             "total_payments": 9,
             "pending_payments": 4,
         }
+        mock_operational_queue.return_value = {
+            "due_today": [],
+            "overdue_candidates": [],
+            "npa_candidates": [],
+            "cure_candidates": [],
+            "notice_candidates": [],
+            "counts": {
+                "due_today": 0,
+                "overdue_candidates": 0,
+                "npa_candidates": 0,
+                "cure_candidates": 0,
+                "notice_candidates": 0,
+            },
+        }
         response = SimpleNamespace(status_code=200)
         mock_render.return_value = response
 
@@ -64,6 +86,12 @@ class GirviDashboardViewTests(SimpleTestCase):
 
         self.assertEqual(result, response)
         mock_payment_counts.assert_called_once_with()
+        mock_operational_queue.assert_called_once_with(
+            user=request.user,
+            workspace=request.tenant,
+        )
         context = mock_render.call_args.args[2]
         self.assertEqual(context["total_payments"], 9)
         self.assertEqual(context["pending_payments"], 4)
+        self.assertIn("operational_queue", context)
+        self.assertIn("queue_counts", context)

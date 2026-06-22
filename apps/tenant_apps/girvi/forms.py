@@ -17,6 +17,10 @@ from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.party.selectors import active_parties
 from apps.tenant_apps.product.models import ProductVariant
 from apps.tenant_apps.girvi.services import RateCacheService
+from apps.tenant_apps.girvi.policies import assert_loan_header_editable
+from apps.tenant_apps.girvi.service_modules.id_generation import (
+    validate_loan_id_unique_across_loan_tables,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -392,26 +396,25 @@ class LoanForm(forms.ModelForm):
         return my_date
 
     def clean_loan_id(self):
-        cleaned_data = super().clean()
-        loan_id = cleaned_data.get("loan_id", None)
+        loan_id = self.cleaned_data.get("loan_id")
         if loan_id:
-            loan_exists = (
-                GivenLoan.objects.filter(loan_id=loan_id)
-                .exclude(pk=self.instance.pk)
-                .exists()
-                or TakenLoan.objects.filter(loan_id=loan_id).exists()
+            validate_loan_id_unique_across_loan_tables(
+                loan_id,
+                exclude_given_pk=getattr(self.instance, "pk", None),
             )
-            if loan_exists:
-                raise forms.ValidationError("A loan with this LoanID already exists.")
-        return loan_id
+        return (loan_id or "").strip()
 
     def clean(self):
         cleaned_data = super().clean()
 
-        if not self.cleaned_data["series"].is_active:
+        if self.instance and self.instance.pk:
+            assert_loan_header_editable(self.instance)
+
+        series = cleaned_data.get("series")
+        if series and not series.is_active:
             # Using self.add_error to add an error to the 'series' field
             self.add_error(
-                "series", f"Series {self.cleaned_data['series']} is Inactive"
+                "series", f"Series {series} is Inactive"
             )
 
             # Alternatively, using raise forms.ValidationError to stop processing
@@ -508,13 +511,8 @@ class LoanCreateForm(forms.Form):
     def clean_loan_id(self):
         loan_id = self.cleaned_data.get("loan_id")
         if loan_id:
-            loan_exists = (
-                GivenLoan.objects.filter(loan_id=loan_id).exists()
-                or TakenLoan.objects.filter(loan_id=loan_id).exists()
-            )
-            if loan_exists:
-                raise forms.ValidationError("A loan with this LoanID already exists.")
-        return loan_id
+            validate_loan_id_unique_across_loan_tables(loan_id)
+        return (loan_id or "").strip()
 
     def clean_loan_date(self):
         loan_date = self.cleaned_data.get("loan_date")
@@ -1703,6 +1701,10 @@ class GivenLoanRepaymentForm(forms.Form):
         initial=False,
     )
 
+    def __init__(self, *args, loan=None, **kwargs):
+        self.loan = loan
+        super().__init__(*args, **kwargs)
+
     def clean(self):
         cleaned_data = super().clean()
         total = cleaned_data.get("total_amount")
@@ -1711,6 +1713,20 @@ class GivenLoanRepaymentForm(forms.Form):
             self.add_error(
                 "interest_amount", "Interest portion cannot exceed total amount."
             )
+        if self.loan and total is not None:
+            from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
+
+            settlement = build_loan_settlement_balance(self.loan)
+            if total > settlement.total_outstanding:
+                self.add_error(
+                    "total_amount",
+                    f"Payment amount cannot exceed outstanding amount {settlement.total_outstanding}.",
+                )
+            if interest is not None and interest > settlement.interest_due:
+                self.add_error(
+                    "interest_amount",
+                    f"Interest portion cannot exceed outstanding interest {settlement.interest_due}.",
+                )
         return cleaned_data
 
 
@@ -1759,6 +1775,10 @@ class TakenLoanRepaymentForm(forms.Form):
         initial=False,
     )
 
+    def __init__(self, *args, loan=None, **kwargs):
+        self.loan = loan
+        super().__init__(*args, **kwargs)
+
     def clean(self):
         cleaned_data = super().clean()
         total = cleaned_data.get("total_amount")
@@ -1767,4 +1787,18 @@ class TakenLoanRepaymentForm(forms.Form):
             self.add_error(
                 "interest_amount", "Interest portion cannot exceed total amount."
             )
+        if self.loan and total is not None:
+            from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
+
+            settlement = build_loan_settlement_balance(self.loan, loan_kind="taken")
+            if total > settlement.total_outstanding:
+                self.add_error(
+                    "total_amount",
+                    f"Payment amount cannot exceed outstanding amount {settlement.total_outstanding}.",
+                )
+            if interest is not None and interest > settlement.interest_due:
+                self.add_error(
+                    "interest_amount",
+                    f"Interest portion cannot exceed outstanding interest {settlement.interest_due}.",
+                )
         return cleaned_data

@@ -59,8 +59,11 @@ class PaymentVoucherCreationServiceTests(SimpleTestCase):
     def test_given_loan_release_defaults_principal_and_interest(self):
         loan = SimpleNamespace(
             pk=1,
-            outstanding_principal=Money(300, "INR"),
-            interest_due=lambda: Decimal("25.00"),
+            get_loan_amount=Decimal("500.00"),
+            outstanding_interest=Decimal("25.00"),
+            get_total_principal_payments=lambda: Decimal("200.00"),
+            get_total_interest_payments=lambda: Decimal("10.00"),
+            get_total_payments=lambda: Decimal("210.00"),
         )
         user = self._user()
 

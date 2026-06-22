@@ -3,8 +3,11 @@
 import logging
 from dataclasses import dataclass, field as dc_field
 
+from django.db import transaction
+
 from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.girvi.integrations.dea_adapter import post_payment_voucher
+from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
 from apps.tenant_apps.girvi.service_modules.accrual import (
     InterestAccrualCommand,
     InterestAccrualService,
@@ -29,6 +32,7 @@ class RepaymentResult:
     accounting_posted: bool = False
     success_message: str = ""
     warnings: list[str] = dc_field(default_factory=list)
+    errors: list[str] = dc_field(default_factory=list)
 
 
 def _build_repayment_payload(cleaned_data):
@@ -47,6 +51,21 @@ def _build_repayment_payload(cleaned_data):
     }
 
 
+def _repayment_validation_errors(loan, payload, *, loan_kind="given"):
+    settlement = build_loan_settlement_balance(loan, loan_kind=loan_kind)
+    errors = []
+    if payload["total_amount"] > settlement.total_outstanding:
+        errors.append(
+            f"Payment amount {payload['total_amount']} cannot exceed outstanding amount {settlement.total_outstanding}."
+        )
+    interest = payload.get("interest_amount") or 0
+    if interest > settlement.interest_due:
+        errors.append(
+            f"Interest portion {interest} cannot exceed outstanding interest {settlement.interest_due}."
+        )
+    return errors
+
+
 def _workspace_for_user(user):
     return getattr(getattr(user, "profile", None), "workspace", None)
 
@@ -57,9 +76,14 @@ class GivenLoanRepaymentService:
     @classmethod
     def execute(cls, command: RepaymentCommand) -> RepaymentResult:
         result = RepaymentResult()
+        payment_payload = _build_repayment_payload(command.cleaned_data)
+        validation_errors = _repayment_validation_errors(command.loan, payment_payload)
+        if validation_errors:
+            result.errors.extend(validation_errors)
+            return result
+
         cls._run_catchup_accrual(command, result)
 
-        payment_payload = _build_repayment_payload(command.cleaned_data)
         try:
             payment, created = GivenLoanPostingService().post_repayment(
                 command.loan,
@@ -77,7 +101,9 @@ class GivenLoanRepaymentService:
                 "Accounting post failed for payment %s",
                 getattr(result.payment, "payment_id", "unknown"),
             )
-            result.warnings.append(f"Payment saved but accounting posting failed: {exc}")
+            result.errors.append(
+                f"Payment was not recorded because accounting posting failed: {exc}"
+            )
 
         return result
 
@@ -125,23 +151,53 @@ class TakenLoanRepaymentService:
         cleaned_data = command.cleaned_data
         payload = _build_repayment_payload(cleaned_data)
         result = RepaymentResult()
-
-        payment = command.loan.create_payment(
-            amount=payload["total_amount"],
-            payment_date=payload["payment_date"],
-            payment_method=payload["payment_method"],
-            reference_number=payload["reference_number"],
-            interest=payload["interest_amount"],
-            principal=payload["principal_amount"],
-            description=payload["description"],
-            is_final=payload["is_final_payment"],
-            created_by=command.created_by,
+        validation_errors = _repayment_validation_errors(
+            command.loan,
+            payload,
+            loan_kind="taken",
         )
-        result.payment = payment
-        result.payment_created = True
+        if validation_errors:
+            result.errors.extend(validation_errors)
+            return result
 
         try:
-            post_payment_voucher(payment, command.created_by)
+            with transaction.atomic():
+                existing = None
+                reference_number = payload["reference_number"]
+                payments = getattr(command.loan, "payments", None)
+                if reference_number and payments is not None:
+                    existing = (
+                        payments.filter(
+                            direction="PAYMENT",
+                            reference_number=reference_number,
+                        )
+                        .order_by("pk")
+                        .first()
+                    )
+                if existing:
+                    result.payment = existing
+                    result.payment_created = False
+                    result.accounting_posted = True
+                    result.success_message = (
+                        f"Payment {existing.payment_id} already recorded and posted to accounting."
+                    )
+                    return result
+
+                payment = command.loan.create_payment(
+                    amount=payload["total_amount"],
+                    payment_date=payload["payment_date"],
+                    payment_method=payload["payment_method"],
+                    reference_number=payload["reference_number"],
+                    interest=payload["interest_amount"],
+                    principal=payload["principal_amount"],
+                    description=payload["description"],
+                    is_final=payload["is_final_payment"],
+                    created_by=command.created_by,
+                )
+                post_payment_voucher(payment, command.created_by)
+
+            result.payment = payment
+            result.payment_created = True
             result.accounting_posted = True
             result.success_message = (
                 f"Payment {payment.payment_id} recorded and posted to accounting."
@@ -149,10 +205,10 @@ class TakenLoanRepaymentService:
         except Exception as exc:
             logger.exception(
                 "Accounting post failed for taken loan payment %s",
-                getattr(payment, "payment_id", "unknown"),
+                getattr(locals().get("payment"), "payment_id", "unknown"),
             )
-            result.warnings.append(
-                f"Payment {payment.payment_id} saved but accounting posting failed: {exc}"
+            result.errors.append(
+                f"Payment was not recorded because accounting posting failed: {exc}"
             )
 
         return result

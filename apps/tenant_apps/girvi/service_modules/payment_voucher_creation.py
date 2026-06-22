@@ -11,6 +11,7 @@ from django.utils import timezone
 from moneyed import Money
 
 from apps.tenant_apps.girvi.integrations.dea_adapter import create_payment_voucher
+from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
 
 
 def _require_created_by(created_by):
@@ -39,8 +40,9 @@ def create_given_loan_release_payment(
 ):
     _require_created_by(created_by)
 
-    principal = _money(principal if principal is not None else loan.outstanding_principal)
-    interest = _money(interest if interest is not None else loan.interest_due())
+    settlement = build_loan_settlement_balance(loan)
+    principal = _money(principal if principal is not None else settlement.principal_due)
+    interest = _money(interest if interest is not None else settlement.interest_due)
     total = principal + interest
 
     return create_payment_voucher(

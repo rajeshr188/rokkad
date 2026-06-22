@@ -28,20 +28,23 @@ from apps.tenant_apps.girvi.documents.loan_ticket import (
     grid_template,
     print_labels_pdf,
 )
+from apps.tenant_apps.dea.models import PaymentVoucher
 from apps.tenant_apps.girvi.models.template import LoanTemplate
-from apps.tenant_apps.girvi.service_modules.printing import LoanPrintService
+from apps.tenant_apps.girvi.service_modules.printing import (
+    GirviDocumentService,
+)
 from apps.tenant_apps.girvi.service_modules.print_selection import (
     unreleased_given_loan_selection,
 )
 from apps.tenant_apps.notify.models import Notification
 from apps.tenant_apps.notify.services import (
     DEFAULT_LOAN_REMINDER_CODE,
-    create_bulk_loan_reminder_group,
 )
 from apps.tenant_apps.notify_v2.models import NotificationJob
 from apps.tenant_apps.notify_v2.services import create_girvi_reminder_batch
 
 from ..forms import LoanSelectionForm
+from .access import girvi_permission_required, girvi_workspace_required
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,49 @@ _NOTIFY_V2_CHANNEL_MAP = {
 }
 
 
+def _dispatch_girvi_notice_batch_v2(*, request, selection, source_label):
+    selected_loans = list(selection.loans or [])
+    if not selected_loans:
+        return HttpResponse(status=200, content="No unreleased loans selected.")
+
+    notice_code = request.POST.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
+    medium_type = request.POST.get("medium_type", Notification.MediumType.Letter)
+    event_key = _NOTIFY_V2_EVENT_MAP.get(notice_code, "loan.first_reminder_due")
+    channel = _NOTIFY_V2_CHANNEL_MAP.get(medium_type, NotificationJob.Channel.LETTER)
+
+    try:
+        batch_result = create_girvi_reminder_batch(
+            loans=selected_loans,
+            created_by=request.user,
+            event_key=event_key,
+            channel=channel,
+            notes=f"Created from {source_label}.",
+        )
+    except ValueError as exc:
+        return HttpResponse(status=400, content=str(exc))
+    except Exception:
+        logger.exception("Error creating notify_v2 reminder batch from %s.", source_label)
+        return HttpResponse(status=500, content="Error creating notify_v2 batch.")
+
+    try:
+        messages.success(
+            request,
+            (
+                f"Created reminder batch for {batch_result.preview.borrower_count} recipient(s) "
+                f"across {batch_result.preview.loan_count} loan(s)."
+            ),
+        )
+    except Exception:
+        pass
+
+    destination = batch_result.batch.get_absolute_url()
+    if request.headers.get("HX-Request") == "true":
+        # HTMX requests from bulk-action dropdown should perform a full navigation.
+        return HttpResponse(status=204, headers={"HX-Redirect": destination})
+    return redirect(destination)
+
+
+@girvi_workspace_required
 def print_labels(request):
     selection = unreleased_given_loan_selection(
         post_data=request.POST,
@@ -79,6 +125,7 @@ def print_labels(request):
     return HttpResponse(status=200, content="No unreleased loans selected.")
 
 
+@girvi_workspace_required
 def print_label(request):
     if request.method == "POST":
         form = LoanSelectionForm(request.POST)
@@ -95,7 +142,7 @@ def print_label(request):
         return render(request, template_name, {"form": form})
 
 
-@login_required
+@girvi_permission_required("girvi_report_view")
 def notify_print(request):
     selection = unreleased_given_loan_selection(
         post_data=request.POST,
@@ -106,31 +153,14 @@ def notify_print(request):
             logger.warning("notify_print rejected invalid IDs: %s", selection.invalid_ids)
         return HttpResponse(status=400, content=selection.error)
 
-    if selection.loans:
-        notice_code = request.POST.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
-        medium_type = request.POST.get(
-            "medium_type",
-            Notification.MediumType.Letter,
-        )
-
-        try:
-            ng = create_bulk_loan_reminder_group(
-                selection.loans,
-                notice_code=notice_code,
-                medium_type=medium_type,
-            )
-        except ValueError as exc:
-            return HttpResponse(status=400, content=str(exc))
-        except Exception:
-            logger.exception("Error creating reminder notifications.")
-            return HttpResponse(status=500, content="Error creating notifications.")
-
-        return redirect(ng.get_absolute_url())
-
-    return HttpResponse(status=200, content="No unreleased loans selected.")
+    return _dispatch_girvi_notice_batch_v2(
+        request=request,
+        selection=selection,
+        source_label="girvi_create_notice (legacy alias)",
+    )
 
 
-@login_required
+@girvi_permission_required("girvi_report_view")
 def notify_print_v2(request):
     selection = unreleased_given_loan_selection(
         post_data=request.POST,
@@ -141,46 +171,17 @@ def notify_print_v2(request):
             logger.warning("notify_print_v2 rejected invalid IDs: %s", selection.invalid_ids)
         return HttpResponse(status=400, content=selection.error)
 
-    selected_loans = list(selection.loans or [])
-    if not selected_loans:
-        return HttpResponse(status=200, content="No unreleased loans selected.")
-
-    notice_code = request.POST.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
-    medium_type = request.POST.get("medium_type", Notification.MediumType.Letter)
-    event_key = _NOTIFY_V2_EVENT_MAP.get(notice_code, "loan.first_reminder_due")
-    channel = _NOTIFY_V2_CHANNEL_MAP.get(medium_type, NotificationJob.Channel.LETTER)
-
-    try:
-        batch_result = create_girvi_reminder_batch(
-            loans=selected_loans,
-            created_by=request.user,
-            event_key=event_key,
-            channel=channel,
-        )
-    except ValueError as exc:
-        return HttpResponse(status=400, content=str(exc))
-    except Exception:
-        logger.exception("Error creating notify_v2 reminder batch.")
-        return HttpResponse(status=500, content="Error creating notify_v2 batch.")
-
-    try:
-        messages.success(
-            request,
-            f"Created notify_v2 batch with {batch_result.preview.borrower_count} recipient(s).",
-        )
-    except Exception:
-        pass
-    destination = batch_result.batch.get_absolute_url()
-    if request.headers.get("HX-Request") == "true":
-        # HTMX requests from bulk-action dropdown should perform a full navigation.
-        return HttpResponse(status=204, headers={"HX-Redirect": destination})
-    return redirect(destination)
+    return _dispatch_girvi_notice_batch_v2(
+        request=request,
+        selection=selection,
+        source_label="girvi_create_notice_v2",
+    )
 
 
 import base64
 
 
-@login_required
+@girvi_workspace_required
 def print_loan(request, pk=None):
     loan = get_object_or_404(
         GivenLoan.objects.select_related(
@@ -190,31 +191,15 @@ def print_loan(request, pk=None):
         ),
         pk=pk,
     )
-    result = LoanPrintService.build_print_result(
+    result = GirviDocumentService.render_loan_ticket(
         loan,
         template_resolver=LoanTemplate.objects.get_default,
         renderer=get_custom_jcl,
     )
-    if not result.template:
+    if not result.ok:
         messages.warning(request, result.error_message)
         return redirect("girvi:girvi_loan_detail", pk=loan.pk)
-
-    if not result.ok:
-        readiness = result.readiness or {}
-        logger.error(
-            "Loan PDF generation failed for loan=%s template_id=%s print_option=%s readiness=%s",
-            getattr(loan, "loan_id", None),
-            getattr(result.template, "pk", None),
-            getattr(result.template, "print_option", None),
-            readiness.get("summary"),
-        )
-        messages.error(request, result.error_message)
-        return redirect("girvi:girvi_loan_detail", pk=loan.pk)
-
-    response = HttpResponse(result.pdf, content_type="application/pdf")
-    response["Content-Disposition"] = f"inline; filename='{loan.loan_id}.pdf'"
-    response["Content-Transfer-Encoding"] = "binary"
-    return response
+    return GirviDocumentService.build_pdf_response(result)
     # Encode the PDF in base64
     # pdf_base64 = base64.b64encode(pdf).decode("utf-8")
 
@@ -227,7 +212,7 @@ def print_loan(request, pk=None):
     # return HttpResponse(object_html)
 
 
-@login_required
+@girvi_workspace_required
 def print_grid_template(request):
     pdf = grid_template()
 
@@ -241,6 +226,16 @@ def print_grid_template(request):
     </object>
     """
     return HttpResponse(object_html)
+
+
+@girvi_permission_required("girvi_loan_payment")
+def payment_receipt_pdf(request, pk):
+    payment = get_object_or_404(PaymentVoucher, pk=pk)
+    result = GirviDocumentService.render_payment_receipt(payment)
+    if not result.ok:
+        messages.error(request, result.error_message)
+        return redirect("dea_payment_detail", pk=payment.pk)
+    return GirviDocumentService.build_pdf_response(result)
 
 
 class PageNumCanvas(canvas.Canvas):
@@ -470,7 +465,7 @@ class PageNumCanvas(canvas.Canvas):
 #     return response
 
 
-@login_required
+@girvi_workspace_required
 def generate_unreleased_pdf(request):
     numbers = GivenLoan.objects.unreleased().values_list("loan_id", flat=True)
 
@@ -501,7 +496,7 @@ from ..models import GivenLoan, Series
 from ..resources import LedgerResource
 
 
-@login_required
+@girvi_workspace_required
 def export_loans_to_excel(request):
     # Create a workbook
     wb = Workbook()
@@ -696,7 +691,7 @@ def _build_inventory_audit_rows(*, scope="all", from_date=None, to_date=None):
     return rows
 
 
-@login_required
+@girvi_workspace_required
 def export_active_loans_inventory_audit(request):
     from datetime import datetime
     

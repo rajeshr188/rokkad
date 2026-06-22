@@ -16,6 +16,28 @@
     <div class="card-body" style="background-color: #eee;">
       <h5 class="card-title">Release Form</h5>
 
+      {% if release_checklist %}
+        <div class="alert {% if release_checklist.can_release %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+          <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <strong>Release Checklist</strong>
+            <span class="badge {% if release_checklist.can_release %}bg-success{% else %}bg-danger{% endif %}">
+              {% if release_checklist.can_release %}Ready{% else %}Blocked{% endif %}
+            </span>
+          </div>
+          <div class="small mt-2 text-muted">
+            <div>Outstanding: {{ release_checklist.outstanding_amount }}</div>
+            <div>Items with lenders: {{ release_checklist.total_with_lenders }}</div>
+          </div>
+          {% if release_checklist.blockers %}
+            <div class="mt-2 small">
+              {% for blocker in release_checklist.blockers %}
+                <div>{{ blocker }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
       {% if release_preview %}
         <div class="alert {% if release_preview.errors %}alert-danger{% elif release_preview.warnings %}alert-warning{% else %}alert-success{% endif %}" role="alert">
           <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
@@ -53,7 +75,7 @@
       <form method="post">
         {% csrf_token %}
         {{ form|crispy }}
-        <button class ="btn btn-success" type="submit" {% if release_preview and release_preview.errors %}disabled{% endif %}>Submit</button>
+        <button class ="btn btn-success" type="submit" {% if release_preview and release_preview.errors or release_checklist and not release_checklist.can_release %}disabled{% endif %}>Submit</button>
       </form>
     </div>
   </div>

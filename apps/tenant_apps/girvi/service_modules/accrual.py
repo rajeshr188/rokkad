@@ -198,12 +198,14 @@ class InterestAccrualService:
             )
 
         existing_keys = InterestAccrualService._get_existing_period_keys(loan)
+        existing_starts = {period_start for period_start, _period_end in existing_keys}
         periods_to_create: list[InterestAccrualPeriod] = []
 
         for period_index in range(1, completed_periods + 1):
             period_start = (loan_start + relativedelta(months=period_index - 1)).date()
-            period_end = (loan_start + relativedelta(months=period_index)).date()
-            if (period_start, period_end) in existing_keys:
+            boundary_end = (loan_start + relativedelta(months=period_index)).date()
+            period_end = min(boundary_end, effective_end_dt.date())
+            if (period_start, period_end) in existing_keys or period_start in existing_starts:
                 continue
             periods_to_create.append(
                 InterestAccrualPeriod(

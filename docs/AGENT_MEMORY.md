@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-21
+updated: 2026-06-22
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
@@ -135,6 +135,7 @@ Each document should expose `get_economic_payload()` or equivalent structured da
 - Party duplicate merge is service-backed and conservative: source parties are archived, non-conflicting profile children and DEA mappings are moved, and merges stop on legacy-customer, identifier, or active DEA mapping conflicts.
 - Party list has filtered CSV/XLSX export for Owner/Admin users. The first version is intentionally flat: Party identity fields, contact summary, active roles, and legacy customer linkage; child profile tables remain separate.
 - Party Phase 9 uses nullable shadow FKs on operational documents first. Current shadow links include Girvi borrower/lender loans and DEA sales/purchase invoice vouchers; DEA account resolution prefers explicit Party links and falls back to Customer.
+- Party detail loan history now uses a Girvi facade read model that aggregates active/closed Given/Taken loans plus payment, notice, and collateral summaries for both Party-linked and legacy bridged-customer records.
 - Girvi given-loan creation is Party-first while still compatibility-safe: users select an active Party, the create path ensures a legacy `Customer` bridge as needed, and `GivenLoan.borrower` plus `GivenLoan.borrower_party` are both populated.
 - Party codes are tenant-local stable identifiers. Normal creation auto-generates sequential `P-000001` style codes when blank; manual/custom codes remain supported for imports and legacy bridge records.
 - Girvi TakenLoan amount, weight, current-value, and item-interest read models should use `RepledgeHistory` plus linked `LoanItem` data; `RepledgedLoanItem` is retained only as readable legacy/import compatibility data.
@@ -142,6 +143,11 @@ Each document should expose `get_economic_payload()` or equivalent structured da
 - Girvi transition registries should keep canonical state/UI/form metadata as primary. Legacy transition metadata belongs only in explicit compatibility registries while aliases remain accepted for old URLs/imported values.
 - Girvi active list/detail/transition UI should render canonical lifecycle labels through lifecycle display helpers rather than raw persisted status values.
 - Girvi transition matrix tests derive canonical transition source/target states from `flows.py`; adding or changing a canonical `GivenLoanFlow` or `TakenLoanFlow` transition should update registry state metadata in the same change.
+- Girvi operational endpoints now use centralized permission gates in `views/access.py` (`girvi_permission_required`, `GirviPermissionRequiredMixin`) so create/edit/delete, transition/disbursal, repayment, release mutation, and report routes are not merely login-guarded.
+- Girvi customer notice communication now standardizes on notify_v2 batch dispatch: bulk and single-loan notice entrypoints map reminder/auction notice codes to notify_v2 events/channels, and the legacy bulk notice URL is retained only as an alias to the same notify_v2 workflow.
+- Girvi MVP document/PDF generation now has a shared `GirviDocumentService` entry point in `service_modules/printing.py`; existing loan ticket and release Form H endpoints call that service, and a new permission-gated repayment receipt PDF route (`girvi_payment_receipt_pdf`) is exposed from loan detail payment rows.
+- Girvi safe-operations admin surface now includes a permission-gated Operations Console (`girvi_operations_console`) that centralizes posting/outbox health, controlled retry for failed outbox rows, series/rate setup checks, and recent `LoanChangeLog` audit events.
+- Girvi essential report coverage now includes a dedicated permission-gated Operational Controls report (`loan_operational_controls_report`) with outstanding aging, collateral custody, release-readiness, and rate-exception sections; the additional per-retry audit-log emission follow-up is intentionally deferred.
 - Current Girvi-to-DEA synchronous posting/read integration should go through `apps.tenant_apps.girvi.integrations.dea_adapter`; `service_modules.posting_adapter` exists only as a compatibility import path.
 - Girvi refactored loan model payment methods are compatibility wrappers only; voucher creation logic belongs in `service_modules.payment_voucher_creation` and the DEA adapter boundary.
 - Girvi P3 adapter cleanup is complete for refactored runtime paths. Deprecated `models/loan.py` may still import DEA directly until P5 legacy model containment.

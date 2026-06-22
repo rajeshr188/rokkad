@@ -196,6 +196,21 @@ LOAN_URLPATTERNS = [
         name="license_report",
     ),
     path(
+        "girvi/reports/reconciliation/",
+        views.loan_accounting_reconciliation_report,
+        name="loan_accounting_reconciliation_report",
+    ),
+    path(
+        "girvi/reports/operational-controls/",
+        views.loan_operational_controls_report,
+        name="loan_operational_controls_report",
+    ),
+    path(
+        "girvi/reports/operations-console/",
+        views.girvi_operations_console,
+        name="girvi_operations_console",
+    ),
+    path(
         "girvi/loan-crosstab/",
         views.LoanCrosstabReport.as_view(),
         name="loan_crosstab_legacy",
@@ -274,6 +289,11 @@ LOAN_ITEM_URLPATTERNS = [
 ]
 
 PAYMENT_URLPATTERNS = [
+    path(
+        "girvi/loanpayment/<int:pk>/receipt/",
+        views.payment_receipt_pdf,
+        name="girvi_payment_receipt_pdf",
+    ),
     path(
         "girvi/loanpayment/<int:pk>/create/",
         views.loan_payment_create_view,

@@ -267,15 +267,62 @@ class RateCacheService:
 class InterestCalculationService:
     """Calculate interest and payment metrics consistently."""
 
+    POLICY_MINIMUM_MONTH_PARTIAL_FULL_WITH_GRACE = (
+        "MINIMUM_MONTH_PARTIAL_FULL_WITH_3_DAY_GRACE"
+    )
+    GRACE_DAYS_IN_NEW_MONTH = 3
+    POLICY_DESCRIPTION = (
+        "Interest has a minimum first-month charge. Partial months count as a full "
+        "month, except an additional partial month is not charged when the as-of date "
+        "falls in the first 3 calendar days of a month."
+    )
+
     @staticmethod
     def months_between(start_date, end_date=None):
         """
-        Calculate months between dates (consistent across app).
-        Uses relativedelta for accuracy across varying month lengths.
+        Calculate chargeable monthly periods between two dates.
+
+        This is the canonical Girvi MVP interest policy:
+        - any positive duration has a minimum one-month charge
+        - partial months count as a full month
+        - the first 3 calendar days of a month are a grace period for adding
+          another partial-month charge
+        - month boundaries are calculated with relativedelta from the loan date
         """
         end = end_date or timezone.now()
-        delta = relativedelta(end, start_date)
-        return delta.years * 12 + delta.months
+        start_value = start_date.date() if hasattr(start_date, "date") else start_date
+        end_value = end.date() if hasattr(end, "date") else end
+        if end_value <= start_value:
+            return 0
+
+        delta = relativedelta(end_value, start_value)
+        completed_months = delta.years * 12 + delta.months
+        boundary = start_value + relativedelta(months=completed_months)
+        has_partial_month = end_value > boundary
+
+        chargeable_months = completed_months
+        if has_partial_month:
+            if completed_months == 0:
+                chargeable_months = 1
+            elif getattr(end_value, "day", 0) <= InterestCalculationService.GRACE_DAYS_IN_NEW_MONTH:
+                chargeable_months = completed_months
+            else:
+                chargeable_months = completed_months + 1
+
+        return max(chargeable_months, 1)
+
+    @classmethod
+    def policy(cls):
+        return {
+            "code": cls.POLICY_MINIMUM_MONTH_PARTIAL_FULL_WITH_GRACE,
+            "description": cls.POLICY_DESCRIPTION,
+            "grace_days_in_new_month": cls.GRACE_DAYS_IN_NEW_MONTH,
+        }
+
+    @classmethod
+    def interest_due(cls, principal_interest_amount, start_date, end_date=None):
+        months = cls.months_between(start_date, end_date)
+        return round(Decimal(str(principal_interest_amount or 0)) * months, 2)
 
     @staticmethod
     def get_duration_annotations(loan_kind="legacy"):

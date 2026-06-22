@@ -96,7 +96,7 @@ class InterestAccrualServiceTests(SimpleTestCase):
         self.assertEqual(created_payloads[0]["period_start"], expected_start)
         self.assertEqual(created_payloads[1]["period_end"], expected_start + relativedelta(months=2))
 
-    def test_preview_does_not_accrue_before_first_full_month_boundary(self):
+    def test_preview_applies_minimum_first_month_charge_before_full_month_boundary(self):
         base_date = timezone.localdate() - timedelta(days=20)
         loan = SimpleNamespace(
             pk=43,
@@ -116,9 +116,10 @@ class InterestAccrualServiceTests(SimpleTestCase):
         preview = InterestAccrualService.preview(command)
 
         self.assertTrue(preview.is_valid)
-        self.assertEqual(preview.completed_periods, 0)
-        self.assertEqual(preview.pending_periods, 0)
-        self.assertEqual(preview.newly_accrued_amount, Decimal("0.00"))
+        self.assertEqual(preview.completed_periods, 1)
+        self.assertEqual(preview.pending_periods, 1)
+        self.assertEqual(preview.newly_accrued_amount, Decimal("125.00"))
+        self.assertEqual(preview.periods_to_create[0].period_end, timezone.localdate())
 
     def test_execute_is_idempotent_when_all_completed_periods_exist(self):
         expected_start = timezone.localdate() - relativedelta(months=3)
