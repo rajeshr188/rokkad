@@ -21,6 +21,9 @@ from apps.tenant_apps.girvi.policies import assert_loan_header_editable
 from apps.tenant_apps.girvi.service_modules.id_generation import (
     validate_loan_id_unique_across_loan_tables,
 )
+from apps.tenant_apps.girvi.service_modules.release_form_validation import (
+    ReleaseFormValidationService,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -911,18 +914,6 @@ class ReleaseForm(forms.ModelForm):
 
         return release_amount
 
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        # Get the value of release_amount
-        release_amount = self.cleaned_data.get("release_amount")
-
-        if commit:
-            instance.save()
-            # Note: release accounting (DEA PaymentVoucher) is handled by
-            # Release.save() → record_loan_release() hook (PR-4). No LoanPayment here.
-        return instance
-
 
 class BaseReleaseFormSet(forms.BaseModelFormSet):
     def clean(self):
@@ -930,51 +921,7 @@ class BaseReleaseFormSet(forms.BaseModelFormSet):
 
         if any(self.errors):
             return
-
-        seen_ids = set()
-        loan_ids = []
-
-        for form in self.forms:
-            if not hasattr(form, "cleaned_data"):
-                continue
-            if not form.cleaned_data:
-                continue
-            if form.cleaned_data.get("DELETE"):
-                continue
-
-            loan = form.cleaned_data.get("loan")
-            if not loan:
-                continue
-
-            if loan.id in seen_ids:
-                form.add_error("loan", "Duplicate loan selected in bulk release.")
-            else:
-                seen_ids.add(loan.id)
-
-            loan_ids.append(loan.id)
-
-        if not loan_ids:
-            raise forms.ValidationError("Please select at least one loan.")
-
-        released_ids = set(
-            GivenLoan.objects.filter(id__in=loan_ids, release__isnull=False).values_list(
-                "id", flat=True
-            )
-        )
-
-        if released_ids:
-            for form in self.forms:
-                if not hasattr(form, "cleaned_data"):
-                    continue
-                loan = form.cleaned_data.get("loan") if form.cleaned_data else None
-                if loan and loan.id in released_ids:
-                    form.add_error(
-                        "loan", "This loan was already released. Refresh and try again."
-                    )
-
-            raise forms.ValidationError(
-                "Some loans are already released. Please review highlighted rows."
-            )
+        ReleaseFormValidationService.validate_formset(self)
 
 
 def build_release_formset(extra=0):
@@ -1140,23 +1087,6 @@ class LoanItemStorageBoxForm(forms.ModelForm):
                 )
 
         return cleaned_data
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        start_loan = self.cleaned_data["start_item_id"]
-        end_loan = self.cleaned_data["end_item_id"]
-        instance.start_item = start_loan.loanitems.filter(
-            itemtype=instance.item_type
-        ).first()
-        instance.end_item = end_loan.loanitems.filter(itemtype=instance.item_type).last()
-        if not instance.start_item or not instance.end_item:
-            raise forms.ValidationError(
-                "Selected loans must contain items matching the storage box item type."
-            )
-        if commit:
-            instance.save()
-        return instance
 
 
 class ApproveLoanForm(forms.Form):

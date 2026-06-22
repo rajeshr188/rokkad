@@ -1,9 +1,11 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
+from django.core.exceptions import ValidationError
 
 from ..forms import LoanItemStorageBoxForm
 from ..models import LoanItemStorageBox
+from ..service_modules.storagebox_workflow import StorageBoxWorkflowService
 
 
 def _render_storagebox_list(request):
@@ -31,8 +33,11 @@ def add_storage_box(request):
     if request.method == "POST":
         form = LoanItemStorageBoxForm(request.POST)
         if form.is_valid():
-            form.save()
-            return _render_storagebox_list(request)
+            try:
+                StorageBoxWorkflowService.save_from_form(form)
+                return _render_storagebox_list(request)
+            except ValidationError as exc:
+                form.add_error(None, str(exc))
         return render(
             request,
             "girvi/storagebox/storagebox_form.html",
@@ -51,8 +56,11 @@ def update_storage_box(request, pk):
     if request.method == "POST":
         form = LoanItemStorageBoxForm(request.POST, instance=storage_box)
         if form.is_valid():
-            form.save()
-            return _render_storagebox_list(request)
+            try:
+                StorageBoxWorkflowService.save_from_form(form)
+                return _render_storagebox_list(request)
+            except ValidationError as exc:
+                form.add_error(None, str(exc))
         return render(
             request,
             "girvi/storagebox/storagebox_form.html",
