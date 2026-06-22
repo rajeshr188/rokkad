@@ -71,6 +71,7 @@ from ..service_modules.bulk_operations import (
     LoanBulkOperationService,
     LoanMergeCommand,
 )
+from ..service_modules.transition_workflow import TransitionWorkflowService
 from .access import girvi_permission_required, girvi_workspace_required
 logger = logging.getLogger(__name__)
 
@@ -78,16 +79,25 @@ logger = logging.getLogger(__name__)
 @girvi_permission_required("girvi_loan_approve")
 def loan_transition_view(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
-    status_label = lifecycle_status_label(loan.status)
-    status_badge_class = lifecycle_status_badge_class(loan.status)
-    raw_transition_name = request.GET.get("transition") or request.POST.get("transition")
-    transition_name = normalize_transition_name(raw_transition_name)
-    transition_name = resolve_runtime_transition_name(loan, transition_name)
-    form_class = get_transition_form_class(transition_name)
-    transition_ui = get_transition_form_ui(transition_name)
+    transition_context = TransitionWorkflowService.resolve_transition_context(loan, request)
+    status_label = transition_context["status_label"]
+    status_badge_class = transition_context["status_badge_class"]
+    transition_name = transition_context["transition_name"]
+    form_class = transition_context["form_class"]
+    transition_ui = transition_context["transition_ui"]
 
     if not form_class:
         messages.error(request, _("Invalid transition."))
+        return redirect(loan.get_absolute_url())
+
+    policy_error = TransitionWorkflowService.assert_allowed(
+        loan,
+        transition_name,
+        user=request.user,
+        workspace=getattr(request, "tenant", None),
+    )
+    if policy_error:
+        messages.error(request, policy_error)
         return redirect(loan.get_absolute_url())
 
     if request.method == "POST":

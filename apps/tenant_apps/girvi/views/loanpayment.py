@@ -1,18 +1,19 @@
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, reverse
 
 from django.template.response import TemplateResponse
-from django.utils import timezone
 
 from ..forms import GivenLoanRepaymentForm, TakenLoanRepaymentForm
 from ..models import GivenLoan, TakenLoan
-from ..selectors import build_repayment_preview
+from ..policies import assert_can_record_repayment
 from ..service_modules.repayment import (
     GivenLoanRepaymentService,
     RepaymentCommand,
     TakenLoanRepaymentService,
 )
+from ..service_modules.repayment_workflow import RepaymentWorkflowService
 from .access import girvi_permission_required
 
 
@@ -22,7 +23,12 @@ def loan_payment_create_view(request, pk=None):
         raise Http404("A loan pk is required to record a payment.")
 
     loan = get_object_or_404(GivenLoan, pk=pk)
-    repayment_preview = build_repayment_preview(loan)
+    try:
+        assert_can_record_repayment(loan, loan_kind="given")
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+        return redirect(reverse("girvi:girvi_loan_detail", args=[loan.pk]))
+    repayment_preview = RepaymentWorkflowService.build_preview(loan, loan_kind="given")
 
     if request.method == "POST":
         form = GivenLoanRepaymentForm(request.POST, loan=loan)
@@ -34,19 +40,11 @@ def loan_payment_create_view(request, pk=None):
                     created_by=request.user,
                 )
             )
-            for warning in result.warnings:
-                messages.warning(request, warning)
-            for error in result.errors:
-                messages.error(request, error)
-            if result.success_message:
-                messages.success(request, result.success_message)
+            RepaymentWorkflowService.emit_result_messages(request, result)
             return redirect(reverse("girvi:girvi_loan_detail", args=[loan.pk]))
     else:
         form = GivenLoanRepaymentForm(
-            initial={
-                "payment_date": timezone.now(),
-                "interest_amount": repayment_preview.suggested_interest_amount,
-            },
+            initial=RepaymentWorkflowService.initial_form_data(repayment_preview),
             loan=loan,
         )
 
@@ -72,7 +70,12 @@ def loan_payment_create_view(request, pk=None):
 @girvi_permission_required("girvi_loan_payment")
 def taken_loan_payment_create_view(request, pk):
     loan = get_object_or_404(TakenLoan, pk=pk)
-    repayment_preview = build_repayment_preview(loan, loan_kind="taken")
+    try:
+        assert_can_record_repayment(loan, loan_kind="taken")
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+        return redirect(loan.get_absolute_url())
+    repayment_preview = RepaymentWorkflowService.build_preview(loan, loan_kind="taken")
 
     if request.method == "POST":
         form = TakenLoanRepaymentForm(request.POST, loan=loan)
@@ -84,19 +87,11 @@ def taken_loan_payment_create_view(request, pk):
                     created_by=request.user,
                 )
             )
-            for warning in result.warnings:
-                messages.warning(request, warning)
-            for error in result.errors:
-                messages.error(request, error)
-            if result.success_message:
-                messages.success(request, result.success_message)
+            RepaymentWorkflowService.emit_result_messages(request, result)
             return redirect(loan.get_absolute_url())
     else:
         form = TakenLoanRepaymentForm(
-            initial={
-                "payment_date": timezone.now(),
-                "interest_amount": repayment_preview.suggested_interest_amount,
-            },
+            initial=RepaymentWorkflowService.initial_form_data(repayment_preview),
             loan=loan,
         )
 

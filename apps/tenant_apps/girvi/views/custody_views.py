@@ -19,18 +19,15 @@ from django.views.decorators.http import require_http_methods
 
 from apps.tenant_apps.girvi.models import GivenLoan, TakenLoan, LoanItem
 from apps.tenant_apps.girvi.models.custody_tracking import (
-    ItemCustodyStatus,
     RepledgeHistory,
 )
 from apps.tenant_apps.girvi.service_modules.custody import (
     build_loan_custody_summary,
-    build_release_readiness_checklist,
-    build_repledge_selection_context,
     build_taken_loan_collateral_context,
-    create_repledge_from_items,
-    release_loan_with_custody_return,
     return_all_items_from_taken_loan,
 )
+from apps.tenant_apps.girvi.service_modules.custody_workflow import CustodyWorkflowService
+from apps.tenant_apps.girvi.service_modules.repledge_workflow import RepledgeWorkflowService
 from apps.tenant_apps.girvi.views.access import girvi_workspace_required
 
 
@@ -156,7 +153,7 @@ def release_loan_check_custody(request, loan_id):
         messages.info(request, "Loan already released")
         return redirect("girvi:girvi_loan_detail", pk=loan_id)
 
-    context = build_release_readiness_checklist(loan)
+    context = CustodyWorkflowService.build_release_checklist_context(loan)
     if context["can_release"]:
         return redirect("girvi:girvi_release_create", pk=loan_id)
 
@@ -182,21 +179,23 @@ def release_loan_with_return(request, loan_id):
         messages.error(request, "Loan already released")
         return redirect("girvi:girvi_loan_detail", pk=loan_id)
 
-    checklist = build_release_readiness_checklist(loan)
-    if not checklist["dues_clear"]:
-        messages.error(
-            request,
-            "Release is blocked until settlement dues are cleared.",
-        )
+    checklist = CustodyWorkflowService.build_release_checklist_context(loan)
+    gate = CustodyWorkflowService.evaluate_release_with_return_gate(
+        loan,
+        checklist=checklist,
+    )
+
+    if gate.block_message:
+        messages.error(request, gate.block_message)
         return redirect("girvi:release_loan_check_custody", loan_id=loan_id)
-    if not checklist["needs_return"]:
+    if gate.redirect_to_release_create:
         return redirect("girvi:girvi_release_create", pk=loan_id)
 
     release_date = request.POST.get("release_date")
     released_by = request.POST.get("released_by")
 
     try:
-        release = release_loan_with_custody_return(
+        release = CustodyWorkflowService.execute_release_with_return(
             loan=loan,
             release_date=release_date,
             released_by=released_by,
@@ -230,7 +229,7 @@ def create_repledge_select_items(request):
     return render(
         request,
         "girvi/repledge_select_items.html",
-        build_repledge_selection_context(),
+        RepledgeWorkflowService.build_selection_context(),
     )
 
 
@@ -250,31 +249,16 @@ def create_repledge_with_items(request):
     - loan_date: Date of loan
     - notes: Optional notes
     """
-    item_ids = request.POST.getlist("item_ids")
-    lender_id = request.POST.get("lender_id")
-    loan_amount = request.POST.get("loan_amount", 0)
-    series_id = request.POST.get("series_id") or request.POST.get("series")
-
-    try:
-        taken_loan = create_repledge_from_items(
-            item_ids=item_ids,
-            lender_id=lender_id,
-            loan_amount=loan_amount,
-            loan_date=request.POST.get("loan_date"),
-            notes=request.POST.get("notes", ""),
-            user=request.user,
-            series_id=series_id,
-        )
-
+    result = RepledgeWorkflowService.create_repledge(request.POST, user=request.user)
+    if result.success:
         messages.success(
             request,
-            f"TakenLoan {taken_loan.loan_id} created with {len(item_ids)} collateral item(s)",
+            f"TakenLoan {result.taken_loan.loan_id} created with {result.selected_item_count} collateral item(s)",
         )
-        return redirect("girvi:taken_loan_collateral_detail", loan_id=taken_loan.id)
+        return redirect("girvi:taken_loan_collateral_detail", loan_id=result.taken_loan.id)
 
-    except (ValidationError, ValueError) as e:
-        messages.error(request, f"Repledge failed: {e}")
-        return redirect("girvi:create_repledge_select_items")
+    messages.error(request, f"Repledge failed: {result.error_message}")
+    return redirect("girvi:create_repledge_select_items")
 
 
 # ============================================================================
@@ -406,29 +390,7 @@ def api_check_release_custody(request, loan_id):
     """
     loan = get_object_or_404(GivenLoan, pk=loan_id)
 
-    items_with_lender = loan.loanitems.filter(
-        custody_status=ItemCustodyStatus.WITH_LENDER
-    )
-
-    lenders = set(
-        item.repledged_to.lender.name for item in items_with_lender if item.repledged_to
-    )
-
-    can_release = not items_with_lender.exists()
-
-    return JsonResponse(
-        {
-            "can_release": can_release,
-            "needs_return": items_with_lender.exists(),
-            "items_with_lender": items_with_lender.count(),
-            "lenders": list(lenders),
-            "message": (
-                "All items in vault - can release"
-                if can_release
-                else f"{items_with_lender.count()} item(s) with lender(s) - return required"
-            ),
-        }
-    )
+    return JsonResponse(CustodyWorkflowService.build_release_custody_api_payload(loan))
 
 
 @girvi_workspace_required

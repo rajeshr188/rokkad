@@ -1,4 +1,3 @@
-from contextlib import nullcontext
 from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -74,7 +73,7 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
             "apps.tenant_apps.girvi.views.release.build_release_readiness_checklist",
             return_value=self._checklist_ready(),
         ), patch(
-            "apps.tenant_apps.girvi.views.release.ReleaseLifecycleService.preview",
+            "apps.tenant_apps.girvi.views.release.ReleaseWorkflowService.build_preview",
             return_value=fake_preview,
         ):
             response = release_create(request, pk=loan.pk)
@@ -102,35 +101,27 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
             "released_by": None,
         }
 
-        class FakeRelease:
-            def __init__(self, **kwargs):
-                self.__dict__.update(kwargs)
-
-            def save(self):
-                return None
-
-        flow = MagicMock()
-        flow.request_closure.can_proceed.return_value = True
-        flow.complete_closure.can_proceed.return_value = True
+        workflow_result = SimpleNamespace(
+            success=True,
+            release=SimpleNamespace(loan=loan),
+            message="Release completed",
+            warnings=[],
+            blocker_messages=[],
+            execution_error="",
+        )
 
         with patch("apps.tenant_apps.girvi.views.release.ReleaseForm", return_value=fake_form), patch(
             "apps.tenant_apps.girvi.views.release.build_release_readiness_checklist",
             return_value=self._checklist_ready(),
         ), patch(
-            "apps.tenant_apps.girvi.services.transaction.atomic", side_effect=lambda: nullcontext()
-        ), patch("apps.tenant_apps.girvi.services.apps.get_model", return_value=FakeRelease), patch(
-            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow", return_value=flow
-        ), patch("apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release") as post_release:
+            "apps.tenant_apps.girvi.views.release.ReleaseWorkflowService.submit",
+            return_value=workflow_result,
+        ):
             response = release_create(request)
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/girvi/loan/detail/42/", response["Location"])
         self.assertIn("/girvi/loan/detail/42/", response["HX-Push-Url"])
-        flow.request_closure.assert_called_once()
-        flow.complete_closure.assert_called_once()
-        created_release = post_release.call_args.args[0]
-        self.assertEqual(created_release.loan, loan)
-        post_release.assert_called_once()
 
     def test_release_create_get_redirects_to_checklist_when_blocked(self):
         loan = self._loan()
@@ -176,16 +167,21 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
         )
 
         with patch("apps.tenant_apps.girvi.views.release.ReleaseForm", return_value=fake_form), patch(
-            "apps.tenant_apps.girvi.views.release.ReleaseLifecycleService.preview",
+            "apps.tenant_apps.girvi.views.release.ReleaseWorkflowService.build_preview",
             return_value=fake_preview,
         ), patch(
             "apps.tenant_apps.girvi.views.release.build_release_readiness_checklist",
             return_value=self._checklist_blocked("Loan has outstanding dues of 500.00"),
         ), patch(
-            "apps.tenant_apps.girvi.views.release.ReleaseLifecycleService.execute"
-        ) as execute_service:
+            "apps.tenant_apps.girvi.views.release.ReleaseWorkflowService.submit",
+            return_value=SimpleNamespace(
+                success=False,
+                blocker_messages=["Loan has outstanding dues of 500.00"],
+                execution_error="Release checklist is not ready.",
+            ),
+        ) as submit_service:
             response = release_create(request)
 
         self.assertEqual(response.status_code, 200)
-        execute_service.assert_not_called()
-        fake_form.add_error.assert_called_with(None, "Loan has outstanding dues of 500.00")
+        submit_service.assert_called_once()
+        fake_form.add_error.assert_any_call(None, "Loan has outstanding dues of 500.00")

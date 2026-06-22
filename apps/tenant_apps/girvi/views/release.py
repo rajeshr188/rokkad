@@ -4,7 +4,6 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import ValidationError
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.template.response import TemplateResponse
@@ -19,10 +18,9 @@ from ..forms import BulkReleaseForm, ReleaseForm
 from ..models import GivenLoan, Release
 from ..services import (
     BulkReleaseService,
-    ReleaseCreateCommand,
-    ReleaseLifecycleService,
 )
 from ..service_modules.custody import build_release_readiness_checklist
+from ..service_modules.release_workflow import ReleaseWorkflowService
 from ..tables import ReleaseTable
 from .access import (
     GirviPermissionRequiredMixin,
@@ -77,13 +75,11 @@ def _build_release_preview(form, user):
     if not loan or not user:
         return None
 
-    return ReleaseLifecycleService.preview(
-        ReleaseCreateCommand(
-            loan=loan,
-            created_by=user,
-            release_date=release_date,
-            released_by=released_by,
-        )
+    return ReleaseWorkflowService.build_preview(
+        loan,
+        user=user,
+        release_date=release_date,
+        released_by=released_by,
     )
 
 
@@ -101,31 +97,31 @@ def release_create(request, pk=None):
             release_checklist = build_release_readiness_checklist(
                 form.cleaned_data["loan"]
             )
-            if not release_checklist["can_release"]:
-                for blocker in release_checklist["blockers"]:
-                    form.add_error(None, blocker)
-                messages.error(request, "Release checklist is not ready.")
-            else:
-                result = ReleaseLifecycleService.execute(
-                    ReleaseCreateCommand(
-                        loan=form.cleaned_data["loan"],
-                        created_by=request.user,
-                        release_date=form.cleaned_data["release_date"],
-                        released_by=form.cleaned_data.get("released_by"),
-                    )
+            workflow_result = ReleaseWorkflowService.submit(
+                loan=form.cleaned_data["loan"],
+                release_date=form.cleaned_data["release_date"],
+                released_by=form.cleaned_data.get("released_by"),
+                user=request.user,
+                checklist=release_checklist,
+            )
+            if workflow_result.success:
+                for warning in workflow_result.warnings:
+                    messages.warning(request, warning)
+                messages.success(request, workflow_result.message)
+                response = redirect(
+                    "girvi:girvi_loan_detail", pk=workflow_result.release.loan.pk
                 )
-                if result.success:
-                    for warning in result.warnings:
-                        messages.warning(request, warning)
-                    messages.success(request, result.message)
-                    response = redirect("girvi:girvi_loan_detail", pk=result.release.loan.pk)
-                    response["HX-Push-Url"] = reverse(
-                        "girvi:girvi_loan_detail", kwargs={"pk": result.release.loan.pk}
-                    )
-                    return response
+                response["HX-Push-Url"] = reverse(
+                    "girvi:girvi_loan_detail",
+                    kwargs={"pk": workflow_result.release.loan.pk},
+                )
+                return response
 
-                form.add_error(None, result.message)
-                messages.error(request, result.message)
+            for blocker in workflow_result.blocker_messages:
+                form.add_error(None, blocker)
+            if workflow_result.execution_error:
+                form.add_error(None, workflow_result.execution_error)
+                messages.error(request, workflow_result.execution_error)
     else:
         loan = None
         if pk:
