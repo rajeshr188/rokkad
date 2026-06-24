@@ -61,10 +61,11 @@ Completed:
 - Phase 2 reversal caller migration has started: `apps/tenant_apps/dea/facades/payments.py::reverse_payment_by_marker()` now calls `reverse_posted_voucher()` directly and focused tests verify payment marker reversal keeps `PaymentVoucher.posted` synchronized.
 - Phase 2 reversal caller migration now also covers `apps/tenant_apps/dea/views/voucher.py::reverse_voucher()`: the route calls `reverse_posted_voucher()` instead of materializing reversal rows directly, and route-level characterization tests cover posted-voucher reversal plus draft rejection.
 - Phase 2 canonical posting caller migration now covers `apps/tenant_apps/dea/views/voucher.py::post_voucher()`: the route delegates to `PostVoucherCommand(DjangoPostingEngine())` instead of direct period/journal/status mutation. `PostVoucherCommand` now has a controlled stored-voucher-line fallback for manual voucher types with no registered posting rule, using `materialize_journal_from_voucher_lines()` behind the command boundary.
+- Phase 3 has started with `docs/adr/2026-06-24-dea-commodity-accounting-layer.md`, which accepts a side-by-side DEA commodity layer separate from financial currency accounting.
 
 Current next task:
 
-- Start Phase 3 with `docs/adr/YYYY-MM-DD-dea-commodity-accounting-layer.md`, defining the side-by-side commodity layer before model migrations.
+- Create `docs/implementation/dea-commodity-model-schema.md` before migrations, defining fields, constraints, indexes, lifecycle rules, tenant rollout notes, and tests for `Commodity`/`Metal`, `CommodityAccount`, `CommodityMovement`, `ExposureLine`, and `RateFixing`.
 
 ## Phase 1: Protect Financial Accounting Correctness
 

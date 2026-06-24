@@ -108,6 +108,7 @@ Rokkad is moving toward a layered architecture:
 - DEA Phase 2 reversal caller migration has started: `apps/tenant_apps/dea/facades/payments.py::reverse_payment_by_marker()` now calls `reverse_posted_voucher()` directly and focused payment facade tests verify successful marker reversal plus missing-accounting-voucher errors.
 - DEA Phase 2 reversal caller migration now includes the voucher UI route: `apps/tenant_apps/dea/views/voucher.py::reverse_voucher()` delegates to `reverse_posted_voucher()` instead of direct reversal materialization, with route-level tests covering posted-voucher reversal and draft rejection.
 - DEA Phase 2 canonical posting caller migration now includes the voucher UI post route: `apps/tenant_apps/dea/views/voucher.py::post_voucher()` delegates to `PostVoucherCommand(DjangoPostingEngine())`, and manual stored-line vouchers with no registered posting rule are materialized through `PostVoucherCommand` using `materialize_journal_from_voucher_lines()` rather than view-owned posting logic.
+- DEA Phase 3 has started: `docs/adr/2026-06-24-dea-commodity-accounting-layer.md` accepts a side-by-side commodity accounting layer for metals, commodity accounts, immutable movements, exposure, rate fixing, and reporting-first valuation while keeping financial currency accounting and trial balance monetary only.
 
 ## Known Pressure Points
 
