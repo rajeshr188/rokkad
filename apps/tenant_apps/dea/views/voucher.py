@@ -30,6 +30,9 @@ from django.contrib import messages
 from django_tables2 import RequestConfig
 from django.utils.translation import gettext_lazy as _
 
+from ..posting.commands import PostVoucherCommand
+from ..posting.engine import DjangoPostingEngine
+from ..posting.types import PostingError
 from ..models import (
     Voucher,
     VoucherType,
@@ -46,6 +49,13 @@ from ..forms import VoucherForm, LedgerTransactionForm, AccountTransactionForm
 from ..forms_vouchers import VoucherLineFormSet
 from ..tables import VoucherTable
 from ..filters import VoucherFilter
+from ..services.reversal import (
+    MissingOriginalJournalEntryError,
+    ReversalError,
+    ReversalPeriodError,
+    VoucherNotPostedError,
+    reverse_posted_voucher,
+)
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 
@@ -350,59 +360,21 @@ def post_voucher(request, pk):
         )
         return redirect("dea_voucher_detail", pk=pk)
 
-    # Validate voucher is balanced
-    debit_total, credit_total = _calculate_totals(voucher)
-    if debit_total != credit_total:
-        messages.error(
-            request,
-            f"Cannot post unbalanced voucher. Debit ({debit_total}) != Credit ({credit_total})",
-        )
-        return redirect("dea_voucher_detail", pk=pk)
-
     try:
-        with db_transaction.atomic():
-            # Determine accounting period
-            period = AccountingPeriod.objects.get_period_for_date(voucher.voucher_date)
-            if not period:
-                messages.error(
-                    request,
-                    f"No accounting period found for date {voucher.voucher_date}",
-                )
-                return redirect("dea_voucher_detail", pk=pk)
-
-            if not period.can_modify_transactions():
-                messages.error(
-                    request,
-                    f"Cannot post to {period.status} period. Period must be OPEN.",
-                )
-                return redirect("dea_voucher_detail", pk=pk)
-
-            # Create journal entry
-            journal_entry = _create_journal_entry(
-                voucher=voucher,
-                period=period,
-                posted_by=request.user,
-                is_reversal=False,
-            )
-
-            # Update balances (done in signal handler)
-            # This is typically handled by post_save signal on JournalEntry
-
-            # Mark voucher as POSTED
-            voucher.status = VoucherStatus.POSTED
-            voucher.last_posted_at = (
-                db_transaction.now() if hasattr(db_transaction, "now") else None
-            )
-            voucher.save(update_fields=["status", "last_posted_at"])
-
-            messages.success(
-                request,
-                f"Voucher {voucher.voucher_no} posted successfully. "
-                f"Journal Entry #{journal_entry.id} created.",
-            )
+        journal_entry = PostVoucherCommand(DjangoPostingEngine()).execute(
+            voucher,
+            request.user,
+        )
+        messages.success(
+            request,
+            f"Voucher {voucher.voucher_no} posted successfully. "
+            f"Journal Entry #{journal_entry.id} created.",
+        )
 
     except ValidationError as e:
         messages.error(request, f"Validation error: {e.message}")
+    except PostingError as e:
+        messages.error(request, f"Error posting voucher: {str(e)}")
     except Exception as e:
         messages.error(request, f"Error posting voucher: {str(e)}")
 
@@ -436,42 +408,20 @@ def reverse_voucher(request, pk):
         return redirect("dea_voucher_detail", pk=pk)
 
     try:
-        with db_transaction.atomic():
-            # Get original journal entry
-            original_je = voucher.journal_entries.filter(
-                is_reversal_of__isnull=True
-            ).first()
-
-            if not original_je:
-                messages.error(request, "Cannot find original journal entry to reverse")
-                return redirect("dea_voucher_detail", pk=pk)
-
-            # Determine accounting period (can be same or different)
-            # Policy: Use same period as original, or current period if original period is closed
-            period = original_je.period
-            if period and not period.can_modify_transactions():
-                # Try current period
-                from django.utils import timezone
-
-                period = AccountingPeriod.objects.get_period_for_date(
-                    timezone.now().date()
-                )
-                if not period:
-                    messages.error(request, "No open accounting period for reversal")
-                    return redirect("dea_voucher_detail", pk=pk)
-
-            # Create reversal journal entry
-            reversal_je = _create_reversal_journal_entry(
-                original_je=original_je,
-                period=period,
-                posted_by=request.user,
-                voucher=voucher,
+        result = reverse_posted_voucher(
+            voucher=voucher,
+            actor=request.user,
+            reason=request.POST.get("reason")
+            or f"Voucher {voucher.voucher_no} reversed from DEA voucher view.",
+            source_action="voucher_view_reversal",
+        )
+        if result.already_reversed:
+            messages.success(
+                request,
+                f"Voucher {voucher.voucher_no} was already reversed.",
             )
-
-            # Mark voucher as REVERSED
-            voucher.status = VoucherStatus.REVERSED
-            voucher.save(update_fields=["status"])
-
+        else:
+            reversal_je = result.reversal_journal_entry
             messages.success(
                 request,
                 f"Voucher {voucher.voucher_no} reversed successfully. "
@@ -480,7 +430,12 @@ def reverse_voucher(request, pk):
 
     except ValidationError as e:
         messages.error(request, f"Validation error: {e.message}")
-    except Exception as e:
+    except (
+        VoucherNotPostedError,
+        MissingOriginalJournalEntryError,
+        ReversalPeriodError,
+        ReversalError,
+    ) as e:
         messages.error(request, f"Error reversing voucher: {str(e)}")
 
     return redirect("dea_voucher_detail", pk=pk)

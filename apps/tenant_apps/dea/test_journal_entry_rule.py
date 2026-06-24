@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -25,18 +26,26 @@ User = get_user_model()
 
 
 class JournalEntryRuleTests(TenantTestCase):
-    @staticmethod
-    def get_test_schema_name():
-        return "test_dea_journal_rule"
+    test_schema_name = f"test_dea_journal_rule_{uuid.uuid4().hex[:8]}"
+    test_domain = f"{test_schema_name}.test.com"
+
+    @classmethod
+    def get_test_schema_name(cls):
+        return cls.test_schema_name
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return cls.test_domain
 
     @classmethod
     def setup_tenant(cls, tenant):
-        user = User.objects.create_user(
+        user, _ = User.objects.get_or_create(
             username="dea-journal-owner",
-            email="dea-journal-owner@example.com",
-            password="testpass123",
+            defaults={"email": "dea-journal-owner@example.com"},
         )
-        tenant.name = "dea-journal-tenant"
+        user.set_password("testpass123")
+        user.save(update_fields=["password"])
+        tenant.name = f"dea-journal-tenant-{uuid.uuid4().hex[:8]}"
         tenant.owner = user
         tenant.creator = user
 

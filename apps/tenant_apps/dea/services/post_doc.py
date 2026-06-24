@@ -120,7 +120,11 @@ def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
         .first()
     )
 
-    prev_je = getattr(prev_voucher, "journal_entry", None) if prev_voucher else None
+    prev_je = (
+        prev_voucher.journal_entries.order_by("-id").first()
+        if prev_voucher
+        else None
+    )
 
     # Idempotent early-return: nothing to do if fingerprint unchanged
     if prev_voucher and getattr(prev_voucher, "fingerprint", None) == new_fp:
@@ -151,6 +155,7 @@ def create_and_post_voucher_for_doc(doc, user, voucher_type_input, engine):
         voucher.business_doc = doc
 
     je = PostVoucherCommand(engine).execute(voucher, user)
+    voucher.refresh_from_db()
 
     # Safety check: verify only one POSTED voucher exists
     posted_count = Voucher.objects.filter(

@@ -130,7 +130,12 @@ class JournalEntry(models.Model):
         """Prevent deletion of posted entries"""
         from .voucher import VoucherStatus
 
-        if self.voucher.status == VoucherStatus.POSTED:
+        voucher_status = self.voucher.status
+        if self.pk:
+            original = JournalEntry.objects.select_related("voucher").get(pk=self.pk)
+            voucher_status = original.voucher.status
+
+        if voucher_status == VoucherStatus.POSTED:
             raise ValidationError(
                 "Cannot delete posted journal entries. Create a reversal entry instead."
             )

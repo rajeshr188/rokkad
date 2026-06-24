@@ -4,6 +4,7 @@ from apps.tenant_apps.dea.models import PaymentVoucher
 from apps.tenant_apps.dea.models.voucher import Voucher, VoucherStatus
 from apps.tenant_apps.dea.posting.engine import DjangoPostingEngine
 from apps.tenant_apps.dea.services.post_doc import create_and_post_voucher_for_doc
+from apps.tenant_apps.dea.services.reversal import reverse_posted_voucher
 
 
 def create_and_post_payment(
@@ -101,7 +102,12 @@ def reverse_payment_by_marker(source_obj, marker: str, user) -> PaymentVoucher:
             f"No POSTED accounting voucher found for PaymentVoucher {payment.pk}."
         )
 
-    DjangoPostingEngine().reverse_voucher(accounting_voucher.pk, user)
+    reverse_posted_voucher(
+        voucher=accounting_voucher,
+        actor=user,
+        reason=f"Reverse payment marker {marker}",
+        source_action="payment_marker_reversal",
+    )
     payment.posted = False
     payment.save(update_fields=["posted"])
     return payment

@@ -84,21 +84,27 @@ class ReportsService:
             ).select_related('AccountType')
 
             for ledger in ledgers:
-                balance = self._get_ledger_balance_for_period(ledger, period)
+                debit_total, credit_total = self._get_ledger_debit_credit_for_period(
+                    ledger,
+                    period,
+                )
+                net_debit = debit_total - credit_total
+                balance = net_debit
                 prior_balance = Money(0, 'INR')
                 if include_prior:
                     prior_period = self._get_prior_period(period)
                     if prior_period:
                         prior_balance = self._get_ledger_balance_for_period(ledger, prior_period)
 
-                if balance != 0:
+                if debit_total.amount or credit_total.amount:
                     # Determine debit/credit side based on account type
                     if account_type.AccountType in ['Asset', 'Expense', 'Gain']:
-                        debit_side = balance if balance.amount >= 0 else Money(0, 'INR')
-                        credit_side = -balance if balance.amount < 0 else Money(0, 'INR')
+                        debit_side = net_debit if net_debit.amount >= 0 else Money(0, 'INR')
+                        credit_side = -net_debit if net_debit.amount < 0 else Money(0, 'INR')
                     else:
-                        credit_side = balance if balance.amount >= 0 else Money(0, 'INR')
-                        debit_side = -balance if balance.amount < 0 else Money(0, 'INR')
+                        net_credit = credit_total - debit_total
+                        credit_side = net_credit if net_credit.amount >= 0 else Money(0, 'INR')
+                        debit_side = -net_credit if net_credit.amount < 0 else Money(0, 'INR')
 
                     total_debit += debit_side
                     total_credit += credit_side
@@ -641,6 +647,20 @@ class ReportsService:
 
         amount = credit_total - debit_total
         return Money(amount, 'INR')
+
+    def _get_ledger_debit_credit_for_period(
+        self, ledger: Ledger, period: AccountingPeriod
+    ) -> Tuple[Money, Money]:
+        """Get base-currency debit and credit totals for a ledger in a period."""
+        credit_total = LedgerTransaction.objects.filter(
+            ledgerno=ledger,
+            journal_entry__period=period,
+        ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+        debit_total = LedgerTransaction.objects.filter(
+            ledgerno_dr=ledger,
+            journal_entry__period=period,
+        ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+        return Money(debit_total, 'INR'), Money(credit_total, 'INR')
 
     def _get_prior_period(self, period: AccountingPeriod) -> Optional[AccountingPeriod]:
         """Get the prior accounting period."""

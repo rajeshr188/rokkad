@@ -122,11 +122,14 @@ class BasePostingEngine(ABC):
                     prev_voucher
                     and getattr(prev_voucher, "fingerprint", None) == new_fp
                 ):
-                    # return its journal entry if exists
-                    try:
-                        return getattr(prev_voucher, "journal_entry")
-                    except Exception:
-                        return None
+                    return prev_voucher.journal_entries.order_by("-id").first()
+
+                if (
+                    voucher.status
+                    in (VoucherStatus.POSTED.value, VoucherStatus.CORRECTED.value)
+                    and getattr(voucher, "fingerprint", None) == new_fp
+                ):
+                    return voucher.journal_entries.order_by("-id").first()
 
                 # If there is a previous posted voucher and fingerprint changed, reverse it
                 if (
@@ -142,7 +145,7 @@ class BasePostingEngine(ABC):
                         prev_voucher = None
 
                     prev_je = (
-                        getattr(prev_voucher, "journal_entry", None)
+                        prev_voucher.journal_entries.order_by("-id").first()
                         if prev_voucher
                         else None
                     )
@@ -262,17 +265,15 @@ class BasePostingEngine(ABC):
                 raise PostingError(f"Posting failed: {str(e)}") from e
 
     def reverse_voucher(self, voucher_id, user):
-        voucher = Voucher.objects.get(pk=voucher_id)
-        self._validate_accounting_period_open(voucher)
-        last_je = voucher.journal_entries.order_by("-id").first()
-        if not last_je:
-            return None
+        from apps.tenant_apps.dea.services.reversal import reverse_posted_voucher
 
-        ctx = PostingContext(voucher=voucher, doc=voucher.business_doc, user_id=user.id)
-        rev = self._reverse_journal_entry(last_je, ctx)
-        voucher.status = VoucherStatus.REVERSED.value
-        voucher.save(update_fields=["status"])
-        return rev
+        result = reverse_posted_voucher(
+            voucher=voucher_id,
+            actor=user,
+            reason="Engine voucher reversal",
+            source_action="engine_reverse_voucher",
+        )
+        return result.reversal_journal_entry
 
     def _validate_business_rules(self, ctx: PostingContext):
         """Domain-specific validations"""
@@ -298,22 +299,26 @@ class BasePostingEngine(ABC):
 
     def _build_fingerprint_payload(self, ctx: PostingContext, rule) -> dict:
         """
-        Hybrid payload:
-          - voucher-minimal (id, type, updated_at)
-          - document economic payload (if provided by doc)
-          - rule overlay (if provided by rule)
+        Economic payload for idempotency.
+
+        The fingerprint must be stable across duplicate submits of the same
+        source document/event. Do not include voucher row identity, timestamps,
+        status, or other mutable persistence metadata when a source document is
+        available.
         All parts must be JSON-serializable by compute_fingerprint.
         """
         v = ctx.voucher
-        base = {
-            "voucher": {
-                "id": getattr(v, "id", None),
-                "type": getattr(getattr(v, "voucher_type", None), "name", None),
-                "updated_at": getattr(v, "updated_at", None),
-            }
-        }
-        # document economic payload
         d = getattr(ctx, "doc", None)
+        fp_payload = getattr(rule, "fingerprint_payload", None)
+        if callable(fp_payload):
+            try:
+                payload = fp_payload(ctx) or {}
+            except Exception:
+                payload = {}
+            if not isinstance(payload, dict):
+                payload = {"value": payload}
+            return payload
+
         if d and hasattr(d, "get_economic_payload"):
             try:
                 doc_payload = d.get_economic_payload() or {}
@@ -321,22 +326,16 @@ class BasePostingEngine(ABC):
                 doc_payload = {}
             if not isinstance(doc_payload, dict):
                 doc_payload = {"value": doc_payload}
-            base["doc"] = doc_payload
+            return doc_payload
 
         # rule overlay (e.g., scenario) – optional
-        overlay = {}
-        fp_payload = getattr(rule, "fingerprint_payload", None)
-        if callable(fp_payload):
-            try:
-                overlay = fp_payload(ctx) or {}
-            except Exception:
-                overlay = {}
-        if not isinstance(overlay, dict):
-            overlay = {"value": overlay}
+        if hasattr(v, "get_economic_payload"):
+            payload = v.get_economic_payload() or {}
+            if not isinstance(payload, dict):
+                payload = {"value": payload}
+            return payload
 
-        if overlay:
-            base["rule"] = overlay
-        return base
+        return {"voucher_type": getattr(getattr(v, "voucher_type", None), "name", None)}
 
     def _compute_fingerprint(self, payload, rule_version: str) -> str:
         return compute_fingerprint(payload, rule_version)

@@ -1,4 +1,5 @@
 from datetime import date
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -18,18 +19,26 @@ User = get_user_model()
 
 
 class PostingRuleRegistrationTests(TenantTestCase):
-    @staticmethod
-    def get_test_schema_name():
-        return "test_dea_rule_registration"
+    test_schema_name = f"test_dea_rule_registration_{uuid.uuid4().hex[:8]}"
+    test_domain = f"{test_schema_name}.test.com"
+
+    @classmethod
+    def get_test_schema_name(cls):
+        return cls.test_schema_name
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return cls.test_domain
 
     @classmethod
     def setup_tenant(cls, tenant):
-        owner = User.objects.create_user(
+        owner, _ = User.objects.get_or_create(
             username="dea-rule-owner",
-            email="dea-rule-owner@example.com",
-            password="testpass123",
+            defaults={"email": "dea-rule-owner@example.com"},
         )
-        tenant.name = "dea-rule-tenant"
+        owner.set_password("testpass123")
+        owner.save(update_fields=["password"])
+        tenant.name = f"dea-rule-tenant-{uuid.uuid4().hex[:8]}"
         tenant.owner = owner
         tenant.creator = owner
 
@@ -59,18 +68,26 @@ class PostingRuleRegistrationTests(TenantTestCase):
 
 
 class PostingEnginePeriodLockTests(TenantTestCase):
-    @staticmethod
-    def get_test_schema_name():
-        return "test_dea_period_guard"
+    test_schema_name = f"test_dea_period_guard_{uuid.uuid4().hex[:8]}"
+    test_domain = f"{test_schema_name}.test.com"
+
+    @classmethod
+    def get_test_schema_name(cls):
+        return cls.test_schema_name
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return cls.test_domain
 
     @classmethod
     def setup_tenant(cls, tenant):
-        owner = User.objects.create_user(
+        owner, _ = User.objects.get_or_create(
             username="dea-period-owner",
-            email="dea-period-owner@example.com",
-            password="testpass123",
+            defaults={"email": "dea-period-owner@example.com"},
         )
-        tenant.name = "dea-period-tenant"
+        owner.set_password("testpass123")
+        owner.save(update_fields=["password"])
+        tenant.name = f"dea-period-tenant-{uuid.uuid4().hex[:8]}"
         tenant.owner = owner
         tenant.creator = owner
 

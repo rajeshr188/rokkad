@@ -695,6 +695,40 @@ class AccountTransaction(models.Model):
     def __str__(self):
         return f"{self.XactTypeCode_ext}"
 
+    def clean(self):
+        super().clean()
+        if not self.pk:
+            return
+
+        original = (
+            type(self)
+            .objects.select_related("journal_entry__voucher")
+            .get(pk=self.pk)
+        )
+        if original.journal_entry.is_posted:
+            raise ValidationError(
+                "Cannot modify account transactions for posted journal entries. "
+                "Create a reversal entry instead."
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.pk:
+            original = (
+                type(self)
+                .objects.select_related("journal_entry__voucher")
+                .get(pk=self.pk)
+            )
+            if original.journal_entry.is_posted:
+                raise ValidationError(
+                    "Cannot delete account transactions for posted journal entries. "
+                    "Create a reversal entry instead."
+                )
+        super().delete(*args, **kwargs)
+
     def get_voucher_url(self):
         # voucher = self.journal_entry.content_object
         # return voucher.get_absolute_url()
