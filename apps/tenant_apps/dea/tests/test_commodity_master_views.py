@@ -93,6 +93,13 @@ class CommodityMasterViewTests(TenantTestCase):
         self.assertContains(response, reverse("dea_commodity_list"))
         self.assertContains(response, "Commodity Master")
 
+    def test_reports_hub_sidebar_context_shows_commodity_master_link(self):
+        response = self.client.get(reverse("dea_reports_hub"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("dea_commodity_list"))
+        self.assertContains(response, "Commodity Master")
+
     def test_create_commodity_uppercases_code(self):
         response = self.client.post(
             reverse("dea_commodity_create"),
@@ -152,6 +159,53 @@ class CommodityMasterViewTests(TenantTestCase):
         self.assertEqual(commodity.code, "PLATINUM")
         self.assertEqual(commodity.name, "Platinum 999")
         self.assertEqual(commodity.default_uom, Commodity.UnitOfMeasure.KG)
+
+    def test_quick_setup_creates_owned_stock_and_vault_accounts(self):
+        commodity = Commodity.objects.create(code="GOLDX", name="Gold X")
+
+        response = self.client.post(
+            reverse(
+                "dea_commodity_quick_setup_accounts",
+                kwargs={"commodity_id": commodity.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            CommodityAccount.objects.filter(
+                commodity=commodity,
+                code="GOLDX_OWNED_STOCK",
+                purpose=CommodityAccount.Purpose.OWNED_STOCK,
+            ).exists()
+        )
+        self.assertTrue(
+            CommodityAccount.objects.filter(
+                commodity=commodity,
+                code="GOLDX_VAULT",
+                purpose=CommodityAccount.Purpose.VAULT,
+            ).exists()
+        )
+
+    def test_quick_setup_is_idempotent(self):
+        commodity = Commodity.objects.create(code="SILVX", name="Silver X")
+
+        self.client.post(
+            reverse(
+                "dea_commodity_quick_setup_accounts",
+                kwargs={"commodity_id": commodity.pk},
+            )
+        )
+        self.client.post(
+            reverse(
+                "dea_commodity_quick_setup_accounts",
+                kwargs={"commodity_id": commodity.pk},
+            )
+        )
+
+        self.assertEqual(
+            CommodityAccount.objects.filter(commodity=commodity).count(),
+            2,
+        )
 
     def test_cannot_deactivate_commodity_with_active_accounts(self):
         commodity = Commodity.objects.create(code="ZINC", name="Zinc")

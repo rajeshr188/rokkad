@@ -6,6 +6,9 @@ from django.views.decorators.http import require_http_methods
 
 from apps.tenant_apps.dea.forms_commodity import CommodityCreateForm, CommodityUpdateForm
 from apps.tenant_apps.dea.models import Commodity
+from apps.tenant_apps.dea.services.commodity_account_setup import (
+    setup_standard_commodity_accounts,
+)
 
 from .access import dea_accountant_required
 
@@ -61,6 +64,28 @@ def commodity_detail(request, commodity_id):
         ).order_by("code"),
     }
     return TemplateResponse(request, "dea/commodity_master/detail.html", context)
+
+
+@dea_accountant_required
+@require_http_methods(["POST"])
+def commodity_quick_setup_accounts(request, commodity_id):
+    commodity = get_object_or_404(Commodity, pk=commodity_id)
+    result = setup_standard_commodity_accounts(commodity)
+
+    if result.created_codes:
+        messages.success(
+            request,
+            f"Created commodity accounts: {', '.join(result.created_codes)}.",
+        )
+    if result.existing_codes:
+        messages.info(
+            request,
+            f"Already present: {', '.join(result.existing_codes)}.",
+        )
+    for note in result.skipped_notes:
+        messages.info(request, note)
+
+    return redirect("dea_commodity_detail", commodity_id=commodity.pk)
 
 
 @dea_accountant_required

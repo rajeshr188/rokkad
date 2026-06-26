@@ -116,6 +116,12 @@
                    href="{% url 'dea_metal_balance_report' %}">
                     <i class="bi bi-safe2"></i> Commodity Reports
                 </a>
+                {% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Accountant' %}
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_commodity_list' or request.resolver_match.url_name == 'dea_commodity_create' or request.resolver_match.url_name == 'dea_commodity_detail' or request.resolver_match.url_name == 'dea_commodity_update' %}active{% endif %}"
+                   href="{% url 'dea_commodity_list' %}">
+                    <i class="bi bi-boxes"></i> Commodity Master
+                </a>
+                {% endif %}
 
                 {% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Accountant' %}
                 <h6 class="nav-section-title mt-3">Accounting Tools</h6>
@@ -142,10 +148,6 @@
                 <a class="nav-link {% if request.resolver_match.url_name == 'dea_period_list' or request.resolver_match.url_name == 'dea_period_create' or request.resolver_match.url_name == 'dea_period_detail' or request.resolver_match.url_name == 'dea_period_update' or request.resolver_match.url_name == 'dea_period_close' or request.resolver_match.url_name == 'dea_period_lock' or request.resolver_match.url_name == 'dea_period_unlock' or request.resolver_match.url_name == 'dea_period_adjustments' or request.resolver_match.url_name == 'dea_period_balances' or request.resolver_match.url_name == 'dea_period_report' or request.resolver_match.url_name == 'dea_period_transactions' %}active{% endif %}"
                    href="{% url 'dea_period_list' %}">
                     <i class="bi bi-calendar-range"></i> Period Controls
-                </a>
-                <a class="nav-link {% if request.resolver_match.url_name == 'dea_commodity_list' or request.resolver_match.url_name == 'dea_commodity_create' or request.resolver_match.url_name == 'dea_commodity_detail' or request.resolver_match.url_name == 'dea_commodity_update' %}active{% endif %}"
-                   href="{% url 'dea_commodity_list' %}">
-                    <i class="bi bi-boxes"></i> Commodity Master
                 </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'dea_journal_entries_list' or request.resolver_match.url_name == 'dea_transaction_list' or request.resolver_match.url_name == 'dea_dashboard' or request.resolver_match.url_name == 'dea_dashboard_legacy' or request.resolver_match.url_name == 'dea_dashboard_enhanced' %}active{% endif %}"
                    href="{% url 'dea_journal_entries_list' %}">

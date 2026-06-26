@@ -250,13 +250,12 @@ class CommodityForm(forms.ModelForm):
    ↓
 2. Detail page shows "Setup Accounts" button
    ↓
-3. Wizard prompts:
-   - "For commodity COPPER, create accounts:"
-   - [ ] OWNED_STOCK (Your company's metal holdings)
-   - [ ] VAULT (Safe custody/storage location)
-   - [ ] KARIGAR_CUSTODY (Optional: metalworker deposits)
+3. Quick setup creates standard non-party accounts:
+   - [x] OWNED_STOCK (Your company's metal holdings)
+   - [x] VAULT (Safe custody/storage location)
+   - [ ] KARIGAR_CUSTODY skipped in MVP because this model requires a Party
    ↓
-4. Create selected accounts automatically
+4. Create missing accounts idempotently
    ↓
 5. Confirmation: "Ready to use COPPER in business events"
 ```
@@ -275,13 +274,11 @@ class CommodityAccountWizardView(DeaAccountantRequiredMixin, FormView):
 ```python
 @dea_accountant_required
 def commodity_account_quick_setup(request, commodity_id):
-    """Auto-create all 3 standard account types for commodity"""
+   """Auto-create standard non-party account types for commodity"""
     commodity = get_object_or_404(Commodity, id=commodity_id)
-    for account_type in ['OWNED_STOCK', 'VAULT', 'KARIGAR_CUSTODY']:
-        CommodityAccount.objects.get_or_create(
-            commodity=commodity,
-            account_type=account_type
-        )
+   for account_type in ['OWNED_STOCK', 'VAULT']:
+      CommodityAccount.objects.get_or_create(commodity=commodity, purpose=account_type)
+   # KARIGAR_CUSTODY stays manual because Party is required
     messages.success(request, f"Accounts created for {commodity.name}")
     return redirect(commodity.get_absolute_url())
 ```
@@ -318,9 +315,11 @@ Implement **quick setup** for Phase 7 (MVP); defer full wizard to Phase 8 if nee
 3. ✅ Added focused tests and verified green
 4. ⏳ Manual QA pending: create/edit/deactivate commodity workflow
 
-**Phase 7.3** (Optional - same session):
-1. Add commodity account quick setup button (1 hour)
-2. Test: create commodity → auto-create accounts → use in business event
+**Phase 7.3** (Completed in this session):
+1. ✅ Added commodity account quick setup button on commodity detail
+2. ✅ Implemented idempotent standard account creation for OWNED_STOCK + VAULT
+3. ✅ Documented that KARIGAR_CUSTODY remains manual because Party is required
+4. ⏳ Manual QA pending: create commodity → quick setup → use in business event
 
 **Phase 8** (Future):
 - Enhanced account wizard
