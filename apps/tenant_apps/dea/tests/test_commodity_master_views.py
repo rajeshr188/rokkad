@@ -86,6 +86,13 @@ class CommodityMasterViewTests(TenantTestCase):
         self.assertContains(response, "GOLD")
         self.assertNotContains(response, "SILVER")
 
+    def test_owner_sidebar_shows_commodity_master_link(self):
+        response = self.client.get(reverse("dea_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("dea_commodity_list"))
+        self.assertContains(response, "Commodity Master")
+
     def test_create_commodity_uppercases_code(self):
         response = self.client.post(
             reverse("dea_commodity_create"),
@@ -101,6 +108,13 @@ class CommodityMasterViewTests(TenantTestCase):
         self.assertEqual(response.status_code, 302)
         commodity = Commodity.objects.get(name="Copper")
         self.assertEqual(commodity.code, "COPPER")
+
+    def test_active_commodity_appears_in_business_event_forms(self):
+        commodity = Commodity.objects.create(code="COPPER", name="Copper")
+
+        form = FixedPurchasePreviewForm()
+
+        self.assertIn(commodity, form.fields["commodity"].queryset)
 
     def test_create_duplicate_commodity_code_is_rejected(self):
         Commodity.objects.create(code="GOLD", name="Gold")

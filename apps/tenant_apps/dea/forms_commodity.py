@@ -16,6 +16,10 @@ class _CommodityBaseForm(forms.ModelForm):
 
 
 class CommodityCreateForm(_CommodityBaseForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["is_active"].initial = True
+
     class Meta:
         model = Commodity
         fields = [

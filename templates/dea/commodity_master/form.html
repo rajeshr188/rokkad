@@ -26,6 +26,24 @@
 
             <div class="row g-3">
                 {% for field in form %}
+                {% if field.name == 'is_active' %}
+                <div class="col-md-6">
+                    <div class="form-check mt-4">
+                        {{ field }}
+                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    </div>
+                    {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% if field.errors %}
+                    <div class="text-danger small mt-1">
+                        {% for error in field.errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
                 <div class="col-md-6">
                     <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
@@ -40,6 +58,7 @@
                     </div>
                     {% endif %}
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
 

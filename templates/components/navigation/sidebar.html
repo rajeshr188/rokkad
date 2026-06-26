@@ -3,7 +3,11 @@
 <div class="sidebar-wrapper">
     <div class="sidebar-sticky">
         {% with effective_workspace=workspace|default:user_workspace %}
+        {% if effective_workspace and effective_workspace.owner_id == request.user.id %}
+        {% firstof user_role "Owner" as role_name %}
+        {% else %}
         {% firstof user_role "Member" as role_name %}
+        {% endif %}
         <!-- Workspace Info - Using context processor variable -->
         {% if effective_workspace and in_tenant %}
         <div class="mb-4 p-3 rounded border-bottom" style="background:linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%);border-color:#6ee7b7!important;">
