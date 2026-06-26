@@ -1,0 +1,92 @@
+{% extends 'layouts/workspace.html' %}
+{% block title %}Commodity Master{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">Commodity Master</h4>
+        <small class="text-muted">Create and maintain commodities used in business event workflows.</small>
+    </div>
+    <a href="{% url 'dea_commodity_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> New Commodity
+    </a>
+</div>
+
+<form method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label">Search</label>
+                <input type="text" name="q" class="form-control" value="{{ query }}" placeholder="Code or name">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>Active only</option>
+                    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+                    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive only</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Apply</button>
+                <a href="{% url 'dea_commodity_list' %}" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-4">
+        <div class="card"><div class="card-body py-2">All: <strong>{{ counts.all }}</strong></div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body py-2">Active: <strong>{{ counts.active }}</strong></div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body py-2">Inactive: <strong>{{ counts.inactive }}</strong></div></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>UOM</th>
+                    <th>Status</th>
+                    <th class="text-end">Accounts</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for commodity in commodities %}
+                <tr>
+                    <td><a href="{% url 'dea_commodity_detail' commodity_id=commodity.pk %}">{{ commodity.code }}</a></td>
+                    <td>{{ commodity.name }}</td>
+                    <td>{{ commodity.get_commodity_type_display }}</td>
+                    <td>{{ commodity.get_default_uom_display }}</td>
+                    <td>
+                        {% if commodity.is_active %}
+                        <span class="badge text-bg-success">Active</span>
+                        {% else %}
+                        <span class="badge text-bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ commodity.account_count }}</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'dea_commodity_update' commodity_id=commodity.pk %}">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No commodities found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

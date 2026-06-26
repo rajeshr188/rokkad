@@ -2,10 +2,22 @@ from django.contrib.auth.decorators import login_required
 from django.template.response import TemplateResponse
 from django.urls import reverse
 
+from .access import can_view_dea_accountant_tools
+
 
 @login_required
 def reports_hub(request):
     """Centralized hub for all financial and operational reports."""
+    commodity_items = [
+        {"name": "Metal Balance", "url": reverse("dea_metal_balance_report"), "icon": "fa-coins"},
+        {"name": "Commodity Exposure", "url": reverse("dea_exposure_report"), "icon": "fa-chart-area"},
+        {"name": "Commodity Valuation", "url": reverse("dea_valuation_report"), "icon": "fa-scale-balanced"},
+    ]
+    if can_view_dea_accountant_tools(request):
+        commodity_items.append(
+            {"name": "Commodity Master", "url": reverse("dea_commodity_list"), "icon": "fa-boxes-stacked"}
+        )
+
     report_groups = [
         {
             "title": "Financial Statements",
@@ -29,11 +41,7 @@ def reports_hub(request):
         {
             "title": "Commodity Reports",
             "description": "Read-only metal quantity, exposure, and valuation reports.",
-            "items": [
-                {"name": "Metal Balance", "url": reverse("dea_metal_balance_report"), "icon": "fa-coins"},
-                {"name": "Commodity Exposure", "url": reverse("dea_exposure_report"), "icon": "fa-chart-area"},
-                {"name": "Commodity Valuation", "url": reverse("dea_valuation_report"), "icon": "fa-scale-balanced"},
-            ],
+            "items": commodity_items,
         },
         {
             "title": "Transactional Reports",

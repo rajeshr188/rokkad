@@ -139,6 +139,10 @@
                    href="{% url 'dea_period_list' %}">
                     <i class="bi bi-calendar-range"></i> Period Controls
                 </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_commodity_list' or request.resolver_match.url_name == 'dea_commodity_create' or request.resolver_match.url_name == 'dea_commodity_detail' or request.resolver_match.url_name == 'dea_commodity_update' %}active{% endif %}"
+                   href="{% url 'dea_commodity_list' %}">
+                    <i class="bi bi-boxes"></i> Commodity Master
+                </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'dea_journal_entries_list' or request.resolver_match.url_name == 'dea_transaction_list' or request.resolver_match.url_name == 'dea_dashboard' or request.resolver_match.url_name == 'dea_dashboard_legacy' or request.resolver_match.url_name == 'dea_dashboard_enhanced' %}active{% endif %}"
                    href="{% url 'dea_journal_entries_list' %}">
                     <i class="bi bi-activity"></i> Diagnostics

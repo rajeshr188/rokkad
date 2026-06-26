@@ -5,6 +5,7 @@ from . import views
 from .views import reports as reports_views
 from .views import reconciliation as reconciliation_views
 from .views import commodity_reports as commodity_report_views
+from .views import commodity_master as commodity_master_views
 from .views import business_events as business_event_views
 from .views import dashboard_enhanced
 
@@ -20,6 +21,27 @@ urlpatterns = [
 urlpatterns += [
     path("chart-of-accounts/", views.chart_of_accounts, name="dea_chart_of_accounts"),
     path("create/", views.voucher_hub, name="dea_voucher_hub"),
+    path("commodities/", commodity_master_views.commodity_list, name="dea_commodity_list"),
+    path(
+        "commodities/create/",
+        commodity_master_views.commodity_create,
+        name="dea_commodity_create",
+    ),
+    path(
+        "commodities/<int:commodity_id>/",
+        commodity_master_views.commodity_detail,
+        name="dea_commodity_detail",
+    ),
+    path(
+        "commodities/<int:commodity_id>/edit/",
+        commodity_master_views.commodity_update,
+        name="dea_commodity_update",
+    ),
+    path(
+        "commodities/<int:commodity_id>/deactivate/",
+        commodity_master_views.commodity_deactivate,
+        name="dea_commodity_deactivate",
+    ),
     path(
         "business-events/",
         business_event_views.business_events_dashboard,

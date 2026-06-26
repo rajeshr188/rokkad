@@ -312,11 +312,11 @@ Implement **quick setup** for Phase 7 (MVP); defer full wizard to Phase 8 if nee
 2. ✅ Run full test suite to verify
 3. ✅ Manual QA: one event flow end-to-end
 
-**Phase 7.2** (Next session):
-1. Implement Commodity CRUD views + forms (3-4 hours)
-2. Create templates & navigation (2-3 hours)
-3. Write & pass tests (1-2 hours)
-4. Manual QA: create/edit/deactivate commodity workflow
+**Phase 7.2** (Completed in this session):
+1. ✅ Implemented Commodity CRUD views + forms
+2. ✅ Added templates + accountant navigation integration
+3. ✅ Added focused tests and verified green
+4. ⏳ Manual QA pending: create/edit/deactivate commodity workflow
 
 **Phase 7.3** (Optional - same session):
 1. Add commodity account quick setup button (1 hour)
