@@ -53,6 +53,8 @@ def loan_payment_create_view(request, pk=None):
         "loan": loan,
         "repayment_preview": repayment_preview,
         "settlement": repayment_preview.settlement,
+        "payment_options": RepaymentWorkflowService.payment_options(repayment_preview),
+        "return_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
     }
     if request.htmx:
         return TemplateResponse(
@@ -100,6 +102,8 @@ def taken_loan_payment_create_view(request, pk):
         "loan": loan,
         "repayment_preview": repayment_preview,
         "settlement": repayment_preview.settlement,
+        "payment_options": RepaymentWorkflowService.payment_options(repayment_preview),
+        "return_url": loan.get_absolute_url(),
     }
     if request.htmx:
         return TemplateResponse(
@@ -112,4 +116,3 @@ def taken_loan_payment_create_view(request, pk):
         "girvi/loanpayment/takenloan_repayment_form.html",
         context,
     )
-

@@ -148,6 +148,10 @@ class PR1RepaymentViewTests(SimpleTestCase):
             response.context_data["form"].initial["interest_amount"],
             Decimal("100.00"),
         )
+        self.assertEqual(
+            [option["label"] for option in response.context_data["payment_options"]],
+            ["Exact settlement", "Interest only", "Principal only"],
+        )
 
     @patch("apps.tenant_apps.girvi.views.loanpayment.reverse", return_value="/girvi/loan/1/")
     @patch("apps.tenant_apps.girvi.views.loanpayment.messages.warning")

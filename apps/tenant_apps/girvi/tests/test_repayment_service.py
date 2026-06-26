@@ -61,7 +61,12 @@ class GivenLoanRepaymentServiceTests(SimpleTestCase):
 
         self.assertTrue(result.accounting_posted)
         self.assertEqual(result.payment, payment)
-        self.assertEqual(result.success_message, "Payment PAY-1 recorded and posted to accounting.")
+        self.assertEqual(
+            result.success_message,
+            "Payment PAY-1 recorded and posted to accounting. "
+            "Total 1000.00; principal 900.00; interest 100.00; "
+            "remaining outstanding 100.00.",
+        )
 
         mock_accrue.assert_called_once()
         accrual_command = mock_accrue.call_args.args[0]
@@ -184,7 +189,12 @@ class TakenLoanRepaymentServiceTests(SimpleTestCase):
 
         self.assertTrue(result.accounting_posted)
         self.assertEqual(result.payment, payment)
-        self.assertEqual(result.success_message, "Payment TPAY-1 recorded and posted to accounting.")
+        self.assertEqual(
+            result.success_message,
+            "Payment TPAY-1 recorded and posted to accounting. "
+            "Total 800.00; principal 720.00; interest 80.00; "
+            "remaining outstanding 80.00.",
+        )
         loan.create_payment.assert_called_once_with(
             amount=Decimal("800.00"),
             payment_date=datetime(2026, 4, 6, 10, 30),

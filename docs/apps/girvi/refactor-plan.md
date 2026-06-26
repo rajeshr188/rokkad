@@ -278,7 +278,7 @@ P7 exit criteria:
 - Transition alias coverage for canonical lifecycle cleanup.
 - Selector/report stale field references.
 - Import/export resources after `LoanPayment` archive migration.
-- Remaining P5 work: decide whether legacy/manual commands such as `do` and `missingcol` should be archived, disabled, or retained only for import/rehearsal operations.
+- Legacy/manual command lifecycle policy is now explicit and documented: `do` remains disabled, `missingcol` remains opt-in for controlled import/rehearsal only, and guardrails prevent runtime coupling to these manual legacy commands.
 - URL duplicate cleanup/regression.
 - End-to-end lifecycle plus accounting posting for:
   - GivenLoan create -> approve -> disburse

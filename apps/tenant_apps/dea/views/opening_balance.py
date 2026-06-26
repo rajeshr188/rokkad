@@ -8,7 +8,6 @@ from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
@@ -28,6 +27,7 @@ from ..models import (
     AccountBalance,
 )
 from ..utils.currency import Balance
+from .access import dea_accountant_required
 
 
 def _opening_balance_wizard_url(step=None, **params):
@@ -37,7 +37,7 @@ def _opening_balance_wizard_url(step=None, **params):
     return f"{base_url}?{urlencode(query)}" if query else base_url
 
 
-@login_required
+@dea_accountant_required
 @require_http_methods(["GET", "POST"])
 def opening_balance_wizard(request):
     """
@@ -347,7 +347,7 @@ def _opening_balance_step4_confirm(request):
         return redirect(_opening_balance_wizard_url(step=3))
 
 
-@login_required
+@dea_accountant_required
 @require_http_methods(["GET", "POST"])
 def opening_balance_bulk_import(request):
     """Import opening balances from CSV file"""
@@ -430,7 +430,7 @@ def opening_balance_bulk_import(request):
     return render(request, "dea/opening_balance/bulk_import.html", context)
 
 
-@login_required
+@dea_accountant_required
 def opening_balance_template_download(request):
     """Download CSV template for opening balance import"""
     response = HttpResponse(content_type="text/csv")
@@ -448,7 +448,7 @@ def opening_balance_template_download(request):
     return response
 
 
-@login_required
+@dea_accountant_required
 @require_http_methods(["POST"])
 def opening_balance_validate_ajax(request):
     """AJAX endpoint to validate opening balances"""

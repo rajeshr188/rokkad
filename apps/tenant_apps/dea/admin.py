@@ -17,6 +17,180 @@ class JournalEntryAdmin(admin.ModelAdmin):
     search_fields = ("voucher__id",)
 
 
+@admin.register(models.Commodity)
+class CommodityAdmin(admin.ModelAdmin):
+    list_display = ("code", "name", "commodity_type", "default_uom", "is_active")
+    list_filter = ("commodity_type", "default_uom", "is_active")
+    search_fields = ("code", "name")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(models.CommodityAccount)
+class CommodityAccountAdmin(admin.ModelAdmin):
+    list_display = (
+        "code",
+        "name",
+        "commodity",
+        "purpose",
+        "party",
+        "location_label",
+        "is_active",
+    )
+    list_filter = ("commodity", "purpose", "is_active")
+    search_fields = ("code", "name", "party__display_name", "location_label")
+    autocomplete_fields = ("commodity", "party")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(models.CommodityMovement)
+class CommodityMovementAdmin(admin.ModelAdmin):
+    list_display = (
+        "movement_no",
+        "movement_date",
+        "commodity",
+        "movement_type",
+        "fixed_status",
+        "from_account",
+        "to_account",
+        "fine_weight",
+        "uom",
+    )
+    list_filter = ("commodity", "movement_type", "fixed_status", "uom")
+    search_fields = (
+        "movement_no",
+        "idempotency_key",
+        "from_account__code",
+        "to_account__code",
+        "narration",
+    )
+    raw_id_fields = (
+        "commodity",
+        "from_account",
+        "to_account",
+        "voucher",
+        "source_content_type",
+        "is_reversal_of",
+        "created_by",
+    )
+    readonly_fields = (
+        "movement_no",
+        "movement_date",
+        "source_content_type",
+        "source_object_id",
+        "voucher",
+        "commodity",
+        "uom",
+        "gross_weight",
+        "purity",
+        "fine_weight",
+        "from_account",
+        "to_account",
+        "movement_type",
+        "fixed_status",
+        "rate",
+        "rate_currency",
+        "valuation_currency",
+        "valuation_amount",
+        "is_reversal_of",
+        "idempotency_key",
+        "narration",
+        "metadata",
+        "created_by",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class RateFixingAllocationInline(admin.TabularInline):
+    model = models.RateFixingAllocation
+    extra = 0
+    raw_id_fields = ("exposure",)
+    readonly_fields = ("rate_fixing", "exposure", "fine_weight", "amount")
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(models.ExposureLine)
+class ExposureLineAdmin(admin.ModelAdmin):
+    list_display = (
+        "exposure_no",
+        "party",
+        "commodity",
+        "side",
+        "status",
+        "fixed_status",
+        "original_fine_weight",
+        "open_fine_weight",
+        "uom",
+    )
+    list_filter = ("commodity", "side", "status", "fixed_status", "uom")
+    search_fields = (
+        "exposure_no",
+        "idempotency_key",
+        "party__display_name",
+        "rate_basis",
+    )
+    raw_id_fields = (
+        "source_content_type",
+        "voucher",
+        "party",
+        "commodity",
+        "is_reversal_of",
+        "created_by",
+    )
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(models.RateFixing)
+class RateFixingAdmin(admin.ModelAdmin):
+    list_display = (
+        "fixing_no",
+        "fixing_date",
+        "party",
+        "commodity",
+        "side",
+        "fine_weight",
+        "rate",
+        "currency",
+        "valuation_amount",
+        "status",
+    )
+    list_filter = ("commodity", "side", "status", "currency")
+    search_fields = ("fixing_no", "idempotency_key", "party__display_name")
+    raw_id_fields = ("party", "commodity", "voucher", "created_by", "updated_by")
+    readonly_fields = ("created_at", "updated_at")
+    inlines = [RateFixingAllocationInline]
+
+
+@admin.register(models.RateFixingAllocation)
+class RateFixingAllocationAdmin(admin.ModelAdmin):
+    list_display = ("rate_fixing", "exposure", "fine_weight", "amount")
+    raw_id_fields = ("rate_fixing", "exposure")
+
+
+@admin.register(models.BusinessEventDraft)
+class BusinessEventDraftAdmin(admin.ModelAdmin):
+    list_display = (
+        "event_type",
+        "source_reference",
+        "event_date",
+        "status",
+        "payload_hash",
+        "updated_at",
+    )
+    list_filter = ("event_type", "status", "event_date")
+    search_fields = ("source_reference", "payload_hash")
+    raw_id_fields = ("created_by", "updated_by")
+    readonly_fields = ("created_at", "updated_at")
+
+
 # === PRIORITY 1 VOUCHER ADMINS ===
 
 

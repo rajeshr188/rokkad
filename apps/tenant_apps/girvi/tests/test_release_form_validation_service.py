@@ -22,6 +22,58 @@ class _FakeFormSet:
 
 
 class ReleaseFormValidationServiceTests(SimpleTestCase):
+    def test_validate_release_form_loan_flags_released_on_create(self):
+        form = SimpleNamespace(
+            instance=SimpleNamespace(pk=None),
+            add_error=MagicMock(),
+        )
+        loan = SimpleNamespace(is_released=True)
+
+        returned = ReleaseFormValidationService.validate_release_form_loan(form, loan)
+
+        self.assertIs(returned, loan)
+        form.add_error.assert_called_once_with("loan", "Loan already has a release.")
+
+    def test_validate_release_form_loan_skips_check_for_existing_release_instance(self):
+        form = SimpleNamespace(
+            instance=SimpleNamespace(pk=10),
+            add_error=MagicMock(),
+        )
+        loan = SimpleNamespace(is_released=True)
+
+        returned = ReleaseFormValidationService.validate_release_form_loan(form, loan)
+
+        self.assertIs(returned, loan)
+        form.add_error.assert_not_called()
+
+    def test_validate_release_amount_flags_when_amount_exceeds_due(self):
+        form = SimpleNamespace(add_error=MagicMock())
+        loan = SimpleNamespace(total_due=None, due=MagicMock(return_value=150))
+
+        ReleaseFormValidationService.validate_release_amount(form, 200, loan)
+
+        form.add_error.assert_called_once_with(
+            "release_amount",
+            "Release amount 200 cannot be > due amount 150.",
+        )
+
+    def test_validate_release_amount_uses_callable_total_due(self):
+        form = SimpleNamespace(add_error=MagicMock())
+        loan = SimpleNamespace(total_due=MagicMock(return_value=250))
+
+        result = ReleaseFormValidationService.validate_release_amount(form, 200, loan)
+
+        self.assertEqual(result, 200)
+        form.add_error.assert_not_called()
+
+    def test_validate_release_amount_allows_missing_loan(self):
+        form = SimpleNamespace(add_error=MagicMock())
+
+        result = ReleaseFormValidationService.validate_release_amount(form, 100, None)
+
+        self.assertEqual(result, 100)
+        form.add_error.assert_not_called()
+
     def test_validate_formset_requires_at_least_one_active_loan(self):
         formset = _FakeFormSet([_FakeForm({}), _FakeForm({"DELETE": True})])
 

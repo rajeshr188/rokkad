@@ -130,6 +130,7 @@
 
 <!-- COA Preview + Recent Activity + Alerts -->
 <div class="row mb-4">
+    {% if show_accountant_tools %}
     <div class="col-md-4">
         <div class="card h-100">
             <div class="card-header bg-light">
@@ -151,12 +152,14 @@
             </div>
         </div>
     </div>
+    {% endif %}
     <div class="col-md-4">
         <div class="card h-100">
             <div class="card-header bg-light">
                 <h5 class="mb-0"><i class="fas fa-receipt"></i> Recent Vouchers</h5>
             </div>
             <div class="card-body">
+                {% if show_accountant_tools %}
                 <div class="recent-list">
                 {% for voucher in recent_vouchers %}
                     <div class="recent-item d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
@@ -169,6 +172,10 @@
                 {% endfor %}
                 </div>
                 <a href="{% url 'dea_voucher_list' %}" class="btn btn-sm btn-outline-primary w-100 mt-3">View All Vouchers</a>
+                {% else %}
+                <div class="text-muted small mb-2">Voucher drilldowns are available in accountant tools.</div>
+                <a href="{% url 'dea_business_events_dashboard' %}" class="btn btn-sm btn-outline-primary w-100">Open Business Events</a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -208,6 +215,19 @@
         <div class="col-md-6 col-lg-2">
             <a href="{% url 'financial_ratios' %}" class="btn btn-primary btn-sm w-100">More Reports <i class="fas fa-arrow-right ms-1"></i></a>
         </div>
+    </div>
+</div>
+
+<div class="reports-section mt-4">
+    <h5><i class="fas fa-coins"></i> Commodity Reports</h5>
+    <div class="row g-2">
+        {% for report in commodity_report_links %}
+        <div class="col-md-6 col-lg-2">
+            <a href="{{ report.url }}" class="btn btn-outline-secondary btn-sm w-100 text-start">
+                <i class="fas fa-chart-area me-2"></i>{{ report.name }}
+            </a>
+        </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

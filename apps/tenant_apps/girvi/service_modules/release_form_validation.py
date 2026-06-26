@@ -9,6 +9,37 @@ class ReleaseFormValidationService:
     """Encapsulate release formset row/cross-row validation rules."""
 
     @staticmethod
+    def validate_release_form_loan(form, loan):
+        if form.instance and form.instance.pk:
+            return loan
+
+        if getattr(loan, "is_released", False):
+            form.add_error("loan", "Loan already has a release.")
+
+        return loan
+
+    @staticmethod
+    def validate_release_amount(form, release_amount, loan):
+        if not release_amount or not loan:
+            return release_amount
+
+        due_amount = getattr(loan, "total_due", None)
+        if callable(due_amount):
+            due_amount = due_amount()
+        if due_amount is None and hasattr(loan, "due"):
+            due_amount = loan.due()
+        if due_amount is None:
+            return release_amount
+
+        if release_amount > due_amount:
+            form.add_error(
+                "release_amount",
+                f"Release amount {release_amount} cannot be > due amount {due_amount}.",
+            )
+
+        return release_amount
+
+    @staticmethod
     def _iter_active_forms(formset):
         for form in formset.forms:
             if not hasattr(form, "cleaned_data"):

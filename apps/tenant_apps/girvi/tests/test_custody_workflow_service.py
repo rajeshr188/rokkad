@@ -9,6 +9,61 @@ from apps.tenant_apps.girvi.service_modules.custody_workflow import (
 
 
 class CustodyWorkflowServiceTests(SimpleTestCase):
+    def test_return_item_from_lender_delegates_and_returns_description(self):
+        item = SimpleNamespace(
+            itemdesc="Chain",
+            return_from_lender=MagicMock(),
+        )
+        user = SimpleNamespace(username="demo")
+
+        result = CustodyWorkflowService.return_item_from_lender(
+            item,
+            user=user,
+            notes="single",
+        )
+
+        item.return_from_lender.assert_called_once_with(user=user, notes="single")
+        self.assertEqual(result.item_description, "Chain")
+
+    @patch("apps.tenant_apps.girvi.service_modules.custody_workflow.transaction.atomic")
+    def test_return_taken_loan_collateral_uses_loan_method_when_available(self, atomic_mock):
+        atomic_cm = MagicMock()
+        atomic_mock.return_value = atomic_cm
+
+        loan = MagicMock()
+        loan.collateral_items.all.return_value = [SimpleNamespace(), SimpleNamespace()]
+        user = SimpleNamespace(username="demo")
+
+        result = CustodyWorkflowService.return_taken_loan_collateral(
+            loan,
+            user=user,
+            notes="note",
+        )
+
+        loan.return_all_collateral.assert_called_once_with(user=user, notes="note")
+        self.assertEqual(result.returned_count, 2)
+
+    @patch("apps.tenant_apps.girvi.service_modules.custody_workflow.transaction.atomic")
+    def test_return_taken_loan_collateral_falls_back_to_item_returns(self, atomic_mock):
+        atomic_cm = MagicMock()
+        atomic_mock.return_value = atomic_cm
+
+        loan = SimpleNamespace()
+        item_one = SimpleNamespace(return_from_lender=MagicMock())
+        item_two = SimpleNamespace(return_from_lender=MagicMock())
+        loan.collateral_items = SimpleNamespace(all=MagicMock(return_value=[item_one, item_two]))
+        user = SimpleNamespace(username="demo")
+
+        result = CustodyWorkflowService.return_taken_loan_collateral(
+            loan,
+            user=user,
+            notes="manual",
+        )
+
+        item_one.return_from_lender.assert_called_once_with(user=user, notes="manual")
+        item_two.return_from_lender.assert_called_once_with(user=user, notes="manual")
+        self.assertEqual(result.returned_count, 2)
+
     def test_gate_blocks_when_dues_not_clear(self):
         gate = CustodyWorkflowService.evaluate_release_with_return_gate(
             SimpleNamespace(is_released=False),

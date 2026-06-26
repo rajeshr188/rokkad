@@ -20,6 +20,7 @@
       </div>
 
       {% include "girvi/loanpayment/_repayment_preview.html" %}
+      {% include "girvi/loanpayment/_payment_options.html" %}
 
       {# Payment form #}
       <div class="card border-0 shadow-sm">
@@ -72,6 +73,7 @@
 {% partialdef content %}
 <div class="modal-body">
   {% include "girvi/loanpayment/_repayment_preview.html" %}
+  {% include "girvi/loanpayment/_payment_options.html" %}
   <form method="post" id="repayment-form">
     {% csrf_token %}
     {{ form.non_field_errors }}

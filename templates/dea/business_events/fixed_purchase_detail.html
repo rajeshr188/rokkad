@@ -1,0 +1,188 @@
+{% extends 'layouts/workspace.html' %}
+{% block title %}Fixed Purchase Result{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">Fixed Purchase Result</h4>
+        <small class="text-muted">Draft #{{ draft.id }} · {{ draft.source_reference }}</small>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'dea_fixed_purchase_preview' %}" class="btn btn-sm btn-outline-secondary">New preview</a>
+        <a href="{% url 'dea_business_events_dashboard' %}" class="btn btn-sm btn-outline-secondary">Business Events</a>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-xl-4">
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Business Facts</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Status</dt>
+                    <dd class="col-sm-7">{{ draft.get_status_display }}</dd>
+                    <dt class="col-sm-5">Date</dt>
+                    <dd class="col-sm-7">{{ draft.event_date }}</dd>
+                    <dt class="col-sm-5">Reference</dt>
+                    <dd class="col-sm-7">{{ draft.source_reference }}</dd>
+                    <dt class="col-sm-5">Amount</dt>
+                    <dd class="col-sm-7">{{ preview.business_facts.currency }} {{ preview.business_facts.money_amount }}</dd>
+                    <dt class="col-sm-5">Fine weight</dt>
+                    <dd class="col-sm-7">{{ preview.business_facts.fine_weight }}</dd>
+                    <dt class="col-sm-5">Commodity</dt>
+                    <dd class="col-sm-7">{{ preview.business_facts.commodity }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Posting Status</h5>
+                {% if voucher %}
+                <span class="badge bg-success">Posted</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">Not posted</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if voucher %}
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Voucher</dt>
+                    <dd class="col-sm-7"><a href="{{ voucher.get_absolute_url }}">{{ voucher.voucher_no }}</a></dd>
+                    <dt class="col-sm-5">Voucher type</dt>
+                    <dd class="col-sm-7">{{ voucher.voucher_type.name }}</dd>
+                    {% if journal_entry %}
+                    <dt class="col-sm-5">Journal entry</dt>
+                    <dd class="col-sm-7"><a href="{{ journal_entry.get_absolute_url }}">JE-{{ journal_entry.id }}</a></dd>
+                    {% endif %}
+                </dl>
+                {% else %}
+                <p class="mb-0 text-muted">This draft has not been posted.</p>
+                {% if readiness.ready and can_confirm %}
+                <form method="post" action="{% url 'dea_fixed_purchase_confirm' draft.id %}" class="mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Confirm fixed purchase posting</button>
+                </form>
+                {% else %}
+                <div class="mt-3">
+                    <a href="{% url 'dea_fixed_purchase_preview' %}" class="btn btn-sm btn-outline-primary">Re-preview fixed purchase</a>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8">
+        {% if readiness and not voucher %}
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Posting Readiness</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Check</th>
+                            <th>Status</th>
+                            <th>Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for check in readiness.checks %}
+                        <tr>
+                            <td>{{ check.label }}</td>
+                            <td>{% if check.passed %}<span class="badge bg-success">Pass</span>{% else %}<span class="badge bg-danger">Block</span>{% endif %}</td>
+                            <td>{{ check.detail }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Accounting Impact</h5>
+            </div>
+            {% if ledger_transactions or account_transactions %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Debit</th>
+                            <th>Credit</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for txn in ledger_transactions %}
+                        <tr>
+                            <td>Ledger</td>
+                            <td>{{ txn.ledgerno_dr }}</td>
+                            <td>{{ txn.ledgerno }}</td>
+                            <td class="text-end">{{ txn.amount }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% for txn in account_transactions %}
+                        <tr>
+                            <td>Account</td>
+                            <td>{% if txn.XactTypeCode_id == 'Dr' %}{{ txn.Account }}{% endif %}</td>
+                            <td>{% if txn.XactTypeCode_id == 'Cr' %}{{ txn.Account }}{% endif %}</td>
+                            <td class="text-end">{{ txn.amount }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body text-muted">No posted accounting rows yet.</div>
+            {% endif %}
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Commodity Impact</h5>
+            </div>
+            {% if commodity_movements %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Movement</th>
+                            <th>Commodity</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th class="text-end">Fine weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movement in commodity_movements %}
+                        <tr>
+                            <td>{{ movement.movement_type }}</td>
+                            <td>{{ movement.commodity.code }}</td>
+                            <td>{{ movement.from_account }}</td>
+                            <td>{{ movement.to_account }}</td>
+                            <td class="text-end">{{ movement.fine_weight }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body text-muted">No posted commodity movement yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

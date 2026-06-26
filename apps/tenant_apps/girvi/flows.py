@@ -9,7 +9,7 @@ from viewflow import fsm
 from apps.orgs.models import Membership
 from apps.tenant_apps.girvi.service_modules.overdue_policy import evaluate_overdue_policy
 
-from .models.loan import LoanChangeLog
+from .models import LoanChangeLog
 from .models.loan_refactored import (
     BaseLoan,
     GivenLoan,

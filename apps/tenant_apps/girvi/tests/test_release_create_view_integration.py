@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from django.test import RequestFactory, SimpleTestCase
 
+from apps.tenant_apps.girvi.views.custody_views import release_loan_check_custody
 from apps.tenant_apps.girvi.views.release import release_create
 
 
@@ -36,6 +37,8 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
             "blockers": [],
             "outstanding_amount": "0.00",
             "total_with_lenders": 0,
+            "dues_clear": True,
+            "custody_clear": True,
         }
 
     def _checklist_blocked(self, blocker="Loan has outstanding dues"):
@@ -44,6 +47,8 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
             "blockers": [blocker],
             "outstanding_amount": "500.00",
             "total_with_lenders": 0,
+            "dues_clear": False,
+            "custody_clear": True,
         }
 
     def test_release_create_get_renders_preview_feedback(self):
@@ -80,6 +85,7 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context_data["release_preview"], fake_preview)
+        self.assertTrue(response.context_data["release_flow"].can_submit)
         self.assertIn(
             "Loan has no outstanding balance. Release accounting may be skipped.",
             response.context_data["release_preview"].warnings,
@@ -183,5 +189,86 @@ class ReleaseCreateViewIntegrationTests(SimpleTestCase):
             response = release_create(request)
 
         self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context_data["release_flow"].can_submit)
+        self.assertIn(
+            "Loan has outstanding dues of 500.00",
+            response.context_data["release_flow"].blockers,
+        )
         submit_service.assert_called_once()
         fake_form.add_error.assert_any_call(None, "Loan has outstanding dues of 500.00")
+
+
+class ReleaseCustodyCheckViewTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def _user(self):
+        return SimpleNamespace(
+            is_authenticated=True,
+            username="demo-user",
+            profile=SimpleNamespace(workspace="tenant-1"),
+        )
+
+    def _bind_workspace(self, request):
+        request.tenant = SimpleNamespace(
+            schema_name="tenant-1",
+            owner=request.user,
+            theme="default",
+            logo="",
+        )
+        return request
+
+    def test_release_custody_check_context_includes_release_flow(self):
+        loan = SimpleNamespace(
+            pk=42,
+            id=42,
+            loan_id="GL-42",
+            status="Disbursed",
+            borrower=SimpleNamespace(name="Demo Borrower"),
+            is_released=False,
+        )
+        checklist = {
+            "loan": loan,
+            "can_release": False,
+            "dues_clear": True,
+            "custody_clear": False,
+            "needs_return": True,
+            "items_by_lender": {},
+            "blockers": ["1 collateral item(s) are still with lender(s)."],
+            "outstanding_amount": "0.00",
+            "total_with_lenders": 1,
+        }
+        request = self.factory.get("/girvi/custody/loans/42/release/check/")
+        request.user = self._user()
+        request._messages = MagicMock()
+        self._bind_workspace(request)
+
+        def fake_render(_request, template_name, context):
+            return SimpleNamespace(
+                status_code=200,
+                template_name=template_name,
+                context_data=context,
+            )
+
+        with patch(
+            "apps.tenant_apps.girvi.views.custody_views.get_object_or_404",
+            return_value=loan,
+        ), patch(
+            "apps.tenant_apps.girvi.views.custody_views.CustodyWorkflowService.build_release_checklist_context",
+            return_value=checklist,
+        ), patch(
+            "apps.tenant_apps.girvi.views.custody_views.render",
+            side_effect=fake_render,
+        ):
+            response = release_loan_check_custody(request, loan_id=loan.pk)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.template_name,
+            "girvi/release/release_custody_check.html",
+        )
+        self.assertFalse(response.context_data["release_flow"].can_submit)
+        self.assertIn(
+            "1 collateral item(s) are still with lender(s).",
+            response.context_data["release_flow"].blockers,
+        )

@@ -32,11 +32,13 @@ from django.db.models import (
     DecimalField,
     ExpressionWrapper,
     F,
+    Func,
     IntegerField,
     OuterRef,
     Q,
     Subquery,
     Sum,
+    Q,
     Value,
     When,
     Window,
@@ -60,6 +62,11 @@ from .lifecycle import (
     canonical_status,
 )
 from .models import GivenLoan, TakenLoan
+from .integrations.notification_adapter import (
+    get_draft_notice_status_value,
+    get_pending_notifications_count,
+    get_total_notifications_count,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -414,6 +421,46 @@ def get_dashboard_payment_counts():
     return get_payment_voucher_counts()
 
 
+def build_girvi_dashboard_read_model(*, user=None, workspace=None, recent_release_limit=5):
+    """Return consolidated dashboard context so views stay as thin render adapters."""
+    from apps.tenant_apps.girvi.models import (
+        License,
+        LoanItemStorageBox,
+        Release,
+        Series,
+        StatementItem,
+    )
+
+    given_loans = GivenLoan.objects
+    payment_counts = get_dashboard_payment_counts()
+    operational_queue = build_dashboard_operational_queue(
+        user=user,
+        workspace=workspace,
+    )
+
+    return {
+        "total_loans": given_loans.count(),
+        "unreleased_loans": given_loans.unreleased().count(),
+        "released_loans": given_loans.released().count(),
+        "overdue_loans": given_loans.non_performing_loans_stats().count(),
+        "total_loan_amount": given_loans.get_queryset().total_loan_amount() or 0,
+        "total_releases": Release.objects.count(),
+        "recent_releases": Release.objects.order_by("-release_date")[:recent_release_limit],
+        "total_licenses": License.objects.count(),
+        "active_licenses": License.objects.filter(is_active=True).count(),
+        "total_series": Series.objects.count(),
+        "active_series": Series.objects.filter(is_active=True).count(),
+        "total_boxes": LoanItemStorageBox.objects.count(),
+        "total_payments": payment_counts["total_payments"],
+        "pending_payments": payment_counts["pending_payments"],
+        "total_statements": StatementItem.objects.count(),
+        "total_notifications": get_total_notifications_count(),
+        "pending_notifications": get_pending_notifications_count(),
+        "operational_queue": operational_queue,
+        "queue_counts": operational_queue["counts"],
+    }
+
+
 def _queue_transition_url(loan, transition_name):
     return f"{reverse('girvi:girvi_loan_transition', args=[loan.pk])}?transition={transition_name}"
 
@@ -447,7 +494,6 @@ def build_dashboard_operational_queue(
     """Build the dashboard queue for due/overdue/NPA/cure/notice workflows."""
     from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
     from apps.tenant_apps.girvi.service_modules.overdue_policy import evaluate_overdue_policy
-    from apps.tenant_apps.notify.models import Notification
 
     if loans is None:
         loans = (
@@ -483,7 +529,7 @@ def build_dashboard_operational_queue(
         if notifications is not None:
             try:
                 draft_notice_exists = notifications.filter(
-                    status=Notification.StatusType.Draft
+                    status=get_draft_notice_status_value()
                 ).exists()
             except Exception:
                 draft_notice_exists = False
@@ -689,6 +735,16 @@ def build_loan_accounting_reconciliation_report(*, limit=200, loans=None):
     }
 
 
+def build_loan_accounting_reconciliation_report_context(*, report=None):
+    """Return template-ready context for the reconciliation report view."""
+    report = report or build_loan_accounting_reconciliation_report()
+    return {
+        "report": report,
+        "report_rows": report["rows"],
+        "report_counts": report["counts"],
+    }
+
+
 def _aging_bucket_label(days_overdue):
     if days_overdue <= 0:
         return "current"
@@ -836,6 +892,126 @@ def build_operational_controls_report(*, limit=200, loans=None, as_of_date=None)
         },
         "generated_at": timezone.now(),
         "scanned_loans": len(loans),
+    }
+
+
+def build_operational_controls_report_context(*, report=None):
+    """Return template-ready context for operational controls report views."""
+    report = report or build_operational_controls_report()
+    return {
+        "report": report,
+        "aging_rows": report["aging"]["rows"],
+        "aging_bucket_counts": report["aging"]["bucket_counts"],
+        "custody_rows": report["custody"]["rows"],
+        "release_ready_rows": report["release_ready"]["rows"],
+        "release_ready_count": report["release_ready"]["ready_count"],
+        "rate_exception_rows": report["rate_exceptions"]["rows"],
+        "rate_exception_total": report["rate_exceptions"]["total"],
+    }
+
+
+def build_operations_console_read_model(*, failed_event_limit=25, audit_event_limit=20):
+    """Return one consolidated read model for operations-console summary widgets."""
+    from apps.tenant_apps.girvi.integrations.dea_adapter import (
+        get_payment_voucher_posting_counts,
+    )
+    from apps.tenant_apps.girvi.services import get_rate_setup_counts
+    from apps.tenant_apps.girvi.models import (
+        GirviPostingOutboxEvent,
+        GirviPostingOutboxStatus,
+        LoanChangeLog,
+        Series,
+    )
+
+    payment_counts = get_payment_voucher_posting_counts()
+    outbox_counts = {
+        status: GirviPostingOutboxEvent.objects.filter(status=status).count()
+        for status, _label in GirviPostingOutboxStatus.choices
+    }
+
+    series_summary = {
+        "total": Series.objects.count(),
+        "active": Series.objects.filter(is_active=True).count(),
+        "loans_locked": Series.objects.filter(deactivated_for_loans=True).count(),
+        "releases_locked": Series.objects.filter(deactivated_for_releases=True).count(),
+    }
+    rate_summary = get_rate_setup_counts()
+
+    failed_events = GirviPostingOutboxEvent.objects.filter(
+        status__in=[
+            GirviPostingOutboxStatus.FAILED,
+            GirviPostingOutboxStatus.DEAD_LETTER,
+        ]
+    ).order_by("-updated_at")[:failed_event_limit]
+    recent_audit_events = LoanChangeLog.objects.select_related("author").order_by(
+        "-changed"
+    )[:audit_event_limit]
+
+    return {
+        "payment_counts": payment_counts,
+        "outbox_counts": outbox_counts,
+        "series_summary": series_summary,
+        "rate_summary": rate_summary,
+        "failed_events": failed_events,
+        "recent_audit_events": recent_audit_events,
+    }
+
+
+def build_repledge_history_read_model(
+    *,
+    status=None,
+    customer_id=None,
+    lender_id=None,
+    limit=100,
+):
+    """Build selector payload for repledge history report with optional filters."""
+    from apps.tenant_apps.girvi.models.custody_tracking import RepledgeHistory
+
+    history = RepledgeHistory.objects.select_related(
+        "loan_item",
+        "loan_item__loan",
+        "loan_item__loan__borrower",
+        "taken_loan",
+        "taken_loan__lender",
+        "repledged_by",
+        "returned_by",
+    )
+
+    if status == "active":
+        history = history.filter(returned_at__isnull=True)
+    elif status == "returned":
+        history = history.filter(returned_at__isnull=False)
+
+    if customer_id:
+        history = history.filter(loan_item__loan__borrower_id=customer_id)
+
+    if lender_id:
+        history = history.filter(taken_loan__lender_id=lender_id)
+
+    return {
+        "history": history[:limit],
+        "total_active": RepledgeHistory.objects.filter(returned_at__isnull=True).count(),
+        "total_returned": RepledgeHistory.objects.filter(returned_at__isnull=False).count(),
+    }
+
+
+def build_item_custody_status_payload(item):
+    """Build JSON-safe item custody payload for API endpoints."""
+    return {
+        "item_id": item.id,
+        "custody_status": item.custody_status,
+        "custody_display": item.get_custody_status_display(),
+        "is_repledged": item.is_repledged,
+        "repledged_to": {
+            "id": item.repledged_to.id,
+            "loan_id": item.repledged_to.loan_id,
+            "lender": item.repledged_to.lender.name,
+        }
+        if item.repledged_to
+        else None,
+        "can_release": item.is_available_for_release,
+        "can_repledge": item.is_available_for_repledge,
+        "can_return": item.can_be_returned_from_lender,
     }
 
 
@@ -1072,6 +1248,83 @@ def build_given_loan_release_action(loan):
     }
 
 
+def _first_enabled_action(actions):
+    for action in actions or []:
+        if not action.get("disabled"):
+            return action
+    return None
+
+
+def build_given_loan_action_readiness(
+    loan,
+    *,
+    transition_actions=None,
+    release_action=None,
+    changelog=None,
+):
+    """Build the loan-detail next-action summary without owning transition rules."""
+    settlement = build_loan_settlement_balance(loan)
+    current_value = _as_decimal(getattr(loan, "current_value", Decimal("0.00")))
+    total_due = _as_decimal(settlement.total_due)
+    collateral_margin = current_value - total_due
+    accounting_status = None
+    journal_count = 0
+    try:
+        from apps.tenant_apps.girvi.integrations.dea_adapter import get_source_posting_status
+
+        accounting_status = get_source_posting_status(loan)
+    except Exception:
+        try:
+            journal_count = get_given_loan_journal_entries(loan).count()
+        except Exception:
+            journal_count = 0
+        accounting_status = {
+            "label": "Posted" if journal_count > 0 else "No posted journal",
+            "badge_class": "bg-success" if journal_count > 0 else "bg-secondary",
+            "posted_payment_count": journal_count,
+            "pending_payment_count": 0,
+            "failed_outbox_count": 0,
+            "pending_outbox_count": 0,
+        }
+
+    enabled_release = release_action if release_action and not release_action.get("disabled") else None
+    enabled_transition = _first_enabled_action(transition_actions)
+    blocked_release = release_action if release_action and release_action.get("disabled") else None
+
+    if enabled_release:
+        primary_action = enabled_release
+        primary_reason = "Settlement is clear enough to start collateral release."
+    elif enabled_transition:
+        primary_action = enabled_transition
+        primary_reason = "This is the next valid lifecycle action for the current state."
+    elif blocked_release:
+        primary_action = blocked_release
+        primary_reason = "Release is blocked until outstanding dues are settled."
+    else:
+        primary_action = None
+        primary_reason = "No staff action is currently available from this state."
+
+    return {
+        "primary_action": primary_action,
+        "primary_reason": primary_reason,
+        "settlement": {
+            "label": "Clear" if settlement.total_outstanding <= Decimal("0.00") else "Outstanding",
+            "badge_class": "bg-success" if settlement.total_outstanding <= Decimal("0.00") else "bg-warning text-dark",
+            "amount": settlement.total_outstanding,
+        },
+        "collateral": {
+            "label": "Adequate" if collateral_margin >= Decimal("0.00") else "Undersecured",
+            "badge_class": "bg-success" if collateral_margin >= Decimal("0.00") else "bg-danger",
+            "current_value": current_value,
+            "margin": collateral_margin,
+        },
+        "accounting": accounting_status,
+        "timeline": {
+            "event_count": len(changelog) if isinstance(changelog, list) else getattr(changelog, "count", lambda: 0)(),
+        },
+    }
+
+
 def build_given_loan_detail_display(loan):
     """Build display-only loan detail metrics used by the full detail view."""
     raw_weight_summary = getattr(loan, "get_weight_summary", []) or []
@@ -1197,3 +1450,290 @@ def build_given_loan_detail_read_model(loan):
 def get_given_loan_detail_read_model(loan_id):
     """Fetch and assemble a full cross-domain read model for loan detail tabs."""
     return build_given_loan_detail_read_model(get_given_loan_detail(loan_id))
+
+
+def loan_interest_due(loan, as_of_date=None):
+    """Compute interest due using the shared interest policy service."""
+    from apps.tenant_apps.girvi.services import InterestCalculationService
+
+    return InterestCalculationService.interest_due(
+        loan.get_interest_amount,
+        loan.loan_date,
+        as_of_date,
+    )
+
+
+def loan_total_receipt_payments(loan):
+    """Sum all receipt-side loan payments across voucher and legacy relations."""
+    if getattr(loan, "pk", None):
+        payments_relation = getattr(loan, "payments", None)
+        if payments_relation is not None:
+            try:
+                total = payments_relation.filter(direction="RECEIPT").aggregate(
+                    total=Sum("amount_in_base_currency")
+                )["total"]
+                if hasattr(total, "amount"):
+                    return Decimal(str(total.amount))
+                if total not in (None, ""):
+                    return Decimal(str(total))
+            except Exception:
+                pass
+
+    loan_payments = getattr(loan, "loan_payments", None)
+    if loan_payments is None:
+        return Decimal(0)
+    return loan_payments.aggregate(Sum("payment_amount"))["payment_amount__sum"] or Decimal(0)
+
+
+def loan_total_principal_payments(loan):
+    """Sum principal receipts across voucher and legacy loan payment relations."""
+    if getattr(loan, "pk", None):
+        payments_relation = getattr(loan, "payments", None)
+        if payments_relation is not None:
+            try:
+                total = payments_relation.filter(direction="RECEIPT").aggregate(
+                    total_principal=Sum("principal_amount")
+                )["total_principal"]
+                if hasattr(total, "amount"):
+                    return Decimal(str(total.amount))
+                if total not in (None, ""):
+                    return Decimal(str(total))
+            except Exception:
+                pass
+
+    loan_payments = getattr(loan, "loan_payments", None)
+    if loan_payments is None:
+        return Decimal(0)
+    return loan_payments.aggregate(Sum("principal_payment"))["principal_payment__sum"] or Decimal(0)
+
+
+def loan_total_interest_payments(loan):
+    """Sum interest receipts across voucher and legacy loan payment relations."""
+    if getattr(loan, "pk", None):
+        payments_relation = getattr(loan, "payments", None)
+        if payments_relation is not None:
+            try:
+                total = payments_relation.filter(direction="RECEIPT").aggregate(
+                    total_interest=Sum("interest_amount")
+                )["total_interest"]
+                if hasattr(total, "amount"):
+                    return Decimal(str(total.amount))
+                if total not in (None, ""):
+                    return Decimal(str(total))
+            except Exception:
+                pass
+
+    loan_payments = getattr(loan, "loan_payments", None)
+    if loan_payments is None:
+        return Decimal(0)
+    return loan_payments.aggregate(Sum("interest_payment"))["interest_payment__sum"] or Decimal(0)
+
+
+def loan_interest_accrued_gross(loan, as_of_date=None):
+    """Compute gross accrued interest, preferring posted accrual rows when available."""
+    if not getattr(loan, "pk", None):
+        return round(loan_interest_due(loan, as_of_date), 2)
+
+    accruals = getattr(loan, "interest_accruals", None)
+    if accruals is None:
+        return round(loan_interest_due(loan, as_of_date), 2)
+
+    try:
+        queryset = accruals.all()
+        if as_of_date is not None:
+            cutoff = as_of_date.date() if hasattr(as_of_date, "date") else as_of_date
+            queryset = queryset.filter(period_end__lte=cutoff)
+        total = queryset.aggregate(total=Sum("accrued_amount"))["total"] or Decimal(0)
+    except Exception:
+        total = Decimal(0)
+
+    if total == 0:
+        return round(loan_interest_due(loan, as_of_date), 2)
+    return round(Decimal(str(total)), 2)
+
+
+def loan_interest_receivable_balance(loan):
+    """Compute booked interest receivable that remains unpaid."""
+    if not getattr(loan, "pk", None):
+        return Decimal("0.00")
+
+    accruals = getattr(loan, "interest_accruals", None)
+    if accruals is None:
+        return Decimal("0.00")
+
+    try:
+        posted_total = (
+            accruals.filter(status="POSTED").aggregate(total=Sum("accrued_amount"))["total"]
+            or Decimal(0)
+        )
+    except Exception:
+        posted_total = Decimal(0)
+
+    outstanding = Decimal(str(posted_total)) - round(loan_total_interest_payments(loan), 2)
+    return round(max(outstanding, Decimal("0")), 2)
+
+
+def loan_last_accrual_date(loan):
+    """Return last accrued period end date if accrual rows exist."""
+    if not getattr(loan, "pk", None):
+        return None
+
+    accruals = getattr(loan, "interest_accruals", None)
+    if accruals is None:
+        return None
+
+    try:
+        return accruals.order_by("-period_end").values_list("period_end", flat=True).first()
+    except Exception:
+        return None
+
+
+def given_loan_amount(loan):
+    """Return principal amount from pledged given-loan items."""
+    return loan.loanitems.aggregate(Sum("loanamount"))["loanamount__sum"] or Decimal(0)
+
+
+def given_loan_interest_amount(loan):
+    """Return base monthly interest amount from given-loan items."""
+    return loan.loanitems.aggregate(Sum("interest"))["interest__sum"] or Decimal(0)
+
+
+def given_loan_weight_summary(loan):
+    """Return weight summary grouped by item metal type for given loans."""
+    return loan.loanitems.values("itemtype").annotate(
+        total_weight=Sum("weight"),
+        pure_weight=Sum(
+            Func(
+                ExpressionWrapper(
+                    F("weight") * F("purity") / 100,
+                    output_field=DecimalField(max_digits=10, decimal_places=3),
+                ),
+                function="ROUND",
+                template="%(function)s(%(expressions)s, 3)",
+            )
+        ),
+    )
+
+
+def given_loan_item_description(loan):
+    """Return comma-separated pledged item descriptions for a given loan."""
+    return ", ".join(loan.loanitems.values_list("itemdesc", flat=True))
+
+
+def given_loan_current_value(loan):
+    """Return current collateral market value for all given-loan items."""
+    return sum(item.current_value() for item in loan.loanitems.all())
+
+
+def taken_loan_amount(loan):
+    """Return principal from taken-loan repledge history rows."""
+    return loan.repledge_history_items.aggregate(Sum("repledged_amount"))["repledged_amount__sum"] or Decimal(0)
+
+
+def taken_loan_interest_amount(loan):
+    """Return base monthly interest amount from taken-loan repledged rows."""
+    interest_expression = ExpressionWrapper(
+        F("repledged_amount") * F("loan_item__interestrate") / Value(100),
+        output_field=DecimalField(max_digits=15, decimal_places=2),
+    )
+    return (
+        loan.repledge_history_items.aggregate(
+            interest=Coalesce(
+                Sum(interest_expression),
+                Value(0),
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            )
+        )["interest"]
+        or Decimal(0)
+    )
+
+
+def taken_loan_weight_summary(loan):
+    """Return weight summary grouped by item metal type for taken loans."""
+    return loan.repledge_history_items.values(itemtype=F("loan_item__itemtype")).annotate(
+        total_weight=Sum("loan_item__weight"),
+        pure_weight=Sum(
+            Func(
+                ExpressionWrapper(
+                    F("loan_item__weight") * F("loan_item__purity") / 100,
+                    output_field=DecimalField(max_digits=10, decimal_places=3),
+                ),
+                function="ROUND",
+                template="%(function)s(%(expressions)s, 3)",
+            )
+        ),
+    )
+
+
+def taken_loan_item_description(loan):
+    """Return comma-separated repledged item descriptions for a taken loan."""
+    return ", ".join(
+        loan.repledge_history_items.select_related("loan_item").values_list(
+            "loan_item__itemdesc", flat=True
+        )
+    )
+
+
+def taken_loan_current_value(loan):
+    """Return current collateral market value for taken-loan history rows."""
+    return sum(
+        history.loan_item.current_value()
+        for history in loan.repledge_history_items.select_related("loan_item__item").all()
+    )
+
+
+def get_statement_missing_loans(statement):
+    """Return the missing-loan queryset for a verification statement."""
+    verified_loans = statement.statementitem_set.values_list("loan_id", flat=True)
+    if statement.is_complete:
+        return GivenLoan.objects.unreleased().exclude(id__in=verified_loans)
+    return GivenLoan.objects.filter(
+        statementitem__statement=statement,
+        statementitem__descrepancy_type="MISSING",
+    )
+
+
+def get_statement_released_items_present(statement):
+    """Return statement items where collateral is present for already-released loans."""
+    return statement.statementitem_set.filter(
+        loan__release__isnull=False,
+        descrepancy_found=True,
+        descrepancy_note="Loan already released",
+    )
+
+
+def build_statement_verification_summary(statement):
+    """Return verification summary payload for statement completion/reporting surfaces."""
+    missing_loans = get_statement_missing_loans(statement)
+    released_present = get_statement_released_items_present(statement)
+    return {
+        "total_verified": statement.statementitem_set.count(),
+        "missing_loans": list(missing_loans),
+        "released_present": list(released_present),
+        "missing_count": missing_loans.count(),
+        "released_present_count": released_present.count(),
+    }
+
+
+def build_statement_detail_read_model(statement):
+    """Build detail-page read model for statement verification screens."""
+    statement_items = statement.statementitem_set.select_related("loan").all()
+    summary = {}
+    if statement.completed:
+        summary = {
+            "dc": statement_items.filter(descrepancy_found=True),
+            "descrepancy_loans": statement.statementitem_set.aggregate(
+                total=Count("pk"),
+                discrepancy=Count("pk", filter=Q(descrepancy_found=True)),
+            ),
+            "missing_loans": GivenLoan.objects.filter(release__isnull=True).exclude(
+                loan_id__in=statement_items.values_list("loan__loan_id", flat=True)
+            ),
+            "unreleased": GivenLoan.objects.filter(release__isnull=True),
+        }
+
+    return {
+        "statement": statement,
+        "items": statement_items,
+        "summary": summary,
+    }

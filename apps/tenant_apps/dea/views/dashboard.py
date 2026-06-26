@@ -23,6 +23,7 @@ from ..models import (
     AccountStatus,
 )
 from ..utils.currency import Balance
+from .access import can_view_dea_accountant_tools
 
 
 def _attach_balance_review_data(entries):
@@ -93,73 +94,104 @@ def dashboard(request):
         ).count(),
     }
 
+    show_accountant_tools = can_view_dea_accountant_tools(request)
+
     quick_actions = [
         {
-            "label": "Create Invoice",
-            "url": reverse("dea_sales_invoice_create"),
-            "icon": "fa-file-invoice-dollar",
-            "description": "Record customer sale",
+            "label": "Business Events",
+            "url": reverse("dea_business_events_dashboard"),
+            "icon": "fa-route",
+            "description": "Run business-event workflows",
         },
         {
-            "label": "Create Expense",
-            "url": reverse("dea_expense_create"),
-            "icon": "fa-receipt",
-            "description": "Record business expense",
+            "label": "Reports Hub",
+            "url": reverse("dea_reports_hub"),
+            "icon": "fa-chart-bar",
+            "description": "Open financial and commodity reports",
         },
         {
-            "label": "Record Payment",
-            "url": reverse("dea_payment_create"),
-            "icon": "fa-money-bill-wave",
-            "description": "Record cash/bank movement",
+            "label": "Metal Balance",
+            "url": reverse("dea_metal_balance_report"),
+            "icon": "fa-coins",
+            "description": "Review commodity position balances",
         },
         {
-            "label": "Journal Entry Voucher",
-            "url": reverse("dea_journal_entry_voucher_create"),
-            "icon": "fa-book",
-            "description": "Manual GL adjustment",
-        },
-        {
-            "label": "Manage Periods",
-            "url": reverse("dea_period_list"),
-            "icon": "fa-calendar-alt",
-            "description": "Open, close, and lock periods",
+            "label": "Exposure Report",
+            "url": reverse("dea_exposure_report"),
+            "icon": "fa-balance-scale",
+            "description": "Track open purchase and sale exposure",
         },
     ]
+    if show_accountant_tools:
+        quick_actions.extend(
+            [
+                {
+                    "label": "Voucher Hub",
+                    "url": reverse("dea_voucher_hub"),
+                    "icon": "fa-book",
+                    "description": "Open manual accounting tools",
+                },
+                {
+                    "label": "Manage Periods",
+                    "url": reverse("dea_period_list"),
+                    "icon": "fa-calendar-alt",
+                    "description": "Open, close, and lock periods",
+                },
+            ]
+        )
 
     workflows = [
         {
-            "title": "Set Up Account Structure",
+            "title": "Business Events Workflow",
             "steps": [
-                {"text": "View Chart of Accounts", "url": reverse("dea_chart_of_accounts")},
-                {"text": "Create Business Accounts", "url": reverse("dea_account_list")},
-                {"text": "Manage Accounting Periods", "url": reverse("dea_period_list")},
+                {
+                    "text": "Open Business Events Dashboard",
+                    "url": reverse("dea_business_events_dashboard"),
+                },
+                {
+                    "text": "Preview and confirm operational events",
+                    "url": reverse("dea_business_events_dashboard"),
+                },
+                {"text": "Review report outputs", "url": reverse("dea_reports_hub")},
             ],
         },
         {
-            "title": "Record Customer Transactions",
+            "title": "Commodity Monitoring",
             "steps": [
-                {"text": "View Customers", "url": reverse("dea_account_list")},
-                {"text": "Create Invoice", "url": reverse("dea_sales_invoice_create")},
-                {"text": "Record Payment", "url": reverse("dea_payment_create")},
+                {"text": "Check Metal Balance", "url": reverse("dea_metal_balance_report")},
+                {"text": "Check Commodity Exposure", "url": reverse("dea_exposure_report")},
+                {
+                    "text": "Check Commodity Valuation",
+                    "url": reverse("dea_valuation_report"),
+                },
             ],
         },
         {
-            "title": "Record Expenses",
+            "title": "Financial Reporting",
             "steps": [
-                {"text": "Create Expense Voucher", "url": reverse("dea_expense_create")},
-                {"text": "Review Expenses", "url": reverse("dea_expense_list")},
-                {"text": "View All Vouchers", "url": reverse("dea_voucher_list")},
-            ],
-        },
-        {
-            "title": "Period-End Activities",
-            "steps": [
-                {"text": "Review General Ledger", "url": reverse("dea_ledger_list")},
-                {"text": "Review Journal Entries", "url": reverse("dea_journal_entries_list")},
-                {"text": "Open/Close Periods", "url": reverse("dea_period_list")},
+                {"text": "Open Reports Hub", "url": reverse("dea_reports_hub")},
+                {"text": "Run Trial Balance", "url": reverse("trial_balance")},
+                {"text": "Run Balance Sheet", "url": reverse("balance_sheet")},
             ],
         },
     ]
+    if show_accountant_tools:
+        workflows.append(
+            {
+                "title": "Accountant Manual Tools",
+                "steps": [
+                    {"text": "Open Voucher Hub", "url": reverse("dea_voucher_hub")},
+                    {
+                        "text": "Open Manual Journal Vouchers",
+                        "url": reverse("dea_journal_entry_voucher_list"),
+                    },
+                    {
+                        "text": "Open Opening Balance Wizard",
+                        "url": reverse("dea_opening_balance_wizard"),
+                    },
+                ],
+            }
+        )
 
     context = {
         "current_period": current_period,
@@ -181,6 +213,7 @@ def dashboard(request):
         "stats": stats,
         "quick_actions": quick_actions,
         "workflows": workflows,
+        "show_accountant_tools": show_accountant_tools,
         "report_links": [
             {"name": "Reports Hub", "url": reverse("dea_reports_hub")},
             {"name": "Trial Balance", "url": reverse("trial_balance")},
@@ -190,6 +223,11 @@ def dashboard(request):
             {"name": "A/R Aging", "url": reverse("ar_aging")},
             {"name": "A/P Aging", "url": reverse("ap_aging")},
             {"name": "Ratios", "url": reverse("financial_ratios")},
+        ],
+        "commodity_report_links": [
+            {"name": "Metal Balance", "url": reverse("dea_metal_balance_report")},
+            {"name": "Commodity Exposure", "url": reverse("dea_exposure_report")},
+            {"name": "Commodity Valuation", "url": reverse("dea_valuation_report")},
         ],
         "title": "Accounting Dashboard",
     }

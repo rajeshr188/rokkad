@@ -162,6 +162,16 @@ def get_itemtype_averages():
     return _selector_impl()
 
 
+def get_rate_setup_counts():
+    """Return rates setup counts through Girvi service boundary."""
+    from apps.tenant_apps.rates.models import Rate, RateSource
+
+    return {
+        "rates": Rate.objects.count(),
+        "sources": RateSource.objects.count(),
+    }
+
+
 
 
 def get_interest_paid():

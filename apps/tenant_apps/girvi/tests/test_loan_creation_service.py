@@ -94,6 +94,79 @@ class LoanCreationServiceTests(SimpleTestCase):
         self.assertEqual(preview.borrower_current_balance, "₹12,500.00")
         self.assertEqual(preview.borrower_available_credit, "₹37,500.00")
 
+    def test_preview_includes_initial_item_valuation_and_ltv(self):
+        command = LoanCreateCommand(
+            borrower=SimpleNamespace(pk=1),
+            series=SimpleNamespace(is_active=True, name="A", pk=7),
+            loan_date=timezone.now(),
+            tenure=3,
+            interest_type="Simple",
+            created_by=None,
+            loan_id="",
+            initial_items=[
+                LoanItemCreateInput(
+                    itemdesc="Gold ring",
+                    itemtype="Gold",
+                    quantity=1,
+                    weight=Decimal("10.000"),
+                    purity=Decimal("75.00"),
+                    loanamount=Decimal("6000.00"),
+                    interestrate=Decimal("1.50"),
+                )
+            ],
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.generate",
+            return_value="A0005",
+        ), patch(
+            "apps.tenant_apps.girvi.services.RateCacheService.get_rate_or_none",
+            return_value=Decimal("1000.00"),
+        ):
+            preview = LoanCreationService.preview(command)
+
+        self.assertEqual(preview.initial_item_count, 1)
+        self.assertEqual(preview.initial_item_total, Decimal("6000.00"))
+        self.assertEqual(preview.initial_item_pure_weight_total, Decimal("7.500"))
+        self.assertEqual(preview.initial_item_current_value_total, Decimal("7500.00"))
+        self.assertEqual(preview.initial_item_ltv_percent, Decimal("80.00"))
+        self.assertEqual(preview.missing_rate_item_types, [])
+
+    def test_preview_warns_when_initial_item_rate_is_missing(self):
+        command = LoanCreateCommand(
+            borrower=SimpleNamespace(pk=1),
+            series=SimpleNamespace(is_active=True, name="A", pk=7),
+            loan_date=timezone.now(),
+            tenure=3,
+            interest_type="Simple",
+            created_by=None,
+            loan_id="",
+            initial_items=[
+                LoanItemCreateInput(
+                    itemdesc="Silver anklet",
+                    itemtype="Silver",
+                    quantity=1,
+                    weight=Decimal("20.000"),
+                    purity=Decimal("75.00"),
+                    loanamount=Decimal("1000.00"),
+                    interestrate=Decimal("1.50"),
+                )
+            ],
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.generate",
+            return_value="A0006",
+        ), patch(
+            "apps.tenant_apps.girvi.services.RateCacheService.get_rate_or_none",
+            return_value=None,
+        ):
+            preview = LoanCreationService.preview(command)
+
+        self.assertEqual(preview.initial_item_current_value_total, Decimal("0.00"))
+        self.assertEqual(preview.missing_rate_item_types, ["Silver"])
+        self.assertIn("Silver rate is not configured", " ".join(preview.warnings))
+
     def test_preview_rejects_future_dates(self):
         command = LoanCreateCommand(
             borrower=SimpleNamespace(pk=1),
@@ -123,6 +196,9 @@ class LoanCreationServiceTests(SimpleTestCase):
             is_authenticated=True,
             profile=SimpleNamespace(workspace=SimpleNamespace()),
         )
+        request.tenant = SimpleNamespace(
+            schema_name="tenant1", name="Tenant 1", owner=request.user, theme=None, logo=None
+        )
 
         with patch(
             "apps.tenant_apps.girvi.views.loan.CompanyPreferences",
@@ -131,6 +207,12 @@ class LoanCreationServiceTests(SimpleTestCase):
                 interest_rate_silver=2.25,
                 interest_rate_other=3.0,
             ),
+        ), patch(
+            "django_project.context_processors.get_effective_permissions",
+            return_value=set(),
+        ), patch(
+            "django_project.context_processors.get_workspace_role_name",
+            return_value="Owner",
         ):
             response = get_interestrate(request)
 
@@ -155,6 +237,9 @@ class LoanCreationServiceTests(SimpleTestCase):
         with patch(
             "apps.tenant_apps.girvi.service_modules.creation.transaction.atomic",
             side_effect=lambda: nullcontext(),
+        ), patch(
+            "apps.tenant_apps.girvi.services.RateCacheService.get_rate_or_none",
+            return_value=Decimal("1000.00"),
         ), patch(
             "apps.tenant_apps.girvi.service_modules.creation.GivenLoan",
             return_value=fake_loan,
@@ -210,8 +295,10 @@ class LoanCreationServiceTests(SimpleTestCase):
         }
         formset_class = build_initial_loan_item_formset()
 
-        with patch("apps.tenant_apps.girvi.forms.Rate.objects.filter") as rate_filter:
-            rate_filter.return_value.exists.return_value = False
+        with patch(
+            "apps.tenant_apps.girvi.forms.RateCacheService.get_rate_or_none",
+            return_value=Decimal("200.00"),
+        ):
             formset = formset_class(data, prefix="items")
             is_valid = formset.is_valid()
 
@@ -248,8 +335,10 @@ class LoanCreationServiceTests(SimpleTestCase):
         }
         formset_class = build_initial_loan_item_formset()
 
-        with patch("apps.tenant_apps.girvi.forms.Rate.objects.filter") as rate_filter:
-            rate_filter.return_value.exists.return_value = False
+        with patch(
+            "apps.tenant_apps.girvi.forms.RateCacheService.get_rate_or_none",
+            return_value=Decimal("200.00"),
+        ):
             formset = formset_class(data, prefix="items")
             is_valid = formset.is_valid()
 
@@ -287,6 +376,9 @@ class LoanCreationServiceTests(SimpleTestCase):
         with patch(
             "apps.tenant_apps.girvi.service_modules.creation.transaction.atomic",
             side_effect=lambda: nullcontext(),
+        ), patch(
+            "apps.tenant_apps.girvi.services.RateCacheService.get_rate_or_none",
+            return_value=Decimal("1000.00"),
         ), patch(
             "apps.tenant_apps.girvi.service_modules.creation.GivenLoan",
             return_value=fake_loan,
@@ -338,6 +430,9 @@ class LoanCreationServiceTests(SimpleTestCase):
             "apps.tenant_apps.girvi.service_modules.creation.transaction.atomic",
             side_effect=lambda: nullcontext(),
         ), patch(
+            "apps.tenant_apps.girvi.services.RateCacheService.get_rate_or_none",
+            return_value=Decimal("1000.00"),
+        ), patch(
             "apps.tenant_apps.girvi.service_modules.creation.GivenLoan",
             return_value=fake_loan,
         ), patch(
@@ -358,6 +453,9 @@ class LoanCreationServiceTests(SimpleTestCase):
     def test_loan_create_post_uses_creation_service(self):
         request = self.factory.post("/girvi/loan/create/", data={"loan_id": "A0001"})
         request.user = SimpleNamespace(is_authenticated=True)
+        request.tenant = SimpleNamespace(
+            schema_name="tenant1", name="Tenant 1", owner=request.user, theme=None, logo=None
+        )
 
         fake_form = MagicMock()
         fake_form.is_valid.return_value = True
@@ -395,7 +493,7 @@ class LoanCreationServiceTests(SimpleTestCase):
             "apps.tenant_apps.girvi.views.loan.build_initial_loan_item_formset",
             return_value=lambda *args, **kwargs: fake_item_formset,
         ), patch(
-            "apps.tenant_apps.girvi.views.loan.ensure_party_customer",
+            "apps.tenant_apps.girvi.service_modules.loan_workflow.ensure_party_customer",
             return_value={"customer": bridge_customer},
         ), patch(
             "apps.tenant_apps.girvi.views.loan.LoanCreationService.execute",
@@ -411,11 +509,15 @@ class LoanCreationServiceTests(SimpleTestCase):
         self.assertEqual(command.borrower_party, borrower_party)
         self.assertEqual(len(command.initial_items), 1)
         self.assertEqual(command.initial_items[0].itemdesc, "Gold ring")
-        self.assertIn("/loan/detail/42/", response["HX-Redirect"])
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/loan/detail/42/", response["Location"])
 
     def test_loan_update_post_does_not_use_creation_service(self):
         request = self.factory.post("/girvi/loan/update/42/", data={"loan_id": "A0001"})
         request.user = SimpleNamespace(is_authenticated=True)
+        request.tenant = SimpleNamespace(
+            schema_name="tenant1", name="Tenant 1", owner=request.user, theme=None, logo=None
+        )
 
         existing_loan = SimpleNamespace(
             id=42,
@@ -438,7 +540,8 @@ class LoanCreationServiceTests(SimpleTestCase):
             response = loan_update(request, 42)
 
         execute_mock.assert_not_called()
-        self.assertIn("/loan/detail/42/", response["HX-Redirect"])
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/loan/detail/42/", response["Location"])
 
     def test_live_preview_endpoint_renders_preview_partial(self):
         request = self.factory.get(
@@ -446,6 +549,9 @@ class LoanCreationServiceTests(SimpleTestCase):
             data={"borrower_party": "1", "series": "7", "loan_id": "A0005"},
         )
         request.user = SimpleNamespace(is_authenticated=True)
+        request.tenant = SimpleNamespace(
+            schema_name="tenant1", name="Tenant 1", owner=request.user, theme=None, logo=None
+        )
 
         fake_preview = SimpleNamespace(
             is_valid=True,
@@ -455,6 +561,11 @@ class LoanCreationServiceTests(SimpleTestCase):
             loan_date=timezone.now(),
             tenure=3,
             interest_type="Simple",
+            initial_item_count=1,
+            initial_item_total=Decimal("6000.00"),
+            initial_item_pure_weight_total=Decimal("7.500"),
+            initial_item_current_value_total=Decimal("7500.00"),
+            initial_item_ltv_percent=Decimal("80.00"),
             warnings=[],
             errors=[],
         )
@@ -462,9 +573,17 @@ class LoanCreationServiceTests(SimpleTestCase):
         with patch(
             "apps.tenant_apps.girvi.views.loan._build_create_preview_from_data",
             return_value=fake_preview,
+        ), patch(
+            "django_project.context_processors.get_effective_permissions",
+            return_value=set(),
+        ), patch(
+            "django_project.context_processors.get_workspace_role_name",
+            return_value="Owner",
         ):
             response = loan_create_preview(request)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Loan Creation Preview")
         self.assertContains(response, "A0005")
+        self.assertContains(response, "Loan-to-Value")
+        self.assertContains(response, "80.00%")

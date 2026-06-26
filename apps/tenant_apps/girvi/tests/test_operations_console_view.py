@@ -26,46 +26,27 @@ class GirviOperationsConsoleViewTests(SimpleTestCase):
         return request
 
     @patch("apps.tenant_apps.girvi.views.reports.render")
-    @patch("apps.tenant_apps.girvi.views.reports.LoanChangeLog")
-    @patch("apps.tenant_apps.girvi.views.reports.GirviPostingOutboxEvent")
-    @patch("apps.tenant_apps.girvi.views.reports.Series")
-    @patch("apps.tenant_apps.girvi.views.reports.RateSource")
-    @patch("apps.tenant_apps.girvi.views.reports.Rate")
-    @patch("apps.tenant_apps.girvi.views.reports.PaymentVoucher")
+    @patch("apps.tenant_apps.girvi.views.reports.build_operations_console_read_model")
     @patch("apps.tenant_apps.girvi.views.access.get_effective_permissions", return_value={"girvi_report_view"})
     @patch("apps.tenant_apps.girvi.views.access.get_workspace_role_name", return_value="Member")
     def test_get_renders_console_context(
         self,
         _role_name,
         _effective_permissions,
-        mock_payment_voucher,
-        mock_rate,
-        mock_rate_source,
-        mock_series,
-        mock_outbox,
-        mock_changelog,
+        mock_read_model,
         mock_render,
     ):
         request = self._request()
         response = SimpleNamespace(status_code=200)
         mock_render.return_value = response
-
-        mock_payment_voucher.objects.count.return_value = 10
-        mock_payment_voucher.objects.filter.side_effect = [
-            SimpleNamespace(count=lambda: 8),
-            SimpleNamespace(count=lambda: 2),
-        ]
-        mock_rate.objects.count.return_value = 6
-        mock_rate_source.objects.count.return_value = 2
-        mock_series.objects.count.return_value = 4
-        mock_series.objects.filter.side_effect = [
-            SimpleNamespace(count=lambda: 3),
-            SimpleNamespace(count=lambda: 1),
-            SimpleNamespace(count=lambda: 0),
-        ]
-        mock_outbox.objects.filter.return_value.count.return_value = 1
-        mock_outbox.objects.filter.return_value.order_by.return_value.__getitem__.return_value = []
-        mock_changelog.objects.select_related.return_value.order_by.return_value.__getitem__.return_value = []
+        mock_read_model.return_value = {
+            "payment_counts": {"total": 10, "posted": 8, "pending": 2},
+            "outbox_counts": {"failed": 1},
+            "series_summary": {"total": 4, "active": 3, "loans_locked": 1, "releases_locked": 0},
+            "rate_summary": {"rates": 6, "sources": 2},
+            "failed_events": [],
+            "recent_audit_events": [],
+        }
 
         result = girvi_operations_console(request)
 

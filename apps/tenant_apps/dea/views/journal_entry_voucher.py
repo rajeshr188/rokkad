@@ -12,7 +12,6 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.db import transaction
 from django.contrib import messages
@@ -28,9 +27,10 @@ from ..forms_vouchers import (
 from ..models import JournalEntryVoucher, VoucherType
 from ..posting.engine import DjangoPostingEngine
 from ..services.post_doc import create_and_post_voucher_for_doc
+from .access import DeaAccountantRequiredMixin
 
 
-class JournalEntryVoucherListView(LoginRequiredMixin, ListView):
+class JournalEntryVoucherListView(DeaAccountantRequiredMixin, ListView):
     """List all journal entry vouchers with filtering"""
 
     model = JournalEntryVoucher
@@ -103,7 +103,7 @@ class JournalEntryVoucherListView(LoginRequiredMixin, ListView):
         return context
 
 
-class JournalEntryVoucherDetailView(LoginRequiredMixin, DetailView):
+class JournalEntryVoucherDetailView(DeaAccountantRequiredMixin, DetailView):
     """Display details of a single journal entry voucher"""
 
     model = JournalEntryVoucher
@@ -149,7 +149,7 @@ class JournalEntryVoucherDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class JournalEntryVoucherCreateView(LoginRequiredMixin, CreateView):
+class JournalEntryVoucherCreateView(DeaAccountantRequiredMixin, CreateView):
     """Create a new journal entry voucher using pair-based posting rows."""
 
     model = JournalEntryVoucher
@@ -214,7 +214,7 @@ class JournalEntryVoucherCreateView(LoginRequiredMixin, CreateView):
         return super().form_invalid(form)
 
 
-class JournalEntryVoucherUpdateView(LoginRequiredMixin, UpdateView):
+class JournalEntryVoucherUpdateView(DeaAccountantRequiredMixin, UpdateView):
     """Update an existing journal entry voucher using pair-based rows."""
 
     model = JournalEntryVoucher
@@ -278,7 +278,7 @@ class JournalEntryVoucherUpdateView(LoginRequiredMixin, UpdateView):
         return redirect(self.success_url)
 
 
-class JournalEntryVoucherDeleteView(LoginRequiredMixin, DeleteView):
+class JournalEntryVoucherDeleteView(DeaAccountantRequiredMixin, DeleteView):
     """Delete a journal entry voucher"""
 
     model = JournalEntryVoucher

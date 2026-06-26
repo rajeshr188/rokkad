@@ -1,11 +1,11 @@
 import logging
 
 from django.contrib import messages
-from django.db.models import Count, F
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from ..models import GivenLoan, Statement, StatementItem
+from ..selectors import build_statement_detail_read_model
 from .access import girvi_workspace_required
 
 
@@ -42,31 +42,12 @@ def verification_session_toggle(request, pk):
 @girvi_workspace_required
 def verification_session_detail(request, pk):
     statement = get_object_or_404(Statement, pk=pk)
-    # form = StatementItemForm(statement=statement)
-
-    statement_items = statement.statementitem_set.select_related("loan").all()
-
-    summary = {}
-    if statement.completed:
-        summary["dc"] = statement_items.filter(descrepancy_found=True)
-        summary["descrepancy_loans"] = statement.statementitem_set.aggregate(
-            total=Count("pk"),
-            discrepancy=Count("pk", filter=F("descrepancy_found")),
-        )
-        summary["missing_loans"] = GivenLoan.objects.filter(
-            release__isnull=True
-        ).exclude(loan_id__in=statement_items.values_list("loan__loan_id", flat=True))
-        summary["unreleased"] = GivenLoan.objects.filter(release__isnull=True)
+    read_model = build_statement_detail_read_model(statement)
 
     return render(
         request,
         "girvi/statement/statement_detail.html",
-        context={
-            "statement": statement,
-            "items": statement_items,
-            "summary": summary,
-            # "form": form,
-        },
+        context=read_model,
     )
 
 

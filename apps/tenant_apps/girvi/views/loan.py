@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 
 import pytz
 from django.contrib import messages
@@ -20,9 +19,8 @@ from moneyed import Money
 # from django_fsm import has_transition_perm,can_proceed
 # from django_fsm_log.models import StateLog
 from apps.orgs.preferences import CompanyPreferences
-from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.contact.facade import customer_queryset
 from apps.tenant_apps.girvi.models.license import Series
-from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.party.services.customer_bridge import ensure_party_customer
 
 from ..filters import LoanFilter
@@ -44,6 +42,7 @@ from ..models import (
 from ..policies import assert_loan_header_editable
 from ..selectors import (
     build_unified_loan_rows,
+    build_given_loan_action_readiness,
     get_given_loan_detail_read_model,
     filter_unified_loans,
     get_loan_totals,
@@ -53,7 +52,6 @@ from ..selectors import (
 from ..services import (
     LoanCreateCommand,
     LoanCreationService,
-    LoanItemCreateInput,
     LoanRenewalCommand,
     LoanRenewalService,
     LoanTransitionService,
@@ -71,6 +69,7 @@ from ..service_modules.bulk_operations import (
     LoanBulkOperationService,
     LoanMergeCommand,
 )
+from ..service_modules.loan_workflow import LoanWorkflowService
 from ..service_modules.transition_workflow import TransitionWorkflowService
 from .access import girvi_permission_required, girvi_workspace_required
 logger = logging.getLogger(__name__)
@@ -256,143 +255,28 @@ def loan_table_partial(request: HttpRequest):
 
 
 def _extract_initial_item_inputs(item_formset):
-    initial_items = []
-    for item_data in getattr(item_formset, "cleaned_data", []) if item_formset else []:
-        if not item_data or item_data.get("DELETE"):
-            continue
-        if not any(
-            item_data.get(field) not in (None, "")
-            for field in ("item", "itemdesc", "weight", "loanamount")
-        ):
-            continue
-        initial_items.append(
-            LoanItemCreateInput(
-                item=item_data.get("item"),
-                itemdesc=item_data.get("itemdesc") or "",
-                itemtype=item_data.get("itemtype") or "Gold",
-                quantity=item_data.get("quantity") or 1,
-                weight=item_data.get("weight"),
-                purity=item_data.get("purity"),
-                loanamount=item_data.get("loanamount"),
-                interestrate=item_data.get("interestrate"),
-            )
-        )
-    return initial_items
+    return LoanWorkflowService.extract_initial_item_inputs(item_formset)
 
 
 def _build_loan_create_command(form, user, item_formset=None):
-    borrower_party = form.cleaned_data["borrower_party"]
-    bridge = ensure_party_customer(borrower_party, created_by=user)
-    return LoanCreateCommand(
-        borrower=bridge["customer"],
-        borrower_party=borrower_party,
-        series=form.cleaned_data["series"],
-        loan_date=form.cleaned_data["loan_date"],
-        tenure=form.cleaned_data["tenure"],
-        interest_type=form.cleaned_data["interest_type"],
-        created_by=user,
-        loan_id=form.cleaned_data.get("loan_id") or "",
-        initial_items=_extract_initial_item_inputs(item_formset),
-    )
+    return LoanWorkflowService.build_loan_create_command(form, user, item_formset)
 
 
 def _parse_preview_loan_date(raw_value):
-    if not raw_value:
-        return timezone.now()
-    if isinstance(raw_value, datetime):
-        return raw_value
-
-    for fmt in ("%Y-%m-%dT%H:%M", "%d-%m-%Y %H:%M"):
-        try:
-            return datetime.strptime(str(raw_value), fmt)
-        except (TypeError, ValueError):
-            continue
-
-    return raw_value
+    return LoanWorkflowService.parse_preview_loan_date(raw_value)
 
 
 def _build_preview_initial_item_inputs(data):
-    initial_items = []
-
-    try:
-        total_forms = int(data.get("items-TOTAL_FORMS") or 0)
-    except (TypeError, ValueError):
-        total_forms = 0
-
-    for index in range(total_forms):
-        item_data = {
-            "itemdesc": data.get(f"items-{index}-itemdesc") or "",
-            "itemtype": data.get(f"items-{index}-itemtype") or "Gold",
-            "quantity": data.get(f"items-{index}-quantity") or 1,
-            "weight": data.get(f"items-{index}-weight"),
-            "purity": data.get(f"items-{index}-purity"),
-            "loanamount": data.get(f"items-{index}-loanamount"),
-            "interestrate": data.get(f"items-{index}-interestrate"),
-        }
-        if any(
-            item_data.get(field) not in (None, "")
-            for field in ("itemdesc", "weight", "loanamount")
-        ):
-            initial_items.append(LoanItemCreateInput(**item_data))
-
-    return initial_items
+    return LoanWorkflowService.build_preview_initial_item_inputs(data)
 
 
 def _build_create_preview_from_data(data, user):
-    borrower = None
-    borrower_party = None
-    series = None
-
-    borrower_party_id = data.get("borrower_party") or data.get("borrower")
-    if borrower_party_id:
-        try:
-            borrower_party = Party.objects.filter(pk=int(borrower_party_id)).first()
-            try:
-                borrower = borrower_party.legacy_customer if borrower_party else None
-            except Customer.DoesNotExist:
-                borrower = borrower_party
-        except (TypeError, ValueError):
-            borrower = None
-            borrower_party = None
-
-    series_id = data.get("series")
-    if series_id:
-        try:
-            series = Series.objects.filter(pk=int(series_id)).first()
-        except (TypeError, ValueError):
-            series = None
-
-    try:
-        tenure = int(data.get("tenure") or 3)
-    except (TypeError, ValueError):
-        tenure = 3
-
-    interest_type = (
-        data.get("interest_type")
-        or GivenLoan._meta.get_field("interest_type").default
-    )
-
-    return LoanCreationService.preview(
-        LoanCreateCommand(
-            borrower=borrower,
-            borrower_party=borrower_party,
-            series=series,
-            loan_date=_parse_preview_loan_date(data.get("loan_date")),
-            tenure=tenure,
-            interest_type=interest_type,
-            created_by=user,
-            loan_id="",
-            initial_items=_build_preview_initial_item_inputs(data),
-        )
-    )
+    return LoanWorkflowService.build_create_preview_from_data(data, user)
 
 
-def _loan_detail_redirect_response(loan_id):
-    return HttpResponse(
-        headers={
-            "HX-Redirect": reverse("girvi:girvi_loan_detail", kwargs={"pk": loan_id})
-        }
-    )
+def _loan_detail_redirect_response(request, loan_id):
+    detail_url = reverse("girvi:girvi_loan_detail", kwargs={"pk": loan_id})
+    return redirect(detail_url)
 
 
 def _render_loan_form_response(
@@ -409,9 +293,7 @@ def _render_loan_form_response(
                     request,
                     "Could not initialize loan data. Please check series and license setup.",
                 )
-                return HttpResponse(
-                    headers={"HX-Redirect": reverse("girvi:girvi_license_list")}
-                )
+                return redirect("girvi:girvi_license_list")
             form = LoanCreateForm(initial=initial_data)
             item_formset = item_formset or item_formset_class(prefix="items")
             creation_preview = initial_data.get("creation_preview")
@@ -458,7 +340,7 @@ def _handle_loan_create_post(request):
         )
         if result.success:
             messages.success(request, result.message)
-            return _loan_detail_redirect_response(result.loan.id)
+            return _loan_detail_redirect_response(request, result.loan.id)
 
         form.add_error(None, result.message)
 
@@ -470,14 +352,10 @@ def _handle_loan_update_post(request, loan):
     assert_loan_header_editable(loan)
     form = LoanForm(request.POST, instance=loan)
     if form.is_valid():
-        with transaction.atomic():
-            loan = form.save(commit=False)
-            if not loan.created_by:
-                loan.created_by = request.user
-            loan.save()
+        loan = LoanWorkflowService.persist_loan_update(form, user=request.user)
 
         messages.success(request, f"Updated Loan: {loan.loan_id}")
-        return _loan_detail_redirect_response(loan.id)
+        return _loan_detail_redirect_response(request, loan.id)
 
     messages.warning(request, "Please correct the errors below.")
     return _render_loan_form_response(request, loan=loan, form=form)
@@ -514,7 +392,7 @@ def loan_create(request):
     except Exception as e:
         logger.warning(f"Error in loan_create: {str(e)}")
         messages.error(request, "An error occurred while creating loan")
-        return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
+        return redirect("girvi:girvi_loan_list")
 
 
 @girvi_permission_required("girvi_loan_create")
@@ -527,7 +405,7 @@ def loan_create_for_customer(request, customer_pk):
     except Exception as e:
         logger.warning(f"Error in loan_create_for_customer: {str(e)}")
         messages.error(request, "An error occurred while creating loan")
-        return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
+        return redirect("girvi:girvi_loan_list")
 
 
 @girvi_permission_required("girvi_loan_edit")
@@ -541,13 +419,11 @@ def loan_update(request, pk):
         return _render_loan_form_response(request, loan=loan)
     except ValidationError as e:
         messages.error(request, "; ".join(getattr(e, "messages", None) or [str(e)]))
-        return HttpResponse(
-            headers={"HX-Redirect": reverse("girvi:girvi_loan_detail", args=(pk,))}
-        )
+        return redirect("girvi:girvi_loan_detail", pk=pk)
     except Exception as e:
         logger.warning(f"Error in loan_update: {str(e)}")
         messages.error(request, "An error occurred while saving loan")
-        return HttpResponse(headers={"HX-Redirect": reverse("girvi:girvi_loan_list")})
+        return redirect("girvi:girvi_loan_list")
 
 
 def _get_initial_loan_data(request, customer_pk=None):
@@ -569,7 +445,7 @@ def _get_initial_loan_data(request, customer_pk=None):
             return None
 
         borrower = (
-            get_object_or_404(Customer.objects.select_related("account"), pk=customer_pk)
+            get_object_or_404(customer_queryset().select_related("account"), pk=customer_pk)
             if customer_pk
             else None
         )
@@ -643,6 +519,12 @@ def loan_detail(request, pk):
         transition.label for transition in flow.get_outgoing_transitions()
     ]
     transition_actions = build_transition_actions(loan, possible_transitions)
+    action_readiness = build_given_loan_action_readiness(
+        loan,
+        transition_actions=transition_actions,
+        release_action=rm["release_action"],
+        changelog=list(changelog),
+    )
 
     context = {
         "object": loan,
@@ -664,6 +546,7 @@ def loan_detail(request, pk):
         "possible_transitions": possible_transitions,
         "transition_actions": transition_actions,
         "release_action": rm["release_action"],
+        "action_readiness": action_readiness,
         "current_status": current_status,
         "current_status_label": current_status_label,
         "current_status_badge_class": current_status_badge_class,

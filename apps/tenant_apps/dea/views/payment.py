@@ -14,7 +14,6 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse_lazy
 from django.db import transaction
@@ -26,9 +25,10 @@ from ..models import PaymentVoucher, CashFlowDirection, PaymentMethod, JournalEn
 from ..forms import PaymentVoucherForm
 from ..posting.engine import DjangoPostingEngine
 from ..services.post_doc import create_and_post_voucher_for_doc
+from .access import DeaAccountantRequiredMixin
 
 
-class PaymentVoucherListView(LoginRequiredMixin, ListView):
+class PaymentVoucherListView(DeaAccountantRequiredMixin, ListView):
     """List all payment vouchers with filtering by direction, loan, date."""
 
     model = PaymentVoucher
@@ -75,7 +75,7 @@ class PaymentVoucherListView(LoginRequiredMixin, ListView):
         return context
 
 
-class PaymentVoucherDetailView(LoginRequiredMixin, DetailView):
+class PaymentVoucherDetailView(DeaAccountantRequiredMixin, DetailView):
     """Display details of a single payment voucher."""
 
     model = PaymentVoucher
@@ -102,7 +102,7 @@ class PaymentVoucherDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class PaymentVoucherCreateView(LoginRequiredMixin, CreateView):
+class PaymentVoucherCreateView(DeaAccountantRequiredMixin, CreateView):
     """Create a new payment voucher for a source document."""
 
     model = PaymentVoucher
@@ -167,7 +167,7 @@ class PaymentVoucherCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class PaymentVoucherUpdateView(LoginRequiredMixin, UpdateView):
+class PaymentVoucherUpdateView(DeaAccountantRequiredMixin, UpdateView):
     """Update a payment voucher (before posting only)."""
 
     model = PaymentVoucher
@@ -197,7 +197,7 @@ class PaymentVoucherUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class PaymentVoucherDeleteView(LoginRequiredMixin, DeleteView):
+class PaymentVoucherDeleteView(DeaAccountantRequiredMixin, DeleteView):
     """Delete a payment voucher (before posting only)."""
 
     model = PaymentVoucher

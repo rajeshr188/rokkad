@@ -27,6 +27,15 @@ def reports_hub(request):
             ],
         },
         {
+            "title": "Commodity Reports",
+            "description": "Read-only metal quantity, exposure, and valuation reports.",
+            "items": [
+                {"name": "Metal Balance", "url": reverse("dea_metal_balance_report"), "icon": "fa-coins"},
+                {"name": "Commodity Exposure", "url": reverse("dea_exposure_report"), "icon": "fa-chart-area"},
+                {"name": "Commodity Valuation", "url": reverse("dea_valuation_report"), "icon": "fa-scale-balanced"},
+            ],
+        },
+        {
             "title": "Transactional Reports",
             "description": "Day-to-day accounting ledgers and transaction views.",
             "items": [

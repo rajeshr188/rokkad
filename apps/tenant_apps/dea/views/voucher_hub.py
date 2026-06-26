@@ -1,9 +1,9 @@
 import logging
 
-from django.contrib.auth.decorators import login_required
 from django.template.response import TemplateResponse
 
 from ..models import AccountingPeriod
+from .access import dea_accountant_required
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ _VOUCHER_TYPES = [
 ]
 
 
-@login_required
+@dea_accountant_required
 def voucher_hub(request):
     """
     Voucher Creation Hub — a single landing page showing all voucher types

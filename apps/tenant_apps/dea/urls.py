@@ -4,6 +4,8 @@ from django.urls import path
 from . import views
 from .views import reports as reports_views
 from .views import reconciliation as reconciliation_views
+from .views import commodity_reports as commodity_report_views
+from .views import business_events as business_event_views
 from .views import dashboard_enhanced
 
 urlpatterns = [
@@ -18,6 +20,131 @@ urlpatterns = [
 urlpatterns += [
     path("chart-of-accounts/", views.chart_of_accounts, name="dea_chart_of_accounts"),
     path("create/", views.voucher_hub, name="dea_voucher_hub"),
+    path(
+        "business-events/",
+        business_event_views.business_events_dashboard,
+        name="dea_business_events_dashboard",
+    ),
+    path(
+        "business-events/fixed-purchase/",
+        business_event_views.fixed_purchase_preview,
+        name="dea_fixed_purchase_preview",
+    ),
+    path(
+        "business-events/unfixed-purchase/",
+        business_event_views.unfixed_purchase_preview,
+        name="dea_unfixed_purchase_preview",
+    ),
+    path(
+        "business-events/purchase-rate-fixing/",
+        business_event_views.purchase_rate_fixing_preview,
+        name="dea_purchase_rate_fixing_preview",
+    ),
+    path(
+        "business-events/sale-rate-fixing/",
+        business_event_views.sale_rate_fixing_preview,
+        name="dea_sale_rate_fixing_preview",
+    ),
+    path(
+        "business-events/settlement/",
+        business_event_views.monetary_settlement_preview,
+        name="dea_monetary_settlement_preview",
+    ),
+    path(
+        "business-events/settlement/<int:draft_id>/",
+        business_event_views.monetary_settlement_detail,
+        name="dea_monetary_settlement_detail",
+    ),
+    path(
+        "business-events/settlement/<int:draft_id>/confirm/",
+        business_event_views.monetary_settlement_confirm,
+        name="dea_monetary_settlement_confirm",
+    ),
+    path(
+        "business-events/karigar/",
+        business_event_views.karigar_movement_preview,
+        name="dea_karigar_movement_preview",
+    ),
+    path(
+        "business-events/karigar/<int:draft_id>/",
+        business_event_views.karigar_movement_detail,
+        name="dea_karigar_movement_detail",
+    ),
+    path(
+        "business-events/karigar/<int:draft_id>/confirm/",
+        business_event_views.karigar_movement_confirm,
+        name="dea_karigar_movement_confirm",
+    ),
+    path(
+        "business-events/fixed-sale/",
+        business_event_views.fixed_sale_preview,
+        name="dea_fixed_sale_preview",
+    ),
+    path(
+        "business-events/unfixed-sale/",
+        business_event_views.unfixed_sale_preview,
+        name="dea_unfixed_sale_preview",
+    ),
+    path(
+        "business-events/fixed-sale/<int:draft_id>/",
+        business_event_views.fixed_sale_detail,
+        name="dea_fixed_sale_detail",
+    ),
+    path(
+        "business-events/unfixed-sale/<int:draft_id>/",
+        business_event_views.unfixed_sale_detail,
+        name="dea_unfixed_sale_detail",
+    ),
+    path(
+        "business-events/fixed-sale/<int:draft_id>/confirm/",
+        business_event_views.fixed_sale_confirm,
+        name="dea_fixed_sale_confirm",
+    ),
+    path(
+        "business-events/unfixed-sale/<int:draft_id>/confirm/",
+        business_event_views.unfixed_sale_confirm,
+        name="dea_unfixed_sale_confirm",
+    ),
+    path(
+        "business-events/purchase-rate-fixing/<int:draft_id>/",
+        business_event_views.purchase_rate_fixing_detail,
+        name="dea_purchase_rate_fixing_detail",
+    ),
+    path(
+        "business-events/purchase-rate-fixing/<int:draft_id>/confirm/",
+        business_event_views.purchase_rate_fixing_confirm,
+        name="dea_purchase_rate_fixing_confirm",
+    ),
+    path(
+        "business-events/sale-rate-fixing/<int:draft_id>/",
+        business_event_views.sale_rate_fixing_detail,
+        name="dea_sale_rate_fixing_detail",
+    ),
+    path(
+        "business-events/sale-rate-fixing/<int:draft_id>/confirm/",
+        business_event_views.sale_rate_fixing_confirm,
+        name="dea_sale_rate_fixing_confirm",
+    ),
+    path(
+        "business-events/unfixed-purchase/<int:draft_id>/",
+        business_event_views.unfixed_purchase_detail,
+        name="dea_unfixed_purchase_detail",
+    ),
+    path(
+        "business-events/fixed-purchase/<int:draft_id>/",
+        business_event_views.fixed_purchase_detail,
+        name="dea_fixed_purchase_detail",
+    ),
+    path(
+        "business-events/fixed-purchase/<int:draft_id>/confirm/",
+        business_event_views.fixed_purchase_confirm,
+        name="dea_fixed_purchase_confirm",
+    ),
+    path(
+        "business-events/unfixed-purchase/<int:draft_id>/confirm/",
+        business_event_views.unfixed_purchase_confirm,
+        name="dea_unfixed_purchase_confirm",
+    ),
     path("transactions/", views.transaction_list, name="dea_transaction_list"),
     path("reports/", views.reports_hub, name="dea_reports_hub"),
 ]
@@ -37,6 +164,22 @@ urlpatterns += [
     path("reports/payables/aging/", views.payables_aging, name="ap_aging"),
     # Financial ratios
     path("reports/ratios/", views.financial_ratios, name="financial_ratios"),
+    # Commodity reports
+    path(
+        "reports/commodity/metal-balance/",
+        commodity_report_views.metal_balance_report,
+        name="dea_metal_balance_report",
+    ),
+    path(
+        "reports/commodity/exposure/",
+        commodity_report_views.exposure_report,
+        name="dea_exposure_report",
+    ),
+    path(
+        "reports/commodity/valuation/",
+        commodity_report_views.valuation_report,
+        name="dea_valuation_report",
+    ),
     # Phase 2.5 report views (period-aware)
     path(
         "reports/period/<int:period_id>/trial-balance/",

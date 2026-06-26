@@ -301,13 +301,9 @@ class BaseLoan(models.Model):
         Returns:
             Total interest amount due
         """
-        from ..services import InterestCalculationService
+        from apps.tenant_apps.girvi.selectors import loan_interest_due
 
-        return InterestCalculationService.interest_due(
-            self.get_interest_amount,
-            self.loan_date,
-            as_of_date,
-        )
+        return loan_interest_due(self, as_of_date)
 
     @property
     def total_due(self) -> Decimal:
@@ -321,68 +317,21 @@ class BaseLoan(models.Model):
 
     def get_total_payments(self) -> Decimal:
         """Sum of all borrower receipts made on this loan."""
-        if getattr(self, "pk", None):
-            payments_relation = getattr(self, "payments", None)
-            if payments_relation is not None:
-                try:
-                    total = payments_relation.filter(direction="RECEIPT").aggregate(
-                        total=Sum("amount_in_base_currency")
-                    )["total"]
-                    if hasattr(total, "amount"):
-                        return Decimal(str(total.amount))
-                    if total not in (None, ""):
-                        return Decimal(str(total))
-                except Exception:
-                    pass
+        from apps.tenant_apps.girvi.selectors import loan_total_receipt_payments
 
-        loan_payments = getattr(self, "loan_payments", None)
-        if loan_payments is None:
-            return Decimal(0)
-        return loan_payments.aggregate(Sum("payment_amount"))["payment_amount__sum"] or Decimal(0)
+        return loan_total_receipt_payments(self)
 
     def get_total_principal_payments(self) -> Decimal:
         """Sum of principal payments across voucher-backed and legacy flows."""
-        if getattr(self, "pk", None):
-            payments_relation = getattr(self, "payments", None)
-            if payments_relation is not None:
-                try:
-                    total = payments_relation.filter(direction="RECEIPT").aggregate(
-                        total_principal=Sum("principal_amount")
-                    )["total_principal"]
-                    if hasattr(total, "amount"):
-                        return Decimal(str(total.amount))
-                    if total not in (None, ""):
-                        return Decimal(str(total))
-                except Exception:
-                    pass
+        from apps.tenant_apps.girvi.selectors import loan_total_principal_payments
 
-        loan_payments = getattr(self, "loan_payments", None)
-        if loan_payments is None:
-            return Decimal(0)
-        return loan_payments.aggregate(Sum("principal_payment"))["principal_payment__sum"] or Decimal(0)
+        return loan_total_principal_payments(self)
 
     def get_total_interest_payments(self) -> Decimal:
         """Sum of interest payments across voucher-backed and legacy payment flows."""
-        if getattr(self, "pk", None):
-            payments_relation = getattr(self, "payments", None)
-            if payments_relation is not None:
-                try:
-                    total = payments_relation.filter(direction="RECEIPT").aggregate(
-                        total_interest=Sum("interest_amount")
-                    )["total_interest"]
-                    if hasattr(total, "amount"):
-                        return Decimal(str(total.amount))
-                    if total not in (None, ""):
-                        return Decimal(str(total))
-                except Exception:
-                    pass
+        from apps.tenant_apps.girvi.selectors import loan_total_interest_payments
 
-        loan_payments = getattr(self, "loan_payments", None)
-        if loan_payments is None:
-            return Decimal(0)
-        return loan_payments.aggregate(Sum("interest_payment"))[
-            "interest_payment__sum"
-        ] or Decimal(0)
+        return loan_total_interest_payments(self)
 
     def interest_paid_total(self) -> Decimal:
         """Interest cash already collected from the borrower."""
@@ -390,25 +339,9 @@ class BaseLoan(models.Model):
 
     def interest_accrued_gross(self, as_of_date=None) -> Decimal:
         """Interest that has been accrued/recognized up to the selected date."""
-        if not getattr(self, "pk", None):
-            return round(self.interest_due(as_of_date), 2)
+        from apps.tenant_apps.girvi.selectors import loan_interest_accrued_gross
 
-        accruals = getattr(self, "interest_accruals", None)
-        if accruals is None:
-            return round(self.interest_due(as_of_date), 2)
-
-        try:
-            queryset = accruals.all()
-            if as_of_date is not None:
-                cutoff = as_of_date.date() if hasattr(as_of_date, "date") else as_of_date
-                queryset = queryset.filter(period_end__lte=cutoff)
-            total = queryset.aggregate(total=Sum("accrued_amount"))["total"] or Decimal(0)
-        except Exception:
-            total = Decimal(0)
-
-        if total == 0:
-            return round(self.interest_due(as_of_date), 2)
-        return round(Decimal(str(total)), 2)
+        return loan_interest_accrued_gross(self, as_of_date)
 
     def interest_outstanding(self, as_of_date=None) -> Decimal:
         """Accrued but not-yet-paid interest balance."""
@@ -417,23 +350,9 @@ class BaseLoan(models.Model):
 
     def interest_receivable_balance(self) -> Decimal:
         """Portion of accrued interest that has already been booked into DEA receivables."""
-        if not getattr(self, "pk", None):
-            return Decimal("0.00")
+        from apps.tenant_apps.girvi.selectors import loan_interest_receivable_balance
 
-        accruals = getattr(self, "interest_accruals", None)
-        if accruals is None:
-            return Decimal("0.00")
-
-        try:
-            posted_total = (
-                accruals.filter(status="POSTED").aggregate(total=Sum("accrued_amount"))["total"]
-                or Decimal(0)
-            )
-        except Exception:
-            posted_total = Decimal(0)
-
-        outstanding = Decimal(str(posted_total)) - self.interest_paid_total()
-        return round(max(outstanding, Decimal("0")), 2)
+        return loan_interest_receivable_balance(self)
 
     @property
     def gross_accrued_interest(self) -> Decimal:
@@ -446,17 +365,9 @@ class BaseLoan(models.Model):
     @property
     def last_accrual_date(self):
         """Most recent accrued period end date, if any."""
-        if not getattr(self, "pk", None):
-            return None
+        from apps.tenant_apps.girvi.selectors import loan_last_accrual_date
 
-        accruals = getattr(self, "interest_accruals", None)
-        if accruals is None:
-            return None
-
-        try:
-            return accruals.order_by("-period_end").values_list("period_end", flat=True).first()
-        except Exception:
-            return None
+        return loan_last_accrual_date(self)
 
     @property
     def current_value(self) -> Decimal:
@@ -641,9 +552,9 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
     @property
     def get_loan_amount(self) -> Decimal:
         """Sum of all loan item amounts."""
-        return self.loanitems.aggregate(Sum("loanamount"))[
-            "loanamount__sum"
-        ] or Decimal(0)
+        from apps.tenant_apps.girvi.selectors import given_loan_amount
+
+        return given_loan_amount(self)
 
     @property
     def get_loan_amount_with_currency(self):
@@ -652,24 +563,16 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
     @property
     def get_interest_amount(self) -> Decimal:
         """Sum of base interest from all items."""
-        return self.loanitems.aggregate(Sum("interest"))["interest__sum"] or Decimal(0)
+        from apps.tenant_apps.girvi.selectors import given_loan_interest_amount
+
+        return given_loan_interest_amount(self)
 
     @property
     def get_weight_summary(self) -> dict:
         """Weight breakdown by metal type."""
-        return self.loanitems.values("itemtype").annotate(
-            total_weight=Sum("weight"),
-            pure_weight=Sum(
-                Func(
-                    ExpressionWrapper(
-                        F("weight") * F("purity") / 100,
-                        output_field=DecimalField(max_digits=10, decimal_places=3),
-                    ),
-                    function="ROUND",
-                    template="%(function)s(%(expressions)s, 3)",
-                )
-            ),
-        )
+        from apps.tenant_apps.girvi.selectors import given_loan_weight_summary
+
+        return given_loan_weight_summary(self)
 
     def formatted_weight(self, joiner=", ") -> str:
         """Human-readable weight string."""
@@ -688,7 +591,9 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
     @property
     def get_item_description(self) -> str:
         """Comma-separated item descriptions."""
-        return ", ".join(self.loanitems.values_list("itemdesc", flat=True))
+        from apps.tenant_apps.girvi.selectors import given_loan_item_description
+
+        return given_loan_item_description(self)
 
     # ========================================================================
     # Table-friendly properties (for django-tables2 rendering)
@@ -712,7 +617,9 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
     @property
     def current_value(self) -> Decimal:
         """Current market value of all pledged items."""
-        return sum(item.current_value() for item in self.loanitems.all())
+        from apps.tenant_apps.girvi.selectors import given_loan_current_value
+
+        return given_loan_current_value(self)
 
     # ========================================================================
     # GivenLoan-specific methods
@@ -956,9 +863,9 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
     @property
     def get_loan_amount(self) -> Decimal:
         """Sum of all repledged item amounts from custody history."""
-        return self.repledge_history_items.aggregate(Sum("repledged_amount"))[
-            "repledged_amount__sum"
-        ] or Decimal(0)
+        from apps.tenant_apps.girvi.selectors import taken_loan_amount
+
+        return taken_loan_amount(self)
 
     @property
     def get_loan_amount_with_currency(self):
@@ -967,60 +874,30 @@ class TakenLoan(BaseLoan, TakenLoanCollateralMixin):
     @property
     def get_interest_amount(self) -> Decimal:
         """Monthly interest derived from custody history repledged amounts."""
-        interest_expression = ExpressionWrapper(
-            F("repledged_amount") * F("loan_item__interestrate") / Value(100),
-            output_field=DecimalField(max_digits=15, decimal_places=2),
-        )
-        return (
-            self.repledge_history_items.aggregate(
-                interest=Coalesce(
-                    Sum(interest_expression),
-                    Value(0),
-                    output_field=DecimalField(max_digits=15, decimal_places=2),
-                )
-            )["interest"]
-            or Decimal(0)
-        )
+        from apps.tenant_apps.girvi.selectors import taken_loan_interest_amount
+
+        return taken_loan_interest_amount(self)
 
     @property
     def get_weight_summary(self) -> dict:
         """Weight breakdown from custody history items."""
-        return self.repledge_history_items.values(
-            itemtype=F("loan_item__itemtype")
-        ).annotate(
-            total_weight=Sum("loan_item__weight"),
-            pure_weight=Sum(
-                Func(
-                    ExpressionWrapper(
-                        F("loan_item__weight")
-                        * F("loan_item__purity")
-                        / 100,
-                        output_field=DecimalField(max_digits=10, decimal_places=3),
-                    ),
-                    function="ROUND",
-                    template="%(function)s(%(expressions)s, 3)",
-                )
-            ),
-        )
+        from apps.tenant_apps.girvi.selectors import taken_loan_weight_summary
+
+        return taken_loan_weight_summary(self)
 
     @property
     def get_item_description(self) -> str:
         """Descriptions from custody history items."""
-        return ", ".join(
-            self.repledge_history_items.select_related("loan_item").values_list(
-                "loan_item__itemdesc", flat=True
-            )
-        )
+        from apps.tenant_apps.girvi.selectors import taken_loan_item_description
+
+        return taken_loan_item_description(self)
 
     @property
     def current_value(self) -> Decimal:
         """Current value of custody history items."""
-        return sum(
-            history.loan_item.current_value()
-            for history in self.repledge_history_items.select_related(
-                "loan_item__item"
-            ).all()
-        )
+        from apps.tenant_apps.girvi.selectors import taken_loan_current_value
+
+        return taken_loan_current_value(self)
 
     # ========================================================================
     # Payment Management (PaymentVoucher Integration)
@@ -1099,7 +976,7 @@ def migrate_old_loan_to_new_structure(old_loan):
 
     This is for the data migration script.
     """
-    from .loan import Loan as OldLoan
+    from .legacy import Loan as OldLoan
 
     if not isinstance(old_loan, OldLoan):
         raise TypeError("Expected old Loan model instance")

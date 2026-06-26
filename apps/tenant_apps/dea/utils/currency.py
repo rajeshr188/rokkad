@@ -48,7 +48,7 @@ class Balance(object):
     def __str__(self):
         def fmt(money):
             return babel.numbers.format_currency(
-                money.amount, currency=money.currency.code
+                money.amount, currency=money.currency.code, locale="en_IN"
             )
 
         return ", ".join(map(fmt, self._money_obs)) or "No values"
@@ -68,6 +68,12 @@ class Balance(object):
             return self._by_currency[currency]
         except KeyError:
             return Money(0, currency)
+
+    def get(self, currency, default=None):
+        money = self[currency]
+        if money.amount == 0 and money.currency.code not in self._by_currency:
+            return default if default is not None else money
+        return money
 
     def __add__(self, other):
         if not isinstance(other, Balance):

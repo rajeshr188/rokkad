@@ -19,59 +19,7 @@
           </span>
         </div>
         <div class="card-body">
-          {% if blockers %}
-            <div class="alert alert-danger mb-3">
-              <strong>Release is blocked:</strong>
-              <ul class="mb-0 mt-2">
-                {% for blocker in blockers %}
-                  <li>{{ blocker }}</li>
-                {% endfor %}
-              </ul>
-            </div>
-          {% endif %}
-
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-              <thead>
-                <tr>
-                  <th scope="col">Checklist item</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Settlement dues clear</td>
-                  <td>
-                    {% if dues_clear %}
-                      <span class="badge bg-success">Clear</span>
-                    {% else %}
-                      <span class="badge bg-danger">Pending</span>
-                    {% endif %}
-                  </td>
-                  <td>
-                    Outstanding: {{ outstanding_amount }}
-                    {% if closure_exception_approved %}
-                      <span class="badge bg-warning text-dark ms-2">Closure Exception Approved</span>
-                    {% endif %}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Collateral custody ready</td>
-                  <td>
-                    {% if custody_clear %}
-                      <span class="badge bg-success">Ready</span>
-                    {% else %}
-                      <span class="badge bg-danger">Return Required</span>
-                    {% endif %}
-                  </td>
-                  <td>
-                    {{ total_with_lenders }} item(s) with lenders
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          {% include "girvi/release/_release_flow_panel.html" %}
 
           {% if needs_return %}
             <hr>

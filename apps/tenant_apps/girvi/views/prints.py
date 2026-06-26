@@ -1,5 +1,6 @@
 import logging
 
+from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import CharField, Count, OuterRef, Q, Subquery, Sum, Value
@@ -28,7 +29,14 @@ from apps.tenant_apps.girvi.documents.loan_ticket import (
     grid_template,
     print_labels_pdf,
 )
-from apps.tenant_apps.dea.models import PaymentVoucher
+from apps.tenant_apps.girvi.integrations.dea_adapter import get_payment_voucher_model
+from apps.tenant_apps.girvi.integrations.notification_adapter import (
+    channel_for_medium_type,
+    create_girvi_reminder_batch,
+    event_key_for_notice_code,
+    get_default_loan_reminder_code,
+    get_default_medium_type,
+)
 from apps.tenant_apps.girvi.models.template import LoanTemplate
 from apps.tenant_apps.girvi.service_modules.printing import (
     GirviDocumentService,
@@ -36,32 +44,10 @@ from apps.tenant_apps.girvi.service_modules.printing import (
 from apps.tenant_apps.girvi.service_modules.print_selection import (
     unreleased_given_loan_selection,
 )
-from apps.tenant_apps.notify.models import Notification
-from apps.tenant_apps.notify.services import (
-    DEFAULT_LOAN_REMINDER_CODE,
-)
-from apps.tenant_apps.notify_v2.models import NotificationJob
-from apps.tenant_apps.notify_v2.services import create_girvi_reminder_batch
-
 from ..forms import LoanSelectionForm
 from .access import girvi_permission_required, girvi_workspace_required
 
 logger = logging.getLogger(__name__)
-
-_NOTIFY_V2_EVENT_MAP = {
-    "LOAN_FIRST_REMINDER": "loan.first_reminder_due",
-    "LOAN_SECOND_REMINDER": "loan.second_reminder_due",
-    "LOAN_FINAL_NOTICE": "loan.final_notice_due",
-    "LOAN_AUCTION_NOTICE": "loan.auction_notice_due",
-}
-
-_NOTIFY_V2_CHANNEL_MAP = {
-    Notification.MediumType.Email: NotificationJob.Channel.EMAIL,
-    Notification.MediumType.Letter: NotificationJob.Channel.LETTER,
-    Notification.MediumType.Post: NotificationJob.Channel.POST,
-    Notification.MediumType.SMS: NotificationJob.Channel.SMS,
-    Notification.MediumType.Whatsapp: NotificationJob.Channel.WHATSAPP,
-}
 
 
 def _dispatch_girvi_notice_batch_v2(*, request, selection, source_label):
@@ -69,10 +55,10 @@ def _dispatch_girvi_notice_batch_v2(*, request, selection, source_label):
     if not selected_loans:
         return HttpResponse(status=200, content="No unreleased loans selected.")
 
-    notice_code = request.POST.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
-    medium_type = request.POST.get("medium_type", Notification.MediumType.Letter)
-    event_key = _NOTIFY_V2_EVENT_MAP.get(notice_code, "loan.first_reminder_due")
-    channel = _NOTIFY_V2_CHANNEL_MAP.get(medium_type, NotificationJob.Channel.LETTER)
+    notice_code = request.POST.get("notice_code", get_default_loan_reminder_code())
+    medium_type = request.POST.get("medium_type", get_default_medium_type())
+    event_key = event_key_for_notice_code(notice_code)
+    channel = channel_for_medium_type(medium_type)
 
     try:
         batch_result = create_girvi_reminder_batch(
@@ -230,7 +216,7 @@ def print_grid_template(request):
 
 @girvi_permission_required("girvi_loan_payment")
 def payment_receipt_pdf(request, pk):
-    payment = get_object_or_404(PaymentVoucher, pk=pk)
+    payment = get_object_or_404(get_payment_voucher_model(), pk=pk)
     result = GirviDocumentService.render_payment_receipt(payment)
     if not result.ok:
         messages.error(request, result.error_message)
@@ -537,7 +523,7 @@ def export_loans_to_excel(request):
 
 
 def _inventory_audit_queryset(scope="all", from_date=None, to_date=None):
-    from apps.tenant_apps.contact.models import Address
+    Address = apps.get_model("contact", "Address")
 
     default_address_qs = Address.objects.filter(customer_id=OuterRef("borrower_id")).order_by(
         "-is_default", "-created", "-pk"

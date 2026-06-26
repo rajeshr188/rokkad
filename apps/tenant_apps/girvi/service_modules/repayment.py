@@ -63,7 +63,26 @@ def _repayment_validation_errors(loan, payload, *, loan_kind="given"):
         errors.append(
             f"Interest portion {interest} cannot exceed outstanding interest {settlement.interest_due}."
         )
-    return errors
+    return errors, settlement
+
+
+def _repayment_success_message(payment, payload, settlement, *, created=True):
+    payment_id = getattr(payment, "payment_id", "payment")
+    remaining = max(
+        settlement.total_outstanding - payload["total_amount"],
+        0,
+    )
+    principal = payload.get("principal_amount") or 0
+    interest = payload.get("interest_amount") or 0
+    if created:
+        action = "recorded and posted to accounting"
+    else:
+        action = "already recorded and posted to accounting"
+    return (
+        f"Payment {payment_id} {action}. "
+        f"Total {payload['total_amount']}; principal {principal}; "
+        f"interest {interest}; remaining outstanding {remaining}."
+    )
 
 
 def _workspace_for_user(user):
@@ -77,7 +96,10 @@ class GivenLoanRepaymentService:
     def execute(cls, command: RepaymentCommand) -> RepaymentResult:
         result = RepaymentResult()
         payment_payload = _build_repayment_payload(command.cleaned_data)
-        validation_errors = _repayment_validation_errors(command.loan, payment_payload)
+        validation_errors, settlement = _repayment_validation_errors(
+            command.loan,
+            payment_payload,
+        )
         if validation_errors:
             result.errors.extend(validation_errors)
             return result
@@ -93,8 +115,11 @@ class GivenLoanRepaymentService:
             result.payment = payment
             result.payment_created = created
             result.accounting_posted = True
-            result.success_message = (
-                f"Payment {payment.payment_id} recorded and posted to accounting."
+            result.success_message = _repayment_success_message(
+                payment,
+                payment_payload,
+                settlement,
+                created=created,
             )
         except Exception as exc:
             logger.exception(
@@ -151,7 +176,7 @@ class TakenLoanRepaymentService:
         cleaned_data = command.cleaned_data
         payload = _build_repayment_payload(cleaned_data)
         result = RepaymentResult()
-        validation_errors = _repayment_validation_errors(
+        validation_errors, settlement = _repayment_validation_errors(
             command.loan,
             payload,
             loan_kind="taken",
@@ -178,8 +203,11 @@ class TakenLoanRepaymentService:
                     result.payment = existing
                     result.payment_created = False
                     result.accounting_posted = True
-                    result.success_message = (
-                        f"Payment {existing.payment_id} already recorded and posted to accounting."
+                    result.success_message = _repayment_success_message(
+                        existing,
+                        payload,
+                        settlement,
+                        created=False,
                     )
                     return result
 
@@ -199,8 +227,11 @@ class TakenLoanRepaymentService:
             result.payment = payment
             result.payment_created = True
             result.accounting_posted = True
-            result.success_message = (
-                f"Payment {payment.payment_id} recorded and posted to accounting."
+            result.success_message = _repayment_success_message(
+                payment,
+                payload,
+                settlement,
+                created=True,
             )
         except Exception as exc:
             logger.exception(

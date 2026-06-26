@@ -87,6 +87,7 @@ def _build_release_preview(form, user):
 def release_create(request, pk=None):
     release_preview = None
     release_checklist = None
+    release_flow = None
 
     if request.POST:
         form = ReleaseForm(request.POST or None)
@@ -122,6 +123,15 @@ def release_create(request, pk=None):
             if workflow_result.execution_error:
                 form.add_error(None, workflow_result.execution_error)
                 messages.error(request, workflow_result.execution_error)
+
+            release_flow = ReleaseWorkflowService.build_flow_context(
+                form.cleaned_data["loan"],
+                user=request.user,
+                checklist=release_checklist,
+                preview=release_preview,
+                release_date=form.cleaned_data["release_date"],
+                released_by=form.cleaned_data.get("released_by"),
+            )
     else:
         loan = None
         if pk:
@@ -143,11 +153,18 @@ def release_create(request, pk=None):
                 }
             )
         release_preview = _build_release_preview(form, request.user)
+        release_flow = ReleaseWorkflowService.build_flow_context(
+            loan,
+            user=request.user,
+            checklist=release_checklist,
+            preview=release_preview,
+        )
 
     context = {
         "form": form,
         "release_preview": release_preview,
         "release_checklist": release_checklist,
+        "release_flow": release_flow,
     }
     if getattr(request, "htmx", False):
         return TemplateResponse(

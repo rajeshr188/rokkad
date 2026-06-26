@@ -63,10 +63,28 @@
           <div class="text-muted">Initial Principal</div>
           <div class="fw-semibold">{{ creation_preview.initial_item_total|default:"0.00" }}</div>
         </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Pure Weight</div>
+          <div class="fw-semibold">{{ creation_preview.initial_item_pure_weight_total|default:"0.000" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Collateral Value</div>
+          <div class="fw-semibold">{{ creation_preview.initial_item_current_value_total|default:"0.00" }}</div>
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted">Loan-to-Value</div>
+          <div class="fw-semibold">
+            {% if creation_preview.initial_item_ltv_percent is not None %}
+              {{ creation_preview.initial_item_ltv_percent }}%
+            {% else %}
+              -
+            {% endif %}
+          </div>
+        </div>
       </div>
 
       <div class="alert alert-info py-1 px-2 mt-2 mb-0 small">
-        Preview values are informational only; the final loan ID is assigned when the record is saved.
+        Preview values are recalculated from current rates when the record is saved.
       </div>
     </div>
 

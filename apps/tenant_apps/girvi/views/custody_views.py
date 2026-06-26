@@ -11,23 +11,24 @@ Handles:
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from apps.tenant_apps.girvi.models import GivenLoan, TakenLoan, LoanItem
-from apps.tenant_apps.girvi.models.custody_tracking import (
-    RepledgeHistory,
-)
 from apps.tenant_apps.girvi.service_modules.custody import (
     build_loan_custody_summary,
     build_taken_loan_collateral_context,
     return_all_items_from_taken_loan,
 )
 from apps.tenant_apps.girvi.service_modules.custody_workflow import CustodyWorkflowService
+from apps.tenant_apps.girvi.service_modules.release_workflow import ReleaseWorkflowService
 from apps.tenant_apps.girvi.service_modules.repledge_workflow import RepledgeWorkflowService
+from apps.tenant_apps.girvi.selectors import (
+    build_item_custody_status_payload,
+    build_repledge_history_read_model,
+)
 from apps.tenant_apps.girvi.views.access import girvi_workspace_required
 
 
@@ -93,8 +94,15 @@ def return_item_from_lender(request, item_id):
     notes = request.POST.get("notes", "")
 
     try:
-        item.return_from_lender(user=request.user, notes=notes)
-        messages.success(request, f"Item {item.itemdesc} returned from lender to vault")
+        result = CustodyWorkflowService.return_item_from_lender(
+            item,
+            user=request.user,
+            notes=notes,
+        )
+        messages.success(
+            request,
+            f"Item {result.item_description} returned from lender to vault",
+        )
     except ValidationError as e:
         messages.error(request, str(e))
 
@@ -157,6 +165,11 @@ def release_loan_check_custody(request, loan_id):
     if context["can_release"]:
         return redirect("girvi:girvi_release_create", pk=loan_id)
 
+    context["release_flow"] = ReleaseWorkflowService.build_flow_context(
+        loan,
+        user=request.user,
+        checklist=context,
+    )
     return render(request, "girvi/release/release_custody_check.html", context)
 
 
@@ -295,20 +308,15 @@ def return_taken_loan_collateral(request, loan_id):
     loan = get_object_or_404(TakenLoan, pk=loan_id)
 
     try:
-        with transaction.atomic():
-            if hasattr(loan, "return_all_collateral"):
-                loan.return_all_collateral(
-                    user=request.user, notes=request.POST.get("notes", "")
-                )
-            else:
-                # Manual return
-                for item in loan.collateral_items.all():
-                    item.return_from_lender(
-                        user=request.user, notes=request.POST.get("notes", "")
-                    )
+        result = CustodyWorkflowService.return_taken_loan_collateral(
+            loan,
+            user=request.user,
+            notes=request.POST.get("notes", ""),
+        )
 
         messages.success(
-            request, f"All collateral returned from TakenLoan {loan.loan_id}"
+            request,
+            f"Returned {result.returned_count} collateral item(s) from TakenLoan {loan.loan_id}",
         )
         return redirect("girvi:taken_loan_collateral_detail", loan_id=loan_id)
 
@@ -329,40 +337,11 @@ def repledge_history_report(request):
 
     GET /girvi/reports/repledge-history/
     """
-    history = RepledgeHistory.objects.select_related(
-        "loan_item",
-        "loan_item__loan",
-        "loan_item__loan__borrower",
-        "taken_loan",
-        "taken_loan__lender",
-        "repledged_by",
-        "returned_by",
+    context = build_repledge_history_read_model(
+        status=request.GET.get("status"),
+        customer_id=request.GET.get("customer"),
+        lender_id=request.GET.get("lender"),
     )
-
-    # Filters
-    status = request.GET.get("status")
-    if status == "active":
-        history = history.filter(returned_at__isnull=True)
-    elif status == "returned":
-        history = history.filter(returned_at__isnull=False)
-
-    customer_id = request.GET.get("customer")
-    if customer_id:
-        history = history.filter(loan_item__loan__borrower_id=customer_id)
-
-    lender_id = request.GET.get("lender")
-    if lender_id:
-        history = history.filter(taken_loan__lender_id=lender_id)
-
-    context = {
-        "history": history[:100],  # Limit for performance
-        "total_active": RepledgeHistory.objects.filter(
-            returned_at__isnull=True
-        ).count(),
-        "total_returned": RepledgeHistory.objects.filter(
-            returned_at__isnull=False
-        ).count(),
-    }
 
     return render(request, "girvi/repledge_history_report.html", context)
 
@@ -402,21 +381,4 @@ def api_item_custody_status(request, item_id):
     """
     item = get_object_or_404(LoanItem, pk=item_id)
 
-    return JsonResponse(
-        {
-            "item_id": item.id,
-            "custody_status": item.custody_status,
-            "custody_display": item.get_custody_status_display(),
-            "is_repledged": item.is_repledged,
-            "repledged_to": {
-                "id": item.repledged_to.id,
-                "loan_id": item.repledged_to.loan_id,
-                "lender": item.repledged_to.lender.name,
-            }
-            if item.repledged_to
-            else None,
-            "can_release": item.is_available_for_release,
-            "can_repledge": item.is_available_for_repledge,
-            "can_return": item.can_be_returned_from_lender,
-        }
-    )
+    return JsonResponse(build_item_custody_status_payload(item))

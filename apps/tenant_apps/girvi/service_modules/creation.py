@@ -76,6 +76,10 @@ class LoanCreatePreview:
     borrower_available_credit: object | None = None
     initial_item_count: int = 0
     initial_item_total: object | None = None
+    initial_item_pure_weight_total: object | None = None
+    initial_item_current_value_total: object | None = None
+    initial_item_ltv_percent: object | None = None
+    missing_rate_item_types: list[str] = dc_field(default_factory=list)
     warnings: list[str] = dc_field(default_factory=list)
     errors: list[str] = dc_field(default_factory=list)
 
@@ -130,6 +134,35 @@ class LoanCreationService:
         if value in (None, ""):
             return default
         return Decimal(str(value))
+
+    @staticmethod
+    def _calculate_initial_item_valuation(initial_items):
+        from apps.tenant_apps.girvi.services import RateCacheService
+
+        total_pure_weight = Decimal("0")
+        total_current_value = Decimal("0")
+        missing_rate_item_types = set()
+
+        for item in initial_items:
+            weight = LoanCreationService._to_decimal(item.weight, default=None)
+            purity = LoanCreationService._to_decimal(item.purity, default=Decimal("75"))
+            if weight is None or purity is None:
+                continue
+
+            pure_weight = weight * purity * Decimal("0.01")
+            total_pure_weight += pure_weight
+
+            rate = RateCacheService.get_rate_or_none(item.itemtype or "Gold")
+            if rate is None:
+                missing_rate_item_types.add(item.itemtype or "Gold")
+                continue
+            total_current_value += pure_weight * rate
+
+        return (
+            total_pure_weight.quantize(Decimal("0.001")),
+            total_current_value.quantize(Decimal("0.01")),
+            sorted(missing_rate_item_types),
+        )
 
     @staticmethod
     def _normalize_initial_item_input(item):
@@ -241,6 +274,31 @@ class LoanCreationService:
             ),
             Decimal("0"),
         )
+        (
+            initial_item_pure_weight_total,
+            initial_item_current_value_total,
+            missing_rate_item_types,
+        ) = LoanCreationService._calculate_initial_item_valuation(initial_items)
+        initial_item_ltv_percent = None
+        if initial_item_current_value_total > 0:
+            initial_item_ltv_percent = (
+                initial_item_total
+                / initial_item_current_value_total
+                * Decimal("100")
+            ).quantize(Decimal("0.01"))
+
+        for item_type in missing_rate_item_types:
+            warnings.append(
+                f"{item_type} rate is not configured, so preview valuation may be incomplete."
+            )
+        if (
+            initial_items
+            and initial_item_current_value_total > 0
+            and initial_item_total > initial_item_current_value_total
+        ):
+            warnings.append(
+                "Initial principal exceeds current collateral value; item validation will block save."
+            )
 
         (
             borrower_credit_limit,
@@ -261,6 +319,14 @@ class LoanCreationService:
             borrower_available_credit=borrower_available_credit,
             initial_item_count=len(initial_items),
             initial_item_total=initial_item_total if initial_items else None,
+            initial_item_pure_weight_total=(
+                initial_item_pure_weight_total if initial_items else None
+            ),
+            initial_item_current_value_total=(
+                initial_item_current_value_total if initial_items else None
+            ),
+            initial_item_ltv_percent=initial_item_ltv_percent,
+            missing_rate_item_types=missing_rate_item_types,
             warnings=warnings,
             errors=errors,
         )

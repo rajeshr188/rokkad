@@ -11,14 +11,23 @@ from moneyed import Money
 from apps.tenant_apps.dea.models import (
     AccountingPeriod,
     AccountType,
+    Commodity,
+    CommodityAccount,
+    CommodityMovement,
+    ExposureLine,
     JournalEntry,
     Ledger,
     LedgerTransaction,
+    RateFixing,
     Voucher,
     VoucherStatus,
     VoucherType,
 )
+from apps.tenant_apps.dea.services.metal_balance_report import (
+    build_metal_balance_report,
+)
 from apps.tenant_apps.dea.services.reports import ReportsService
+from apps.tenant_apps.party.models import Party
 
 
 User = get_user_model()
@@ -157,6 +166,41 @@ class FinancialReportsServiceTests(TenantTestCase):
         self.assertTrue(report.totals["in_balance"])
         self.assertEqual({line.balance.currency.code for line in report.lines}, {"INR"})
 
+    def test_trial_balance_ignores_commodity_records_and_metal_report_data(self):
+        self._post_ledger_pair(
+            debit_ledger=self.cash,
+            credit_ledger=self.capital,
+            amount=Money(Decimal("500.00"), "INR"),
+            amount_base=Money(Decimal("500.00"), "INR"),
+        )
+        baseline_report = self.service.trial_balance(self.period)
+        baseline_lines = [
+            (line.ledger_code, line.balance)
+            for line in baseline_report.lines
+            if line.ledger_code
+        ]
+        financial_journal_count = JournalEntry.objects.count()
+        financial_ledger_txn_count = LedgerTransaction.objects.count()
+
+        self._create_commodity_noise()
+        metal_report = build_metal_balance_report(as_of=self.period.end_date)
+        report = self.service.trial_balance(self.period)
+
+        self.assertEqual(report.totals["debit"], baseline_report.totals["debit"])
+        self.assertEqual(report.totals["credit"], baseline_report.totals["credit"])
+        self.assertTrue(report.totals["in_balance"])
+        self.assertEqual(
+            [(line.ledger_code, line.balance) for line in report.lines if line.ledger_code],
+            baseline_lines,
+        )
+        self.assertEqual(JournalEntry.objects.count(), financial_journal_count)
+        self.assertEqual(LedgerTransaction.objects.count(), financial_ledger_txn_count)
+        self.assertEqual(metal_report.totals_by_commodity[0].commodity_code, "GOLD")
+        self.assertEqual(
+            metal_report.totals_by_commodity[0].fine_weight,
+            Decimal("91.600"),
+        )
+
     def test_income_statement_smoke(self):
         report = self.service.income_statement(self.period)
         self.assertEqual(report.title, "Profit & Loss Statement")
@@ -207,4 +251,66 @@ class FinancialReportsServiceTests(TenantTestCase):
             ledgerno=credit_ledger,
             amount=amount,
             amount_base=amount_base,
+        )
+
+    def _create_commodity_noise(self):
+        gold = Commodity.objects.create(code="GOLD", name="Gold")
+        party = Party.objects.create(display_name="Financial report commodity party")
+        vault = CommodityAccount.objects.create(
+            code="REPORT_GOLD_VAULT",
+            name="Report gold vault",
+            commodity=gold,
+            purpose=CommodityAccount.Purpose.VAULT,
+        )
+        adjustment = CommodityAccount.objects.create(
+            code="REPORT_GOLD_ADJUSTMENT",
+            name="Report gold adjustment",
+            commodity=gold,
+            purpose=CommodityAccount.Purpose.ADJUSTMENT,
+        )
+        source_content_type = ContentType.objects.get_for_model(AccountingPeriod)
+
+        CommodityMovement.objects.create(
+            movement_no="REPORT-GOLD-MOVE",
+            movement_date=self.period.end_date,
+            source_content_type=source_content_type,
+            source_object_id=self.period.pk,
+            commodity=gold,
+            gross_weight=Decimal("100.000"),
+            purity=Decimal("0.916000"),
+            fine_weight=Decimal("91.600"),
+            from_account=adjustment,
+            to_account=vault,
+            movement_type=CommodityMovement.MovementType.PURCHASE_RECEIPT,
+            fixed_status=CommodityMovement.FixedStatus.UNFIXED,
+            idempotency_key="commodity:test:financial-report:movement",
+        )
+        exposure = ExposureLine.objects.create(
+            exposure_no="REPORT-GOLD-EXPOSURE",
+            source_content_type=source_content_type,
+            source_object_id=self.period.pk,
+            party=party,
+            commodity=gold,
+            side=ExposureLine.Side.PURCHASE,
+            status=ExposureLine.Status.OPEN,
+            fixed_status=CommodityMovement.FixedStatus.UNFIXED,
+            original_fine_weight=Decimal("91.600"),
+            open_fine_weight=Decimal("91.600"),
+            rate_basis="Report test unfixed exposure",
+            valuation_currency="INR",
+            idempotency_key="commodity:test:financial-report:exposure",
+        )
+        RateFixing.objects.create(
+            fixing_no="REPORT-GOLD-FIXING",
+            fixing_date=self.period.end_date,
+            party=party,
+            commodity=gold,
+            side=ExposureLine.Side.PURCHASE,
+            fine_weight=Decimal("10.000"),
+            rate=Decimal("6200.0000"),
+            currency="INR",
+            valuation_amount=Decimal("62000.00"),
+            status=RateFixing.Status.POSTED,
+            idempotency_key="commodity:test:financial-report:fixing",
+            narration=f"Standalone fixing row for exposure {exposure.exposure_no}",
         )

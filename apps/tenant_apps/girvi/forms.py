@@ -16,13 +16,22 @@ from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.party.selectors import active_parties
 from apps.tenant_apps.product.models import ProductVariant
+from apps.tenant_apps.rates.models import Rate
 from apps.tenant_apps.girvi.services import RateCacheService
-from apps.tenant_apps.girvi.policies import assert_loan_header_editable
 from apps.tenant_apps.girvi.service_modules.id_generation import (
     validate_loan_id_unique_across_loan_tables,
 )
 from apps.tenant_apps.girvi.service_modules.release_form_validation import (
     ReleaseFormValidationService,
+)
+from apps.tenant_apps.girvi.service_modules.loan_item_form_validation import (
+    LoanItemFormValidationService,
+)
+from apps.tenant_apps.girvi.service_modules.loan_form_validation import (
+    LoanFormValidationService,
+)
+from apps.tenant_apps.girvi.service_modules.repayment_form_validation import (
+    RepaymentFormValidationService,
 )
 
 
@@ -384,19 +393,12 @@ class LoanForm(forms.ModelForm):
         else:
             self.post_url = reverse("girvi:girvi_loan_create")
 
-        self.helper.attrs = {
-            "hx-post": self.post_url,
-            "hx-target": "#modal-content",
-        }
+        self.helper.attrs = {}
 
     def clean_created(self):
         cleaned_data = super().clean()
         my_date = cleaned_data.get("loan_date")
-
-        if my_date and my_date > timezone.now():
-            raise forms.ValidationError("Date cannot be in the future.")
-
-        return my_date
+        return LoanFormValidationService.validate_not_future(my_date)
 
     def clean_loan_id(self):
         loan_id = self.cleaned_data.get("loan_id")
@@ -409,19 +411,7 @@ class LoanForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-
-        if self.instance and self.instance.pk:
-            assert_loan_header_editable(self.instance)
-
-        series = cleaned_data.get("series")
-        if series and not series.is_active:
-            # Using self.add_error to add an error to the 'series' field
-            self.add_error(
-                "series", f"Series {series} is Inactive"
-            )
-
-            # Alternatively, using raise forms.ValidationError to stop processing
-            # raise forms.ValidationError(f"Series {series} is Inactive")
+        return LoanFormValidationService.validate_loan_form(self, cleaned_data)
 
         # # generate loan id when created
         # loan_id = Series.objects.get(id=self.cleaned_data["series"].id).name + str(
@@ -506,10 +496,7 @@ class LoanCreateForm(forms.Form):
             HTML("<br/>"),
         )
         self.post_url = reverse("girvi:girvi_loan_create")
-        self.helper.attrs = {
-            "hx-post": self.post_url,
-            "hx-target": "#modal-content",
-        }
+        self.helper.attrs = {}
 
     def clean_loan_id(self):
         loan_id = self.cleaned_data.get("loan_id")
@@ -519,16 +506,11 @@ class LoanCreateForm(forms.Form):
 
     def clean_loan_date(self):
         loan_date = self.cleaned_data.get("loan_date")
-        if loan_date and loan_date > timezone.now():
-            raise forms.ValidationError("Date cannot be in the future.")
-        return loan_date
+        return LoanFormValidationService.validate_not_future(loan_date)
 
     def clean(self):
         cleaned_data = super().clean()
-        series = cleaned_data.get("series")
-        if series and not series.is_active:
-            self.add_error("series", f"Series {series} is Inactive")
-        return cleaned_data
+        return LoanFormValidationService.validate_loan_create_form(self, cleaned_data)
 
 
 class LoanRenewForm(forms.Form):
@@ -587,14 +569,7 @@ class LoanRenewForm(forms.Form):
 
     def clean(self):
         cleaned = super().clean()
-        mode = cleaned.get("mode")
-        extra = cleaned.get("requested_extra_amount") or 0
-        if mode == "TOPUP_RENEW" and extra <= 0:
-            self.add_error(
-                "requested_extra_amount",
-                "Top-Up mode requires a positive extra amount.",
-            )
-        return cleaned
+        return LoanFormValidationService.validate_loan_renewal(self, cleaned)
 
 
 class LoanItemForm(forms.ModelForm):
@@ -683,18 +658,13 @@ class LoanItemForm(forms.ModelForm):
             return cleaned_data
 
         rate = RateCacheService.get_rate_or_none(itemtype)
-        if rate is None:
-            raise forms.ValidationError(
-                f"{itemtype} rate is not configured. Add the current metal rate "
-                "from Rates before creating this loan item."
-            )
-
-        value = round(weight * purity * Decimal(0.01) * rate)
-
-        if value < loanamount:
-            raise forms.ValidationError(
-                f"Loan amount {loanamount} cannot exceed items value {value}."
-            )
+        LoanItemFormValidationService.validate_collateral_value(
+            itemtype=itemtype,
+            loanamount=loanamount,
+            weight=weight,
+            purity=purity,
+            rate=rate,
+        )
 
         return cleaned_data
 
@@ -730,27 +700,11 @@ class InitialLoanItemForm(LoanItemForm):
         if self.errors:
             return cleaned_data
 
-        if not self._row_has_user_input(cleaned_data):
-            return cleaned_data
-
-        required_messages = {
-            "itemdesc": "Description is required when adding an item.",
-            "weight": "Weight is required when adding an item.",
-            "loanamount": "Loan amount is required when adding an item.",
-            "interestrate": "Interest rate is required when adding an item.",
-        }
-        for field_name, message in required_messages.items():
-            if cleaned_data.get(field_name) in (None, ""):
-                self.add_error(field_name, message)
-
-        if cleaned_data.get("quantity") in (None, ""):
-            cleaned_data["quantity"] = 1
-        if cleaned_data.get("purity") in (None, ""):
-            cleaned_data["purity"] = 75
-        if not cleaned_data.get("itemtype"):
-            cleaned_data["itemtype"] = "Gold"
-
-        return cleaned_data
+        return LoanItemFormValidationService.validate_initial_row(
+            self,
+            cleaned_data,
+            row_has_user_input=self._row_has_user_input(cleaned_data),
+        )
 
 
 def build_initial_loan_item_formset(*, extra=3):
@@ -868,16 +822,7 @@ class ReleaseForm(forms.ModelForm):
 
     def clean_loan(self):
         loan = self.cleaned_data["loan"]
-        # if loan.due() > 0:
-        #     self.add_error("loan", "Loan is not fully paid")
-        # raise forms.ValidationError("Loan is not fully paid")
-        if self.instance and self.instance.pk:
-            # Skip validation if updating an existing release
-            return loan
-        if loan.is_released:
-            self.add_error("loan", "Loan already has a release.")
-            # raise forms.ValidationError("Loan already has a release."
-        return loan
+        return ReleaseFormValidationService.validate_release_form_loan(self, loan)
 
     def clean_created(self):
         cleaned_data = super().clean()
@@ -891,28 +836,12 @@ class ReleaseForm(forms.ModelForm):
 
     def clean_release_amount(self):
         release_amount = self.cleaned_data["release_amount"]
-        loan = self.cleaned_data["loan"]
-
-        if not release_amount:
-            return release_amount
-
-        due_amount = getattr(loan, "total_due", None)
-        if callable(due_amount):
-            due_amount = due_amount()
-        if due_amount is None and hasattr(loan, "due"):
-            due_amount = loan.due()
-
-        if due_amount is None:
-            return release_amount
-
-        if release_amount > due_amount:
-            self.add_error(
-                "release_amount",
-                f"Release amount {release_amount} cannot be > due amount {due_amount}.",
-            )
-            # raise ValidationError(f"Release amount {release_amount} cannot be > due amount {due_amount}.")
-
-        return release_amount
+        loan = self.cleaned_data.get("loan")
+        return ReleaseFormValidationService.validate_release_amount(
+            self,
+            release_amount,
+            loan,
+        )
 
 
 class BaseReleaseFormSet(forms.BaseModelFormSet):
@@ -1079,12 +1008,10 @@ class LoanItemStorageBoxForm(forms.ModelForm):
         # return cleaned_data
         start_loan = cleaned_data.get("start_item_id")
         end_loan = cleaned_data.get("end_item_id")
-
-        if start_loan and end_loan:
-            if start_loan.loan_id > end_loan.loan_id:
-                raise forms.ValidationError(
-                    "Start Loan ID must be less than End Loan ID."
-                )
+        LoanFormValidationService.validate_storage_box_range(
+            start_loan=start_loan,
+            end_loan=end_loan,
+        )
 
         return cleaned_data
 
@@ -1637,26 +1564,7 @@ class GivenLoanRepaymentForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        total = cleaned_data.get("total_amount")
-        interest = cleaned_data.get("interest_amount")
-        if total is not None and interest is not None and interest > total:
-            self.add_error(
-                "interest_amount", "Interest portion cannot exceed total amount."
-            )
-        if self.loan and total is not None:
-            from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
-
-            settlement = build_loan_settlement_balance(self.loan)
-            if total > settlement.total_outstanding:
-                self.add_error(
-                    "total_amount",
-                    f"Payment amount cannot exceed outstanding amount {settlement.total_outstanding}.",
-                )
-            if interest is not None and interest > settlement.interest_due:
-                self.add_error(
-                    "interest_amount",
-                    f"Interest portion cannot exceed outstanding interest {settlement.interest_due}.",
-                )
+        RepaymentFormValidationService.validate_form(self, loan_kind="given")
         return cleaned_data
 
 
@@ -1711,24 +1619,5 @@ class TakenLoanRepaymentForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        total = cleaned_data.get("total_amount")
-        interest = cleaned_data.get("interest_amount")
-        if total is not None and interest is not None and interest > total:
-            self.add_error(
-                "interest_amount", "Interest portion cannot exceed total amount."
-            )
-        if self.loan and total is not None:
-            from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
-
-            settlement = build_loan_settlement_balance(self.loan, loan_kind="taken")
-            if total > settlement.total_outstanding:
-                self.add_error(
-                    "total_amount",
-                    f"Payment amount cannot exceed outstanding amount {settlement.total_outstanding}.",
-                )
-            if interest is not None and interest > settlement.interest_due:
-                self.add_error(
-                    "interest_amount",
-                    f"Interest portion cannot exceed outstanding interest {settlement.interest_due}.",
-                )
+        RepaymentFormValidationService.validate_form(self, loan_kind="taken")
         return cleaned_data

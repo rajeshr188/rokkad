@@ -63,7 +63,7 @@ class OperationalControlsViewTests(SimpleTestCase):
         self.user = SimpleNamespace(is_authenticated=True)
 
     @patch("apps.tenant_apps.girvi.views.reports.render")
-    @patch("apps.tenant_apps.girvi.views.reports.build_operational_controls_report")
+    @patch("apps.tenant_apps.girvi.views.reports.build_operational_controls_report_context")
     @patch("apps.tenant_apps.girvi.views.access.get_effective_permissions", return_value={"girvi_report_view"})
     @patch("apps.tenant_apps.girvi.views.access.get_workspace_role_name", return_value="Member")
     def test_view_renders_selector_payload(
@@ -77,12 +77,30 @@ class OperationalControlsViewTests(SimpleTestCase):
         request.user = self.user
         request.tenant = SimpleNamespace(schema_name="tenant-1", owner=SimpleNamespace(), theme="default", logo="")
         mock_selector.return_value = {
-            "aging": {"rows": [{"loan_id": "GL-001"}], "bucket_counts": {"current": 1, "b1_30": 0, "b31_60": 0, "b61_90": 0, "b90_plus": 0}},
-            "custody": {"rows": [{"loan_id": "GL-001"}]},
-            "release_ready": {"rows": [{"loan_id": "GL-001"}], "ready_count": 0},
-            "rate_exceptions": {"rows": [], "total": 0},
-            "generated_at": "2026-06-22T10:00:00",
-            "scanned_loans": 1,
+            "report": {
+                "aging": {
+                    "rows": [{"loan_id": "GL-001"}],
+                    "bucket_counts": {
+                        "current": 1,
+                        "b1_30": 0,
+                        "b31_60": 0,
+                        "b61_90": 0,
+                        "b90_plus": 0,
+                    },
+                },
+                "custody": {"rows": [{"loan_id": "GL-001"}]},
+                "release_ready": {"rows": [{"loan_id": "GL-001"}], "ready_count": 0},
+                "rate_exceptions": {"rows": [], "total": 0},
+                "generated_at": "2026-06-22T10:00:00",
+                "scanned_loans": 1,
+            },
+            "aging_rows": [{"loan_id": "GL-001"}],
+            "aging_bucket_counts": {"current": 1, "b1_30": 0, "b31_60": 0, "b61_90": 0, "b90_plus": 0},
+            "custody_rows": [{"loan_id": "GL-001"}],
+            "release_ready_rows": [{"loan_id": "GL-001"}],
+            "release_ready_count": 0,
+            "rate_exception_rows": [],
+            "rate_exception_total": 0,
         }
         response = SimpleNamespace(status_code=200)
         mock_render.return_value = response

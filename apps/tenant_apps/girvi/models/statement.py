@@ -64,43 +64,22 @@ class Statement(models.Model):
         return Statement.objects.filter(id__lt=self.id).order_by("id").last()
 
     def get_missing_loans(self):
-        from .loan_refactored import GivenLoan  # Import here to avoid circular imports
+        """Compatibility wrapper that delegates statement missing-loan reads to selectors."""
+        from apps.tenant_apps.girvi.selectors import get_statement_missing_loans
 
-        """
-        Returns unreleased loans that were not physically present during verification
-        """
-        verified_loans = self.statementitem_set.values_list("loan_id", flat=True)
-        if self.is_complete:
-            return GivenLoan.objects.unreleased().exclude(id__in=verified_loans)
-        else:
-            return GivenLoan.objects.filter(
-                statementitem__statement=self, statementitem__descrepancy_type="MISSING"
-            )
+        return get_statement_missing_loans(self)
 
     def get_released_items_present(self):
-        """
-        Returns statement items where loan is released but physically present
-        """
-        return self.statementitem_set.filter(
-            loan__release__isnull=False,
-            descrepancy_found=True,
-            descrepancy_note="Loan already released",
-        )
+        """Compatibility wrapper that delegates released-present reads to selectors."""
+        from apps.tenant_apps.girvi.selectors import get_statement_released_items_present
+
+        return get_statement_released_items_present(self)
 
     def get_verification_summary(self):
-        """
-        Returns summary of verification
-        """
-        missing_loans = self.get_missing_loans()
-        released_present = self.get_released_items_present()
+        """Compatibility wrapper that delegates verification summary construction to selectors."""
+        from apps.tenant_apps.girvi.selectors import build_statement_verification_summary
 
-        return {
-            "total_verified": self.statementitem_set.count(),
-            "missing_loans": list(missing_loans),
-            "released_present": list(released_present),
-            "missing_count": missing_loans.count(),
-            "released_present_count": released_present.count(),
-        }
+        return build_statement_verification_summary(self)
 
     def mark_complete(self, completed_by=None):
         """

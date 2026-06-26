@@ -234,6 +234,7 @@ def run_period_close_interest_accrual(*, period, user) -> list[str]:
 def get_party_loan_history_summary(party, *, limit=20):
     """Return party-centric loan history for Party detail pages."""
     from django.db.models import Count, Q, Sum
+    from django.urls import reverse
 
     from apps.tenant_apps.girvi.lifecycle import (
         CANONICAL_ACTIVE_CURRENT,
@@ -252,6 +253,7 @@ def get_party_loan_history_summary(party, *, limit=20):
         taken_canonical_status,
     )
     from apps.tenant_apps.girvi.models import GivenLoan, TakenLoan
+    from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
 
     customer = getattr(party, "legacy_customer", None)
     given_filter = Q(borrower_party=party)
@@ -295,7 +297,34 @@ def get_party_loan_history_summary(party, *, limit=20):
         .order_by("-loan_date")
     )
 
+    def _settlement_for_given_loan(loan):
+        try:
+            return build_loan_settlement_balance(loan)
+        except Exception:
+            logger.exception(
+                "Unable to build Party loan-history settlement for GivenLoan %s",
+                getattr(loan, "pk", None),
+            )
+            return None
+
+    def _release_document_links(loan):
+        release = getattr(loan, "release", None)
+        if not release:
+            return []
+
+        return [
+            {
+                "label": "Release",
+                "url": reverse("girvi:girvi_release_detail", args=[release.pk]),
+            },
+            {
+                "label": "Form H",
+                "url": reverse("girvi:release_form_h", args=[release.pk]),
+            },
+        ]
+
     def _given_row(loan):
+        settlement = _settlement_for_given_loan(loan)
         return {
             "loan": loan,
             "loan_id": loan.loan_id,
@@ -303,12 +332,17 @@ def get_party_loan_history_summary(party, *, limit=20):
             "status": loan.status,
             "loan_date": loan.loan_date,
             "detail_url": loan.get_absolute_url(),
+            "repayment_url": reverse("girvi:girvi_loanpayment_create", args=[loan.pk]),
             "payment_count": getattr(loan, "payment_count", 0) or 0,
             "unposted_payment_count": getattr(loan, "unposted_payment_count", 0) or 0,
             "total_payment_amount": getattr(loan, "total_payment_amount", 0) or 0,
             "notice_count": getattr(loan, "notice_count", 0) or 0,
             "collateral_items_count": getattr(loan, "collateral_items_count", 0) or 0,
             "collateral_loan_amount": getattr(loan, "collateral_loan_amount", 0) or 0,
+            "principal_due": getattr(settlement, "principal_due", None),
+            "interest_due": getattr(settlement, "interest_due", None),
+            "total_outstanding": getattr(settlement, "total_outstanding", None),
+            "document_links": _release_document_links(loan),
         }
 
     def _taken_row(loan):
@@ -319,12 +353,17 @@ def get_party_loan_history_summary(party, *, limit=20):
             "status": loan.status,
             "loan_date": loan.loan_date,
             "detail_url": loan.get_absolute_url(),
+            "repayment_url": reverse("girvi:takenloan_payment_create", args=[loan.pk]),
             "payment_count": getattr(loan, "payment_count", 0) or 0,
             "unposted_payment_count": getattr(loan, "unposted_payment_count", 0) or 0,
             "total_payment_amount": getattr(loan, "total_payment_amount", 0) or 0,
             "notice_count": 0,
             "collateral_items_count": getattr(loan, "collateral_items_count", 0) or 0,
             "collateral_loan_amount": getattr(loan, "collateral_loan_amount", 0) or 0,
+            "principal_due": None,
+            "interest_due": None,
+            "total_outstanding": None,
+            "document_links": [],
         }
 
     active_given_states = {
@@ -367,17 +406,26 @@ def get_party_loan_history_summary(party, *, limit=20):
 
     limited_active = active_rows[:limit]
     limited_closed = closed_rows[:limit]
+    all_rows = active_rows + closed_rows
+    active_outstanding = sum(
+        (row["total_outstanding"] or 0) for row in active_rows
+    )
+    total_collateral_amount = sum(
+        (row["collateral_loan_amount"] or 0) for row in all_rows
+    )
     return {
         "active_loans": limited_active,
         "closed_loans": limited_closed,
         "counts": {
             "active_loans": len(active_rows),
             "closed_loans": len(closed_rows),
-            "payments": sum(row["payment_count"] for row in active_rows + closed_rows),
-            "notices": sum(row["notice_count"] for row in active_rows + closed_rows),
+            "payments": sum(row["payment_count"] for row in all_rows),
+            "notices": sum(row["notice_count"] for row in all_rows),
             "collateral_items": sum(
-                row["collateral_items_count"] for row in active_rows + closed_rows
+                row["collateral_items_count"] for row in all_rows
             ),
+            "active_outstanding": active_outstanding,
+            "collateral_loan_amount": total_collateral_amount,
         },
     }
 

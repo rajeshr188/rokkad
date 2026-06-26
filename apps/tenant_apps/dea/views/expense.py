@@ -12,7 +12,6 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.db import transaction
 from django.contrib import messages
@@ -21,9 +20,10 @@ from decimal import Decimal
 
 from ..models import ExpenseVoucher, ExpenseLineItem
 from ..forms_vouchers import ExpenseVoucherForm, ExpenseLineItemFormSet
+from .access import DeaAccountantRequiredMixin, dea_accountant_required
 
 
-class ExpenseVoucherListView(LoginRequiredMixin, ListView):
+class ExpenseVoucherListView(DeaAccountantRequiredMixin, ListView):
     """List all expense vouchers with filtering"""
 
     model = ExpenseVoucher
@@ -95,7 +95,7 @@ class ExpenseVoucherListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ExpenseVoucherDetailView(LoginRequiredMixin, DetailView):
+class ExpenseVoucherDetailView(DeaAccountantRequiredMixin, DetailView):
     """Display details of a single expense voucher"""
 
     model = ExpenseVoucher
@@ -132,6 +132,7 @@ from django.shortcuts import redirect, get_object_or_404
 from ..services.post_doc import create_and_post_voucher_for_doc
 from ..posting.engine import DjangoPostingEngine
 
+@dea_accountant_required
 def post_expense_voucher(request, pk):
     """Post an ExpenseVoucher to the ledger (creates Voucher and entries)"""
     expense = get_object_or_404(ExpenseVoucher, pk=pk)
@@ -151,7 +152,7 @@ def post_expense_voucher(request, pk):
     return redirect("dea_expense_detail", pk=expense.pk)
 
 
-class ExpenseVoucherCreateView(LoginRequiredMixin, CreateView):
+class ExpenseVoucherCreateView(DeaAccountantRequiredMixin, CreateView):
     """Create a new expense voucher with line items"""
 
     model = ExpenseVoucher
@@ -221,7 +222,7 @@ class ExpenseVoucherCreateView(LoginRequiredMixin, CreateView):
         return super().form_invalid(form)
 
 
-class ExpenseVoucherUpdateView(LoginRequiredMixin, UpdateView):
+class ExpenseVoucherUpdateView(DeaAccountantRequiredMixin, UpdateView):
     """Update an existing expense voucher"""
 
     model = ExpenseVoucher
@@ -287,7 +288,7 @@ class ExpenseVoucherUpdateView(LoginRequiredMixin, UpdateView):
         return redirect(self.success_url)
 
 
-class ExpenseVoucherDeleteView(LoginRequiredMixin, DeleteView):
+class ExpenseVoucherDeleteView(DeaAccountantRequiredMixin, DeleteView):
     """Delete an expense voucher"""
 
     model = ExpenseVoucher

@@ -31,6 +31,30 @@ class RepaymentWorkflowServiceTests(SimpleTestCase):
         self.assertEqual(initial["interest_amount"], 125)
         self.assertIn("payment_date", initial)
 
+    def test_payment_options_builds_settlement_interest_and_principal_presets(self):
+        preview = SimpleNamespace(
+            suggested_total_amount=1100,
+            suggested_interest_amount=100,
+            settlement=SimpleNamespace(
+                interest_due=100,
+                principal_due=1000,
+            ),
+        )
+
+        options = RepaymentWorkflowService.payment_options(preview)
+
+        self.assertEqual([option["label"] for option in options], [
+            "Exact settlement",
+            "Interest only",
+            "Principal only",
+        ])
+        self.assertEqual(options[0]["total_amount"], 1100)
+        self.assertEqual(options[0]["interest_amount"], 100)
+        self.assertEqual(options[1]["total_amount"], 100)
+        self.assertEqual(options[1]["interest_amount"], 100)
+        self.assertEqual(options[2]["total_amount"], 1000)
+        self.assertEqual(options[2]["interest_amount"], 0)
+
     @patch("django.contrib.messages.success")
     @patch("django.contrib.messages.error")
     @patch("django.contrib.messages.warning")

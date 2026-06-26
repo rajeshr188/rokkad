@@ -2,43 +2,26 @@ from dateutil.relativedelta import relativedelta
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.tenant_apps.notify.models import Notification
-from apps.tenant_apps.notify.services import (
-    DEFAULT_LOAN_REMINDER_CODE,
+from apps.tenant_apps.contact.facade import customer_queryset
+from apps.tenant_apps.girvi.integrations.notification_adapter import (
+    channel_for_medium_type,
+    create_girvi_reminder_batch,
+    event_key_for_notice_code,
+    get_default_loan_reminder_code,
+    get_default_medium_type,
 )
-from apps.tenant_apps.notify_v2.models import NotificationJob
-from apps.tenant_apps.notify_v2.services import create_girvi_reminder_batch
 
-from ..models import Customer, GivenLoan
+from ..models import GivenLoan
 from .access import girvi_permission_required, girvi_workspace_required
-
-
-_NOTIFY_V2_EVENT_MAP = {
-    "LOAN_FIRST_REMINDER": "loan.first_reminder_due",
-    "LOAN_SECOND_REMINDER": "loan.second_reminder_due",
-    "LOAN_FINAL_NOTICE": "loan.final_notice_due",
-    "LOAN_AUCTION_NOTICE": "loan.auction_notice_due",
-}
-
-_NOTIFY_V2_CHANNEL_MAP = {
-    Notification.MediumType.Email: NotificationJob.Channel.EMAIL,
-    Notification.MediumType.Letter: NotificationJob.Channel.LETTER,
-    Notification.MediumType.Post: NotificationJob.Channel.POST,
-    Notification.MediumType.SMS: NotificationJob.Channel.SMS,
-    Notification.MediumType.Whatsapp: NotificationJob.Channel.WHATSAPP,
-}
 
 
 @girvi_permission_required("girvi_report_view")
 def create_loan_notification(request, pk=None):
     loan = get_object_or_404(GivenLoan.objects.select_related("borrower"), pk=pk)
-    notice_code = request.GET.get("notice_code", DEFAULT_LOAN_REMINDER_CODE)
-    medium_type = request.GET.get(
-        "medium_type",
-        Notification.MediumType.Letter,
-    )
-    event_key = _NOTIFY_V2_EVENT_MAP.get(notice_code, "loan.first_reminder_due")
-    channel = _NOTIFY_V2_CHANNEL_MAP.get(medium_type, NotificationJob.Channel.LETTER)
+    notice_code = request.GET.get("notice_code", get_default_loan_reminder_code())
+    medium_type = request.GET.get("medium_type", get_default_medium_type())
+    event_key = event_key_for_notice_code(notice_code)
+    channel = channel_for_medium_type(medium_type)
 
     batch_result = create_girvi_reminder_batch(
         loans=[loan],
@@ -67,7 +50,7 @@ def notice(request):
     # get a list of unique customers for the selected loans
     # customers = selected_loans.values('customer').distinct().count()
     customers = (
-        Customer.objects.filter(loans_received__in=selected_loans)
+        customer_queryset().filter(loans_received__in=selected_loans)
         .distinct()
         .prefetch_related("loans_received", "address", "contactno")
     )

@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.test import RequestFactory, SimpleTestCase
 
@@ -12,26 +12,10 @@ class GirviDashboardViewTests(SimpleTestCase):
         self.user = SimpleNamespace(is_authenticated=True)
 
     @patch("apps.tenant_apps.girvi.views.dashboard.render")
-    @patch("apps.tenant_apps.girvi.views.dashboard.Notification")
-    @patch("apps.tenant_apps.girvi.views.dashboard.StatementItem")
-    @patch("apps.tenant_apps.girvi.views.dashboard.LoanItemStorageBox")
-    @patch("apps.tenant_apps.girvi.views.dashboard.Series")
-    @patch("apps.tenant_apps.girvi.views.dashboard.License")
-    @patch("apps.tenant_apps.girvi.views.dashboard.Release")
-    @patch("apps.tenant_apps.girvi.views.dashboard.GivenLoan")
-    @patch("apps.tenant_apps.girvi.views.dashboard.build_dashboard_operational_queue")
-    @patch("apps.tenant_apps.girvi.views.dashboard.get_dashboard_payment_counts")
-    def test_dashboard_uses_payment_count_selector(
+    @patch("apps.tenant_apps.girvi.views.dashboard.build_girvi_dashboard_read_model")
+    def test_dashboard_uses_read_model_selector(
         self,
-        mock_payment_counts,
-        mock_operational_queue,
-        mock_given_loan,
-        mock_release,
-        mock_license,
-        mock_series,
-        mock_storage_box,
-        mock_statement_item,
-        mock_notification,
+        mock_read_model,
         mock_render,
     ):
         request = self.factory.get("/girvi/")
@@ -43,35 +27,40 @@ class GirviDashboardViewTests(SimpleTestCase):
             logo=None,
         )
 
-        given_manager = mock_given_loan.objects
-        given_manager.count.return_value = 3
-        given_manager.unreleased.return_value.count.return_value = 2
-        given_manager.released.return_value.count.return_value = 1
-        given_manager.non_performing_loans_stats.return_value.count.return_value = 0
-        given_manager.get_queryset.return_value.total_loan_amount.return_value = 100
-
-        mock_release.objects.count.return_value = 1
-        mock_release.objects.order_by.return_value.__getitem__.return_value = []
-        mock_license.objects.count.return_value = 1
-        mock_license.objects.filter.return_value.count.return_value = 1
-        mock_series.objects.count.return_value = 1
-        mock_series.objects.filter.return_value.count.return_value = 1
-        mock_storage_box.objects.count.return_value = 1
-        mock_statement_item.objects.count.return_value = 1
-        mock_notification.objects.count.return_value = 1
-        mock_notification.objects.filter.return_value.count.return_value = 1
-        mock_notification.StatusType.Draft = "Draft"
-        mock_payment_counts.return_value = {
+        mock_read_model.return_value = {
+            "total_loans": 3,
+            "unreleased_loans": 2,
+            "released_loans": 1,
+            "overdue_loans": 0,
+            "total_loan_amount": 100,
+            "total_releases": 1,
+            "recent_releases": [],
+            "total_licenses": 1,
+            "active_licenses": 1,
+            "total_series": 1,
+            "active_series": 1,
+            "total_boxes": 1,
             "total_payments": 9,
             "pending_payments": 4,
-        }
-        mock_operational_queue.return_value = {
+            "total_statements": 1,
+            "total_notifications": 1,
+            "pending_notifications": 1,
             "due_today": [],
-            "overdue_candidates": [],
-            "npa_candidates": [],
-            "cure_candidates": [],
-            "notice_candidates": [],
-            "counts": {
+            "operational_queue": {
+                "due_today": [],
+                "overdue_candidates": [],
+                "npa_candidates": [],
+                "cure_candidates": [],
+                "notice_candidates": [],
+                "counts": {
+                    "due_today": 0,
+                    "overdue_candidates": 0,
+                    "npa_candidates": 0,
+                    "cure_candidates": 0,
+                    "notice_candidates": 0,
+                },
+            },
+            "queue_counts": {
                 "due_today": 0,
                 "overdue_candidates": 0,
                 "npa_candidates": 0,
@@ -85,8 +74,7 @@ class GirviDashboardViewTests(SimpleTestCase):
         result = girvi_dashboard(request)
 
         self.assertEqual(result, response)
-        mock_payment_counts.assert_called_once_with()
-        mock_operational_queue.assert_called_once_with(
+        mock_read_model.assert_called_once_with(
             user=request.user,
             workspace=request.tenant,
         )

@@ -21,6 +21,10 @@ from apps.tenant_apps.dea.models import (
     AccountType,
     AccountType_Ext,
     EntityType,
+    ExpenseCategory,
+    ExpenseLineItem,
+    ExpenseSource,
+    ExpenseVoucher,
     JournalEntryLineItem,
     JournalEntryVoucher,
     Ledger,
@@ -41,6 +45,7 @@ from apps.tenant_apps.dea.services.reversal import (
     reverse_posted_voucher,
 )
 from apps.tenant_apps.dea.services.post_doc import create_and_post_voucher_for_doc
+from apps.tenant_apps.dea.views.expense import post_expense_voucher as post_expense_voucher_view
 from apps.tenant_apps.dea.views.voucher import post_voucher as post_voucher_view
 from apps.tenant_apps.dea.views.voucher import reverse_voucher as reverse_voucher_view
 
@@ -79,6 +84,7 @@ class FinancialPostingCharacterizationTests(TenantTestCase):
             username=f"dea-fin-post-user-{uuid.uuid4().hex[:8]}",
             email=f"dea-fin-post-user-{uuid.uuid4().hex[:8]}@example.com",
             password="testpass123",
+            is_staff=True,
         )
         self.period = AccountingPeriod.objects.create(
             name="April 2026",
@@ -720,6 +726,54 @@ class FinancialPostingCharacterizationTests(TenantTestCase):
         self.assertEqual(draft_voucher.status, VoucherStatus.DRAFT)
         self.assertEqual(draft_voucher.journal_entries.count(), 0)
 
+    def test_expense_post_view_is_idempotent_for_direct_payment(self):
+        expense = self._build_direct_payment_expense(
+            expense_number="EXP-DIRECT-IDEMPOTENT-001",
+            amount=Decimal("100.00"),
+        )
+        request = self._build_expense_post_view_request(expense)
+
+        first_response = post_expense_voucher_view(request, pk=expense.pk)
+        second_response = post_expense_voucher_view(request, pk=expense.pk)
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(second_response.status_code, 302)
+        posted_vouchers = Voucher.objects.filter(
+            doc_content_type=ContentType.objects.get_for_model(expense),
+            doc_object_id=expense.pk,
+            status=VoucherStatus.POSTED,
+        )
+        self.assertEqual(posted_vouchers.count(), 1)
+
+        voucher = posted_vouchers.get()
+        self.assertEqual(voucher.journal_entries.count(), 1)
+        journal_entry = voucher.journal_entries.get()
+        self.assertTrue(journal_entry.validate_balanced()[0])
+        self.assertEqual(LedgerTransaction.objects.filter(journal_entry=journal_entry).count(), 2)
+
+    def test_expense_post_view_closed_period_does_not_materialize_journal_effects(self):
+        self.period.status = AccountingPeriod.PeriodStatus.CLOSED
+        self.period.save(update_fields=["status"])
+        expense = self._build_direct_payment_expense(
+            expense_number="EXP-DIRECT-CLOSED-001",
+            amount=Decimal("100.00"),
+        )
+        request = self._build_expense_post_view_request(expense)
+
+        response = post_expense_voucher_view(request, pk=expense.pk)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Voucher.objects.filter(
+                doc_content_type=ContentType.objects.get_for_model(expense),
+                doc_object_id=expense.pk,
+                status=VoucherStatus.POSTED,
+            ).count(),
+            0,
+        )
+        self.assertEqual(LedgerTransaction.objects.count(), 0)
+        self.assertEqual(AccountTransaction.objects.count(), 0)
+
     def _post_doc(self, doc):
         voucher_type = self._ensure_voucher_type(doc)
         voucher = Voucher.objects.create(
@@ -784,6 +838,33 @@ class FinancialPostingCharacterizationTests(TenantTestCase):
         )
         return doc
 
+    def _build_direct_payment_expense(self, *, expense_number, amount):
+        expense = ExpenseVoucher.objects.create(
+            expense_number=expense_number,
+            expense_date=date(2026, 4, 15),
+            source_type=ExpenseSource.DIRECT_PAYMENT,
+            party_name="Office Vendor",
+            gross_amount=Money(amount, "INR"),
+            taxable_amount=Money(Decimal("0.00"), "INR"),
+            tax_amount=Money(Decimal("0.00"), "INR"),
+            tds_amount=Money(Decimal("0.00"), "INR"),
+            description=expense_number,
+            created_by=self.user,
+            updated_by=self.user,
+            auto_post_to_accounting=False,
+        )
+        ExpenseLineItem.objects.create(
+            expense_voucher=expense,
+            line_number=1,
+            category=ExpenseCategory.FOOD,
+            description="Team meal",
+            amount=Money(amount, "INR"),
+            is_taxable=False,
+            tax_rate=Decimal("0.00"),
+            tds_rate=Decimal("0.00"),
+        )
+        return expense
+
     def _build_manual_line_voucher(self, voucher_no):
         voucher_type, _ = VoucherType.objects.get_or_create(
             name="MANUAL_VIEW_LINES",
@@ -829,6 +910,20 @@ class FinancialPostingCharacterizationTests(TenantTestCase):
             data=data or {},
         )
         request.user = self.user
+        request.tenant = self.tenant
+        session_middleware = SessionMiddleware(lambda req: None)
+        session_middleware.process_request(request)
+        request.session.save()
+        setattr(request, "_messages", FallbackStorage(request))
+        return request
+
+    def _build_expense_post_view_request(self, expense):
+        request = self.request_factory.post(
+            f"/dea/expenses/{expense.pk}/post/",
+            data={},
+        )
+        request.user = self.user
+        request.tenant = self.tenant
         session_middleware = SessionMiddleware(lambda req: None)
         session_middleware.process_request(request)
         request.session.save()
@@ -841,6 +936,7 @@ class FinancialPostingCharacterizationTests(TenantTestCase):
             data=data or {},
         )
         request.user = self.user
+        request.tenant = self.tenant
         session_middleware = SessionMiddleware(lambda req: None)
         session_middleware.process_request(request)
         request.session.save()
@@ -894,12 +990,23 @@ class FinancialPostingCharacterizationTests(TenantTestCase):
             AccountType="Revenue",
             defaults={"description": "Revenue", "code_prefix": "4"},
         )
+        expense_type, _ = AccountType.objects.get_or_create(
+            AccountType="Expense",
+            defaults={"description": "Expense", "code_prefix": "5"},
+        )
 
         cash, _ = Ledger.objects.get_or_create(
             name="CASH",
             defaults={
                 "AccountType": asset_type,
                 "code": "1.CHAR.CASH",
+            },
+        )
+        cash_title, _ = Ledger.objects.get_or_create(
+            name="Cash",
+            defaults={
+                "AccountType": asset_type,
+                "code": "1.CHAR.CASH.TITLE",
             },
         )
         capital, _ = Ledger.objects.get_or_create(
@@ -965,9 +1072,24 @@ class FinancialPostingCharacterizationTests(TenantTestCase):
                 "code": "2.CHAR.TDS",
             },
         )
+        expense_suspense, _ = Ledger.objects.get_or_create(
+            name="EXPENSE_SUSPENSE",
+            defaults={
+                "AccountType": liability_type,
+                "code": "2.CHAR.EXPENSESUSPENSE",
+            },
+        )
+        food_expense, _ = Ledger.objects.get_or_create(
+            name="FOOD_EXPENSE",
+            defaults={
+                "AccountType": expense_type,
+                "code": "5.CHAR.FOOD",
+            },
+        )
 
         return {
             "CASH": cash,
+            "Cash": cash_title,
             "CAPITAL": capital,
             "ACCOUNTS_RECEIVABLE": ar,
             "SALES_REVENUE": sales,
@@ -977,4 +1099,6 @@ class FinancialPostingCharacterizationTests(TenantTestCase):
             "GST_INPUT_CREDIT": gst_input,
             "ACCOUNTS_PAYABLE": ap,
             "TDS_PAYABLE": tds,
+            "EXPENSE_SUSPENSE": expense_suspense,
+            "FOOD_EXPENSE": food_expense,
         }

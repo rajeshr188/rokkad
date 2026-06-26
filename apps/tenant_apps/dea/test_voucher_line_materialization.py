@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -32,18 +33,26 @@ User = get_user_model()
 
 
 class VoucherLineMaterializationTests(TenantTestCase):
-    @staticmethod
-    def get_test_schema_name():
-        return "test_dea_voucher_lines"
+    test_schema_name = f"test_dea_voucher_lines_{uuid.uuid4().hex[:8]}"
+    test_domain = f"{test_schema_name}.test.com"
+
+    @classmethod
+    def get_test_schema_name(cls):
+        return cls.test_schema_name
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return cls.test_domain
 
     @classmethod
     def setup_tenant(cls, tenant):
-        user = User.objects.create_user(
+        user, _ = User.objects.get_or_create(
             username="dea-vl-owner",
-            email="dea-vl-owner@example.com",
-            password="testpass123",
+            defaults={"email": "dea-vl-owner@example.com"},
         )
-        tenant.name = "dea-vl-tenant"
+        user.set_password("testpass123")
+        user.save(update_fields=["password"])
+        tenant.name = f"dea-vl-tenant-{uuid.uuid4().hex[:8]}"
         tenant.owner = user
         tenant.creator = user
 
@@ -51,8 +60,8 @@ class VoucherLineMaterializationTests(TenantTestCase):
         super().setUp()
         connection.set_tenant(self.tenant)
         self.user = User.objects.create_user(
-            username="dea-vl-user",
-            email="dea-vl-user@example.com",
+            username=f"dea-vl-user-{uuid.uuid4().hex[:8]}",
+            email=f"dea-vl-user-{uuid.uuid4().hex[:8]}@example.com",
             password="testpass123",
         )
 

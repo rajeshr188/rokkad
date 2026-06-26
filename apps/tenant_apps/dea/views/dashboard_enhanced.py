@@ -19,6 +19,7 @@ from ..models import (
     VoucherStatus,
 )
 from ..utils.currency import Balance
+from .access import can_view_dea_accountant_tools
 
 # ---------------------------------------------------------------------------
 # Financial data helpers
@@ -292,15 +293,17 @@ def dashboard_enhanced(request):
         .order_by("-posted_at")[:10]
     )
 
+    show_accountant_tools = can_view_dea_accountant_tools(request)
+
     context = {
         "current_period": current_period,
         "period_status": "Open" if current_period else "No Period",
         "days_in_period": days_in_period,
         "quick_actions": [
-            {"label": "Create Invoice", "url": reverse("dea_sales_invoice_create"), "icon": "fa-file-invoice-dollar", "description": "Record customer sale"},
-            {"label": "Create Expense", "url": reverse("dea_expense_create"), "icon": "fa-receipt", "description": "Record business expense"},
-            {"label": "Record Payment", "url": reverse("dea_payment_create"), "icon": "fa-money-bill-wave", "description": "Record cash/bank movement"},
-            {"label": "Journal Entry", "url": reverse("dea_journal_entry_create"), "icon": "fa-book", "description": "Manual GL adjustment"},
+            {"label": "Business Events", "url": reverse("dea_business_events_dashboard"), "icon": "fa-route", "description": "Run business-event workflows"},
+            {"label": "Reports Hub", "url": reverse("dea_reports_hub"), "icon": "fa-chart-bar", "description": "Open financial and commodity reports"},
+            {"label": "Metal Balance", "url": reverse("dea_metal_balance_report"), "icon": "fa-coins", "description": "Review commodity position balances"},
+            {"label": "Exposure Report", "url": reverse("dea_exposure_report"), "icon": "fa-balance-scale", "description": "Track open purchase and sale exposure"},
         ],
         "metrics": {
             "total_vouchers": Voucher.objects.count(),
@@ -322,30 +325,20 @@ def dashboard_enhanced(request):
         "top_debtors": top_debtors,
         "top_creditors": top_creditors,
         "workflows": [
-            {"title": "Set Up Account Structure", "steps": [
-                {"text": "View Chart of Accounts", "url": reverse("dea_chart_of_accounts")},
-                {"text": "Manage Accounting Periods", "url": reverse("dea_period_list")},
-                {"text": "Create Business Accounts", "url": reverse("dea_account_list")},
+            {"title": "Business Events Workflow", "steps": [
+                {"text": "Open Business Events Dashboard", "url": reverse("dea_business_events_dashboard")},
+                {"text": "Preview and confirm events", "url": reverse("dea_business_events_dashboard")},
+                {"text": "Review reports", "url": reverse("dea_reports_hub")},
             ]},
-            {"title": "Record Customer Transactions", "steps": [
-                {"text": "View Customers", "url": reverse("dea_account_list")},
-                {"text": "Create Invoice", "url": reverse("dea_sales_invoice_create")},
-                {"text": "Record Payment", "url": reverse("dea_payment_create")},
+            {"title": "Commodity Monitoring", "steps": [
+                {"text": "Check Metal Balance", "url": reverse("dea_metal_balance_report")},
+                {"text": "Check Commodity Exposure", "url": reverse("dea_exposure_report")},
+                {"text": "Check Commodity Valuation", "url": reverse("dea_valuation_report")},
             ]},
-            {"title": "Record Supplier Transactions", "steps": [
-                {"text": "View Suppliers", "url": reverse("dea_account_list") + "?type=supplier"},
-                {"text": "Create Expense Voucher", "url": reverse("dea_expense_create")},
-                {"text": "Record Payment", "url": reverse("dea_payment_create")},
-            ]},
-            {"title": "Record Operating Expenses", "steps": [
-                {"text": "Create Expense Entry", "url": reverse("dea_expense_create")},
-                {"text": "Review Expenses", "url": reverse("dea_expense_list")},
-                {"text": "View All Vouchers", "url": reverse("dea_voucher_list")},
-            ]},
-            {"title": "Period-End Activities", "steps": [
-                {"text": "Review GL", "url": reverse("dea_ledger_list")},
-                {"text": "Review Journal Entries", "url": reverse("dea_journal_entries_list")},
-                {"text": "Open/Close Periods", "url": reverse("dea_period_list")},
+            {"title": "Financial Reporting", "steps": [
+                {"text": "Open Reports Hub", "url": reverse("dea_reports_hub")},
+                {"text": "Run Trial Balance", "url": reverse("trial_balance")},
+                {"text": "Run Balance Sheet", "url": reverse("balance_sheet")},
             ]},
         ],
         "coa_preview": get_coa_preview(),
@@ -360,6 +353,30 @@ def dashboard_enhanced(request):
             {"name": "A/P Aging", "url": reverse("ap_aging")},
             {"name": "Ratios", "url": reverse("financial_ratios")},
         ],
+        "commodity_report_links": [
+            {"name": "Metal Balance", "url": reverse("dea_metal_balance_report")},
+            {"name": "Commodity Exposure", "url": reverse("dea_exposure_report")},
+            {"name": "Commodity Valuation", "url": reverse("dea_valuation_report")},
+        ],
+        "show_accountant_tools": show_accountant_tools,
         "title": "Accounting Dashboard",
     }
+
+    if show_accountant_tools:
+        context["quick_actions"].extend(
+            [
+                {"label": "Voucher Hub", "url": reverse("dea_voucher_hub"), "icon": "fa-book", "description": "Open manual accounting tools"},
+                {"label": "Manage Periods", "url": reverse("dea_period_list"), "icon": "fa-calendar-alt", "description": "Open, close, and lock periods"},
+            ]
+        )
+        context["workflows"].append(
+            {
+                "title": "Accountant Manual Tools",
+                "steps": [
+                    {"text": "Open Voucher Hub", "url": reverse("dea_voucher_hub")},
+                    {"text": "Open Manual Journal Vouchers", "url": reverse("dea_journal_entry_voucher_list")},
+                    {"text": "Open Opening Balance Wizard", "url": reverse("dea_opening_balance_wizard")},
+                ],
+            }
+        )
     return render(request, "dea/dashboard_enhanced.html", context)

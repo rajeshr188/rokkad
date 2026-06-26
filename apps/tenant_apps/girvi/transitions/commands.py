@@ -15,9 +15,11 @@ from apps.tenant_apps.girvi.service_modules.transition_side_effects import (
     execute_recovery_transition,
     parse_recovery_amount,
 )
-from apps.tenant_apps.girvi.models.loan import LoanChangeLog
-from apps.tenant_apps.notify_v2.models import NotificationJob
-from apps.tenant_apps.notify_v2.services import create_girvi_reminder_batch
+from apps.tenant_apps.girvi.integrations.notification_adapter import (
+    create_girvi_reminder_batch,
+    get_default_notice_channel,
+)
+from apps.tenant_apps.girvi.models import LoanChangeLog
 from .types import TransitionResult
 
 logger = logging.getLogger(__name__)
@@ -159,7 +161,7 @@ class AuctionNoticeMixin:
                 loans=[self.loan],
                 created_by=self.user,
                 event_key=AUCTION_NOTICE_EVENT_KEY,
-                channel=NotificationJob.Channel.LETTER,
+                channel=get_default_notice_channel(),
                 notes="Generated from Girvi auction lifecycle transition.",
             )
             return True

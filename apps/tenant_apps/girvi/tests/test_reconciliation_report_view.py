@@ -12,7 +12,7 @@ class LoanAccountingReconciliationReportViewTests(SimpleTestCase):
         self.user = SimpleNamespace(is_authenticated=True)
 
     @patch("apps.tenant_apps.girvi.views.reports.render")
-    @patch("apps.tenant_apps.girvi.views.reports.build_loan_accounting_reconciliation_report")
+    @patch("apps.tenant_apps.girvi.views.reports.build_loan_accounting_reconciliation_report_context")
     def test_report_view_renders_selector_payload(
         self,
         mock_selector,
@@ -28,16 +28,25 @@ class LoanAccountingReconciliationReportViewTests(SimpleTestCase):
         )
 
         mock_selector.return_value = {
-            "rows": [{"loan_id": "GL-001"}],
-            "counts": {
+            "report": {
+                "rows": [{"loan_id": "GL-001"}],
+                "counts": {
+                    "missing_disbursal_voucher": 1,
+                    "failed_payment_posting": 0,
+                    "release_without_voucher": 0,
+                    "posted_voucher_state_mismatch": 0,
+                },
+                "total_issues": 1,
+                "scanned_loans": 5,
+                "generated_at": "2026-06-22T10:00:00",
+            },
+            "report_rows": [{"loan_id": "GL-001"}],
+            "report_counts": {
                 "missing_disbursal_voucher": 1,
                 "failed_payment_posting": 0,
                 "release_without_voucher": 0,
                 "posted_voucher_state_mismatch": 0,
             },
-            "total_issues": 1,
-            "scanned_loans": 5,
-            "generated_at": "2026-06-22T10:00:00",
         }
         response = SimpleNamespace(status_code=200)
         mock_render.return_value = response

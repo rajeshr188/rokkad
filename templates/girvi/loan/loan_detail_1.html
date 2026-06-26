@@ -16,9 +16,7 @@
         </svg>
         <span class="ml-1">List</span>
       </button>
-      <button class="btn btn-outline-success" hx-get="{% url 'girvi:girvi_loan_create' %}"
-        hx-trigger="click, keyup[shiftKey&&key=='N'] from:body" hx-target="#modal-content"
-        _="on htmx:afterRequest wait 10ms then add .show to #modal then call bootstrap.Modal.getOrCreateInstance(#modal).show()">
+      <a class="btn btn-outline-success" href="{% url 'girvi:girvi_loan_create' %}">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle"
           viewBox="0 0 16 16">
           <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
@@ -26,7 +24,7 @@
             d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
         </svg>
         <span class="ml-1">Create</span>
-      </button>
+      </a>
     </div>
   </div>
 </div>
@@ -102,11 +100,7 @@
             </ul>
           </div>
 
-          <a class="btn btn-outline-primary" hx-get="{% url 'girvi:girvi_loan_update' object.id %}"
-            hx-target="#modal .modal-content"
-            hx-swap="innerHTML"
-            data-bs-toggle="modal"
-            data-bs-target="#modal">Edit</a>
+          <a class="btn btn-outline-primary" href="{% url 'girvi:girvi_loan_update' object.id %}">Edit</a>
           <a class="btn btn-outline-danger" hx-confirm="Are you sure you want to delete this loan?"
             hx-delete="{% url 'girvi:girvi_loan_delete' object.id %}">Delete</a>
         </div>
@@ -116,6 +110,57 @@
 
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
+      <div class="row g-3 align-items-stretch mb-3">
+        <div class="col-lg-5">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small mb-1">Next Action</div>
+            {% if action_readiness.primary_action %}
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                {% if action_readiness.primary_action.disabled %}
+                  <button class="btn btn-sm {{ action_readiness.primary_action.button_class }}" type="button" disabled>
+                    {{ action_readiness.primary_action.icon }} {{ action_readiness.primary_action.title }}
+                  </button>
+                {% elif action_readiness.primary_action.is_htmx %}
+                  <a class="btn btn-sm {{ action_readiness.primary_action.button_class }}"
+                     hx-get="{{ action_readiness.primary_action.hx_get }}"
+                     hx-target="#content" hx-push-url="true" hx-swap="innerHTML transition:true">
+                    {{ action_readiness.primary_action.icon }} {{ action_readiness.primary_action.title }}
+                  </a>
+                {% else %}
+                  <a class="btn btn-sm {{ action_readiness.primary_action.button_class }}"
+                     href="{{ action_readiness.primary_action.href }}">
+                    {{ action_readiness.primary_action.icon }} {{ action_readiness.primary_action.title }}
+                  </a>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="fw-semibold">No action available</div>
+            {% endif %}
+            <div class="small text-muted mt-2">{{ action_readiness.primary_reason }}</div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small mb-2">Readiness</div>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge {{ action_readiness.settlement.badge_class }}">
+                Settlement: {{ action_readiness.settlement.label }}
+                {% if action_readiness.settlement.amount > 0 %} Rs {{ action_readiness.settlement.amount|floatformat:2 }}{% endif %}
+              </span>
+              <span class="badge {{ action_readiness.collateral.badge_class }}">
+                Collateral: {{ action_readiness.collateral.label }}
+              </span>
+              <span class="badge {{ action_readiness.accounting.badge_class }}">
+                Accounting: {{ action_readiness.accounting.label }}
+              </span>
+              <span class="badge bg-light text-dark border">
+                Timeline: {{ action_readiness.timeline.event_count }} events
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-start">
         <div>
           <div class="text-muted small mb-2">Lifecycle</div>

@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase
 
 from apps.tenant_apps.girvi.selectors import (
+    build_given_loan_action_readiness,
     build_loan_settlement_balance,
     build_repayment_preview,
     build_given_loan_detail_display,
@@ -162,6 +163,94 @@ class InterestAccrualReadModelTests(SimpleTestCase):
         self.assertEqual(action["outstanding_amount"], Decimal("0.00"))
         self.assertEqual(action["button_class"], "btn-success")
 
+    def test_build_given_loan_action_readiness_prefers_enabled_release(self):
+        loan = SimpleNamespace(
+            id=1,
+            status="ActiveCurrent",
+            release=None,
+            current_value=Decimal("2000.00"),
+            total_due=Decimal("1000.00"),
+            get_total_payments=lambda: Decimal("1000.00"),
+            closure_exception_approved=False,
+        )
+        release_action = build_given_loan_release_action(loan)
+
+        with patch(
+            "apps.tenant_apps.girvi.selectors.get_given_loan_journal_entries"
+        ) as journal_entries:
+            journal_entries.return_value.count.return_value = 1
+            readiness = build_given_loan_action_readiness(
+                loan,
+                transition_actions=[{"title": "Renew Loan", "disabled": False}],
+                release_action=release_action,
+                changelog=[SimpleNamespace()],
+            )
+
+        self.assertEqual(readiness["primary_action"]["title"], "Start Release Workflow")
+        self.assertEqual(readiness["settlement"]["label"], "Clear")
+        self.assertEqual(readiness["collateral"]["label"], "Adequate")
+        self.assertEqual(readiness["accounting"]["label"], "Posted")
+        self.assertEqual(readiness["timeline"]["event_count"], 1)
+
+    def test_build_given_loan_action_readiness_explains_blocked_release(self):
+        loan = SimpleNamespace(
+            id=1,
+            status="ActiveCurrent",
+            release=None,
+            current_value=Decimal("2000.00"),
+            total_due=Decimal("1250.00"),
+            get_total_payments=lambda: Decimal("1000.00"),
+            closure_exception_approved=False,
+        )
+        release_action = build_given_loan_release_action(loan)
+
+        with patch(
+            "apps.tenant_apps.girvi.selectors.get_given_loan_journal_entries"
+        ) as journal_entries:
+            journal_entries.return_value.count.return_value = 0
+            readiness = build_given_loan_action_readiness(
+                loan,
+                transition_actions=[],
+                release_action=release_action,
+                changelog=[],
+            )
+
+        self.assertTrue(readiness["primary_action"]["disabled"])
+        self.assertEqual(readiness["settlement"]["label"], "Outstanding")
+        self.assertEqual(readiness["accounting"]["label"], "No posted journal")
+
+    @patch("apps.tenant_apps.girvi.integrations.dea_adapter.get_source_posting_status")
+    def test_build_given_loan_action_readiness_uses_adapter_posting_status(self, mock_status):
+        mock_status.return_value = {
+            "label": "Pending",
+            "badge_class": "bg-warning text-dark",
+            "posted_payment_count": 0,
+            "pending_payment_count": 1,
+            "failed_outbox_count": 0,
+            "pending_outbox_count": 0,
+        }
+        loan = SimpleNamespace(
+            id=1,
+            status="ActiveCurrent",
+            release=None,
+            current_value=Decimal("2000.00"),
+            total_due=Decimal("1000.00"),
+            get_total_payments=lambda: Decimal("1000.00"),
+            closure_exception_approved=False,
+            _meta=SimpleNamespace(app_label="girvi", model_name="givenloan"),
+            pk=1,
+        )
+
+        readiness = build_given_loan_action_readiness(
+            loan,
+            transition_actions=[],
+            release_action=None,
+            changelog=[],
+        )
+
+        self.assertEqual(readiness["accounting"]["label"], "Pending")
+        self.assertEqual(readiness["accounting"]["pending_payment_count"], 1)
+
 
 class InterestAccrualReportingViewTests(SimpleTestCase):
     def setUp(self):
@@ -169,6 +258,7 @@ class InterestAccrualReportingViewTests(SimpleTestCase):
         self.user = SimpleNamespace(id=1, is_authenticated=True)
 
     @patch("apps.tenant_apps.girvi.views.loan.render", return_value=HttpResponse("ok"))
+    @patch("apps.tenant_apps.girvi.views.loan.build_given_loan_action_readiness")
     @patch("apps.tenant_apps.girvi.views.loan.build_transition_actions", return_value=[])
     @patch("apps.tenant_apps.girvi.views.loan.build_runtime_loan_flow")
     @patch("apps.tenant_apps.girvi.views.loan.get_given_loan_detail_read_model")
@@ -181,6 +271,7 @@ class InterestAccrualReportingViewTests(SimpleTestCase):
         mock_get_read_model,
         mock_build_runtime_flow,
         _mock_actions,
+        mock_action_readiness,
         mock_render,
     ):
         mock_changelog_filter.return_value.select_related.return_value.order_by.return_value = []
@@ -188,6 +279,10 @@ class InterestAccrualReportingViewTests(SimpleTestCase):
             status="Disbursed",
             get_outgoing_transitions=lambda: [],
         )
+        mock_action_readiness.return_value = {
+            "primary_action": None,
+            "primary_reason": "No action available",
+        }
 
         loan = MagicMock()
         loan.id = 1
@@ -228,3 +323,4 @@ class InterestAccrualReportingViewTests(SimpleTestCase):
         self.assertEqual(context["interest_reporting"]["outstanding"], Decimal("90.00"))
         self.assertEqual(context["interest_reporting"]["receivable_balance"], Decimal("70.00"))
         self.assertEqual(context["interest_reporting"]["last_accrual_date"], date(2026, 3, 31))
+        self.assertEqual(context["action_readiness"]["primary_reason"], "No action available")

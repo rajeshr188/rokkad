@@ -12,7 +12,7 @@ from django_tenants.test.client import TenantClient
 
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.girvi.models import GivenLoan, License, LoanItem, Series, TakenLoan
+from apps.tenant_apps.girvi.models import GivenLoan, License, LoanItem, Release, Series, TakenLoan
 from apps.tenant_apps.party.models import (
     Party,
     PartyAddress,
@@ -267,6 +267,30 @@ class PartyUITests(TenantTestCase):
         active_given.status = "ActiveCurrent"
         active_given.save(update_fields=["status"])
 
+        closed_given = GivenLoan.objects.create(
+            loan_id="LG0002",
+            series=given_series,
+            borrower=customer,
+            status="Draft",
+        )
+        LoanItem.objects.create(
+            loan=closed_given,
+            itemtype="Gold",
+            quantity=1,
+            weight=Decimal("5.000"),
+            purity=Decimal("91.60"),
+            loanamount=Decimal("500.00"),
+            interestrate=Decimal("2.00"),
+            itemdesc="Chain",
+        )
+        closed_given.status = "Closed"
+        closed_given.save(update_fields=["status"])
+        Release.objects.create(
+            loan=closed_given,
+            created_by=self.user,
+            released_by=customer,
+        )
+
         TakenLoan.objects.create(
             loan_id="LT0001",
             series=taken_series,
@@ -281,9 +305,14 @@ class PartyUITests(TenantTestCase):
         self.assertContains(response, "Closed Loans")
         self.assertContains(response, "Payments")
         self.assertContains(response, "Notices")
-        self.assertContains(response, "Collateral Summary")
+        self.assertContains(response, "Active Outstanding")
+        self.assertContains(response, "Final Outstanding")
+        self.assertContains(response, "Collateral Items")
         self.assertContains(response, "LG0001")
+        self.assertContains(response, "LG0002")
         self.assertContains(response, "LT0001")
+        self.assertContains(response, "Repay")
+        self.assertContains(response, "Form H")
 
     def test_party_role_add_and_end(self):
         party = Party.objects.create(party_code="P1004", display_name="Ravi")

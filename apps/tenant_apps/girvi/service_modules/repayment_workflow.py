@@ -20,6 +20,41 @@ class RepaymentWorkflowService:
         }
 
     @staticmethod
+    def payment_options(preview):
+        options = []
+        if preview.suggested_total_amount > 0:
+            options.append(
+                {
+                    "label": "Exact settlement",
+                    "description": "Pay the full current outstanding amount.",
+                    "total_amount": preview.suggested_total_amount,
+                    "interest_amount": preview.suggested_interest_amount,
+                    "button_class": "btn-outline-success",
+                }
+            )
+        if preview.settlement.interest_due > 0:
+            options.append(
+                {
+                    "label": "Interest only",
+                    "description": "Clear outstanding interest without reducing principal.",
+                    "total_amount": preview.settlement.interest_due,
+                    "interest_amount": preview.settlement.interest_due,
+                    "button_class": "btn-outline-primary",
+                }
+            )
+        if preview.settlement.principal_due > 0:
+            options.append(
+                {
+                    "label": "Principal only",
+                    "description": "Apply the amount fully toward principal.",
+                    "total_amount": preview.settlement.principal_due,
+                    "interest_amount": 0,
+                    "button_class": "btn-outline-secondary",
+                }
+            )
+        return options
+
+    @staticmethod
     def emit_result_messages(request, result):
         from django.contrib import messages
 

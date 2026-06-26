@@ -20,8 +20,6 @@ from django.views.generic import (
     DeleteView,
 )
 from django.urls import reverse_lazy, reverse
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect, JsonResponse
 from django.db import transaction as db_transaction
 from django.db.models import Q, Sum, F
@@ -38,12 +36,8 @@ from ..models import (
     VoucherType,
     VoucherStatus,
     VoucherLine,
-    JournalEntry,
-    LedgerTransaction,
-    AccountTransaction,
     Ledger,
     Account,
-    AccountingPeriod,
 )
 from ..forms import VoucherForm, LedgerTransactionForm, AccountTransactionForm
 from ..forms_vouchers import VoucherLineFormSet
@@ -56,10 +50,11 @@ from ..services.reversal import (
     VoucherNotPostedError,
     reverse_posted_voucher,
 )
+from .access import DeaAccountantRequiredMixin, dea_accountant_required
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 
-class VoucherListView(LoginRequiredMixin, ListView):
+class VoucherListView(DeaAccountantRequiredMixin, ListView):
     """
     List all vouchers with filtering and pagination.
 
@@ -107,7 +102,7 @@ class VoucherListView(LoginRequiredMixin, ListView):
         return context
 
 
-class VoucherDetailView(LoginRequiredMixin, DetailView):
+class VoucherDetailView(DeaAccountantRequiredMixin, DetailView):
     """
     Display voucher details including:
     - Header information
@@ -183,7 +178,7 @@ class VoucherDetailView(LoginRequiredMixin, DetailView):
         return items
 
 
-class VoucherCreateView(LoginRequiredMixin, CreateView):
+class VoucherCreateView(DeaAccountantRequiredMixin, CreateView):
     """
     Create a new voucher for a specific voucher type with inline VoucherLine formset.
 
@@ -251,7 +246,7 @@ class VoucherCreateView(LoginRequiredMixin, CreateView):
         return reverse("dea_voucher_detail", args=[self.object.pk])
 
 
-class VoucherUpdateView(LoginRequiredMixin, UpdateView):
+class VoucherUpdateView(DeaAccountantRequiredMixin, UpdateView):
     """
     Edit an existing DRAFT voucher including line items.
 
@@ -310,7 +305,7 @@ class VoucherUpdateView(LoginRequiredMixin, UpdateView):
         return reverse("dea_voucher_detail", args=[self.object.pk])
 
 
-class VoucherDeleteView(LoginRequiredMixin, DeleteView):
+class VoucherDeleteView(DeaAccountantRequiredMixin, DeleteView):
     """
     Delete a DRAFT voucher.
 
@@ -334,7 +329,7 @@ class VoucherDeleteView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-@login_required
+@dea_accountant_required
 @db_transaction.atomic
 def post_voucher(request, pk):
     """
@@ -381,7 +376,7 @@ def post_voucher(request, pk):
     return redirect("dea_voucher_detail", pk=pk)
 
 
-@login_required
+@dea_accountant_required
 @db_transaction.atomic
 def reverse_voucher(request, pk):
     """
@@ -462,103 +457,6 @@ def _calculate_totals(voucher):
     # This is complex because DRAFT vouchers don't have JEs yet
 
     return debit_total, credit_total
-
-
-def _create_journal_entry(voucher, period, posted_by, is_reversal=False):
-    """
-    Create a journal entry from a voucher.
-
-    Args:
-        voucher: Voucher instance
-        period: AccountingPeriod
-        posted_by: User who is posting
-        is_reversal: Boolean - if True, amounts are reversed (CR becomes DR)
-
-    Returns:
-        JournalEntry: The created journal entry
-    """
-    from django.utils import timezone
-
-    # Create journal entry header
-    je = JournalEntry.objects.create(
-        voucher=voucher,
-        period=period,
-        posted_by=posted_by,
-        posted_at=timezone.now(),
-        desc=f"Entry from {voucher.voucher_type.name} - {voucher.narration or 'No description'}",
-    )
-
-    # Create transactions (this needs to be customized based on your data structure)
-    # You'll need to iterate through your voucher line items and create
-    # LedgerTransactions and AccountTransactions
-
-    # Placeholder:
-    # for line in voucher.get_line_items():
-    #     if is_reversal:
-    #         # Swap debit/credit
-    #         ledgerno_dr = line['ledger_cr']
-    #         ledgerno = line['ledger_dr']
-    #     else:
-    #         ledgerno_dr = line['ledger_dr']
-    #         ledgerno = line['ledger_cr']
-    #
-    #     LedgerTransaction.objects.create_txn(
-    #         journal_entry=je,
-    #         ledgerno=ledgerno.name,
-    #         ledgerno_dr=ledgerno_dr.name,
-    #         amount=line['amount']
-    #     )
-
-    return je
-
-
-def _create_reversal_journal_entry(original_je, period, posted_by, voucher):
-    """
-    Create a reversal journal entry that reverses the original.
-
-    Args:
-        original_je: JournalEntry to reverse
-        period: AccountingPeriod
-        posted_by: User posting the reversal
-        voucher: Voucher being reversed
-
-    Returns:
-        JournalEntry: The reversal journal entry
-    """
-    from django.utils import timezone
-
-    # Create reversal journal entry
-    reversal_je = JournalEntry.objects.create(
-        voucher=voucher,
-        period=period,
-        posted_by=posted_by,
-        posted_at=timezone.now(),
-        is_reversal_of=original_je,
-        desc=f"Reversal of JE-{original_je.id} - {voucher.narration or 'Reversal'}",
-    )
-
-    # Create reversed transactions (opposite of original)
-    for ltxn in original_je.ltxns.all():
-        # Swap debit and credit
-        LedgerTransaction.objects.create(
-            journal_entry=reversal_je,
-            ledgerno=ltxn.ledgerno_dr,  # Was debit, now credit
-            ledgerno_dr=ltxn.ledgerno,  # Was credit, now debit
-            amount=ltxn.amount,
-        )
-
-    # Create reversed account transactions
-    for atxn in original_je.atxns.all():
-        # Swap debit and credit
-        opposite_side = "CREDIT" if atxn.side == "DEBIT" else "DEBIT"
-        AccountTransaction.objects.create(
-            journal_entry=reversal_je,
-            account=atxn.account,
-            side=opposite_side,
-            amount=atxn.amount,
-        )
-
-    return reversal_je
 
 
 # ============================================================================

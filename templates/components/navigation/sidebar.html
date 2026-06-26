@@ -100,10 +100,50 @@
                 
                 <!-- Accounting/DEA -->
                 {% if 'dea_entry_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="nav-link" 
-                   href="{% url 'dea_journal_entries_list' %}">
-                    <i class="bi bi-graph-up"></i> Accounting
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_business_events_dashboard' %}active{% endif %}"
+                   href="{% url 'dea_business_events_dashboard' %}">
+                    <i class="bi bi-diagram-3"></i> Business Events
                 </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_reports_hub' %}active{% endif %}"
+                   href="{% url 'dea_reports_hub' %}">
+                    <i class="bi bi-journal-text"></i> Financial Reports
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_metal_balance_report' or request.resolver_match.url_name == 'dea_exposure_report' or request.resolver_match.url_name == 'dea_valuation_report' %}active{% endif %}"
+                   href="{% url 'dea_metal_balance_report' %}">
+                    <i class="bi bi-safe2"></i> Commodity Reports
+                </a>
+
+                {% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Accountant' %}
+                <h6 class="nav-section-title mt-3">Accounting Tools</h6>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_voucher_hub' or request.resolver_match.url_name == 'dea_voucher_list' or request.resolver_match.url_name == 'dea_voucher_create' or request.resolver_match.url_name == 'dea_voucher_detail' or request.resolver_match.url_name == 'dea_voucher_update' or request.resolver_match.url_name == 'dea_voucher_delete' %}active{% endif %}"
+                   href="{% url 'dea_voucher_hub' %}">
+                    <i class="bi bi-file-earmark-plus"></i> Vouchers
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_payment_list' or request.resolver_match.url_name == 'dea_payment_create' or request.resolver_match.url_name == 'dea_payment_detail' or request.resolver_match.url_name == 'dea_payment_update' or request.resolver_match.url_name == 'dea_payment_delete' %}active{% endif %}"
+                   href="{% url 'dea_payment_list' %}">
+                    <i class="bi bi-cash-stack"></i> Payment Vouchers
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_expense_list' or request.resolver_match.url_name == 'dea_expense_create' or request.resolver_match.url_name == 'dea_expense_detail' or request.resolver_match.url_name == 'dea_expense_update' or request.resolver_match.url_name == 'dea_expense_delete' %}active{% endif %}"
+                   href="{% url 'dea_expense_list' %}">
+                    <i class="bi bi-receipt-cutoff"></i> Expense Vouchers
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_journal_entry_voucher_list' or request.resolver_match.url_name == 'dea_journal_entry_voucher_create' or request.resolver_match.url_name == 'dea_journal_entry_voucher_detail' or request.resolver_match.url_name == 'dea_journal_entry_voucher_update' or request.resolver_match.url_name == 'dea_journal_entry_voucher_delete' %}active{% endif %}"
+                   href="{% url 'dea_journal_entry_voucher_list' %}">
+                    <i class="bi bi-journal-plus"></i> Manual Journals
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_opening_balance_wizard' or request.resolver_match.url_name == 'dea_opening_balance_import' or request.resolver_match.url_name == 'dea_opening_balance_template' or request.resolver_match.url_name == 'dea_opening_balance_validate' %}active{% endif %}"
+                   href="{% url 'dea_opening_balance_wizard' %}">
+                    <i class="bi bi-box-arrow-in-down"></i> Opening Balances
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_period_list' or request.resolver_match.url_name == 'dea_period_create' or request.resolver_match.url_name == 'dea_period_detail' or request.resolver_match.url_name == 'dea_period_update' or request.resolver_match.url_name == 'dea_period_close' or request.resolver_match.url_name == 'dea_period_lock' or request.resolver_match.url_name == 'dea_period_unlock' or request.resolver_match.url_name == 'dea_period_adjustments' or request.resolver_match.url_name == 'dea_period_balances' or request.resolver_match.url_name == 'dea_period_report' or request.resolver_match.url_name == 'dea_period_transactions' %}active{% endif %}"
+                   href="{% url 'dea_period_list' %}">
+                    <i class="bi bi-calendar-range"></i> Period Controls
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dea_journal_entries_list' or request.resolver_match.url_name == 'dea_transaction_list' or request.resolver_match.url_name == 'dea_dashboard' or request.resolver_match.url_name == 'dea_dashboard_legacy' or request.resolver_match.url_name == 'dea_dashboard_enhanced' %}active{% endif %}"
+                   href="{% url 'dea_journal_entries_list' %}">
+                    <i class="bi bi-activity"></i> Diagnostics
+                </a>
+                {% endif %}
                 {% endif %}
 
                 <!-- Rates -->

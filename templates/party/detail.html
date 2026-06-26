@@ -328,15 +328,15 @@
         <div class="row g-3 mb-3">
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Closed Loans</div><div class="h4 mb-0">{{ loan_history.counts.closed_loans }}</div></div></div>
-            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Payments</div><div class="h4 mb-0">{{ loan_history.counts.payments }}</div></div></div>
-            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Notices</div><div class="h4 mb-0">{{ loan_history.counts.notices }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Outstanding</div><div class="h4 mb-0">{{ loan_history.counts.active_outstanding }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Collateral Items</div><div class="h4 mb-0">{{ loan_history.counts.collateral_items }}</div><div class="small text-muted">{{ loan_history.counts.collateral_loan_amount }}</div></div></div>
         </div>
 
         <div class="card mb-3">
             <div class="card-header"><h2 class="h6 mb-0">Active Loans</h2></div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead><tr><th>Loan</th><th>Status</th><th>Payments</th><th>Notices</th><th>Collateral Summary</th><th class="text-end">Open</th></tr></thead>
+                    <thead><tr><th>Loan</th><th>Status</th><th>Outstanding</th><th>Payments</th><th>Notices</th><th>Collateral</th><th class="text-end">Actions</th></tr></thead>
                     <tbody>
                         {% for row in loan_history.active_loans %}
                         <tr>
@@ -346,7 +346,16 @@
                             </td>
                             <td>{{ row.status }}</td>
                             <td>
+                                {% if row.total_outstanding != None %}
+                                <div class="fw-semibold">{{ row.total_outstanding }}</div>
+                                <div class="text-muted small">Principal {{ row.principal_due }} | Interest {{ row.interest_due }}</div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
                                 <div>{{ row.payment_count }} total</div>
+                                <div class="text-muted small">{{ row.total_payment_amount|default:"0.00" }} paid</div>
                                 {% if row.unposted_payment_count %}
                                 <div class="text-danger small">{{ row.unposted_payment_count }} unposted</div>
                                 {% endif %}
@@ -356,9 +365,14 @@
                                 <div>{{ row.collateral_items_count }} items</div>
                                 <div class="text-muted small">Value: {{ row.collateral_loan_amount }}</div>
                             </td>
-                            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ row.detail_url }}"><i class="bi bi-box-arrow-up-right"></i></a></td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a class="btn btn-outline-primary" href="{{ row.repayment_url }}">Repay</a>
+                                    <a class="btn btn-outline-secondary" href="{{ row.detail_url }}"><i class="bi bi-box-arrow-up-right"></i></a>
+                                </div>
+                            </td>
                         </tr>
-                        {% empty %}<tr><td colspan="6" class="text-muted">No active loans found.</td></tr>{% endfor %}
+                        {% empty %}<tr><td colspan="7" class="text-muted">No active loans found.</td></tr>{% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -368,7 +382,7 @@
             <div class="card-header"><h2 class="h6 mb-0">Closed Loans</h2></div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead><tr><th>Loan</th><th>Status</th><th>Payments</th><th>Notices</th><th>Collateral Summary</th><th class="text-end">Open</th></tr></thead>
+                    <thead><tr><th>Loan</th><th>Status</th><th>Final Outstanding</th><th>Payments</th><th>Documents</th><th>Collateral</th><th class="text-end">Open</th></tr></thead>
                     <tbody>
                         {% for row in loan_history.closed_loans %}
                         <tr>
@@ -377,15 +391,31 @@
                                 <div class="text-muted small">{{ row.loan_type }} | {{ row.loan_date|date:"d M Y" }}</div>
                             </td>
                             <td>{{ row.status }}</td>
-                            <td>{{ row.payment_count }}</td>
-                            <td>{{ row.notice_count }}</td>
+                            <td>
+                                {% if row.total_outstanding != None %}
+                                {{ row.total_outstanding }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ row.payment_count }} total</div>
+                                <div class="text-muted small">{{ row.total_payment_amount|default:"0.00" }} paid</div>
+                            </td>
+                            <td>
+                                {% for document in row.document_links %}
+                                <a class="btn btn-sm btn-outline-secondary me-1 mb-1" href="{{ document.url }}">{{ document.label }}</a>
+                                {% empty %}
+                                <span class="text-muted">-</span>
+                                {% endfor %}
+                            </td>
                             <td>
                                 <div>{{ row.collateral_items_count }} items</div>
                                 <div class="text-muted small">Value: {{ row.collateral_loan_amount }}</div>
                             </td>
                             <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ row.detail_url }}"><i class="bi bi-box-arrow-up-right"></i></a></td>
                         </tr>
-                        {% empty %}<tr><td colspan="6" class="text-muted">No closed loans found.</td></tr>{% endfor %}
+                        {% empty %}<tr><td colspan="7" class="text-muted">No closed loans found.</td></tr>{% endfor %}
                     </tbody>
                 </table>
             </div>
