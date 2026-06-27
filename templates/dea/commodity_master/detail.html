@@ -51,6 +51,46 @@
             </div>
         </div>
 
+        <div class="card mt-3 border-info-subtle">
+            <div class="card-body">
+                <h6 class="card-title">Create Karigar Custody Account</h6>
+                <p class="text-muted mb-3">Create a party-specific custody account for a selected karigar so issue/receipt workflows can target that party directly.</p>
+                <form method="post" action="{% url 'dea_commodity_create_karigar_custody_account' commodity_id=commodity.pk %}">
+                    {% csrf_token %}
+                    {% if karigar_form.non_field_errors %}
+                    <div class="alert alert-danger py-2">
+                        {% for error in karigar_form.non_field_errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <label class="form-label" for="{{ karigar_form.party.id_for_label }}">Karigar Party</label>
+                        {{ karigar_form.party }}
+                        {% for error in karigar_form.party.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="{{ karigar_form.code.id_for_label }}">Account Code</label>
+                        {{ karigar_form.code }}
+                        <div class="form-text">Leave blank to auto-generate a code from commodity and party code.</div>
+                        {% for error in karigar_form.code.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="{{ karigar_form.name.id_for_label }}">Account Name</label>
+                        {{ karigar_form.name }}
+                        <div class="form-text">Leave blank to use a default commodity-plus-party name.</div>
+                        {% for error in karigar_form.name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ karigar_form.location_label.id_for_label }}">Location Label</label>
+                        {{ karigar_form.location_label }}
+                        {% for error in karigar_form.location_label.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary">Create Karigar Custody Account</button>
+                </form>
+            </div>
+        </div>
+
         {% if commodity.is_active %}
         <div class="card mt-3 border-warning">
             <div class="card-body">

@@ -4,10 +4,17 @@ from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.views.decorators.http import require_http_methods
 
-from apps.tenant_apps.dea.forms_commodity import CommodityCreateForm, CommodityUpdateForm
+from apps.tenant_apps.dea.forms_commodity import (
+    CommodityCreateForm,
+    CommodityKarigarCustodyAccountForm,
+    CommodityUpdateForm,
+)
 from apps.tenant_apps.dea.models import Commodity
 from apps.tenant_apps.dea.services.commodity_account_setup import (
     setup_standard_commodity_accounts,
+)
+from apps.tenant_apps.dea.services.karigar_custody_setup import (
+    ensure_karigar_custody_account,
 )
 
 from .access import dea_accountant_required
@@ -53,9 +60,11 @@ def commodity_detail(request, commodity_id):
         Commodity.objects.prefetch_related("commodity_accounts__party"),
         pk=commodity_id,
     )
+    karigar_form = CommodityKarigarCustodyAccountForm(commodity=commodity)
     context = {
         "title": f"Commodity {commodity.code}",
         "commodity": commodity,
+        "karigar_form": karigar_form,
         "active_accounts": commodity.commodity_accounts.filter(is_active=True).order_by(
             "code"
         ),
@@ -64,6 +73,48 @@ def commodity_detail(request, commodity_id):
         ).order_by("code"),
     }
     return TemplateResponse(request, "dea/commodity_master/detail.html", context)
+
+
+@dea_accountant_required
+@require_http_methods(["POST"])
+def commodity_create_karigar_custody_account(request, commodity_id):
+    commodity = get_object_or_404(Commodity, pk=commodity_id)
+    form = CommodityKarigarCustodyAccountForm(
+        request.POST,
+        commodity=commodity,
+    )
+    if form.is_valid():
+        result = ensure_karigar_custody_account(
+            commodity=commodity,
+            party=form.cleaned_data["party"],
+            code=form.cleaned_data["code"],
+            name=form.cleaned_data["name"],
+            location_label=form.cleaned_data["location_label"],
+        )
+        if result.created:
+            messages.success(
+                request,
+                f"Created karigar custody account {result.account.code}.",
+            )
+        else:
+            messages.info(
+                request,
+                f"Karigar custody account already exists: {result.account.code}.",
+            )
+        return redirect("dea_commodity_detail", commodity_id=commodity.pk)
+
+    context = {
+        "title": f"Commodity {commodity.code}",
+        "commodity": commodity,
+        "karigar_form": form,
+        "active_accounts": commodity.commodity_accounts.filter(is_active=True).order_by(
+            "code"
+        ),
+        "inactive_accounts": commodity.commodity_accounts.filter(
+            is_active=False
+        ).order_by("code"),
+    }
+    return TemplateResponse(request, "dea/commodity_master/detail.html", context, status=200)
 
 
 @dea_accountant_required

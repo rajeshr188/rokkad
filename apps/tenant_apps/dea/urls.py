@@ -43,6 +43,11 @@ urlpatterns += [
         name="dea_commodity_quick_setup_accounts",
     ),
     path(
+        "commodities/<int:commodity_id>/karigar-custody/create/",
+        commodity_master_views.commodity_create_karigar_custody_account,
+        name="dea_commodity_create_karigar_custody_account",
+    ),
+    path(
         "commodities/<int:commodity_id>/deactivate/",
         commodity_master_views.commodity_deactivate,
         name="dea_commodity_deactivate",

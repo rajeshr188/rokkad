@@ -254,6 +254,7 @@ class CommodityForm(forms.ModelForm):
    - [x] OWNED_STOCK (Your company's metal holdings)
    - [x] VAULT (Safe custody/storage location)
    - [ ] KARIGAR_CUSTODY skipped in MVP because this model requires a Party
+   - [x] Manual selected-Party karigar custody form added on commodity detail as follow-up UX
    ↓
 4. Create missing accounts idempotently
    ↓
@@ -319,7 +320,8 @@ Implement **quick setup** for Phase 7 (MVP); defer full wizard to Phase 8 if nee
 1. ✅ Added commodity account quick setup button on commodity detail
 2. ✅ Implemented idempotent standard account creation for OWNED_STOCK + VAULT
 3. ✅ Documented that KARIGAR_CUSTODY remains manual because Party is required
-4. ⏳ Manual QA pending: create commodity → quick setup → use in business event
+4. ✅ Added manual selected-Party `KARIGAR_CUSTODY` account creation UX on commodity detail
+5. ⏳ Manual QA pending: create commodity → quick setup → create karigar custody account → use in business event
 
 **Phase 8** (Future):
 - Enhanced account wizard

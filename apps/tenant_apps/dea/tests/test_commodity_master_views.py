@@ -10,6 +10,7 @@ from django_tenants.test.client import TenantClient
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.dea.forms_business_events import FixedPurchasePreviewForm
 from apps.tenant_apps.dea.models import Commodity, CommodityAccount
+from apps.tenant_apps.party.models import Party
 
 
 User = get_user_model()
@@ -205,6 +206,88 @@ class CommodityMasterViewTests(TenantTestCase):
         self.assertEqual(
             CommodityAccount.objects.filter(commodity=commodity).count(),
             2,
+        )
+
+    def test_can_create_karigar_custody_account_for_selected_party(self):
+        commodity = Commodity.objects.create(code="KRGD", name="Karigar Gold")
+        party = Party.objects.create(display_name="Raju Karigar")
+
+        response = self.client.post(
+            reverse(
+                "dea_commodity_create_karigar_custody_account",
+                kwargs={"commodity_id": commodity.pk},
+            ),
+            data={
+                "party": str(party.pk),
+                "code": "",
+                "name": "",
+                "location_label": "Workshop custody",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        account = CommodityAccount.objects.get(
+            commodity=commodity,
+            purpose=CommodityAccount.Purpose.KARIGAR_CUSTODY,
+            party=party,
+        )
+        self.assertEqual(account.location_label, "Workshop custody")
+        self.assertTrue(account.code.startswith("KRGD_KARIGAR_"))
+
+    def test_karigar_custody_creation_is_idempotent_per_party(self):
+        commodity = Commodity.objects.create(code="KRGS", name="Karigar Silver")
+        party = Party.objects.create(display_name="Suresh Karigar")
+
+        for _ in range(2):
+            self.client.post(
+                reverse(
+                    "dea_commodity_create_karigar_custody_account",
+                    kwargs={"commodity_id": commodity.pk},
+                ),
+                data={
+                    "party": str(party.pk),
+                    "code": "",
+                    "name": "",
+                    "location_label": "",
+                },
+            )
+
+        self.assertEqual(
+            CommodityAccount.objects.filter(
+                commodity=commodity,
+                purpose=CommodityAccount.Purpose.KARIGAR_CUSTODY,
+                party=party,
+            ).count(),
+            1,
+        )
+
+    def test_archived_party_cannot_be_used_for_karigar_custody_creation(self):
+        commodity = Commodity.objects.create(code="KRGA", name="Karigar Alloy")
+        party = Party.objects.create(
+            display_name="Archived Karigar",
+            status=Party.PartyStatus.ARCHIVED,
+        )
+
+        response = self.client.post(
+            reverse(
+                "dea_commodity_create_karigar_custody_account",
+                kwargs={"commodity_id": commodity.pk},
+            ),
+            data={
+                "party": str(party.pk),
+                "code": "KRGA_ARCHIVE",
+                "name": "Archived custody",
+                "location_label": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            CommodityAccount.objects.filter(
+                commodity=commodity,
+                purpose=CommodityAccount.Purpose.KARIGAR_CUSTODY,
+                party=party,
+            ).exists()
         )
 
     def test_cannot_deactivate_commodity_with_active_accounts(self):
