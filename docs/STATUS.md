@@ -23,6 +23,7 @@ Rokkad is moving toward a layered architecture:
 - Phase 2.3 template layout cleanup keeps behavior stable while moving remaining clear first-party direct layout extends to intent aliases and adding guard tests for layout alias contracts.
 - Phase 2.4 workspace settings layout separation keeps URLs and navigation stable while moving clear workspace-admin/settings templates to `base_workspace_settings.html` and adding no-op settings-sidebar include points for the future settings shell.
 - Phase 2.5 shell render smoke tests cover representative public, auth, global, workspace settings, and tenant shell aliases with synthetic child templates before visual navigation changes.
+- Phase 2.6 route/template inventory documentation captures current URLConf ownership, shell ownership, guard tests, and mixed-boundary risks in [docs/ui/route_template_inventory.md](ui/route_template_inventory.md).
 
 ## Recently Stabilized
 
@@ -189,6 +190,7 @@ Rokkad is moving toward a layered architecture:
 - SaaS IA Phase 2.3 template layout cleanup is complete for clear first-party stragglers. Onboarding, subscription, DEA reconciliation/report base, dynamic preference, simple upload, company legacy, and error templates now target intent aliases, and `django_project/test_template_layout_intent.py` guards direct low-level layout usage plus alias block contracts.
 - SaaS IA Phase 2.4 workspace settings layout separation is complete for the current settings shell. Workspace detail/preferences/team/invitation/leave/delete pages now target `base_workspace_settings.html`, the management layout exposes future settings-sidebar include points, and layout-intent tests guard both decisions.
 - SaaS IA Phase 2.5 shell render smoke tests are complete. `django_project/test_shell_render_smoke.py` renders all five active shell aliases and checks that the expected content block markers survive through the real base layouts.
+- SaaS IA Phase 2.6 route/template inventory documentation is complete in [docs/ui/route_template_inventory.md](ui/route_template_inventory.md). The next recommended SaaS IA slice is Phase 3 navigation and workspace switcher planning, still keeping compatibility routes in place.
 
 ## Known Pressure Points
 

@@ -291,6 +291,8 @@ Phase 2.4 workspace settings layout separation moved clear workspace-admin/setti
 
 Phase 2.5 shell render smoke tests live in `django_project/test_shell_render_smoke.py` and render synthetic children for the public, auth, global, workspace-settings, and tenant shell aliases. These tests should be kept green before Phase 3 navigation/sidebar changes. The next safe slice is route/template inventory documentation or a similarly non-behavioral cleanup checkpoint.
 
+Phase 2.6 route/template inventory documentation lives in `docs/ui/route_template_inventory.md`. It records current URLConf ownership, route-family ownership, shell aliases, known mixed boundaries, and guard tests. The next safe SaaS IA work is Phase 3 navigation and workspace switcher planning while keeping compatibility routes in place.
+
 ## Navigation Memory
 
 Main sidebar direction:

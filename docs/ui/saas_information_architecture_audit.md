@@ -16,6 +16,8 @@ This document records the current UI/route/schema audit and the recommended rede
 - workspace settings/admin area
 - customer/member portal area
 
+The current Phase 2 route/template ownership matrix is maintained in [route_template_inventory.md](route_template_inventory.md).
+
 No code changes were made for this audit.
 
 ## A. Current State Map
@@ -454,10 +456,11 @@ Current checkpoint:
 - Template layout intent tests in `django_project/test_template_layout_intent.py` now guard that direct `layouts/base.html`, `layouts/management.html`, and `layouts/workspace.html` usage remains limited to infrastructure wrappers, and that alias children use the correct content block names.
 - Phase 2.4 workspace settings layout separation moves clear workspace-admin/settings templates to `base_workspace_settings.html`: workspace detail, preferences, team members, sent invitations, invite member, leave workspace, delete workspace, dynamic preferences, and subscription screens. The management shell now exposes no-op `workspace_settings_sidebar` and `mobile_workspace_settings_sidebar` include points for a future settings sidebar without changing current navigation behavior.
 - Phase 2.5 shell render smoke tests now render synthetic child templates against `base_public.html`, `base_auth.html`, `base_global.html`, `base_workspace_settings.html`, and `base_tenant.html`, proving the shell aliases and their expected content blocks render before navigation/sidebar visual changes.
+- Phase 2.6 route/template inventory documentation now records current URLConf ownership, route families, shell ownership, guard tests, and mixed-boundary risks in `docs/ui/route_template_inventory.md`.
 
 Next recommended Phase 2 slice:
 
-- Start Phase 2.6 route/template inventory documentation. Keep code behavior unchanged, but add a concise matrix of current public/auth/global/settings/tenant template ownership and route families, including unresolved mixed-boundary routes to defer into Phase 3 navigation/workspace switcher work.
+- Phase 2 route/template standardization is ready to hand off to Phase 3 navigation and workspace switcher planning. Keep compatibility routes in place while defining global topbar, tenant topbar, workspace switcher, tenant sidebar, and settings sidebar behavior.
 
 ### Phase 3: Navigation and Workspace Switcher
 
