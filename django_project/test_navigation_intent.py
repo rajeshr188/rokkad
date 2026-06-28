@@ -43,6 +43,15 @@ class SaaSNavigationIntentTests(SimpleTestCase):
         ]
         self.assertEqual(violations, [])
 
+    def test_main_nav_uses_reusable_workspace_switcher_partial(self):
+        content = _read_template("components/navigation/main_nav.html")
+
+        self.assertIn(
+            "{% include 'components/navigation/workspace_switcher.html' with workspace_switcher_variant=\"navbar\" %}",
+            content,
+        )
+        self.assertNotIn("{% for membership in request.user.memberships.all %}", content)
+
     def test_tenant_sidebar_remains_live_source_of_truth(self):
         workspace_layout = _read_template("layouts/workspace.html")
         sidebar = _read_template("components/navigation/sidebar.html")

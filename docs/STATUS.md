@@ -25,6 +25,7 @@ Rokkad is moving toward a layered architecture:
 - Phase 2.5 shell render smoke tests cover representative public, auth, global, workspace settings, and tenant shell aliases with synthetic child templates before visual navigation changes.
 - Phase 2.6 route/template inventory documentation captures current URLConf ownership, shell ownership, guard tests, and mixed-boundary risks in [docs/ui/route_template_inventory.md](ui/route_template_inventory.md).
 - Phase 3.1 navigation and workspace switcher planning is documented in [docs/ui/navigation_workspace_switcher_plan.md](ui/navigation_workspace_switcher_plan.md), with intent tests guarding the current switcher/sidebar ownership contract before visible navigation changes.
+- Phase 3.2 workspace switcher reuse is implemented: the top navbar now includes the reusable `components/navigation/workspace_switcher.html` partial in navbar mode, and authenticated global/tenant shell smoke tests cover the switcher rendering path.
 
 ## Recently Stabilized
 
@@ -193,6 +194,7 @@ Rokkad is moving toward a layered architecture:
 - SaaS IA Phase 2.5 shell render smoke tests are complete. `django_project/test_shell_render_smoke.py` renders all five active shell aliases and checks that the expected content block markers survive through the real base layouts.
 - SaaS IA Phase 2.6 route/template inventory documentation is complete in [docs/ui/route_template_inventory.md](ui/route_template_inventory.md). The next recommended SaaS IA slice is Phase 3 navigation and workspace switcher planning, still keeping compatibility routes in place.
 - SaaS IA Phase 3.1 navigation and workspace switcher planning is complete in [docs/ui/navigation_workspace_switcher_plan.md](ui/navigation_workspace_switcher_plan.md). `django_project/test_navigation_intent.py` now protects the current workspace switcher partial contract, tenant sidebar source-of-truth decision, and separate management/tenant navigation surfaces. The next recommended slice is Phase 3.2: replace the inline topbar workspace dropdown with the reusable switcher partial and add authenticated shell render coverage.
+- SaaS IA Phase 3.2 workspace switcher reuse is complete. `templates/components/navigation/main_nav.html` now delegates workspace switching to `templates/components/navigation/workspace_switcher.html` using a navbar variant, while the existing standalone switcher remains available. `django_project/test_shell_render_smoke.py` now covers authenticated global and tenant shell switcher rendering. The next recommended slice is Phase 3.3: begin extracting the duplicated workspace settings sidebar links into `components/navigation/workspace_settings_sidebar.html` for desktop first, then mobile.
 
 ## Known Pressure Points
 

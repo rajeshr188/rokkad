@@ -460,10 +460,11 @@ Current checkpoint:
 - Phase 2.5 shell render smoke tests now render synthetic child templates against `base_public.html`, `base_auth.html`, `base_global.html`, `base_workspace_settings.html`, and `base_tenant.html`, proving the shell aliases and their expected content blocks render before navigation/sidebar visual changes.
 - Phase 2.6 route/template inventory documentation now records current URLConf ownership, route families, shell ownership, guard tests, and mixed-boundary risks in `docs/ui/route_template_inventory.md`.
 - Phase 3.1 navigation and workspace switcher planning now records topbar/sidebar ownership, workspace switcher behavior, mobile navigation rules, and guard tests in `docs/ui/navigation_workspace_switcher_plan.md`.
+- Phase 3.2 workspace switcher reuse now moves the topbar workspace dropdown into the reusable `templates/components/navigation/workspace_switcher.html` partial using a navbar variant, with authenticated global and tenant shell smoke coverage.
 
 Next recommended Phase 3 slice:
 
-- Phase 3.2 should replace the inline topbar workspace dropdown with the reusable workspace switcher partial while keeping current route targets and redirect behavior stable.
+- Phase 3.3 should extract the duplicated desktop workspace settings links from `layouts/management.html` into `components/navigation/workspace_settings_sidebar.html`, keeping route targets and mobile behavior stable first.
 
 ### Phase 3: Navigation and Workspace Switcher
 

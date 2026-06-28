@@ -295,6 +295,8 @@ Phase 2.6 route/template inventory documentation lives in `docs/ui/route_templat
 
 Phase 3.1 navigation and workspace switcher planning lives in `docs/ui/navigation_workspace_switcher_plan.md`. The accepted sidebar ADRs still apply: `templates/components/navigation/sidebar.html` remains the live tenant sidebar source of truth, `django_project/navigation.py` is future-only, and the next safe SaaS IA slice is to replace the inline topbar workspace dropdown with the reusable `components/navigation/workspace_switcher.html` partial while preserving current route behavior.
 
+Phase 3.2 workspace switcher reuse is complete: `templates/components/navigation/main_nav.html` includes `components/navigation/workspace_switcher.html` with `workspace_switcher_variant="navbar"`, and the partial keeps its standalone mode for other surfaces. Authenticated global and tenant shell smoke tests cover switcher rendering. The next safe SaaS IA slice is Phase 3.3 settings sidebar extraction into `components/navigation/workspace_settings_sidebar.html`, starting with desktop links before mobile duplication cleanup.
+
 ## Navigation Memory
 
 Main sidebar direction:

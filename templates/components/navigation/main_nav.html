@@ -57,41 +57,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
                 {% if user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle nav-pill" href="#" id="workspaceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-briefcase me-1"></i>
-                            {% if request.user.profile.workspace %}
-                                {{ request.user.profile.workspace.name|truncatechars:22 }}
-                            {% else %}
-                                Select Workspace
-                            {% endif %}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="workspaceDropdown">
-                            {% for membership in request.user.memberships.all %}
-                                <li>
-                                    <a class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}" href="{% url 'workspace_select' membership.company.id %}">
-                                        {{ membership.company.name }}
-                                        {% if request.user.profile.workspace.id == membership.company.id %}
-                                            <i class="bi bi-check-lg ms-2"></i>
-                                        {% endif %}
-                                    </a>
-                                </li>
-                            {% endfor %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'workspace_selector' %}?show_all=1">
-                                    <i class="bi bi-grid-3x3-gap me-1"></i>All Workspaces
-                                </a>
-                            </li>
-                            {% if request.user.profile.workspace and request.user.profile.workspace.schema_name != 'public' %}
-                            <li>
-                                <a class="dropdown-item" href="{% url 'clear_workspace' %}">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Clear Workspace
-                                </a>
-                            </li>
-                            {% endif %}
-                        </ul>
-                    </li>
+                    {% include 'components/navigation/workspace_switcher.html' with workspace_switcher_variant="navbar" %}
 
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle nav-pill" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">

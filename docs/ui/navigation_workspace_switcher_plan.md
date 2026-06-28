@@ -14,9 +14,9 @@ This is the Phase 3.1 planning checkpoint for SaaS navigation standardization. I
 
 | Surface | Current source | Notes |
 | --- | --- | --- |
-| Global/top navbar | `templates/components/navigation/main_nav.html` | Includes user menu, language selector, and an inline workspace dropdown. |
+| Global/top navbar | `templates/components/navigation/main_nav.html` | Includes user menu, language selector, and the reusable workspace switcher partial in navbar mode. |
 | Tenant sidebar | `templates/components/navigation/sidebar.html` | Current source of truth for live tenant ERP navigation, per accepted sidebar ADRs. |
-| Workspace switcher partial | `templates/components/navigation/workspace_switcher.html` | Existing reusable dropdown, not yet the only switcher implementation. |
+| Workspace switcher partial | `templates/components/navigation/workspace_switcher.html` | Reusable dropdown with standalone and navbar variants. |
 | Workspace settings sidebar include point | `templates/components/navigation/workspace_settings_sidebar.html` | Placeholder include point added in Phase 2.4. |
 | Global and settings shell | `templates/layouts/management.html` | Contains account/workspace management sidebar and duplicated mobile links. |
 | Tenant shell | `templates/layouts/workspace.html` | Contains tenant identity banner, sidebar, and mobile offcanvas sidebar. |
@@ -110,6 +110,15 @@ Phase 3 adds `django_project/test_navigation_intent.py` to protect the planning 
 - the tenant sidebar remains the live template source of truth;
 - management and tenant shells keep their separate navigation include points.
 
+## Phase 3.2 Checkpoint
+
+Completed:
+
+1. `components/navigation/main_nav.html` now delegates its authenticated workspace dropdown to `components/navigation/workspace_switcher.html`.
+2. The switcher partial supports a `workspace_switcher_variant="navbar"` mode while keeping the existing standalone mode.
+3. The navbar switcher keeps compatibility routes: `workspace_select`, `workspace_selector`, `workspace_create`, and `clear_workspace`.
+4. Authenticated global and tenant shell smoke tests prove the switcher renders through the real shell inheritance path.
+
 ## Next Recommended Step
 
-Proceed to Phase 3.2: replace the inline workspace dropdown in `components/navigation/main_nav.html` with the existing `components/navigation/workspace_switcher.html` partial, keeping labels and route targets compatible. Add a render smoke test for authenticated global and tenant shells that proves the switcher still appears without changing effective URLs.
+Proceed to Phase 3.3: extract the duplicated desktop workspace settings links from `layouts/management.html` into `components/navigation/workspace_settings_sidebar.html`. Keep the current route names, labels, permissions, and mobile markup stable until the desktop partial is covered by tests.
