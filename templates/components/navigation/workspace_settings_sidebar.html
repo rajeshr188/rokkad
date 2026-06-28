@@ -1,1 +1,24 @@
-{# Phase 2.4 include point for future workspace-settings navigation. #}
+{% if workspace_settings_sidebar_variant == "desktop" %}
+<a class="nav-link {% if request.resolver_match.url_name == 'workspace_detail' %}active{% endif %}"
+   href="{% url 'workspace_detail' workspace_id=ew.id %}">
+    <i class="bi bi-gear"></i> Settings
+</a>
+{% if role_name == 'Owner' %}
+<a class="nav-link {% if request.resolver_match.url_name == 'workspace_preferences' %}active{% endif %}"
+   href="{% url 'workspace_preferences' workspace_id=ew.id %}">
+    <i class="bi bi-sliders"></i> Preferences
+</a>
+{% endif %}
+<a class="nav-link {% if request.resolver_match.url_name == 'team_members_list' %}active{% endif %}"
+   href="{% url 'team_members_list' %}">
+    <i class="bi bi-people"></i> Team Members
+</a>
+<a class="nav-link {% if request.resolver_match.url_name == 'team_invite' %}active{% endif %}"
+   href="{% url 'team_invite' workspace_id=ew.id %}">
+    <i class="bi bi-person-plus"></i> Invite Member
+</a>
+<a class="nav-link {% if request.resolver_match.url_name == 'team_invitations_list' %}active{% endif %}"
+   href="{% url 'team_invitations_list' %}">
+    <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
+</a>
+{% endif %}

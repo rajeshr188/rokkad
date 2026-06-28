@@ -89,6 +89,8 @@ Target settings groups:
 
 Keep the current inline management sidebar links until the partial can render both desktop and mobile settings navigation without duplicating route logic.
 
+Phase 3.3 checkpoint: the desktop workspace settings links now render from `components/navigation/workspace_settings_sidebar.html` with `workspace_settings_sidebar_variant="desktop"`. The mobile management offcanvas still keeps its inline links until the partial gets a mobile variant.
+
 ## Mobile Navigation Contract
 
 1. Mobile navigation should use the same partials as desktop wherever possible.
@@ -119,6 +121,15 @@ Completed:
 3. The navbar switcher keeps compatibility routes: `workspace_select`, `workspace_selector`, `workspace_create`, and `clear_workspace`.
 4. Authenticated global and tenant shell smoke tests prove the switcher renders through the real shell inheritance path.
 
+## Phase 3.3 Checkpoint
+
+Completed:
+
+1. `layouts/management.html` delegates desktop workspace settings/team/invitation links to `components/navigation/workspace_settings_sidebar.html`.
+2. The settings sidebar partial owns the desktop route targets for `workspace_detail`, `workspace_preferences`, `team_members_list`, `team_invite`, and `team_invitations_list`.
+3. Mobile management offcanvas links remain inline to avoid changing mobile behavior in the same slice.
+4. Template layout intent tests guard desktop ownership and the remaining mobile include point.
+
 ## Next Recommended Step
 
-Proceed to Phase 3.3: extract the duplicated desktop workspace settings links from `layouts/management.html` into `components/navigation/workspace_settings_sidebar.html`. Keep the current route names, labels, permissions, and mobile markup stable until the desktop partial is covered by tests.
+Proceed to Phase 3.4: add a mobile variant to `components/navigation/workspace_settings_sidebar.html`, route the management offcanvas through it, and remove the duplicated mobile workspace settings links while preserving labels and route targets.

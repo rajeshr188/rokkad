@@ -297,6 +297,8 @@ Phase 3.1 navigation and workspace switcher planning lives in `docs/ui/navigatio
 
 Phase 3.2 workspace switcher reuse is complete: `templates/components/navigation/main_nav.html` includes `components/navigation/workspace_switcher.html` with `workspace_switcher_variant="navbar"`, and the partial keeps its standalone mode for other surfaces. Authenticated global and tenant shell smoke tests cover switcher rendering. The next safe SaaS IA slice is Phase 3.3 settings sidebar extraction into `components/navigation/workspace_settings_sidebar.html`, starting with desktop links before mobile duplication cleanup.
 
+Phase 3.3 desktop settings-sidebar extraction is complete: `templates/layouts/management.html` delegates desktop workspace settings/team/invitation links to `components/navigation/workspace_settings_sidebar.html` with `workspace_settings_sidebar_variant="desktop"`. The mobile management offcanvas intentionally still has inline duplicate links. The next safe SaaS IA slice is Phase 3.4 to add a mobile variant to the same partial and remove the mobile duplicate links.
+
 ## Navigation Memory
 
 Main sidebar direction:

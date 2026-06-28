@@ -126,6 +126,41 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         self.assertIn("{% block workspace_settings_sidebar %}", content)
         self.assertIn("{% block mobile_workspace_settings_sidebar %}", content)
         self.assertIn(
-            "{% include 'components/navigation/workspace_settings_sidebar.html' %}",
+            "{% include 'components/navigation/workspace_settings_sidebar.html' with workspace_settings_sidebar_variant=\"desktop\" %}",
             content,
+        )
+
+    def test_workspace_settings_sidebar_owns_desktop_workspace_admin_links(self):
+        management_content = (TEMPLATES_ROOT / "layouts/management.html").read_text(
+            encoding="utf-8-sig"
+        )
+        sidebar_content = (
+            TEMPLATES_ROOT / "components/navigation/workspace_settings_sidebar.html"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn('workspace_settings_sidebar_variant == "desktop"', sidebar_content)
+        for route_name in (
+            "workspace_detail",
+            "workspace_preferences",
+            "team_members_list",
+            "team_invite",
+            "team_invitations_list",
+        ):
+            self.assertIn(route_name, sidebar_content)
+
+        desktop_section = management_content.split(
+            "{% block workspace_settings_sidebar %}", 1
+        )[0]
+        for route_name in (
+            "workspace_detail",
+            "workspace_preferences",
+            "team_members_list",
+            "team_invite",
+            "team_invitations_list",
+        ):
+            self.assertNotIn(route_name, desktop_section)
+
+        self.assertIn(
+            "{% include 'components/navigation/workspace_settings_sidebar.html' %}",
+            management_content,
         )
