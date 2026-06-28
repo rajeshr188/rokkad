@@ -22,6 +22,7 @@ Rokkad is moving toward a layered architecture:
 - Phase 2.2 route intent cleanup keeps URL behavior stable while making URLConf ownership explicit: public-schema routes live through `django_project.urls`, tenant ERP prefixes are grouped in `django_project.tenant_urls.TENANT_ERP_URLPATTERNS`, and the legacy `public_urls` module stays parity-compatible.
 - Phase 2.3 template layout cleanup keeps behavior stable while moving remaining clear first-party direct layout extends to intent aliases and adding guard tests for layout alias contracts.
 - Phase 2.4 workspace settings layout separation keeps URLs and navigation stable while moving clear workspace-admin/settings templates to `base_workspace_settings.html` and adding no-op settings-sidebar include points for the future settings shell.
+- Phase 2.5 shell render smoke tests cover representative public, auth, global, workspace settings, and tenant shell aliases with synthetic child templates before visual navigation changes.
 
 ## Recently Stabilized
 
@@ -187,6 +188,7 @@ Rokkad is moving toward a layered architecture:
 - SaaS IA Phase 2.2 route intent cleanup is complete for URLConf grouping and regression coverage. `django_project/test_route_intent.py` now guards active public/tenant URLConf settings, shared route aggregate order, public URLConf tenant-prefix exclusion, tenant ERP prefix grouping, and legacy public URLConf parity.
 - SaaS IA Phase 2.3 template layout cleanup is complete for clear first-party stragglers. Onboarding, subscription, DEA reconciliation/report base, dynamic preference, simple upload, company legacy, and error templates now target intent aliases, and `django_project/test_template_layout_intent.py` guards direct low-level layout usage plus alias block contracts.
 - SaaS IA Phase 2.4 workspace settings layout separation is complete for the current settings shell. Workspace detail/preferences/team/invitation/leave/delete pages now target `base_workspace_settings.html`, the management layout exposes future settings-sidebar include points, and layout-intent tests guard both decisions.
+- SaaS IA Phase 2.5 shell render smoke tests are complete. `django_project/test_shell_render_smoke.py` renders all five active shell aliases and checks that the expected content block markers survive through the real base layouts.
 
 ## Known Pressure Points
 

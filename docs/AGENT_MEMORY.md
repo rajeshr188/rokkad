@@ -289,6 +289,8 @@ Phase 2.3 template layout cleanup moved clear first-party layout stragglers to i
 
 Phase 2.4 workspace settings layout separation moved clear workspace-admin/settings templates to `base_workspace_settings.html` and added no-op `workspace_settings_sidebar` include points in `layouts/management.html`. This does not change URLs or visible navigation. The next safe slice is Phase 2.5 shell render smoke tests before any navigation/sidebar visual changes.
 
+Phase 2.5 shell render smoke tests live in `django_project/test_shell_render_smoke.py` and render synthetic children for the public, auth, global, workspace-settings, and tenant shell aliases. These tests should be kept green before Phase 3 navigation/sidebar changes. The next safe slice is route/template inventory documentation or a similarly non-behavioral cleanup checkpoint.
+
 ## Navigation Memory
 
 Main sidebar direction:

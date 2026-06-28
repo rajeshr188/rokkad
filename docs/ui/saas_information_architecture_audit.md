@@ -453,10 +453,11 @@ Current checkpoint:
 - Phase 2.3 template layout cleanup now removes remaining clear first-party direct extends of low-level layouts from onboarding, subscriptions, DEA reconciliation/report bases, dynamic preferences, company legacy pages, simple upload pages, and error pages. These pages now use the intent aliases with the correct `mgmt_content` or `workspace_content` block contracts.
 - Template layout intent tests in `django_project/test_template_layout_intent.py` now guard that direct `layouts/base.html`, `layouts/management.html`, and `layouts/workspace.html` usage remains limited to infrastructure wrappers, and that alias children use the correct content block names.
 - Phase 2.4 workspace settings layout separation moves clear workspace-admin/settings templates to `base_workspace_settings.html`: workspace detail, preferences, team members, sent invitations, invite member, leave workspace, delete workspace, dynamic preferences, and subscription screens. The management shell now exposes no-op `workspace_settings_sidebar` and `mobile_workspace_settings_sidebar` include points for a future settings sidebar without changing current navigation behavior.
+- Phase 2.5 shell render smoke tests now render synthetic child templates against `base_public.html`, `base_auth.html`, `base_global.html`, `base_workspace_settings.html`, and `base_tenant.html`, proving the shell aliases and their expected content blocks render before navigation/sidebar visual changes.
 
 Next recommended Phase 2 slice:
 
-- Start Phase 2.5 shell render smoke tests. Keep URLs and navigation unchanged, but add focused render tests for representative public, auth, global, workspace settings, and tenant templates so later navigation/sidebar changes have coverage before visual refactoring.
+- Start Phase 2.6 route/template inventory documentation. Keep code behavior unchanged, but add a concise matrix of current public/auth/global/settings/tenant template ownership and route families, including unresolved mixed-boundary routes to defer into Phase 3 navigation/workspace switcher work.
 
 ### Phase 3: Navigation and Workspace Switcher
 
