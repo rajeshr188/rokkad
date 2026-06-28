@@ -448,6 +448,12 @@ Current checkpoint:
 - `django_project.shared_urlpatterns` now exposes named route groups for service, public platform, auth, and global authenticated routes, while preserving the current `shared_urlpatterns` aggregate.
 - Intent-specific base aliases now exist: `base_public.html`, `base_auth.html`, `base_global.html`, `base_tenant.html`, `base_workspace_settings.html`, and `base_customer_portal.html`.
 - Active public/auth/global/tenant templates have started moving to those aliases without changing view behavior.
+- Phase 2.2 route intent cleanup now makes the active URLConf boundary explicit: `django_project.urls` is the active public-schema control-plane URLConf, `django_project.tenant_urls` groups tenant ERP routes in `TENANT_ERP_URLPATTERNS`, and legacy `django_project.public_urls` delegates to the same shared control-plane bundle for compatibility.
+- Route ownership tests in `django_project/test_route_intent.py` guard the current settings, shared route aggregate order, absence of tenant ERP prefixes from the public URLConf, tenant ERP prefix grouping, and legacy public URLConf parity.
+
+Next recommended Phase 2 slice:
+
+- Start Phase 2.3 template layout cleanup. Keep URL behavior unchanged, but classify remaining templates that still extend low-level legacy layouts directly, decide which belong to global vs workspace settings vs tenant ERP, and add focused render tests for the highest-risk auth/global/tenant shells before changing navigation structure.
 
 ### Phase 3: Navigation and Workspace Switcher
 

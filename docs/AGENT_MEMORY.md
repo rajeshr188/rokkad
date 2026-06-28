@@ -283,6 +283,8 @@ The current SaaS UI information architecture audit lives at [ui/saas_information
 
 Phase 2 route/template standardization has begun with compatibility-only naming: `django_project.shared_urlpatterns` now defines service/public/auth/global route groups and keeps the old aggregate export, while templates can extend intent-specific base aliases (`base_public.html`, `base_auth.html`, `base_global.html`, `base_tenant.html`, `base_workspace_settings.html`, `base_customer_portal.html`). Do not remove legacy route inclusion or old layout files until route coverage and redirects are tested.
 
+Phase 2.2 route intent cleanup keeps effective URLs unchanged but makes ownership explicit: `django_project.urls` is the active public-schema URLConf, `django_project.tenant_urls.TENANT_ERP_URLPATTERNS` groups tenant ERP prefixes, and `django_project.public_urls` is a legacy parity URLConf. Route boundary tests live in `django_project/test_route_intent.py`. The next safe SaaS IA slice is Phase 2.3 template layout cleanup, not navigation redesign or route moves.
+
 ## Navigation Memory
 
 Main sidebar direction:
