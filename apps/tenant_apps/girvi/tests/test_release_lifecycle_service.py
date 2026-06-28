@@ -110,6 +110,13 @@ class ReleaseLifecycleServiceTests(TestCase):
         self.assertEqual(result.release.loan, loan)
         self.assertEqual(result.payment, fake_payment)
         self.assertTrue(result.payment_created)
+        self.assertEqual(result.stage_outcomes["readiness_checked"], "completed")
+        self.assertNotEqual(result.stage_outcomes["accrual_catchup"], "failed")
+        self.assertEqual(result.stage_outcomes["custody_transferred"], "completed")
+        self.assertEqual(result.stage_outcomes["release_saved"], "completed")
+        self.assertEqual(result.stage_outcomes["closure_completed"], "completed")
+        self.assertEqual(result.stage_outcomes["posting_completed"], "completed")
+        self.assertEqual(result.failed_stage, "")
 
     def test_create_release_rejects_illegal_transition(self):
         loan = self._fake_loan()
@@ -214,6 +221,14 @@ class ReleaseLifecycleServiceTests(TestCase):
         self.assertFalse(result.success)
         self.assertIn("collateral custody update failed", result.message)
         self.assertIn("Chain", result.message)
+        self.assertEqual(result.failed_stage, "custody_transferred")
+        self.assertEqual(result.stage_outcomes["readiness_checked"], "completed")
+        self.assertNotEqual(result.stage_outcomes["accrual_catchup"], "failed")
+        self.assertEqual(result.stage_outcomes["custody_transferred"], "failed")
+        self.assertEqual(result.stage_outcomes["release_saved"], "not_started")
+        self.assertEqual(result.stage_outcomes["closure_completed"], "not_started")
+        self.assertEqual(result.stage_outcomes["posting_completed"], "not_started")
+        self.assertIn("custody_transferred", result.stage_errors)
         item.release_to_customer.assert_called_once_with(user=user)
         flow.request_closure.assert_not_called()
         flow.complete_closure.assert_not_called()
@@ -289,3 +304,184 @@ class ReleaseLifecycleServiceTests(TestCase):
             completed_by=user,
             release_id="RL0001",
         )
+
+    def test_execute_releases_custody_before_persisting_release_row(self):
+        user = self._fake_user()
+        saved_state = {"saved": False}
+
+        class FakeRelease:
+            def __init__(self, **kwargs):
+                self.__dict__.update(kwargs)
+                self.release_id = "RL0002"
+
+            def save(self):
+                saved_state["saved"] = True
+
+        def assert_not_saved_yet(*, user):
+            self.assertFalse(saved_state["saved"])
+
+        item = MagicMock(itemdesc="Ring")
+        item.custody_status = ItemCustodyStatus.IN_VAULT
+        item.release_to_customer.side_effect = assert_not_saved_yet
+        loan = SimpleNamespace(
+            loan_id="L-001",
+            status="ActiveCurrent",
+            loanitems=SimpleNamespace(all=lambda: [item]),
+        )
+        flow = MagicMock()
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
+        fake_payment = SimpleNamespace(payment_id="PAY-1")
+
+        with patch(
+            "apps.tenant_apps.girvi.services.apps.get_model",
+            return_value=FakeRelease,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow",
+            return_value=flow,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release",
+            return_value=(fake_payment, True),
+        ):
+            result = ReleaseLifecycleService.execute(
+                ReleaseCreateCommand(
+                    loan=loan,
+                    created_by=user,
+                    release_date="2026-04-01",
+                    released_by=None,
+                )
+            )
+
+        self.assertTrue(result.success)
+        self.assertTrue(saved_state["saved"])
+        item.release_to_customer.assert_called_once_with(user=user)
+
+    def test_execute_skips_accrual_when_catchup_disabled(self):
+        loan = self._fake_loan()
+        user = self._fake_user()
+        flow = MagicMock()
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
+        fake_payment = SimpleNamespace(payment_id="PAY-1")
+        prefs = SimpleNamespace(
+            loan_catchup_on_release=False,
+            loan_release_fail_closed_on_accrual_error=False,
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.CompanyPreferences",
+            return_value=prefs,
+        ), patch(
+            "apps.tenant_apps.girvi.services.apps.get_model",
+            return_value=self._fake_release_model(),
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.InterestAccrualService.execute"
+        ) as accrue, patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow",
+            return_value=flow,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release",
+            return_value=(fake_payment, True),
+        ):
+            result = ReleaseLifecycleService.execute(
+                ReleaseCreateCommand(
+                    loan=loan,
+                    created_by=user,
+                    release_date="2026-04-01",
+                    released_by=None,
+                )
+            )
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.stage_outcomes["accrual_catchup"], "skipped")
+        accrue.assert_not_called()
+
+    def test_execute_warns_and_continues_when_accrual_fails_in_compat_mode(self):
+        loan = self._fake_loan()
+        user = self._fake_user()
+        flow = MagicMock()
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
+        fake_payment = SimpleNamespace(payment_id="PAY-1")
+        prefs = SimpleNamespace(
+            loan_catchup_on_release=True,
+            loan_release_fail_closed_on_accrual_error=False,
+        )
+        accrual_result = SimpleNamespace(
+            success=False,
+            message="accrual posting failed",
+            warnings=[],
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.CompanyPreferences",
+            return_value=prefs,
+        ), patch(
+            "apps.tenant_apps.girvi.services.apps.get_model",
+            return_value=self._fake_release_model(),
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.InterestAccrualService.execute",
+            return_value=accrual_result,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow",
+            return_value=flow,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release",
+            return_value=(fake_payment, True),
+        ):
+            result = ReleaseLifecycleService.execute(
+                ReleaseCreateCommand(
+                    loan=loan,
+                    created_by=user,
+                    release_date="2026-04-01",
+                    released_by=None,
+                )
+            )
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.stage_outcomes["accrual_catchup"], "warning")
+        self.assertIn("accrual catch-up failed", " ".join(result.warnings).lower())
+
+    def test_execute_fails_closed_when_accrual_fails_and_policy_enabled(self):
+        loan = self._fake_loan()
+        user = self._fake_user()
+        prefs = SimpleNamespace(
+            loan_catchup_on_release=True,
+            loan_release_fail_closed_on_accrual_error=True,
+        )
+        accrual_result = SimpleNamespace(
+            success=False,
+            message="accrual posting failed",
+            warnings=[],
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.CompanyPreferences",
+            return_value=prefs,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.InterestAccrualService.execute",
+            return_value=accrual_result,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow"
+        ) as flow_builder, patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release"
+        ) as post_release, patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.ReleaseLifecycleService._release_items_to_customer"
+        ) as release_items:
+            result = ReleaseLifecycleService.execute(
+                ReleaseCreateCommand(
+                    loan=loan,
+                    created_by=user,
+                    release_date="2026-04-01",
+                    released_by=None,
+                )
+            )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.failed_stage, "accrual_catchup")
+        self.assertEqual(result.stage_outcomes["accrual_catchup"], "failed")
+        self.assertEqual(result.stage_outcomes["custody_transferred"], "not_started")
+        self.assertEqual(result.stage_outcomes["release_saved"], "not_started")
+        self.assertIn("accrual catch-up failed", result.message.lower())
+        release_items.assert_not_called()
+        post_release.assert_not_called()

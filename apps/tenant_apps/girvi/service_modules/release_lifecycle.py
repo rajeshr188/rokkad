@@ -46,10 +46,34 @@ class ReleaseCreateResult:
     payment_created: bool = False
     warnings: list[str] = dc_field(default_factory=list)
     errors: list[str] = dc_field(default_factory=list)
+    stage_outcomes: dict[str, str] = dc_field(default_factory=dict)
+    failed_stage: str = ""
+    stage_errors: dict[str, list[str]] = dc_field(default_factory=dict)
+    stage_warnings: dict[str, list[str]] = dc_field(default_factory=dict)
 
 
 class ReleaseLifecycleService:
     """Command-style release creation for GivenLoan lifecycle writes."""
+
+    STAGE_READINESS = "readiness_checked"
+    STAGE_ACCRUAL = "accrual_catchup"
+    STAGE_CUSTODY = "custody_transferred"
+    STAGE_RELEASE_SAVE = "release_saved"
+    STAGE_CLOSURE = "closure_completed"
+    STAGE_POSTING = "posting_completed"
+
+    STAGES = (
+        STAGE_READINESS,
+        STAGE_ACCRUAL,
+        STAGE_CUSTODY,
+        STAGE_RELEASE_SAVE,
+        STAGE_CLOSURE,
+        STAGE_POSTING,
+    )
+
+    @classmethod
+    def _new_stage_outcomes(cls):
+        return {stage: "not_started" for stage in cls.STAGES}
 
     @staticmethod
     def _existing_release(loan):
@@ -169,24 +193,41 @@ class ReleaseLifecycleService:
 
     @staticmethod
     def execute(command: ReleaseCreateCommand) -> ReleaseCreateResult:
+        stage_outcomes = ReleaseLifecycleService._new_stage_outcomes()
+        stage_errors: dict[str, list[str]] = {}
+        stage_warnings: dict[str, list[str]] = {}
+
         preview = ReleaseLifecycleService.preview(command)
         if not preview.is_valid:
+            stage_outcomes[ReleaseLifecycleService.STAGE_READINESS] = "failed"
+            stage_errors[ReleaseLifecycleService.STAGE_READINESS] = list(preview.errors)
             return ReleaseCreateResult(
                 success=False,
                 message="; ".join(preview.errors),
                 warnings=preview.warnings,
                 errors=preview.errors,
+                stage_outcomes=stage_outcomes,
+                failed_stage=ReleaseLifecycleService.STAGE_READINESS,
+                stage_errors=stage_errors,
+                stage_warnings=stage_warnings,
             )
+
+        stage_outcomes[ReleaseLifecycleService.STAGE_READINESS] = "completed"
 
         Release = apps.get_model("girvi", "Release")
         created_by = command.created_by
         workspace = getattr(getattr(created_by, "profile", None), "workspace", None)
         warnings = list(preview.warnings)
+        current_stage = ""
 
         try:
             with transaction.atomic():
                 prefs = CompanyPreferences(workspace)
+                current_stage = ReleaseLifecycleService.STAGE_ACCRUAL
                 if prefs.loan_catchup_on_release:
+                    fail_closed_on_accrual_error = bool(
+                        prefs.loan_release_fail_closed_on_accrual_error
+                    )
                     accrual_result = InterestAccrualService.execute(
                         InterestAccrualCommand(
                             loan=command.loan,
@@ -198,11 +239,24 @@ class ReleaseLifecycleService:
                         )
                     )
                     if not accrual_result.success:
-                        warnings.append(
+                        issue_text = (
                             f"Interest accrual catch-up failed before release: {accrual_result.message}"
                         )
+                        if fail_closed_on_accrual_error:
+                            raise ValidationError(issue_text)
+                        warnings.append(issue_text)
+                        stage_warnings.setdefault(current_stage, []).append(issue_text)
+                        stage_outcomes[current_stage] = "warning"
                     else:
-                        warnings.extend(accrual_result.warnings)
+                        accrual_warnings = list(accrual_result.warnings or [])
+                        warnings.extend(accrual_warnings)
+                        if accrual_warnings:
+                            stage_warnings[current_stage] = accrual_warnings
+                            stage_outcomes[current_stage] = "warning"
+                        else:
+                            stage_outcomes[current_stage] = "completed"
+                else:
+                    stage_outcomes[current_stage] = "skipped"
 
                 flow = build_runtime_loan_flow(
                     command.loan,
@@ -215,11 +269,16 @@ class ReleaseLifecycleService:
                     released_by=command.released_by,
                     created_by=created_by,
                 )
-                release.save()
+                current_stage = ReleaseLifecycleService.STAGE_CUSTODY
                 ReleaseLifecycleService._release_items_to_customer(
                     command.loan,
                     created_by,
                 )
+                stage_outcomes[current_stage] = "completed"
+
+                current_stage = ReleaseLifecycleService.STAGE_RELEASE_SAVE
+                release.save()
+                stage_outcomes[current_stage] = "completed"
 
                 current_status = normalize_legacy_given_loan_status(
                     getattr(command.loan, "status", "")
@@ -229,6 +288,7 @@ class ReleaseLifecycleService:
                 complete_closure = getattr(flow, "complete_closure", None)
                 request_closure = getattr(flow, "request_closure", None)
 
+                current_stage = ReleaseLifecycleService.STAGE_CLOSURE
                 if use_v2_closure:
                     if request_closure is not None and request_closure.can_proceed():
                         if callable(request_closure):
@@ -255,19 +315,23 @@ class ReleaseLifecycleService:
                     raise ValidationError(
                         f"Loan {command.loan.loan_id} has no release-capable transition flow."
                     )
+                stage_outcomes[current_stage] = "completed"
 
+                current_stage = ReleaseLifecycleService.STAGE_POSTING
                 release_posting = record_loan_release(release, created_by=created_by)
                 if isinstance(release_posting, tuple):
                     payment, payment_created = release_posting
                 else:
                     payment = release_posting
                     payment_created = bool(release_posting)
+                stage_outcomes[current_stage] = "completed"
 
             message = f"Loan {command.loan.loan_id} released successfully."
             if payment is None:
                 warnings.append(
                     "Release created without accounting receipt because no outstanding amount remained."
                 )
+                stage_outcomes[ReleaseLifecycleService.STAGE_POSTING] = "skipped"
             elif payment_created:
                 payment_id = getattr(payment, "payment_id", None)
                 if payment_id:
@@ -289,21 +353,40 @@ class ReleaseLifecycleService:
                 payment=payment,
                 payment_created=bool(payment_created),
                 warnings=warnings,
+                stage_outcomes=stage_outcomes,
+                stage_errors=stage_errors,
+                stage_warnings=stage_warnings,
             )
         except ValidationError as exc:
             error_list = list(getattr(exc, "messages", None) or [str(exc)])
+            if current_stage:
+                if stage_outcomes.get(current_stage) == "not_started":
+                    stage_outcomes[current_stage] = "failed"
+                stage_errors[current_stage] = error_list
             return ReleaseCreateResult(
                 success=False,
                 message="; ".join(error_list),
                 warnings=preview.warnings,
                 errors=error_list,
+                stage_outcomes=stage_outcomes,
+                failed_stage=current_stage,
+                stage_errors=stage_errors,
+                stage_warnings=stage_warnings,
             )
         except Exception as exc:
+            if current_stage:
+                if stage_outcomes.get(current_stage) == "not_started":
+                    stage_outcomes[current_stage] = "failed"
+                stage_errors[current_stage] = [str(exc)]
             return ReleaseCreateResult(
                 success=False,
                 message=f"An error occurred while creating release: {exc}",
                 warnings=preview.warnings,
                 errors=[str(exc)],
+                stage_outcomes=stage_outcomes,
+                failed_stage=current_stage,
+                stage_errors=stage_errors,
+                stage_warnings=stage_warnings,
             )
 
     @staticmethod

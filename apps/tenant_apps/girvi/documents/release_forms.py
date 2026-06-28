@@ -6,10 +6,17 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 
 
+def _build_settlement_balance(loan):
+    from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
+
+    return build_loan_settlement_balance(loan)
+
+
 def generate_form_h(release):
     """Build the Form H receipt PDF for a loan release."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
+    settlement = _build_settlement_balance(release.loan)
 
     styles = getSampleStyleSheet()
     centered_style = ParagraphStyle(
@@ -50,8 +57,8 @@ def generate_form_h(release):
             "",
         ],
         ["Amount of Loan Rs: ", "", f"{release.loan.loan_amount}", ""],
-        ["Interest", "", f"{release.loan.interestdue()}", ""],
-        [Paragraph("Total", centered_style), "", f"{release.loan.total()}", ""],
+        ["Interest", "", f"{settlement.interest_due}", ""],
+        [Paragraph("Total", centered_style), "", f"{settlement.total_outstanding}", ""],
         ["", "", "", ""],
         [
             Paragraph("Signature ", centered_style),
