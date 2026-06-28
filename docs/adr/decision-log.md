@@ -1,7 +1,7 @@
 ﻿---
 status: accepted
 owner: project
-updated: 2026-06-17
+updated: 2026-06-27
 tags: [adr]
 related: []
 ---
@@ -20,6 +20,7 @@ This is the live index of architecture decisions in docs/decisions.
 | 2026-05-03 | 2026-05-03_LOAN_DISBURSED_AND_RELEASED_EVENT_CONTRACT_ACCEPTANCE.md | Accepted | Girvi Team, DEA Team, Notify_v2 Team, Platform Architecture | girvi, dea, notify_v2 | - | Accepts v1 contracts for loan.disbursed and loan.released.
 | 2026-05-03 | 2026-05-03_BUSINESSDOC_INHERITANCE_ANALYSIS.md | Accepted | Platform Architecture, Girvi, DEA | girvi, dea | - | BusinessDoc inheritance from girvi is wrong; BaseLoan/Loan/LoanPayment to be decoupled. PaymentVoucher/JournalEntryVoucher correctly inherit it.
 | 2026-05-03 | (inline) DEA_FACADE_BOUNDARY | Accepted | Platform Architecture | girvi, contact, sales, purchase, dea | - | dea/facade.py is the only cross-app import point into DEA. girvi, contact, sales, purchase all migrated. 25 violations remain (tracked by scripts/check_dea_boundary.py).
+| 2026-06-27 | 2026-06-27-girvi-release-accrual-lifecycle-boundary.md | Accepted | Girvi Team, DEA Team, Platform Architecture | girvi, dea, orgs | - | Accepts release as the owner of custody handoff and closure while keeping interest accrual as a separate event that may be invoked as a pre-release catch-up step. |
 
 ## Maintenance Rules
 

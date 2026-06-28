@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-21
+updated: 2026-06-27
 tags: [plans, active, girvi, dea, party]
 related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, ../flows/dea-posting-flow.md, ../archive/girvi/GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC.md, party-rollout.md]
 ---
@@ -48,3 +48,11 @@ Current status:
 Plan:
 
 - [Party rollout plan](party-rollout.md)
+
+## Girvi Release And Accrual Hardening
+
+The accepted release/accrual boundary ADR is now tracked as an execution plan with ordered slices, acceptance criteria, and test gates.
+
+Plan:
+
+- [Girvi release and accrual hardening plan](girvi-release-accrual-hardening.md)

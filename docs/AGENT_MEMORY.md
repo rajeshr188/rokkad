@@ -279,6 +279,8 @@ Every source document should follow a consistent page pattern:
 
 Prefer timelines and activity feeds over isolated reports.
 
+The current SaaS UI information architecture audit lives at [ui/saas_information_architecture_audit.md](ui/saas_information_architecture_audit.md). It records the target separation between public/platform pages, authenticated global workspace management, tenant ERP, workspace settings/admin, and a future customer/member portal. Future UI route/template work should use that document as the baseline and proceed incrementally with compatibility aliases.
+
 ## Navigation Memory
 
 Main sidebar direction:

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-17
+updated: 2026-06-27
 tags: [adr, decisions]
 related: [../README.md, decision-log.md]
 ---
@@ -19,5 +19,6 @@ Accepted and historical architecture decisions live here.
 - [Sidebar navigation source of truth](sidebar-navigation-source-of-truth.md)
 - [Dynamic sidebar rendering](dynamic-sidebar-rendering.md)
 - [Girvi flow boundaries with DEA](girvi-flow-boundaries-with-dea.md)
+- [Girvi release and interest accrual lifecycle boundary](2026-06-27-girvi-release-accrual-lifecycle-boundary.md)
 
 Older decision index files were preserved as [old decisions README](old-decisions-readme.md) and [decision log](decision-log.md).
