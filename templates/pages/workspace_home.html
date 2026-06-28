@@ -1,9 +1,9 @@
-{% extends 'layouts/base.html' %}
+{% extends 'base_global.html' %}
 {% load permissions %}
 {% load crispy_forms_tags %}
 {% block title %}Workspace Selection{% endblock title %}
 
-{% block content %}
+{% block mgmt_content %}
 <div class="container-fluid py-5">
     <div class="page-header mb-5">
         <!-- Welcome Section -->
@@ -245,4 +245,4 @@
     padding: 1rem 0;
 }
 </style>
-{% endblock content %}
+{% endblock mgmt_content %}

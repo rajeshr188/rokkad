@@ -281,6 +281,8 @@ Prefer timelines and activity feeds over isolated reports.
 
 The current SaaS UI information architecture audit lives at [ui/saas_information_architecture_audit.md](ui/saas_information_architecture_audit.md). It records the target separation between public/platform pages, authenticated global workspace management, tenant ERP, workspace settings/admin, and a future customer/member portal. Future UI route/template work should use that document as the baseline and proceed incrementally with compatibility aliases.
 
+Phase 2 route/template standardization has begun with compatibility-only naming: `django_project.shared_urlpatterns` now defines service/public/auth/global route groups and keeps the old aggregate export, while templates can extend intent-specific base aliases (`base_public.html`, `base_auth.html`, `base_global.html`, `base_tenant.html`, `base_workspace_settings.html`, `base_customer_portal.html`). Do not remove legacy route inclusion or old layout files until route coverage and redirects are tested.
+
 ## Navigation Memory
 
 Main sidebar direction:

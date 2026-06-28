@@ -1,8 +1,8 @@
-{% extends 'layouts/workspace.html' %}
+{% extends 'base_tenant.html' %}
 {% load mptt_tags %}
 {% block title %}DEA{% endblock %}
 
-{% block content %}
+{% block workspace_content %}
 
 <div class="container mt-3" id="dea-content">
     <h1>Chart Of Accounts</h1>
@@ -117,4 +117,4 @@
 </div>
 
 
-{% endblock content %}
+{% endblock workspace_content %}

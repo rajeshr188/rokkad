@@ -18,6 +18,7 @@ Rokkad is moving toward a layered architecture:
 - Girvi loan operations are being moved toward command/use-case classes, with accounting effects delegated to DEA.
 - Contacts are being separated from loan-specific reads through summary selectors and Girvi facades.
 - UI information architecture now has a current audit and redesign plan at [docs/ui/saas_information_architecture_audit.md](ui/saas_information_architecture_audit.md), covering public/global/tenant/settings/portal separation, route risks, layout targets, flows, authorization, onboarding, roadmap, and test needs.
+- Phase 2 route/template standardization has started: shared URL patterns now have explicit service/public/auth/global groups while preserving the current aggregate behavior, and templates can target `base_public.html`, `base_auth.html`, `base_global.html`, `base_tenant.html`, `base_workspace_settings.html`, and `base_customer_portal.html`.
 
 ## Recently Stabilized
 
@@ -179,6 +180,7 @@ Rokkad is moving toward a layered architecture:
 - DEA Phase 7 business-event wording cleanup now improves purchase UX: fixed/unfixed purchase preview forms label commodity account inputs as supplier-side source and workspace destination stock/vault accounts (instead of raw from/to terminology), reducing operator confusion without changing posting behavior.
 - DEA Phase 7 period CRUD and bank reconciliation permission hardening is complete: all accounting period views (list, detail, create, update, adjustments, close, lock, unlock, transactions, balances, report, status, delete) now require owner/admin/accountant access via `@dea_accountant_required`; all bank reconciliation views (list, detail, import, auto-match, manual-match, unmatch) are now gated by `DeaAccountantRequiredMixin` / `@dea_accountant_required`. Three new permission boundary tests prove member users are denied period and reconciliation surfaces. All 6 permission boundary tests pass.
 - DEA Phase 8 JEV surface relabeling is complete: Journal Entry Voucher UI now uses "Manual Journal Entry (Advanced)" in page titles, breadcrumbs, sidebar nav, and the voucher hub footer. The list page includes a dismissible advisory banner directing normal users to Business Events for day-to-day workflows. No route or model changes; purely UI discoverability improvement.
+- SaaS IA Phase 2 first slice is complete for route/template naming only: active public/auth/global/tenant templates now extend intent-specific base aliases, and `django_project.shared_urlpatterns` exposes named route groups without changing the effective URL map.
 
 ## Known Pressure Points
 

@@ -1,4 +1,4 @@
-{% extends 'layouts/workspace.html' %}
+{% extends 'base_tenant.html' %}
 {% load crispy_forms_tags %}
 
 {% block title %}{% if is_update %}Edit{% else %}Create{% endif %} Sales Invoice{% endblock %}
@@ -20,7 +20,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block workspace_content %}
 <div class="container-fluid mt-4">
     <div class="row mb-4">
         <div class="col-md-12">

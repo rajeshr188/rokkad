@@ -443,6 +443,12 @@ Setup blockers should be actionable and close to the blocked action. Missing rat
 - Add new base templates without deleting old layouts.
 - Keep compatibility aliases for old URLs.
 
+Current checkpoint:
+
+- `django_project.shared_urlpatterns` now exposes named route groups for service, public platform, auth, and global authenticated routes, while preserving the current `shared_urlpatterns` aggregate.
+- Intent-specific base aliases now exist: `base_public.html`, `base_auth.html`, `base_global.html`, `base_tenant.html`, `base_workspace_settings.html`, and `base_customer_portal.html`.
+- Active public/auth/global/tenant templates have started moving to those aliases without changing view behavior.
+
 ### Phase 3: Navigation and Workspace Switcher
 
 - Create one canonical workspace switcher.
