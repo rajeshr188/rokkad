@@ -285,6 +285,8 @@ Phase 2 route/template standardization has begun with compatibility-only naming:
 
 Phase 2.2 route intent cleanup keeps effective URLs unchanged but makes ownership explicit: `django_project.urls` is the active public-schema URLConf, `django_project.tenant_urls.TENANT_ERP_URLPATTERNS` groups tenant ERP prefixes, and `django_project.public_urls` is a legacy parity URLConf. Route boundary tests live in `django_project/test_route_intent.py`. The next safe SaaS IA slice is Phase 2.3 template layout cleanup, not navigation redesign or route moves.
 
+Phase 2.3 template layout cleanup moved clear first-party layout stragglers to intent aliases without changing URLs or navigation. `django_project/test_template_layout_intent.py` guards low-level layout usage and alias block contracts. Remaining direct `layouts/base.html` usage should stay limited to infrastructure wrappers (`base_public`, `base_auth`, `base_customer_portal`, low-level layout files, allauth/slick wrappers, and legacy `_base`). The next safe slice is Phase 2.4 workspace settings layout separation.
+
 ## Navigation Memory
 
 Main sidebar direction:

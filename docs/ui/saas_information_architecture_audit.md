@@ -450,10 +450,12 @@ Current checkpoint:
 - Active public/auth/global/tenant templates have started moving to those aliases without changing view behavior.
 - Phase 2.2 route intent cleanup now makes the active URLConf boundary explicit: `django_project.urls` is the active public-schema control-plane URLConf, `django_project.tenant_urls` groups tenant ERP routes in `TENANT_ERP_URLPATTERNS`, and legacy `django_project.public_urls` delegates to the same shared control-plane bundle for compatibility.
 - Route ownership tests in `django_project/test_route_intent.py` guard the current settings, shared route aggregate order, absence of tenant ERP prefixes from the public URLConf, tenant ERP prefix grouping, and legacy public URLConf parity.
+- Phase 2.3 template layout cleanup now removes remaining clear first-party direct extends of low-level layouts from onboarding, subscriptions, DEA reconciliation/report bases, dynamic preferences, company legacy pages, simple upload pages, and error pages. These pages now use the intent aliases with the correct `mgmt_content` or `workspace_content` block contracts.
+- Template layout intent tests in `django_project/test_template_layout_intent.py` now guard that direct `layouts/base.html`, `layouts/management.html`, and `layouts/workspace.html` usage remains limited to infrastructure wrappers, and that alias children use the correct content block names.
 
 Next recommended Phase 2 slice:
 
-- Start Phase 2.3 template layout cleanup. Keep URL behavior unchanged, but classify remaining templates that still extend low-level legacy layouts directly, decide which belong to global vs workspace settings vs tenant ERP, and add focused render tests for the highest-risk auth/global/tenant shells before changing navigation structure.
+- Start Phase 2.4 workspace settings layout separation. Keep URL behavior unchanged, but move workspace admin/settings templates from `base_global.html` to `base_workspace_settings.html` where the current page is clearly workspace-scoped, then add a small settings-sidebar placeholder or include point without changing navigation behavior.
 
 ### Phase 3: Navigation and Workspace Switcher
 

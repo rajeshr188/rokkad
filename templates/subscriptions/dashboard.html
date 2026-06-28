@@ -1,9 +1,9 @@
-{% extends 'layouts/base.html' %}
+{% extends 'base_workspace_settings.html' %}
 {% load static %}
 
 {% block title %}Billing Dashboard - Rokkad{% endblock %}
 
-{% block extra_css %}
+{% block mgmt_extra_css %}
 <style>
     .dashboard-card {
         background: white;
@@ -115,7 +115,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block mgmt_content %}
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12">

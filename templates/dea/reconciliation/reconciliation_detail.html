@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_tenant.html" %}
 {% load static %}
 
 {% block title %}Reconciliation - {{ bank_account.name }}{% endblock %}
@@ -78,7 +78,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block workspace_content %}
 <div class="container-fluid mt-4">
     {% if error %}
     <div class="alert alert-danger">

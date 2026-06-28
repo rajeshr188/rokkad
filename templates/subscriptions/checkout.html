@@ -1,9 +1,9 @@
-{% extends 'layouts/base.html' %}
+{% extends 'base_workspace_settings.html' %}
 {% load static %}
 
 {% block title %}Checkout - {{ plan.name }} - Rokkad{% endblock %}
 
-{% block extra_css %}
+{% block mgmt_extra_css %}
 <style>
     .checkout-container {
         max-width: 600px;
@@ -110,7 +110,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block mgmt_content %}
 <div class="container py-5">
     <div class="row">
         <div class="col-12 mb-4">

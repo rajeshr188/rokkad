@@ -20,6 +20,7 @@ Rokkad is moving toward a layered architecture:
 - UI information architecture now has a current audit and redesign plan at [docs/ui/saas_information_architecture_audit.md](ui/saas_information_architecture_audit.md), covering public/global/tenant/settings/portal separation, route risks, layout targets, flows, authorization, onboarding, roadmap, and test needs.
 - Phase 2 route/template standardization has started: shared URL patterns now have explicit service/public/auth/global groups while preserving the current aggregate behavior, and templates can target `base_public.html`, `base_auth.html`, `base_global.html`, `base_tenant.html`, `base_workspace_settings.html`, and `base_customer_portal.html`.
 - Phase 2.2 route intent cleanup keeps URL behavior stable while making URLConf ownership explicit: public-schema routes live through `django_project.urls`, tenant ERP prefixes are grouped in `django_project.tenant_urls.TENANT_ERP_URLPATTERNS`, and the legacy `public_urls` module stays parity-compatible.
+- Phase 2.3 template layout cleanup keeps behavior stable while moving remaining clear first-party direct layout extends to intent aliases and adding guard tests for layout alias contracts.
 
 ## Recently Stabilized
 
@@ -183,6 +184,7 @@ Rokkad is moving toward a layered architecture:
 - DEA Phase 8 JEV surface relabeling is complete: Journal Entry Voucher UI now uses "Manual Journal Entry (Advanced)" in page titles, breadcrumbs, sidebar nav, and the voucher hub footer. The list page includes a dismissible advisory banner directing normal users to Business Events for day-to-day workflows. No route or model changes; purely UI discoverability improvement.
 - SaaS IA Phase 2 first slice is complete for route/template naming only: active public/auth/global/tenant templates now extend intent-specific base aliases, and `django_project.shared_urlpatterns` exposes named route groups without changing the effective URL map.
 - SaaS IA Phase 2.2 route intent cleanup is complete for URLConf grouping and regression coverage. `django_project/test_route_intent.py` now guards active public/tenant URLConf settings, shared route aggregate order, public URLConf tenant-prefix exclusion, tenant ERP prefix grouping, and legacy public URLConf parity.
+- SaaS IA Phase 2.3 template layout cleanup is complete for clear first-party stragglers. Onboarding, subscription, DEA reconciliation/report base, dynamic preference, simple upload, company legacy, and error templates now target intent aliases, and `django_project/test_template_layout_intent.py` guards direct low-level layout usage plus alias block contracts.
 
 ## Known Pressure Points
 
