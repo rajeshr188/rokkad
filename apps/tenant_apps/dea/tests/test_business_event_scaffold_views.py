@@ -893,7 +893,7 @@ class BusinessEventScaffoldViewTests(TenantTestCase):
         self.assertEqual(self._side_effect_counts(), before)
         self.assertEqual(BusinessEventDraft.objects.count(), 0)
 
-    def test_karigar_movement_confirm_post_is_disabled_and_side_effect_free(self):
+    def test_karigar_movement_preview_post_shows_confirm_action_when_ready(self):
         deps = self._seed_fixed_purchase_preview_dependencies()
         before = self._side_effect_counts()
 
@@ -901,14 +901,14 @@ class BusinessEventScaffoldViewTests(TenantTestCase):
             reverse("dea_karigar_movement_preview"),
             data={
                 **self._karigar_issue_preview_data(deps),
-                "action": "confirm",
             },
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertContains(response, "Confirm posting is disabled", status_code=400)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Confirm karigar custody posting")
+        self.assertContains(response, "View draft detail")
         self.assertEqual(self._side_effect_counts(), before)
-        self.assertEqual(BusinessEventDraft.objects.count(), 0)
+        self.assertEqual(BusinessEventDraft.objects.count(), 1)
 
     def test_monetary_settlement_detail_shows_readiness_and_repreview_link(self):
         deps = self._seed_fixed_purchase_preview_dependencies()

@@ -133,7 +133,7 @@ Completed:
 
 Current next task:
 
-- Phase 8 planning or Phase 7 remaining work: Based on Phase 7 accounting tools inventory, either proceed with Phase 8 roadmap (role-gating hardening for period CRUD + bank reconciliation, surface relabeling/discoverability reduction) or complete remaining Phase 7 slices if identified.
+- Phase 8 remaining: JEV surface relabeling is now done. Two further Phase 8 options remain: (1) CSV/XLSX export surface audit — confirm any future commodity or accounting report exports land behind the `dea_accountant_required` gate, and add an explicit export guard test; (2) Period delete UX simplification — the route is hardened and no template currently shows a delete button, but a guard test asserting the delete view returns `PermissionDenied` for members would close the loop.
 
 Current verification:
 

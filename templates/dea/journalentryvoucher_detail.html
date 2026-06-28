@@ -1,6 +1,6 @@
 {% extends 'layouts/workspace.html' %}
 
-{% block title %}Journal Entry {{ journal_entry.je_number }}{% endblock %}
+{% block title %}Manual Journal Entry {{ journal_entry.je_number }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -11,7 +11,7 @@
             </h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dea_journal_entry_voucher_list' %}">Journal Entries</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'dea_journal_entry_voucher_list' %}">Manual Journals (Advanced)</a></li>
                     <li class="breadcrumb-item active">{{ journal_entry.je_number }}</li>
                 </ol>
             </nav>

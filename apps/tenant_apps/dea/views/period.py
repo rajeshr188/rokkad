@@ -32,6 +32,7 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..filters import PeriodFilter
 from ..forms import AccountingPeriodForm, PeriodAdjustmentForm, PeriodCloseForm
+from .access import dea_accountant_required
 from ..models import (
     Account,
     AccountingPeriod,
@@ -207,6 +208,7 @@ def _create_period_adjustment(period, user, cleaned_data):
 
 
 @login_required
+@dea_accountant_required
 @for_htmx(use_block="content")
 def period_list(request):
     """
@@ -233,6 +235,7 @@ def period_list(request):
 
 
 @login_required
+@dea_accountant_required
 @for_htmx(use_block="content")
 def period_detail(request, pk):
     """
@@ -294,6 +297,7 @@ def period_detail(request, pk):
 
 
 @login_required
+@dea_accountant_required
 @transaction.atomic
 def period_create(request):
     """
@@ -357,6 +361,7 @@ def period_create(request):
 
 
 @login_required
+@dea_accountant_required
 @transaction.atomic
 def period_update(request, pk):
     """
@@ -407,6 +412,7 @@ def period_update(request, pk):
 
 
 @login_required
+@dea_accountant_required
 @transaction.atomic
 def period_adjustments(request, pk):
     """Review and post pre-close adjustment entries for a period."""
@@ -460,6 +466,7 @@ def period_adjustments(request, pk):
 
 
 @login_required
+@dea_accountant_required
 @transaction.atomic
 def period_close(request, pk):
     """
@@ -576,6 +583,7 @@ def period_close(request, pk):
 
 
 @login_required
+@dea_accountant_required
 @permission_required("dea.can_lock_period", raise_exception=True)
 @transaction.atomic
 def period_lock(request, pk):
@@ -597,6 +605,7 @@ def period_lock(request, pk):
 
 
 @login_required
+@dea_accountant_required
 @permission_required("dea.can_unlock_period", raise_exception=True)
 @transaction.atomic
 def period_unlock(request, pk):
@@ -633,6 +642,7 @@ def period_unlock(request, pk):
 
 
 @login_required
+@dea_accountant_required
 @for_htmx(use_block="content")
 def period_transactions(request, pk):
     """
@@ -664,6 +674,7 @@ def period_transactions(request, pk):
 
 
 @login_required
+@dea_accountant_required
 @for_htmx(use_block="content")
 def period_balances(request, pk):
     """
@@ -708,6 +719,7 @@ def period_balances(request, pk):
 
 
 @login_required
+@dea_accountant_required
 def period_report(request, pk):
     """
     Generate comprehensive period report (PDF/Excel export)
@@ -791,6 +803,7 @@ def period_report(request, pk):
 
 
 @login_required
+@dea_accountant_required
 def period_status_ajax(request):
     """
     AJAX endpoint to get current period status
@@ -817,6 +830,7 @@ def period_status_ajax(request):
 
 
 @login_required
+@dea_accountant_required
 def period_delete(request, pk):
     """
     Delete a period (only if OPEN and no transactions)

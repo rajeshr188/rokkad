@@ -15,6 +15,7 @@ from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from apps.tenant_apps.dea.views.access import DeaAccountantRequiredMixin, dea_accountant_required
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
@@ -31,7 +32,7 @@ from apps.tenant_apps.dea.models import (
 from apps.tenant_apps.dea.services.reconciliation import ReconciliationService
 
 
-class BankAccountListView(LoginRequiredMixin, ListView):
+class BankAccountListView(DeaAccountantRequiredMixin, ListView):
     """List all bank accounts for the current tenant"""
     model = BankAccount
     template_name = "dea/reconciliation/bank_account_list.html"
@@ -47,7 +48,7 @@ class BankAccountListView(LoginRequiredMixin, ListView):
         return context
 
 
-class BankReconciliationDetailView(LoginRequiredMixin, DetailView):
+class BankReconciliationDetailView(DeaAccountantRequiredMixin, DetailView):
     """Detail view for bank reconciliation of a specific account"""
     model = BankAccount
     template_name = "dea/reconciliation/reconciliation_detail.html"
@@ -106,6 +107,7 @@ class BankReconciliationDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+@dea_accountant_required
 def import_bank_statement(request):
     """Import bank statement lines from CSV"""
     if request.method == "GET":
@@ -184,6 +186,7 @@ def import_bank_statement(request):
 
 
 @require_http_methods(["POST"])
+@dea_accountant_required
 def auto_match_statements(request, bank_account_id):
     """Auto-match bank statement lines to GL transactions"""
     try:
@@ -215,6 +218,7 @@ def auto_match_statements(request, bank_account_id):
 
 
 @require_http_methods(["POST"])
+@dea_accountant_required
 def manual_match(request):
     """Manually match a bank line to a GL transaction"""
     bank_line_id = request.POST.get("bank_line_id")
@@ -241,6 +245,7 @@ def manual_match(request):
 
 
 @require_http_methods(["POST"])
+@dea_accountant_required
 def unmatch(request):
     """Remove match for a bank line"""
     bank_line_id = request.POST.get("bank_line_id")

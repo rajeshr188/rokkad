@@ -28,8 +28,16 @@ class FixedPurchasePreviewForm(forms.Form):
     gross_weight = forms.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0.001"))
     purity = forms.DecimalField(max_digits=7, decimal_places=6, min_value=Decimal("0.000001"))
     fine_weight = forms.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0.001"))
-    from_commodity_account = forms.ModelChoiceField(queryset=CommodityAccount.objects.none())
-    to_commodity_account = forms.ModelChoiceField(queryset=CommodityAccount.objects.none())
+    from_commodity_account = forms.ModelChoiceField(
+        queryset=CommodityAccount.objects.none(),
+        label="Supplier metal account (source)",
+        help_text="Select the supplier-side commodity account the metal is coming from.",
+    )
+    to_commodity_account = forms.ModelChoiceField(
+        queryset=CommodityAccount.objects.none(),
+        label="Your stock/vault account (destination)",
+        help_text="Select your commodity account that will receive the purchased metal.",
+    )
     money_amount = forms.DecimalField(max_digits=15, decimal_places=2, min_value=Decimal("0.01"))
     currency = forms.ChoiceField(choices=(("INR", "INR"),), initial="INR")
     narration = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
@@ -96,8 +104,16 @@ class UnfixedPurchasePreviewForm(forms.Form):
     gross_weight = forms.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0.001"))
     purity = forms.DecimalField(max_digits=7, decimal_places=6, min_value=Decimal("0.000001"))
     fine_weight = forms.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0.001"))
-    from_commodity_account = forms.ModelChoiceField(queryset=CommodityAccount.objects.none())
-    to_commodity_account = forms.ModelChoiceField(queryset=CommodityAccount.objects.none())
+    from_commodity_account = forms.ModelChoiceField(
+        queryset=CommodityAccount.objects.none(),
+        label="Supplier metal account (source)",
+        help_text="Select the supplier-side commodity account the unfixed metal is coming from.",
+    )
+    to_commodity_account = forms.ModelChoiceField(
+        queryset=CommodityAccount.objects.none(),
+        label="Your stock/vault account (destination)",
+        help_text="Select your commodity account that will hold this unfixed metal until rate fixing.",
+    )
     rate_basis = forms.CharField(
         required=False,
         max_length=120,

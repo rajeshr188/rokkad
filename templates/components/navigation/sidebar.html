@@ -139,7 +139,7 @@
                 </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'dea_journal_entry_voucher_list' or request.resolver_match.url_name == 'dea_journal_entry_voucher_create' or request.resolver_match.url_name == 'dea_journal_entry_voucher_detail' or request.resolver_match.url_name == 'dea_journal_entry_voucher_update' or request.resolver_match.url_name == 'dea_journal_entry_voucher_delete' %}active{% endif %}"
                    href="{% url 'dea_journal_entry_voucher_list' %}">
-                    <i class="bi bi-journal-plus"></i> Manual Journals
+                    <i class="bi bi-journal-plus"></i> Manual Journals (Advanced)
                 </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'dea_opening_balance_wizard' or request.resolver_match.url_name == 'dea_opening_balance_import' or request.resolver_match.url_name == 'dea_opening_balance_template' or request.resolver_match.url_name == 'dea_opening_balance_validate' %}active{% endif %}"
                    href="{% url 'dea_opening_balance_wizard' %}">

@@ -323,6 +323,35 @@ Implement **quick setup** for Phase 7 (MVP); defer full wizard to Phase 8 if nee
 4. ✅ Added manual selected-Party `KARIGAR_CUSTODY` account creation UX on commodity detail
 5. ⏳ Manual QA pending: create commodity → quick setup → create karigar custody account → use in business event
 
+**Phase 7 cleanup follow-up** (Completed):
+1. ✅ Fixed/unfixed purchase form wording is now less technical: account labels explain supplier-side source and your stock/vault destination instead of raw from/to commodity-account terminology.
+
+### Karigar Account Choice Reference
+
+Use the same selected commodity on both sides. The difference is only the direction of movement:
+
+1. `Issue Metal To Karigar`
+   - `from_commodity_account`: choose your internal stock account for that commodity.
+   - Valid choices: `OWNED_STOCK` or `VAULT` for the same commodity.
+   - `to_commodity_account`: choose the selected Party's `KARIGAR_CUSTODY` account for the same commodity.
+   - Example: `GOLD Vault` -> `GOLD Karigar Custody - Ramesh`
+
+2. `Receive Metal From Karigar`
+   - `from_commodity_account`: choose the selected Party's `KARIGAR_CUSTODY` account for the same commodity.
+   - `to_commodity_account`: choose your internal destination account for that commodity.
+   - Valid choices: `OWNED_STOCK` or `VAULT` for the same commodity.
+   - Example: `GOLD Karigar Custody - Ramesh` -> `GOLD Vault`
+
+Validation enforced by the form:
+- both accounts must belong to the selected commodity
+- the two accounts must be different
+- for issue, the destination custody account must belong to the selected karigar Party
+- for receipt, the source custody account must belong to the selected karigar Party
+
+Manual QA note:
+- after preview, use the readiness card's `Confirm karigar custody posting` action or the draft detail page
+- the preview screen now routes to the real confirm endpoint instead of showing the obsolete Phase 6 disabled-posting message
+
 **Phase 8** (Future):
 - Enhanced account wizard
 - Commodity deprecation warnings

@@ -102,6 +102,30 @@ class Phase7PermissionBoundaryTests(TenantTestCase):
                 with self.assertRaises(PermissionDenied):
                     match.func(request, *match.args, **match.kwargs)
 
+    def test_member_is_denied_period_surfaces(self):
+        """Period CRUD requires accountant access; members must be denied."""
+        for route_name in ("dea_period_list", "dea_period_create"):
+            with self.subTest(route=route_name):
+                path = reverse(route_name)
+                request = self._member_request("get", path)
+                match = resolve(path)
+                with self.assertRaises(PermissionDenied):
+                    match.func(request, *match.args, **match.kwargs)
+
+    def test_owner_can_reach_period_list(self):
+        """Owner (accountant-capable) must be able to reach period list."""
+        self.client.login(username="dea-phase7-owner", password="testpass123")
+        response = self.client.get(reverse("dea_period_list"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_member_is_denied_bank_reconciliation_list(self):
+        """Bank reconciliation list requires accountant access; members must be denied."""
+        path = reverse("bank-accounts-list")
+        request = self._member_request("get", path)
+        match = resolve(path)
+        with self.assertRaises(PermissionDenied):
+            match.func(request, *match.args, **match.kwargs)
+
     def _member_request(self, method, path):
         request = getattr(self.request_factory, method)(path)
         request.user = self.member

@@ -1,7 +1,7 @@
 {% extends 'layouts/workspace.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Journal Entry{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Manual Journal Entry{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -9,11 +9,11 @@
         <div class="col-md-8">
             <h1 class="display-6">
                 <i class="bi bi-journal-text"></i> 
-                {% if form.instance.pk %}Edit Journal Entry{% else %}Create Journal Entry{% endif %}
+                {% if form.instance.pk %}Edit Manual Journal Entry{% else %}Create Manual Journal Entry{% endif %}
             </h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dea_journal_entry_voucher_list' %}">Journal Entries</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'dea_journal_entry_voucher_list' %}">Manual Journals (Advanced)</a></li>
                     <li class="breadcrumb-item active">{% if form.instance.pk %}Edit{% else %}Create{% endif %}</li>
                 </ol>
             </nav>
