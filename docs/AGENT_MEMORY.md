@@ -293,6 +293,8 @@ Phase 2.5 shell render smoke tests live in `django_project/test_shell_render_smo
 
 Phase 2.6 route/template inventory documentation lives in `docs/ui/route_template_inventory.md`. It records current URLConf ownership, route-family ownership, shell aliases, known mixed boundaries, and guard tests. The next safe SaaS IA work is Phase 3 navigation and workspace switcher planning while keeping compatibility routes in place.
 
+Phase 3.1 navigation and workspace switcher planning lives in `docs/ui/navigation_workspace_switcher_plan.md`. The accepted sidebar ADRs still apply: `templates/components/navigation/sidebar.html` remains the live tenant sidebar source of truth, `django_project/navigation.py` is future-only, and the next safe SaaS IA slice is to replace the inline topbar workspace dropdown with the reusable `components/navigation/workspace_switcher.html` partial while preserving current route behavior.
+
 ## Navigation Memory
 
 Main sidebar direction:

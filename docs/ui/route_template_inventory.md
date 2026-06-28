@@ -66,7 +66,7 @@ No behavior changes are made by this document. Route moves, sidebar redesign, an
 
 ## Next Recommended Step
 
-Start Phase 3 with navigation and workspace switcher planning before changing visible navigation:
+Phase 3 navigation and workspace switcher planning is tracked in [navigation_workspace_switcher_plan.md](navigation_workspace_switcher_plan.md). Start with that contract before changing visible navigation:
 
 1. Define the exact global vs tenant topbar responsibilities.
 2. Decide whether the canonical workspace switcher redirects to global workspace list, tenant dashboard, or safe `next`.
