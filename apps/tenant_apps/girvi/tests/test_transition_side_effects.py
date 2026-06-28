@@ -1,7 +1,9 @@
 from contextlib import nullcontext
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
@@ -61,6 +63,74 @@ class TransitionSideEffectsTests(SimpleTestCase):
         self.assertTrue(result.success)
         self.assertIn("posted", result.message)
         post_disbursal.assert_called_once()
+
+    def test_execute_disbursal_transition_persists_givenloan_deduction_fields(self):
+        loan = SimpleNamespace(
+            status=LoanLifecycleState.APPROVED,
+            get_loan_amount=Decimal("1000.00"),
+            disbursal_upfront_interest_deduction=Decimal("0.00"),
+            disbursal_document_charge=Decimal("0.00"),
+            save=MagicMock(),
+        )
+
+        def transition_method(**_kwargs):
+            loan.status = LoanLifecycleState.ACTIVE_CURRENT
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.transition_side_effects.transaction.atomic",
+            return_value=nullcontext(),
+        ):
+            execute_disbursal_transition(
+                loan=loan,
+                user=SimpleNamespace(),
+                transition_method=transition_method,
+                payload_kwargs={
+                    "disbursed_by": "cashier",
+                    "upfront_interest_deduction": Decimal("100.00"),
+                    "document_charge": Decimal("25.00"),
+                },
+                active_statuses={LoanLifecycleState.ACTIVE_CURRENT},
+                post_disbursal=MagicMock(return_value=(SimpleNamespace(payment_id="PV-2"), True)),
+            )
+
+        self.assertEqual(loan.disbursal_upfront_interest_deduction, Decimal("100.00"))
+        self.assertEqual(loan.disbursal_document_charge, Decimal("25.00"))
+        loan.save.assert_called_once_with(
+            update_fields=[
+                "disbursal_upfront_interest_deduction",
+                "disbursal_document_charge",
+            ]
+        )
+
+    def test_execute_disbursal_transition_rejects_deductions_exceeding_principal(self):
+        loan = SimpleNamespace(
+            status=LoanLifecycleState.APPROVED,
+            get_loan_amount=Decimal("100.00"),
+            disbursal_upfront_interest_deduction=Decimal("0.00"),
+            disbursal_document_charge=Decimal("0.00"),
+            save=MagicMock(),
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.transition_side_effects.transaction.atomic",
+            return_value=nullcontext(),
+        ):
+            with self.assertRaisesMessage(
+                ValidationError,
+                "cannot exceed the loan principal",
+            ):
+                execute_disbursal_transition(
+                    loan=loan,
+                    user=SimpleNamespace(),
+                    transition_method=MagicMock(),
+                    payload_kwargs={
+                        "disbursed_by": "cashier",
+                        "upfront_interest_deduction": Decimal("80.00"),
+                        "document_charge": Decimal("30.00"),
+                    },
+                    active_statuses={LoanLifecycleState.ACTIVE_CURRENT},
+                    post_disbursal=MagicMock(return_value=(SimpleNamespace(payment_id="PV-3"), True)),
+                )
 
     def test_execute_recovery_transition_posts_when_status_matches_success(self):
         loan = SimpleNamespace(status=LoanLifecycleState.AUCTION_IN_PROGRESS)

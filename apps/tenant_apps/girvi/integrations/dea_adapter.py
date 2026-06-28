@@ -30,7 +30,15 @@ GIRVI_POSTING_EVENT_CONTRACTS = {
     "disbursal": {
         "source_model": "GivenLoan",
         "expected_dea_rule": "given_loan_disbursal",
-        "economic_fields": ("principal_amount", "cash_account", "borrower_account", "posting_date"),
+        "economic_fields": (
+            "principal_amount",
+            "upfront_interest_deduction",
+            "document_charge",
+            "net_disbursal_amount",
+            "cash_account",
+            "borrower_account",
+            "posting_date",
+        ),
     },
     "taken_loan_activation": {
         "source_model": "TakenLoan",
@@ -169,6 +177,15 @@ def build_source_document_economic_payload(*, event_key, source_document):
                 ),
                 "interest_amount": _serialize_economic_value(
                     _call_or_value(source_document, "get_interest_amount", default=None)
+                ),
+                "upfront_interest_deduction": _serialize_economic_value(
+                    getattr(source_document, "disbursal_upfront_interest_deduction", None)
+                ),
+                "document_charge": _serialize_economic_value(
+                    getattr(source_document, "disbursal_document_charge", None)
+                ),
+                "net_disbursal_amount": _serialize_economic_value(
+                    getattr(source_document, "disbursal_net_payout", None)
                 ),
                 "posting_date": _serialize_economic_value(
                     getattr(source_document, "loan_date", None)

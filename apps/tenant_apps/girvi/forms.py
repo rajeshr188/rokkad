@@ -11,6 +11,7 @@ from django.utils import timezone
 from django_select2 import forms as s2forms
 from django_select2.forms import ModelSelect2Widget
 
+from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.party.models import Party
@@ -1064,15 +1065,58 @@ class SubmitForApprovalLoanForm(forms.Form):
 
 class DisburseLoanForm(forms.Form):
     disbursed_by = forms.CharField(max_length=255, widget=forms.HiddenInput())
+    upfront_interest_deduction = forms.DecimalField(
+        required=False,
+        min_value=Decimal("0.00"),
+        decimal_places=2,
+        max_digits=12,
+        initial=Decimal("0.00"),
+        label="Upfront Interest Deduction",
+        help_text="Preview-only in this slice. Accounting wiring will follow in the next slice.",
+    )
+    document_charge = forms.DecimalField(
+        required=False,
+        min_value=Decimal("0.00"),
+        decimal_places=2,
+        max_digits=12,
+        initial=Decimal("0.00"),
+        label="Document Charge",
+        help_text="Preview-only in this slice. Accounting wiring will follow in the next slice.",
+    )
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
+        self.loan = kwargs.pop("loan", None)
+        workspace = kwargs.pop("workspace", None)
         super().__init__(*args, **kwargs)
+        self._prefs = CompanyPreferences(workspace) if workspace is not None else None
+
+        if self._prefs is not None:
+            min_charge = Decimal(str(self._prefs.loan_minimum_document_charge or Decimal("0.00")))
+            if self._prefs.loan_disbursal_deductions_enabled and min_charge > Decimal("0.00"):
+                self.fields["document_charge"].initial = min_charge
+
         if user:
             self.fields["disbursed_by"].initial = user.username
+
+        self.disbursal_preview = self._build_preview(
+            upfront_interest=self._bound_decimal(
+                "upfront_interest_deduction",
+                self.fields["upfront_interest_deduction"].initial,
+            ),
+            document_charge=self._bound_decimal(
+                "document_charge",
+                self.fields["document_charge"].initial,
+            ),
+        )
+
         self.helper = FormHelper()
         self.helper.layout = Layout(
             "disbursed_by",
+            Row(
+                Column("upfront_interest_deduction", css_class="col-md-6"),
+                Column("document_charge", css_class="col-md-6"),
+            ),
             HTML(
                 '<div class="alert alert-warning">'
                 '<strong>Disbursing this loan</strong> records cash as paid out to the borrower. '
@@ -1081,6 +1125,88 @@ class DisburseLoanForm(forms.Form):
             ),
         )
         self.helper.add_input(Submit("submit", "Confirm Disbursement", css_class="btn btn-primary"))
+
+    def _bound_decimal(self, field_name, fallback):
+        if self.is_bound:
+            raw = self.data.get(field_name)
+            if raw in (None, ""):
+                return Decimal("0.00")
+            try:
+                return Decimal(str(raw))
+            except Exception:
+                return Decimal("0.00")
+        return Decimal(str(fallback or Decimal("0.00")))
+
+    def _loan_amount(self):
+        amount = getattr(self.loan, "get_loan_amount", None)
+        if callable(amount):
+            try:
+                amount = amount()
+            except Exception:
+                amount = None
+        try:
+            return Decimal(str(amount or Decimal("0.00")))
+        except Exception:
+            return Decimal("0.00")
+
+    def _build_preview(self, *, upfront_interest, document_charge):
+        gross_amount = self._loan_amount()
+        total_deductions = upfront_interest + document_charge
+        return {
+            "gross_amount": gross_amount,
+            "upfront_interest_deduction": upfront_interest,
+            "document_charge": document_charge,
+            "total_deductions": total_deductions,
+            "net_disbursal_amount": gross_amount - total_deductions,
+            "deductions_enabled": bool(
+                getattr(self._prefs, "loan_disbursal_deductions_enabled", False)
+            ),
+            "interest_deduction_enabled": bool(
+                getattr(self._prefs, "loan_interest_deduction", False)
+            ),
+            "minimum_document_charge": Decimal(
+                str(getattr(self._prefs, "loan_minimum_document_charge", Decimal("0.00")) or Decimal("0.00"))
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        upfront_interest = cleaned_data.get("upfront_interest_deduction") or Decimal("0.00")
+        document_charge = cleaned_data.get("document_charge") or Decimal("0.00")
+
+        preview = self._build_preview(
+            upfront_interest=upfront_interest,
+            document_charge=document_charge,
+        )
+        self.disbursal_preview = preview
+
+        if self._prefs is None:
+            return cleaned_data
+
+        if not preview["deductions_enabled"] and preview["total_deductions"] > Decimal("0.00"):
+            raise forms.ValidationError(
+                "Disbursal deductions are disabled by policy. Set both deduction amounts to zero."
+            )
+
+        if not preview["interest_deduction_enabled"] and upfront_interest > Decimal("0.00"):
+            self.add_error(
+                "upfront_interest_deduction",
+                "Interest deduction is disabled by policy for this workspace.",
+            )
+
+        min_doc_charge = preview["minimum_document_charge"]
+        if preview["deductions_enabled"] and min_doc_charge > Decimal("0.00") and document_charge < min_doc_charge:
+            self.add_error(
+                "document_charge",
+                f"Document charge must be at least {min_doc_charge}.",
+            )
+
+        if preview["net_disbursal_amount"] < Decimal("0.00"):
+            raise forms.ValidationError(
+                "Total deductions cannot exceed the gross loan amount."
+            )
+
+        return cleaned_data
 
 
 class DeliverLoanForm(forms.Form):

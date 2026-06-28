@@ -338,6 +338,23 @@ class PaymentVoucher(BusinessDoc):
         if not any([self.principal_amount, self.interest_amount, self.fee_amount]):
             return  # Components not provided
 
+        # Given-loan disbursal net payout semantics:
+        # total_amount (cash out) = principal_amount - interest_amount - fee_amount
+        if (
+            self.payment_type == PaymentType.DISBURSAL
+            and self.direction == CashFlowDirection.PAYMENT
+        ):
+            principal = self.principal_amount or self.total_amount
+            interest = self.interest_amount or Money(0, self.total_amount.currency)
+            fee = self.fee_amount or Money(0, self.total_amount.currency)
+            expected_total = principal - interest - fee
+            if expected_total != self.total_amount:
+                raise ValidationError(
+                    f"Disbursal net payout ({self.total_amount}) must equal principal ({principal}) "
+                    f"minus deductions ({interest + fee})."
+                )
+            return
+
         component_sum = Money(0, self.total_amount.currency)
 
         if self.principal_amount:

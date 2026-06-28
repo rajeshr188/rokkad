@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -406,6 +407,46 @@ class PR2DisbursalServiceTests(SimpleTestCase):
         call_kwargs = mock_post.call_args.kwargs
         self.assertEqual(call_kwargs["direction"], "PAYMENT")
         self.assertEqual(call_kwargs["payment_type"], "DISBURSAL")
+
+    @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
+    @patch("apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc")
+    def test_givenloan_disbursal_posts_net_payout_with_explicit_components(
+        self,
+        mock_post,
+        mock_content_type,
+        mock_payment_voucher,
+    ):
+        FakeGivenLoan = type("FakeGivenLoan", (), {})
+        FakeTakenLoan = type("FakeTakenLoan", (), {})
+        loan = FakeGivenLoan()
+        loan.pk = 13
+        loan.loan_id = "GL-13"
+        loan.loan_date = "2026-03-23"
+        loan.get_loan_amount_with_currency = "1000"
+        loan.disbursal_upfront_interest_deduction = Decimal("100.00")
+        loan.disbursal_document_charge = Decimal("25.00")
+        loan.borrower = SimpleNamespace(customer_type="R")
+
+        created_payment = MagicMock()
+        mock_content_type.objects.get_for_model.return_value = object()
+        mock_payment_voucher.objects.filter.return_value.first.return_value = None
+        mock_post.return_value = (created_payment, True)
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.payment.GivenLoan", new=FakeGivenLoan
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.payment.TakenLoan", new=FakeTakenLoan
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.payment.resolve_customer_account"
+        ):
+            record_loan_disbursal(loan, user=SimpleNamespace(id=1))
+
+        call_kwargs = mock_post.call_args.kwargs
+        self.assertEqual(call_kwargs["total_amount"].amount, Decimal("875.00"))
+        self.assertEqual(call_kwargs["principal_amount"].amount, Decimal("1000.00"))
+        self.assertEqual(call_kwargs["interest_amount"].amount, Decimal("100.00"))
+        self.assertEqual(call_kwargs["fee_amount"].amount, Decimal("25.00"))
 
     @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
     @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")

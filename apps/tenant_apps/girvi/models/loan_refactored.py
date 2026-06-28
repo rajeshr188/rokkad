@@ -20,7 +20,7 @@ import re
 from decimal import Decimal
 
 from django.contrib.contenttypes.fields import GenericRelation
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.db.models import DecimalField, ExpressionWrapper, F, Func, Sum, Value
 from django.db.models.functions import Coalesce
@@ -269,10 +269,42 @@ class BaseLoan(models.Model):
     # Common calculated properties (work across all loan types)
     # ========================================================================
 
+    def _has_persisted_release(self) -> bool:
+        """Return whether a real Release row still exists for this loan."""
+        if self.pk is None:
+            return False
+
+        try:
+            release_field = self._meta.get_field("release")
+        except FieldDoesNotExist:
+            return False
+
+        cached_release = self._state.fields_cache.get("release")
+        if cached_release is not None:
+            release_pk = getattr(cached_release, "pk", None)
+            if not release_pk:
+                self._state.fields_cache.pop("release", None)
+                return False
+
+            exists = release_field.related_model._default_manager.filter(
+                pk=release_pk,
+                loan_id=self.pk,
+            ).exists()
+            if not exists:
+                self._state.fields_cache.pop("release", None)
+            return exists
+
+        try:
+            release = getattr(self, "release")
+        except (AttributeError, ObjectDoesNotExist):
+            return False
+
+        return getattr(release, "pk", None) is not None
+
     @property
     def is_released(self) -> bool:
         """Check if loan has been released."""
-        return hasattr(self, "release")
+        return self._has_persisted_release()
 
     @property
     def is_overdue(self) -> bool:
@@ -496,6 +528,18 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         verbose_name="Borrower Party",
         help_text="Shadow Party link for the borrower during Customer migration.",
     )
+    disbursal_upfront_interest_deduction = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Upfront interest deducted from borrower payout at disbursal.",
+    )
+    disbursal_document_charge = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Document/processing charge deducted from borrower payout at disbursal.",
+    )
 
     # Override series from BaseLoan with explicit related_name
     series = models.ForeignKey(
@@ -620,6 +664,16 @@ class GivenLoan(BaseLoan, GivenLoanReleaseMixin):
         from apps.tenant_apps.girvi.selectors import given_loan_current_value
 
         return given_loan_current_value(self)
+
+    @property
+    def disbursal_total_deductions(self) -> Decimal:
+        return (self.disbursal_upfront_interest_deduction or Decimal("0.00")) + (
+            self.disbursal_document_charge or Decimal("0.00")
+        )
+
+    @property
+    def disbursal_net_payout(self) -> Decimal:
+        return self.get_loan_amount - self.disbursal_total_deductions
 
     # ========================================================================
     # GivenLoan-specific methods

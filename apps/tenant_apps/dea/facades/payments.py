@@ -23,6 +23,7 @@ def create_and_post_payment(
     create_release: bool = False,
     principal_amount=None,
     interest_amount=None,
+    fee_amount=None,
     is_final_payment: bool = False,
 ) -> tuple:
     """Create a PaymentVoucher for source_obj and immediately post it."""
@@ -66,6 +67,8 @@ def create_and_post_payment(
         create_kwargs["principal_amount"] = principal_amount
     if interest_amount is not None:
         create_kwargs["interest_amount"] = interest_amount
+    if fee_amount is not None:
+        create_kwargs["fee_amount"] = fee_amount
 
     payment = PaymentVoucher.objects.create(**create_kwargs)
 

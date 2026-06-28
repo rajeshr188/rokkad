@@ -10,6 +10,8 @@ class ApprovePayload:
 @dataclass
 class DisbursePayload:
     disbursed_by: str
+    upfront_interest_deduction: Decimal | None = None
+    document_charge: Decimal | None = None
 
 
 @dataclass

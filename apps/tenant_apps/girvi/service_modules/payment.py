@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from django.contrib.contenttypes.models import ContentType
+from moneyed import Money
 
 from apps.tenant_apps.girvi.integrations.dea_adapter import (
     create_and_post_voucher_for_doc,
@@ -14,6 +15,18 @@ from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, TakenLoan
 from apps.tenant_apps.girvi.service_modules.loan_posting import GivenLoanPostingService
 
 PaymentVoucher = None  # Compatibility alias for older tests; posting uses DEA facade.
+
+
+def _money(value, *, currency="INR"):
+    if isinstance(value, Money):
+        return value
+    if isinstance(value, Decimal):
+        return Money(value, currency)
+    if isinstance(value, str):
+        parts = value.strip().split()
+        if parts:
+            value = parts[0]
+    return Money(Decimal(str(value)), currency)
 
 
 def record_loan_disbursal(loan, user):
@@ -45,16 +58,46 @@ def record_loan_disbursal(loan, user):
     )
     amount = loan.get_loan_amount_with_currency
 
+    principal_amount = _money(amount)
+    interest_deduction = None
+    document_charge = None
+    payout_amount = principal_amount
+
+    if isinstance(loan, GivenLoan):
+        interest_deduction_value = Decimal(
+            str(getattr(loan, "disbursal_upfront_interest_deduction", Decimal("0.00")) or Decimal("0.00"))
+        )
+        document_charge_value = Decimal(
+            str(getattr(loan, "disbursal_document_charge", Decimal("0.00")) or Decimal("0.00"))
+        )
+
+        if interest_deduction_value < 0 or document_charge_value < 0:
+            raise ValueError("Disbursal deductions cannot be negative.")
+
+        if (interest_deduction_value + document_charge_value) > principal_amount.amount:
+            raise ValueError(
+                "Disbursal deductions cannot exceed principal amount."
+            )
+
+        interest_deduction = _money(interest_deduction_value)
+        document_charge = _money(document_charge_value)
+        payout_amount = _money(
+            principal_amount.amount - interest_deduction_value - document_charge_value
+        )
+
     return create_and_post_voucher_for_doc(
         loan,
         direction=direction,
         payment_type="DISBURSAL",
-        total_amount=amount,
-        amount_in_base_currency=amount,
+        total_amount=payout_amount,
+        amount_in_base_currency=payout_amount,
         payment_date=loan.loan_date,
         payment_method="CASH",
         reference_number=marker,
         description=description,
+        principal_amount=principal_amount if isinstance(loan, GivenLoan) else None,
+        interest_amount=interest_deduction,
+        fee_amount=document_charge,
         created_by=user,
     )
 

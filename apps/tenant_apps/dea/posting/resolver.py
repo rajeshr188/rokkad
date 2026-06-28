@@ -10,6 +10,10 @@ LEDGER_KEY_ALIASES = {
     "FIXED_ASSETS": ["FIXED_ASSETS", "Fixed Assets"],
     "IGST_OUTPUT": ["IGST_OUTPUT", "Output IGST"],
     "INTEREST_RECEIVABLE": ["INTEREST_RECEIVABLE", "Interest Receivables"],
+    "DOCUMENT_CHARGE_INCOME": [
+        "DOCUMENT_CHARGE_INCOME",
+        "Service Income",
+    ],
     "SALES_REVENUE": ["SALES_REVENUE", "Sales"],
     "SERVICES_EXPENSE": ["SERVICES_EXPENSE", "Professional Services"],
     "SGST_OUTPUT": ["SGST_OUTPUT", "Output SGST"],

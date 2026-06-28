@@ -204,6 +204,27 @@ class CompanyLoanCatchupOnRelease(BaseLoanCatchupOnRelease):
     pass
 
 
+class BaseLoanReleaseFailClosedOnAccrualError(BooleanPreference):
+    section = loan_section
+    name = "Release_Fail_Closed_On_Accrual_Error"
+    default = False
+    required = False
+
+
+@global_preferences_registry.register
+class GlobalLoanReleaseFailClosedOnAccrualError(
+    BaseLoanReleaseFailClosedOnAccrualError
+):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanReleaseFailClosedOnAccrualError(
+    BaseLoanReleaseFailClosedOnAccrualError
+):
+    pass
+
+
 class BaseLoanCatchupOnRenewal(BooleanPreference):
     section = loan_section
     name = "Catchup_On_Renewal"
@@ -235,4 +256,38 @@ class GlobalLoanAllowBackfillPosting(BaseLoanAllowBackfillPosting):
 
 @company_preference_registry.register
 class CompanyLoanAllowBackfillPosting(BaseLoanAllowBackfillPosting):
+    pass
+
+
+class BaseLoanDisbursalDeductionsEnabled(BooleanPreference):
+    section = loan_section
+    name = "Disbursal_Deductions_Enabled"
+    default = False
+    required = False
+
+
+@global_preferences_registry.register
+class GlobalLoanDisbursalDeductionsEnabled(BaseLoanDisbursalDeductionsEnabled):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanDisbursalDeductionsEnabled(BaseLoanDisbursalDeductionsEnabled):
+    pass
+
+
+class BaseLoanMinimumDocumentCharge(DecimalPreference):
+    section = loan_section
+    name = "Minimum_Document_Charge"
+    default = Decimal("0.00")
+    required = False
+
+
+@global_preferences_registry.register
+class GlobalLoanMinimumDocumentCharge(BaseLoanMinimumDocumentCharge):
+    pass
+
+
+@company_preference_registry.register
+class CompanyLoanMinimumDocumentCharge(BaseLoanMinimumDocumentCharge):
     pass

@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.db.models import DecimalField, ExpressionWrapper, F, Func, Sum
 from django.db.models.functions import Coalesce
@@ -158,9 +158,40 @@ class Loan(_LoanAuditMixin):
     def get_update_url(self):
         return reverse("girvi:girvi_loan_update", args=(self.pk,))
 
+    def _has_persisted_release(self):
+        if self.pk is None:
+            return False
+
+        try:
+            release_field = self._meta.get_field("release")
+        except FieldDoesNotExist:
+            return False
+
+        cached_release = self._state.fields_cache.get("release")
+        if cached_release is not None:
+            release_pk = getattr(cached_release, "pk", None)
+            if not release_pk:
+                self._state.fields_cache.pop("release", None)
+                return False
+
+            exists = release_field.related_model._default_manager.filter(
+                pk=release_pk,
+                loan_id=self.pk,
+            ).exists()
+            if not exists:
+                self._state.fields_cache.pop("release", None)
+            return exists
+
+        try:
+            release = getattr(self, "release")
+        except (AttributeError, ObjectDoesNotExist):
+            return False
+
+        return getattr(release, "pk", None) is not None
+
     @property
     def is_released(self):
-        return hasattr(self, "release")
+        return self._has_persisted_release()
 
     @property
     def last_notified(self):

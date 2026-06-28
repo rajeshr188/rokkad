@@ -18,8 +18,11 @@ class CompanyPreferences:
         "Loan__Auto_Post_Accruals": True,
         "Loan__Catchup_On_Receipt": True,
         "Loan__Catchup_On_Release": True,
+        "Loan__Release_Fail_Closed_On_Accrual_Error": False,
         "Loan__Catchup_On_Renewal": True,
         "Loan__Allow_Backfill_Posting": False,
+        "Loan__Disbursal_Deductions_Enabled": False,
+        "Loan__Minimum_Document_Charge": Decimal("0.00"),
     }
 
     def __init__(self, company=None):
@@ -86,9 +89,21 @@ class CompanyPreferences:
         return self._get("Loan__Catchup_On_Release")
 
     @property
+    def loan_release_fail_closed_on_accrual_error(self):
+        return self._get("Loan__Release_Fail_Closed_On_Accrual_Error")
+
+    @property
     def loan_catchup_on_renewal(self):
         return self._get("Loan__Catchup_On_Renewal")
 
     @property
     def loan_allow_backfill_posting(self):
         return self._get("Loan__Allow_Backfill_Posting")
+
+    @property
+    def loan_disbursal_deductions_enabled(self):
+        return self._get("Loan__Disbursal_Deductions_Enabled")
+
+    @property
+    def loan_minimum_document_charge(self):
+        return self._get("Loan__Minimum_Document_Charge")

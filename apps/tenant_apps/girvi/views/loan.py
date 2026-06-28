@@ -75,6 +75,20 @@ from .access import girvi_permission_required, girvi_workspace_required
 logger = logging.getLogger(__name__)
 
 
+def _transition_form_kwargs(*, transition_name, request_user, loan, workspace, post_data=None):
+    kwargs = {"user": request_user}
+    if transition_name in {"disburse_loan", "activate"}:
+        kwargs.update(
+            {
+                "loan": loan,
+                "workspace": workspace,
+            }
+        )
+    if post_data is not None:
+        return {"data": post_data, **kwargs}
+    return kwargs
+
+
 @girvi_permission_required("girvi_loan_approve")
 def loan_transition_view(request, pk):
     loan = get_object_or_404(GivenLoan, pk=pk)
@@ -100,15 +114,33 @@ def loan_transition_view(request, pk):
         return redirect(loan.get_absolute_url())
 
     if request.method == "POST":
-        form = form_class(request.POST, user=request.user)
+        form = form_class(
+            **_transition_form_kwargs(
+                transition_name=transition_name,
+                request_user=request.user,
+                loan=loan,
+                workspace=request.tenant,
+                post_data=request.POST,
+            )
+        )
         if form.is_valid():
+            payload = {
+                key: value for key, value in form.cleaned_data.items() if value is not None
+            }
             result = LoanTransitionService(loan, request.user, request.tenant).execute(
-                transition_name, **form.cleaned_data
+                transition_name, **payload
             )
             getattr(messages, result.level)(request, result.message)
             return redirect(loan.get_absolute_url())
     else:
-        form = form_class(user=request.user)
+        form = form_class(
+            **_transition_form_kwargs(
+                transition_name=transition_name,
+                request_user=request.user,
+                loan=loan,
+                workspace=request.tenant,
+            )
+        )
 
     return render(
         request,
@@ -120,6 +152,7 @@ def loan_transition_view(request, pk):
             "transition_ui": transition_ui,
             "status_label": status_label,
             "status_badge_class": status_badge_class,
+            "disbursal_preview": getattr(form, "disbursal_preview", None),
         },
     )
 

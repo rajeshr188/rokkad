@@ -33,6 +33,30 @@
         {{ transition_ui.icon }} {{ transition_ui.heading }}
       </div>
       <div class="card-body">
+        {% if disbursal_preview %}
+          <div class="alert alert-secondary">
+            <div class="fw-semibold mb-1">Disbursal Preview (Policy Slice)</div>
+            <div class="small text-muted mb-2">
+              Deductions policy: {% if disbursal_preview.deductions_enabled %}enabled{% else %}disabled{% endif %}
+              · Interest deduction policy: {% if disbursal_preview.interest_deduction_enabled %}enabled{% else %}disabled{% endif %}
+            </div>
+            <div class="row g-2 small">
+              <div class="col-6">Gross loan amount</div>
+              <div class="col-6 text-end">₹{{ disbursal_preview.gross_amount|floatformat:2 }}</div>
+              <div class="col-6">Upfront interest deduction</div>
+              <div class="col-6 text-end">₹{{ disbursal_preview.upfront_interest_deduction|floatformat:2 }}</div>
+              <div class="col-6">Document charge</div>
+              <div class="col-6 text-end">₹{{ disbursal_preview.document_charge|floatformat:2 }}</div>
+              <div class="col-6">Minimum document charge policy</div>
+              <div class="col-6 text-end">₹{{ disbursal_preview.minimum_document_charge|floatformat:2 }}</div>
+              <div class="col-6 fw-semibold">Net borrower payout (preview)</div>
+              <div class="col-6 text-end fw-semibold">₹{{ disbursal_preview.net_disbursal_amount|floatformat:2 }}</div>
+            </div>
+            <div class="small text-muted mt-2">
+              Note: This slice validates and previews deductions only. Accounting posting remains unchanged.
+            </div>
+          </div>
+        {% endif %}
         <form method="post">
           {% csrf_token %}
           {% crispy form %}
