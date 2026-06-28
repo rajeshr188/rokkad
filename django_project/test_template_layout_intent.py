@@ -23,6 +23,21 @@ def _extends_line(path):
 
 
 class SaaSTemplateLayoutIntentTests(SimpleTestCase):
+    WORKSPACE_SETTINGS_TEMPLATES = {
+        "company/company_delete_confirm.html",
+        "company/company_detail.html",
+        "company/company_invitations_list.html",
+        "company/company_preferences.html",
+        "company/invitation_form.html",
+        "company/membership_list.html",
+        "company/workspace_leave_confirm.html",
+        "dynamic_preferences/form.html",
+        "subscriptions/checkout.html",
+        "subscriptions/dashboard.html",
+        "subscriptions/invoice_detail.html",
+        "subscriptions/plan_list.html",
+    }
+
     def test_direct_low_level_base_extends_are_infrastructure_only(self):
         allowed = {
             "_base.html",
@@ -92,3 +107,25 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
                 violations.append(f"{_relative(path)}: missing mgmt_content")
 
         self.assertEqual(violations, [])
+
+    def test_workspace_settings_templates_use_settings_alias(self):
+        violations = []
+
+        for rel_path in self.WORKSPACE_SETTINGS_TEMPLATES:
+            line = _extends_line(TEMPLATES_ROOT / rel_path)
+            if "base_workspace_settings.html" not in line:
+                violations.append(f"{rel_path}: {line}")
+
+        self.assertEqual(violations, [])
+
+    def test_management_layout_exposes_workspace_settings_include_points(self):
+        content = (TEMPLATES_ROOT / "layouts/management.html").read_text(
+            encoding="utf-8-sig"
+        )
+
+        self.assertIn("{% block workspace_settings_sidebar %}", content)
+        self.assertIn("{% block mobile_workspace_settings_sidebar %}", content)
+        self.assertIn(
+            "{% include 'components/navigation/workspace_settings_sidebar.html' %}",
+            content,
+        )

@@ -287,6 +287,8 @@ Phase 2.2 route intent cleanup keeps effective URLs unchanged but makes ownershi
 
 Phase 2.3 template layout cleanup moved clear first-party layout stragglers to intent aliases without changing URLs or navigation. `django_project/test_template_layout_intent.py` guards low-level layout usage and alias block contracts. Remaining direct `layouts/base.html` usage should stay limited to infrastructure wrappers (`base_public`, `base_auth`, `base_customer_portal`, low-level layout files, allauth/slick wrappers, and legacy `_base`). The next safe slice is Phase 2.4 workspace settings layout separation.
 
+Phase 2.4 workspace settings layout separation moved clear workspace-admin/settings templates to `base_workspace_settings.html` and added no-op `workspace_settings_sidebar` include points in `layouts/management.html`. This does not change URLs or visible navigation. The next safe slice is Phase 2.5 shell render smoke tests before any navigation/sidebar visual changes.
+
 ## Navigation Memory
 
 Main sidebar direction:

@@ -173,6 +173,9 @@
               href="{% url 'team_invitations_list' %}">
             <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
         </a>
+        {% block workspace_settings_sidebar %}
+            {% include 'components/navigation/workspace_settings_sidebar.html' %}
+        {% endblock %}
         {% endif %}
         {% endwith %}
 
@@ -245,6 +248,9 @@
             <a class="nav-link py-2" href="{% url 'team_members_list' %}"><i class="bi bi-people me-2"></i>Team Members</a>
             <a class="nav-link py-2" href="{% url 'team_invite' workspace_id=ew.id %}"><i class="bi bi-person-plus me-2"></i>Invite Member</a>
             <a class="nav-link py-2" href="{% url 'team_invitations_list' %}"><i class="bi bi-envelope-arrow-up me-2"></i>Sent Invitations</a>
+            {% block mobile_workspace_settings_sidebar %}
+                {% include 'components/navigation/workspace_settings_sidebar.html' %}
+            {% endblock %}
             {% endif %}
             {% endwith %}
             <hr style="border-color:#e9e4f8;">
