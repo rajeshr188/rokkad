@@ -1,9 +1,11 @@
 from types import SimpleNamespace
 
 from django.contrib.auth.models import AnonymousUser
+from django.conf import settings
 from django.template import Context
 from django.template import engines
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, override_settings
+from django.urls import reverse
 
 
 def _request(path="/", *, url_name="home", namespace=""):
@@ -55,13 +57,20 @@ def _authenticated_request(path="/workspace/", *, url_name="workspace_selector",
 def _render(source, context=None, request=None, *, use_request_processors=True):
     request = request or _request()
     context = context or {}
-    if use_request_processors:
-        template = engines["django"].from_string(source)
-        return template.render(context, request=request)
+    storages = {
+        **settings.STORAGES,
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    with override_settings(STORAGES=storages):
+        if use_request_processors:
+            template = engines["django"].from_string(source)
+            return template.render(context, request=request)
 
-    template = engines["django"].engine.from_string(source)
-    context = {"request": request, "user": request.user, **context}
-    return template.render(Context(context))
+        template = engines["django"].engine.from_string(source)
+        context = {"request": request, "user": request.user, **context}
+        return template.render(Context(context))
 
 
 class SaaSShellRenderSmokeTests(SimpleTestCase):
@@ -123,6 +132,61 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("workspace-switcher-navbar", html)
         self.assertIn("Acme Jewellers", html)
         self.assertIn("All Workspaces", html)
+
+    def test_authenticated_management_shell_renders_expected_nav_routes(self):
+        workspace = _workspace()
+        html = _render(
+            """
+            {% extends "base_global.html" %}
+            {% block title %}Management Navigation Smoke{% endblock %}
+            {% block mgmt_content %}<section id="management-nav-smoke">Management shell</section>{% endblock %}
+            """,
+            request=_authenticated_request("/workspace/", url_name="workspace_selector"),
+            context={
+                "workspace": workspace,
+                "user_workspace": workspace,
+                "user_role": "Owner",
+                "invitation_count": 2,
+            },
+            use_request_processors=False,
+        )
+
+        expected_hrefs = [
+            reverse("workspace_selector"),
+            reverse("workspace_create"),
+            reverse("workspace_detail", kwargs={"workspace_id": workspace.id}),
+            reverse("workspace_preferences", kwargs={"workspace_id": workspace.id}),
+            reverse("team_members_list"),
+            reverse("team_invite", kwargs={"workspace_id": workspace.id}),
+            reverse("team_invitations_list"),
+            reverse("team_invitations"),
+            reverse("account_settings"),
+            reverse("profile"),
+        ]
+
+        for href in expected_hrefs:
+            self.assertIn(f'href="{href}"', html)
+
+        billing_href = (
+            f'{reverse("workspace_select", kwargs={"workspace_id": workspace.id})}'
+            f'?next={reverse("subscriptions:dashboard")}'
+        )
+        self.assertIn(f'href="{billing_href}"', html)
+
+        for label in (
+            "My Workspaces",
+            "New Workspace",
+            "Settings",
+            "Preferences",
+            "Team Members",
+            "Invite Member",
+            "Sent Invitations",
+            "My Invitations",
+            "Billing",
+            "Account Settings",
+            "Profile",
+        ):
+            self.assertIn(label, html)
 
     def test_workspace_settings_shell_renders_management_content_marker(self):
         html = _render(

@@ -299,6 +299,30 @@ Phase 3.2 workspace switcher reuse is complete: `templates/components/navigation
 
 Phase 3.3 desktop settings-sidebar extraction is complete: `templates/layouts/management.html` delegates desktop workspace settings/team/invitation links to `components/navigation/workspace_settings_sidebar.html` with `workspace_settings_sidebar_variant="desktop"`. The mobile management offcanvas intentionally still has inline duplicate links. The next safe SaaS IA slice is Phase 3.4 to add a mobile variant to the same partial and remove the mobile duplicate links.
 
+Phase 3.4 mobile settings-sidebar extraction is complete: `templates/layouts/management.html` delegates mobile workspace settings/team/invitation links to `components/navigation/workspace_settings_sidebar.html` with `workspace_settings_sidebar_variant="mobile"`. The next safe SaaS IA slice is Phase 3.5 account-management sidebar extraction for the remaining duplicated account links in the management shell.
+
+Phase 3.5 account-management sidebar extraction is complete: `templates/layouts/management.html` delegates desktop and mobile account links to `components/navigation/account_sidebar.html` with `account_sidebar_variant="desktop"` or `"mobile"`. The next safe SaaS IA slice is Phase 3.6 workspace-manager sidebar extraction for the remaining duplicated `My Workspaces` and `New Workspace` links.
+
+Phase 3.6 workspace-manager sidebar extraction is complete: `templates/layouts/management.html` delegates desktop and mobile `My Workspaces` / `New Workspace` links to `components/navigation/workspace_manager_sidebar.html` with desktop/mobile variants. The next safe SaaS IA slice is Phase 3.7 management shell wording cleanup and final navigation partial inventory before moving to visual polish.
+
+Phase 3.7 management shell cleanup is complete: `templates/layouts/management.html` has clean ASCII shell comments, obsolete duplicate-sidebar wording is removed, and `docs/ui/navigation_workspace_switcher_plan.md` records the final management navigation partial inventory. The next safe SaaS IA slice is Phase 3.8 management-shell compatibility review before visual polish.
+
+Phase 3.8 management-shell compatibility review is complete: `django_project/test_shell_render_smoke.py` renders an authenticated owner management shell and asserts key labels plus route targets still resolve after partialization. The next safe SaaS IA slice is Phase 3.9 visual-polish checklist for the global/settings management shell before CSS/layout changes.
+
+Phase 3.9 management shell visual-polish checklist lives at `docs/ui/management_shell_visual_polish_checklist.md`. It defines compatibility constraints, visual review criteria, and the Phase 3.10 recommendation before CSS/layout-density changes. The next safe SaaS IA slice is Phase 3.10 first management-shell visual polish pass with route names, labels, partial ownership, and permission behavior preserved.
+
+Phase 3.10 first management-shell visual polish pass is complete: `layouts/management.html` uses restrained neutral control-plane styling, management sidebar partials share `mgmt-nav-link`, mobile links have active-state parity with desktop, and offcanvas styling moved away from inline purple treatments. The next safe SaaS IA slice is Phase 3.11 browser/screenshot review for desktop/mobile overflow and spacing.
+
+Phase 3.11 rendered management-shell review is complete: the generated management shell HTML showed the control-plane shell was constrained by the default `container-lg mt-4` wrapper. `layouts/base.html` now provides a backward-compatible `main_wrapper_class` block, and `layouts/management.html` overrides it with `container-fluid p-0 mt-0`. Local Chrome headless screenshot attempts did not create files in this environment, so the next safe SaaS IA slice is Phase 3.12 reproducible browser/live-server visual smoke setup before more visual polish.
+
+Phase 3.12 reproducible management-shell visual smoke coverage is complete: `django_project/test_management_shell_visual_smoke.py` renders an authenticated owner management shell and guards the full-width wrapper, desktop/mobile management nav classes, active states, and control-plane route safety without new browser dependencies. The next safe SaaS IA slice is Phase 3.13 management-shell CSS extraction to a dedicated static stylesheet without behavior changes.
+
+Phase 3.13 management-shell CSS extraction is complete: `static/css/management.css` owns the management shell styles, `layouts/management.html` loads it through `{% static %}`, and `mgmt_extra_css` remains available. Synthetic shell smoke rendering now overrides staticfiles storage to avoid stale collected-manifest failures for newly added static assets. The next safe SaaS IA slice is Phase 3.14 static asset readiness checks for the new stylesheet.
+
+Phase 3.14 static asset readiness is complete: `findstatic css/management.css --verbosity 2` finds the management stylesheet in project static files, `collectstatic --dry-run --noinput --verbosity 1` succeeds and includes `css/management.css`, and `test_management_shell_visual_smoke.py` guards staticfiles discovery. The next safe SaaS IA slice is Phase 3.15 final Phase 3 navigation/management-shell review and commit preparation.
+
+Phase 3.15 final Phase 3 navigation/management-shell review is complete in `docs/ui/phase3_navigation_management_shell_review.md`. The review confirms route names, labels, permissions, and partial ownership are preserved, records verification commands, and recommends one phase-level commit before starting Phase 4 invitation/team flow cleanup.
+
 ## Navigation Memory
 
 Main sidebar direction:

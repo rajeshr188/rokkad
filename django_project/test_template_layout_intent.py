@@ -3,7 +3,9 @@ from pathlib import Path
 from django.test import SimpleTestCase
 
 
-TEMPLATES_ROOT = Path(__file__).resolve().parent.parent / "templates"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+TEMPLATES_ROOT = PROJECT_ROOT / "templates"
+STATIC_ROOT = PROJECT_ROOT / "static"
 
 
 def _template_files():
@@ -129,8 +131,12 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
             "{% include 'components/navigation/workspace_settings_sidebar.html' with workspace_settings_sidebar_variant=\"desktop\" %}",
             content,
         )
+        self.assertIn(
+            "{% include 'components/navigation/workspace_settings_sidebar.html' with workspace_settings_sidebar_variant=\"mobile\" %}",
+            content,
+        )
 
-    def test_workspace_settings_sidebar_owns_desktop_workspace_admin_links(self):
+    def test_workspace_settings_sidebar_owns_workspace_admin_links(self):
         management_content = (TEMPLATES_ROOT / "layouts/management.html").read_text(
             encoding="utf-8-sig"
         )
@@ -139,6 +145,7 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         ).read_text(encoding="utf-8-sig")
 
         self.assertIn('workspace_settings_sidebar_variant == "desktop"', sidebar_content)
+        self.assertIn('workspace_settings_sidebar_variant == "mobile"', sidebar_content)
         for route_name in (
             "workspace_detail",
             "workspace_preferences",
@@ -151,6 +158,9 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         desktop_section = management_content.split(
             "{% block workspace_settings_sidebar %}", 1
         )[0]
+        mobile_section = management_content.split(
+            "{% block mobile_workspace_settings_sidebar %}", 1
+        )[0]
         for route_name in (
             "workspace_detail",
             "workspace_preferences",
@@ -159,8 +169,123 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
             "team_invitations_list",
         ):
             self.assertNotIn(route_name, desktop_section)
+            self.assertNotIn(route_name, mobile_section)
 
         self.assertIn(
-            "{% include 'components/navigation/workspace_settings_sidebar.html' %}",
+            "{% include 'components/navigation/workspace_settings_sidebar.html' with workspace_settings_sidebar_variant=\"desktop\" %}",
             management_content,
         )
+        self.assertIn(
+            "{% include 'components/navigation/workspace_settings_sidebar.html' with workspace_settings_sidebar_variant=\"mobile\" %}",
+            management_content,
+        )
+
+    def test_account_sidebar_owns_account_management_links(self):
+        management_content = (TEMPLATES_ROOT / "layouts/management.html").read_text(
+            encoding="utf-8-sig"
+        )
+        sidebar_content = (
+            TEMPLATES_ROOT / "components/navigation/account_sidebar.html"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn('account_sidebar_variant == "desktop"', sidebar_content)
+        self.assertIn('account_sidebar_variant == "mobile"', sidebar_content)
+        for route_fragment in (
+            "{% url 'team_invitations' %}",
+            "{% url 'subscriptions:dashboard' %}",
+            "{% url 'account_settings' %}",
+            "{% url 'profile' %}",
+        ):
+            self.assertIn(route_fragment, sidebar_content)
+            self.assertNotIn(route_fragment, management_content)
+
+        self.assertIn("{% block account_sidebar %}", management_content)
+        self.assertIn("{% block mobile_account_sidebar %}", management_content)
+        self.assertIn(
+            "{% include 'components/navigation/account_sidebar.html' with account_sidebar_variant=\"desktop\" %}",
+            management_content,
+        )
+        self.assertIn(
+            "{% include 'components/navigation/account_sidebar.html' with account_sidebar_variant=\"mobile\" %}",
+            management_content,
+        )
+
+    def test_workspace_manager_sidebar_owns_workspace_manager_links(self):
+        management_content = (TEMPLATES_ROOT / "layouts/management.html").read_text(
+            encoding="utf-8-sig"
+        )
+        sidebar_content = (
+            TEMPLATES_ROOT / "components/navigation/workspace_manager_sidebar.html"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn('workspace_manager_sidebar_variant == "desktop"', sidebar_content)
+        self.assertIn('workspace_manager_sidebar_variant == "mobile"', sidebar_content)
+        for route_fragment in (
+            "{% url 'workspace_selector' %}",
+            "{% url 'workspace_create' %}",
+        ):
+            self.assertIn(route_fragment, sidebar_content)
+            self.assertNotIn(route_fragment, management_content)
+
+        self.assertIn("{% block workspace_manager_sidebar %}", management_content)
+        self.assertIn("{% block mobile_workspace_manager_sidebar %}", management_content)
+        self.assertIn(
+            "{% include 'components/navigation/workspace_manager_sidebar.html' with workspace_manager_sidebar_variant=\"desktop\" %}",
+            management_content,
+        )
+        self.assertIn(
+            "{% include 'components/navigation/workspace_manager_sidebar.html' with workspace_manager_sidebar_variant=\"mobile\" %}",
+            management_content,
+        )
+
+    def test_management_layout_comments_stay_current(self):
+        content = (TEMPLATES_ROOT / "layouts/management.html").read_text(
+            encoding="utf-8-sig"
+        )
+
+        self.assertIn("Control-plane layout for account and workspace management", content)
+        self.assertNotIn("Duplicate sidebar content", content)
+        self.assertNotIn("â", content)
+
+    def test_management_layout_uses_restrained_visual_contract(self):
+        content = (TEMPLATES_ROOT / "layouts/management.html").read_text(
+            encoding="utf-8-sig"
+        )
+        base_content = (TEMPLATES_ROOT / "layouts/base.html").read_text(
+            encoding="utf-8-sig"
+        )
+        css_content = (STATIC_ROOT / "css" / "management.css").read_text(
+            encoding="utf-8-sig"
+        )
+
+        self.assertIn("{% load static orgs_tags %}", content)
+        self.assertIn("{% static 'css/management.css' %}", content)
+        self.assertNotIn("<style>", content)
+        self.assertNotIn("</style>", content)
+        self.assertIn(".mgmt-nav-link", css_content)
+        self.assertIn(".mgmt-section-title", css_content)
+        self.assertIn(".mgmt-offcanvas", css_content)
+        self.assertIn("{% block main_wrapper_class %}container-lg mt-4{% endblock %}", base_content)
+        self.assertIn(
+            "{% block main_wrapper_class %}container-fluid p-0 mt-0{% endblock %}",
+            content,
+        )
+        self.assertIn("background: #1f2937", css_content)
+        self.assertIn("box-shadow: inset 3px 0 0 #0f766e", css_content)
+        self.assertNotIn("linear-gradient(90deg, #7c3aed", content)
+        self.assertNotIn("linear-gradient(90deg, #7c3aed", css_content)
+        self.assertNotIn("style=\"background:#f8f7ff", content)
+        self.assertNotIn("style=\"color:#7c3aed", content)
+
+    def test_management_sidebar_partials_share_visual_link_class(self):
+        partials = (
+            "components/navigation/workspace_manager_sidebar.html",
+            "components/navigation/workspace_settings_sidebar.html",
+            "components/navigation/account_sidebar.html",
+        )
+
+        for partial in partials:
+            with self.subTest(partial=partial):
+                content = (TEMPLATES_ROOT / partial).read_text(encoding="utf-8-sig")
+                self.assertIn("mgmt-nav-link", content)
+                self.assertNotIn("nav-link py-2", content)

@@ -60,7 +60,7 @@
     {% endblock %}
     
     <!-- Main Content -->
-    <main class="container-lg mt-4 {% block main_class %}{% endblock %}">
+    <main class="{% block main_wrapper_class %}container-lg mt-4{% endblock %} {% block main_class %}{% endblock %}">
         {% block content %}{% endblock %}
     </main>
     

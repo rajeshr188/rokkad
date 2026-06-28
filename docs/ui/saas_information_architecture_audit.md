@@ -462,10 +462,22 @@ Current checkpoint:
 - Phase 3.1 navigation and workspace switcher planning now records topbar/sidebar ownership, workspace switcher behavior, mobile navigation rules, and guard tests in `docs/ui/navigation_workspace_switcher_plan.md`.
 - Phase 3.2 workspace switcher reuse now moves the topbar workspace dropdown into the reusable `templates/components/navigation/workspace_switcher.html` partial using a navbar variant, with authenticated global and tenant shell smoke coverage.
 - Phase 3.3 desktop settings-sidebar extraction now moves desktop workspace settings, preferences, team, invite, and sent-invitation links into `templates/components/navigation/workspace_settings_sidebar.html`, leaving mobile management links stable for the next slice.
+- Phase 3.4 mobile settings-sidebar extraction now routes the mobile management offcanvas workspace settings, preferences, team, invite, and sent-invitation links through the same `templates/components/navigation/workspace_settings_sidebar.html` partial.
+- Phase 3.5 account-management sidebar extraction now routes desktop and mobile invitations, owner billing, account settings, and profile links through `templates/components/navigation/account_sidebar.html`.
+- Phase 3.6 workspace-manager sidebar extraction now routes desktop and mobile `My Workspaces` and `New Workspace` links through `templates/components/navigation/workspace_manager_sidebar.html`.
+- Phase 3.7 management shell cleanup now removes obsolete duplicate-sidebar wording, cleans shell comments to ASCII, and records the final management navigation partial inventory in `docs/ui/navigation_workspace_switcher_plan.md`.
+- Phase 3.8 management-shell compatibility review now renders an authenticated owner management shell and asserts expected labels plus route targets survive the sidebar partialization.
+- Phase 3.9 management shell visual-polish checklist now documents compatibility constraints, desktop/mobile review criteria, and acceptance checks in `docs/ui/management_shell_visual_polish_checklist.md` before CSS or layout-density changes.
+- Phase 3.10 first management-shell visual polish pass now applies restrained neutral control-plane styling, shared management nav-link classes, mobile active-state parity, and cleaner offcanvas styling without changing route names, visible labels, partial ownership, or permissions.
+- Phase 3.11 rendered management-shell review now fixes the default base-container constraint by adding a backward-compatible `main_wrapper_class` block to `layouts/base.html` and using a full-width wrapper in `layouts/management.html`. Local Chrome headless screenshot attempts did not produce image files in this environment.
+- Phase 3.12 reproducible management-shell visual smoke coverage now renders an authenticated owner management shell in `django_project/test_management_shell_visual_smoke.py` and guards the full-width wrapper, desktop/mobile navigation classes, active states, and control-plane route safety without adding browser dependencies.
+- Phase 3.13 management-shell CSS extraction now moves shell styles to `static/css/management.css`, loads that stylesheet from `layouts/management.html`, and keeps visual behavior unchanged while avoiding further inline CSS growth.
+- Phase 3.14 static asset readiness now verifies `css/management.css` through `findstatic`, a successful `collectstatic --dry-run --noinput` check, and visual smoke coverage for Django staticfiles discovery.
+- Phase 3.15 final navigation/management-shell review now records compatibility findings, verification commands, and the phase-level commit set in `docs/ui/phase3_navigation_management_shell_review.md`.
 
 Next recommended Phase 3 slice:
 
-- Phase 3.4 should route the mobile management offcanvas through a mobile variant of `components/navigation/workspace_settings_sidebar.html`, then remove the duplicated mobile workspace settings links while preserving labels and route targets.
+- Phase 3 is ready for a phase-level commit. After committing, proceed to Phase 4 invitation/team flow cleanup.
 
 ### Phase 3: Navigation and Workspace Switcher
 

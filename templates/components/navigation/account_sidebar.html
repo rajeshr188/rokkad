@@ -1,0 +1,44 @@
+{% with ew=workspace|default:user_workspace %}
+{% firstof user_role "Member" as role_name %}
+{% if account_sidebar_variant == "desktop" %}
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations' %}active{% endif %}"
+   href="{% url 'team_invitations' %}">
+    <i class="bi bi-envelope-open"></i> My Invitations
+    {% if invitation_count and invitation_count > 0 %}
+    <span class="badge bg-warning text-dark">{{ invitation_count }}</span>
+    {% endif %}
+</a>
+{% if role_name == 'Owner' %}
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}"
+   href="{% if ew %}{% url 'workspace_select' ew.id %}?next={% url 'subscriptions:dashboard' %}{% else %}{% url 'workspace_selector' %}?show_all=1{% endif %}">
+    <i class="bi bi-credit-card"></i> Billing
+</a>
+{% endif %}
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'account_settings' %}active{% endif %}"
+   href="{% url 'account_settings' %}">
+    <i class="bi bi-shield-lock"></i> Account Settings
+</a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+   href="{% url 'profile' %}">
+    <i class="bi bi-person-gear"></i> Profile
+</a>
+{% elif account_sidebar_variant == "mobile" %}
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations' %}active{% endif %}"
+   href="{% url 'team_invitations' %}">
+    <i class="bi bi-envelope-open"></i> My Invitations
+    {% if invitation_count and invitation_count > 0 %}
+    <span class="badge bg-warning text-dark">{{ invitation_count }}</span>
+    {% endif %}
+</a>
+{% if role_name == 'Owner' %}
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}"
+   href="{% if ew %}{% url 'workspace_select' ew.id %}?next={% url 'subscriptions:dashboard' %}{% else %}{% url 'workspace_selector' %}?show_all=1{% endif %}">
+    <i class="bi bi-credit-card"></i> Billing
+</a>
+{% endif %}
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+   href="{% url 'profile' %}">
+    <i class="bi bi-person-gear"></i> Profile
+</a>
+{% endif %}
+{% endwith %}
