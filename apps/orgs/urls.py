@@ -2,11 +2,9 @@ from django.urls import path
 
 from . import views
 
-urlpatterns = [
-    # =========================================================================
-    # WORKSPACE MANAGEMENT
-    # =========================================================================
-    # Workspace selection and dashboard
+# Workspace manager routes are global authenticated surfaces. They manage the
+# user's available workspaces and selected workspace, not tenant ERP data.
+WORKSPACE_MANAGER_URLPATTERNS = [
     path("workspace/", views.workspace_selector, name="workspace_selector"),
     path(
         "workspace/<int:workspace_id>/dashboard/",
@@ -18,7 +16,6 @@ urlpatterns = [
         views.workspace_select,
         name="workspace_select",
     ),
-    # Workspace CRUD
     path("workspace/create/", views.workspace_create, name="workspace_create"),
     path("workspace/list/", views.workspace_list, name="workspace_list"),
     path(
@@ -34,26 +31,33 @@ urlpatterns = [
         views.workspace_delete,
         name="workspace_delete",
     ),
-    # Workspace settings and preferences
     path(
         "workspace/<int:workspace_id>/preferences/",
         views.CompanyPreferenceBuilder.as_view(),
         name="workspace_preferences",
     ),
-    # =========================================================================
-    # TEAM MANAGEMENT
-    # =========================================================================
-    # Team invitations
+]
+
+# Incoming invitations belong to the authenticated user account. They are kept
+# separate from workspace invitation administration even though compatibility
+# paths currently live under /orgs/team/.
+ACCOUNT_INVITATION_URLPATTERNS = [
+    path("team/invitations/", views.team_invitations, name="team_invitations"),
+    path(
+        "team/invitations/accept/<str:key>/",
+        views.team_accept_invitation,
+        name="team_accept_invitation",
+    ),
+]
+
+# Workspace invitation administration belongs to workspace settings. Current
+# list/revoke/success paths remain unscoped for compatibility until canonical
+# workspace-scoped aliases are introduced and tested.
+WORKSPACE_INVITATION_URLPATTERNS = [
     path(
         "workspace/<int:workspace_id>/team/invite/",
         views.team_invite,
         name="team_invite",
-    ),
-    path("team/invitations/", views.team_invitations, name="team_invitations"),
-    path(
-        "team/invitations/accept/<str:key>/",
-        views.AcceptInvite.as_view(),
-        name="team_accept_invitation",
     ),
     path(
         "team/invitations/<int:invitation_id>/delete/",
@@ -66,7 +70,11 @@ urlpatterns = [
         name="team_invitations_list",
     ),
     path("team/invite/success/", views.invite_success, name="team_invite_success"),
-    # Team member management
+]
+
+# Team membership routes are workspace settings/admin surfaces. The list route
+# still uses selected-workspace fallback; mutating routes carry workspace_id.
+TEAM_MEMBER_URLPATTERNS = [
     path(
         "workspace/<int:workspace_id>/team/member/<int:membership_id>/remove/",
         views.team_remove_member,
@@ -84,7 +92,17 @@ urlpatterns = [
         name="workspace_leave",
     ),
     path("memberships/", views.my_memberships, name="my_memberships"),
-    # Other
+]
+
+ACCOUNT_PROFILE_URLPATTERNS = [
     path("profile/", views.profile, name="profile"),
     path("account/settings/", views.account_settings, name="account_settings"),
 ]
+
+urlpatterns = (
+    WORKSPACE_MANAGER_URLPATTERNS
+    + ACCOUNT_INVITATION_URLPATTERNS
+    + WORKSPACE_INVITATION_URLPATTERNS
+    + TEAM_MEMBER_URLPATTERNS
+    + ACCOUNT_PROFILE_URLPATTERNS
+)

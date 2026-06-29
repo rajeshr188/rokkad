@@ -12,13 +12,13 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h1 class="h3 mb-1">
-                        <i class="bi bi-envelope"></i> {% trans "Pending Invitations" %}
+                        <i class="bi bi-envelope"></i> {% trans "Sent Workspace Invitations" %}
                     </h1>
                     <p class="text-muted">
                         {% if current_workspace %}
-                        View all invitations for {{ current_workspace.name }}
+                        Track invitations sent for {{ current_workspace.name }}.
                         {% else %}
-                        View all invitations you've sent to team members
+                        Track invitations you have sent to team members across workspaces.
                         {% endif %}
                     </p>
                 </div>
@@ -125,9 +125,9 @@
                         <i class="bi bi-info-circle text-info"></i> About Invitations
                     </h6>
                     <ul class="small mb-0">
-                        <li><strong>Pending:</strong> Invitation sent, waiting for user to accept</li>
+                        <li><strong>Pending:</strong> Invitation sent, waiting for the recipient to accept</li>
                         <li><strong>Accepted:</strong> User has joined the workspace</li>
-                        <li><strong>Declined:</strong> User has declined the invitation</li>
+                        <li><strong>Declined:</strong> Recipient has declined the invitation</li>
                         <li><strong>Revoked:</strong> Invitation was cancelled by inviter/admin</li>
                         <li><strong>Expiration:</strong> Invitations expire after 7 days for security</li>
                     </ul>

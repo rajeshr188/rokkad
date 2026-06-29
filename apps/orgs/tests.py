@@ -813,7 +813,276 @@ class InvitationLifecycleStateTests(SimpleTestCase):
 
 		mock_revoke.assert_called_once()
 		mock_messages.success.assert_called_once()
-		mock_redirect.assert_called_once_with("team_invitations_list")
+		mock_redirect.assert_called_once_with("/orgs/team/invitations/list/?workspace_id=1")
+
+
+class InvitationTeamAuthorizationTests(SimpleTestCase):
+	"""Phase 4.6: focused authorization coverage for team and invitation flows."""
+
+	def setUp(self):
+		self.factory = RequestFactory()
+
+	def _team_invite_view(self):
+		from apps.orgs import views as org_views
+		return org_views.team_invite.__wrapped__.__wrapped__.__wrapped__
+
+	def _remove_member_view(self):
+		from apps.orgs import views as org_views
+		return org_views.team_remove_member.__wrapped__.__wrapped__
+
+	def _change_role_view(self):
+		from apps.orgs import views as org_views
+		return org_views.team_change_role.__wrapped__.__wrapped__
+
+	def test_team_invite_requires_workspace_team_invite_permission(self):
+		company = SimpleNamespace(id=9, is_deleted=False)
+		request = self.factory.get("/orgs/workspace/9/team/invite/")
+		request.user = SimpleNamespace(id=1, is_superuser=False, is_authenticated=True)
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=company), \
+			 patch("apps.orgs.views._assert_workspace_access", return_value={"effective_permissions": {"team_invite"}}) as mock_access, \
+			 patch("apps.orgs.views.CompanyInvitationForm") as mock_form, \
+			 patch("apps.orgs.views.render") as mock_render:
+			self._team_invite_view()(request, workspace_id=9)
+
+		mock_access.assert_called_once_with(
+			request,
+			company,
+			required_permissions={"team_invite"},
+			allow_platform_admin=True,
+		)
+		mock_form.assert_called_once_with(inviter=request.user, company=company)
+		mock_render.assert_called_once()
+
+	def test_send_team_invitation_service_enforces_role_grant_policy(self):
+		form = SimpleNamespace(cleaned_data={"role": SimpleNamespace(name="Admin")})
+		actor = SimpleNamespace(id=1)
+		company = SimpleNamespace(id=9)
+
+		with patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role", side_effect=ValidationError("denied")) as mock_policy, \
+			 patch("apps.orgs.services.control_plane._public_schema_context") as mock_ctx:
+			with self.assertRaises(ValidationError):
+				control_plane.send_team_invitation(
+					form=form,
+					actor=actor,
+					company=company,
+					request=SimpleNamespace(),
+				)
+
+		mock_policy.assert_called_once_with(
+			actor=actor,
+			workspace=company,
+			role=form.cleaned_data["role"],
+		)
+		mock_ctx.assert_not_called()
+
+	@patch("apps.orgs.views.redirect")
+	@patch("apps.orgs.views.messages")
+	def test_invitation_revoke_denies_non_inviter_without_workspace_permission(
+		self,
+		mock_messages,
+		mock_redirect,
+	):
+		from apps.orgs import views as org_views
+
+		request = self.factory.post("/orgs/team/invitations/42/delete/")
+		request.user = SimpleNamespace(id=9)
+		request.headers = {}
+		invitation = SimpleNamespace(
+			id=42,
+			inviter=SimpleNamespace(id=5),
+			company=SimpleNamespace(id=1),
+		)
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=invitation), \
+			 patch("apps.orgs.views._assert_workspace_access", side_effect=PermissionDenied("denied")), \
+			 patch("apps.orgs.views.control_plane.revoke_invitation") as mock_revoke:
+			org_views.invitation_delete.__wrapped__(request, invitation_id=42)
+
+		mock_revoke.assert_not_called()
+		mock_messages.error.assert_called_once()
+		mock_redirect.assert_called_once_with("workspace_selector")
+
+	def test_team_remove_member_requires_team_remove_permission(self):
+		company = SimpleNamespace(id=9)
+		membership = SimpleNamespace(
+			id=5,
+			user=SimpleNamespace(id=2, profile=SimpleNamespace(workspace=None)),
+		)
+		request = self.factory.post("/orgs/workspace/9/team/member/5/remove/")
+		request.user = SimpleNamespace(id=1)
+
+		with patch("apps.orgs.views.get_object_or_404", side_effect=[company, membership]), \
+			 patch("apps.orgs.views._assert_workspace_access", return_value={"role_name": "Owner"}) as mock_access, \
+			 patch("apps.orgs.views.control_plane.remove_membership"):
+			self._remove_member_view()(request, workspace_id=9, membership_id=5)
+
+		mock_access.assert_called_once_with(
+			request,
+			company,
+			required_permissions={"team_remove"},
+			allow_platform_admin=True,
+		)
+
+	def test_team_change_role_requires_team_change_role_permission(self):
+		company = SimpleNamespace(id=9)
+		membership = SimpleNamespace(id=5, user=SimpleNamespace(id=2))
+		role = SimpleNamespace(id=3, name="Admin")
+		request = self.factory.post(
+			"/orgs/workspace/9/team/member/5/role/",
+			{"role": "3"},
+		)
+		request.user = SimpleNamespace(id=1)
+		request.htmx = False
+
+		with patch("apps.orgs.views.get_object_or_404", side_effect=[company, membership, role]), \
+			 patch("apps.orgs.views._assert_workspace_access", return_value={"role_name": "Owner"}) as mock_access, \
+			 patch("apps.orgs.views.role_policy.allowed_invitation_roles", return_value=[role]), \
+			 patch("apps.orgs.views.control_plane.change_membership_role"):
+			self._change_role_view()(request, workspace_id=9, membership_id=5)
+
+		mock_access.assert_called_once_with(
+			request,
+			company,
+			required_permissions={"team_change_role"},
+			allow_platform_admin=True,
+		)
+
+	@patch("apps.orgs.views.redirect")
+	@patch("apps.orgs.views.messages")
+	def test_workspace_leave_blocks_sole_owner_self_leave(self, mock_messages, mock_redirect):
+		from apps.orgs import views as org_views
+
+		user = SimpleNamespace(id=1)
+		company = SimpleNamespace(id=9)
+		membership = SimpleNamespace(user=user, role=SimpleNamespace(name="Owner"))
+		request = self.factory.post("/orgs/workspace/9/leave/")
+		request.user = user
+
+		with patch("apps.orgs.views.get_object_or_404", side_effect=[company, membership]), \
+			 patch("apps.orgs.views._is_owner_membership", return_value=True), \
+			 patch("apps.orgs.views._owner_membership_count", return_value=1), \
+			 patch("apps.orgs.views.control_plane.remove_membership") as mock_remove:
+			org_views.workspace_leave.__wrapped__(request, workspace_id=9)
+
+		mock_remove.assert_not_called()
+		mock_messages.error.assert_called_once()
+		mock_redirect.assert_called_once_with("workspace_detail", workspace_id=9)
+
+	def test_sent_invitation_list_requires_team_invite_on_selected_workspace(self):
+		from apps.orgs import views as org_views
+
+		workspace = SimpleNamespace(id=9)
+		request = self.factory.get("/orgs/team/invitations/list/")
+		request.user = SimpleNamespace(id=1)
+
+		with patch("apps.orgs.views.resolve_request_workspace", return_value=workspace), \
+			 patch("apps.orgs.views._assert_workspace_access", side_effect=PermissionDenied("denied")) as mock_access:
+			with self.assertRaises(PermissionDenied):
+				org_views.companyinvitations_list.__wrapped__(request)
+
+		mock_access.assert_called_once_with(
+			request,
+			workspace,
+			required_permissions={"team_invite"},
+			allow_platform_admin=True,
+		)
+
+
+class DirectInvitationAcceptAdapterTests(SimpleTestCase):
+	"""Phase 4.7: direct invite links use orgs flow for authenticated users."""
+
+	def setUp(self):
+		self.factory = RequestFactory()
+
+	@patch("apps.orgs.views.redirect")
+	@patch("apps.orgs.views.messages")
+	def test_authenticated_matching_user_accepts_through_control_plane(
+		self,
+		mock_messages,
+		mock_redirect,
+	):
+		from apps.orgs import views as org_views
+
+		workspace = SimpleNamespace(id=9, name="Acme")
+		role = SimpleNamespace(name="Member")
+		invitation = SimpleNamespace(
+			email="user@example.com",
+			company=workspace,
+			role=role,
+			lifecycle_state=lambda: CompanyInvitation.Status.PENDING,
+		)
+		profile_saves = []
+		user = SimpleNamespace(
+			email="USER@example.com",
+			is_authenticated=True,
+			profile=SimpleNamespace(
+				workspace=None,
+				save=lambda **kwargs: profile_saves.append(kwargs),
+			),
+		)
+		request = self.factory.get("/orgs/team/invitations/accept/key123/")
+		request.user = user
+		fake_queryset = SimpleNamespace(first=lambda: invitation)
+		fake_manager = SimpleNamespace(filter=lambda **_kwargs: fake_queryset)
+
+		with patch.object(org_views.CompanyInvitation.objects, "select_related", return_value=fake_manager), \
+			 patch("apps.orgs.views.control_plane.accept_invitation") as mock_accept:
+			org_views.team_accept_invitation(request, key="KEY123")
+
+		mock_accept.assert_called_once_with(
+			invitation=invitation,
+			user=user,
+			request=request,
+		)
+		self.assertIs(user.profile.workspace, workspace)
+		self.assertEqual(profile_saves, [{}])
+		mock_messages.success.assert_called_once()
+		mock_redirect.assert_called_once_with("workspace_dashboard", workspace_id=9)
+
+	def test_unauthenticated_direct_accept_preserves_django_invitations_fallback(self):
+		from apps.orgs import views as org_views
+
+		request = self.factory.get("/orgs/team/invitations/accept/key123/")
+		request.user = SimpleNamespace(is_authenticated=False)
+		fallback_response = object()
+
+		with patch("apps.orgs.views.AcceptInvite.as_view", return_value=lambda request, key: fallback_response) as mock_as_view:
+			response = org_views.team_accept_invitation(request, key="key123")
+
+		mock_as_view.assert_called_once()
+		self.assertIs(response, fallback_response)
+
+	@patch("apps.orgs.views.redirect")
+	@patch("apps.orgs.views.messages")
+	def test_authenticated_email_mismatch_does_not_accept_invitation(
+		self,
+		mock_messages,
+		mock_redirect,
+	):
+		from apps.orgs import views as org_views
+
+		invitation = SimpleNamespace(
+			email="invited@example.com",
+			company=SimpleNamespace(id=9, name="Acme"),
+			role=SimpleNamespace(name="Member"),
+			lifecycle_state=lambda: CompanyInvitation.Status.PENDING,
+		)
+		request = self.factory.get("/orgs/team/invitations/accept/key123/")
+		request.user = SimpleNamespace(
+			email="other@example.com",
+			is_authenticated=True,
+		)
+		fake_queryset = SimpleNamespace(first=lambda: invitation)
+		fake_manager = SimpleNamespace(filter=lambda **_kwargs: fake_queryset)
+
+		with patch.object(org_views.CompanyInvitation.objects, "select_related", return_value=fake_manager), \
+			 patch("apps.orgs.views.control_plane.accept_invitation") as mock_accept:
+			org_views.team_accept_invitation(request, key="key123")
+
+		mock_accept.assert_not_called()
+		mock_messages.error.assert_called_once()
+		mock_redirect.assert_called_once_with("team_invitations")
 
 
 class MembershipLifecycleGuardrailTests(SimpleTestCase):

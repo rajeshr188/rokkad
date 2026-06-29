@@ -98,6 +98,15 @@ def _owner_membership_count(workspace):
     return role_policy.owner_membership_count(workspace)
 
 
+def _get_workspace_from_query(request):
+    workspace_id = request.GET.get("workspace_id")
+    if not workspace_id:
+        return None
+    if not workspace_id.isdigit():
+        raise Http404("Invalid workspace ID")
+    return get_object_or_404(Company, id=workspace_id, is_deleted=False)
+
+
 def _assert_owner_access(request, workspace, allow_platform_admin=True):
     """Allow only workspace owner (or platform admin when enabled)."""
     access = _assert_workspace_access(
@@ -269,11 +278,13 @@ def workspace_delete(request, workspace_id=None, company_id=None):
 
 @login_required
 def companyinvitations_list(request):
-    workspace = resolve_request_workspace(
-        request,
-        include_public=False,
-        allow_profile_fallback=True,
-    )
+    workspace = _get_workspace_from_query(request)
+    if workspace is None:
+        workspace = resolve_request_workspace(
+            request,
+            include_public=False,
+            allow_profile_fallback=True,
+        )
 
     if workspace is not None:
         _assert_workspace_access(
@@ -345,7 +356,9 @@ def team_invite(request, workspace_id=None, company_id=None):
                     request=request,
                 )
                 messages.success(request, "Invitation sent successfully")
-                return redirect("team_invite_success")
+                return redirect(
+                    f"{reverse('team_invite_success')}?workspace_id={company.id}"
+                )
             except (ValidationError, ValueError) as exc:
                 form.add_error(None, str(exc))
                 messages.error(request, "Unable to send invitation. Please review errors.")
@@ -367,7 +380,72 @@ def team_invite(request, workspace_id=None, company_id=None):
 
 @login_required
 def invite_success(request):
-    return render(request, "company/invite_success.html")
+    workspace = None
+    sent_invitations_url = reverse("team_invitations_list")
+    workspace = _get_workspace_from_query(request)
+    if workspace is not None:
+        _assert_workspace_access(
+            request,
+            workspace,
+            required_permissions={"team_invite"},
+            allow_platform_admin=True,
+        )
+        sent_invitations_url = (
+            f"{sent_invitations_url}?workspace_id={workspace.id}"
+        )
+
+    return render(
+        request,
+        "company/invite_success.html",
+        {
+            "workspace": workspace,
+            "current_workspace": workspace,
+            "sent_invitations_url": sent_invitations_url,
+        },
+    )
+
+
+def team_accept_invitation(request, key):
+    if not request.user.is_authenticated:
+        return AcceptInvite.as_view()(request, key=key)
+
+    invitation = (
+        CompanyInvitation.objects.select_related("company", "role")
+        .filter(key=key.lower())
+        .first()
+    )
+    if invitation is None:
+        messages.error(request, "Invitation not found.")
+        return redirect("team_invitations")
+
+    if invitation.email.lower() != request.user.email.lower():
+        messages.error(request, "This invitation was sent to a different email address.")
+        return redirect("team_invitations")
+
+    current_state = invitation.lifecycle_state()
+    if current_state == "expired":
+        messages.error(request, f"Invitation from {invitation.company.name} has expired.")
+        return redirect("team_invitations")
+
+    if current_state != CompanyInvitation.Status.PENDING:
+        messages.info(request, f"Invitation is already {current_state}.")
+        return redirect("team_invitations")
+
+    control_plane.accept_invitation(
+        invitation=invitation,
+        user=request.user,
+        request=request,
+    )
+
+    if hasattr(request.user, "profile"):
+        request.user.profile.workspace = invitation.company
+        request.user.profile.save()
+
+    messages.success(
+        request,
+        f"Added to {invitation.company.name} as {invitation.role.name}",
+    )
+    return redirect("workspace_dashboard", workspace_id=invitation.company.id)
 
 
 @method_decorator(login_required, name="dispatch")
@@ -718,7 +796,10 @@ def invitation_delete(request, invitation_id):
     if request.headers.get("HX-Request"):
         return HttpResponse("Invitation revoked successfully")
 
-    return redirect("team_invitations_list")
+    invitation_workspace_id = getattr(invitation, "company_id", invitation.company.id)
+    return redirect(
+        f"{reverse('team_invitations_list')}?workspace_id={invitation_workspace_id}"
+    )
 
 
 from io import StringIO

@@ -474,10 +474,18 @@ Current checkpoint:
 - Phase 3.13 management-shell CSS extraction now moves shell styles to `static/css/management.css`, loads that stylesheet from `layouts/management.html`, and keeps visual behavior unchanged while avoiding further inline CSS growth.
 - Phase 3.14 static asset readiness now verifies `css/management.css` through `findstatic`, a successful `collectstatic --dry-run --noinput` check, and visual smoke coverage for Django staticfiles discovery.
 - Phase 3.15 final navigation/management-shell review now records compatibility findings, verification commands, and the phase-level commit set in `docs/ui/phase3_navigation_management_shell_review.md`.
+- Phase 4.1 invitation/team flow intent audit now documents current incoming invitation, sent workspace invitation, and team-member route ownership in `docs/ui/invitation_team_flow_cleanup_plan.md`, with route/template guard tests in `django_project/test_invitation_team_flow_intent.py`.
+- Phase 4.2 route-intent cleanup now groups `apps.orgs.urls` by workspace manager, account invitation, workspace invitation, team member, and account profile surfaces while preserving the same effective URL order.
+- Phase 4.3 copy and heading clarification now distinguishes received invitations from sent workspace invitations, aligns team-invite wording, and guards known invitation/team mojibake cleanup.
+- Phase 4.4 workspace-scoped redirect cleanup now carries explicit workspace context through invite success, sent-invitation list, and revoke return paths while keeping old URLs working.
+- Phase 4.5 accept/decline characterization now documents that the direct django-invitations accept path is signal-bridged for membership creation, while the custom orgs POST accept path owns active workspace selection, orgs audit, and workspace-dashboard redirect behavior.
+- Phase 4.6 authorization coverage now guards invite permissions, role-grant policy, revoke denial, team remove/change-role gates, sole-owner self-leave, and selected-workspace sent-invitation fallback.
+- Phase 4.7 direct invitation accept adapter now keeps the existing accept path/name while sending authenticated matching users through the orgs control-plane accept flow and preserving django-invitations fallback for unauthenticated users.
+- Phase 4 final review now records compatibility, authorization coverage, verification, and deferred follow-ups in `docs/ui/phase4_invitation_team_flow_review.md`.
 
-Next recommended Phase 3 slice:
+Next recommended Phase 4 slice:
 
-- Phase 3 is ready for a phase-level commit. After committing, proceed to Phase 4 invitation/team flow cleanup.
+- Phase 4 is ready for a phase-level commit. After committing, proceed to canonical route aliases or Phase 5 authorization cleanup as a separate phase.
 
 ### Phase 3: Navigation and Workspace Switcher
 
@@ -490,6 +498,7 @@ Next recommended Phase 3 slice:
 - Unify invitation accept/list/revoke/resend.
 - Keep role-grant policy in services.
 - Make accept-invite safe for logged-out and new users.
+- Start from the compatibility map in `docs/ui/invitation_team_flow_cleanup_plan.md`: incoming invitations are global/account surfaces, while sent invitations and team members are workspace settings surfaces.
 
 ### Phase 5: Authorization Cleanup
 

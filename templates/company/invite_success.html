@@ -1,2 +1,38 @@
-<h1>Invite Success</h1>
-  <p>Your invitation has been successfully sent.</p>
+{% extends 'base_workspace_settings.html' %}
+
+{% block title %}Workspace Invitation Sent - Rokkad{% endblock %}
+
+{% block mgmt_content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-send-check fs-1 text-success"></i>
+                    </div>
+                    <h1 class="h4 mb-2">Workspace Invitation Sent</h1>
+                    <p class="text-muted mb-4">
+                        Your team member invitation has been sent.
+                    </p>
+
+                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                        <a href="{{ sent_invitations_url }}" class="btn btn-primary">
+                            <i class="bi bi-envelope-check"></i> View Sent Invitations
+                        </a>
+                        {% if workspace %}
+                        <a href="{% url 'team_invite' workspace_id=workspace.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-person-plus"></i> Invite Another
+                        </a>
+                        {% else %}
+                        <a href="{% url 'workspace_selector' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-building"></i> Back to Workspaces
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
