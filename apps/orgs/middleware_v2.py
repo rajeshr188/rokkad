@@ -58,20 +58,24 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
 
     # URLs that require workspace
     WORKSPACE_REQUIRED_URLS = [
+        "/party/",
         "/girvi/",
         "/dea/",
         "/sales/",
         "/purchase/",
         "/contact/",
+        "/data-tools/",
         "/product/",
         "/rates/",
         "/approval/",
         "/notify/",
+        "/notify-v2/",
     ]
 
     WORKSPACE_ID_PATTERNS = [
         re.compile(r"^/orgs/workspace/(?P<workspace_id>\d+)(/|$)"),
         re.compile(r"^/orgs/company/(?P<workspace_id>\d+)(/|$)"),
+        re.compile(r"^/workspace/(?P<workspace_id>\d+)/settings(/|$)"),
     ]
 
     def process_request(self, request):

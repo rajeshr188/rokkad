@@ -490,10 +490,19 @@ Current checkpoint:
 - Sent-invitation return targets now use the canonical settings URL: invite-success back links and invitation revoke returns both target `workspace_settings_invitations`.
 - Successful invite POSTs now redirect directly to `workspace_settings_invitations`; the legacy `team_invite_success` route/template remains available for old links.
 - Canonical route alias phase review now records compatibility findings, residual risks, verification, and the recommended commit set in `docs/ui/canonical_route_aliases_phase_review.md`.
+- Phase 5.1 authorization inventory now maps public, global authenticated, workspace settings, tenant ERP, and future portal surfaces in `docs/ui/authorization_cleanup_inventory.md`, with guard tests in `django_project/test_authorization_surface_intent.py`.
+- Phase 5.2 middleware canonical settings path extraction now lets `SecureWorkspaceMiddleware` recognize `/workspace/<id>/settings/...` aliases as workspace-id-bearing paths.
+- Phase 5.3 middleware tenant-prefix coverage now keeps every current tenant ERP prefix from `django_project.tenant_urls.TENANT_ERP_URLPATTERNS` behind workspace-required middleware handling.
+- Phase 5.4 Party access helper scaffolding now provides reusable Party workspace, permission, action, decorator, and CBV mixin helpers in `apps.tenant_apps.party.access`.
+- Phase 5.5 Party read/export authorization now routes Party list/detail through the Party view action guard and Party export through the Party export action permission.
+- Phase 5.6 Party simple mutation authorization now routes Party create/customer-convert through the Party create action guard and Party update through the Party edit action guard.
+- Phase 5.7 Party profile mutation authorization now routes profile-photo, contact-method, and address mutations through the Party edit action guard.
+- Phase 5.8 Party KYC/relationship mutation authorization now routes identifier, document, and relationship mutations through the Party edit action guard.
+- Phase 5.9 final Party mutation authorization now routes role add/end and duplicate merge through the Party edit action guard.
 
 Next recommended SaaS IA slice:
 
-- Commit the canonical route alias phase as one phase-level change set. After that, start Phase 5 authorization cleanup with an authorization inventory and guard-test pass for public/global/workspace-settings/tenant surfaces.
+- Complete a Phase 5 Party authorization review and phase-level commit checkpoint before starting Contact/Product authorization cleanup.
 
 ### Phase 3: Navigation and Workspace Switcher
 

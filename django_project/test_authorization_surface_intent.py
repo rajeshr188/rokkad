@@ -1,0 +1,173 @@
+from pathlib import Path
+
+from django.test import SimpleTestCase
+
+from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
+from django_project import tenant_urls, urls
+from django_project.shared_urlpatterns import (
+    CANONICAL_CONTROL_PLANE_URLPATTERNS,
+    GLOBAL_AUTHENTICATED_URLPATTERNS,
+)
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DOCS_UI_ROOT = PROJECT_ROOT / "docs" / "ui"
+
+
+def _route_prefixes(patterns):
+    return {str(pattern.pattern) for pattern in patterns}
+
+
+def _read(relative_path):
+    return (PROJECT_ROOT / relative_path).read_text(encoding="utf-8-sig")
+
+
+class AuthorizationSurfaceIntentTests(SimpleTestCase):
+    def test_phase5_authorization_inventory_exists(self):
+        inventory = DOCS_UI_ROOT / "authorization_cleanup_inventory.md"
+
+        self.assertTrue(inventory.exists())
+        content = inventory.read_text(encoding="utf-8-sig")
+        for expected in (
+            "Public / Platform",
+            "Global Authenticated",
+            "Workspace Settings / Admin",
+            "Tenant / Workspace ERP",
+            "Customer / Member Portal",
+            "Recommended Cleanup Order",
+        ):
+            self.assertIn(expected, content)
+
+    def test_public_urlconf_excludes_tenant_erp_prefixes(self):
+        public_prefixes = _route_prefixes(urls.urlpatterns)
+        tenant_only_prefixes = _route_prefixes(tenant_urls.TENANT_ERP_URLPATTERNS)
+
+        self.assertTrue(tenant_only_prefixes.isdisjoint(public_prefixes))
+
+    def test_tenant_erp_prefixes_are_workspace_required_by_middleware(self):
+        tenant_prefixes = {
+            prefix.rstrip("/")
+            for prefix in _route_prefixes(tenant_urls.TENANT_ERP_URLPATTERNS)
+        }
+        workspace_required = {
+            prefix.strip("/")
+            for prefix in SecureWorkspaceMiddleware.WORKSPACE_REQUIRED_URLS
+        }
+
+        self.assertTrue(tenant_prefixes.issubset(workspace_required))
+
+    def test_canonical_control_plane_aliases_are_not_tenant_erp_prefixes(self):
+        tenant_prefixes = _route_prefixes(tenant_urls.TENANT_ERP_URLPATTERNS)
+        canonical_prefixes = _route_prefixes(CANONICAL_CONTROL_PLANE_URLPATTERNS)
+
+        self.assertTrue(tenant_prefixes.isdisjoint(canonical_prefixes))
+        self.assertEqual(
+            GLOBAL_AUTHENTICATED_URLPATTERNS[: len(CANONICAL_CONTROL_PLANE_URLPATTERNS)],
+            CANONICAL_CONTROL_PLANE_URLPATTERNS,
+        )
+
+    def test_secure_workspace_middleware_keeps_membership_before_tenant_context_contract(self):
+        middleware_content = _read("apps/orgs/middleware_v2.py")
+
+        self.assertIn("def _validate_workspace_access", middleware_content)
+        self.assertIn("Membership.objects.select_related(\"role\").get", middleware_content)
+        self.assertIn("self._set_tenant_context(request, workspace)", middleware_content)
+        validation_index = middleware_content.index(
+            "validation = self._validate_workspace_access"
+        )
+        tenant_context_index = middleware_content.index(
+            "self._set_tenant_context(request, workspace)",
+            validation_index,
+        )
+        self.assertLess(validation_index, tenant_context_index)
+
+    def test_secure_workspace_middleware_extracts_legacy_and_canonical_workspace_ids(self):
+        middleware = SecureWorkspaceMiddleware(get_response=lambda request: None)
+
+        path_cases = {
+            "/orgs/workspace/42/": 42,
+            "/orgs/workspace/42/detail/": 42,
+            "/orgs/company/43/preferences/": 43,
+            "/workspace/44/settings/": 44,
+            "/workspace/44/settings/team/": 44,
+            "/workspace/44/settings/invitations/new/": 44,
+        }
+
+        for path, expected_workspace_id in path_cases.items():
+            with self.subTest(path=path):
+                self.assertEqual(
+                    middleware._extract_workspace_id_from_path(path),
+                    expected_workspace_id,
+                )
+
+        for public_path in ("/app/workspaces/", "/accounts/login/", "/workspace/44/"):
+            with self.subTest(path=public_path):
+                self.assertIsNone(middleware._extract_workspace_id_from_path(public_path))
+
+    def test_workspace_resolution_helper_does_not_use_profile_fallback_by_default(self):
+        tenant_context = _read("apps/orgs/tenant_context.py")
+
+        self.assertIn("allow_profile_fallback=False", tenant_context)
+        self.assertIn("if not allow_profile_fallback:", tenant_context)
+        self.assertIn("return None", tenant_context)
+
+    def test_girvi_and_dea_shared_access_helpers_remain_available(self):
+        girvi_access = _read("apps/tenant_apps/girvi/views/access.py")
+        dea_access = _read("apps/tenant_apps/dea/views/access.py")
+        party_access = _read("apps/tenant_apps/party/access.py")
+
+        for expected in (
+            "def assert_girvi_workspace_access",
+            "def girvi_workspace_required",
+            "def assert_girvi_workspace_permission",
+            "def girvi_permission_required",
+            "class GirviPermissionRequiredMixin",
+        ):
+            self.assertIn(expected, girvi_access)
+
+        for expected in (
+            "def assert_dea_accountant_access",
+            "def dea_accountant_required",
+            "class DeaAccountantRequiredMixin",
+            "ACCOUNTANT_ROLES",
+        ):
+            self.assertIn(expected, dea_access)
+
+        for expected in (
+            "def assert_party_workspace_access",
+            "def assert_party_permission",
+            "def assert_party_action_permission",
+            "def party_action_required",
+            "class PartyPermissionRequiredMixin",
+        ):
+            self.assertIn(expected, party_access)
+
+    def test_known_tenant_authorization_gaps_are_documented_before_behavior_changes(self):
+        inventory = (DOCS_UI_ROOT / "authorization_cleanup_inventory.md").read_text(
+            encoding="utf-8-sig"
+        )
+
+        self.assertIn("Party list/detail read paths use the Party view action guard", inventory)
+        self.assertIn(
+            "Party role add/end and duplicate merge mutation paths use the Party edit action guard",
+            inventory,
+        )
+        self.assertIn("Contact, Product", inventory)
+        self.assertIn("mostly login-only", inventory)
+        self.assertIn("Middleware workspace-required prefixes cover current tenant ERP prefixes", inventory)
+        self.assertIn("every current tenant ERP prefix", inventory)
+        self.assertIn("canonical `/workspace/<id>/settings/...`", inventory)
+
+    def test_login_only_tenant_app_gaps_remain_visible_for_phase5_cleanup(self):
+        party_views = _read("apps/tenant_apps/party/views.py")
+        contact_customer_views = _read("apps/tenant_apps/contact/views/customer.py")
+        product_views = _read("apps/tenant_apps/product/views/product.py")
+
+        self.assertNotIn("@login_required", party_views)
+        self.assertIn("party_action_required", party_views)
+
+        for content in (contact_customer_views, product_views):
+            self.assertIn("@login_required", content)
+
+        self.assertNotIn("girvi_permission_required", party_views)
+        self.assertNotIn("dea_accountant_required", party_views)

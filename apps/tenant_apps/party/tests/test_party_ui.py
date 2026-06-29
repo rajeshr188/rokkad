@@ -3,13 +3,15 @@ import uuid
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
-from django.test import override_settings
+from django.test import RequestFactory, override_settings
 from django.urls import reverse
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 
+from apps.tenant_apps.party import views as party_views
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.girvi.models import GivenLoan, License, LoanItem, Release, Series, TakenLoan
@@ -30,6 +32,12 @@ User = get_user_model()
 @override_settings(
     ROOT_URLCONF="django_project.tenant_urls",
     MEDIA_ROOT=tempfile.mkdtemp(),
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
+    },
 )
 class PartyUITests(TenantTestCase):
     test_schema_name = f"party_ui_{uuid.uuid4().hex[:8]}"
@@ -66,8 +74,26 @@ class PartyUITests(TenantTestCase):
         super().setUp()
         connection.set_tenant(self.tenant)
         self.client = TenantClient(self.tenant)
+        self.factory = RequestFactory()
         self.user = User.objects.get(username="party-ui-owner")
         self.client.login(username="party-ui-owner", password="testpass123")
+
+    def _login_workspace_user(self, username, role_name):
+        user, _ = User.objects.get_or_create(
+            username=username,
+            defaults={"email": f"{username}@example.com"},
+        )
+        user.set_password("testpass123")
+        user.save()
+        role, _ = Role.objects.get_or_create(name=role_name)
+        Membership.objects.update_or_create(
+            user=user,
+            company=self.tenant,
+            defaults={"role": role},
+        )
+        self.client.logout()
+        self.client.login(username=username, password="testpass123")
+        return user
 
     def test_party_list_search_displays_party(self):
         Party.objects.create(party_code="P1001", display_name="Asha Traders")
@@ -77,6 +103,24 @@ class PartyUITests(TenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Asha Traders")
         self.assertContains(response, "P1001")
+
+    def test_party_list_allows_member_with_view_permission(self):
+        Party.objects.create(party_code="P1001", display_name="Asha Traders")
+        self._login_workspace_user("party-ui-member", "Member")
+
+        response = self.client.get(reverse("party:party_list"), {"q": "Asha"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Asha Traders")
+
+    def test_party_list_denies_role_without_view_permission(self):
+        user = self._login_workspace_user("party-ui-noaccess", "NoAccess")
+        request = self.factory.get(reverse("party:party_list"))
+        request.user = user
+        request.tenant = self.tenant
+
+        with self.assertRaises(PermissionDenied):
+            party_views.party_list(request)
 
     def test_party_list_csv_export_uses_current_filters(self):
         borrower = PartyRoleType.objects.create(key="BORROWER", label="Borrower")
@@ -103,6 +147,16 @@ class PartyUITests(TenantTestCase):
         self.assertIn("Asha Traders", content)
         self.assertIn("Borrower", content)
         self.assertNotIn("P1002", content)
+
+    def test_party_list_export_denies_member_without_export_permission(self):
+        Party.objects.create(party_code="P1001", display_name="Asha Traders")
+        user = self._login_workspace_user("party-ui-export-member", "Member")
+        request = self.factory.get(reverse("party:party_list"), {"_export": "csv"})
+        request.user = user
+        request.tenant = self.tenant
+
+        with self.assertRaisesMessage(PermissionDenied, "Party export permission is required."):
+            party_views.party_list(request)
 
     def test_party_list_xlsx_export_returns_spreadsheet(self):
         Party.objects.create(party_code="P1001", display_name="Asha Traders")
@@ -143,6 +197,36 @@ class PartyUITests(TenantTestCase):
         self.assertEqual(party.created_by, self.user)
         self.assertEqual(party.updated_by, self.user)
 
+    def test_party_create_allows_member_with_create_permission(self):
+        self._login_workspace_user("party-ui-create-member", "Member")
+
+        response = self.client.post(
+            reverse("party:party_create"),
+            {
+                "party_type": Party.PartyType.ORGANIZATION,
+                "display_name": "Member Created Party",
+                "legal_name": "",
+                "primary_phone": "",
+                "primary_email": "",
+                "tax_pan": "",
+                "gstin": "",
+                "risk_level": "",
+                "status": Party.PartyStatus.ACTIVE,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Party.objects.filter(display_name="Member Created Party").exists())
+
+    def test_party_create_denies_role_without_create_permission(self):
+        user = self._login_workspace_user("party-ui-create-noaccess", "NoAccess")
+        request = self.factory.post(reverse("party:party_create"))
+        request.user = user
+        request.tenant = self.tenant
+
+        with self.assertRaises(PermissionDenied):
+            party_views.party_create(request)
+
     def test_party_create_preserves_manual_code(self):
         response = self.client.post(
             reverse("party:party_create"),
@@ -162,6 +246,15 @@ class PartyUITests(TenantTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Party.objects.filter(party_code="CUSTOM-100").exists())
+
+    def test_party_customer_convert_denies_role_without_create_permission(self):
+        user = self._login_workspace_user("party-ui-convert-noaccess", "NoAccess")
+        request = self.factory.get(reverse("party:party_customer_convert"))
+        request.user = user
+        request.tenant = self.tenant
+
+        with self.assertRaises(PermissionDenied):
+            party_views.party_customer_convert(request)
 
     def test_party_create_saves_textual_relation(self):
         response = self.client.post(
@@ -226,6 +319,40 @@ class PartyUITests(TenantTestCase):
         self.assertContains(response, "No account mappings found.")
         self.assertContains(response, "Save Photo")
         self.assertContains(response, "Merge")
+
+    def test_party_update_allows_member_with_edit_permission(self):
+        party = Party.objects.create(party_code="P1018", display_name="Editable Party")
+        self._login_workspace_user("party-ui-edit-member", "Member")
+
+        response = self.client.post(
+            reverse("party:party_update", args=[party.pk]),
+            {
+                "party_code": "P1018",
+                "party_type": Party.PartyType.ORGANIZATION,
+                "display_name": "Member Edited Party",
+                "legal_name": "",
+                "primary_phone": "",
+                "primary_email": "",
+                "tax_pan": "",
+                "gstin": "",
+                "risk_level": "",
+                "status": Party.PartyStatus.ACTIVE,
+            },
+        )
+
+        party.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(party.display_name, "Member Edited Party")
+
+    def test_party_update_denies_role_without_edit_permission(self):
+        party = Party.objects.create(party_code="P1019", display_name="Locked Party")
+        user = self._login_workspace_user("party-ui-edit-noaccess", "NoAccess")
+        request = self.factory.get(reverse("party:party_update", args=[party.pk]))
+        request.user = user
+        request.tenant = self.tenant
+
+        with self.assertRaises(PermissionDenied):
+            party_views.party_update(request, party.pk)
 
     def test_party_detail_loans_tab_shows_active_closed_with_operational_metrics(self):
         party = Party.objects.create(party_code="P1020", display_name="Loan Party")
@@ -345,6 +472,27 @@ class PartyUITests(TenantTestCase):
         self.assertEqual(role.status, PartyRole.RoleStatus.ENDED)
         self.assertIsNotNone(role.effective_to)
 
+    def test_role_mutations_deny_role_without_edit_permission(self):
+        party = Party.objects.create(party_code="P1028", display_name="Locked Role")
+        role_type = PartyRoleType.objects.create(
+            key="LOCKED_CUSTOMER",
+            label="Locked Customer",
+        )
+        role = PartyRole.objects.create(party=party, role_type=role_type)
+        user = self._login_workspace_user("party-ui-role-noaccess", "NoAccess")
+
+        add_request = self.factory.post(reverse("party:party_role_add", args=[party.pk]))
+        add_request.user = user
+        add_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_role_add(add_request, party.pk)
+
+        end_request = self.factory.post(reverse("party:party_role_end", args=[party.pk, role.pk]))
+        end_request.user = user
+        end_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_role_end(end_request, party.pk, role.pk)
+
     def test_profile_photo_upload_and_remove(self):
         party = Party.objects.create(party_code="P1005", display_name="Photo Party")
         image = SimpleUploadedFile(
@@ -385,6 +533,22 @@ class PartyUITests(TenantTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(party.profile_photo)
+
+    def test_profile_photo_mutations_deny_role_without_edit_permission(self):
+        party = Party.objects.create(party_code="P1021", display_name="Locked Photo")
+        user = self._login_workspace_user("party-ui-photo-noaccess", "NoAccess")
+
+        update_request = self.factory.post(reverse("party:party_photo_update", args=[party.pk]))
+        update_request.user = user
+        update_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_profile_photo_update(update_request, party.pk)
+
+        remove_request = self.factory.post(reverse("party:party_photo_remove", args=[party.pk]))
+        remove_request.user = user
+        remove_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_profile_photo_remove(remove_request, party.pk)
 
     def test_primary_contacts_sync_to_party_fields_and_delete_clears(self):
         party = Party.objects.create(party_code="P1006", display_name="Contact Party")
@@ -434,6 +598,29 @@ class PartyUITests(TenantTestCase):
 
         self.assertEqual(delete_response.status_code, 302)
         self.assertEqual(party.primary_phone, "")
+
+    def test_contact_mutations_deny_role_without_edit_permission(self):
+        party = Party.objects.create(party_code="P1022", display_name="Locked Contact")
+        contact = PartyContactMethod.objects.create(
+            party=party,
+            contact_type=PartyContactMethod.ContactType.EMAIL,
+            value="locked@example.com",
+        )
+        user = self._login_workspace_user("party-ui-contact-noaccess", "NoAccess")
+
+        save_request = self.factory.post(reverse("party:party_contact_add", args=[party.pk]))
+        save_request.user = user
+        save_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_contact_save(save_request, party.pk)
+
+        delete_request = self.factory.post(
+            reverse("party:party_contact_delete", args=[party.pk, contact.pk])
+        )
+        delete_request.user = user
+        delete_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_contact_delete(delete_request, party.pk, contact.pk)
 
     def test_invalid_phone_contact_returns_form_error(self):
         party = Party.objects.create(party_code="P1011", display_name="Bad Phone")
@@ -512,6 +699,31 @@ class PartyUITests(TenantTestCase):
         self.assertEqual(addresses.count(), 1)
         self.assertEqual(addresses.get().line1, "Second Street")
 
+    def test_address_mutations_deny_role_without_edit_permission(self):
+        party = Party.objects.create(party_code="P1023", display_name="Locked Address")
+        address = PartyAddress.objects.create(
+            party=party,
+            address_type=PartyAddress.AddressType.BILLING,
+            line1="Locked Street",
+            city="Chennai",
+            country="IN",
+        )
+        user = self._login_workspace_user("party-ui-address-noaccess", "NoAccess")
+
+        save_request = self.factory.post(reverse("party:party_address_add", args=[party.pk]))
+        save_request.user = user
+        save_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_address_save(save_request, party.pk)
+
+        delete_request = self.factory.post(
+            reverse("party:party_address_delete", args=[party.pk, address.pk])
+        )
+        delete_request.user = user
+        delete_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_address_delete(delete_request, party.pk, address.pk)
+
     def test_duplicate_identifier_type_returns_form_error(self):
         party = Party.objects.create(party_code="P1009", display_name="KYC Party")
         PartyIdentifier.objects.create(
@@ -537,6 +749,29 @@ class PartyUITests(TenantTestCase):
             "This party already has an identifier of this type.",
         )
         self.assertEqual(PartyIdentifier.objects.filter(party=party).count(), 1)
+
+    def test_identifier_mutations_deny_role_without_edit_permission(self):
+        party = Party.objects.create(party_code="P1024", display_name="Locked Identifier")
+        identifier = PartyIdentifier.objects.create(
+            party=party,
+            identifier_type=PartyIdentifier.IdentifierType.PAN,
+            value="ABCDE1234F",
+        )
+        user = self._login_workspace_user("party-ui-identifier-noaccess", "NoAccess")
+
+        save_request = self.factory.post(reverse("party:party_identifier_add", args=[party.pk]))
+        save_request.user = user
+        save_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_identifier_save(save_request, party.pk)
+
+        delete_request = self.factory.post(
+            reverse("party:party_identifier_delete", args=[party.pk, identifier.pk])
+        )
+        delete_request.user = user
+        delete_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_identifier_delete(delete_request, party.pk, identifier.pk)
 
     def test_document_upload_can_link_to_identifier(self):
         party = Party.objects.create(party_code="P1010", display_name="Doc Party")
@@ -567,6 +802,29 @@ class PartyUITests(TenantTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(document.identifier, identifier)
         self.assertTrue(document.file)
+
+    def test_document_mutations_deny_role_without_edit_permission(self):
+        party = Party.objects.create(party_code="P1025", display_name="Locked Document")
+        document = PartyDocument.objects.create(
+            party=party,
+            document_type=PartyDocument.DocumentType.OTHER,
+            title="Locked Document",
+        )
+        user = self._login_workspace_user("party-ui-document-noaccess", "NoAccess")
+
+        save_request = self.factory.post(reverse("party:party_document_add", args=[party.pk]))
+        save_request.user = user
+        save_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_document_save(save_request, party.pk)
+
+        delete_request = self.factory.post(
+            reverse("party:party_document_delete", args=[party.pk, document.pk])
+        )
+        delete_request.user = user
+        delete_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_document_delete(delete_request, party.pk, document.pk)
 
     def test_party_relationship_add_edit_and_delete(self):
         party = Party.objects.create(party_code="P1012", display_name="Source Party")
@@ -615,6 +873,34 @@ class PartyUITests(TenantTestCase):
 
         self.assertEqual(delete_response.status_code, 302)
         self.assertFalse(PartyRelationship.objects.filter(pk=relationship.pk).exists())
+
+    def test_relationship_mutations_deny_role_without_edit_permission(self):
+        party = Party.objects.create(party_code="P1026", display_name="Locked Relation")
+        related = Party.objects.create(party_code="P1027", display_name="Related Lock")
+        relationship = PartyRelationship.objects.create(
+            from_party=party,
+            to_party=related,
+            relationship_type=PartyRelationship.RelationshipType.CONTACT_PERSON,
+        )
+        user = self._login_workspace_user("party-ui-relationship-noaccess", "NoAccess")
+
+        save_request = self.factory.post(reverse("party:party_relationship_add", args=[party.pk]))
+        save_request.user = user
+        save_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_relationship_save(save_request, party.pk)
+
+        delete_request = self.factory.post(
+            reverse("party:party_relationship_delete", args=[party.pk, relationship.pk])
+        )
+        delete_request.user = user
+        delete_request.tenant = self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_relationship_delete(
+                delete_request,
+                party.pk,
+                relationship.pk,
+            )
 
     def test_party_relationship_rejects_self_reference(self):
         party = Party.objects.create(party_code="P1014", display_name="Self Party")
@@ -676,3 +962,17 @@ class PartyUITests(TenantTestCase):
                 value="merge@example.com",
             ).exists()
         )
+
+    def test_party_merge_denies_role_without_edit_permission(self):
+        target = Party.objects.create(party_code="P1029", display_name="Locked Merge Target")
+        source = Party.objects.create(party_code="P1030", display_name="Locked Merge Source")
+        user = self._login_workspace_user("party-ui-merge-noaccess", "NoAccess")
+        request = self.factory.post(
+            reverse("party:party_merge", args=[target.pk]),
+            {"source_party": source.pk, "confirm": "on"},
+        )
+        request.user = user
+        request.tenant = self.tenant
+
+        with self.assertRaises(PermissionDenied):
+            party_views.party_merge(request, target.pk)

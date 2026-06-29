@@ -2,7 +2,6 @@ import base64
 import uuid
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
@@ -15,11 +14,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.orgs.models import Membership
-from apps.orgs.permissions import is_platform_admin
-from apps.orgs.tenant_context import resolve_request_workspace
 from apps.tenant_apps.girvi.facade import get_party_loan_history_summary
 
+from .access import assert_party_action_permission, party_action_required
 from .forms import (
     CustomerConversionForm,
     PartyAddressForm,
@@ -47,7 +44,6 @@ from .services.customer_bridge import ensure_customer_party
 from .services.party_merge import merge_parties
 
 
-ADMIN_ROLE_NAMES = {"Owner", "Admin", "Administrator"}
 PARTY_EXPORT_FORMATS = {
     "csv": "text/csv",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -104,23 +100,11 @@ def _party_detail_url(party, tab="overview"):
 
 
 def _can_export_party_data(request):
-    if is_platform_admin(request.user):
-        return True
-
-    workspace = resolve_request_workspace(request)
-    if workspace is None:
-        return False
-
     try:
-        membership = Membership.objects.select_related("role").get(
-            user=request.user,
-            company=workspace,
-        )
-    except Membership.DoesNotExist:
+        assert_party_action_permission(request, "export")
+        return True
+    except PermissionDenied:
         return False
-
-    role_name = membership.role.name if membership.role else ""
-    return role_name in ADMIN_ROLE_NAMES
 
 
 def _party_queryset_from_request(request):
@@ -171,8 +155,10 @@ def _party_export_querystring(request):
 def _export_parties(request, parties, export_format):
     if export_format not in PARTY_EXPORT_FORMATS:
         return HttpResponseBadRequest(f"Invalid export format '{export_format}'.")
-    if not _can_export_party_data(request):
-        raise PermissionDenied("Owner or admin access is required to export parties.")
+    try:
+        assert_party_action_permission(request, "export")
+    except PermissionDenied as exc:
+        raise PermissionDenied("Party export permission is required.") from exc
 
     dataset = PartyResource().export(parties)
     export_data = dataset.export(export_format)
@@ -342,7 +328,7 @@ def _image_file_from_data_uri(image_data):
     )
 
 
-@login_required
+@party_action_required("view")
 def party_list(request):
     parties, query, status, role_key = _party_queryset_from_request(request)
     export_format = request.GET.get("_export")
@@ -375,7 +361,7 @@ def party_list(request):
     )
 
 
-@login_required
+@party_action_required("view")
 def party_detail(request, pk):
     party = get_object_or_404(
         party_detail_queryset().prefetch_related(
@@ -390,7 +376,7 @@ def party_detail(request, pk):
     return _render_party_detail(request, party)
 
 
-@login_required
+@party_action_required("create")
 def party_create(request):
     form = PartyForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
@@ -408,7 +394,7 @@ def party_create(request):
     )
 
 
-@login_required
+@party_action_required("create")
 def party_customer_convert(request):
     form = CustomerConversionForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -428,7 +414,7 @@ def party_customer_convert(request):
     )
 
 
-@login_required
+@party_action_required("edit")
 def party_update(request, pk):
     party = get_object_or_404(Party, pk=pk)
     form = PartyForm(request.POST or None, request.FILES or None, instance=party)
@@ -451,7 +437,7 @@ def party_update(request, pk):
     )
 
 
-@login_required
+@party_action_required("edit")
 def party_role_add(request, pk):
     party = get_object_or_404(Party, pk=pk)
     form = PartyRoleForm(request.POST or None)
@@ -467,7 +453,7 @@ def party_role_add(request, pk):
     return redirect("party:party_detail", pk=party.pk)
 
 
-@login_required
+@party_action_required("edit")
 def party_role_end(request, pk, role_pk):
     party = get_object_or_404(Party, pk=pk)
     role = get_object_or_404(PartyRole, pk=role_pk, party=party)
@@ -479,7 +465,7 @@ def party_role_end(request, pk, role_pk):
     return redirect("party:party_detail", pk=party.pk)
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_profile_photo_update(request, pk):
     party = get_object_or_404(Party, pk=pk)
@@ -505,7 +491,7 @@ def party_profile_photo_update(request, pk):
     return _render_party_detail(request, party, active_tab="overview", photo_form=form)
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_profile_photo_remove(request, pk):
     party = get_object_or_404(Party, pk=pk)
@@ -517,7 +503,7 @@ def party_profile_photo_remove(request, pk):
     return redirect(_party_detail_url(party, "overview"))
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_contact_save(request, pk, contact_pk=None):
     party = get_object_or_404(Party, pk=pk)
@@ -541,7 +527,7 @@ def party_contact_save(request, pk, contact_pk=None):
     )
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_contact_delete(request, pk, contact_pk):
     party = get_object_or_404(Party, pk=pk)
@@ -552,7 +538,7 @@ def party_contact_delete(request, pk, contact_pk):
     return redirect(_party_detail_url(party, "contacts"))
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_address_save(request, pk, address_pk=None):
     party = get_object_or_404(Party, pk=pk)
@@ -576,7 +562,7 @@ def party_address_save(request, pk, address_pk=None):
     )
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_address_delete(request, pk, address_pk):
     party = get_object_or_404(Party, pk=pk)
@@ -586,7 +572,7 @@ def party_address_delete(request, pk, address_pk):
     return redirect(_party_detail_url(party, "addresses"))
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_identifier_save(request, pk, identifier_pk=None):
     party = get_object_or_404(Party, pk=pk)
@@ -609,7 +595,7 @@ def party_identifier_save(request, pk, identifier_pk=None):
     )
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_identifier_delete(request, pk, identifier_pk):
     party = get_object_or_404(Party, pk=pk)
@@ -619,7 +605,7 @@ def party_identifier_delete(request, pk, identifier_pk):
     return redirect(_party_detail_url(party, "kyc"))
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_document_save(request, pk, document_pk=None):
     party = get_object_or_404(Party, pk=pk)
@@ -642,7 +628,7 @@ def party_document_save(request, pk, document_pk=None):
     )
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_document_delete(request, pk, document_pk):
     party = get_object_or_404(Party, pk=pk)
@@ -652,7 +638,7 @@ def party_document_delete(request, pk, document_pk):
     return redirect(_party_detail_url(party, "kyc"))
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_relationship_save(request, pk, relationship_pk=None):
     party = get_object_or_404(Party, pk=pk)
@@ -683,7 +669,7 @@ def party_relationship_save(request, pk, relationship_pk=None):
     )
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_relationship_delete(request, pk, relationship_pk):
     party = get_object_or_404(Party, pk=pk)
@@ -697,7 +683,7 @@ def party_relationship_delete(request, pk, relationship_pk):
     return redirect(_party_detail_url(party, "relationships"))
 
 
-@login_required
+@party_action_required("edit")
 @require_POST
 def party_merge(request, pk):
     party = get_object_or_404(Party, pk=pk)
