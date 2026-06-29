@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-28
+updated: 2026-06-29
 tags: [ui, saas, information-architecture, tenancy, audit]
 related: [screen_designs.md, htmx_interactions.md, ../AGENT_MEMORY.md, ../STATUS.md, ../domain/workspace-auth.md, ../domain/accounting.md]
 ---
@@ -482,10 +482,18 @@ Current checkpoint:
 - Phase 4.6 authorization coverage now guards invite permissions, role-grant policy, revoke denial, team remove/change-role gates, sole-owner self-leave, and selected-workspace sent-invitation fallback.
 - Phase 4.7 direct invitation accept adapter now keeps the existing accept path/name while sending authenticated matching users through the orgs control-plane accept flow and preserving django-invitations fallback for unauthenticated users.
 - Phase 4 final review now records compatibility, authorization coverage, verification, and deferred follow-ups in `docs/ui/phase4_invitation_team_flow_review.md`.
+- Canonical route aliases first slice now adds additive `/app/...` and `/workspace/<id>/settings/...` aliases through `django_project.shared_urlpatterns.CANONICAL_CONTROL_PLANE_URLPATTERNS` while preserving existing `/orgs/...` route names and paths.
+- Low-risk management navigation now targets canonical aliases for workspace manager and global received-invitation links: `app_workspaces`, `app_workspace_create`, and `app_invitations`.
+- Workspace settings navigation now targets canonical aliases for settings home and preferences: `workspace_settings_home` and `workspace_settings_preferences`.
+- Workspace-scoped team/invitation behavior is now characterized before link adoption: explicit workspace ids, invite success, sent-invitation list, and revoke returns are covered in `apps/orgs/tests.py`.
+- Workspace settings navigation now targets canonical aliases for team, invite-member, and sent-invitation links: `workspace_settings_team`, `workspace_settings_invite`, and `workspace_settings_invitations`.
+- Sent-invitation return targets now use the canonical settings URL: invite-success back links and invitation revoke returns both target `workspace_settings_invitations`.
+- Successful invite POSTs now redirect directly to `workspace_settings_invitations`; the legacy `team_invite_success` route/template remains available for old links.
+- Canonical route alias phase review now records compatibility findings, residual risks, verification, and the recommended commit set in `docs/ui/canonical_route_aliases_phase_review.md`.
 
-Next recommended Phase 4 slice:
+Next recommended SaaS IA slice:
 
-- Phase 4 is ready for a phase-level commit. After committing, proceed to canonical route aliases or Phase 5 authorization cleanup as a separate phase.
+- Commit the canonical route alias phase as one phase-level change set. After that, start Phase 5 authorization cleanup with an authorization inventory and guard-test pass for public/global/workspace-settings/tenant surfaces.
 
 ### Phase 3: Navigation and Workspace Switcher
 

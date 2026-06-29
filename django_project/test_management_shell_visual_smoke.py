@@ -82,7 +82,7 @@ class ManagementShellVisualSmokeTests(SimpleTestCase):
     def test_active_state_is_available_in_desktop_and_mobile_nav(self):
         html = self._render_management_shell(url_name="workspace_selector")
 
-        self.assertGreaterEqual(html.count(f'href="{reverse("workspace_selector")}"'), 2)
+        self.assertGreaterEqual(html.count(f'href="{reverse("app_workspaces")}"'), 2)
         self.assertGreaterEqual(html.count("mgmt-nav-link active"), 2)
 
     def test_management_visual_smoke_remains_control_plane_safe(self):

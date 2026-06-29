@@ -277,8 +277,12 @@ def workspace_delete(request, workspace_id=None, company_id=None):
 
 
 @login_required
-def companyinvitations_list(request):
-    workspace = _get_workspace_from_query(request)
+def companyinvitations_list(request, workspace_id=None):
+    workspace = None
+    if workspace_id is not None:
+        workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    if workspace is None:
+        workspace = _get_workspace_from_query(request)
     if workspace is None:
         workspace = resolve_request_workspace(
             request,
@@ -357,7 +361,8 @@ def team_invite(request, workspace_id=None, company_id=None):
                 )
                 messages.success(request, "Invitation sent successfully")
                 return redirect(
-                    f"{reverse('team_invite_success')}?workspace_id={company.id}"
+                    "workspace_settings_invitations",
+                    workspace_id=company.id,
                 )
             except (ValidationError, ValueError) as exc:
                 form.add_error(None, str(exc))
@@ -390,8 +395,9 @@ def invite_success(request):
             required_permissions={"team_invite"},
             allow_platform_admin=True,
         )
-        sent_invitations_url = (
-            f"{sent_invitations_url}?workspace_id={workspace.id}"
+        sent_invitations_url = reverse(
+            "workspace_settings_invitations",
+            kwargs={"workspace_id": workspace.id},
         )
 
     return render(
@@ -625,12 +631,15 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
 
 
 @login_required
-def membership_list(request):
-    workspace = resolve_request_workspace(
-        request,
-        include_public=False,
-        allow_profile_fallback=True,
-    )
+def membership_list(request, workspace_id=None):
+    if workspace_id is not None:
+        workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    else:
+        workspace = resolve_request_workspace(
+            request,
+            include_public=False,
+            allow_profile_fallback=True,
+        )
 
     if not workspace:
         messages.info(request, "Select a workspace to view team members.")
@@ -798,7 +807,10 @@ def invitation_delete(request, invitation_id):
 
     invitation_workspace_id = getattr(invitation, "company_id", invitation.company.id)
     return redirect(
-        f"{reverse('team_invitations_list')}?workspace_id={invitation_workspace_id}"
+        reverse(
+            "workspace_settings_invitations",
+            kwargs={"workspace_id": invitation_workspace_id},
+        )
     )
 
 

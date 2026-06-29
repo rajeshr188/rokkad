@@ -1,8 +1,8 @@
 {% with ew=workspace|default:user_workspace %}
 {% firstof user_role "Member" as role_name %}
 {% if account_sidebar_variant == "desktop" %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations' %}active{% endif %}"
-   href="{% url 'team_invitations' %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations' or request.resolver_match.url_name == 'app_invitations' %}active{% endif %}"
+   href="{% url 'app_invitations' %}">
     <i class="bi bi-envelope-open"></i> My Invitations
     {% if invitation_count and invitation_count > 0 %}
     <span class="badge bg-warning text-dark">{{ invitation_count }}</span>
@@ -23,8 +23,8 @@
     <i class="bi bi-person-gear"></i> Profile
 </a>
 {% elif account_sidebar_variant == "mobile" %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations' %}active{% endif %}"
-   href="{% url 'team_invitations' %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations' or request.resolver_match.url_name == 'app_invitations' %}active{% endif %}"
+   href="{% url 'app_invitations' %}">
     <i class="bi bi-envelope-open"></i> My Invitations
     {% if invitation_count and invitation_count > 0 %}
     <span class="badge bg-warning text-dark">{{ invitation_count }}</span>

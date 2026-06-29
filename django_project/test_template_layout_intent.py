@@ -146,6 +146,15 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
 
         self.assertIn('workspace_settings_sidebar_variant == "desktop"', sidebar_content)
         self.assertIn('workspace_settings_sidebar_variant == "mobile"', sidebar_content)
+        for route_fragment in (
+            "{% url 'workspace_settings_home' workspace_id=ew.id %}",
+            "{% url 'workspace_settings_preferences' workspace_id=ew.id %}",
+            "{% url 'workspace_settings_team' workspace_id=ew.id %}",
+            "{% url 'workspace_settings_invite' workspace_id=ew.id %}",
+            "{% url 'workspace_settings_invitations' workspace_id=ew.id %}",
+        ):
+            self.assertIn(route_fragment, sidebar_content)
+
         for route_name in (
             "workspace_detail",
             "workspace_preferences",
@@ -191,13 +200,14 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         self.assertIn('account_sidebar_variant == "desktop"', sidebar_content)
         self.assertIn('account_sidebar_variant == "mobile"', sidebar_content)
         for route_fragment in (
-            "{% url 'team_invitations' %}",
+            "{% url 'app_invitations' %}",
             "{% url 'subscriptions:dashboard' %}",
             "{% url 'account_settings' %}",
             "{% url 'profile' %}",
         ):
             self.assertIn(route_fragment, sidebar_content)
             self.assertNotIn(route_fragment, management_content)
+        self.assertIn("team_invitations", sidebar_content)
 
         self.assertIn("{% block account_sidebar %}", management_content)
         self.assertIn("{% block mobile_account_sidebar %}", management_content)
@@ -221,11 +231,13 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         self.assertIn('workspace_manager_sidebar_variant == "desktop"', sidebar_content)
         self.assertIn('workspace_manager_sidebar_variant == "mobile"', sidebar_content)
         for route_fragment in (
-            "{% url 'workspace_selector' %}",
-            "{% url 'workspace_create' %}",
+            "{% url 'app_workspaces' %}",
+            "{% url 'app_workspace_create' %}",
         ):
             self.assertIn(route_fragment, sidebar_content)
             self.assertNotIn(route_fragment, management_content)
+        for legacy_route_name in ("workspace_selector", "workspace_create"):
+            self.assertIn(legacy_route_name, sidebar_content)
 
         self.assertIn("{% block workspace_manager_sidebar %}", management_content)
         self.assertIn("{% block mobile_workspace_manager_sidebar %}", management_content)

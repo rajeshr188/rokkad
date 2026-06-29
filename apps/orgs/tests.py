@@ -3,10 +3,11 @@ import re
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError
 from django.template.loader import render_to_string
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.urls import reverse
 from django_tenants.utils import get_public_schema_name
 
@@ -813,7 +814,9 @@ class InvitationLifecycleStateTests(SimpleTestCase):
 
 		mock_revoke.assert_called_once()
 		mock_messages.success.assert_called_once()
-		mock_redirect.assert_called_once_with("/orgs/team/invitations/list/?workspace_id=1")
+		mock_redirect.assert_called_once_with(
+			reverse("workspace_settings_invitations", kwargs={"workspace_id": 1})
+		)
 
 
 class InvitationTeamAuthorizationTests(SimpleTestCase):
@@ -986,6 +989,179 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			workspace,
 			required_permissions={"team_invite"},
 			allow_platform_admin=True,
+		)
+
+	def test_member_list_uses_explicit_workspace_context_when_alias_passes_id(self):
+		from apps.orgs import views as org_views
+
+		workspace = SimpleNamespace(id=9)
+		request = self.factory.get("/workspace/9/settings/team/")
+		request.user = SimpleNamespace(id=1)
+
+		class FakeMembershipQuerySet:
+			def filter(self, **kwargs):
+				self.filter_kwargs = kwargs
+				return self
+
+			def order_by(self, *_args):
+				return self
+
+			def count(self):
+				return 0
+
+		memberships = FakeMembershipQuerySet()
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=workspace) as mock_get, \
+			 patch("apps.orgs.views.resolve_request_workspace") as mock_resolve, \
+			 patch("apps.orgs.views._assert_workspace_access", return_value={"effective_permissions": {"team_change_role", "team_remove"}}) as mock_access, \
+			 patch.object(org_views.Membership.objects, "select_related", return_value=memberships), \
+			 patch("apps.orgs.views.render") as mock_render:
+			org_views.membership_list.__wrapped__(request, workspace_id=9)
+
+		mock_get.assert_called_once_with(org_views.Company, id=9, is_deleted=False)
+		mock_resolve.assert_not_called()
+		mock_access.assert_called_once_with(
+			request,
+			workspace,
+			required_permissions={"team_list"},
+			allow_platform_admin=True,
+		)
+		self.assertEqual(memberships.filter_kwargs, {"company": workspace})
+		context = mock_render.call_args.args[2]
+		self.assertIs(context["workspace"], workspace)
+		self.assertTrue(context["can_change_role"])
+		self.assertTrue(context["can_remove_member"])
+
+	def test_sent_invitation_list_uses_explicit_workspace_context_when_alias_passes_id(self):
+		from apps.orgs import views as org_views
+
+		workspace = SimpleNamespace(id=9)
+		request = self.factory.get("/workspace/9/settings/invitations/")
+		request.user = SimpleNamespace(id=1)
+
+		class FakeInvitationQuerySet:
+			def __init__(self):
+				self.filter_kwargs = None
+
+			def order_by(self, *_args):
+				return self
+
+			def filter(self, **kwargs):
+				self.filter_kwargs = kwargs
+				return []
+
+		invitations = FakeInvitationQuerySet()
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=workspace) as mock_get, \
+			 patch("apps.orgs.views._get_workspace_from_query") as mock_query_workspace, \
+			 patch("apps.orgs.views.resolve_request_workspace") as mock_resolve, \
+			 patch("apps.orgs.views._assert_workspace_access", return_value={"effective_permissions": {"team_invite"}}) as mock_access, \
+			 patch.object(org_views.CompanyInvitation.objects, "select_related", return_value=invitations), \
+			 patch("apps.orgs.views.render") as mock_render:
+			org_views.companyinvitations_list.__wrapped__(request, workspace_id=9)
+
+		mock_get.assert_called_once_with(org_views.Company, id=9, is_deleted=False)
+		mock_query_workspace.assert_not_called()
+		mock_resolve.assert_not_called()
+		mock_access.assert_called_once_with(
+			request,
+			workspace,
+			required_permissions={"team_invite"},
+			allow_platform_admin=True,
+		)
+		self.assertEqual(invitations.filter_kwargs, {"company": workspace})
+		context = mock_render.call_args.args[2]
+		self.assertIs(context["workspace"], workspace)
+		self.assertIs(context["current_workspace"], workspace)
+
+	@patch("apps.orgs.views.redirect")
+	@patch("apps.orgs.views.messages")
+	def test_team_invite_success_redirects_to_canonical_sent_invitations(
+		self,
+		mock_messages,
+		mock_redirect,
+	):
+		company = SimpleNamespace(id=9)
+		request = self.factory.post(
+			"/workspace/9/settings/invitations/new/",
+			{"email": "member@example.com"},
+		)
+		request.user = SimpleNamespace(id=1)
+		form = SimpleNamespace(is_valid=lambda: True)
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=company), \
+			 patch("apps.orgs.views._assert_workspace_access"), \
+			 patch("apps.orgs.views.CompanyInvitationForm", return_value=form), \
+			 patch("apps.orgs.views.control_plane.send_team_invitation"):
+			self._team_invite_view()(request, workspace_id=9)
+
+		mock_messages.success.assert_called_once_with(request, "Invitation sent successfully")
+		mock_redirect.assert_called_once_with(
+			"workspace_settings_invitations",
+			workspace_id=9,
+		)
+
+	def test_invite_success_links_back_to_workspace_scoped_sent_invitations(self):
+		from apps.orgs import views as org_views
+
+		workspace = SimpleNamespace(id=9)
+		request = self.factory.get("/orgs/team/invite/success/?workspace_id=9")
+		request.user = SimpleNamespace(id=1)
+
+		with patch("apps.orgs.views._get_workspace_from_query", return_value=workspace), \
+			 patch("apps.orgs.views._assert_workspace_access") as mock_access, \
+			 patch("apps.orgs.views.render") as mock_render:
+			org_views.invite_success.__wrapped__(request)
+
+		mock_access.assert_called_once_with(
+			request,
+			workspace,
+			required_permissions={"team_invite"},
+			allow_platform_admin=True,
+		)
+		context = mock_render.call_args.args[2]
+		self.assertIs(context["workspace"], workspace)
+		self.assertEqual(
+			context["sent_invitations_url"],
+			reverse("workspace_settings_invitations", kwargs={"workspace_id": 9}),
+		)
+
+	@patch("apps.orgs.views.redirect")
+	@patch("apps.orgs.views.messages")
+	def test_invitation_revoke_returns_to_workspace_scoped_sent_list(
+		self,
+		mock_messages,
+		mock_redirect,
+	):
+		from apps.orgs import views as org_views
+
+		company = SimpleNamespace(id=9)
+		inviter = SimpleNamespace(id=1)
+		invitation = SimpleNamespace(
+			id=42,
+			company=company,
+			company_id=9,
+			inviter=inviter,
+		)
+		request = self.factory.post("/orgs/team/invitations/42/delete/")
+		request.user = inviter
+		request.headers = {}
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=invitation), \
+			 patch("apps.orgs.views.control_plane.revoke_invitation") as mock_revoke:
+			org_views.invitation_delete.__wrapped__(request, invitation_id=42)
+
+		mock_revoke.assert_called_once_with(
+			invitation=invitation,
+			actor=inviter,
+			request=request,
+		)
+		mock_messages.success.assert_called_once_with(
+			request,
+			"Invitation revoked successfully",
+		)
+		mock_redirect.assert_called_once_with(
+			reverse("workspace_settings_invitations", kwargs={"workspace_id": 9})
 		)
 
 
@@ -1377,16 +1553,23 @@ class CompanyPreferenceBuilderTests(SimpleTestCase):
 		request = self.factory.get("/orgs/workspace/13/preferences/?section=Loan")
 		request.user = SimpleNamespace(is_authenticated=False)
 
-		html = render_to_string(
-			"company/company_preferences.html",
-			{
-				"sections": [{"name": "Loan", "obj": None}],
-				"current_section": "Loan",
-				"workspace_id": 13,
-				"form": SimpleNamespace(visible_fields=[]),
+		storages = {
+			**settings.STORAGES,
+			"staticfiles": {
+				"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
 			},
-			request=request,
-		)
+		}
+		with override_settings(STORAGES=storages):
+			html = render_to_string(
+				"company/company_preferences.html",
+				{
+					"sections": [{"name": "Loan", "obj": None}],
+					"current_section": "Loan",
+					"workspace_id": 13,
+					"form": SimpleNamespace(visible_fields=[]),
+				},
+				request=request,
+			)
 
 		self.assertIn(
 			reverse("workspace_preferences", kwargs={"workspace_id": 13}) + "?section=Loan",

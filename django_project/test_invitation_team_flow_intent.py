@@ -204,17 +204,13 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
             encoding="utf-8-sig"
         )
 
-        self.assertIn(
-            "f\"{reverse('team_invite_success')}?workspace_id={company.id}\"",
-            views_content,
-        )
+        self.assertIn('"workspace_settings_invitations"', views_content)
+        self.assertIn("workspace_id=company.id", views_content)
         self.assertIn("def _get_workspace_from_query(request):", views_content)
         self.assertIn('workspace_id = request.GET.get("workspace_id")', views_content)
         self.assertIn("raise Http404(\"Invalid workspace ID\")", views_content)
-        self.assertIn(
-            "f\"{reverse('team_invitations_list')}?workspace_id={invitation_workspace_id}\"",
-            views_content,
-        )
+        self.assertIn('"workspace_settings_invitations"', views_content)
+        self.assertIn('kwargs={"workspace_id": invitation_workspace_id}', views_content)
 
     def test_invite_success_uses_workspace_settings_shell_after_cleanup(self):
         success_template = (TEMPLATES_ROOT / "company" / "invite_success.html").read_text(

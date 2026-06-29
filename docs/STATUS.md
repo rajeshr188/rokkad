@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-27
+updated: 2026-06-29
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -47,6 +47,7 @@ Rokkad is moving toward a layered architecture:
 - Phase 4.6 authorization coverage adds focused tests for invite permission checks, role-grant policy, revoke denial, team remove/change-role gates, sole-owner self-leave blocking, and selected-workspace sent-invitation fallback.
 - Phase 4.7 direct invitation accept adapter preserves the existing accept URL while routing authenticated matching users through the orgs control-plane accept flow; unauthenticated users still fall back to django-invitations behavior and authenticated email mismatches fail closed.
 - Phase 4 final review is documented in [docs/ui/phase4_invitation_team_flow_review.md](ui/phase4_invitation_team_flow_review.md), including compatibility findings, authorization coverage, verification commands, and deferred follow-ups.
+- Canonical control-plane route aliases are phase-reviewed in [docs/ui/canonical_route_aliases_phase_review.md](ui/canonical_route_aliases_phase_review.md): `django_project.shared_urlpatterns.CANONICAL_CONTROL_PLANE_URLPATTERNS` adds `/app/...` and `/workspace/<id>/settings/...` aliases while preserving existing `/orgs/...` compatibility routes. Management and workspace-settings navigation now target canonical aliases, and sent-invitation POST/back/revoke returns use the canonical settings URL while legacy route names remain active-compatible.
 
 ## Recently Stabilized
 
@@ -237,6 +238,7 @@ Rokkad is moving toward a layered architecture:
 - SaaS IA Phase 4.6 authorization coverage is complete. The next recommended slice is Phase 4.7 scope decision: add canonical compatibility aliases or wrap the direct invitation accept route with an orgs-owned adapter using the now-characterized policy boundaries.
 - SaaS IA Phase 4.7 direct invitation accept adapter is complete. The next recommended step is Phase 4 final review and phase-level commit preparation before starting canonical route aliases or Phase 5 authorization cleanup.
 - SaaS IA Phase 4 final review is complete. The next recommended action is to commit the Phase 4 set, then begin canonical route aliases or Phase 5 authorization cleanup as a separate phase.
+- SaaS IA canonical route aliases are phase-reviewed in [docs/ui/canonical_route_aliases_phase_review.md](ui/canonical_route_aliases_phase_review.md). Management navigation now uses `app_workspaces`, `app_workspace_create`, `app_invitations`, `workspace_settings_home`, `workspace_settings_preferences`, `workspace_settings_team`, `workspace_settings_invite`, and `workspace_settings_invitations` while legacy route names and URLs remain active-compatible. Invite POST success, invite-success back links, and revoke returns now use `workspace_settings_invitations`; the legacy `team_invite_success` route remains available. The next recommended action is a phase-level commit, then Phase 5 authorization cleanup starting with inventory and guard tests.
 
 ## Known Pressure Points
 

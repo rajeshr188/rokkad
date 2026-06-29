@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-25
+updated: 2026-06-29
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
@@ -338,6 +338,8 @@ Phase 4.6 authorization coverage is complete. `InvitationTeamAuthorizationTests`
 Phase 4.7 direct invitation accept adapter is complete. The existing `team_accept_invitation` route path/name now points to `apps.orgs.views.team_accept_invitation`: authenticated matching users use the orgs control-plane accept path, active workspace selection, and workspace-dashboard redirect; unauthenticated users still fall back to `invitations.views.AcceptInvite`; authenticated email mismatches fail closed. Canonical route aliases are deferred until after the Phase 4 set is reviewed and committed. The next safe step is Phase 4 final review and phase-level commit preparation.
 
 Phase 4 final review is complete in `docs/ui/phase4_invitation_team_flow_review.md`. It records compatibility preservation, authorization coverage, verification commands, and deferred canonical route aliases. After commit, the next safe SaaS IA work is either canonical route aliases for account/settings routes or Phase 5 broader authorization cleanup.
+
+Canonical route aliases are phase-reviewed in `docs/ui/canonical_route_aliases_phase_review.md`. Additive aliases now expose `/app/`, `/app/workspaces/`, `/app/workspaces/new/`, `/app/invitations/`, `/app/memberships/`, and `/workspace/<id>/settings/...` paths for workspace settings/team/invitations while preserving existing `/orgs/...` routes and names. `django_project/test_route_intent.py` guards alias resolution and legacy route stability. Management navigation now uses `app_workspaces`, `app_workspace_create`, `app_invitations`, `workspace_settings_home`, `workspace_settings_preferences`, `workspace_settings_team`, `workspace_settings_invite`, and `workspace_settings_invitations` while keeping old route names as active-state compatibility. Workspace-scoped sent-invitation returns now use `workspace_settings_invitations` for invite POST success, invite-success back links, and revoke returns. The next safe action is a phase-level commit, followed by Phase 5 authorization cleanup starting with inventory and guard tests.
 
 ## Navigation Memory
 

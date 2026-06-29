@@ -1,6 +1,8 @@
 from django.conf.urls import i18n
 from django.urls import include, path
 
+from apps.orgs import views as org_views
+
 
 # Cross-plane service routes used by both public and tenant URLConfs.
 SERVICE_URLPATTERNS = [
@@ -23,9 +25,50 @@ AUTH_URLPATTERNS = [
     path("invitations/", include("invitations.urls")),
 ]
 
+# Canonical SaaS control-plane aliases. These are additive aliases for the
+# current orgs routes; old /orgs/... paths remain the compatibility surface.
+CANONICAL_CONTROL_PLANE_URLPATTERNS = [
+    path("app/", org_views.workspace_selector, name="app_dashboard"),
+    path("app/workspaces/", org_views.workspace_selector, name="app_workspaces"),
+    path("app/workspaces/new/", org_views.workspace_create, name="app_workspace_create"),
+    path("app/invitations/", org_views.team_invitations, name="app_invitations"),
+    path("app/memberships/", org_views.my_memberships, name="app_memberships"),
+    path(
+        "workspace/<int:workspace_id>/settings/",
+        org_views.workspace_detail,
+        name="workspace_settings_home",
+    ),
+    path(
+        "workspace/<int:workspace_id>/settings/preferences/",
+        org_views.CompanyPreferenceBuilder.as_view(),
+        name="workspace_settings_preferences",
+    ),
+    path(
+        "workspace/<int:workspace_id>/settings/team/",
+        org_views.membership_list,
+        name="workspace_settings_team",
+    ),
+    path(
+        "workspace/<int:workspace_id>/settings/invitations/",
+        org_views.companyinvitations_list,
+        name="workspace_settings_invitations",
+    ),
+    path(
+        "workspace/<int:workspace_id>/settings/invitations/new/",
+        org_views.team_invite,
+        name="workspace_settings_invite",
+    ),
+    path(
+        "workspace/<int:workspace_id>/settings/leave/",
+        org_views.workspace_leave,
+        name="workspace_settings_leave",
+    ),
+]
+
 # Authenticated global/control-plane routes. These are still included in tenant
 # URLConf for compatibility until Phase 2 route separation is completed.
 GLOBAL_AUTHENTICATED_URLPATTERNS = [
+    *CANONICAL_CONTROL_PLANE_URLPATTERNS,
     path("onboarding/", include("apps.onboarding.urls")),
     path("orgs/", include("apps.orgs.urls")),
     path("profile/", include("accounts.urls")),
