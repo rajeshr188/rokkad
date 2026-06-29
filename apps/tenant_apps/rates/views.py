@@ -2,11 +2,13 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from .access import rate_action_required
 from .forms import RateForm, RateSourceForm
 from .models import Rate, RateSource
 
 
 # Create your views here.
+@rate_action_required("view")
 def get_latest_rate(request):
     latest_rates = (
         Rate.objects.filter(Q(metal=Rate.Metal.GOLD) | Q(metal=Rate.Metal.SILVER))
@@ -23,6 +25,7 @@ def get_latest_rate(request):
     return HttpResponse(" ".join(rates))
 
 
+@rate_action_required("view")
 def rate_list(request):
     rates = Rate.objects.all()
     return render(
@@ -31,12 +34,13 @@ def rate_list(request):
         {"rates": rates, "has_rate_sources": RateSource.objects.exists()},
     )
 
-
+@rate_action_required("view")
 def rate_detail(request, pk):
     rate = get_object_or_404(Rate, pk=pk)
     return render(request, "rates/rate_detail.html", {"rate": rate})
 
 
+@rate_action_required("create")
 def rate_create(request):
     if request.method == "POST":
         form = RateForm(request.POST)
@@ -52,6 +56,7 @@ def rate_create(request):
     )
 
 
+@rate_action_required("edit")
 def rate_update(request, pk):
     rate = get_object_or_404(Rate, pk=pk)
     if request.method == "POST":
@@ -68,6 +73,7 @@ def rate_update(request, pk):
     )
 
 
+@rate_action_required("delete")
 def rate_delete(request, pk):
     rate = get_object_or_404(Rate, pk=pk)
     if request.method == "POST":
@@ -76,16 +82,19 @@ def rate_delete(request, pk):
     return render(request, "rates/rate_confirm_delete.html", {"rate": rate})
 
 
+@rate_action_required("view")
 def ratesource_list(request):
     ratesources = RateSource.objects.all()
     return render(request, "rates/ratesource_list.html", {"ratesources": ratesources})
 
 
+@rate_action_required("view")
 def ratesource_detail(request, pk):
     ratesource = get_object_or_404(RateSource, pk=pk)
     return render(request, "rates/ratesource_detail.html", {"ratesource": ratesource})
 
 
+@rate_action_required("create")
 def ratesource_create(request):
     if request.method == "POST":
         form = RateSourceForm(request.POST)
@@ -97,6 +106,7 @@ def ratesource_create(request):
     return render(request, "rates/ratesource_form.html", {"form": form})
 
 
+@rate_action_required("edit")
 def ratesource_update(request, pk):
     ratesource = get_object_or_404(RateSource, pk=pk)
     if request.method == "POST":
@@ -109,6 +119,7 @@ def ratesource_update(request, pk):
     return render(request, "rates/ratesource_form.html", {"form": form})
 
 
+@rate_action_required("delete")
 def ratesource_delete(request, pk):
     ratesource = get_object_or_404(RateSource, pk=pk)
     if request.method == "POST":

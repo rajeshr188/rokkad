@@ -202,7 +202,8 @@ class ProductUserFlowIntegrationTests(TenantTestCase):
 				"variant-name": "Flow Variant",
 			},
 		)
-		request.user = self.user
+		request.tenant = self.tenant
+		request.user = self.tenant.owner
 		response = views.product_create(request, type_pk=self.product_type.pk)
 
 		self.assertEqual(response.status_code, 302)
@@ -236,7 +237,8 @@ class ProductUserFlowIntegrationTests(TenantTestCase):
 				"variant-name": "Flow Variant New",
 			},
 		)
-		request.user = self.user
+		request.tenant = self.tenant
+		request.user = self.tenant.owner
 		response = views.product_edit(request, pk=product.pk)
 
 		self.assertEqual(response.status_code, 302)

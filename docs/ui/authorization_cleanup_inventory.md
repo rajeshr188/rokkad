@@ -202,13 +202,21 @@ Current guardrails:
 - Party profile-photo, contact-method, and address mutation paths use the Party edit action guard.
 - Party identifier, document, and relationship mutation paths use the Party edit action guard.
 - Party role add/end and duplicate merge mutation paths use the Party edit action guard.
+- Product has `assert_product_workspace_access`, `assert_product_permission`, `assert_product_action_permission`, `product_action_required`, and Product CBV mixins available for view adoption.
+- Product catalog list/detail/create/edit/delete paths for products, product types, generated products/variants, and variants use Product action guards backed by the existing generic data permissions.
+- Product stock list/detail/search, transaction/statement lists, split/merge/delete, stock-in/stock-out, physical audit, opening balance import, and import template paths use Product action guards backed by the existing generic data permissions.
+- Product pricing, price override, image, and attribute paths use Product action guards backed by the existing generic data permissions.
+- Rates has `assert_rate_workspace_access`, `assert_rate_permission`, `assert_rate_action_permission`, and `rate_action_required`; rate and rate-source list/detail/create/edit/delete plus latest-rate endpoints use Rate action guards backed by existing generic data permissions.
+- Notify has `assert_notify_workspace_access`, `assert_notify_permission`, `assert_notify_action_permission`, and `notify_action_required`; legacy notice/notification list/detail/create/delete/print routes and Notify v2 batch/settings routes use Notify action guards backed by existing generic data permissions.
+- Notify v2 WhatsApp Cloud webhook remains intentionally unauthenticated because it is an external provider callback that validates provider tokens instead of user sessions.
+- Utility data import/export tools already use `owner_or_admin_required`, resolving the tenant workspace and restricting access to platform admin, Owner, Admin, or Administrator roles.
 - Secure middleware requires membership before setting tenant context for all current tenant ERP prefixes: `party`, `contact`, `data-tools`, `girvi`, `rates`, `product`, `notify`, `notify-v2`, and `dea`.
 
 Known gaps:
 
-- Contact, Product, and some Rates/Notify surfaces are still mostly login-only at the view layer.
-- Several DEA business-event and report surfaces are login-only or role-dependent by navigation rather than consistently using shared access helpers.
-- Some legacy Girvi surfaces still use plain login-only guards and need route-by-route review.
+- Contact remains a legacy compatibility surface while Party replaces it; do not invest in broad Contact authorization cleanup unless a compatibility route becomes unsafe before cutover.
+- DEA and Girvi still have broader domain-specific permission-hardening tracks outside this SaaS IA Phase 5 closeout; current Phase 5 guards only assert their shared access helper contracts remain available.
+- Phase 5 tenant authorization cleanup is complete for current Product, Rates, Notify, and utility data-tool route groups.
 
 ### Customer / Member Portal
 
@@ -254,17 +262,28 @@ Important current mismatch:
 - Middleware workspace-required prefixes cover current tenant ERP prefixes.
 - Secure middleware still checks membership before tenant schema switching.
 - Girvi and DEA shared access helper contracts remain present.
-- Known login-only tenant app gaps stay visible until fixed.
+- Product, Rates, Notify, and data-tool tenant route groups no longer rely on plain login-only view guards for the current Phase 5 scope.
 
 ## Recommended Cleanup Order
 
 1. Keep this inventory and guard tests as the Phase 5.1 baseline.
 2. Review Party authorization coverage as a completed first tenant-app conversion and commit the Phase 5 Party set.
-3. Add shared tenant app access helpers for Contact, Product, Rates, Notify, and utility data tools.
-4. Convert Contact and Product mutation views in small route groups.
-5. Audit DEA login-only business-event/report routes and split normal business-event access from accountant-only tools.
-6. Audit remaining Girvi login-only legacy surfaces and either convert them to Girvi helpers or document why they are safe.
+3. Add shared tenant app access helpers for Product, Rates, Notify, and utility data tools.
+4. Convert Product mutation views in small route groups, starting with catalog paths, then stock, then pricing/image/attribute.
+5. Convert Rates and Notify route groups to shared action guards.
+6. Keep DEA/Girvi domain-specific permission hardening in their dedicated tracks while preserving shared helper contracts here.
 7. Add subscription/billing permission gates after ownership semantics are settled.
+
+## Phase 5 Closeout
+
+Current SaaS IA Phase 5 closeout status:
+
+- Complete for current Product catalog, stock, pricing, image, and attribute route groups.
+- Complete for current Rates route groups.
+- Complete for current legacy Notify and Notify v2 user-facing route groups.
+- Complete for current utility data import/export route groups through their existing owner/admin guard.
+- Complete for Party route groups through the prior Party authorization slice.
+- Not intended to finish every DEA/Girvi domain surface in this UI phase; those modules retain separate accounting/loan permission tracks because their semantics are broader than generic SaaS route cleanup.
 
 ## Deferred Decisions
 

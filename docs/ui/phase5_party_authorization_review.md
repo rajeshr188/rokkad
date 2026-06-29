@@ -28,7 +28,8 @@ Implemented changes:
 - Owners and platform admins retain bypass behavior through the shared Party access helper.
 - Workspace members retain allowed read/create/edit behavior based on the existing `RolePermissions` effective permission map.
 - Party export remains separately gated by the export action permission.
-- Contact and Product still remain known login-only tenant app gaps for later slices.
+- Product catalog, stock, pricing, image, and attribute authorization were completed in follow-on slices. Rates and Notify route groups also received shared action guards after this Party review.
+- Contact is intentionally skipped for broad authorization cleanup because Party is replacing it; treat Contact as a legacy compatibility surface unless a specific unsafe route must be patched before cutover.
 
 ## Verification
 
@@ -52,5 +53,5 @@ Party authorization is complete for the current tenant Party UI surface.
 
 Next recommended SaaS IA work:
 
-1. Commit the Phase 5 Party authorization set.
-2. Start Contact/Product authorization cleanup in a new phase/slice.
+1. Prepare the overall Phase 5 authorization closeout review.
+2. Commit the Phase 5 set before starting Phase 6 onboarding.

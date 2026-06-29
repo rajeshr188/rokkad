@@ -1,4 +1,3 @@
-from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, reverse
 from django.template.response import TemplateResponse
@@ -9,17 +8,18 @@ from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from .forms import NoticeGroupForm, NotificationForm
 from .models import NoticeGroup, Notification
+from .access import notify_action_required
 
 # Create your views here.
 
 
-@login_required
+@notify_action_required("view")
 def noticegroup_list(request):
     ng = NoticeGroup.objects.all().prefetch_related("notifications")
     return render(request, "notify/noticegroup_list.html", context={"objects": ng})
 
 
-@login_required
+@notify_action_required("create")
 def noticegroup_create(request):
     form = NoticeGroupForm(request.POST or None)
     if request.method == "POST":
@@ -31,7 +31,7 @@ def noticegroup_create(request):
     return render(request, "notify/noticegroup_form.html", context={"form": form})
 
 
-@login_required
+@notify_action_required("view")
 @for_htmx(use_block="content")
 def noticegroup_detail(request, pk):
     ng = get_object_or_404(NoticeGroup, pk=pk)
@@ -79,7 +79,7 @@ def noticegroup_detail(request, pk):
 
 
 # view to delete a noticegroup
-@login_required
+@notify_action_required("delete")
 @require_http_methods(["DELETE"])
 def noticegroup_delete(request, pk):
     ng = get_object_or_404(NoticeGroup, pk=pk)
@@ -90,7 +90,7 @@ def noticegroup_delete(request, pk):
 
 
 # views for Notifications
-@login_required
+@notify_action_required("delete")
 @require_http_methods(["DELETE"])
 def notification_delete(request, pk):
     ng = get_object_or_404(Notification, pk=pk)
@@ -100,7 +100,7 @@ def notification_delete(request, pk):
     )
 
 
-@login_required
+@notify_action_required("view")
 def notification_list(request):
     ng = (
         Notification.objects.all()
@@ -110,7 +110,7 @@ def notification_list(request):
     return render(request, "notify/notification_list.html", context={"objects": ng})
 
 
-@login_required
+@notify_action_required("create")
 def notification_create(request):
     form = NotificationForm(request.POST or None)
     if request.method == "POST":
@@ -122,7 +122,7 @@ def notification_create(request):
     return render(request, "notify/notification_form.html", context={"form": form})
 
 
-@login_required
+@notify_action_required("view")
 def notification_detail(request, pk):
     ng = get_object_or_404(
         Notification.objects.select_related(
@@ -134,7 +134,7 @@ def notification_detail(request, pk):
 
 
 # this looks heavy on frontend with items > 100: optimise it
-@login_required
+@notify_action_required("print")
 def noticegroup_print(request, pk):
     ng = get_object_or_404(NoticeGroup, pk=pk)
     pdf = ng.print_notice()
@@ -146,7 +146,7 @@ def noticegroup_print(request, pk):
     return response
 
 
-@login_required
+@notify_action_required("print")
 def notification_print(request, pk):
     notification = get_object_or_404(Notification, pk=pk)
     pdf = notification.print_letter()

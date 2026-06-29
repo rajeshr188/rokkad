@@ -1,5 +1,3 @@
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
@@ -8,6 +6,7 @@ from django.views.generic import DeleteView
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
+from ..access import ProductActionRequiredMixin, product_action_required
 from ..filters import ProductVariantFilter
 from ..forms import ProductVariantForm
 from ..models import Product, ProductVariant
@@ -29,7 +28,7 @@ def _apply_sorting(queryset, sort_key, direction, allowed_sorts):
     return queryset.order_by(sort_field)
 
 
-@login_required
+@product_action_required("view")
 @for_htmx(use_block_from_params=True)
 def productvariant_list(request):
     variants = ProductVariant.objects.select_related(
@@ -54,7 +53,7 @@ def productvariant_list(request):
     return TemplateResponse(request, "product/productvariant_list.html", ctx)
 
 
-@login_required
+@product_action_required("create")
 @for_htmx(use_block="content")
 def variant_create(request, pk):
     product = get_object_or_404(Product.objects.all(), pk=pk)
@@ -67,7 +66,7 @@ def variant_create(request, pk):
     return TemplateResponse(request, "product/productvariant_form.html", ctx)
 
 
-@login_required
+@product_action_required("view")
 @for_htmx(use_block="content")
 def productvariant_detail(request, pk):
     variant = get_object_or_404(ProductVariant.objects.all(), pk=pk)
@@ -76,7 +75,7 @@ def productvariant_detail(request, pk):
     )
 
 
-@login_required
+@product_action_required("edit")
 @for_htmx(use_block="content")
 def productvariant_update(request, pk):
     variant = get_object_or_404(ProductVariant.objects.all(), pk=pk)
@@ -88,15 +87,7 @@ def productvariant_update(request, pk):
     return TemplateResponse(request, "product/productvariant_form.html", ctx)
 
 
-class ProductVariantDeleteView(LoginRequiredMixin, DeleteView):
+class ProductVariantDeleteView(ProductActionRequiredMixin, DeleteView):
     model = ProductVariant
+    required_action = "delete"
     success_url = reverse_lazy("product_productvariant_list")
-
-
-# @login_required
-# def productvariant_delete(request, pk):
-#     variant = get_object_or_404(ProductVariant.objects.all(), pk=pk)
-#     if request.method == "POST":
-#         variant.delete()
-#         return redirect("product_productvariant_list")
-#     return TemplateResponse(request, "product/productvariant_delete.html", {"variant": variant}

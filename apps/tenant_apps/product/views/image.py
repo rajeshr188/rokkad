@@ -1,6 +1,6 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
+from ..access import ProductActionRequiredMixin
 from ..forms import (
     AttributeForm,
     AttributeValueForm,
@@ -15,73 +15,89 @@ from ..models import Attribute, AttributeValue, ProductImage, VariantImage
 # from blabel import Labelwriter
 
 
-class AttributeListView(LoginRequiredMixin, ListView):
+class AttributeListView(ProductActionRequiredMixin, ListView):
     model = Attribute
+    required_action = "view"
 
 
-class AttributeCreateView(LoginRequiredMixin, CreateView):
-    model = Attribute
-    form_class = AttributeForm
-
-
-class AttributeDetailView(LoginRequiredMixin, DetailView):
-    model = Attribute
-
-
-class AttributeUpdateView(LoginRequiredMixin, UpdateView):
+class AttributeCreateView(ProductActionRequiredMixin, CreateView):
     model = Attribute
     form_class = AttributeForm
+    required_action = "create"
 
 
-class AttributeValueListView(LoginRequiredMixin, ListView):
+class AttributeDetailView(ProductActionRequiredMixin, DetailView):
+    model = Attribute
+    required_action = "view"
+
+
+class AttributeUpdateView(ProductActionRequiredMixin, UpdateView):
+    model = Attribute
+    form_class = AttributeForm
+    required_action = "edit"
+
+
+class AttributeValueListView(ProductActionRequiredMixin, ListView):
     model = AttributeValue
+    required_action = "view"
 
 
-class AttributeValueCreateView(LoginRequiredMixin, CreateView):
+class AttributeValueCreateView(ProductActionRequiredMixin, CreateView):
     model = AttributeValue
     form_class = AttributeValueForm
+    required_action = "create"
 
 
-class AttributeValueDetailView(LoginRequiredMixin, DetailView):
+class AttributeValueDetailView(ProductActionRequiredMixin, DetailView):
     model = AttributeValue
+    required_action = "view"
 
 
-class AttributeValueUpdateView(LoginRequiredMixin, UpdateView):
+class AttributeValueUpdateView(ProductActionRequiredMixin, UpdateView):
     model = AttributeValue
     form_class = AttributeValueForm
+    required_action = "edit"
 
 
-class ProductImageListView(LoginRequiredMixin, ListView):
+class ProductImageListView(ProductActionRequiredMixin, ListView):
     model = ProductImage
+    required_action = "view"
 
 
-class ProductImageCreateView(LoginRequiredMixin, CreateView):
-    model = ProductImage
-    form_class = ProductImageForm
-
-
-class ProductImageDetailView(LoginRequiredMixin, DetailView):
-    model = ProductImage
-
-
-class ProductImageUpdateView(LoginRequiredMixin, UpdateView):
+class ProductImageCreateView(ProductActionRequiredMixin, CreateView):
     model = ProductImage
     form_class = ProductImageForm
+    required_action = "create"
 
 
-class VariantImageListView(LoginRequiredMixin, ListView):
+class ProductImageDetailView(ProductActionRequiredMixin, DetailView):
+    model = ProductImage
+    required_action = "view"
+
+
+class ProductImageUpdateView(ProductActionRequiredMixin, UpdateView):
+    model = ProductImage
+    form_class = ProductImageForm
+    required_action = "edit"
+
+
+class VariantImageListView(ProductActionRequiredMixin, ListView):
     model = VariantImage
+    required_action = "view"
 
 
-class VariantImageCreateView(LoginRequiredMixin, CreateView):
+class VariantImageCreateView(ProductActionRequiredMixin, CreateView):
     model = VariantImage
     form_class = VariantImageForm
+    required_action = "create"
 
 
-class VariantImageDetailView(LoginRequiredMixin, DetailView):
+class VariantImageDetailView(ProductActionRequiredMixin, DetailView):
     model = VariantImage
+    required_action = "view"
 
 
-class VariantImageUpdateView(LoginRequiredMixin, UpdateView):
+class VariantImageUpdateView(ProductActionRequiredMixin, UpdateView):
     model = VariantImage
     form_class = VariantImageForm
+    required_action = "edit"

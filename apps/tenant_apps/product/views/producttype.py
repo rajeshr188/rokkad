@@ -1,12 +1,12 @@
 import logging
 
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
+from ..access import product_action_required
 from ..filters import ProductTypeFilter
 from ..forms import AttributeValueSelectionForm, ProductTypeForm
 from ..models import (
@@ -78,7 +78,7 @@ def _set_variant_attributes(variant_obj, attr_values):
         assigned.values.set([attr_value])
 
 
-@login_required
+@product_action_required("view")
 @for_htmx(use_block_from_params=True)
 def producttype_list(request):
     producttypes = ProductType.objects.prefetch_related(
@@ -103,7 +103,7 @@ def producttype_list(request):
     return TemplateResponse(request, "product/producttype_list.html", ctx)
 
 
-@login_required
+@product_action_required("create")
 @for_htmx(use_block="content")
 def producttype_create(request):
     form = ProductTypeForm(request.POST or None)
@@ -114,7 +114,7 @@ def producttype_create(request):
     return TemplateResponse(request, "product/producttype_form.html", ctx)
 
 
-@login_required
+@product_action_required("view")
 @for_htmx(use_block="content")
 def producttype_detail(request, pk):
     producttype = get_object_or_404(ProductType, pk=pk)
@@ -122,7 +122,7 @@ def producttype_detail(request, pk):
     return TemplateResponse(request, "product/producttype_detail.html", ctx)
 
 
-@login_required
+@product_action_required("edit")
 @for_htmx(use_block="content")
 def producttype_update(request, pk):
     producttype = get_object_or_404(ProductType, pk=pk)
@@ -134,7 +134,7 @@ def producttype_update(request, pk):
     return TemplateResponse(request, "product/producttype_form.html", ctx)
 
 
-@login_required
+@product_action_required("delete")
 def producttype_delete(request, pk):
     producttype = get_object_or_404(ProductType, pk=pk)
     if request.method != "POST":
@@ -202,6 +202,7 @@ from django.db import IntegrityError
 #     return redirect("product_producttype_list")
 
 
+@product_action_required("create")
 def generate_products_and_variants(request, product_type_id):
     # if any of the attributes has no attributevalues at all then combinations will be empty
     product_type = get_object_or_404(ProductType, id=product_type_id)

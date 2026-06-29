@@ -6,12 +6,13 @@ import zipfile
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+
+from apps.tenant_apps.notify.access import notify_action_required
 
 from .models import (
     NotificationBatch,
@@ -93,12 +94,12 @@ def _notify_settings_summary():
     }
 
 
-@login_required
+@notify_action_required("view")
 def index(_request):
     return redirect("notify_v2_batch_list")
 
 
-@login_required
+@notify_action_required("view")
 def settings_overview(request):
     settings_summary = _notify_settings_summary()
     tenant = getattr(request, "tenant", None)
@@ -146,7 +147,7 @@ def whatsapp_cloud_webhook(request):
     return JsonResponse({"ok": True, **summary})
 
 
-@login_required
+@notify_action_required("view")
 def batch_list(request):
     batches = NotificationBatch.objects.select_related("event_type", "created_by").prefetch_related(
         "jobs"
@@ -165,7 +166,7 @@ def batch_list(request):
     )
 
 
-@login_required
+@notify_action_required("view")
 def batch_detail(request, pk):
     batch = get_object_or_404(
         NotificationBatch.objects.select_related("event_type", "created_by").prefetch_related(
@@ -198,7 +199,7 @@ def batch_detail(request, pk):
     )
 
 
-@login_required
+@notify_action_required("send")
 @require_http_methods(["POST"])
 def batch_send_digital(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)
@@ -218,7 +219,7 @@ def batch_send_digital(request, pk):
     return redirect("notify_v2_batch_detail", pk=batch.pk)
 
 
-@login_required
+@notify_action_required("print")
 def batch_print(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)
     pdf = render_batch_pdf(batch)
@@ -231,7 +232,7 @@ def batch_print(request, pk):
     return response
 
 
-@login_required
+@notify_action_required("view")
 def batch_download_artifacts(request, pk):
     batch = get_object_or_404(
         NotificationBatch.objects.prefetch_related("jobs__event__recipient", "jobs__artifacts"),
@@ -267,7 +268,7 @@ def batch_download_artifacts(request, pk):
     return response
 
 
-@login_required
+@notify_action_required("edit")
 @require_http_methods(["POST"])
 def batch_mark_printed(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)
@@ -276,7 +277,7 @@ def batch_mark_printed(request, pk):
     return redirect("notify_v2_batch_detail", pk=batch.pk)
 
 
-@login_required
+@notify_action_required("edit")
 @require_http_methods(["POST"])
 def batch_mark_posted(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)

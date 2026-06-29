@@ -57,7 +57,12 @@ Rokkad is moving toward a layered architecture:
 - Phase 5.7 Party profile mutation authorization is implemented: profile photo, contact-method, and address mutations now use the Party edit action guard, with denied no-access coverage for update/remove/save/delete paths.
 - Phase 5.8 Party KYC/relationship mutation authorization is implemented: identifier, document, and relationship mutations now use the Party edit action guard, with denied no-access coverage for save/delete paths.
 - Phase 5.9 final Party mutation authorization is implemented: role add/end and duplicate merge now use the Party edit action guard, with denied no-access coverage for both role mutation and merge paths.
-- Phase 5 Party authorization review is documented in [docs/ui/phase5_party_authorization_review.md](ui/phase5_party_authorization_review.md), confirming Party authorization coverage, compatibility findings, verification commands, and the next Contact/Product authorization cleanup direction.
+- Phase 5 Party authorization review is documented in [docs/ui/phase5_party_authorization_review.md](ui/phase5_party_authorization_review.md), confirming Party authorization coverage, compatibility findings, verification commands, and the next Product authorization cleanup direction. Broad Contact authorization cleanup is intentionally skipped because Party is replacing Contact; Contact should only receive targeted safety patches before cutover.
+- Phase 5.10 Product catalog authorization is implemented: `apps.tenant_apps.product.access` now provides workspace, permission, action, decorator, and CBV mixin helpers backed by current generic data permissions, and product/product type/generated product/variant/product variant catalog views use Product action guards. Stock, pricing, image, and attribute Product surfaces remain separate follow-on slices.
+- Phase 5.11 Product stock authorization is implemented: stock list/detail/search, transaction/statement lists, split/merge/delete, stock-in/stock-out, physical audit, opening balance import, and import template routes use Product action guards. `stock_select` now safely reads `?q=` when the route does not pass a positional query argument. Product pricing, image, and attribute surfaces remain separate follow-on slices.
+- Phase 5.12 Product pricing/image/attribute authorization is implemented: pricing tiers, tier product prices, price overrides, product/variant image views, and attribute/attribute-value views now use Product action guards.
+- Phase 5.13 Rates/Notify authorization is implemented: `apps.tenant_apps.rates.access` and `apps.tenant_apps.notify.access` now provide workspace/action guard helpers; rate/rate-source routes, legacy Notify routes, and Notify v2 user-facing batch/settings routes use action guards. Notify v2 WhatsApp Cloud webhook remains intentionally public for provider callbacks.
+- Phase 5.14 SaaS IA authorization closeout is complete for the current Party, Product, Rates, Notify, and utility data-tool route groups. DEA and Girvi retain separate domain-specific permission hardening tracks because their accounting/loan semantics are broader than this UI authorization phase.
 
 ## Recently Stabilized
 
@@ -257,8 +262,13 @@ Rokkad is moving toward a layered architecture:
 - SaaS IA Phase 5.6 Party simple mutation authorization is complete. The next recommended slice is to convert nested Party mutation paths to the new helpers in small groups, starting with profile photo and contact/address mutations.
 - SaaS IA Phase 5.7 Party profile mutation authorization is complete. The next recommended slice is to convert the remaining nested Party mutation paths in small groups, starting with identifiers, documents, and relationships before roles and merge.
 - SaaS IA Phase 5.8 Party KYC/relationship mutation authorization is complete. The next recommended slice is to convert the final Party nested mutation paths: role add/end and duplicate merge.
-- SaaS IA Phase 5.9 final Party mutation authorization is complete. The next recommended action is a Phase 5 Party authorization review and phase-level commit checkpoint before starting Contact/Product authorization cleanup.
-- SaaS IA Phase 5 Party authorization review is complete. The next recommended action is a phase-level commit, then starting Contact/Product authorization cleanup as the next separate slice.
+- SaaS IA Phase 5.9 final Party mutation authorization is complete. The next recommended action is a Phase 5 Party authorization review and phase-level commit checkpoint before starting Product authorization cleanup.
+- SaaS IA Phase 5 Party authorization review is complete. The next recommended action is starting Product authorization cleanup as the next separate slice; skip broad Contact cleanup in favor of the Party cutover.
+- SaaS IA Phase 5.10 Product catalog authorization is complete. The next recommended action is Product stock authorization review, then Product pricing/image/attribute route groups.
+- SaaS IA Phase 5.11 Product stock authorization is complete. The next recommended action is Product pricing authorization cleanup, then Product image/attribute route groups.
+- SaaS IA Phase 5.12 Product pricing/image/attribute authorization is complete.
+- SaaS IA Phase 5.13 Rates/Notify authorization is complete.
+- SaaS IA Phase 5.14 authorization closeout is complete for the current SaaS IA scope. The next recommended action is a Phase 5 review/commit checkpoint before starting Phase 6 onboarding.
 
 ## Known Pressure Points
 

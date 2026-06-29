@@ -119,7 +119,7 @@ The project already has the beginning of a two-plane UI through `management.html
 
 - Girvi operational routes now have strong permission helpers.
 - DEA high-risk legacy/accountant surfaces have strong owner/admin/accountant gates.
-- Party, Product, and Contact still appear to rely largely on `@login_required` plus tenant middleware, with less explicit per-action permission enforcement.
+- Party, Product, Rates, Notify, and utility data-tool route groups now have explicit Phase 5 authorization guard coverage. Legacy Contact remains compatibility-only while Party replaces it. Broader DEA/Girvi domain hardening remains in dedicated accounting/loan permission tracks.
 - Template-hidden buttons are not sufficient; every HTMX/action endpoint needs a server-side permission gate.
 
 ### Subscription/Billing Bugs and Risks
@@ -499,10 +499,15 @@ Current checkpoint:
 - Phase 5.7 Party profile mutation authorization now routes profile-photo, contact-method, and address mutations through the Party edit action guard.
 - Phase 5.8 Party KYC/relationship mutation authorization now routes identifier, document, and relationship mutations through the Party edit action guard.
 - Phase 5.9 final Party mutation authorization now routes role add/end and duplicate merge through the Party edit action guard.
+- Phase 5.10 Product catalog authorization now adds Product workspace/permission/action helper scaffolding and routes product, product type, generated product/variant, and product variant catalog paths through Product action guards backed by existing generic data permissions.
+- Phase 5.11 Product stock authorization now routes stock list/detail/search, transaction/statement lists, split/merge/delete, stock-in/stock-out, physical audit, opening balance import, and import template paths through Product action guards backed by existing generic data permissions.
+- Phase 5.12 Product pricing/image/attribute authorization now routes pricing tiers, product prices, price overrides, image views, and attribute views through Product action guards.
+- Phase 5.13 Rates/Notify authorization now adds Rates and Notify shared access helpers and routes rate, rate-source, legacy Notify, and Notify v2 user-facing routes through action guards while keeping the external Notify v2 WhatsApp webhook public.
+- Phase 5.14 authorization closeout now records that SaaS IA Phase 5 is complete for current Party, Product, Rates, Notify, and utility data-tool route groups, with DEA/Girvi remaining in their separate domain-specific permission tracks.
 
 Next recommended SaaS IA slice:
 
-- Complete a Phase 5 Party authorization review and phase-level commit checkpoint before starting Contact/Product authorization cleanup.
+- Prepare the Phase 5 authorization closeout review and commit checkpoint, then move to Phase 6 onboarding. Skip broad Contact authorization cleanup because Party is replacing Contact; patch Contact only if a specific compatibility route is unsafe before cutover.
 
 ### Phase 3: Navigation and Workspace Switcher
 
@@ -519,7 +524,7 @@ Next recommended SaaS IA slice:
 
 ### Phase 5: Authorization Cleanup
 
-- Add explicit permissions for Party, Product, Contact, and tenant utility endpoints.
+- Add explicit permissions for Party, Product, and tenant utility endpoints. Skip broad Contact cleanup in favor of Party cutover unless a specific compatibility route is unsafe.
 - Keep middleware as isolation defense, not as the only authorization layer.
 
 ### Phase 6: Onboarding

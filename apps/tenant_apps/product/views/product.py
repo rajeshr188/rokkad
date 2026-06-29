@@ -1,5 +1,3 @@
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
@@ -8,6 +6,7 @@ from django.views.generic import DeleteView
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
+from ..access import ProductActionRequiredMixin, product_action_required
 from ..filters import ProductFilter
 from ..forms import ProductForm, ProductVariantForm
 from ..models import Product, ProductType, ProductVariant
@@ -28,7 +27,7 @@ def _apply_sorting(queryset, sort_key, direction, allowed_sorts):
 
 
 # create product_list with filter view
-@login_required
+@product_action_required("view")
 @for_htmx(use_block_from_params=True)
 def product_list(request):
     products = (
@@ -55,7 +54,7 @@ def product_list(request):
     return TemplateResponse(request, "product/product_list.html", ctx)
 
 
-@login_required
+@product_action_required("create")
 @for_htmx(use_block="content")
 def product_create(request, type_pk):
     product_type = get_object_or_404(ProductType, pk=type_pk)
@@ -88,7 +87,7 @@ def product_create(request, type_pk):
     return TemplateResponse(request, "product/product_form.html", ctx)
 
 
-@login_required
+@product_action_required("view")
 @for_htmx(use_block="content")
 def product_detail(request, pk):
     products = Product.objects.prefetch_related("variants", "images").all()
@@ -98,7 +97,7 @@ def product_detail(request, pk):
     return TemplateResponse(request, "product/product_detail.html", ctx)
 
 
-@login_required
+@product_action_required("edit")
 def product_edit(request, pk):
     product = get_object_or_404(Product.objects.prefetch_related("variants"), pk=pk)
     form = ProductForm(request.POST or None, instance=product)
@@ -123,6 +122,7 @@ def product_edit(request, pk):
     return TemplateResponse(request, "product/product_form.html", ctx)
 
 
-class ProductDeleteView(LoginRequiredMixin, DeleteView):
+class ProductDeleteView(ProductActionRequiredMixin, DeleteView):
     model = Product
+    required_action = "delete"
     success_url = reverse_lazy("product_product_list")

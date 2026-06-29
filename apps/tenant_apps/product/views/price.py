@@ -1,14 +1,14 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 
+from ..access import product_action_required
 from ..forms import PriceOverrideForm, PricingTierForm, PricingTierProductPriceForm
 from ..models import Price, PricingTier, PricingTierProductPrice
 
 
-@login_required
+@product_action_required("view")
 def pricing_tier_list(request):
     object_list = PricingTier.objects.select_related("parent").all()
     return TemplateResponse(
@@ -18,7 +18,7 @@ def pricing_tier_list(request):
     )
 
 
-@login_required
+@product_action_required("view")
 def pricing_tier_detail(request, pk):
     pricing_tier = get_object_or_404(PricingTier, id=pk)
     price_rows = pricing_tier.price_list.select_related("product").all()
@@ -33,7 +33,7 @@ def pricing_tier_detail(request, pk):
     )
 
 
-@login_required
+@product_action_required("create")
 def pricing_tier_create(request):
     form = PricingTierForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -47,7 +47,7 @@ def pricing_tier_create(request):
     )
 
 
-@login_required
+@product_action_required("edit")
 def pricing_tier_update(request, pk):
     obj = get_object_or_404(PricingTier, id=pk)
     form = PricingTierForm(request.POST or None, instance=obj)
@@ -62,7 +62,7 @@ def pricing_tier_update(request, pk):
     )
 
 
-@login_required
+@product_action_required("delete")
 def pricing_tier_delete(request, pk):
     obj = get_object_or_404(PricingTier, id=pk)
     if request.method != "POST":
@@ -72,7 +72,7 @@ def pricing_tier_delete(request, pk):
     return redirect("product_pricingtier_list")
 
 
-@login_required
+@product_action_required("create")
 def pricing_tier_product_price_create(request, pk):
     pricing_tier = get_object_or_404(PricingTier, id=pk)
     form = PricingTierProductPriceForm(
@@ -103,7 +103,7 @@ def pricing_tier_product_price_create(request, pk):
     )
 
 
-@login_required
+@product_action_required("edit")
 def pricing_tier_product_price_update(request, pk):
     obj = get_object_or_404(PricingTierProductPrice, id=pk)
     form = PricingTierProductPriceForm(request.POST or None, instance=obj)
@@ -130,7 +130,7 @@ def pricing_tier_product_price_update(request, pk):
     )
 
 
-@login_required
+@product_action_required("delete")
 def pricing_tier_product_price_delete(request, pk):
     obj = get_object_or_404(PricingTierProductPrice, id=pk)
     if request.method != "POST":
@@ -141,7 +141,7 @@ def pricing_tier_product_price_delete(request, pk):
     return redirect("product_pricingtier_detail", pk=tier_id)
 
 
-@login_required
+@product_action_required("view")
 def price_override_list(request):
     object_list = Price.objects.select_related("contact", "product", "price_tier").all()
     return TemplateResponse(
@@ -154,7 +154,7 @@ def price_override_list(request):
     )
 
 
-@login_required
+@product_action_required("create")
 def price_override_create(request):
     form = PriceOverrideForm(request.POST or None)
     if request.method == "POST":
@@ -175,7 +175,7 @@ def price_override_create(request):
     )
 
 
-@login_required
+@product_action_required("edit")
 def price_override_update(request, pk):
     obj = get_object_or_404(Price, id=pk)
     form = PriceOverrideForm(request.POST or None, instance=obj)
@@ -201,7 +201,7 @@ def price_override_update(request, pk):
     )
 
 
-@login_required
+@product_action_required("delete")
 def price_override_delete(request, pk):
     obj = get_object_or_404(Price, id=pk)
     if request.method != "POST":

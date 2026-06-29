@@ -25,8 +25,10 @@ def _read(relative_path):
 class AuthorizationSurfaceIntentTests(SimpleTestCase):
     def test_phase5_authorization_inventory_exists(self):
         inventory = DOCS_UI_ROOT / "authorization_cleanup_inventory.md"
+        closeout = DOCS_UI_ROOT / "phase5_authorization_closeout_review.md"
 
         self.assertTrue(inventory.exists())
+        self.assertTrue(closeout.exists())
         content = inventory.read_text(encoding="utf-8-sig")
         for expected in (
             "Public / Platform",
@@ -37,6 +39,10 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
             "Recommended Cleanup Order",
         ):
             self.assertIn(expected, content)
+
+        closeout_content = closeout.read_text(encoding="utf-8-sig")
+        self.assertIn("Phase 5 Authorization Closeout Review", closeout_content)
+        self.assertIn("Commit the Phase 5 set, then begin Phase 6 onboarding", closeout_content)
 
     def test_public_urlconf_excludes_tenant_erp_prefixes(self):
         public_prefixes = _route_prefixes(urls.urlpatterns)
@@ -115,6 +121,9 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
         girvi_access = _read("apps/tenant_apps/girvi/views/access.py")
         dea_access = _read("apps/tenant_apps/dea/views/access.py")
         party_access = _read("apps/tenant_apps/party/access.py")
+        product_access = _read("apps/tenant_apps/product/access.py")
+        rate_access = _read("apps/tenant_apps/rates/access.py")
+        notify_access = _read("apps/tenant_apps/notify/access.py")
 
         for expected in (
             "def assert_girvi_workspace_access",
@@ -142,6 +151,34 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
         ):
             self.assertIn(expected, party_access)
 
+        for expected in (
+            "def assert_product_workspace_access",
+            "def assert_product_permission",
+            "def assert_product_action_permission",
+            "def product_action_required",
+            "class ProductPermissionRequiredMixin",
+            "class ProductActionRequiredMixin",
+        ):
+            self.assertIn(expected, product_access)
+
+        for expected in (
+            "def assert_rate_workspace_access",
+            "def assert_rate_permission",
+            "def assert_rate_action_permission",
+            "def rate_action_required",
+            "class RateActionRequiredMixin",
+        ):
+            self.assertIn(expected, rate_access)
+
+        for expected in (
+            "def assert_notify_workspace_access",
+            "def assert_notify_permission",
+            "def assert_notify_action_permission",
+            "def notify_action_required",
+            "class NotifyActionRequiredMixin",
+        ):
+            self.assertIn(expected, notify_access)
+
     def test_known_tenant_authorization_gaps_are_documented_before_behavior_changes(self):
         inventory = (DOCS_UI_ROOT / "authorization_cleanup_inventory.md").read_text(
             encoding="utf-8-sig"
@@ -152,8 +189,8 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
             "Party role add/end and duplicate merge mutation paths use the Party edit action guard",
             inventory,
         )
-        self.assertIn("Contact, Product", inventory)
-        self.assertIn("mostly login-only", inventory)
+        self.assertIn("Phase 5 tenant authorization cleanup is complete for current Product, Rates, Notify, and utility data-tool route groups", inventory)
+        self.assertIn("Contact remains a legacy compatibility surface", inventory)
         self.assertIn("Middleware workspace-required prefixes cover current tenant ERP prefixes", inventory)
         self.assertIn("every current tenant ERP prefix", inventory)
         self.assertIn("canonical `/workspace/<id>/settings/...`", inventory)
@@ -162,12 +199,39 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
         party_views = _read("apps/tenant_apps/party/views.py")
         contact_customer_views = _read("apps/tenant_apps/contact/views/customer.py")
         product_views = _read("apps/tenant_apps/product/views/product.py")
+        producttype_views = _read("apps/tenant_apps/product/views/producttype.py")
+        productvariant_views = _read("apps/tenant_apps/product/views/productvariant.py")
+        product_stock_views = _read("apps/tenant_apps/product/views/stock.py")
+        product_price_views = _read("apps/tenant_apps/product/views/price.py")
+        product_image_views = _read("apps/tenant_apps/product/views/image.py")
+        rate_views = _read("apps/tenant_apps/rates/views.py")
+        notify_views = _read("apps/tenant_apps/notify/views.py")
+        notify_v2_views = _read("apps/tenant_apps/notify_v2/views.py")
 
         self.assertNotIn("@login_required", party_views)
         self.assertIn("party_action_required", party_views)
+        self.assertNotIn("@login_required", product_views)
+        self.assertIn("product_action_required", product_views)
+        self.assertIn("ProductActionRequiredMixin", product_views)
+        self.assertNotIn("@login_required", producttype_views)
+        self.assertIn("product_action_required", producttype_views)
+        self.assertNotIn("@login_required", productvariant_views)
+        self.assertIn("product_action_required", productvariant_views)
+        self.assertIn("ProductActionRequiredMixin", productvariant_views)
+        self.assertNotIn("@login_required", product_stock_views)
+        self.assertIn("product_action_required", product_stock_views)
+        self.assertIn("ProductActionRequiredMixin", product_stock_views)
+        self.assertIn("def stock_select(request, q=None)", product_stock_views)
+        self.assertNotIn("@login_required", product_price_views)
+        self.assertIn("product_action_required", product_price_views)
+        self.assertNotIn("LoginRequiredMixin", product_image_views)
+        self.assertIn("ProductActionRequiredMixin", product_image_views)
+        self.assertIn("rate_action_required", rate_views)
+        self.assertIn("notify_action_required", notify_views)
+        self.assertIn("notify_action_required", notify_v2_views)
+        self.assertIn("def whatsapp_cloud_webhook", notify_v2_views)
 
-        for content in (contact_customer_views, product_views):
-            self.assertIn("@login_required", content)
+        self.assertIn("@login_required", contact_customer_views)
 
         self.assertNotIn("girvi_permission_required", party_views)
         self.assertNotIn("dea_accountant_required", party_views)

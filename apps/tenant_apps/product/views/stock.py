@@ -3,8 +3,6 @@ from decimal import Decimal, InvalidOperation
 from io import TextIOWrapper
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,6 +19,7 @@ from django.utils import timezone
 from django.apps import apps as django_apps
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
+from ..access import ProductActionRequiredMixin, product_action_required
 from ..forms import (
     InventoryListFilterForm,
     StockOpeningBalanceImportForm,
@@ -34,7 +33,7 @@ from ..models import ProductVariant, Stock, StockItem, StockStatement, StockTran
 from ..tables import InventoryTable
 
 
-@login_required
+@product_action_required("edit")
 @for_htmx(use_block="content")
 def split_lot(request, pk):
     stock = get_object_or_404(Stock, pk=pk)
@@ -59,7 +58,7 @@ def split_lot(request, pk):
     return TemplateResponse(request, "product/stock/split_lot.html", context)
 
 
-@login_required
+@product_action_required("edit")
 def merge_lot(request, pk):
     node = Stock.objects.get(id=pk)
     print(f"to merge node{node}")
@@ -67,7 +66,7 @@ def merge_lot(request, pk):
     return reverse_lazy("product_stock_list")
 
 
-@login_required
+@product_action_required("view")
 @for_htmx(use_block="content")
 def stock_list(request):
     form = InventoryListFilterForm(request.GET)
@@ -164,6 +163,7 @@ def stock_list(request):
     return TemplateResponse(request, "product/stock/stock_list.html", context)
 
 
+@product_action_required("delete")
 @require_http_methods(["DELETE"])
 def stock_delete(request, pk):
     stock = get_object_or_404(Stock, pk=pk)
@@ -172,19 +172,22 @@ def stock_delete(request, pk):
     return HttpResponse("")
 
 
-class StockDetailView(LoginRequiredMixin, DetailView):
+class StockDetailView(ProductActionRequiredMixin, DetailView):
     template_name = "product/stock/stock_detail.html"
     model = Stock
+    required_action = "view"
 
 
-class StockTransactionListView(LoginRequiredMixin, ListView):
+class StockTransactionListView(ProductActionRequiredMixin, ListView):
     template_name = "product/stock/stocktransaction_list.html"
     model = StockTransaction
+    required_action = "view"
 
 
-class StockStatementListView(LoginRequiredMixin, ListView):
+class StockStatementListView(ProductActionRequiredMixin, ListView):
     template_name = "product/stock/stockstatement_list.html"
     model = StockStatement
+    required_action = "view"
 
     def get_queryset(self):
         return (
@@ -198,8 +201,9 @@ class StockStatementListView(LoginRequiredMixin, ListView):
         )
 
 
-class StockStatementView(TemplateView):
+class StockStatementView(ProductActionRequiredMixin, TemplateView):
     template_name = "product/stock/add_stockstatement.html"
+    required_action = "edit"
 
     def get(self, *args, **kwargs):
         form = StockStatementForm()
@@ -226,14 +230,16 @@ class StockStatementView(TemplateView):
         return self.render_to_response({"form": form})
 
 
-@login_required
+@product_action_required("edit")
 def audit_stock(request):
     stocks = Stock.objects.all()
     for i in stocks:
         i.audit()
     return HttpResponseRedirect(reverse("product_stock_list"))
 
-def stock_select(request, q):
+@product_action_required("view")
+def stock_select(request, q=None):
+    q = q or request.GET.get("q", "")
     objects = Stock.objects.filter(
         Q(variant__name__icontains=q)
         | Q(lot_no__icontains=q)
@@ -245,7 +251,7 @@ def stock_select(request, q):
     )
 
 
-@login_required
+@product_action_required("create")
 def stock_in_direct(request):
     # Check if journal_entry_id is provided in the request
     journal_entry_id = request.GET.get("journal_entry_id", None)
@@ -275,7 +281,7 @@ def stock_in_direct(request):
     )
 
 
-@login_required
+@product_action_required("import")
 def stock_opening_balance_import(request):
     form = StockOpeningBalanceImportForm(request.POST or None, request.FILES or None)
 
@@ -363,7 +369,7 @@ def stock_opening_balance_import(request):
     )
 
 
-@login_required
+@product_action_required("import")
 def stock_opening_balance_template_csv(request):
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = (
@@ -385,12 +391,13 @@ def stock_opening_balance_template_csv(request):
     return response
 
 
-@login_required
+@product_action_required("create")
 def stockin_journalentry(request):
     """Backward-compatible alias for deprecated view name."""
     return stock_in_direct(request)
 
 
+@product_action_required("create")
 @for_htmx(use_block="content")
 def stockout_journalentry(request, pk=None):
     if request.method == "POST":
