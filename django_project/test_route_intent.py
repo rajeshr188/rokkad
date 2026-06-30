@@ -5,6 +5,7 @@ from django_project import public_urls, tenant_urls, urls
 from django_project.shared_urlpatterns import (
     AUTH_URLPATTERNS,
     CANONICAL_CONTROL_PLANE_URLPATTERNS,
+    CANONICAL_WORKSPACE_SLUG_URLPATTERNS,
     GLOBAL_AUTHENTICATED_URLPATTERNS,
     PUBLIC_PLATFORM_URLPATTERNS,
     SERVICE_URLPATTERNS,
@@ -37,6 +38,14 @@ class SaaSRouteIntentTests(SimpleTestCase):
             GLOBAL_AUTHENTICATED_URLPATTERNS[: len(CANONICAL_CONTROL_PLANE_URLPATTERNS)],
             CANONICAL_CONTROL_PLANE_URLPATTERNS,
         )
+        self.assertEqual(
+            GLOBAL_AUTHENTICATED_URLPATTERNS[
+                len(CANONICAL_CONTROL_PLANE_URLPATTERNS) :
+                len(CANONICAL_CONTROL_PLANE_URLPATTERNS)
+                + len(CANONICAL_WORKSPACE_SLUG_URLPATTERNS)
+            ],
+            CANONICAL_WORKSPACE_SLUG_URLPATTERNS,
+        )
 
     def test_canonical_control_plane_aliases_resolve(self):
         route_cases = {
@@ -63,6 +72,44 @@ class SaaSRouteIntentTests(SimpleTestCase):
             with self.subTest(route_name=route_name):
                 self.assertEqual(reverse(route_name, kwargs=kwargs), expected_path)
                 self.assertEqual(resolve(expected_path).url_name, route_name)
+
+    def test_phase104_minimal_workspace_slug_aliases_resolve(self):
+        route_cases = {
+            "workspace_slug_dashboard": "/w/acme/",
+            "workspace_slug_settings": "/w/acme/settings/",
+            "workspace_slug_settings_preferences": "/w/acme/settings/preferences/",
+            "workspace_slug_settings_team": "/w/acme/settings/team/",
+            "workspace_slug_settings_invitations": "/w/acme/settings/invitations/",
+            "workspace_slug_parties": "/w/acme/parties/",
+            "workspace_slug_loans": "/w/acme/loans/",
+            "workspace_slug_inventory": "/w/acme/inventory/",
+            "workspace_slug_accounting": "/w/acme/accounting/",
+        }
+
+        for route_name, expected_path in route_cases.items():
+            with self.subTest(route_name=route_name):
+                kwargs = {"workspace_slug": "acme"}
+                self.assertEqual(reverse(route_name, kwargs=kwargs), expected_path)
+                self.assertEqual(resolve(expected_path).url_name, route_name)
+
+    def test_phase104_workspace_slug_aliases_resolve_in_public_and_tenant_urlconfs(self):
+        route_cases = {
+            "/w/acme/": "workspace_slug_dashboard",
+            "/w/acme/settings/": "workspace_slug_settings",
+            "/w/acme/settings/preferences/": "workspace_slug_settings_preferences",
+            "/w/acme/settings/team/": "workspace_slug_settings_team",
+            "/w/acme/settings/invitations/": "workspace_slug_settings_invitations",
+            "/w/acme/parties/": "workspace_slug_parties",
+            "/w/acme/loans/": "workspace_slug_loans",
+            "/w/acme/inventory/": "workspace_slug_inventory",
+            "/w/acme/accounting/": "workspace_slug_accounting",
+        }
+
+        for path, route_name in route_cases.items():
+            with self.subTest(path=path, urlconf="public"):
+                self.assertEqual(resolve(path, urlconf=urls).url_name, route_name)
+            with self.subTest(path=path, urlconf="tenant"):
+                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
 
     def test_current_canonical_control_plane_aliases_resolve_in_public_and_tenant_urlconfs(self):
         route_cases = {
@@ -213,8 +260,11 @@ class SaaSRouteIntentTests(SimpleTestCase):
 
     def test_future_public_and_tenant_route_aliases_are_intentionally_absent(self):
         absent_route_names = (
-            "workspace_slug_dashboard",
-            "workspace_slug_settings",
+            "workspace_slug_reports",
+            "workspace_slug_operations",
+            "workspace_slug_sales",
+            "workspace_slug_purchase",
+            "workspace_slug_commodity",
         )
 
         for route_name in absent_route_names:
@@ -223,10 +273,11 @@ class SaaSRouteIntentTests(SimpleTestCase):
                     reverse(route_name)
 
         absent_paths = (
-            "/w/acme/",
-            "/w/acme/settings/",
-            "/w/acme/parties/",
-            "/w/acme/accounting/",
+            "/w/acme/reports/",
+            "/w/acme/operations/",
+            "/w/acme/sales/",
+            "/w/acme/purchase/",
+            "/w/acme/commodity/",
         )
 
         for path in absent_paths:

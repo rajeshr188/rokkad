@@ -169,17 +169,23 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         expected_hrefs = [
             reverse("app_workspaces"),
             reverse("app_workspace_create"),
-            reverse("workspace_settings_home", kwargs={"workspace_id": workspace.id}),
+            reverse(
+                "workspace_slug_settings",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
             reverse("workspace_settings_setup", kwargs={"workspace_id": workspace.id}),
             reverse(
-                "workspace_settings_preferences",
-                kwargs={"workspace_id": workspace.id},
+                "workspace_slug_settings_preferences",
+                kwargs={"workspace_slug": workspace.schema_name},
             ),
-            reverse("workspace_settings_team", kwargs={"workspace_id": workspace.id}),
+            reverse(
+                "workspace_slug_settings_team",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
             reverse("workspace_settings_invite", kwargs={"workspace_id": workspace.id}),
             reverse(
-                "workspace_settings_invitations",
-                kwargs={"workspace_id": workspace.id},
+                "workspace_slug_settings_invitations",
+                kwargs={"workspace_slug": workspace.schema_name},
             ),
             reverse("app_invitations"),
             reverse("account_settings"),
@@ -230,8 +236,8 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         )
 
         preferences_href = reverse(
-            "workspace_settings_preferences",
-            kwargs={"workspace_id": workspace.id},
+            "workspace_slug_settings_preferences",
+            kwargs={"workspace_slug": workspace.schema_name},
         )
         self.assertGreaterEqual(html.count(f'href="{preferences_href}"'), 2)
         self.assertIn("Preferences", html)

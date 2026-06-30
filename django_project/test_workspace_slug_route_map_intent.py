@@ -1,0 +1,193 @@
+from pathlib import Path
+
+from django.test import SimpleTestCase
+from django.urls import NoReverseMatch, Resolver404, resolve, reverse
+
+from django_project import tenant_urls, urls
+from django_project.shared_urlpatterns import CANONICAL_WORKSPACE_SLUG_URLPATTERNS
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DOCS_UI_ROOT = PROJECT_ROOT / "docs" / "ui"
+
+
+def _read(relative_path):
+    return (PROJECT_ROOT / relative_path).read_text(encoding="utf-8-sig")
+
+
+class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
+    def test_phase101_plan_exists_and_keeps_runtime_baseline_explicit(self):
+        plan_path = DOCS_UI_ROOT / "workspace_slug_route_map_plan.md"
+
+        self.assertTrue(plan_path.exists())
+        content = plan_path.read_text(encoding="utf-8-sig")
+
+        for expected in (
+            "Workspace Slug Route Map Plan",
+            "Phase 10.1: Plan And Guard Baseline",
+            "Status: complete",
+            "Do not add slug routes",
+            "Company` has `schema_name`, but no explicit user-facing slug field",
+            "Membership check order",
+            "Phase 10.2: Slug Source Decision",
+            "Use `Company.schema_name` as the initial compatibility slug",
+            "Skip Contact because Party is the canonical replacement",
+        ):
+            self.assertIn(expected, content)
+
+    def test_phase101_workspace_slug_routes_remain_intentionally_absent(self):
+        absent_route_names = (
+            "workspace_slug_operations",
+            "workspace_slug_sales",
+            "workspace_slug_purchase",
+            "workspace_slug_commodity",
+            "workspace_slug_reports",
+        )
+
+        for route_name in absent_route_names:
+            with self.subTest(route_name=route_name):
+                with self.assertRaises(NoReverseMatch):
+                    reverse(route_name, kwargs={"workspace_slug": "acme"})
+
+        absent_paths = (
+            "/w/acme/operations/",
+            "/w/acme/sales/",
+            "/w/acme/purchase/",
+            "/w/acme/commodity/",
+            "/w/acme/reports/",
+            "/w/acme/contact/",
+        )
+
+        for path in absent_paths:
+            with self.subTest(path=path, urlconf="public"):
+                with self.assertRaises(Resolver404):
+                    resolve(path, urlconf=urls)
+            with self.subTest(path=path, urlconf="tenant"):
+                with self.assertRaises(Resolver404):
+                    resolve(path, urlconf=tenant_urls)
+
+    def test_phase101_current_workspace_identity_sources_are_documented(self):
+        plan = _read("docs/ui/workspace_slug_route_map_plan.md")
+        middleware = _read("apps/orgs/middleware_v2.py")
+        models = _read("apps/orgs/models.py")
+
+        self.assertIn("Domain mapping through `django-tenants` `Domain`", plan)
+        self.assertIn("/workspace/<id>/settings/...", plan)
+        self.assertIn("User profile fallback", plan)
+        self.assertIn("WORKSPACE_ID_PATTERNS", middleware)
+        self.assertIn("WORKSPACE_SLUG_PATTERNS", middleware)
+        self.assertIn("def _extract_workspace_slug_from_path", middleware)
+        self.assertIn("schema_name=workspace_slug", middleware)
+        self.assertIn("schema_name", models)
+        self.assertNotIn("slug = models.SlugField", models)
+
+    def test_phase102_slug_source_decision_uses_schema_name_without_migration(self):
+        plan = _read("docs/ui/workspace_slug_route_map_plan.md")
+        models = _read("apps/orgs/models.py")
+
+        for expected in (
+            "Status: complete",
+            "Use `Company.schema_name` as the initial compatibility slug",
+            "no migration is needed",
+            "Do not expose schema names as editable marketing slugs",
+            "Adding `Company.slug` immediately",
+        ):
+            self.assertIn(expected, plan)
+
+        self.assertIn("class Company(TenantMixin):", models)
+        self.assertIn("schema_name", plan)
+        self.assertNotIn("slug = models.SlugField", models)
+
+    def test_phase101_slug_rollout_is_reflected_in_project_docs(self):
+        status = _read("docs/STATUS.md")
+        memory = _read("docs/AGENT_MEMORY.md")
+        audit = _read("docs/ui/saas_information_architecture_audit.md")
+
+        for content in (status, memory, audit):
+            with self.subTest():
+                self.assertIn("Phase 10.1", content)
+                self.assertIn("workspace_slug_route_map_plan.md", content)
+                self.assertIn("Phase 10.2", content)
+                self.assertIn("Company.schema_name", content)
+
+    def test_phase103_middleware_slug_extraction_is_documented(self):
+        plan = _read("docs/ui/workspace_slug_route_map_plan.md")
+
+        for expected in (
+            "Phase 10.3: Middleware Slug Extraction",
+            "Status: complete",
+            "WORKSPACE_SLUG_PATTERNS",
+            "_extract_workspace_slug_from_path()",
+            "resolves slug paths by `Company.schema_name`",
+            "No URL patterns have been added yet",
+            "Phase 10.4: Add Minimal Slug Aliases",
+        ):
+            self.assertIn(expected, plan)
+
+    def test_phase104_minimal_slug_aliases_are_live(self):
+        route_cases = {
+            "workspace_slug_dashboard": "/w/acme/",
+            "workspace_slug_settings": "/w/acme/settings/",
+            "workspace_slug_settings_preferences": "/w/acme/settings/preferences/",
+            "workspace_slug_settings_team": "/w/acme/settings/team/",
+            "workspace_slug_settings_invitations": "/w/acme/settings/invitations/",
+            "workspace_slug_parties": "/w/acme/parties/",
+            "workspace_slug_loans": "/w/acme/loans/",
+            "workspace_slug_inventory": "/w/acme/inventory/",
+            "workspace_slug_accounting": "/w/acme/accounting/",
+        }
+
+        self.assertEqual(
+            len(CANONICAL_WORKSPACE_SLUG_URLPATTERNS),
+            len(route_cases),
+        )
+
+        for route_name, expected_path in route_cases.items():
+            with self.subTest(route_name=route_name):
+                self.assertEqual(
+                    reverse(route_name, kwargs={"workspace_slug": "acme"}),
+                    expected_path,
+                )
+                self.assertEqual(resolve(expected_path).url_name, route_name)
+
+    def test_phase105_tenant_erp_section_aliases_are_live_without_contact(self):
+        route_cases = {
+            "workspace_slug_parties": "/w/acme/parties/",
+            "workspace_slug_loans": "/w/acme/loans/",
+            "workspace_slug_inventory": "/w/acme/inventory/",
+            "workspace_slug_accounting": "/w/acme/accounting/",
+        }
+
+        for route_name, expected_path in route_cases.items():
+            with self.subTest(route_name=route_name):
+                self.assertEqual(
+                    reverse(route_name, kwargs={"workspace_slug": "acme"}),
+                    expected_path,
+                )
+                self.assertEqual(resolve(expected_path).url_name, route_name)
+
+        with self.assertRaises(NoReverseMatch):
+            reverse("workspace_slug_contact", kwargs={"workspace_slug": "acme"})
+
+        for urlconf in (urls, tenant_urls):
+            with self.subTest(urlconf=urlconf):
+                with self.assertRaises(Resolver404):
+                    resolve("/w/acme/contact/", urlconf=urlconf)
+
+    def test_phase107_review_closes_workspace_slug_route_map_phase(self):
+        review_path = DOCS_UI_ROOT / "workspace_slug_route_map_review.md"
+
+        self.assertTrue(review_path.exists())
+        content = review_path.read_text(encoding="utf-8-sig")
+
+        for expected in (
+            "Workspace Slug Route Map Review",
+            "Chose `Company.schema_name` as the initial compatibility slug",
+            "Added middleware slug extraction",
+            "/w/<workspace_slug>/settings/preferences/",
+            "/w/<workspace_slug>/parties/",
+            "Contact is intentionally not exposed",
+            "65 tests passed",
+            "Commit Boundary",
+        ):
+            self.assertIn(expected, content)

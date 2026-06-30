@@ -86,7 +86,10 @@ class SaaSNavigationIntentTests(SimpleTestCase):
         self.assertIn("Current status:", navigation_config)
         self.assertIn("Not used for live sidebar rendering", navigation_config)
         self.assertIn("dea_business_events_dashboard", sidebar)
-        self.assertIn("girvi:girvi_dashboard", sidebar)
+        self.assertIn("workspace_slug_dashboard", sidebar)
+        self.assertIn("workspace_slug_parties", sidebar)
+        self.assertIn("workspace_slug_loans", sidebar)
+        self.assertIn("workspace_slug_inventory", sidebar)
 
     def test_management_and_tenant_shells_have_separate_navigation_surfaces(self):
         management_layout = _read_template("layouts/management.html")

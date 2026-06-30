@@ -12,7 +12,7 @@ from django.urls import reverse
 from django_tenants.utils import get_public_schema_name
 
 from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
-from apps.orgs.models import CompanyInvitation, Membership
+from apps.orgs.models import Company, CompanyInvitation, Membership
 from apps.orgs.permissions import (
 	ALL_PERMISSIONS,
 	get_all_permission_codenames,
@@ -48,6 +48,43 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 	def test_extract_workspace_id_returns_none_for_unmatched_path(self):
 		workspace_id = self.middleware._extract_workspace_id_from_path("/girvi/list/")
 		self.assertIsNone(workspace_id)
+
+	def test_extract_workspace_slug_from_future_workspace_path(self):
+		workspace_slug = self.middleware._extract_workspace_slug_from_path(
+			"/w/acme_workspace/settings/"
+		)
+		self.assertEqual(workspace_slug, "acme_workspace")
+
+	def test_extract_workspace_slug_returns_none_for_non_workspace_path(self):
+		workspace_slug = self.middleware._extract_workspace_slug_from_path(
+			"/workspace/42/settings/"
+		)
+		self.assertIsNone(workspace_slug)
+
+	def test_resolve_workspace_from_path_supports_schema_name_slug(self):
+		workspace = SimpleNamespace(id=7, schema_name="acme_workspace")
+		fake_filtered = SimpleNamespace(first=lambda: workspace)
+		request = SimpleNamespace(path="/w/acme_workspace/parties/")
+
+		with patch("apps.orgs.middleware_v2.connection.set_schema_to_public"), \
+			 patch.object(Company.objects, "filter", return_value=fake_filtered) as mock_filter:
+			resolved = self.middleware._resolve_workspace_from_path(request)
+
+		self.assertIs(resolved, workspace)
+		mock_filter.assert_called_once_with(
+			schema_name="acme_workspace",
+			is_deleted=False,
+		)
+
+	def test_resolve_workspace_from_path_ignores_public_schema_slug(self):
+		request = SimpleNamespace(path=f"/w/{get_public_schema_name()}/")
+
+		with patch("apps.orgs.middleware_v2.connection.set_schema_to_public"), \
+			 patch.object(Company.objects, "filter") as mock_filter:
+			resolved = self.middleware._resolve_workspace_from_path(request)
+
+		self.assertIsNone(resolved)
+		mock_filter.assert_not_called()
 
 	def test_select_workspace_candidate_prefers_domain(self):
 		domain_workspace = SimpleNamespace(id=1, schema_name="acme")

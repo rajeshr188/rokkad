@@ -116,6 +116,70 @@ def _get_workspace_from_query(request):
     return get_object_or_404(Company, id=workspace_id, is_deleted=False)
 
 
+def _get_workspace_from_slug(workspace_slug):
+    if workspace_slug == get_public_schema_name():
+        raise Http404("Workspace not found")
+    return get_object_or_404(
+        Company,
+        schema_name=workspace_slug,
+        is_deleted=False,
+    )
+
+
+@login_required
+def workspace_slug_dashboard(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_dashboard", workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_home(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_settings_home", workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_preferences(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_settings_preferences", workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_team(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_settings_team", workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_invitations(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_settings_invitations", workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_parties(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("party:party_list")
+
+
+@login_required
+def workspace_slug_loans(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("girvi:girvi_dashboard")
+
+
+@login_required
+def workspace_slug_inventory(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("product_product_home")
+
+
+@login_required
+def workspace_slug_accounting(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("dea_home")
+
+
 def _assert_owner_access(request, workspace, allow_platform_admin=True):
     """Allow only workspace owner (or platform admin when enabled)."""
     access = _assert_workspace_access(

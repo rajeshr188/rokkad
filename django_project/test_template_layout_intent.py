@@ -248,22 +248,26 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         self.assertIn("role_name == 'Admin'", sidebar_content)
         self.assertIn("role_name == 'Superuser'", sidebar_content)
         for route_fragment in (
-            "{% url 'workspace_settings_home' workspace_id=ew.id %}",
+            "{% url 'workspace_slug_settings' workspace_slug=ew.schema_name %}",
             "{% url 'workspace_settings_setup' workspace_id=ew.id %}",
-            "{% url 'workspace_settings_preferences' workspace_id=ew.id %}",
-            "{% url 'workspace_settings_team' workspace_id=ew.id %}",
+            "{% url 'workspace_slug_settings_preferences' workspace_slug=ew.schema_name %}",
+            "{% url 'workspace_slug_settings_team' workspace_slug=ew.schema_name %}",
             "{% url 'workspace_settings_invite' workspace_id=ew.id %}",
-            "{% url 'workspace_settings_invitations' workspace_id=ew.id %}",
+            "{% url 'workspace_slug_settings_invitations' workspace_slug=ew.schema_name %}",
         ):
             self.assertIn(route_fragment, sidebar_content)
 
         for route_name in (
             "workspace_detail",
+            "workspace_slug_settings",
             "workspace_setup",
             "workspace_preferences",
+            "workspace_slug_settings_preferences",
             "team_members_list",
+            "workspace_slug_settings_team",
             "team_invite",
             "team_invitations_list",
+            "workspace_slug_settings_invitations",
         ):
             self.assertIn(route_name, sidebar_content)
 
@@ -275,11 +279,15 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         )[0]
         for route_name in (
             "workspace_detail",
+            "workspace_slug_settings",
             "workspace_setup",
             "workspace_preferences",
+            "workspace_slug_settings_preferences",
             "team_members_list",
+            "workspace_slug_settings_team",
             "team_invite",
             "team_invitations_list",
+            "workspace_slug_settings_invitations",
         ):
             self.assertNotIn(route_name, desktop_section)
             self.assertNotIn(route_name, mobile_section)
@@ -432,6 +440,10 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         self.assertIn("workspace-identity", sidebar)
         self.assertIn("workspace-nav-link", sidebar)
         self.assertIn("workspace-nav-section-title", sidebar)
+        self.assertIn("workspace_slug_dashboard", sidebar)
+        self.assertIn("workspace_slug_parties", sidebar)
+        self.assertIn("workspace_slug_loans", sidebar)
+        self.assertIn("workspace_slug_inventory", sidebar)
         self.assertNotIn("<style>", sidebar)
         self.assertNotIn("</style>", sidebar)
         self.assertNotIn('class="nav-link', sidebar)

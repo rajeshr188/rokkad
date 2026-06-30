@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-29
+updated: 2026-06-30
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
@@ -392,6 +392,20 @@ Phase 9.3 short auth aliases are implemented. `/login/`, `/signup/`, and `/passw
 Phase 9.4 public invitation accept alias is implemented. `/invitations/accept/<key>` now resolves as `public_invitation_accept` to the orgs-owned `team_accept_invitation` adapter while the django-invitations `/invitations/accept-invite/<key>` compatibility path remains available. The next safe SaaS IA slice is Phase 9.5: public/auth alias rollout review and commit preparation before the separate `/w/<workspace_slug>/...` route-map phase.
 
 Phase 9.5 public/auth alias-template rollout review is complete in `docs/ui/public_auth_alias_template_rollout_review.md`. The review records completed pricing/templates/auth/invitation aliases, compatibility findings, verification commands, and the commit boundary. The next safe SaaS IA action is to commit this phase, then start separate `/w/<workspace_slug>/...` route-map planning before slug routes are added.
+
+Phase 10.1 workspace slug route-map planning is complete in `docs/ui/workspace_slug_route_map_plan.md`, with guard coverage in `django_project/test_workspace_slug_route_map_intent.py`. Runtime behavior is unchanged and `/w/<workspace_slug>/...` routes remain intentionally absent. The next safe slice is Phase 10.2: choose the slug source, conservatively using `Company.schema_name` as a compatibility slug unless a dedicated immutable `Company.slug` is justified.
+
+Phase 10.2 slug source decision is complete. `/w/<workspace_slug>/...` will initially use `Company.schema_name` as a compatibility slug, with no shared-schema migration in this phase. Do not expose schema names as editable branded slugs yet; defer a dedicated immutable `Company.slug` until rename/branding requirements are clear. The next safe slice is Phase 10.3: add middleware slug extraction by `schema_name` while keeping URL routes absent.
+
+Phase 10.3 middleware slug extraction is complete. `SecureWorkspaceMiddleware` can extract future `/w/<workspace_slug>/...` path candidates through `WORKSPACE_SLUG_PATTERNS` and resolve them by `Company.schema_name`, while ignoring the public schema slug. URL routes are still absent. The next safe slice is Phase 10.4: add minimal slug aliases for workspace dashboard and settings.
+
+Phase 10.4 minimal workspace slug aliases are live. `CANONICAL_WORKSPACE_SLUG_URLPATTERNS` exposes `/w/<workspace_slug>/`, `/w/<workspace_slug>/settings/`, `/settings/preferences/`, `/settings/team/`, and `/settings/invitations/` as redirect aliases to existing id-based dashboard/settings views. Tenant ERP section aliases remain absent. The next safe slice is Phase 10.5: add Party, Girvi loans, Product/inventory, and DEA accounting aliases, skipping Contact.
+
+Phase 10.5 tenant ERP section aliases are live for stable module entrypoints: `/w/<workspace_slug>/parties/` redirects to Party, `/loans/` to Girvi, `/inventory/` to Product, and `/accounting/` to DEA. `/w/<workspace_slug>/contact/` remains absent because Party replaces Contact. Operations, sales, purchase, commodity, and reports remain absent until product targets are selected. The next safe slice is Phase 10.6: move selected navigation links to slug aliases where workspace schema context is reliable.
+
+Phase 10.6 selected navigation cutover is complete. Tenant sidebar dashboard, Parties, Girvi, and Product links now target slug aliases, and workspace settings sidebar home/preferences/team/sent-invitations links use slug aliases where `ew.schema_name` is present. Setup, invite member, subscription, reports, business events, commodity, accounting tools, rates, notifications, and data tools remain on existing routes until dedicated aliases are introduced. The next safe slice is Phase 10.7 review/verification and phase-level commit.
+
+Phase 10.7 workspace slug route-map review is complete in `docs/ui/workspace_slug_route_map_review.md`. The phase added the first live `/w/<workspace_slug>/...` aliases, kept compatibility URLs available, and deferred remaining operations/sales/purchase/commodity/reports/settings-detail/portal routes. After commit, choose targets for remaining slug routes or start customer/member portal IA.
 
 ## Navigation Memory
 

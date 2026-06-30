@@ -77,6 +77,9 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         re.compile(r"^/orgs/company/(?P<workspace_id>\d+)(/|$)"),
         re.compile(r"^/workspace/(?P<workspace_id>\d+)/settings(/|$)"),
     ]
+    WORKSPACE_SLUG_PATTERNS = [
+        re.compile(r"^/w/(?P<workspace_slug>[A-Za-z0-9_][A-Za-z0-9_-]{0,62})(/|$)"),
+    ]
 
     def process_request(self, request):
         """Process request with deterministic tenant resolution and membership validation."""
@@ -237,14 +240,21 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         return None
 
     def _resolve_workspace_from_path(self, request):
-        """Resolve workspace from known path patterns such as /orgs/workspace/<id>/..."""
+        """Resolve workspace from known id or slug path patterns."""
         connection.set_schema_to_public()
 
         workspace_id = self._extract_workspace_id_from_path(request.path)
-        if not workspace_id:
+        if workspace_id:
+            return Company.objects.filter(id=workspace_id, is_deleted=False).first()
+
+        workspace_slug = self._extract_workspace_slug_from_path(request.path)
+        if not workspace_slug or workspace_slug == get_public_schema_name():
             return None
 
-        return Company.objects.filter(id=workspace_id, is_deleted=False).first()
+        return Company.objects.filter(
+            schema_name=workspace_slug,
+            is_deleted=False,
+        ).first()
 
     def _extract_workspace_id_from_path(self, path):
         """Extract workspace id from path using known workspace URL patterns."""
@@ -252,6 +262,14 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             match = pattern.match(path)
             if match:
                 return int(match.group("workspace_id"))
+        return None
+
+    def _extract_workspace_slug_from_path(self, path):
+        """Extract workspace slug from future /w/<workspace_slug>/... paths."""
+        for pattern in self.WORKSPACE_SLUG_PATTERNS:
+            match = pattern.match(path)
+            if match:
+                return match.group("workspace_slug")
         return None
 
     def _select_workspace_candidate(self, domain_workspace, path_workspace, profile_workspace):

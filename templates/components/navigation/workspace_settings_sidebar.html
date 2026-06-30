@@ -1,6 +1,6 @@
 {% if workspace_settings_sidebar_variant == "desktop" %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' %}active{% endif %}"
-   href="{% url 'workspace_settings_home' workspace_id=ew.id %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings' workspace_slug=ew.schema_name %}">
     <i class="bi bi-gear"></i> Settings
 </a>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_setup' or request.resolver_match.url_name == 'workspace_settings_setup' %}active{% endif %}"
@@ -8,26 +8,26 @@
     <i class="bi bi-list-check"></i> Setup
 </a>
 {% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Superuser' %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' %}active{% endif %}"
-   href="{% url 'workspace_settings_preferences' workspace_id=ew.id %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' or request.resolver_match.url_name == 'workspace_slug_settings_preferences' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_preferences' workspace_slug=ew.schema_name %}">
     <i class="bi bi-sliders"></i> Preferences
 </a>
 {% endif %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_members_list' or request.resolver_match.url_name == 'workspace_settings_team' %}active{% endif %}"
-   href="{% url 'workspace_settings_team' workspace_id=ew.id %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_members_list' or request.resolver_match.url_name == 'workspace_settings_team' or request.resolver_match.url_name == 'workspace_slug_settings_team' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_team' workspace_slug=ew.schema_name %}">
     <i class="bi bi-people"></i> Team Members
 </a>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invite' or request.resolver_match.url_name == 'workspace_settings_invite' %}active{% endif %}"
    href="{% url 'workspace_settings_invite' workspace_id=ew.id %}">
     <i class="bi bi-person-plus"></i> Invite Member
 </a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations_list' or request.resolver_match.url_name == 'workspace_settings_invitations' %}active{% endif %}"
-   href="{% url 'workspace_settings_invitations' workspace_id=ew.id %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations_list' or request.resolver_match.url_name == 'workspace_settings_invitations' or request.resolver_match.url_name == 'workspace_slug_settings_invitations' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_invitations' workspace_slug=ew.schema_name %}">
     <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
 </a>
 {% elif workspace_settings_sidebar_variant == "mobile" %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' %}active{% endif %}"
-   href="{% url 'workspace_settings_home' workspace_id=ew.id %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings' workspace_slug=ew.schema_name %}">
     <i class="bi bi-gear"></i> Settings
 </a>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_setup' or request.resolver_match.url_name == 'workspace_settings_setup' %}active{% endif %}"
@@ -35,21 +35,21 @@
     <i class="bi bi-list-check"></i> Setup
 </a>
 {% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Superuser' %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' %}active{% endif %}"
-   href="{% url 'workspace_settings_preferences' workspace_id=ew.id %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' or request.resolver_match.url_name == 'workspace_slug_settings_preferences' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_preferences' workspace_slug=ew.schema_name %}">
     <i class="bi bi-sliders"></i> Preferences
 </a>
 {% endif %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_members_list' or request.resolver_match.url_name == 'workspace_settings_team' %}active{% endif %}"
-   href="{% url 'workspace_settings_team' workspace_id=ew.id %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_members_list' or request.resolver_match.url_name == 'workspace_settings_team' or request.resolver_match.url_name == 'workspace_slug_settings_team' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_team' workspace_slug=ew.schema_name %}">
     <i class="bi bi-people"></i> Team Members
 </a>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invite' or request.resolver_match.url_name == 'workspace_settings_invite' %}active{% endif %}"
    href="{% url 'workspace_settings_invite' workspace_id=ew.id %}">
     <i class="bi bi-person-plus"></i> Invite Member
 </a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations_list' or request.resolver_match.url_name == 'workspace_settings_invitations' %}active{% endif %}"
-   href="{% url 'workspace_settings_invitations' workspace_id=ew.id %}">
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations_list' or request.resolver_match.url_name == 'workspace_settings_invitations' or request.resolver_match.url_name == 'workspace_slug_settings_invitations' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_invitations' workspace_slug=ew.schema_name %}">
     <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
 </a>
 {% endif %}

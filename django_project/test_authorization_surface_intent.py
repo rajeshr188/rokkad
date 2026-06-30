@@ -110,6 +110,28 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
             with self.subTest(path=public_path):
                 self.assertIsNone(middleware._extract_workspace_id_from_path(public_path))
 
+    def test_secure_workspace_middleware_extracts_future_workspace_slugs(self):
+        middleware = SecureWorkspaceMiddleware(get_response=lambda request: None)
+
+        path_cases = {
+            "/w/acme/": "acme",
+            "/w/acme_workspace/settings/": "acme_workspace",
+            "/w/acme-legacy/parties/": "acme-legacy",
+        }
+
+        for path, expected_workspace_slug in path_cases.items():
+            with self.subTest(path=path):
+                self.assertEqual(
+                    middleware._extract_workspace_slug_from_path(path),
+                    expected_workspace_slug,
+                )
+
+        for public_path in ("/app/workspaces/", "/workspace/44/settings/", "/party/"):
+            with self.subTest(path=public_path):
+                self.assertIsNone(
+                    middleware._extract_workspace_slug_from_path(public_path)
+                )
+
     def test_workspace_resolution_helper_does_not_use_profile_fallback_by_default(self):
         tenant_context = _read("apps/orgs/tenant_context.py")
 

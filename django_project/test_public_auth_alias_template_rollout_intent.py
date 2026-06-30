@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from django.test import SimpleTestCase
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -33,15 +33,16 @@ class PublicAuthAliasTemplateRolloutIntentTests(SimpleTestCase):
         ):
             self.assertIn(expected, content)
 
-    def test_phase91_deferred_routes_remain_absent_before_runtime_rollout(self):
-        absent_route_names = (
-            "workspace_slug_dashboard",
-        )
+    def test_phase91_deferred_workspace_slug_routes_moved_to_phase10(self):
+        plan = _read("docs/ui/public_auth_alias_template_rollout_plan.md")
+        slug_plan = _read("docs/ui/workspace_slug_route_map_plan.md")
 
-        for route_name in absent_route_names:
-            with self.subTest(route_name=route_name):
-                with self.assertRaises(NoReverseMatch):
-                    reverse(route_name)
+        self.assertIn("Future Phase: `/w/<workspace_slug>/...` Route Map", plan)
+        self.assertIn("Workspace Slug Route Map Plan", slug_plan)
+        self.assertEqual(
+            reverse("workspace_slug_dashboard", kwargs={"workspace_slug": "acme"}),
+            "/w/acme/",
+        )
 
     def test_phase92_pricing_route_and_public_templates_are_live(self):
         self.assertEqual(reverse("pricing"), "/pricing/")

@@ -25,7 +25,7 @@
         <nav class="workspace-nav">
                 {% if effective_workspace %}
             <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_dashboard' %}active{% endif %}"
-                    href="{% url 'workspace_dashboard' workspace_id=effective_workspace.id %}">
+                    href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.schema_name %}">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
             {% endif %}
@@ -35,12 +35,12 @@
             </a>
 
             {% if role_name == 'Owner' and effective_workspace %}
-            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_detail' %}active{% endif %}"
-               href="{% url 'workspace_detail' workspace_id=effective_workspace.id %}">
+            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
+               href="{% url 'workspace_slug_settings' workspace_slug=effective_workspace.schema_name %}">
                 <i class="bi bi-gear"></i> Company Settings
             </a>
-            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' %}active{% endif %}"
-               href="{% url 'workspace_preferences' workspace_id=effective_workspace.id %}">
+            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_slug_settings_preferences' %}active{% endif %}"
+               href="{% url 'workspace_slug_settings_preferences' workspace_slug=effective_workspace.schema_name %}">
                 <i class="bi bi-sliders"></i> Preferences
             </a>
             {% endif %}
@@ -72,16 +72,16 @@
                    href="{% url 'contact_customer_list' %}">
                     <i class="bi bi-people-fill"></i> Contacts
                 </a>
-                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'party' %}active{% endif %}"
-                   href="{% url 'party:party_list' %}">
+                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'party' or request.resolver_match.url_name == 'workspace_slug_parties' %}active{% endif %}"
+                   href="{% url 'workspace_slug_parties' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-person-vcard"></i> Parties
                 </a>
                 {% endif %}
 
                 <!-- Product/Catalog -->
                 {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if 'product_' in request.resolver_match.url_name %}active{% endif %}"
-                   href="{% url 'product_product_home' %}">
+                <a class="workspace-nav-link {% if 'product_' in request.resolver_match.url_name or request.resolver_match.url_name == 'workspace_slug_inventory' %}active{% endif %}"
+                   href="{% url 'workspace_slug_inventory' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-grid-1x2-fill"></i> Product
                 </a>
                 {% endif %}
@@ -96,8 +96,8 @@
 
                 <!-- Girvi (Loans) -->
                 {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'girvi' %}active{% endif %}"
-                   href="{% url 'girvi:girvi_dashboard' %}">
+                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'girvi' or request.resolver_match.url_name == 'workspace_slug_loans' %}active{% endif %}"
+                   href="{% url 'workspace_slug_loans' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-cash-coin"></i> Girvi
                 </a>
                 {% endif %}

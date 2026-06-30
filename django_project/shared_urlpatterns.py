@@ -108,10 +108,59 @@ CANONICAL_CONTROL_PLANE_URLPATTERNS = [
     ),
 ]
 
+CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
+    path(
+        "w/<str:workspace_slug>/",
+        org_views.workspace_slug_dashboard,
+        name="workspace_slug_dashboard",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/",
+        org_views.workspace_slug_settings_home,
+        name="workspace_slug_settings",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/preferences/",
+        org_views.workspace_slug_settings_preferences,
+        name="workspace_slug_settings_preferences",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/team/",
+        org_views.workspace_slug_settings_team,
+        name="workspace_slug_settings_team",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/invitations/",
+        org_views.workspace_slug_settings_invitations,
+        name="workspace_slug_settings_invitations",
+    ),
+    path(
+        "w/<str:workspace_slug>/parties/",
+        org_views.workspace_slug_parties,
+        name="workspace_slug_parties",
+    ),
+    path(
+        "w/<str:workspace_slug>/loans/",
+        org_views.workspace_slug_loans,
+        name="workspace_slug_loans",
+    ),
+    path(
+        "w/<str:workspace_slug>/inventory/",
+        org_views.workspace_slug_inventory,
+        name="workspace_slug_inventory",
+    ),
+    path(
+        "w/<str:workspace_slug>/accounting/",
+        org_views.workspace_slug_accounting,
+        name="workspace_slug_accounting",
+    ),
+]
+
 # Authenticated global/control-plane routes. These are still included in tenant
 # URLConf for compatibility until Phase 2 route separation is completed.
 GLOBAL_AUTHENTICATED_URLPATTERNS = [
     *CANONICAL_CONTROL_PLANE_URLPATTERNS,
+    *CANONICAL_WORKSPACE_SLUG_URLPATTERNS,
     path("onboarding/", include("apps.onboarding.urls")),
     path("orgs/", include("apps.orgs.urls")),
     path("profile/", include("accounts.urls")),
