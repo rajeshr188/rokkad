@@ -39,6 +39,16 @@ CANONICAL_CONTROL_PLANE_URLPATTERNS = [
         name="workspace_settings_home",
     ),
     path(
+        "workspace/<int:workspace_id>/settings/setup/",
+        org_views.workspace_setup,
+        name="workspace_settings_setup",
+    ),
+    path(
+        "workspace/<int:workspace_id>/settings/setup/state/",
+        org_views.workspace_setup_state,
+        name="workspace_settings_setup_state",
+    ),
+    path(
         "workspace/<int:workspace_id>/settings/preferences/",
         org_views.CompanyPreferenceBuilder.as_view(),
         name="workspace_settings_preferences",

@@ -161,3 +161,53 @@ class OnboardingChoice(models.Model):
 
     def __str__(self):
         return f"{self.progress.user.email} - {self.choice_key}: {self.choice_value}"
+
+
+class WorkspaceSetupState(models.Model):
+    """User-specific workspace setup checklist display state."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="workspace_setup_states",
+        verbose_name=_("User"),
+    )
+    workspace = models.ForeignKey(
+        "orgs.Company",
+        on_delete=models.CASCADE,
+        related_name="setup_states",
+        verbose_name=_("Workspace"),
+    )
+    dismissed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Dismissed At"),
+    )
+    marked_complete_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Marked Complete At"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
+
+    class Meta:
+        verbose_name = _("Workspace Setup State")
+        verbose_name_plural = _("Workspace Setup States")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "workspace"],
+                name="onboarding_workspace_setup_state_unique_user_workspace",
+            ),
+        ]
+
+    @property
+    def is_dismissed(self):
+        return self.dismissed_at is not None
+
+    @property
+    def is_marked_complete(self):
+        return self.marked_complete_at is not None
+
+    def __str__(self):
+        return f"{self.user} - {self.workspace} setup state"

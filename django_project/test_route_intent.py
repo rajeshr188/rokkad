@@ -46,6 +46,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "app_invitations": "/app/invitations/",
             "app_memberships": "/app/memberships/",
             "workspace_settings_home": "/workspace/42/settings/",
+            "workspace_settings_setup": "/workspace/42/settings/setup/",
+            "workspace_settings_setup_state": "/workspace/42/settings/setup/state/",
             "workspace_settings_preferences": "/workspace/42/settings/preferences/",
             "workspace_settings_team": "/workspace/42/settings/team/",
             "workspace_settings_invitations": "/workspace/42/settings/invitations/",
@@ -65,6 +67,14 @@ class SaaSRouteIntentTests(SimpleTestCase):
     def test_legacy_org_routes_remain_unchanged_after_canonical_aliases(self):
         self.assertEqual(reverse("workspace_selector"), "/orgs/workspace/")
         self.assertEqual(reverse("workspace_create"), "/orgs/workspace/create/")
+        self.assertEqual(
+            reverse("workspace_setup", kwargs={"workspace_id": 42}),
+            "/orgs/workspace/42/setup/",
+        )
+        self.assertEqual(
+            reverse("workspace_setup_state", kwargs={"workspace_id": 42}),
+            "/orgs/workspace/42/setup/state/",
+        )
         self.assertEqual(reverse("team_invitations"), "/orgs/team/invitations/")
         self.assertEqual(reverse("team_members_list"), "/orgs/team/members/")
         self.assertEqual(reverse("team_invitations_list"), "/orgs/team/invitations/list/")

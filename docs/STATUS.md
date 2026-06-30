@@ -63,6 +63,15 @@ Rokkad is moving toward a layered architecture:
 - Phase 5.12 Product pricing/image/attribute authorization is implemented: pricing tiers, tier product prices, price overrides, product/variant image views, and attribute/attribute-value views now use Product action guards.
 - Phase 5.13 Rates/Notify authorization is implemented: `apps.tenant_apps.rates.access` and `apps.tenant_apps.notify.access` now provide workspace/action guard helpers; rate/rate-source routes, legacy Notify routes, and Notify v2 user-facing batch/settings routes use action guards. Notify v2 WhatsApp Cloud webhook remains intentionally public for provider callbacks.
 - Phase 5.14 SaaS IA authorization closeout is complete for the current Party, Product, Rates, Notify, and utility data-tool route groups. DEA and Girvi retain separate domain-specific permission hardening tracks because their accounting/loan semantics are broader than this UI authorization phase.
+- Phase 6.1 onboarding inventory is complete for documentation and guard tests only. [docs/ui/onboarding_phase6_plan.md](ui/onboarding_phase6_plan.md) records the current user-level onboarding wizard, duplicate onboarding/orgs workspace creation paths, target workspace setup checklist, compatibility constraints, and safe implementation order.
+- Phase 6.2 read-only checklist service is implemented: `apps.onboarding.services.setup_checklist` builds workspace setup checklist items from injectable metrics and best-effort tenant/org counts without mutating state or changing existing onboarding routes.
+- Phase 6.3 workspace dashboard checklist surface is implemented: `apps.orgs.services.dashboard_selectors.get_workspace_dashboard_context()` now includes `setup_checklist`, and `templates/company/workspace_dashboard.html` renders the advisory workspace setup card for owner/admin dashboard users without blocking workflows.
+- Phase 6.4 workspace settings setup page is implemented: canonical `workspace_settings_setup` and compatibility `workspace_setup` render the same read-only checklist in the workspace settings shell, with desktop/mobile settings-sidebar links.
+- Phase 6.5 onboarding completion routing is implemented: completed onboarding start/complete/skip paths now redirect to `workspace_settings_setup` when a selected non-public workspace exists, with `workspace_list` fallback.
+- Phase 6.6 onboarding workspace creation extraction is implemented: `apps.onboarding.views.onboarding_company` now delegates company/domain/Owner membership creation to `apps.orgs.services.control_plane.create_onboarding_workspace_from_form()` while preserving existing provisioning callbacks, progress, choices, audit, messages, and redirects.
+- Phase 6.7 onboarding team invitation extraction is implemented: `apps.onboarding.views.onboarding_team` now delegates invitation creation/sending to `apps.orgs.services.control_plane.send_onboarding_team_invitations()` while preserving optional skip behavior, progress, messages, audit summary, and partial-failure logging.
+- Phase 6.8 workspace setup state is implemented: `WorkspaceSetupState` records per-user/per-workspace dismiss and manual-complete timestamps, setup-state services expose display/mutation helpers, dashboard setup cards respect the state, and canonical/legacy setup-state POST routes are available.
+- Phase 6.9 onboarding review is complete in [docs/ui/phase6_onboarding_review.md](ui/phase6_onboarding_review.md), with compatibility findings, verification commands, rollout notes, and phase-level commit guidance.
 
 ## Recently Stabilized
 
@@ -269,6 +278,15 @@ Rokkad is moving toward a layered architecture:
 - SaaS IA Phase 5.12 Product pricing/image/attribute authorization is complete.
 - SaaS IA Phase 5.13 Rates/Notify authorization is complete.
 - SaaS IA Phase 5.14 authorization closeout is complete for the current SaaS IA scope. The next recommended action is a Phase 5 review/commit checkpoint before starting Phase 6 onboarding.
+- SaaS IA Phase 6.1 onboarding inventory and guard tests are complete.
+- SaaS IA Phase 6.2 read-only workspace setup checklist service is complete.
+- SaaS IA Phase 6.3 workspace dashboard checklist surface is complete.
+- SaaS IA Phase 6.4 workspace settings setup page is complete.
+- SaaS IA Phase 6.5 onboarding completion routing is complete.
+- SaaS IA Phase 6.6 onboarding workspace creation extraction is complete.
+- SaaS IA Phase 6.7 onboarding team invitation extraction is complete.
+- SaaS IA Phase 6.8 workspace setup completion/dismiss state is complete.
+- SaaS IA Phase 6.9 onboarding review is complete. The next recommended action is to commit Phase 6 as a single phase-level commit, then start Phase 7 modern fintech UI polish.
 
 ## Known Pressure Points
 

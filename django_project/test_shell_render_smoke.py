@@ -155,6 +155,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             reverse("app_workspaces"),
             reverse("app_workspace_create"),
             reverse("workspace_settings_home", kwargs={"workspace_id": workspace.id}),
+            reverse("workspace_settings_setup", kwargs={"workspace_id": workspace.id}),
             reverse(
                 "workspace_settings_preferences",
                 kwargs={"workspace_id": workspace.id},
@@ -183,6 +184,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             "My Workspaces",
             "New Workspace",
             "Settings",
+            "Setup",
             "Preferences",
             "Team Members",
             "Invite Member",
@@ -256,3 +258,126 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("workspace-switcher-navbar", html)
         self.assertIn("Acme Jewellers", html)
         self.assertIn("Switch workspace", html)
+
+    def test_workspace_dashboard_renders_setup_checklist_card(self):
+        workspace = _workspace()
+        setup_checklist = SimpleNamespace(
+            completed_count=1,
+            total_count=2,
+            completion_percentage=50,
+            items=(
+                SimpleNamespace(
+                    key="business_profile",
+                    title="Business profile",
+                    description="Confirm workspace identity.",
+                    status="complete",
+                    action_label="Review profile",
+                ),
+                SimpleNamespace(
+                    key="opening_balances",
+                    title="Opening balances",
+                    description="Record opening balances.",
+                    status="incomplete",
+                    action_label="Add opening balances",
+                ),
+            ),
+        )
+        setup_state = SimpleNamespace(
+            should_show_dashboard_card=True,
+            is_complete=False,
+            is_dismissed=False,
+        )
+        html = _render(
+            """
+            {% include "company/workspace_dashboard.html" %}
+            """,
+            request=_authenticated_request(
+                "/orgs/workspace/1/dashboard/",
+                url_name="workspace_dashboard",
+            ),
+            context={
+                "in_tenant": True,
+                "show_sidebar": False,
+                "workspace": workspace,
+                "user_workspace": workspace,
+                "user_role": "Owner",
+                "user_permissions": set(),
+                "role": "Owner",
+                "can_view": True,
+                "setup_checklist": setup_checklist,
+                "setup_state": setup_state,
+                "team_count": 1,
+                "pending_invitations": 0,
+                "total_customers": 0,
+                "loan_count": 0,
+                "new_customers": [],
+                "gold_rate": None,
+                "silver_rate": None,
+                "has_active_subscription": True,
+                "sunken": SimpleNamespace(loan_count=0),
+            },
+            use_request_processors=False,
+        )
+
+        self.assertIn("Workspace setup", html)
+        self.assertIn("1/2", html)
+        self.assertIn("50% complete", html)
+        self.assertIn("Opening balances", html)
+        self.assertIn("Dismiss", html)
+        self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
+        self.assertIn(reverse("dea_opening_balance_wizard"), html)
+
+    def test_workspace_settings_setup_page_renders_checklist(self):
+        workspace = _workspace()
+        setup_checklist = SimpleNamespace(
+            completed_count=1,
+            total_count=2,
+            completion_percentage=50,
+            items=(
+                SimpleNamespace(
+                    key="business_profile",
+                    title="Business profile",
+                    description="Confirm workspace identity.",
+                    status="complete",
+                    action_label="Review profile",
+                ),
+                SimpleNamespace(
+                    key="first_transaction",
+                    title="First transaction",
+                    description="Create the first business event.",
+                    status="incomplete",
+                    action_label="Create transaction",
+                ),
+            ),
+        )
+        setup_state = SimpleNamespace(
+            should_show_dashboard_card=True,
+            is_complete=False,
+            is_dismissed=False,
+        )
+        html = _render(
+            """
+            {% include "company/workspace_setup.html" %}
+            """,
+            request=_authenticated_request(
+                "/workspace/1/settings/setup/",
+                url_name="workspace_settings_setup",
+            ),
+            context={
+                "workspace": workspace,
+                "user_workspace": workspace,
+                "user_role": "Owner",
+                "company": workspace,
+                "setup_checklist": setup_checklist,
+                "setup_state": setup_state,
+            },
+            use_request_processors=False,
+        )
+
+        self.assertIn("Workspace setup", html)
+        self.assertIn("1/2 complete", html)
+        self.assertIn("First transaction", html)
+        self.assertIn("Mark setup complete", html)
+        self.assertIn("Dismiss dashboard card", html)
+        self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
+        self.assertIn(reverse("dea_business_events_dashboard"), html)

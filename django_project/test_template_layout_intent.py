@@ -30,6 +30,7 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         "company/company_detail.html",
         "company/company_invitations_list.html",
         "company/company_preferences.html",
+        "company/workspace_setup.html",
         "company/invitation_form.html",
         "company/membership_list.html",
         "company/workspace_leave_confirm.html",
@@ -148,6 +149,7 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         self.assertIn('workspace_settings_sidebar_variant == "mobile"', sidebar_content)
         for route_fragment in (
             "{% url 'workspace_settings_home' workspace_id=ew.id %}",
+            "{% url 'workspace_settings_setup' workspace_id=ew.id %}",
             "{% url 'workspace_settings_preferences' workspace_id=ew.id %}",
             "{% url 'workspace_settings_team' workspace_id=ew.id %}",
             "{% url 'workspace_settings_invite' workspace_id=ew.id %}",
@@ -157,6 +159,7 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
 
         for route_name in (
             "workspace_detail",
+            "workspace_setup",
             "workspace_preferences",
             "team_members_list",
             "team_invite",
@@ -172,6 +175,7 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         )[0]
         for route_name in (
             "workspace_detail",
+            "workspace_setup",
             "workspace_preferences",
             "team_members_list",
             "team_invite",

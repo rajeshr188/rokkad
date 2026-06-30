@@ -122,6 +122,77 @@
 </div>
 {% endif %}
 
+{% if can_view and setup_checklist and setup_state.should_show_dashboard_card %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="card-title mb-1"><i class="bi bi-list-check me-2 text-primary"></i>Workspace setup</h5>
+            <p class="small text-muted mb-0">Complete the core setup tasks for this workspace.</p>
+        </div>
+        <div class="text-end d-flex flex-column align-items-end gap-1">
+            <div>
+                <div class="fw-semibold">{{ setup_checklist.completed_count }}/{{ setup_checklist.total_count }}</div>
+                <div class="small text-muted">{{ setup_checklist.completion_percentage }}% complete</div>
+            </div>
+            <div class="d-flex flex-wrap justify-content-end gap-2">
+                <a href="{% url 'workspace_settings_setup' workspace_id=workspace.id %}" class="btn btn-sm btn-outline-primary">View setup</a>
+                <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=workspace.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="dismiss">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="progress mb-3" style="height: 8px;">
+            <div class="progress-bar" role="progressbar" style="width: {{ setup_checklist.completion_percentage }}%;" aria-valuenow="{{ setup_checklist.completion_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <div class="row g-3">
+            {% for item in setup_checklist.items %}
+            <div class="col-md-6 col-xl-4">
+                <div class="border rounded p-3 h-100">
+                    <div class="d-flex justify-content-between gap-2 mb-2">
+                        <div class="fw-semibold">{{ item.title }}</div>
+                        {% if item.status == "complete" %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">Done</span>
+                        {% elif item.status == "unknown" %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Check</span>
+                        {% else %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Todo</span>
+                        {% endif %}
+                    </div>
+                    <p class="small text-muted mb-3">{{ item.description }}</p>
+                    {% if item.status != "complete" %}
+                        {% if item.key == "business_profile" %}
+                        <a href="{% url 'workspace_settings_preferences' workspace_id=workspace.id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% elif item.key == "accounting_setup" %}
+                        <a href="{% url 'dea_period_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% elif item.key == "opening_balances" %}
+                        <a href="{% url 'dea_opening_balance_wizard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% elif item.key == "parties" %}
+                        <a href="{% url 'party_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% elif item.key == "products" %}
+                        <a href="{% url 'product_product_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% elif item.key == "opening_stock" %}
+                        <a href="{% url 'stock_opening_balance_import' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% elif item.key == "invite_team" %}
+                        <a href="{% url 'workspace_settings_invite' workspace_id=workspace.id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% elif item.key == "rates" %}
+                        <a href="{% url 'rate_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% elif item.key == "first_transaction" %}
+                        <a href="{% url 'dea_business_events_dashboard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm h-100">

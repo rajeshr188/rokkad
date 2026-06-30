@@ -10,10 +10,19 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 from django_tenants.utils import get_public_schema_name
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
+
+from apps.onboarding.services import (
+    build_workspace_setup_checklist,
+    build_workspace_setup_display_state,
+    dismiss_workspace_setup,
+    mark_workspace_setup_complete,
+    reopen_workspace_setup,
+)
 
 from .audit import AuditLog, audit_log
 from .decorators_v2 import permission_required
@@ -185,6 +194,75 @@ def workspace_detail(request, workspace_id=None, company_id=None):
     return render(
         request, "company/company_detail.html", {"company": company, "roles": roles, "workspace": company}
     )
+
+
+@login_required
+def workspace_setup(request, workspace_id=None, company_id=None):
+    """Display the read-only workspace setup checklist."""
+    workspace_id = workspace_id or company_id
+    if workspace_id is None:
+        raise Http404("Workspace ID is required")
+
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    access_context = _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"workspace_settings"},
+        allow_platform_admin=True,
+    )
+    setup_checklist = build_workspace_setup_checklist(workspace=company)
+    setup_state = build_workspace_setup_display_state(
+        user=request.user,
+        workspace=company,
+        checklist=setup_checklist,
+    )
+
+    return render(
+        request,
+        "company/workspace_setup.html",
+        {
+            "company": company,
+            "workspace": company,
+            "setup_checklist": setup_checklist,
+            "setup_state": setup_state,
+            "user_role": access_context["role_name"],
+        },
+    )
+
+
+@login_required
+@require_POST
+def workspace_setup_state(request, workspace_id=None, company_id=None):
+    """Update user-specific workspace setup checklist display state."""
+    workspace_id = workspace_id or company_id
+    if workspace_id is None:
+        raise Http404("Workspace ID is required")
+
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"workspace_settings"},
+        allow_platform_admin=True,
+    )
+
+    action = request.POST.get("action")
+    if action == "dismiss":
+        dismiss_workspace_setup(user=request.user, workspace=company)
+        messages.info(request, "Workspace setup card dismissed.")
+    elif action == "complete":
+        mark_workspace_setup_complete(user=request.user, workspace=company)
+        messages.success(request, "Workspace setup marked complete.")
+    elif action == "reopen":
+        reopen_workspace_setup(user=request.user, workspace=company)
+        messages.info(request, "Workspace setup reopened.")
+    else:
+        messages.error(request, "Unknown workspace setup action.")
+
+    next_url = request.POST.get("next")
+    if next_url and next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect("workspace_settings_setup", workspace_id=company.id)
 
 
 @login_required
@@ -1158,6 +1236,12 @@ def workspace_dashboard(request, workspace_id):
     # Check if user can view detailed metrics (Owner/Admin)
     context["can_view"] = role_name in ["Owner", "Admin", "Superuser"]
     context.update(get_workspace_dashboard_context(workspace=workspace))
+    if context.get("setup_checklist") is not None:
+        context["setup_state"] = build_workspace_setup_display_state(
+            user=request.user,
+            workspace=workspace,
+            checklist=context["setup_checklist"],
+        )
 
     # Breadcrumb context
     context["breadcrumb_items"] = [

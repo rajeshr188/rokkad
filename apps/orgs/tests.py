@@ -1,7 +1,7 @@
 import contextlib
 import re
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -22,7 +22,9 @@ from apps.orgs.permissions import (
 )
 from apps.orgs.services import control_plane
 from apps.orgs.services import role_policy
+from apps.orgs.services.dashboard_selectors import get_workspace_dashboard_context
 from apps.orgs.views import CompanyPreferenceBuilder, _assert_workspace_access
+from apps.orgs import views as org_views
 from apps.orgs import signals as org_signals
 from apps.orgs.tenant_context import resolve_request_workspace
 
@@ -443,6 +445,16 @@ class RolePolicyTests(SimpleTestCase):
 
 class OrgNavigationFlowTests(SimpleTestCase):
 	"""D2: Route and userflow verification for navigation links and canonical routes."""
+
+	class _CountRelation:
+		def __init__(self, count):
+			self._count = count
+
+		def count(self):
+			return self._count
+
+		def filter(self, **kwargs):
+			return self
 	
 	def test_sidebar_uses_canonical_workspace_routes(self):
 		"""Verify sidebar.html navigation links use canonical workspace_* route names."""
@@ -467,7 +479,51 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		# Should use canonical workspace routes
 		self.assertIn("workspace_selector", dashboard_html)
 		self.assertIn("workspace_detail", dashboard_html)
+		self.assertIn("workspace_settings_setup", dashboard_html)
 		self.assertIn("team_invite", dashboard_html)
+		self.assertIn("setup_checklist", dashboard_html)
+		self.assertIn("Workspace setup", dashboard_html)
+		self.assertIn("workspace_settings_preferences", dashboard_html)
+		self.assertIn("dea_opening_balance_wizard", dashboard_html)
+		self.assertIn("dea_business_events_dashboard", dashboard_html)
+
+	def test_workspace_setup_page_uses_settings_shell_and_checklist(self):
+		with open("templates/company/workspace_setup.html", "r") as f:
+			setup_html = f.read()
+
+		self.assertIn("{% extends 'base_workspace_settings.html' %}", setup_html)
+		self.assertIn("setup_checklist", setup_html)
+		self.assertIn("Workspace setup", setup_html)
+		self.assertIn("workspace_settings_home", setup_html)
+		self.assertIn("workspace_settings_invite", setup_html)
+		self.assertIn("dea_business_events_dashboard", setup_html)
+
+	def test_workspace_dashboard_context_includes_setup_checklist(self):
+		workspace = SimpleNamespace(
+			memberships=self._CountRelation(2),
+			invitations=self._CountRelation(1),
+		)
+		setup_checklist = SimpleNamespace(completed_count=1, total_count=9)
+
+		with patch(
+			"apps.orgs.services.dashboard_selectors.build_workspace_setup_checklist",
+			return_value=setup_checklist,
+		) as mock_build, patch(
+			"apps.tenant_apps.contact.facade.get_workspace_customer_dashboard_summary",
+			return_value={"total_customers": 0, "new_customers": []},
+		), patch(
+			"apps.tenant_apps.girvi.facade.get_workspace_loan_dashboard_summary",
+			return_value={"loan_count": 0},
+		), patch(
+			"apps.tenant_apps.rates.facade.get_workspace_rate_dashboard_summary",
+			return_value={"gold_rate": None, "silver_rate": None},
+		):
+			context = get_workspace_dashboard_context(workspace=workspace)
+
+		self.assertEqual(2, context["team_count"])
+		self.assertEqual(1, context["pending_invitations"])
+		self.assertIs(setup_checklist, context["setup_checklist"])
+		mock_build.assert_called_once_with(workspace=workspace)
 
 	def test_profile_page_uses_team_invitations_route(self):
 		"""Verify profile.html links to team_invitations (global scope)."""
@@ -476,6 +532,7 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		
 		# Profile should link to global team_invitations
 		self.assertIn("team_invitations", profile_html)
+
 
 	def test_main_navigation_uses_canonical_routes(self):
 		"""Verify _base.html and tenant.html use canonical route names."""
@@ -548,6 +605,63 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		self.assertNotIn("apps.tenant_apps.contact.models", views_py)
 		self.assertNotIn("apps.tenant_apps.girvi.models", views_py)
 		self.assertNotIn("apps.tenant_apps.rates.models", views_py)
+
+
+class WorkspaceSetupStateViewTests(SimpleTestCase):
+	def setUp(self):
+		self.factory = RequestFactory()
+
+	def test_setup_state_dismiss_action_updates_state_and_redirects_to_safe_next(self):
+		workspace = SimpleNamespace(id=9, is_deleted=False)
+		request = self.factory.post(
+			"/workspace/9/settings/setup/state/",
+			{"action": "dismiss", "next": "/workspace/9/settings/setup/"},
+		)
+		request.user = SimpleNamespace(is_authenticated=True)
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=workspace), \
+			 patch("apps.orgs.views._assert_workspace_access"), \
+			 patch("apps.orgs.views.dismiss_workspace_setup") as dismiss_setup, \
+			 patch("apps.orgs.views.messages") as messages, \
+			 patch("apps.orgs.views.redirect", return_value="redirected") as redirect:
+			response = org_views.workspace_setup_state(request, workspace_id=9)
+
+		self.assertEqual(response, "redirected")
+		dismiss_setup.assert_called_once_with(user=request.user, workspace=workspace)
+		messages.info.assert_called_once()
+		redirect.assert_called_once_with("/workspace/9/settings/setup/")
+
+	def test_setup_state_complete_and_reopen_actions_delegate_to_services(self):
+		workspace = SimpleNamespace(id=9, is_deleted=False)
+		request = self.factory.post(
+			"/workspace/9/settings/setup/state/",
+			{"action": "complete"},
+		)
+		request.user = SimpleNamespace(is_authenticated=True)
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=workspace), \
+			 patch("apps.orgs.views._assert_workspace_access"), \
+			 patch("apps.orgs.views.mark_workspace_setup_complete") as complete_setup, \
+			 patch("apps.orgs.views.messages"), \
+			 patch("apps.orgs.views.redirect", return_value="redirected"):
+			org_views.workspace_setup_state(request, workspace_id=9)
+
+		complete_setup.assert_called_once_with(user=request.user, workspace=workspace)
+
+		request = self.factory.post(
+			"/workspace/9/settings/setup/state/",
+			{"action": "reopen"},
+		)
+		request.user = SimpleNamespace(is_authenticated=True)
+
+		with patch("apps.orgs.views.get_object_or_404", return_value=workspace), \
+			 patch("apps.orgs.views._assert_workspace_access"), \
+			 patch("apps.orgs.views.reopen_workspace_setup") as reopen_setup, \
+			 patch("apps.orgs.views.messages"), \
+			 patch("apps.orgs.views.redirect", return_value="redirected"):
+			org_views.workspace_setup_state(request, workspace_id=9)
+
+		reopen_setup.assert_called_once_with(user=request.user, workspace=workspace)
 
 
 class DomainPathMismatchTests(SimpleTestCase):
@@ -1440,6 +1554,95 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		mock_domain_create.assert_called_once()
 		mock_membership_create.assert_called_once()
 		mock_audit.assert_called_once()
+
+	def test_onboarding_workspace_create_uses_control_plane_records_and_callbacks(self):
+		company = SimpleNamespace(name="Acme Workspace")
+
+		class FakeForm:
+			def save(self, commit=False):
+				assert commit is False
+				return company
+
+		request = SimpleNamespace(get_host=lambda: "app.example.com:8000")
+		user = SimpleNamespace(id=7, email="owner@example.com")
+		owner_role = SimpleNamespace(name="Owner")
+		provision_workspace = MagicMock(return_value="fresh")
+		seed_workspace_defaults = MagicMock()
+
+		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
+			 patch.object(control_plane.Domain.objects, "create") as mock_domain_create, \
+			 patch.object(control_plane.Role.objects, "get", return_value=owner_role) as mock_role_get, \
+			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create:
+			created_company, provisioning_mode = (
+				control_plane.create_onboarding_workspace_from_form(
+					form=FakeForm(),
+					user=user,
+					request=request,
+					provision_workspace=provision_workspace,
+					seed_workspace_defaults=seed_workspace_defaults,
+				)
+			)
+
+		self.assertIs(created_company, company)
+		self.assertEqual(provisioning_mode, "fresh")
+		self.assertEqual(company.schema_name, "acme_workspace")
+		self.assertEqual(company.creator, user)
+		self.assertEqual(company.owner, user)
+		mock_ctx.assert_called_once()
+		provision_workspace.assert_called_once_with(company)
+		seed_workspace_defaults.assert_called_once_with(company)
+		mock_role_get.assert_called_once_with(name="Owner")
+		mock_domain_create.assert_called_once_with(
+			tenant=company,
+			domain="acme_workspace.app.example.com",
+			is_primary=True,
+		)
+		mock_membership_create.assert_called_once_with(
+			user=user,
+			company=company,
+			role=owner_role,
+		)
+
+	def test_onboarding_team_invites_use_public_schema_and_report_failures(self):
+		company = SimpleNamespace(id=9, name="Acme")
+		actor = SimpleNamespace(id=7, email="owner@example.com")
+		request = SimpleNamespace()
+		member_role = SimpleNamespace(name="Member")
+		invitation = SimpleNamespace(
+			email="a@example.com",
+			send_invitation=MagicMock(),
+		)
+		failure = ValidationError("duplicate")
+
+		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
+			 patch.object(control_plane.Role.objects, "get", return_value=member_role) as mock_role_get, \
+			 patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role") as assert_can_invite, \
+			 patch.object(
+				control_plane.CompanyInvitation,
+				"create",
+				side_effect=[invitation, failure],
+			 ) as create_invitation:
+			result = control_plane.send_onboarding_team_invitations(
+				email_addresses=["a@example.com", "b@example.com"],
+				actor=actor,
+				company=company,
+				request=request,
+			)
+
+		mock_ctx.assert_called_once()
+		mock_role_get.assert_called_once_with(name="Member")
+		assert_can_invite.assert_called_once_with(
+			actor=actor,
+			workspace=company,
+			role=member_role,
+		)
+		self.assertEqual(create_invitation.call_count, 2)
+		invitation.send_invitation.assert_called_once_with(request)
+		self.assertEqual(result["invited_count"], 1)
+		self.assertEqual(result["failed_count"], 1)
+		self.assertEqual(result["invitations"], [invitation])
+		self.assertEqual(result["failed"][0]["email"], "b@example.com")
+		self.assertIs(result["failed"][0]["error"], failure)
 
 	def test_membership_mutations_occur_in_public_schema_context(self):
 		membership = SimpleNamespace(

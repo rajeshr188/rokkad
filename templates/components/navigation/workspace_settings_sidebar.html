@@ -3,6 +3,10 @@
    href="{% url 'workspace_settings_home' workspace_id=ew.id %}">
     <i class="bi bi-gear"></i> Settings
 </a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_setup' or request.resolver_match.url_name == 'workspace_settings_setup' %}active{% endif %}"
+   href="{% url 'workspace_settings_setup' workspace_id=ew.id %}">
+    <i class="bi bi-list-check"></i> Setup
+</a>
 {% if role_name == 'Owner' %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' %}active{% endif %}"
    href="{% url 'workspace_settings_preferences' workspace_id=ew.id %}">
@@ -25,6 +29,10 @@
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' %}active{% endif %}"
    href="{% url 'workspace_settings_home' workspace_id=ew.id %}">
     <i class="bi bi-gear"></i> Settings
+</a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_setup' or request.resolver_match.url_name == 'workspace_settings_setup' %}active{% endif %}"
+   href="{% url 'workspace_settings_setup' workspace_id=ew.id %}">
+    <i class="bi bi-list-check"></i> Setup
 </a>
 {% if role_name == 'Owner' %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' %}active{% endif %}"

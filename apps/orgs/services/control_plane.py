@@ -44,6 +44,40 @@ def create_workspace_from_form(*, form, user, request):
     return company
 
 
+def create_onboarding_workspace_from_form(
+    *,
+    form,
+    user,
+    request,
+    provision_workspace,
+    seed_workspace_defaults,
+):
+    """Create an onboarding workspace through the orgs control plane.
+
+    This preserves the legacy onboarding schema naming and tenant provisioning
+    behavior while moving company/domain/membership creation out of the view.
+    """
+    with _public_schema_context():
+        # Do not wrap tenant schema creation/migration in an outer atomic block.
+        # PostgreSQL can reject later ALTER TABLE operations when earlier seed
+        # data leaves pending FK trigger events in the same transaction.
+        company = form.save(commit=False)
+        company.schema_name = company.name.lower().replace(" ", "_")
+        company.creator = user
+        company.owner = user
+        provisioning_mode = provision_workspace(company)
+        seed_workspace_defaults(company)
+
+        domain = remove_www(request.get_host().split(":")[0]).lower()
+        company_domain = f"{company.schema_name}.{domain}"
+        Domain.objects.create(tenant=company, domain=company_domain, is_primary=True)
+
+        owner_role = Role.objects.get(name="Owner")
+        Membership.objects.create(user=user, company=company, role=owner_role)
+
+    return company, provisioning_mode
+
+
 def build_schema_name(name):
     schema_name = slugify(name).replace("-", "_")
     if not schema_name:
@@ -181,6 +215,47 @@ def send_team_invitation(*, form, actor, company, request):
         content_object=invitation,
     )
     return invitation
+
+
+def send_onboarding_team_invitations(
+    *,
+    email_addresses,
+    actor,
+    company,
+    request,
+    role_name="Member",
+):
+    """Create and send onboarding team invitations in public schema."""
+    invited_invitations = []
+    failed_invitations = []
+
+    with _public_schema_context():
+        role = Role.objects.get(name=role_name)
+        role_policy.assert_can_invite_role(
+            actor=actor,
+            workspace=company,
+            role=role,
+        )
+
+        for email in email_addresses:
+            try:
+                invitation = CompanyInvitation.create(
+                    email=email,
+                    company=company,
+                    inviter=actor,
+                    role=role,
+                )
+                invitation.send_invitation(request)
+                invited_invitations.append(invitation)
+            except Exception as exc:
+                failed_invitations.append({"email": email, "error": exc})
+
+    return {
+        "invitations": invited_invitations,
+        "failed": failed_invitations,
+        "invited_count": len(invited_invitations),
+        "failed_count": len(failed_invitations),
+    }
 
 
 def accept_invitation(*, invitation, user, request):

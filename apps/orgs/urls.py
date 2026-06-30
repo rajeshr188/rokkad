@@ -22,6 +22,16 @@ WORKSPACE_MANAGER_URLPATTERNS = [
         "workspace/<int:workspace_id>/", views.workspace_detail, name="workspace_detail"
     ),
     path(
+        "workspace/<int:workspace_id>/setup/",
+        views.workspace_setup,
+        name="workspace_setup",
+    ),
+    path(
+        "workspace/<int:workspace_id>/setup/state/",
+        views.workspace_setup_state,
+        name="workspace_setup_state",
+    ),
+    path(
         "workspace/<int:workspace_id>/edit/",
         views.workspace_update,
         name="workspace_update",

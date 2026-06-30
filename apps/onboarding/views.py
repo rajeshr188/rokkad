@@ -10,11 +10,10 @@ from django.contrib.auth.decorators import login_required
 from django.core.management import call_command
 from django.shortcuts import redirect, render
 from django_tenants.clone import CloneSchema
-from django_tenants.utils import get_public_schema_name, remove_www, schema_context
 from django_tenants.utils import schema_exists
 
 from apps.orgs.audit import AuditLog
-from apps.orgs.models import CompanyInvitation, Domain, Membership, Role
+from apps.orgs.services import control_plane
 from apps.orgs.tenant_context import resolve_request_workspace
 
 from .forms import (
@@ -75,6 +74,18 @@ def get_or_create_progress(user):
     return progress
 
 
+def _redirect_to_workspace_setup_or_list(request):
+    """Route completed onboarding to workspace setup when a workspace is selected."""
+    company = resolve_request_workspace(
+        request,
+        include_public=False,
+        allow_profile_fallback=True,
+    )
+    if company is not None:
+        return redirect("workspace_settings_setup", workspace_id=company.id)
+    return redirect("workspace_list")
+
+
 @login_required
 def onboarding_start(request):
     """
@@ -82,9 +93,9 @@ def onboarding_start(request):
     """
     progress = get_or_create_progress(request.user)
 
-    # If already complete, redirect to dashboard
+    # If already complete, route directly to workspace setup when possible.
     if progress.is_complete:
-        return redirect("workspace_list")
+        return _redirect_to_workspace_setup_or_list(request)
 
     # Redirect to current step
     return redirect(progress.next_step_url)
@@ -151,76 +162,61 @@ def onboarding_company(request):
     if request.method == "POST":
         form = CompanySetupForm(request.POST, request.FILES)
         if form.is_valid():
-            with schema_context(get_public_schema_name()):
-                # Do not wrap tenant schema creation/migration in an outer atomic block.
-                # PostgreSQL can reject later ALTER TABLE operations when earlier seed
-                # data leaves pending FK trigger events in the same transaction.
-                company = form.save(commit=False)
-                company.schema_name = company.name.lower().replace(" ", "_")
-                company.creator = request.user
-                company.owner = request.user
-                provisioning_mode = _provision_company_schema(company)
-                _seed_company_schema_defaults(company)
-
-                # Create domain
-                domain = remove_www(request.get_host().split(":")[0]).lower()
-                company_domain = f"{company.schema_name}.{domain}"
-                Domain.objects.create(
-                    tenant=company, domain=company_domain, is_primary=True
-                )
-
-                # Create Owner membership
-                Membership.objects.create(
+            company, provisioning_mode = (
+                control_plane.create_onboarding_workspace_from_form(
+                    form=form,
                     user=request.user,
-                    company=company,
-                    role=Role.objects.get(name="Owner"),
-                )
-
-                # Set as active workspace
-                request.user.profile.set_workspace(company)
-
-                # Save onboarding choices
-                industry = form.cleaned_data.get("industry")
-                company_size = form.cleaned_data.get("company_size")
-
-                if industry:
-                    OnboardingChoice.objects.create(
-                        progress=progress,
-                        step=2,
-                        choice_key="industry",
-                        choice_value=industry,
-                    )
-
-                if company_size:
-                    OnboardingChoice.objects.create(
-                        progress=progress,
-                        step=2,
-                        choice_key="company_size",
-                        choice_value=company_size,
-                    )
-
-                # Mark step complete
-                progress.mark_step_complete(2)
-
-                # Log completion
-                AuditLog.log(
-                    "ONBOARDING_COMPANY_COMPLETE",
-                    user=request.user,
-                    company=company,
-                    description=f"Created workspace: {company.name}",
                     request=request,
-                    success=True,
-                    data={
-                        "industry": industry,
-                        "company_size": company_size,
-                        "provisioning_mode": provisioning_mode,
-                    },
+                    provision_workspace=_provision_company_schema,
+                    seed_workspace_defaults=_seed_company_schema_defaults,
+                )
+            )
+
+            # Set as active workspace
+            request.user.profile.set_workspace(company)
+
+            # Save onboarding choices
+            industry = form.cleaned_data.get("industry")
+            company_size = form.cleaned_data.get("company_size")
+
+            if industry:
+                OnboardingChoice.objects.create(
+                    progress=progress,
+                    step=2,
+                    choice_key="industry",
+                    choice_value=industry,
                 )
 
-                messages.success(
-                    request, f'Workspace "{company.name}" created successfully!'
+            if company_size:
+                OnboardingChoice.objects.create(
+                    progress=progress,
+                    step=2,
+                    choice_key="company_size",
+                    choice_value=company_size,
                 )
-                return redirect(progress.next_step_url)
+
+            # Mark step complete
+            progress.mark_step_complete(2)
+
+            # Log completion
+            AuditLog.log(
+                "ONBOARDING_COMPANY_COMPLETE",
+                user=request.user,
+                company=company,
+                description=f"Created workspace: {company.name}",
+                request=request,
+                success=True,
+                data={
+                    "industry": industry,
+                    "company_size": company_size,
+                    "provisioning_mode": provisioning_mode,
+                },
+            )
+
+            messages.success(
+                request, f'Workspace "{company.name}" created successfully!'
+            )
+            return redirect(progress.next_step_url)
     else:
         form = CompanySetupForm()
 
@@ -249,7 +245,11 @@ def onboarding_team(request):
     if progress.team_setup_completed or progress.skipped_team:
         return redirect(progress.next_step_url)
 
-    company = resolve_request_workspace(request)
+    company = resolve_request_workspace(
+        request,
+        include_public=False,
+        allow_profile_fallback=True,
+    )
 
     if request.method == "POST":
         if "skip" in request.POST:
@@ -263,21 +263,19 @@ def onboarding_team(request):
             email_addresses = form.cleaned_data["email_addresses"]
 
             if email_addresses:
-                # Send invitations
-                invited_count = 0
-                for email in email_addresses:
-                    try:
-                        # Create invitation
-                        invitation = CompanyInvitation.objects.create(
-                            email=email,
-                            company=company,
-                            inviter=request.user,
-                            role=Role.objects.get(name="Member"),
-                        )
-                        invitation.send_invitation(request)
-                        invited_count += 1
-                    except Exception as e:
-                        logger.error(f"Failed to invite {email}: {e}")
+                invitation_result = control_plane.send_onboarding_team_invitations(
+                    email_addresses=email_addresses,
+                    actor=request.user,
+                    company=company,
+                    request=request,
+                )
+                invited_count = invitation_result["invited_count"]
+                for failure in invitation_result["failed"]:
+                    logger.error(
+                        "Failed to invite %s: %s",
+                        failure["email"],
+                        failure["error"],
+                    )
 
                 messages.success(
                     request, f"Invitations sent to {invited_count} team members!"
@@ -291,7 +289,11 @@ def onboarding_team(request):
                     description=f"Invited {invited_count} team members",
                     request=request,
                     success=True,
-                    data={"emails": email_addresses, "count": invited_count},
+                    data={
+                        "emails": email_addresses,
+                        "count": invited_count,
+                        "failed_count": invitation_result["failed_count"],
+                    },
                 )
 
             # Mark step complete
@@ -396,11 +398,7 @@ def onboarding_complete(request):
         success=True,
     )
 
-    context = {
-        "progress": progress,
-        "company": company,
-    }
-    return render(request, "onboarding/complete.html", context)
+    return _redirect_to_workspace_setup_or_list(request)
 
 
 @login_required
@@ -414,4 +412,4 @@ def onboarding_skip(request):
     progress.complete_onboarding()
 
     messages.warning(request, "Onboarding skipped. You can access setup from settings.")
-    return redirect("workspace_list")
+    return _redirect_to_workspace_setup_or_list(request)

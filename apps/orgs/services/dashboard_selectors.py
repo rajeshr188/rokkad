@@ -1,5 +1,6 @@
 """Read selectors for workspace dashboard composition."""
 
+from apps.onboarding.services import build_workspace_setup_checklist
 from apps.orgs.models import CompanyInvitation
 
 
@@ -11,6 +12,7 @@ def get_workspace_dashboard_context(*, workspace):
             status=CompanyInvitation.Status.PENDING,
             accepted=False,
         ).count(),
+        "setup_checklist": build_workspace_setup_checklist(workspace=workspace),
     }
 
     from apps.tenant_apps.contact.facade import (

@@ -504,10 +504,19 @@ Current checkpoint:
 - Phase 5.12 Product pricing/image/attribute authorization now routes pricing tiers, product prices, price overrides, image views, and attribute views through Product action guards.
 - Phase 5.13 Rates/Notify authorization now adds Rates and Notify shared access helpers and routes rate, rate-source, legacy Notify, and Notify v2 user-facing routes through action guards while keeping the external Notify v2 WhatsApp webhook public.
 - Phase 5.14 authorization closeout now records that SaaS IA Phase 5 is complete for current Party, Product, Rates, Notify, and utility data-tool route groups, with DEA/Girvi remaining in their separate domain-specific permission tracks.
+- Phase 6.1 onboarding inventory now documents the current user-level onboarding wizard, duplicate workspace creation paths, target workspace setup checklist, compatibility constraints, and safe implementation slices in `docs/ui/onboarding_phase6_plan.md`.
+- Phase 6.2 adds `apps.onboarding.services.setup_checklist`, a read-only workspace setup checklist service with injectable metrics, best-effort tenant count collection, and focused tests. Existing `/onboarding/...` URLs, redirects, and dashboard templates remain unchanged.
+- Phase 6.3 surfaces the read-only setup checklist on the workspace dashboard through `apps.orgs.services.dashboard_selectors.get_workspace_dashboard_context()` and `templates/company/workspace_dashboard.html`. It is advisory only: no onboarding redirects, ERP access gates, or setup-state mutations changed.
+- Phase 6.4 adds a workspace settings setup page at canonical `workspace_settings_setup` (`/workspace/<id>/settings/setup/`) plus compatibility `workspace_setup` (`/orgs/workspace/<id>/setup/`). The page reuses the read-only checklist service and is linked from the workspace settings sidebar and dashboard setup card.
+- Phase 6.5 routes completed onboarding users to `workspace_settings_setup` when a selected non-public workspace is available, while preserving `/onboarding/start/`, `/onboarding/complete/`, and `/onboarding/skip/` as compatibility entrypoints with `workspace_list` fallback.
+- Phase 6.6 moves onboarding workspace row/domain/Owner membership creation behind `apps.orgs.services.control_plane.create_onboarding_workspace_from_form()`, while keeping existing onboarding tenant provisioning, seed callbacks, progress updates, choices, audit logging, messages, and redirects in place.
+- Phase 6.7 moves onboarding team invitation creation/sending behind `apps.orgs.services.control_plane.send_onboarding_team_invitations()`, while preserving optional skip behavior, progress updates, messages, audit summary, and partial-failure logging.
+- Phase 6.8 adds user-specific setup completion/dismiss state through `WorkspaceSetupState`, setup-state service helpers, dashboard card hide/show behavior, and canonical/legacy setup state POST routes without adding ERP access gates.
+- Phase 6.9 review is documented in `docs/ui/phase6_onboarding_review.md`, including compatibility findings, verification commands, rollout notes, and the recommended phase-level commit.
 
 Next recommended SaaS IA slice:
 
-- Prepare the Phase 5 authorization closeout review and commit checkpoint, then move to Phase 6 onboarding. Skip broad Contact authorization cleanup because Party is replacing Contact; patch Contact only if a specific compatibility route is unsafe before cutover.
+- Commit Phase 6 as a single phase-level commit, then start Phase 7 modern fintech UI polish with the management/workspace setup surfaces as the first review targets.
 
 ### Phase 3: Navigation and Workspace Switcher
 
