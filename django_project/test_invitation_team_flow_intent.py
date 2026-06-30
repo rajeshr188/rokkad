@@ -117,6 +117,8 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
                 "workspace_create",
                 "workspace_list",
                 "workspace_detail",
+                "workspace_setup",
+                "workspace_setup_state",
                 "workspace_update",
                 "workspace_delete",
                 "workspace_preferences",
@@ -267,3 +269,108 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         self.assertIn("PendingInvitation.objects.get_or_create", signals_content)
         self.assertNotIn("profile.workspace", signals_content)
         self.assertNotIn("AuditLog", signals_content)
+
+    def test_phase86_runtime_invitation_team_guard_tests_remain_present(self):
+        orgs_tests = (PROJECT_ROOT / "apps" / "orgs" / "tests.py").read_text(
+            encoding="utf-8-sig"
+        )
+
+        for expected in (
+            "class InvitationTeamAuthorizationTests",
+            "test_team_invite_requires_workspace_team_invite_permission",
+            "test_send_team_invitation_service_enforces_role_grant_policy",
+            "test_invitation_revoke_denies_non_inviter_without_workspace_permission",
+            "test_team_remove_member_requires_team_remove_permission",
+            "test_team_change_role_requires_team_change_role_permission",
+            "test_workspace_leave_blocks_sole_owner_self_leave",
+            "test_sent_invitation_list_requires_team_invite_on_selected_workspace",
+            "test_member_list_uses_explicit_workspace_context_when_alias_passes_id",
+            "test_sent_invitation_list_uses_explicit_workspace_context_when_alias_passes_id",
+            "test_invitation_revoke_returns_to_workspace_scoped_sent_list",
+            "class DirectInvitationAcceptAdapterTests",
+            "test_authenticated_matching_user_accepts_through_control_plane",
+            "test_unauthenticated_direct_accept_preserves_django_invitations_fallback",
+            "test_authenticated_email_mismatch_does_not_accept_invitation",
+            "class MembershipLifecycleGuardrailTests",
+            "test_cannot_remove_last_owner",
+            "test_owner_must_transfer_before_self_leave",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, orgs_tests)
+
+    def test_phase86_views_keep_invitation_and_team_boundaries_explicit(self):
+        views_content = (PROJECT_ROOT / "apps" / "orgs" / "views.py").read_text(
+            encoding="utf-8-sig"
+        )
+
+        for expected in (
+            "def team_accept_invitation(request, key):",
+            "if not request.user.is_authenticated:",
+            "return AcceptInvite.as_view()(request, key=key)",
+            "invitation.email.lower() != request.user.email.lower()",
+            "current_state != CompanyInvitation.Status.PENDING",
+            "control_plane.accept_invitation(",
+            "request.user.profile.workspace = invitation.company",
+            '"workspace_dashboard", workspace_id=invitation.company.id',
+            "def companyinvitations_list(request, workspace_id=None):",
+            'required_permissions={"team_invite"}',
+            "def invitation_delete(request, invitation_id):",
+            "can_revoke = request.user == invitation.inviter",
+            "control_plane.revoke_invitation(",
+            '"workspace_settings_invitations"',
+            "def team_remove_member(",
+            'required_permissions={"team_remove"}',
+            "control_plane.remove_membership(",
+            "membership.user.profile.workspace = None",
+            "def team_change_role(",
+            'required_permissions={"team_change_role"}',
+            "role_policy.allowed_invitation_roles(",
+            "control_plane.change_membership_role(",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, views_content)
+
+    def test_phase86_control_plane_owns_invitation_team_policy_and_audit(self):
+        control_plane_content = (
+            PROJECT_ROOT / "apps" / "orgs" / "services" / "control_plane.py"
+        ).read_text(encoding="utf-8-sig")
+
+        policy_before_mutation_pairs = (
+            (
+                "role_policy.assert_can_invite_role(",
+                "with _public_schema_context():\n        invitation = form.save()",
+            ),
+            (
+                "role_policy.assert_can_remove_membership(",
+                "with _public_schema_context():\n        membership.delete()",
+            ),
+            (
+                "role_policy.assert_can_change_role(",
+                "with _public_schema_context():\n        membership.role = new_role",
+            ),
+        )
+        for policy_call, mutation_start in policy_before_mutation_pairs:
+            with self.subTest(policy_call=policy_call):
+                self.assertLess(
+                    control_plane_content.index(policy_call),
+                    control_plane_content.index(mutation_start),
+                )
+
+        for expected in (
+            "def accept_invitation(",
+            "Membership.objects.filter(user=user, company=invitation.company).exists()",
+            "Membership.objects.create(",
+            "invitation.accept(request)",
+            '"TEAM_INVITE_ACCEPT"',
+            "def decline_invitation(",
+            "invitation.mark_declined()",
+            '"TEAM_INVITE_DECLINE"',
+            "def revoke_invitation(",
+            "invitation.mark_revoked()",
+            '"TEAM_INVITE_REVOKE"',
+            '"TEAM_INVITE"',
+            '"TEAM_MEMBER_REMOVE"',
+            '"TEAM_ROLE_CHANGE"',
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, control_plane_content)

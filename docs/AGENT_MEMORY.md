@@ -367,6 +367,22 @@ Phase 7.9 tenant ERP dashboard/navigation density polish is complete: `static/cs
 
 Phase 7.10 first-pass UI polish review is complete in `docs/ui/phase7_modern_fintech_ui_polish_review.md`. Phase 7 should be treated as UI infrastructure and surface cleanup, not the final high-fidelity fintech redesign. Deeper visual redesign, pricing/short-auth/invitation aliases, missing public templates, and the full `/w/<workspace_slug>/...` target route-map rollout remain separate future work. The next safe SaaS IA action is to commit Phase 7, then start Phase 8 regression consolidation.
 
+Phase 8.1 regression consolidation planning is complete in `docs/ui/phase8_regression_consolidation_plan.md`, with guard coverage in `django_project/test_phase8_regression_consolidation_intent.py`. Phase 8 is a no-runtime-change guardrail phase before pricing/auth aliases, missing public templates, `/w/<workspace_slug>/...`, or deeper redesign work. The next safe SaaS IA slice is Phase 8.2: route boundary regression tests for current aliases, legacy URLs, and intentionally absent future aliases.
+
+Phase 8.2 route boundary regression is complete in `django_project/test_route_intent.py`. Coverage now guards current canonical aliases in both public and tenant URLConfs, legacy allauth/invitation/orgs paths, representative tenant ERP paths, public URLConf tenant exclusion, and intentionally absent future aliases (`/pricing/`, short auth aliases, `/invitations/accept/<key>`, `/w/<workspace_slug>/...`). The next safe SaaS IA slice is Phase 8.3: template/shell regression tests for base-template ownership and static stylesheet contracts.
+
+Phase 8.3 template/shell regression is complete in `django_project/test_template_layout_intent.py`. Coverage now guards shell alias ownership, public/auth `css/public.css`, tenant `css/workspace.css`, extracted management/workspace shell no-inline-style contracts, and known root `layouts/base.html` / `main_nav.html` inline style debt. The next safe SaaS IA slice is Phase 8.4: public/auth render and compatibility tests, including missing-template documentation.
+
+Phase 8.4 public/auth render and compatibility regression is complete in `django_project/test_phase7_public_auth_render_smoke.py`. Coverage now guards renderable public pages, allauth login/signup/password-reset rendering, Google OAuth CTA gating, current allauth route names, current django-invitations `/invitations/accept-invite/<key>` compatibility, invalid invite fail-closed behavior, and documented missing public templates. The next safe SaaS IA slice is Phase 8.5: workspace switching, setup, and onboarding regression tests.
+
+Phase 8.5 workspace/setup/onboarding regression is complete in `django_project/test_onboarding_phase6_intent.py`. Coverage now guards canonical and legacy workspace setup routes, canonical setup-state form targets, membership-safe workspace switching before selected-workspace mutation, safe `next` handling, `WORKSPACE_SWITCH` audit logging, and the presence of focused onboarding runtime regression files.
+
+Phase 8.6 invitation/team regression is complete in `django_project/test_invitation_team_flow_intent.py`. Coverage now guards the presence of focused runtime tests for invite permissions, role-grant policy, revoke denial, team remove/change-role gates, sole-owner self-leave, sent-invitation workspace context, and direct accept adapter behavior; it also guards orgs view/control-plane ownership for accept/revoke/member mutation policy and audit actions.
+
+Phase 8.7 authorization regression is complete in `django_project/test_authorization_surface_intent.py`. Coverage now guards exact tenant ERP prefix coverage, middleware workspace-required coverage, Party/Product/Rates/Notify/utility data-tool guards, Contact's documented legacy gap, the intentionally public Notify v2 webhook, and DEA/Girvi as separate domain-specific permission tracks.
+
+Phase 8.8 regression closeout is complete in `docs/ui/phase8_regression_consolidation_review.md`. The review records completed guard coverage, deferred scope, compatibility findings, verification commands, expected test log noise, and the tests/documentation-only commit boundary. The next safe SaaS IA action is to commit the Phase 8 set, then start a follow-on alias/template phase for `/pricing/`, missing public templates, short auth aliases, `/invitations/accept/<key>`, and the full `/w/<workspace_slug>/...` route-map rollout.
+
 ## Navigation Memory
 
 Main sidebar direction:

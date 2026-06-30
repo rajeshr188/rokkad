@@ -235,3 +235,119 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
 
         self.assertNotIn("girvi_permission_required", party_views)
         self.assertNotIn("dea_accountant_required", party_views)
+
+    def test_phase87_current_tenant_utility_surfaces_keep_action_guards(self):
+        guard_cases = {
+            "party": {
+                "content": _read("apps/tenant_apps/party/views.py"),
+                "guard": "@party_action_required(",
+                "minimum": 18,
+            },
+            "product_catalog": {
+                "content": _read("apps/tenant_apps/product/views/product.py")
+                + _read("apps/tenant_apps/product/views/producttype.py")
+                + _read("apps/tenant_apps/product/views/productvariant.py"),
+                "guard": "@product_action_required(",
+                "minimum": 12,
+            },
+            "product_stock_price": {
+                "content": _read("apps/tenant_apps/product/views/stock.py")
+                + _read("apps/tenant_apps/product/views/price.py"),
+                "guard": "@product_action_required(",
+                "minimum": 20,
+            },
+            "product_image_attribute": {
+                "content": _read("apps/tenant_apps/product/views/image.py"),
+                "guard": "ProductActionRequiredMixin",
+                "minimum": 12,
+            },
+            "rates": {
+                "content": _read("apps/tenant_apps/rates/views.py"),
+                "guard": "@rate_action_required(",
+                "minimum": 10,
+            },
+            "notify_legacy": {
+                "content": _read("apps/tenant_apps/notify/views.py"),
+                "guard": "@notify_action_required(",
+                "minimum": 9,
+            },
+            "notify_v2": {
+                "content": _read("apps/tenant_apps/notify_v2/views.py"),
+                "guard": "@notify_action_required(",
+                "minimum": 8,
+            },
+            "utility_data_tools": {
+                "content": _read("apps/tenant_apps/utils/importing/views.py"),
+                "guard": "@owner_or_admin_required",
+                "minimum": 5,
+            },
+        }
+
+        for surface, case in guard_cases.items():
+            with self.subTest(surface=surface):
+                self.assertGreaterEqual(
+                    case["content"].count(case["guard"]),
+                    case["minimum"],
+                )
+
+    def test_phase87_tenant_prefix_and_middleware_authorization_sets_match(self):
+        tenant_prefixes = {
+            prefix.strip("/")
+            for prefix in _route_prefixes(tenant_urls.TENANT_ERP_URLPATTERNS)
+        }
+        workspace_required = {
+            prefix.strip("/")
+            for prefix in SecureWorkspaceMiddleware.WORKSPACE_REQUIRED_URLS
+        }
+
+        self.assertEqual(
+            tenant_prefixes,
+            {
+                "party",
+                "contact",
+                "data-tools",
+                "girvi",
+                "rates",
+                "product",
+                "notify",
+                "notify-v2",
+                "dea",
+            },
+        )
+        self.assertTrue(tenant_prefixes.issubset(workspace_required))
+
+    def test_phase87_deferred_authorization_boundaries_remain_documented(self):
+        inventory = _read("docs/ui/authorization_cleanup_inventory.md")
+        closeout = _read("docs/ui/phase5_authorization_closeout_review.md")
+        phase8_plan = _read("docs/ui/phase8_regression_consolidation_plan.md")
+
+        for content in (inventory, closeout, phase8_plan):
+            with self.subTest():
+                self.assertIn("Contact", content)
+                self.assertIn("DEA", content)
+                self.assertIn("Girvi", content)
+
+        self.assertIn(
+            "Contact remains a legacy compatibility surface while Party replaces it",
+            inventory,
+        )
+        self.assertIn(
+            "DEA and Girvi still have broader domain-specific permission-hardening tracks",
+            inventory,
+        )
+        self.assertIn(
+            "Notify v2 WhatsApp Cloud webhook remains intentionally unauthenticated",
+            inventory,
+        )
+        self.assertIn(
+            "not fully closed by this SaaS UI phase",
+            closeout,
+        )
+        self.assertIn(
+            "Contact compatibility gap remaining documented until Party cutover",
+            phase8_plan,
+        )
+        self.assertIn(
+            "DEA and Girvi remaining separate domain-specific permission tracks",
+            phase8_plan,
+        )

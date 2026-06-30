@@ -44,6 +44,99 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         "components/setup/setup_checklist_task.html",
     }
 
+    def test_shell_aliases_extend_their_intended_layouts(self):
+        alias_contracts = {
+            "base_public.html": 'extends "layouts/base.html"',
+            "base_auth.html": 'extends "layouts/base.html"',
+            "base_global.html": 'extends "layouts/management.html"',
+            "base_workspace_settings.html": 'extends "layouts/management.html"',
+            "base_tenant.html": 'extends "layouts/workspace.html"',
+            "base_customer_portal.html": 'extends "layouts/base.html"',
+        }
+
+        for rel_path, expected_extends in alias_contracts.items():
+            with self.subTest(rel_path=rel_path):
+                self.assertIn(expected_extends, _extends_line(TEMPLATES_ROOT / rel_path))
+
+    def test_shell_aliases_own_only_their_expected_static_stylesheets(self):
+        public_alias = (TEMPLATES_ROOT / "base_public.html").read_text(
+            encoding="utf-8-sig"
+        )
+        auth_alias = (TEMPLATES_ROOT / "base_auth.html").read_text(
+            encoding="utf-8-sig"
+        )
+        global_alias = (TEMPLATES_ROOT / "base_global.html").read_text(
+            encoding="utf-8-sig"
+        )
+        settings_alias = (TEMPLATES_ROOT / "base_workspace_settings.html").read_text(
+            encoding="utf-8-sig"
+        )
+        tenant_alias = (TEMPLATES_ROOT / "base_tenant.html").read_text(
+            encoding="utf-8-sig"
+        )
+        customer_portal_alias = (TEMPLATES_ROOT / "base_customer_portal.html").read_text(
+            encoding="utf-8-sig"
+        )
+
+        self.assertIn("{% static 'css/public.css' %}", public_alias)
+        self.assertIn("public-shell", public_alias)
+        self.assertIn("{% static 'css/public.css' %}", auth_alias)
+        self.assertIn("auth-shell", auth_alias)
+        self.assertIn("{% static 'css/workspace.css' %}", tenant_alias)
+
+        for content in (public_alias, auth_alias):
+            with self.subTest(shell="public_or_auth"):
+                self.assertNotIn("css/management.css", content)
+                self.assertNotIn("css/workspace.css", content)
+
+        for content in (global_alias, settings_alias, customer_portal_alias):
+            with self.subTest(shell="management_or_portal_alias"):
+                self.assertNotIn("css/public.css", content)
+                self.assertNotIn("css/workspace.css", content)
+
+        self.assertNotIn("css/public.css", tenant_alias)
+        self.assertNotIn("css/management.css", tenant_alias)
+
+    def test_shell_layouts_do_not_reintroduce_inline_style_blocks(self):
+        shell_templates = (
+            "base_public.html",
+            "base_auth.html",
+            "base_global.html",
+            "base_workspace_settings.html",
+            "base_tenant.html",
+            "base_customer_portal.html",
+            "layouts/management.html",
+            "layouts/workspace.html",
+            "components/navigation/workspace_switcher.html",
+            "components/navigation/workspace_manager_sidebar.html",
+            "components/navigation/workspace_settings_sidebar.html",
+            "components/navigation/account_sidebar.html",
+            "components/navigation/sidebar.html",
+        )
+
+        for rel_path in shell_templates:
+            content = (TEMPLATES_ROOT / rel_path).read_text(encoding="utf-8-sig")
+            with self.subTest(rel_path=rel_path):
+                self.assertNotIn("<style>", content)
+                self.assertNotIn("</style>", content)
+
+    def test_known_root_shell_inline_style_debt_stays_documented(self):
+        base_layout = (TEMPLATES_ROOT / "layouts/base.html").read_text(
+            encoding="utf-8-sig"
+        )
+        main_nav = (TEMPLATES_ROOT / "components/navigation/main_nav.html").read_text(
+            encoding="utf-8-sig"
+        )
+        phase8_plan = (
+            PROJECT_ROOT / "docs" / "ui" / "phase8_regression_consolidation_plan.md"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn("Dropdown Submenu Styling", base_layout)
+        self.assertIn("<style>", base_layout)
+        self.assertIn(".modern-nav", main_nav)
+        self.assertIn("<style>", main_nav)
+        self.assertIn("root `layouts/base.html` and `main_nav.html` inline style debt", phase8_plan)
+
     def test_direct_low_level_base_extends_are_infrastructure_only(self):
         allowed = {
             "_base.html",

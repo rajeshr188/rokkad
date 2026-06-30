@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from django.test import SimpleTestCase
+from django.urls import reverse
 
 from apps.onboarding import urls as onboarding_urls
 
@@ -165,3 +166,77 @@ class OnboardingPhase6IntentTests(SimpleTestCase):
         self.assertIn("Mark setup complete", setup_template)
         self.assertIn("Dismiss dashboard card", setup_template)
         self.assertIn("Reopen setup", setup_template)
+
+    def test_phase85_workspace_setup_routes_keep_canonical_and_legacy_entrypoints(self):
+        setup_template = _read("templates/company/workspace_setup.html")
+        dashboard_template = _read("templates/company/workspace_dashboard.html")
+        phase8_plan = _read("docs/ui/phase8_regression_consolidation_plan.md")
+
+        self.assertEqual(
+            reverse("workspace_settings_setup", kwargs={"workspace_id": 42}),
+            "/workspace/42/settings/setup/",
+        )
+        self.assertEqual(
+            reverse("workspace_settings_setup_state", kwargs={"workspace_id": 42}),
+            "/workspace/42/settings/setup/state/",
+        )
+        self.assertEqual(
+            reverse("workspace_setup", kwargs={"workspace_id": 42}),
+            "/orgs/workspace/42/setup/",
+        )
+        self.assertEqual(
+            reverse("workspace_setup_state", kwargs={"workspace_id": 42}),
+            "/orgs/workspace/42/setup/state/",
+        )
+
+        for template in (setup_template, dashboard_template):
+            with self.subTest():
+                self.assertIn("workspace_settings_setup_state", template)
+                self.assertNotIn("{% url 'workspace_setup_state'", template)
+
+        self.assertIn("Phase 8.5", phase8_plan)
+        self.assertIn("workspace switching, setup, and onboarding", phase8_plan)
+
+    def test_phase85_workspace_switching_contract_remains_membership_safe(self):
+        orgs_views = _read("apps/orgs/views.py")
+        orgs_tests = _read("apps/orgs/tests.py")
+
+        self.assertIn("def workspace_select(request, workspace_id):", orgs_views)
+        self.assertIn("_assert_workspace_access(request, workspace", orgs_views)
+        self.assertIn("user.profile.set_workspace(workspace)", orgs_views)
+        self.assertIn("WORKSPACE_SWITCH", orgs_views)
+        self.assertIn('next_url and next_url.startswith("/")', orgs_views)
+
+        access_check_index = orgs_views.index("_assert_workspace_access(request, workspace")
+        set_workspace_index = orgs_views.index("user.profile.set_workspace(workspace)")
+        self.assertLess(access_check_index, set_workspace_index)
+
+        for expected_test in (
+            "test_workspace_select_redirects_when_access_denied",
+            "test_workspace_select_sets_workspace_when_access_allowed",
+        ):
+            self.assertIn(expected_test, orgs_tests)
+
+    def test_phase85_workspace_setup_runtime_regression_files_remain_present(self):
+        expected_test_files = (
+            "apps/onboarding/tests_setup_checklist.py",
+            "apps/onboarding/tests_setup_state.py",
+            "apps/onboarding/tests_completion_redirects.py",
+            "apps/onboarding/tests_company_creation.py",
+            "apps/onboarding/tests_team_invites.py",
+        )
+
+        for relative_path in expected_test_files:
+            with self.subTest(relative_path=relative_path):
+                self.assertTrue((PROJECT_ROOT / relative_path).exists())
+
+        setup_checklist_tests = _read("apps/onboarding/tests_setup_checklist.py")
+        setup_state_tests = _read("apps/onboarding/tests_setup_state.py")
+        completion_tests = _read("apps/onboarding/tests_completion_redirects.py")
+
+        self.assertIn("test_empty_workspace_metrics_keep_checklist_non_blocking", setup_checklist_tests)
+        self.assertIn("test_complete_metrics_mark_every_setup_item_complete", setup_checklist_tests)
+        self.assertIn("test_display_state_shows_dashboard_card_for_incomplete_active_setup", setup_state_tests)
+        self.assertIn("test_state_mutators_update_expected_timestamps", setup_state_tests)
+        self.assertIn("test_onboarding_complete_redirects_to_workspace_setup", completion_tests)
+        self.assertIn("test_onboarding_skip_redirects_to_workspace_setup_when_workspace_exists", completion_tests)

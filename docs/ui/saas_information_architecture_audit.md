@@ -564,6 +564,14 @@ Next recommended SaaS IA slice:
 
 - Add route/schema/permission tests before removing old aliases.
 - Add visual and HTMX regression coverage for high-value flows where practical.
+- Current checkpoint: Phase 8.1 creates `docs/ui/phase8_regression_consolidation_plan.md`, mapping the existing guard inventory, route/template/auth/workspace/invitation/authorization/render regression buckets, and the deferred alias/design work that must wait until the guard layer is stronger.
+- Phase 8.2 strengthens route-boundary regression tests for current canonical aliases, legacy compatibility URLs, representative tenant ERP paths, public URLConf tenant exclusion, and intentionally absent future aliases including `/pricing/`, short auth aliases, `/invitations/accept/<key>`, and `/w/<workspace_slug>/...`.
+- Phase 8.3 strengthens template/shell regression tests for base-template ownership, static stylesheet contracts, no inline style reintroduction in extracted shells, and known root `layouts/base.html` / `main_nav.html` inline style debt.
+- Phase 8.4 strengthens public/auth render and compatibility regression tests for renderable public pages, allauth compatibility paths, Google OAuth CTA gating, django-invitations accept compatibility, invalid invite fail-closed behavior, and documented missing public templates.
+- Phase 8.5 strengthens workspace switching, setup, and onboarding regression tests for canonical/legacy setup routes, canonical setup-state form targets, membership-safe workspace switching, safe `next` handling, audit logging, and existing onboarding runtime regression files.
+- Phase 8.6 strengthens invitation/team regression tests for existing runtime guard coverage, direct accept adapter behavior, authenticated email mismatch fail-closed behavior, sent-invitation workspace context, revoke return targets, role/member mutation boundaries, control-plane policy checks, and invitation/team audit actions.
+- Phase 8.7 strengthens authorization regression tests for exact tenant ERP prefix coverage, middleware workspace-required coverage, Party/Product/Rates/Notify/utility data-tool guards, Contact's documented legacy gap, the intentionally public Notify v2 webhook, and DEA/Girvi as separate domain-specific permission tracks.
+- Phase 8.8 closes the regression consolidation phase in `docs/ui/phase8_regression_consolidation_review.md`, recording completed guard coverage, deferred scope, compatibility findings, verification commands, expected test log noise, and the tests/documentation-only commit boundary.
 
 ## J. Files to Change Later
 
