@@ -145,6 +145,16 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         name="workspace_slug_settings_billing",
     ),
     path(
+        "w/<str:workspace_slug>/settings/roles/",
+        org_views.workspace_slug_settings_roles,
+        name="workspace_slug_settings_roles",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/numbering/",
+        org_views.workspace_slug_settings_numbering,
+        name="workspace_slug_settings_numbering",
+    ),
+    path(
         "w/<str:workspace_slug>/settings/accounting/",
         org_views.workspace_slug_settings_accounting,
         name="workspace_slug_settings_accounting",

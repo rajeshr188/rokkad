@@ -177,6 +177,18 @@ def workspace_slug_settings_accounting(request, workspace_slug):
 
 
 @login_required
+def workspace_slug_settings_roles(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_settings_team", workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_numbering(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("girvi:girvi_series_list")
+
+
+@login_required
 def workspace_slug_parties(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
     return redirect("party:party_list")

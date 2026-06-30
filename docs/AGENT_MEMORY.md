@@ -411,6 +411,8 @@ Phase 11.1 deferred workspace slug target selection is complete in `docs/ui/work
 
 Phase 11.2 safe deferred workspace slug aliases are implemented. Operations/sales/purchase redirect to `dea_business_events_dashboard`, commodity redirects to `dea_commodity_list`, reports redirects to `dea_reports_hub`, settings/profile redirects to `workspace_update`, settings/billing selects the workspace then redirects to `subscriptions:dashboard`, and settings/accounting redirects to `dea_chart_of_accounts`. Contact plus settings roles/modules/numbering/security remain absent until separate decisions.
 
+Phase 11.3 interim workspace settings slug aliases are implemented. Settings/roles redirects to `workspace_settings_team`; settings/numbering redirects to `girvi:girvi_series_list`. Settings/modules and settings/security remain absent until real workspace-owned modules and security/audit screens are designed.
+
 ## Navigation Memory
 
 Main sidebar direction:

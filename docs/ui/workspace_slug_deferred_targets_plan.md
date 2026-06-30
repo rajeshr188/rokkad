@@ -75,6 +75,8 @@ Keep compatibility routes and existing tenant prefixes available.
 
 ### Phase 11.3: Interim Redirect Aliases
 
+Status: complete.
+
 Add interim aliases only if the user experience is acceptable:
 
 - settings/roles -> team management;
@@ -95,7 +97,7 @@ account-level allauth settings.
 
 ## Next Recommended Step
 
-Proceed with Phase 11.3 only if interim settings redirects are acceptable:
-settings/roles can point to team management, and settings/numbering can point to
-Girvi series. Otherwise skip directly to Phase 11.4 and design real
-workspace-owned modules and security/audit screens.
+Proceed with Phase 11.4: design and implement real workspace-owned screens for
+settings/modules and settings/security before adding those live slug aliases.
+`settings/security` should be a workspace security/audit surface, not an
+account-level security redirect.

@@ -82,6 +82,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "workspace_slug_settings_invitations": "/w/acme/settings/invitations/",
             "workspace_slug_settings_profile": "/w/acme/settings/profile/",
             "workspace_slug_settings_billing": "/w/acme/settings/billing/",
+            "workspace_slug_settings_roles": "/w/acme/settings/roles/",
+            "workspace_slug_settings_numbering": "/w/acme/settings/numbering/",
             "workspace_slug_settings_accounting": "/w/acme/settings/accounting/",
             "workspace_slug_operations": "/w/acme/operations/",
             "workspace_slug_parties": "/w/acme/parties/",
@@ -109,6 +111,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "/w/acme/settings/invitations/": "workspace_slug_settings_invitations",
             "/w/acme/settings/profile/": "workspace_slug_settings_profile",
             "/w/acme/settings/billing/": "workspace_slug_settings_billing",
+            "/w/acme/settings/roles/": "workspace_slug_settings_roles",
+            "/w/acme/settings/numbering/": "workspace_slug_settings_numbering",
             "/w/acme/settings/accounting/": "workspace_slug_settings_accounting",
             "/w/acme/operations/": "workspace_slug_operations",
             "/w/acme/parties/": "workspace_slug_parties",
@@ -277,9 +281,7 @@ class SaaSRouteIntentTests(SimpleTestCase):
     def test_still_deferred_public_and_tenant_route_aliases_are_intentionally_absent(self):
         absent_route_names = (
             "workspace_slug_contact",
-            "workspace_slug_settings_roles",
             "workspace_slug_settings_modules",
-            "workspace_slug_settings_numbering",
             "workspace_slug_settings_security",
         )
 
@@ -290,9 +292,7 @@ class SaaSRouteIntentTests(SimpleTestCase):
 
         absent_paths = (
             "/w/acme/contact/",
-            "/w/acme/settings/roles/",
             "/w/acme/settings/modules/",
-            "/w/acme/settings/numbering/",
             "/w/acme/settings/security/",
         )
 

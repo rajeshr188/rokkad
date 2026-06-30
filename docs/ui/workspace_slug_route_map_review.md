@@ -118,3 +118,15 @@ Phase 11.2 is implemented. The safe redirect aliases are now live for:
 Contact remains intentionally absent. Settings roles, modules, numbering, and
 security also remain absent until the interim redirect or real-screen decisions
 are made.
+
+## Phase 11.3 Follow-Up
+
+Phase 11.3 is implemented. The interim redirect aliases are now live for:
+
+- `/w/<workspace_slug>/settings/roles/`
+- `/w/<workspace_slug>/settings/numbering/`
+
+Roles currently redirects to workspace team management because there is no
+dedicated roles/permissions editor yet. Numbering currently redirects to Girvi
+series because it is the only live numbering-series surface. Settings modules
+and security remain absent until real workspace-owned screens exist.
