@@ -1,0 +1,52 @@
+{% extends 'base_workspace_settings.html' %}
+
+{% block title %}{{ company.name }} - Modules - Rokkad{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'workspace_selector' %}">My Workspaces</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'workspace_settings_home' workspace_id=company.id %}">{{ company.name }}</a></li>
+        <li class="breadcrumb-item active">Modules</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block mgmt_content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1 class="h3 mb-1">Modules</h1>
+        <p class="text-muted mb-0">Workspace-owned module visibility and current operational entrypoints.</p>
+    </div>
+    <a href="{% url 'workspace_settings_setup' workspace_id=company.id %}" class="btn btn-outline-primary">
+        <i class="bi bi-list-check"></i> Setup checklist
+    </a>
+</div>
+
+<div class="row g-3">
+    {% for module in modules %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                    <h2 class="h5 mb-0">{{ module.name }}</h2>
+                    {% if module.status == "Active" %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ module.status }}</span>
+                    {% endif %}
+                </div>
+                <p class="text-muted small mb-3">{{ module.description }}</p>
+                {% if module.route_name %}
+                <a href="{% url module.route_name %}" class="btn btn-sm btn-outline-secondary">
+                    Open
+                </a>
+                {% else %}
+                <span class="text-muted small">No live workspace screen yet</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

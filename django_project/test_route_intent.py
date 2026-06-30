@@ -61,6 +61,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "workspace_settings_team": "/workspace/42/settings/team/",
             "workspace_settings_invitations": "/workspace/42/settings/invitations/",
             "workspace_settings_invite": "/workspace/42/settings/invitations/new/",
+            "workspace_settings_modules": "/workspace/42/settings/modules/",
+            "workspace_settings_security": "/workspace/42/settings/security/",
             "workspace_settings_leave": "/workspace/42/settings/leave/",
         }
 
@@ -84,6 +86,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "workspace_slug_settings_billing": "/w/acme/settings/billing/",
             "workspace_slug_settings_roles": "/w/acme/settings/roles/",
             "workspace_slug_settings_numbering": "/w/acme/settings/numbering/",
+            "workspace_slug_settings_modules": "/w/acme/settings/modules/",
+            "workspace_slug_settings_security": "/w/acme/settings/security/",
             "workspace_slug_settings_accounting": "/w/acme/settings/accounting/",
             "workspace_slug_operations": "/w/acme/operations/",
             "workspace_slug_parties": "/w/acme/parties/",
@@ -113,6 +117,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "/w/acme/settings/billing/": "workspace_slug_settings_billing",
             "/w/acme/settings/roles/": "workspace_slug_settings_roles",
             "/w/acme/settings/numbering/": "workspace_slug_settings_numbering",
+            "/w/acme/settings/modules/": "workspace_slug_settings_modules",
+            "/w/acme/settings/security/": "workspace_slug_settings_security",
             "/w/acme/settings/accounting/": "workspace_slug_settings_accounting",
             "/w/acme/operations/": "workspace_slug_operations",
             "/w/acme/parties/": "workspace_slug_parties",
@@ -145,6 +151,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "/workspace/42/settings/team/": "workspace_settings_team",
             "/workspace/42/settings/invitations/": "workspace_settings_invitations",
             "/workspace/42/settings/invitations/new/": "workspace_settings_invite",
+            "/workspace/42/settings/modules/": "workspace_settings_modules",
+            "/workspace/42/settings/security/": "workspace_settings_security",
             "/workspace/42/settings/leave/": "workspace_settings_leave",
         }
 
@@ -281,8 +289,6 @@ class SaaSRouteIntentTests(SimpleTestCase):
     def test_still_deferred_public_and_tenant_route_aliases_are_intentionally_absent(self):
         absent_route_names = (
             "workspace_slug_contact",
-            "workspace_slug_settings_modules",
-            "workspace_slug_settings_security",
         )
 
         for route_name in absent_route_names:
@@ -292,8 +298,6 @@ class SaaSRouteIntentTests(SimpleTestCase):
 
         absent_paths = (
             "/w/acme/contact/",
-            "/w/acme/settings/modules/",
-            "/w/acme/settings/security/",
         )
 
         for path in absent_paths:

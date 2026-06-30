@@ -25,6 +25,14 @@
    href="{% url 'workspace_slug_settings_invitations' workspace_slug=ew.schema_name %}">
     <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
 </a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_modules' or request.resolver_match.url_name == 'workspace_slug_settings_modules' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_modules' workspace_slug=ew.schema_name %}">
+    <i class="bi bi-grid-3x3-gap"></i> Modules
+</a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_security' or request.resolver_match.url_name == 'workspace_slug_settings_security' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_security' workspace_slug=ew.schema_name %}">
+    <i class="bi bi-shield-check"></i> Security
+</a>
 {% elif workspace_settings_sidebar_variant == "mobile" %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
    href="{% url 'workspace_slug_settings' workspace_slug=ew.schema_name %}">
@@ -51,5 +59,13 @@
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations_list' or request.resolver_match.url_name == 'workspace_settings_invitations' or request.resolver_match.url_name == 'workspace_slug_settings_invitations' %}active{% endif %}"
    href="{% url 'workspace_slug_settings_invitations' workspace_slug=ew.schema_name %}">
     <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
+</a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_modules' or request.resolver_match.url_name == 'workspace_slug_settings_modules' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_modules' workspace_slug=ew.schema_name %}">
+    <i class="bi bi-grid-3x3-gap"></i> Modules
+</a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_security' or request.resolver_match.url_name == 'workspace_slug_settings_security' %}active{% endif %}"
+   href="{% url 'workspace_slug_settings_security' workspace_slug=ew.schema_name %}">
+    <i class="bi bi-shield-check"></i> Security
 </a>
 {% endif %}

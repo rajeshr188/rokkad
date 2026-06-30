@@ -126,6 +126,59 @@ def _get_workspace_from_slug(workspace_slug):
     )
 
 
+def _workspace_module_statuses():
+    return [
+        {
+            "name": "Accounting",
+            "status": "Active",
+            "description": "Chart of accounts, vouchers, journals, reports, and posting controls.",
+            "route_name": "dea_home",
+        },
+        {
+            "name": "Operations",
+            "status": "Active",
+            "description": "DEA business-event workflows for sales, purchase, settlement, and commodity previews.",
+            "route_name": "dea_business_events_dashboard",
+        },
+        {
+            "name": "Parties",
+            "status": "Active",
+            "description": "Customer, supplier, broker, employee, KYC, and relationship records.",
+            "route_name": "party:party_list",
+        },
+        {
+            "name": "Loans",
+            "status": "Active",
+            "description": "Girvi loan workflows, collateral custody, releases, repayments, and notices.",
+            "route_name": "girvi:girvi_dashboard",
+        },
+        {
+            "name": "Inventory",
+            "status": "Active",
+            "description": "Product catalog, stock records, stock movements, pricing, and physical audit.",
+            "route_name": "product_product_home",
+        },
+        {
+            "name": "Commodity",
+            "status": "Active",
+            "description": "Commodity master data and accounting-linked commodity reporting.",
+            "route_name": "dea_commodity_list",
+        },
+        {
+            "name": "Notifications",
+            "status": "Active",
+            "description": "Operational notification batches and delivery settings.",
+            "route_name": "notify_v2_index",
+        },
+        {
+            "name": "Customer Portal",
+            "status": "Planned",
+            "description": "Future customer-facing loans, invoices, payments, documents, and statements.",
+            "route_name": "",
+        },
+    ]
+
+
 @login_required
 def workspace_slug_dashboard(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
@@ -186,6 +239,18 @@ def workspace_slug_settings_roles(request, workspace_slug):
 def workspace_slug_settings_numbering(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
     return redirect("girvi:girvi_series_list")
+
+
+@login_required
+def workspace_slug_settings_modules(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_settings_modules", workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_security(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_settings_security", workspace_id=workspace.id)
 
 
 @login_required
@@ -389,6 +454,79 @@ def workspace_setup_state(request, workspace_id=None, company_id=None):
     if next_url and next_url.startswith("/"):
         return redirect(next_url)
     return redirect("workspace_settings_setup", workspace_id=company.id)
+
+
+@login_required
+def workspace_modules(request, workspace_id=None, company_id=None):
+    """Display the workspace-owned module availability map."""
+    workspace_id = workspace_id or company_id
+    if workspace_id is None:
+        raise Http404("Workspace ID is required")
+
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    access_context = _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"workspace_settings"},
+        allow_platform_admin=True,
+    )
+
+    return render(
+        request,
+        "company/workspace_modules.html",
+        {
+            "company": company,
+            "workspace": company,
+            "modules": _workspace_module_statuses(),
+            "user_role": access_context["role_name"],
+        },
+    )
+
+
+@login_required
+def workspace_security(request, workspace_id=None, company_id=None):
+    """Display workspace security and audit activity."""
+    workspace_id = workspace_id or company_id
+    if workspace_id is None:
+        raise Http404("Workspace ID is required")
+
+    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    access_context = _assert_workspace_access(
+        request,
+        company,
+        required_permissions={"workspace_settings"},
+        allow_platform_admin=True,
+    )
+    audit_events = (
+        AuditLog.objects.for_company(company)
+        .select_related("user")
+        .order_by("-timestamp")[:50]
+    )
+    security_actions = [
+        "LOGIN",
+        "LOGOUT",
+        "LOGIN_FAILED",
+        "PERMISSION_DENIED",
+        "UNAUTHORIZED_ACCESS",
+    ]
+    security_events = AuditLog.objects.for_company(company).filter(
+        action__in=security_actions
+    )
+
+    return render(
+        request,
+        "company/workspace_security.html",
+        {
+            "company": company,
+            "workspace": company,
+            "audit_events": audit_events,
+            "security_event_count": security_events.count(),
+            "failed_event_count": AuditLog.objects.for_company(company)
+            .filter(success=False)
+            .count(),
+            "user_role": access_context["role_name"],
+        },
+    )
 
 
 @login_required

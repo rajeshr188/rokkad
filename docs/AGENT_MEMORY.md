@@ -413,6 +413,8 @@ Phase 11.2 safe deferred workspace slug aliases are implemented. Operations/sale
 
 Phase 11.3 interim workspace settings slug aliases are implemented. Settings/roles redirects to `workspace_settings_team`; settings/numbering redirects to `girvi:girvi_series_list`. Settings/modules and settings/security remain absent until real workspace-owned modules and security/audit screens are designed.
 
+Phase 11.4 workspace modules/security settings screens are implemented. `workspace_settings_modules` renders a read-only installed-module map, `workspace_settings_security` renders workspace audit/security activity from `AuditLog`, and slug aliases redirect to these workspace-owned pages. Do not redirect workspace security to account-level allauth/security settings.
+
 ## Navigation Memory
 
 Main sidebar direction:

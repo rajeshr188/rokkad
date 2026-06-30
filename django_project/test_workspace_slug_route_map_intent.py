@@ -38,8 +38,6 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
     def test_phase101_unsafe_workspace_slug_routes_remain_intentionally_absent(self):
         absent_route_names = (
             "workspace_slug_contact",
-            "workspace_slug_settings_modules",
-            "workspace_slug_settings_security",
         )
 
         for route_name in absent_route_names:
@@ -49,8 +47,6 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
 
         absent_paths = (
             "/w/acme/contact/",
-            "/w/acme/settings/modules/",
-            "/w/acme/settings/security/",
         )
 
         for path in absent_paths:
@@ -130,6 +126,8 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
             "workspace_slug_settings_billing": "/w/acme/settings/billing/",
             "workspace_slug_settings_roles": "/w/acme/settings/roles/",
             "workspace_slug_settings_numbering": "/w/acme/settings/numbering/",
+            "workspace_slug_settings_modules": "/w/acme/settings/modules/",
+            "workspace_slug_settings_security": "/w/acme/settings/security/",
             "workspace_slug_settings_accounting": "/w/acme/settings/accounting/",
             "workspace_slug_operations": "/w/acme/operations/",
             "workspace_slug_parties": "/w/acme/parties/",
@@ -213,14 +211,19 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
                 )
                 self.assertEqual(resolve(expected_path).url_name, route_name)
 
-    def test_phase113_new_screen_settings_aliases_remain_absent(self):
-        for route_name in (
-            "workspace_slug_settings_modules",
-            "workspace_slug_settings_security",
-        ):
+    def test_phase114_new_screen_settings_aliases_are_live(self):
+        route_cases = {
+            "workspace_slug_settings_modules": "/w/acme/settings/modules/",
+            "workspace_slug_settings_security": "/w/acme/settings/security/",
+        }
+
+        for route_name, expected_path in route_cases.items():
             with self.subTest(route_name=route_name):
-                with self.assertRaises(NoReverseMatch):
-                    reverse(route_name, kwargs={"workspace_slug": "acme"})
+                self.assertEqual(
+                    reverse(route_name, kwargs={"workspace_slug": "acme"}),
+                    expected_path,
+                )
+                self.assertEqual(resolve(expected_path).url_name, route_name)
 
     def test_phase107_review_closes_workspace_slug_route_map_phase(self):
         review_path = DOCS_UI_ROOT / "workspace_slug_route_map_review.md"

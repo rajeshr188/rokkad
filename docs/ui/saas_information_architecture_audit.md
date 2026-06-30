@@ -587,6 +587,7 @@ Next recommended SaaS IA slice:
 - Phase 11.1 selects targets for the remaining deferred `/w/<workspace_slug>/...` routes in `docs/ui/workspace_slug_deferred_targets_plan.md`. Sales and purchase stay routed through DEA business events rather than removed runtime apps. Modules and security are intentionally not given live redirect targets until real workspace-owned settings screens exist. Phase 11.2 should implement only the safe redirect aliases before interim role/numbering aliases or new modules/security screens.
 - Phase 11.2 implements the safe deferred `/w/<workspace_slug>/...` redirect aliases for operations, sales, purchase, commodity, reports, settings/profile, settings/billing, and settings/accounting. Contact remains skipped in favor of Party. Settings roles, modules, numbering, and security remain absent until interim redirect or real-screen decisions are made.
 - Phase 11.3 implements interim settings aliases for `/w/<workspace_slug>/settings/roles/` and `/w/<workspace_slug>/settings/numbering/`, redirecting to workspace team management and Girvi series respectively. Settings modules and security remain absent until real workspace-owned screens exist.
+- Phase 11.4 implements real workspace-owned settings screens for modules and security/audit, then exposes `/w/<workspace_slug>/settings/modules/` and `/w/<workspace_slug>/settings/security/` as redirects to those pages. Workspace security reads `AuditLog` activity and does not reuse account-level security pages.
 
 ## J. Files to Change Later
 

@@ -102,6 +102,16 @@ CANONICAL_CONTROL_PLANE_URLPATTERNS = [
         name="workspace_settings_invite",
     ),
     path(
+        "workspace/<int:workspace_id>/settings/modules/",
+        org_views.workspace_modules,
+        name="workspace_settings_modules",
+    ),
+    path(
+        "workspace/<int:workspace_id>/settings/security/",
+        org_views.workspace_security,
+        name="workspace_settings_security",
+    ),
+    path(
         "workspace/<int:workspace_id>/settings/leave/",
         org_views.workspace_leave,
         name="workspace_settings_leave",
@@ -153,6 +163,16 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         "w/<str:workspace_slug>/settings/numbering/",
         org_views.workspace_slug_settings_numbering,
         name="workspace_slug_settings_numbering",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/modules/",
+        org_views.workspace_slug_settings_modules,
+        name="workspace_slug_settings_modules",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/security/",
+        org_views.workspace_slug_settings_security,
+        name="workspace_slug_settings_security",
     ),
     path(
         "w/<str:workspace_slug>/settings/accounting/",

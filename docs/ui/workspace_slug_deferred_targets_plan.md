@@ -87,6 +87,8 @@ workspace settings modules.
 
 ### Phase 11.4: New Workspace Settings Screens
 
+Status: complete.
+
 Design and implement real screens before adding live aliases for:
 
 - settings/modules;
@@ -97,7 +99,6 @@ account-level allauth settings.
 
 ## Next Recommended Step
 
-Proceed with Phase 11.4: design and implement real workspace-owned screens for
-settings/modules and settings/security before adding those live slug aliases.
-`settings/security` should be a workspace security/audit surface, not an
-account-level security redirect.
+Close Phase 11 with a final route-map review. Then start the customer/member
+portal IA phase for `/portal/` and its loans, invoices, payments, documents,
+and statements surfaces.

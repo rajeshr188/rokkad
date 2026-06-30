@@ -130,3 +130,16 @@ Roles currently redirects to workspace team management because there is no
 dedicated roles/permissions editor yet. Numbering currently redirects to Girvi
 series because it is the only live numbering-series surface. Settings modules
 and security remain absent until real workspace-owned screens exist.
+
+## Phase 11.4 Follow-Up
+
+Phase 11.4 is implemented. Workspace-owned settings screens are now live for:
+
+- `/workspace/<workspace_id>/settings/modules/`
+- `/workspace/<workspace_id>/settings/security/`
+- `/w/<workspace_slug>/settings/modules/`
+- `/w/<workspace_slug>/settings/security/`
+
+Modules is a read-only installed-module map with links to current operational
+entrypoints. Security is a workspace audit/security surface backed by
+`AuditLog`, not an account-level security redirect.
