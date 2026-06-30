@@ -584,6 +584,7 @@ Next recommended SaaS IA slice:
 - Phase 10.5 adds live `/w/<workspace_slug>/parties/`, `/loans/`, `/inventory/`, and `/accounting/` aliases as redirects to current Party, Girvi, Product, and DEA entrypoints. Contact remains skipped in favor of Party; operations, sales, purchase, commodity, and reports stay deferred until their targets are selected.
 - Phase 10.6 moves selected navigation links to slug aliases where workspace schema context is reliable: tenant sidebar dashboard/Parties/Girvi/Product and workspace settings home/preferences/team/sent-invitations. Deep module, reports, setup, invite, billing, rates, notifications, data tools, business events, and commodity links remain on existing routes.
 - Phase 10.7 closes the workspace slug route-map phase in `docs/ui/workspace_slug_route_map_review.md`. The first live `/w/<workspace_slug>/...` layer is implemented and reviewed; remaining target route-map items are deferred until their product targets are selected.
+- Phase 11.1 selects targets for the remaining deferred `/w/<workspace_slug>/...` routes in `docs/ui/workspace_slug_deferred_targets_plan.md`. Sales and purchase stay routed through DEA business events rather than removed runtime apps. Modules and security are intentionally not given live redirect targets until real workspace-owned settings screens exist. Phase 11.2 should implement only the safe redirect aliases before interim role/numbering aliases or new modules/security screens.
 
 ## J. Files to Change Later
 

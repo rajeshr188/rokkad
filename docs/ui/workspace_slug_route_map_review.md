@@ -90,3 +90,14 @@ The next SaaS IA step should be either:
 
 - choose targets for the remaining `/w/<workspace_slug>/...` deferred routes; or
 - start a customer/member portal IA phase if portal work is now higher priority.
+
+## Follow-Up Decision
+
+Phase 11.1 target selection is documented in
+`docs/ui/workspace_slug_deferred_targets_plan.md`. It chooses existing redirect
+targets for operations, sales, purchase, commodity, reports, profile, billing,
+and accounting; records interim targets for roles and numbering; and keeps
+modules plus security absent until real workspace-owned screens exist.
+
+The next safe implementation slice is Phase 11.2: add only the safe redirect
+aliases.
