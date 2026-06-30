@@ -75,3 +75,22 @@ class WorkspaceSlugDeferredTargetsIntentTests(SimpleTestCase):
                 self.assertIn("Phase 11.1", content)
                 self.assertIn("workspace_slug_deferred_targets_plan.md", content)
                 self.assertIn("Phase 11.2", content)
+
+    def test_phase11_final_review_closes_slug_route_map_before_portal(self):
+        review_path = DOCS_UI_ROOT / "workspace_slug_phase11_review.md"
+
+        self.assertTrue(review_path.exists())
+        content = review_path.read_text(encoding="utf-8-sig")
+
+        for expected in (
+            "Workspace Slug Phase 11 Review",
+            "Phase 11 completes the remaining workspace slug route-map rollout",
+            "/w/<workspace_slug>/settings/modules/",
+            "/w/<workspace_slug>/settings/security/",
+            "Contact remains intentionally absent",
+            "customer/member portal IA",
+            "/portal/loans/",
+            "Company.schema_name",
+            "AuditLog",
+        ):
+            self.assertIn(expected, content)

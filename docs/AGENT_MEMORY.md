@@ -415,6 +415,8 @@ Phase 11.3 interim workspace settings slug aliases are implemented. Settings/rol
 
 Phase 11.4 workspace modules/security settings screens are implemented. `workspace_settings_modules` renders a read-only installed-module map, `workspace_settings_security` renders workspace audit/security activity from `AuditLog`, and slug aliases redirect to these workspace-owned pages. Do not redirect workspace security to account-level allauth/security settings.
 
+Phase 11 final review is complete in `docs/ui/workspace_slug_phase11_review.md`. The target `/w/<workspace_slug>/...` tenant and workspace-settings route map is live except Contact, intentionally skipped for Party, and the customer/member portal route map, which should be the next separate IA phase.
+
 ## Navigation Memory
 
 Main sidebar direction:

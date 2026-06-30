@@ -588,6 +588,7 @@ Next recommended SaaS IA slice:
 - Phase 11.2 implements the safe deferred `/w/<workspace_slug>/...` redirect aliases for operations, sales, purchase, commodity, reports, settings/profile, settings/billing, and settings/accounting. Contact remains skipped in favor of Party. Settings roles, modules, numbering, and security remain absent until interim redirect or real-screen decisions are made.
 - Phase 11.3 implements interim settings aliases for `/w/<workspace_slug>/settings/roles/` and `/w/<workspace_slug>/settings/numbering/`, redirecting to workspace team management and Girvi series respectively. Settings modules and security remain absent until real workspace-owned screens exist.
 - Phase 11.4 implements real workspace-owned settings screens for modules and security/audit, then exposes `/w/<workspace_slug>/settings/modules/` and `/w/<workspace_slug>/settings/security/` as redirects to those pages. Workspace security reads `AuditLog` activity and does not reuse account-level security pages.
+- Phase 11 final review in `docs/ui/workspace_slug_phase11_review.md` closes the workspace slug route-map rollout for tenant ERP and workspace settings. The remaining target route-map gap is the separate customer/member portal.
 
 ## J. Files to Change Later
 
