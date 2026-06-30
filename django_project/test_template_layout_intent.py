@@ -40,6 +40,9 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         "subscriptions/invoice_detail.html",
         "subscriptions/plan_list.html",
     }
+    SETUP_COMPONENT_TEMPLATES = {
+        "components/setup/setup_checklist_task.html",
+    }
 
     def test_direct_low_level_base_extends_are_infrastructure_only(self):
         allowed = {
@@ -100,6 +103,8 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         violations = []
 
         for path in _template_files():
+            if _relative(path) in self.SETUP_COMPONENT_TEMPLATES:
+                continue
             line = _extends_line(path)
             if "base_global.html" not in line and "base_workspace_settings.html" not in line:
                 continue
@@ -147,6 +152,8 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
 
         self.assertIn('workspace_settings_sidebar_variant == "desktop"', sidebar_content)
         self.assertIn('workspace_settings_sidebar_variant == "mobile"', sidebar_content)
+        self.assertIn("role_name == 'Admin'", sidebar_content)
+        self.assertIn("role_name == 'Superuser'", sidebar_content)
         for route_fragment in (
             "{% url 'workspace_settings_home' workspace_id=ew.id %}",
             "{% url 'workspace_settings_setup' workspace_id=ew.id %}",
@@ -305,3 +312,42 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
                 content = (TEMPLATES_ROOT / partial).read_text(encoding="utf-8-sig")
                 self.assertIn("mgmt-nav-link", content)
                 self.assertNotIn("nav-link py-2", content)
+
+    def test_workspace_layout_and_sidebar_use_static_visual_contract(self):
+        workspace_layout = (TEMPLATES_ROOT / "layouts/workspace.html").read_text(
+            encoding="utf-8-sig"
+        )
+        tenant_alias = (TEMPLATES_ROOT / "base_tenant.html").read_text(
+            encoding="utf-8-sig"
+        )
+        sidebar = (TEMPLATES_ROOT / "components/navigation/sidebar.html").read_text(
+            encoding="utf-8-sig"
+        )
+        workspace_css = (STATIC_ROOT / "css" / "workspace.css").read_text(
+            encoding="utf-8-sig"
+        )
+
+        self.assertIn("{% static 'css/workspace.css' %}", tenant_alias)
+        self.assertIn("workspace-shell", workspace_layout)
+        self.assertIn("workspace-context-bar", workspace_layout)
+        self.assertIn("workspace-sidebar", workspace_layout)
+        self.assertIn("workspace-content", workspace_layout)
+        self.assertNotIn("<style>", workspace_layout)
+        self.assertNotIn("</style>", workspace_layout)
+
+        self.assertIn("workspace-sidebar-wrapper", sidebar)
+        self.assertIn("workspace-identity", sidebar)
+        self.assertIn("workspace-nav-link", sidebar)
+        self.assertIn("workspace-nav-section-title", sidebar)
+        self.assertNotIn("<style>", sidebar)
+        self.assertNotIn("</style>", sidebar)
+        self.assertNotIn('class="nav-link', sidebar)
+
+        for expected in (
+            ".workspace-context-bar",
+            ".workspace-nav-link",
+            ".tenant-stat-grid",
+            ".tenant-quick-action",
+            ".tenant-panel",
+        ):
+            self.assertIn(expected, workspace_css)

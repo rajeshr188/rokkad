@@ -26,7 +26,7 @@
 
 {% block mgmt_content %}
 {% if setup_state.is_complete %}
-<div class="alert alert-success d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+<div class="alert alert-success mgmt-state-alert d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
     <div>
         <div class="fw-semibold">Workspace setup is marked complete.</div>
         <div class="small">The checklist remains available for review and future adjustments.</div>
@@ -39,7 +39,7 @@
     </form>
 </div>
 {% elif setup_state.is_dismissed %}
-<div class="alert alert-secondary d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+<div class="alert alert-secondary mgmt-state-alert d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
     <div>
         <div class="fw-semibold">Setup card is dismissed from the dashboard.</div>
         <div class="small">You can reopen it or continue using this setup page.</div>
@@ -53,87 +53,44 @@
 </div>
 {% endif %}
 
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-            <div>
-                <div class="text-uppercase small fw-semibold text-muted">Progress</div>
-                <div class="h4 mb-0">{{ setup_checklist.completed_count }}/{{ setup_checklist.total_count }} complete</div>
-            </div>
-            <div class="text-end">
-                <div class="display-6 fw-bold mb-0">{{ setup_checklist.completion_percentage }}%</div>
-                <div class="small text-muted">workspace readiness</div>
-            </div>
+<section class="mgmt-setup-hero mb-4" aria-labelledby="setup-progress-title">
+    <div class="mgmt-setup-summary">
+        <div>
+            <div class="mgmt-kicker mb-1">Progress</div>
+            <h2 id="setup-progress-title" class="h4 fw-bold mb-1">{{ setup_checklist.completed_count }}/{{ setup_checklist.total_count }} complete</h2>
+            <p class="text-muted mb-0">Complete the essentials for accounting, stock, rates, team access, and first operations.</p>
         </div>
-        <div class="progress" style="height: 10px;">
-            <div class="progress-bar" role="progressbar" style="width: {{ setup_checklist.completion_percentage }}%;" aria-valuenow="{{ setup_checklist.completion_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
-        </div>
-        <div class="d-flex flex-wrap gap-2 mt-3">
-            {% if not setup_state.is_complete %}
-            <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="complete">
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button type="submit" class="btn btn-sm btn-primary">Mark setup complete</button>
-            </form>
-            {% endif %}
-            {% if not setup_state.is_dismissed and not setup_state.is_complete %}
-            <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="dismiss">
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss dashboard card</button>
-            </form>
-            {% endif %}
+        <div class="text-lg-end">
+            <div class="mgmt-progress-value">{{ setup_checklist.completion_percentage }}%</div>
+            <div class="small text-muted">workspace readiness</div>
         </div>
     </div>
-</div>
+    <div class="mgmt-progress-track mt-3">
+        <div class="progress-bar mgmt-progress-bar" role="progressbar" style="width: {{ setup_checklist.completion_percentage }}%;" aria-valuenow="{{ setup_checklist.completion_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <div class="mgmt-setup-actions">
+        {% if not setup_state.is_complete %}
+        <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="complete">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-sm btn-primary">Mark setup complete</button>
+        </form>
+        {% endif %}
+        {% if not setup_state.is_dismissed and not setup_state.is_complete %}
+        <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="dismiss">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss dashboard card</button>
+        </form>
+        {% endif %}
+    </div>
+</section>
 
-<div class="row g-3">
+<div class="mgmt-setup-grid">
     {% for item in setup_checklist.items %}
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
-                    <div>
-                        <h2 class="h6 fw-bold mb-1">{{ item.title }}</h2>
-                        <p class="small text-muted mb-0">{{ item.description }}</p>
-                    </div>
-                    {% if item.status == "complete" %}
-                    <span class="badge bg-success-subtle text-success border border-success-subtle">Done</span>
-                    {% elif item.status == "unknown" %}
-                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Check</span>
-                    {% else %}
-                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Todo</span>
-                    {% endif %}
-                </div>
-
-                {% if item.status != "complete" %}
-                <div class="mt-3">
-                    {% if item.key == "business_profile" %}
-                    <a href="{% url 'workspace_settings_preferences' workspace_id=company.id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% elif item.key == "accounting_setup" %}
-                    <a href="{% url 'dea_period_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% elif item.key == "opening_balances" %}
-                    <a href="{% url 'dea_opening_balance_wizard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% elif item.key == "parties" %}
-                    <a href="{% url 'party_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% elif item.key == "products" %}
-                    <a href="{% url 'product_product_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% elif item.key == "opening_stock" %}
-                    <a href="{% url 'stock_opening_balance_import' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% elif item.key == "invite_team" %}
-                    <a href="{% url 'workspace_settings_invite' workspace_id=company.id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% elif item.key == "rates" %}
-                    <a href="{% url 'rate_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% elif item.key == "first_transaction" %}
-                    <a href="{% url 'dea_business_events_dashboard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+    {% include "components/setup/setup_checklist_task.html" with item=item workspace_id=company.id task_id_prefix="setup-task" heading_level="h2" %}
     {% endfor %}
 </div>
 {% endblock %}

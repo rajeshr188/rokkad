@@ -23,6 +23,14 @@ class _Memberships:
         return self._memberships
 
 
+class _CountRelation:
+    def __init__(self, count):
+        self._count = count
+
+    def count(self):
+        return self._count
+
+
 class _AuthenticatedUser:
     is_authenticated = True
     username = "owner"
@@ -37,7 +45,14 @@ class _AuthenticatedUser:
 
 
 def _workspace(id=1, name="Acme Jewellers", schema_name="acme"):
-    return SimpleNamespace(id=id, name=name, schema_name=schema_name, owner_id=1)
+    return SimpleNamespace(
+        id=id,
+        name=name,
+        schema_name=schema_name,
+        owner_id=1,
+        logo=None,
+        memberships=_CountRelation(2),
+    )
 
 
 def _membership(workspace):
@@ -196,6 +211,78 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         ):
             self.assertIn(label, html)
 
+    def test_authenticated_management_shell_shows_preferences_for_admin_role(self):
+        workspace = _workspace()
+        html = _render(
+            """
+            {% extends "base_global.html" %}
+            {% block title %}Management Admin Smoke{% endblock %}
+            {% block mgmt_content %}<section id="management-admin-smoke">Management shell</section>{% endblock %}
+            """,
+            request=_authenticated_request("/workspace/1/settings/", url_name="workspace_settings_home"),
+            context={
+                "workspace": workspace,
+                "user_workspace": workspace,
+                "user_role": "Admin",
+                "invitation_count": 0,
+            },
+            use_request_processors=False,
+        )
+
+        preferences_href = reverse(
+            "workspace_settings_preferences",
+            kwargs={"workspace_id": workspace.id},
+        )
+        self.assertGreaterEqual(html.count(f'href="{preferences_href}"'), 2)
+        self.assertIn("Preferences", html)
+
+    def test_workspace_selector_renders_global_workspace_manager_surface(self):
+        workspace = _workspace()
+        other_workspace = _workspace(2, "Beta Bullion", "beta")
+        html = _render(
+            """
+            {% include "company/workspace_home.html" %}
+            """,
+            request=_authenticated_request("/app/workspaces/", url_name="app_workspaces"),
+            context={
+                "workspace": workspace,
+                "user_workspace": workspace,
+                "user_role": "Owner",
+                "workspaces": [
+                    SimpleNamespace(
+                        company=workspace,
+                        role=SimpleNamespace(name="Owner"),
+                        created="2026-06-30",
+                    ),
+                    SimpleNamespace(
+                        company=other_workspace,
+                        role=SimpleNamespace(name="Admin"),
+                        created="2026-06-30",
+                    ),
+                ],
+                "current_workspace": workspace,
+                "workspace_count": 2,
+                "invitation_count": 0,
+                "sent_invitations_count": 1,
+                "pending_invitations": [],
+                "has_workspaces": True,
+            },
+            use_request_processors=False,
+        )
+
+        self.assertIn("Global workspace manager", html)
+        self.assertIn("mgmt-workspace-hero", html)
+        self.assertIn("mgmt-workspace-card current", html)
+        self.assertIn("Acme Jewellers", html)
+        self.assertIn("Beta Bullion", html)
+        self.assertIn("Switch Workspace", html)
+        self.assertIn(reverse("app_workspace_create"), html)
+        self.assertIn(reverse("app_invitations"), html)
+        self.assertIn(reverse("workspace_select", kwargs={"workspace_id": other_workspace.id}), html)
+        self.assertIn(reverse("workspace_settings_home", kwargs={"workspace_id": workspace.id}), html)
+        self.assertNotIn("createWorkspaceModal", html)
+        self.assertNotIn("Welcome Back!", html)
+
     def test_workspace_settings_shell_renders_management_content_marker(self):
         html = _render(
             """
@@ -321,7 +408,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
 
         self.assertIn("Workspace setup", html)
         self.assertIn("1/2", html)
-        self.assertIn("50% complete", html)
+        self.assertIn("50%", html)
+        self.assertIn("1/2 complete", html)
+        self.assertIn("mgmt-setup-hero", html)
         self.assertIn("Opening balances", html)
         self.assertIn("Dismiss", html)
         self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)

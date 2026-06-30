@@ -7,7 +7,7 @@
    href="{% url 'workspace_settings_setup' workspace_id=ew.id %}">
     <i class="bi bi-list-check"></i> Setup
 </a>
-{% if role_name == 'Owner' %}
+{% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Superuser' %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' %}active{% endif %}"
    href="{% url 'workspace_settings_preferences' workspace_id=ew.id %}">
     <i class="bi bi-sliders"></i> Preferences
@@ -34,7 +34,7 @@
    href="{% url 'workspace_settings_setup' workspace_id=ew.id %}">
     <i class="bi bi-list-check"></i> Setup
 </a>
-{% if role_name == 'Owner' %}
+{% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Superuser' %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' %}active{% endif %}"
    href="{% url 'workspace_settings_preferences' workspace_id=ew.id %}">
     <i class="bi bi-sliders"></i> Preferences

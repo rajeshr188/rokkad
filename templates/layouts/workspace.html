@@ -5,27 +5,26 @@
     {% include 'components/navigation/main_nav.html' %}
 {% endblock %}
 
-{% block main_class %}d-flex flex-column min-vh-100{% endblock %}
+{% block main_class %}d-flex flex-column min-vh-100 workspace-shell{% endblock %}
 
 {% block content %}
 {# ── Workspace context banner (data-plane indicator) ── #}
 {% if in_tenant and workspace %}
-<div style="background:linear-gradient(90deg,#059669 0%,#10b981 100%);color:#fff;font-size:0.78rem;letter-spacing:0.03em;padding:0.35rem 1.25rem;display:flex;align-items:center;justify-content:space-between;">
+<div class="workspace-context-bar">
     <span>
         <i class="bi bi-database-fill-check me-1"></i>
         <strong>Workspace:</strong> {{ workspace.name }}
-        &nbsp;&middot;&nbsp;
-        {% if user_role %}<span style="background:rgba(255,255,255,0.25);border-radius:4px;padding:0 6px;">{{ user_role }}</span>{% endif %}
+        {% if user_role %}<span class="workspace-role-pill">{{ user_role }}</span>{% endif %}
     </span>
-    <a href="{% url 'workspace_selector' %}?show_all=1" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:0.75rem;">
+    <a href="{% url 'workspace_selector' %}?show_all=1" class="workspace-switch-link">
         <i class="bi bi-arrow-left-right me-1"></i>Switch workspace
     </a>
 </div>
 {% endif %}
-<div class="container-fluid flex-grow-1">
+<div class="container-fluid flex-grow-1 workspace-page">
     <div class="row h-100">
         <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
-        <nav class="col-lg-2 bg-light sidebar border-end p-3 
+        <nav class="col-lg-2 workspace-sidebar
                     {% if not show_sidebar %}d-none{% endif %} d-lg-block" 
              id="workspaceSidebar">
             {% block sidebar %}
@@ -34,8 +33,8 @@
         </nav>
         
         <!-- Mobile Sidebar Toggle Button -->
-        <div class="d-lg-none position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
-            <button class="btn btn-primary rounded-circle" 
+        <div class="d-lg-none position-fixed bottom-0 end-0 p-3 z-3">
+            <button class="btn btn-primary rounded-circle workspace-sidebar-toggle"
                     type="button" 
                     id="sidebarToggleBtn" 
                     data-bs-toggle="offcanvas" 
@@ -47,7 +46,7 @@
         </div>
         
         <!-- Mobile Offcanvas Sidebar -->
-        <div class="offcanvas offcanvas-start bg-light" 
+        <div class="offcanvas offcanvas-start bg-light workspace-offcanvas"
              tabindex="-1" 
              id="sidebarOffcanvas"
              aria-labelledby="sidebarOffcanvasLabel">
@@ -70,7 +69,7 @@
         </div>
         
         <!-- Main Content Area -->
-        <main class="col-lg-10 px-3 px-md-4 py-3" id="content">
+        <main class="col-lg-10 px-3 px-md-4 py-3 workspace-content" id="content">
             <!-- Breadcrumb Navigation -->
             {% block breadcrumbs %}{% endblock %}
             
@@ -83,61 +82,4 @@
     </div>
 </div>
 
-<style>
-/* Mobile responsive improvements */
-@media (max-width: 991.98px) {
-    .sidebar {
-        display: none !important;
-    }
-    
-    main {
-        width: 100% !important;
-    }
-}
-
-/* Smooth sidebar toggleoffcanvas transitions */
-.offcanvas {
-    --bs-offcanvas-width: 250px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.offcanvas-body {
-    max-height: calc(100vh - 60px);
-    overflow-y: auto;
-}
-
-/* Sidebar toggle button styling */
-#sidebarToggleBtn {
-    width: 50px;
-    height: 50px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-#sidebarToggleBtn:hover {
-    transform: scale(1.1);
-}
-
-/* Ensure content doesn't hide behind floating button */
-main {
-    padding-bottom: 80px;
-}
-
-@media (min-width: 992px) {
-    main {
-        padding-bottom: 1.5rem;
-    }
-}
-
-.sidebar {
-    max-height: calc(100vh - 70px);
-    overflow-y: auto;
-    position: sticky;
-    top: 70px;
-}
-</style>
 {% endblock %}

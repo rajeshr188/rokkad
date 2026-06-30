@@ -1,0 +1,43 @@
+<section class="mgmt-setup-task" aria-labelledby="{{ task_id_prefix }}-{{ item.key }}">
+    <div class="mgmt-setup-task-header">
+        <div>
+            {% if heading_level == "h3" %}
+            <h3 id="{{ task_id_prefix }}-{{ item.key }}" class="mgmt-setup-task-title">{{ item.title }}</h3>
+            {% else %}
+            <h2 id="{{ task_id_prefix }}-{{ item.key }}" class="mgmt-setup-task-title">{{ item.title }}</h2>
+            {% endif %}
+            <p class="small text-muted mb-0">{{ item.description }}</p>
+        </div>
+        {% if item.status == "complete" %}
+        <span class="mgmt-status-badge done"><i class="bi bi-check-circle"></i>Done</span>
+        {% elif item.status == "unknown" %}
+        <span class="mgmt-status-badge check"><i class="bi bi-info-circle"></i>Check</span>
+        {% else %}
+        <span class="mgmt-status-badge todo"><i class="bi bi-circle"></i>Todo</span>
+        {% endif %}
+    </div>
+
+    {% if item.status != "complete" %}
+    <div class="mgmt-setup-task-action">
+        {% if item.key == "business_profile" %}
+        <a href="{% url 'workspace_settings_preferences' workspace_id=workspace_id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% elif item.key == "accounting_setup" %}
+        <a href="{% url 'dea_period_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% elif item.key == "opening_balances" %}
+        <a href="{% url 'dea_opening_balance_wizard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% elif item.key == "parties" %}
+        <a href="{% url 'party_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% elif item.key == "products" %}
+        <a href="{% url 'product_product_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% elif item.key == "opening_stock" %}
+        <a href="{% url 'stock_opening_balance_import' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% elif item.key == "invite_team" %}
+        <a href="{% url 'workspace_settings_invite' workspace_id=workspace_id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% elif item.key == "rates" %}
+        <a href="{% url 'rate_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% elif item.key == "first_transaction" %}
+        <a href="{% url 'dea_business_events_dashboard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>

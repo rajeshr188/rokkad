@@ -1,551 +1,87 @@
 {% extends 'base_public.html' %}
 {% load i18n %}
-{% block title %}Home - Loan & Accounting Management System{% endblock title %}
+{% block title %}Rokkad - Accounting-First SaaS ERP{% endblock title %}
 
 {% block content %}
-<style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .hero-section {
-        background: var(--primary-gradient);
-        color: white;
-        padding: 100px 0;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .hero-section::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 500px;
-        height: 500px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-    }
-
-    .hero-content {
-        position: relative;
-        z-index: 1;
-    }
-
-    .hero-title {
-        font-size: 3.5rem;
-        font-weight: 800;
-        line-height: 1.2;
-        margin-bottom: 1.5rem;
-    }
-
-    .hero-subtitle {
-        font-size: 1.5rem;
-        font-weight: 300;
-        margin-bottom: 2rem;
-        opacity: 0.95;
-    }
-
-    .cta-buttons {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .btn-primary-light {
-        background: white;
-        color: #667eea;
-        font-weight: 600;
-        padding: 12px 32px;
-        border: none;
-    }
-
-    .btn-primary-light:hover {
-        background: #f0f0f0;
-        color: #667eea;
-    }
-
-    .btn-outline-light {
-        color: white;
-        border: 2px solid white;
-        font-weight: 600;
-        padding: 10px 30px;
-    }
-
-    .btn-outline-light:hover {
-        background: white;
-        color: #667eea;
-    }
-
-    /* Feature Cards */
-    .feature-card {
-        padding: 2rem;
-        border: none;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        height: 100%;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .feature-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-    }
-
-    .feature-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .feature-icon.icon-1 {
-        background: rgba(102, 126, 234, 0.1);
-        color: #667eea;
-    }
-
-    .feature-icon.icon-2 {
-        background: rgba(34, 193, 230, 0.1);
-        color: #22c1e6;
-    }
-
-    .feature-icon.icon-3 {
-        background: rgba(76, 175, 80, 0.1);
-        color: #4caf50;
-    }
-
-    .feature-icon.icon-4 {
-        background: rgba(255, 152, 0, 0.1);
-        color: #ff9800;
-    }
-
-    .feature-card h5 {
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin-bottom: 0.75rem;
-        color: #2c3e50;
-    }
-
-    .feature-card p {
-        color: #666;
-        font-size: 0.95rem;
-        line-height: 1.6;
-    }
-
-    /* Benefits Section */
-    .benefits-section {
-        background: #f8f9fa;
-        padding: 80px 0;
-    }
-
-    .benefit-item {
-        display: flex;
-        gap: 2rem;
-        margin-bottom: 3rem;
-        align-items: flex-start;
-    }
-
-    .benefit-icon-box {
-        flex-shrink: 0;
-        width: 80px;
-        height: 80px;
-        background: var(--primary-gradient);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 2rem;
-    }
-
-    .benefit-content h4 {
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        color: #2c3e50;
-    }
-
-    .benefit-content p {
-        color: #666;
-        margin: 0;
-    }
-
-    /* Testimonials */
-    .testimonial-card {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-top: 4px solid #667eea;
-        height: 100%;
-    }
-
-    .testimonial-stars {
-        color: #ffc107;
-        margin-bottom: 1rem;
-        font-size: 1.2rem;
-    }
-
-    .testimonial-text {
-        color: #555;
-        margin-bottom: 1.5rem;
-        font-style: italic;
-        line-height: 1.6;
-    }
-
-    .testimonial-author {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .testimonial-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        background: var(--primary-gradient);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 1.2rem;
-    }
-
-    .testimonial-name {
-        font-weight: 700;
-        color: #2c3e50;
-        margin: 0;
-    }
-
-    .testimonial-role {
-        font-size: 0.85rem;
-        color: #999;
-        margin: 0;
-    }
-
-    /* Stats Section */
-    .stats-section {
-        background: var(--primary-gradient);
-        color: white;
-        padding: 60px 0;
-    }
-
-    .stat-item {
-        text-align: center;
-    }
-
-    .stat-number {
-        font-size: 3rem;
-        font-weight: 800;
-        margin: 0;
-    }
-
-    .stat-label {
-        font-size: 1rem;
-        opacity: 0.9;
-        margin: 0;
-    }
-
-    /* CTA Section */
-    .cta-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 80px 0;
-        text-align: center;
-    }
-
-    .cta-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 1.5rem;
-    }
-
-    .cta-subtitle {
-        font-size: 1.2rem;
-        margin-bottom: 2rem;
-        opacity: 0.95;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .hero-title {
-            font-size: 2rem;
-        }
-
-        .hero-subtitle {
-            font-size: 1.1rem;
-        }
-
-        .cta-buttons {
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .cta-buttons .btn {
-            width: 100%;
-            max-width: 300px;
-        }
-
-        .benefit-item {
-            text-align: center;
-            gap: 1rem;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-        }
-    }
-
-    .section-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 1rem;
-        color: #2c3e50;
-    }
-
-    .section-subtitle {
-        font-size: 1.1rem;
-        color: #666;
-        margin-bottom: 3rem;
-    }
-</style>
-
-<!-- Hero Section -->
-<section class="hero-section">
-    <div class="container">
-        <div class="hero-content">
-            <h1 class="hero-title">Manage Your Loans & Finances with Ease</h1>
-            <p class="hero-subtitle">A comprehensive ERP system designed for loan management and double-entry accounting. Streamline your business operations with powerful tools and real-time insights.</p>
-            <div class="cta-buttons">
-                <a href="{% url 'account_signup' %}" class="btn btn-lg btn-primary-light">
-                    <i class="bi bi-rocket-takeoff me-2"></i>Start Free Trial
-                </a>
-                <a href="#features" class="btn btn-lg btn-outline-light">
-                    <i class="bi bi-arrow-down me-2"></i>Learn More
-                </a>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Features Section -->
-<section class="py-5" id="features">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="section-title">Powerful Features</h2>
-            <p class="section-subtitle">Everything you need to manage your business efficiently</p>
-        </div>
-
-        <div class="row g-4">
-            <!-- Feature 1 -->
-            <div class="col-md-6 col-lg-3">
-                <div class="feature-card">
-                    <div class="feature-icon icon-1">
-                        <i class="bi bi-credit-card"></i>
-                    </div>
-                    <h5>Loan Management</h5>
-                    <p>Track loans with precision. Manage disbursals, repayments, and interest calculations automatically with detailed audit trails.</p>
-                </div>
-            </div>
-
-            <!-- Feature 2 -->
-            <div class="col-md-6 col-lg-3">
-                <div class="feature-card">
-                    <div class="feature-icon icon-2">
-                        <i class="bi bi-graph-up"></i>
-                    </div>
-                    <h5>Double Entry Accounting</h5>
-                    <p>Maintain accurate financial records with our robust double-entry accounting system. Balance your books effortlessly.</p>
-                </div>
-            </div>
-
-            <!-- Feature 3 -->
-            <div class="col-md-6 col-lg-3">
-                <div class="feature-card">
-                    <div class="feature-icon icon-3">
-                        <i class="bi bi-file-earmark-chart"></i>
-                    </div>
-                    <h5>Advanced Reporting</h5>
-                    <p>Generate comprehensive reports on demand. Get insights with visualizations and analytics to make data-driven decisions.</p>
-                </div>
-            </div>
-
-            <!-- Feature 4 -->
-            <div class="col-md-6 col-lg-3">
-                <div class="feature-card">
-                    <div class="feature-icon icon-4">
-                        <i class="bi bi-lock"></i>
-                    </div>
-                    <h5>Enterprise Security</h5>
-                    <p>Secure your data with enterprise-grade encryption and compliance. Role-based permissions and audit logging included.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Benefits Section -->
-<section class="benefits-section">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="text-center mb-5 mb-lg-0">
-                    <h2 class="section-title">Why Choose Our Platform?</h2>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon-box">
-                        <i class="bi bi-lightning-fast"></i>
-                    </div>
-                    <div class="benefit-content">
-                        <h4>Lightning Fast</h4>
-                        <p>Get instant access to your data with our optimized cloud infrastructure and real-time synchronization.</p>
-                    </div>
+<section class="public-hero">
+    <div class="container-lg">
+        <div class="public-hero-grid">
+            <div>
+                <div class="public-kicker">SaaS ERP for finance-led small businesses</div>
+                <h1 class="public-title">Run loans, inventory, commodity, and accounting in one workspace.</h1>
+                <p class="public-lede">
+                    Rokkad gives jewellery, gold-loan, trading, and operations teams a clear ERP workspace where every major document stays connected to accounting, inventory, commodity movement, and audit impact.
+                </p>
+                <div class="public-actions">
+                    <a href="{% url 'account_signup' %}" class="btn btn-success btn-lg">
+                        <i class="bi bi-arrow-right-circle"></i>Start workspace setup
+                    </a>
+                    <a href="#operations" class="btn btn-outline-dark btn-lg">
+                        <i class="bi bi-grid-1x2"></i>View product areas
+                    </a>
                 </div>
 
-                <div class="benefit-item">
-                    <div class="benefit-icon-box">
-                        <i class="bi bi-person-check"></i>
+                <div class="public-proof-row">
+                    <div>
+                        <div class="public-proof-label">Core model</div>
+                        <div class="public-proof-value">Accounting first</div>
                     </div>
-                    <div class="benefit-content">
-                        <h4>Easy Collaboration</h4>
-                        <p>Invite team members, set roles, and collaborate seamlessly with built-in permission controls.</p>
+                    <div>
+                        <div class="public-proof-label">Workspace access</div>
+                        <div class="public-proof-value">Role scoped</div>
                     </div>
-                </div>
-
-                <div class="benefit-item">
-                    <div class="benefit-icon-box">
-                        <i class="bi bi-clock-history"></i>
-                    </div>
-                    <div class="benefit-content">
-                        <h4>Audit Trail</h4>
-                        <p>Track every action with comprehensive audit logs. Maintain compliance and transparency effortlessly.</p>
-                    </div>
-                </div>
-
-                <div class="benefit-item">
-                    <div class="benefit-icon-box">
-                        <i class="bi bi-tools"></i>
-                    </div>
-                    <div class="benefit-content">
-                        <h4>Fully Customizable</h4>
-                        <p>Adapt the system to your business needs with flexible configurations and custom workflows.</p>
+                    <div>
+                        <div class="public-proof-label">Business fit</div>
+                        <div class="public-proof-value">Gold + ERP</div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-6">
-                <img src="https://via.placeholder.com/500x600?text=Dashboard+Screenshot" alt="Dashboard Preview" class="img-fluid rounded-3 shadow">
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Stats Section -->
-<section class="stats-section">
-    <div class="container">
-        <div class="row text-center">
-            <div class="col-md-3 mb-4 mb-md-0">
-                <div class="stat-item">
-                    <p class="stat-number">5000+</p>
-                    <p class="stat-label">Active Users</p>
+            <div class="public-product-preview" aria-label="Rokkad product preview">
+                <div class="public-preview-topbar">
+                    <div class="public-preview-title">Workspace dashboard</div>
+                    <div class="public-preview-status">Live controls</div>
                 </div>
-            </div>
-            <div class="col-md-3 mb-4 mb-md-0">
-                <div class="stat-item">
-                    <p class="stat-number">₹50Cr+</p>
-                    <p class="stat-label">Total Transactions</p>
-                </div>
-            </div>
-            <div class="col-md-3 mb-4 mb-md-0">
-                <div class="stat-item">
-                    <p class="stat-number">99.9%</p>
-                    <p class="stat-label">Uptime SLA</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <p class="stat-number">24/7</p>
-                    <p class="stat-label">Customer Support</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Testimonials Section -->
-<section class="py-5">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="section-title">Loved by Businesses</h2>
-            <p class="section-subtitle">See what our customers have to say about us</p>
-        </div>
-
-        <div class="row g-4">
-            <!-- Testimonial 1 -->
-            <div class="col-md-6 col-lg-4">
-                <div class="testimonial-card">
-                    <div class="testimonial-stars">
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                    </div>
-                    <p class="testimonial-text">"This platform has completely transformed how we manage our loans. The automation alone saves us hours every week!"</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">RK</div>
-                        <div>
-                            <p class="testimonial-name">Rajesh Kumar</p>
-                            <p class="testimonial-role">CEO, Golden Finance Ltd</p>
+                <div class="public-preview-body">
+                    <div class="public-metric-grid">
+                        <div class="public-metric">
+                            <div class="public-metric-label">Receivable</div>
+                            <div class="public-metric-value">INR 18.4L</div>
+                        </div>
+                        <div class="public-metric">
+                            <div class="public-metric-label">Gold stock</div>
+                            <div class="public-metric-value">2.8kg</div>
+                        </div>
+                        <div class="public-metric">
+                            <div class="public-metric-label">Open loans</div>
+                            <div class="public-metric-value">126</div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Testimonial 2 -->
-            <div class="col-md-6 col-lg-4">
-                <div class="testimonial-card">
-                    <div class="testimonial-stars">
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                    </div>
-                    <p class="testimonial-text">"The reporting features are incredibly detailed. We now have real-time visibility into our financial position at all times."</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">PS</div>
-                        <div>
-                            <p class="testimonial-name">Priya Sharma</p>
-                            <p class="testimonial-role">CFO, Silver Trading Co.</p>
+                    <div class="public-flow-list">
+                        <div class="public-flow-item">
+                            <div class="public-flow-icon"><i class="bi bi-receipt"></i></div>
+                            <div class="public-flow-copy">
+                                <div class="public-flow-name">Gold loan disbursal</div>
+                                <div class="public-flow-note">Loan, party, collateral, and voucher linked</div>
+                            </div>
+                            <div class="public-flow-impact">Posted</div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Testimonial 3 -->
-            <div class="col-md-6 col-lg-4">
-                <div class="testimonial-card">
-                    <div class="testimonial-stars">
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                    </div>
-                    <p class="testimonial-text">"Outstanding customer support and an intuitive interface. Our team was productive from day one. Highly recommended!"</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">AJ</div>
-                        <div>
-                            <p class="testimonial-name">Amit Joshi</p>
-                            <p class="testimonial-role">Operations Manager, Bullion Hub</p>
+                        <div class="public-flow-item">
+                            <div class="public-flow-icon"><i class="bi bi-box-seam"></i></div>
+                            <div class="public-flow-copy">
+                                <div class="public-flow-name">Inventory purchase</div>
+                                <div class="public-flow-note">Stock, supplier payable, commodity impact</div>
+                            </div>
+                            <div class="public-flow-impact">Checked</div>
+                        </div>
+                        <div class="public-flow-item">
+                            <div class="public-flow-icon"><i class="bi bi-journal-check"></i></div>
+                            <div class="public-flow-copy">
+                                <div class="public-flow-name">Accounting period</div>
+                                <div class="public-flow-note">Reports and audit trail ready</div>
+                            </div>
+                            <div class="public-flow-impact">Open</div>
                         </div>
                     </div>
                 </div>
@@ -554,17 +90,95 @@
     </div>
 </section>
 
-<!-- CTA Section -->
-<section class="cta-section">
-    <div class="container">
-        <h2 class="cta-title">Ready to Transform Your Business?</h2>
-        <p class="cta-subtitle">Join thousands of businesses already using our platform</p>
-        <a href="{% url 'account_signup' %}" class="btn btn-lg btn-primary-light">
-            <i class="bi bi-check-circle me-2"></i>Get Started Free
-        </a>
-        <p class="mt-4 mb-0" style="opacity: 0.9;">30-day free trial. No credit card required.</p>
+<section class="public-section alt" id="operations">
+    <div class="container-lg">
+        <div class="public-section-header">
+            <h2 class="public-section-title">Built around the workflows that create books.</h2>
+            <p class="public-section-copy">
+                Operational teams can work in familiar business areas while the system keeps accounting, stock, commodity, and audit context close to every document.
+            </p>
+        </div>
+
+        <div class="public-card-grid">
+            <div class="public-card">
+                <div class="public-card-icon"><i class="bi bi-person-vcard"></i></div>
+                <h3 class="public-card-title">Parties and loans</h3>
+                <p class="public-card-copy">Manage customers, suppliers, borrowers, collateral, dues, receipts, and statements with clear workspace ownership.</p>
+            </div>
+            <div class="public-card">
+                <div class="public-card-icon"><i class="bi bi-boxes"></i></div>
+                <h3 class="public-card-title">Inventory and commodity</h3>
+                <p class="public-card-copy">Track products, stock movement, gold and silver positions, rate fixing, and custody workflows from one operating surface.</p>
+            </div>
+            <div class="public-card">
+                <div class="public-card-icon"><i class="bi bi-calculator"></i></div>
+                <h3 class="public-card-title">Accounting core</h3>
+                <p class="public-card-copy">Keep vouchers, journals, ledgers, trial balance, reports, and audit trails connected to source business events.</p>
+            </div>
+        </div>
     </div>
 </section>
 
+<section class="public-impact-band">
+    <div class="container-lg">
+        <div class="public-impact-grid">
+            <div>
+                <h2 class="public-section-title text-white">Designed for controlled growth, not spreadsheet drift.</h2>
+                <p class="public-impact-copy">
+                    Start with one workspace, invite the team, configure accounting, and expand into business modules without losing tenant boundaries or source-document traceability.
+                </p>
+            </div>
+            <div>
+                <div class="public-impact-number">1</div>
+                <div class="public-impact-label">Workspace setup checklist</div>
+            </div>
+            <div>
+                <div class="public-impact-number">4</div>
+                <div class="public-impact-label">Core impact tracks</div>
+            </div>
+            <div>
+                <div class="public-impact-number">24/7</div>
+                <div class="public-impact-label">Cloud access target</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="public-section">
+    <div class="container-lg">
+        <div class="public-section-header">
+            <h2 class="public-section-title">A serious control plane for owners and finance teams.</h2>
+            <p class="public-section-copy">
+                Rokkad separates public marketing, account management, workspace settings, and tenant ERP screens so users know where they are and what data they are touching.
+            </p>
+        </div>
+
+        <div class="public-card-grid">
+            <div class="public-card alt">
+                <div class="public-card-icon"><i class="bi bi-buildings"></i></div>
+                <h3 class="public-card-title">Workspace manager</h3>
+                <p class="public-card-copy">Create workspaces, switch between companies, review pending invitations, and manage account settings outside tenant ERP data.</p>
+            </div>
+            <div class="public-card alt">
+                <div class="public-card-icon"><i class="bi bi-shield-check"></i></div>
+                <h3 class="public-card-title">Roles and permissions</h3>
+                <p class="public-card-copy">Keep owner, admin, accountant, and member access explicit as the business adds workflows and people.</p>
+            </div>
+            <div class="public-card alt">
+                <div class="public-card-icon"><i class="bi bi-clipboard2-check"></i></div>
+                <h3 class="public-card-title">Setup guidance</h3>
+                <p class="public-card-copy">Use a practical checklist for business profile, accounting setup, parties, products, stock, rates, team, and first transactions.</p>
+            </div>
+        </div>
+
+        <div class="public-actions mt-4">
+            <a href="{% url 'account_signup' %}" class="btn btn-success btn-lg">
+                <i class="bi bi-check-circle"></i>Create your account
+            </a>
+            <a href="{% url 'account_login' %}" class="btn btn-outline-dark btn-lg">
+                <i class="bi bi-box-arrow-in-right"></i>Log in
+            </a>
+        </div>
+    </div>
+</section>
 {% endblock content %}
-

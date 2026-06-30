@@ -5,259 +5,198 @@
 {% block title %}My Workspaces - Rokkad{% endblock %}
 
 {% block mgmt_content %}
-<div class="container-fluid py-5">
-    <div class="page-header mb-5">
-        <!-- Welcome Section -->
-        <div class="row align-items-center mb-5">
-            <div class="col-md-8">
-                <h1 class="h2 mb-2">
-                    <i class="bi bi-house-fill text-primary"></i> Welcome Back!
-                </h1>
-                <p class="text-muted mb-0">
-                    {% if has_workspaces %}
-                        Select a workspace to get started, or create a new one.
-                    {% else %}
-                        Get started by creating your first workspace.
-                    {% endif %}
-                </p>
-            </div>
-            <div class="col-md-4 text-end">
-                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#createWorkspaceModal">
-                    <i class="bi bi-plus-circle"></i> New Workspace
-                </button>
-            </div>
-        </div>
-
-        <hr class="my-4">
-    </div>
-
-    <div class="row">
-        <!-- Main Content Area -->
-        <div class="col-lg-8">
+<div class="mgmt-workspace-hero">
+    <div>
+        <div class="mgmt-kicker mb-1">Global workspace manager</div>
+        <h1 class="h3 fw-bold mb-1">My Workspaces</h1>
+        <p class="text-muted mb-0">
             {% if has_workspaces %}
-                <!-- Active Workspaces Section -->
-                <div class="mb-5">
-                    <h3 class="h5 fw-bold mb-4">
-                        <i class="bi bi-folder2-open"></i> Your Workspaces
-                        <span class="badge bg-secondary ms-2">{{ workspace_count }}</span>
-                    </h3>
-
-                    <div class="row g-4">
-                        {% for membership in workspaces %}
-                        <div class="col-md-6">
-                            <div class="card h-100 workspace-card shadow-sm">
-                                <div class="card-body">
-                                    <!-- Workspace Header -->
-                                    <div class="d-flex align-items-start justify-content-between mb-3">
-                                        <div class="d-flex align-items-center flex-grow-1">
-                                            <!-- Workspace Icon -->
-                                            {% if membership.company.logo %}
-                                                <img src="{{ membership.company.logo.url }}" 
-                                                     alt="{{ membership.company.name }}"
-                                                     class="rounded-circle me-3"
-                                                     style="width: 48px; height: 48px; object-fit: cover;">
-                                            {% else %}
-                                                <div class="rounded-circle me-3 d-flex align-items-center justify-content-center"
-                                                     style="width: 48px; height: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; font-size: 20px;">
-                                                    {{ membership.company.name|first|upper }}
-                                                </div>
-                                            {% endif %}
-                                            
-                                            <!-- Workspace Info -->
-                                            <div>
-                                                <h5 class="card-title mb-1">{{ membership.company.name }}</h5>
-                                                <small class="text-muted">
-                                                    <i class="bi bi-calendar-event"></i> 
-                                                    Added {{ membership.created|date:"M d, Y" }}
-                                                </small>
-                                            </div>
-                                        </div>
-
-                                        <!-- Current Badge -->
-                                        {% if current_workspace == membership.company %}
-                                        <span class="badge bg-success ms-2">
-                                            <i class="bi bi-check-circle"></i> Current
-                                        </span>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- Role & Member Count -->
-                                    <div class="d-flex align-items-center gap-2 mb-3">
-                                        {% render_role_badge role=membership.role.name %}
-                                        <small class="text-muted">
-                                            <i class="bi bi-people"></i> 
-                                            {{ membership.company.memberships.count }} member{{ membership.company.memberships.count|pluralize }}
-                                        </small>
-                                    </div>
-
-                                    <!-- Action Buttons -->
-                                    <div class="d-grid gap-2">
-                                        {% if current_workspace == membership.company %}
-                                            <a href="{% url 'workspace_dashboard' workspace_id=membership.company.id %}" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-arrow-right-circle"></i> Enter Workspace
-                                            </a>
-                                        {% else %}
-                                            <a href="{% url 'workspace_select' membership.company.id %}" class="btn btn-outline-primary btn-sm">
-                                                <i class="bi bi-box-arrow-in-right"></i> Switch To This
-                                            </a>
-                                        {% endif %}
-                                        {% if membership.role.name == 'Owner' or membership.role.name == 'Admin' %}
-                                        <a href="{% url 'workspace_detail' workspace_id=membership.company.id %}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-gear"></i> Manage
-                                        </a>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
+            Choose the business workspace you want to operate or manage.
             {% else %}
-                <!-- Empty State -->
-                <div class="text-center py-5">
-                    <div class="mb-4">
-                        <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                    </div>
-                    <h4 class="mb-2">No Workspaces Yet</h4>
-                    <p class="text-muted mb-4">Create your first workspace to get started and start managing your business.</p>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createWorkspaceModal">
-                        <i class="bi bi-plus-circle"></i> Create Your First Workspace
-                    </button>
-                </div>
+            Create your first workspace to start configuring the ERP.
             {% endif %}
-        </div>
+        </p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'app_workspace_create' %}">
+        <i class="bi bi-plus-circle me-1"></i>New Workspace
+    </a>
+</div>
 
-        <!-- Sidebar -->
-        <div class="col-lg-4">
-            <!-- Pending Invitations Card -->
-            {% if pending_invitations %}
-            <div class="card mb-4 border-warning">
-                <div class="card-header bg-warning bg-opacity-10 border-warning">
-                    <h5 class="mb-0 text-warning">
-                        <i class="bi bi-envelope-open"></i> Pending Invitations
-                        <span class="badge bg-warning text-dark ms-2">{{ invitation_count }}</span>
-                    </h5>
-                </div>
-                <div class="card-body p-3">
-                    <div class="list-group list-group-flush">
-                        {% for invitation in pending_invitations %}
-                        <div class="list-group-item py-3 px-0">
-                            <div class="d-flex align-items-start justify-content-between mb-2">
-                                <div>
-                                    <h6 class="mb-1">{{ invitation.company.name }}</h6>
-                                    <small class="text-muted">
-                                        Invited by {{ invitation.inviter.first_name|default:invitation.inviter.username }}
-                                    </small>
-                                </div>
-                                {% render_role_badge role=invitation.role.name %}
-                            </div>
-                            <div class="d-grid gap-2" style="grid-template-columns: 1fr 1fr; display: grid;">
-                                <form method="post" action="{% url 'team_invitations' %}">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="accept">
-                                    <input type="hidden" name="invitation_id" value="{{ invitation.id }}">
-                                    <button type="submit" class="btn btn-sm btn-success w-100">
-                                        <i class="bi bi-check"></i> Accept
-                                    </button>
-                                </form>
-                                <form method="post" action="{% url 'team_invitations' %}">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="decline">
-                                    <input type="hidden" name="invitation_id" value="{{ invitation.id }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
-                                        <i class="bi bi-x"></i> Decline
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div class="card-footer bg-light text-muted small d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-info-circle"></i> Invitations expire in 7 days</span>
-                    <a href="{% url 'team_invitations' %}" class="text-muted small">View all</a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Quick Stats Card -->
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Account Overview</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li class="d-flex justify-content-between align-items-center py-3 border-bottom">
-                            <span><i class="bi bi-folder2"></i> Workspaces</span>
-                            <strong class="badge bg-primary">{{ workspace_count }}</strong>
-                        </li>
-                        <li class="d-flex justify-content-between align-items-center py-3 border-bottom">
-                            <span><i class="bi bi-envelope"></i> Pending Invites</span>
-                            <strong class="badge bg-warning text-dark">{{ invitation_count }}</strong>
-                        </li>
-                        <li class="py-3 border-bottom">
-                            <a href="{% url 'team_invitations' %}" class="text-decoration-none">
-                                <i class="bi bi-envelope-check"></i> Manage Invitations
-                                <i class="bi bi-chevron-right float-end"></i>
-                            </a>
-                        </li>
-                        <li class="py-3">
-                            <a href="{% url 'profile' %}" class="text-decoration-none">
-                                <i class="bi bi-person-circle"></i> Manage Profile
-                                <i class="bi bi-chevron-right float-end"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+<div class="mgmt-workspace-summary">
+    <div class="mgmt-summary-tile">
+        <div class="mgmt-kicker mb-2">Workspaces</div>
+        <div class="mgmt-summary-value">{{ workspace_count }}</div>
+        <div class="small text-muted mt-1">available to your account</div>
+    </div>
+    <div class="mgmt-summary-tile">
+        <div class="mgmt-kicker mb-2">Pending invites</div>
+        <div class="mgmt-summary-value">{{ invitation_count }}</div>
+        <div class="small text-muted mt-1">waiting for your response</div>
+    </div>
+    <div class="mgmt-summary-tile">
+        <div class="mgmt-kicker mb-2">Sent invites</div>
+        <div class="mgmt-summary-value">{{ sent_invitations_count }}</div>
+        <div class="small text-muted mt-1">open invitations you sent</div>
     </div>
 </div>
 
-<!-- Create Workspace Modal -->
-<div class="modal fade" id="createWorkspaceModal" tabindex="-1" aria-labelledby="createWorkspaceLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title" id="createWorkspaceLabel">
-                    <i class="bi bi-plus-circle text-primary"></i> Create New Workspace
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+                <h2 class="h5 fw-bold mb-1">Workspace access</h2>
+                <p class="small text-muted mb-0">Switching updates your active workspace before entering business screens.</p>
             </div>
-            <div class="modal-body">
-                <p class="text-muted mb-4">
-                    Set up a new workspace to organize your business. You'll be assigned as the Owner.
-                </p>
-                <div class="alert alert-info" role="alert">
-                    <i class="bi bi-info-circle"></i>
-                    <strong>Note:</strong> You can invite team members after creating the workspace.
-                </div>
+            <a href="{% url 'app_invitations' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-envelope me-1"></i>Invitations
+            </a>
+        </div>
+
+        <div>
+            {% if has_workspaces %}
+            <div class="mgmt-workspace-grid">
+                {% for membership in workspaces %}
+                <section class="mgmt-workspace-card {% if current_workspace == membership.company %}current{% endif %}" aria-labelledby="workspace-card-{{ membership.company.id }}">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3 min-w-0">
+                            {% if membership.company.logo %}
+                            <img src="{{ membership.company.logo.url }}"
+                                 alt="{{ membership.company.name }}"
+                                 class="mgmt-workspace-logo">
+                            {% else %}
+                            <div class="mgmt-workspace-avatar">
+                                {{ membership.company.name|first|upper }}
+                            </div>
+                            {% endif %}
+                            <div class="min-w-0">
+                                <h3 id="workspace-card-{{ membership.company.id }}" class="h6 fw-bold mb-1">{{ membership.company.name }}</h3>
+                                <div class="small text-muted">Added {{ membership.created|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+                        {% if current_workspace == membership.company %}
+                        <span class="mgmt-status-badge done"><i class="bi bi-check-circle"></i>Active</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mgmt-workspace-meta">
+                        {% render_role_badge role=membership.role.name %}
+                        <span class="small text-muted">
+                            <i class="bi bi-people me-1"></i>{{ membership.company.memberships.count }} member{{ membership.company.memberships.count|pluralize }}
+                        </span>
+                    </div>
+
+                    <div class="mgmt-workspace-actions">
+                        {% if current_workspace == membership.company %}
+                        <a href="{% url 'workspace_dashboard' workspace_id=membership.company.id %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-arrow-right-circle me-1"></i>Enter Workspace
+                        </a>
+                        {% else %}
+                        <a href="{% url 'workspace_select' membership.company.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Switch Workspace
+                        </a>
+                        {% endif %}
+                        {% if membership.role.name == 'Owner' or membership.role.name == 'Admin' %}
+                        <a href="{% url 'workspace_settings_home' workspace_id=membership.company.id %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-gear me-1"></i>Settings
+                        </a>
+                        {% endif %}
+                    </div>
+                </section>
+                {% endfor %}
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="{% url 'workspace_create' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Create Workspace
+            {% else %}
+            <div class="mgmt-empty-state">
+                <div class="mb-3"><i class="bi bi-inbox fs-1 text-muted"></i></div>
+                <h2 class="h5 fw-bold mb-2">No workspaces yet</h2>
+                <p class="text-muted mb-3">Create your first workspace to configure business settings, accounting, inventory, and team access.</p>
+                <a href="{% url 'app_workspace_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Create Workspace
                 </a>
             </div>
+            {% endif %}
         </div>
     </div>
+
+    <div class="col-xl-4">
+        {% if pending_invitations %}
+        <aside class="mgmt-side-card mb-4">
+            <div class="p-3 border-bottom">
+                <h2 class="h6 fw-bold mb-1">
+                    <i class="bi bi-envelope-open me-1 text-warning"></i>Pending invitations
+                    <span class="badge bg-warning text-dark ms-2">{{ invitation_count }}</span>
+                </h2>
+                <p class="small text-muted mb-0">Join workspaces where you have been invited.</p>
+            </div>
+            <div class="p-3">
+                {% for invitation in pending_invitations %}
+                <div class="py-3 {% if not forloop.last %}border-bottom{% endif %}">
+                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                        <div>
+                            <h3 class="h6 mb-1">{{ invitation.company.name }}</h3>
+                            <small class="text-muted">
+                                Invited by {{ invitation.inviter.first_name|default:invitation.inviter.username }}
+                            </small>
+                        </div>
+                        {% render_role_badge role=invitation.role.name %}
+                    </div>
+                    <div class="d-grid gap-2" style="grid-template-columns: 1fr 1fr;">
+                        <form method="post" action="{% url 'team_invitations' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="accept">
+                            <input type="hidden" name="invitation_id" value="{{ invitation.id }}">
+                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                <i class="bi bi-check"></i> Accept
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'team_invitations' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="decline">
+                            <input type="hidden" name="invitation_id" value="{{ invitation.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
+                                <i class="bi bi-x"></i> Decline
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="p-3 border-top small d-flex justify-content-between align-items-center">
+                <span class="text-muted"><i class="bi bi-info-circle me-1"></i>Invitations expire in 7 days</span>
+                <a href="{% url 'app_invitations' %}" class="text-muted">View all</a>
+            </div>
+        </aside>
+        {% endif %}
+
+        <aside class="mgmt-side-card">
+            <div class="p-3 border-bottom">
+                <h2 class="h6 fw-bold mb-1">Account overview</h2>
+                <p class="small text-muted mb-0">Global account actions stay outside tenant ERP screens.</p>
+            </div>
+            <div class="p-3">
+                <ul class="list-unstyled mb-0">
+                    <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span><i class="bi bi-folder2 me-1"></i>Workspaces</span>
+                        <strong class="badge bg-primary">{{ workspace_count }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span><i class="bi bi-envelope me-1"></i>Pending invites</span>
+                        <strong class="badge bg-warning text-dark">{{ invitation_count }}</strong>
+                    </li>
+                    <li class="py-2 border-bottom">
+                        <a href="{% url 'app_invitations' %}" class="text-decoration-none d-flex justify-content-between">
+                            <span><i class="bi bi-envelope-check me-1"></i>Manage invitations</span>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="py-2">
+                        <a href="{% url 'profile' %}" class="text-decoration-none d-flex justify-content-between">
+                            <span><i class="bi bi-person-circle me-1"></i>Manage profile</span>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+    </div>
 </div>
-
-<style>
-.workspace-card {
-    transition: all 0.3s ease;
-    border: 1px solid #e0e0e0;
-}
-
-.workspace-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-    border-color: #667eea;
-}
-
-.page-header {
-    padding: 1rem 0;
-}
-</style>
 {% endblock mgmt_content %}

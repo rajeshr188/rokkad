@@ -1,0 +1,370 @@
+.workspace-shell {
+    background: #f6f7f9;
+}
+
+.workspace-context-bar {
+    align-items: center;
+    background: #0f766e;
+    color: #ffffff;
+    display: flex;
+    font-size: 0.78rem;
+    justify-content: space-between;
+    letter-spacing: 0;
+    padding: 0.42rem 1.25rem;
+}
+
+.workspace-role-pill {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-left: 0.45rem;
+    padding: 0.08rem 0.5rem;
+}
+
+.workspace-switch-link {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.workspace-switch-link:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+.workspace-page {
+    min-height: calc(100vh - 70px);
+}
+
+.workspace-sidebar {
+    background: #ffffff;
+    border-right: 1px solid #dde3ea;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
+    position: sticky;
+    top: 70px;
+}
+
+.workspace-content {
+    padding-bottom: 80px;
+}
+
+.workspace-sidebar-wrapper {
+    padding: 0.9rem;
+}
+
+.workspace-sidebar-sticky {
+    position: sticky;
+    top: 1rem;
+}
+
+.workspace-identity {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    padding: 0.9rem;
+}
+
+.workspace-identity-kicker {
+    color: #065f46;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    margin-bottom: 0.28rem;
+    text-transform: uppercase;
+}
+
+.workspace-identity-name {
+    color: #064e3b;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.workspace-identity-role {
+    background: rgba(5, 150, 105, 0.14);
+    border-radius: 999px;
+    color: #065f46;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-top: 0.45rem;
+    padding: 0.12rem 0.5rem;
+}
+
+.workspace-nav {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.workspace-nav-section {
+    margin-top: 1rem;
+}
+
+.workspace-nav-section-title {
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    margin-bottom: 0.45rem;
+    padding-left: 0.65rem;
+    text-transform: uppercase;
+}
+
+.workspace-nav-link {
+    align-items: center;
+    border-radius: 7px;
+    color: #334155;
+    display: flex;
+    font-size: 0.9rem;
+    font-weight: 650;
+    gap: 0.55rem;
+    line-height: 1.25;
+    min-height: 36px;
+    padding: 0.48rem 0.65rem;
+    text-decoration: none;
+}
+
+.workspace-nav-link:hover {
+    background: #eef6ff;
+    color: #0f766e;
+}
+
+.workspace-nav-link.active {
+    background: #0f766e;
+    color: #ffffff;
+}
+
+.workspace-nav-link i {
+    flex: 0 0 1.1rem;
+    text-align: center;
+}
+
+.workspace-nav-link .badge {
+    margin-left: auto;
+}
+
+.workspace-sidebar-meta {
+    border-top: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 0.82rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+
+.workspace-offcanvas {
+    --bs-offcanvas-width: 280px;
+    box-shadow: 0 0 20px rgba(15, 23, 42, 0.18);
+}
+
+.workspace-offcanvas .offcanvas-body {
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+.workspace-sidebar-toggle {
+    align-items: center;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+    display: flex;
+    height: 50px;
+    justify-content: center;
+    padding: 0;
+    width: 50px;
+}
+
+.tenant-page-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.tenant-page-title {
+    color: #111827;
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+}
+
+.tenant-page-subtitle {
+    color: #64748b;
+    margin-bottom: 0;
+}
+
+.tenant-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tenant-stat-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 1rem;
+}
+
+.tenant-stat-card,
+.tenant-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.tenant-stat-card {
+    align-items: center;
+    display: flex;
+    gap: 0.8rem;
+    min-height: 86px;
+    padding: 1rem;
+}
+
+.tenant-stat-icon {
+    align-items: center;
+    border-radius: 8px;
+    display: inline-flex;
+    flex: 0 0 42px;
+    height: 42px;
+    justify-content: center;
+    width: 42px;
+}
+
+.tenant-stat-label {
+    color: #64748b;
+    font-size: 0.78rem;
+    margin-bottom: 0.15rem;
+}
+
+.tenant-stat-value {
+    color: #111827;
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.tenant-panel {
+    margin-bottom: 1rem;
+}
+
+.tenant-panel-header {
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0.9rem 1rem;
+}
+
+.tenant-panel-title {
+    color: #111827;
+    font-size: 0.98rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.tenant-panel-body {
+    padding: 1rem;
+}
+
+.tenant-quick-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tenant-quick-action {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #111827;
+    display: block;
+    min-height: 92px;
+    padding: 0.95rem;
+    text-decoration: none;
+}
+
+.tenant-quick-action:hover {
+    background: #f8fafc;
+    border-color: #99f6e4;
+    color: #0f766e;
+}
+
+.tenant-quick-title {
+    font-weight: 800;
+    margin-bottom: 0.3rem;
+}
+
+.tenant-quick-copy {
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.tenant-metric-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tenant-metric {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.9rem;
+}
+
+.tenant-metric-label {
+    color: #64748b;
+    font-size: 0.78rem;
+}
+
+.tenant-metric-value {
+    color: #111827;
+    font-weight: 800;
+}
+
+.tenant-empty-state {
+    padding: 2.5rem 1rem;
+    text-align: center;
+}
+
+.tenant-empty-icon {
+    color: #94a3b8;
+    font-size: 2.5rem;
+    opacity: 0.7;
+}
+
+@media (max-width: 1199.98px) {
+    .tenant-stat-grid,
+    .tenant-quick-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 991.98px) {
+    .workspace-sidebar {
+        display: none !important;
+    }
+
+    .workspace-content {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .workspace-context-bar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .tenant-stat-grid,
+    .tenant-quick-grid,
+    .tenant-metric-grid {
+        grid-template-columns: 1fr;
+    }
+}

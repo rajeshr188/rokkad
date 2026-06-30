@@ -17,8 +17,21 @@ def google_oauth_context(request):
     Expose Google OAuth client ID from settings to templates.
     Prevents hardcoding secrets in template files.
     """
-    google_client_id = settings.SOCIALACCOUNT_PROVIDERS.get('google', {}).get('CLIENT_ID', '')
-    return {'GOOGLE_CLIENT_ID': google_client_id}
+    google_client_id = settings.SOCIALACCOUNT_PROVIDERS.get("google", {}).get("CLIENT_ID", "")
+    google_oauth_enabled = False
+
+    if google_client_id:
+        try:
+            from allauth.socialaccount.models import SocialApp
+
+            google_oauth_enabled = SocialApp.objects.filter(provider="google").exists()
+        except Exception:
+            google_oauth_enabled = False
+
+    return {
+        "GOOGLE_CLIENT_ID": google_client_id,
+        "GOOGLE_OAUTH_ENABLED": google_oauth_enabled,
+    }
 
 
 def user_permissions(request):

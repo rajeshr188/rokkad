@@ -459,6 +459,7 @@ Current checkpoint:
 - Phase 2.4 workspace settings layout separation moves clear workspace-admin/settings templates to `base_workspace_settings.html`: workspace detail, preferences, team members, sent invitations, invite member, leave workspace, delete workspace, dynamic preferences, and subscription screens. The management shell now exposes no-op `workspace_settings_sidebar` and `mobile_workspace_settings_sidebar` include points for a future settings sidebar without changing current navigation behavior.
 - Phase 2.5 shell render smoke tests now render synthetic child templates against `base_public.html`, `base_auth.html`, `base_global.html`, `base_workspace_settings.html`, and `base_tenant.html`, proving the shell aliases and their expected content blocks render before navigation/sidebar visual changes.
 - Phase 2.6 route/template inventory documentation now records current URLConf ownership, route families, shell ownership, guard tests, and mixed-boundary risks in `docs/ui/route_template_inventory.md`.
+- Phase 2 should be read as complete for the route/template standardization scope only. It did not implement the full target `/w/<workspace_slug>/...` route map; that remains a future alias/redirect rollout after the current `/app/...` and `/workspace/<id>/settings/...` control-plane aliases are stable.
 - Phase 3.1 navigation and workspace switcher planning now records topbar/sidebar ownership, workspace switcher behavior, mobile navigation rules, and guard tests in `docs/ui/navigation_workspace_switcher_plan.md`.
 - Phase 3.2 workspace switcher reuse now moves the topbar workspace dropdown into the reusable `templates/components/navigation/workspace_switcher.html` partial using a navbar variant, with authenticated global and tenant shell smoke coverage.
 - Phase 3.3 desktop settings-sidebar extraction now moves desktop workspace settings, preferences, team, invite, and sent-invitation links into `templates/components/navigation/workspace_settings_sidebar.html`, leaving mobile management links stable for the next slice.
@@ -513,10 +514,21 @@ Current checkpoint:
 - Phase 6.7 moves onboarding team invitation creation/sending behind `apps.orgs.services.control_plane.send_onboarding_team_invitations()`, while preserving optional skip behavior, progress updates, messages, audit summary, and partial-failure logging.
 - Phase 6.8 adds user-specific setup completion/dismiss state through `WorkspaceSetupState`, setup-state service helpers, dashboard card hide/show behavior, and canonical/legacy setup state POST routes without adding ERP access gates.
 - Phase 6.9 review is documented in `docs/ui/phase6_onboarding_review.md`, including compatibility findings, verification commands, rollout notes, and the recommended phase-level commit.
+- Phase 7.1 starts modern fintech UI polish with documentation and guard tests only. `docs/ui/phase7_modern_fintech_ui_polish_plan.md` defines the product-area visual targets, management/workspace setup first slice, non-negotiables, safe implementation order, and acceptance criteria. `django_project/test_phase7_ui_polish_intent.py` guards that the setup surfaces stay advisory, settings-shell owned, static-stylesheet backed, and canonical-route targeted before CSS/template polish begins.
+- Phase 7.2 adds a small management/setup visual vocabulary to `static/css/management.css` and applies it only to `templates/company/workspace_setup.html`, replacing generic setup cards with setup-specific hero, progress, task, action, and status classes while preserving all routes, forms, links, setup state actions, and advisory behavior.
+- Phase 7.3 applies the same setup visual vocabulary to the workspace dashboard setup card in `templates/company/workspace_dashboard.html`, preserving dashboard visibility, canonical setup link, dismiss POST behavior, checklist action URLs, and onboarding behavior.
+- Preferences visibility checkpoint: workspace Preferences is already available at the canonical `workspace_settings_preferences` alias, and the settings sidebar now exposes it to `Owner`, `Admin`, and platform `Superuser` users instead of hiding it from admins.
+- Phase 7.4 extracts repeated setup checklist task/status/action markup into `templates/components/setup/setup_checklist_task.html`, reused by both `workspace_setup.html` and `workspace_dashboard.html` with page-specific heading/id context and unchanged action URLs.
+- Phase 7.5 polishes the global workspace selector/list surface in `templates/company/workspace_home.html` into a clearer workspace manager, with summary tiles, explicit active-workspace state, canonical create/invitations/settings links, and preserved `workspace_select` switching plus invitation POST behavior.
+- Phase 7.6 records the public/auth route and template inventory in `docs/ui/phase7_public_auth_polish_plan.md` with guard tests in `django_project/test_phase7_public_auth_intent.py`. It deliberately does not implement `/pricing/`, short auth aliases, the `/invitations/accept/<key>` target alias, or missing public templates.
+- Phase 7.7 applies the first public/auth visual polish pass: `static/css/public.css` now owns shared public/auth styling, `base_public.html` and `base_auth.html` load it, the landing page no longer uses inline CSS or a remote placeholder image, and login/signup/password reset use a consistent auth layout while preserving allauth/social-auth behavior.
+- Phase 7.8 render-reviews the public/auth pages and fixes the no-`SocialApp` Google OAuth crash by exposing `GOOGLE_OAUTH_ENABLED` from `django_project.context_processors.google_oauth_context` and conditionally rendering Google auth CTAs.
+- Phase 7.9 applies the first tenant ERP dashboard/navigation density pass: `static/css/workspace.css` owns tenant shell/sidebar/dashboard styles, `base_tenant.html` loads it, tenant layout/sidebar inline style blocks are removed, and the workspace dashboard uses denser static classes while preserving route names and workflow behavior.
+- Phase 7.10 closes the first-pass UI polish track in `docs/ui/phase7_modern_fintech_ui_polish_review.md`. The review explicitly records that the current polish is basic infrastructure/surface cleanup, not the final high-fidelity fintech redesign. Deeper visual design, the full `/w/<workspace_slug>/...` target route map, `/pricing/`, short auth aliases, direct invitation accept aliases, missing public templates, and broader tenant ERP module polish remain separate future work.
 
 Next recommended SaaS IA slice:
 
-- Commit Phase 6 as a single phase-level commit, then start Phase 7 modern fintech UI polish with the management/workspace setup surfaces as the first review targets.
+- Commit the Phase 7 set as one phase-level commit, then start Phase 8 regression consolidation for the SaaS IA plan. Keep pricing, short auth aliases, missing public templates, and the full `/w/<workspace_slug>/...` target route-map rollout as a later alias/redirect phase.
 
 ### Phase 3: Navigation and Workspace Switcher
 
@@ -546,6 +558,7 @@ Next recommended SaaS IA slice:
 - Polish public pages as a SaaS fintech funnel.
 - Make global app feel like a workspace manager.
 - Make tenant ERP denser, clearer, and operational.
+- Current status: first-pass infrastructure and surface cleanup is complete; deeper high-fidelity product-design polish remains future work.
 
 ### Phase 8: Tests and Regression Checks
 
