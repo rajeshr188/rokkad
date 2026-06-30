@@ -80,10 +80,18 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "workspace_slug_settings_preferences": "/w/acme/settings/preferences/",
             "workspace_slug_settings_team": "/w/acme/settings/team/",
             "workspace_slug_settings_invitations": "/w/acme/settings/invitations/",
+            "workspace_slug_settings_profile": "/w/acme/settings/profile/",
+            "workspace_slug_settings_billing": "/w/acme/settings/billing/",
+            "workspace_slug_settings_accounting": "/w/acme/settings/accounting/",
+            "workspace_slug_operations": "/w/acme/operations/",
             "workspace_slug_parties": "/w/acme/parties/",
+            "workspace_slug_sales": "/w/acme/sales/",
+            "workspace_slug_purchase": "/w/acme/purchase/",
             "workspace_slug_loans": "/w/acme/loans/",
             "workspace_slug_inventory": "/w/acme/inventory/",
             "workspace_slug_accounting": "/w/acme/accounting/",
+            "workspace_slug_commodity": "/w/acme/commodity/",
+            "workspace_slug_reports": "/w/acme/reports/",
         }
 
         for route_name, expected_path in route_cases.items():
@@ -99,10 +107,18 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "/w/acme/settings/preferences/": "workspace_slug_settings_preferences",
             "/w/acme/settings/team/": "workspace_slug_settings_team",
             "/w/acme/settings/invitations/": "workspace_slug_settings_invitations",
+            "/w/acme/settings/profile/": "workspace_slug_settings_profile",
+            "/w/acme/settings/billing/": "workspace_slug_settings_billing",
+            "/w/acme/settings/accounting/": "workspace_slug_settings_accounting",
+            "/w/acme/operations/": "workspace_slug_operations",
             "/w/acme/parties/": "workspace_slug_parties",
+            "/w/acme/sales/": "workspace_slug_sales",
+            "/w/acme/purchase/": "workspace_slug_purchase",
             "/w/acme/loans/": "workspace_slug_loans",
             "/w/acme/inventory/": "workspace_slug_inventory",
             "/w/acme/accounting/": "workspace_slug_accounting",
+            "/w/acme/commodity/": "workspace_slug_commodity",
+            "/w/acme/reports/": "workspace_slug_reports",
         }
 
         for path, route_name in route_cases.items():
@@ -258,26 +274,26 @@ class SaaSRouteIntentTests(SimpleTestCase):
         self.assertEqual(resolve("/pricing/", urlconf=urls).url_name, "pricing")
         self.assertEqual(resolve("/pricing/", urlconf=tenant_urls).url_name, "pricing")
 
-    def test_future_public_and_tenant_route_aliases_are_intentionally_absent(self):
+    def test_still_deferred_public_and_tenant_route_aliases_are_intentionally_absent(self):
         absent_route_names = (
-            "workspace_slug_reports",
-            "workspace_slug_operations",
-            "workspace_slug_sales",
-            "workspace_slug_purchase",
-            "workspace_slug_commodity",
+            "workspace_slug_contact",
+            "workspace_slug_settings_roles",
+            "workspace_slug_settings_modules",
+            "workspace_slug_settings_numbering",
+            "workspace_slug_settings_security",
         )
 
         for route_name in absent_route_names:
             with self.subTest(route_name=route_name):
                 with self.assertRaises(NoReverseMatch):
-                    reverse(route_name)
+                    reverse(route_name, kwargs={"workspace_slug": "acme"})
 
         absent_paths = (
-            "/w/acme/reports/",
-            "/w/acme/operations/",
-            "/w/acme/sales/",
-            "/w/acme/purchase/",
-            "/w/acme/commodity/",
+            "/w/acme/contact/",
+            "/w/acme/settings/roles/",
+            "/w/acme/settings/modules/",
+            "/w/acme/settings/numbering/",
+            "/w/acme/settings/security/",
         )
 
         for path in absent_paths:

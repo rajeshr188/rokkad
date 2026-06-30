@@ -135,9 +135,39 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         name="workspace_slug_settings_invitations",
     ),
     path(
+        "w/<str:workspace_slug>/settings/profile/",
+        org_views.workspace_slug_settings_profile,
+        name="workspace_slug_settings_profile",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/billing/",
+        org_views.workspace_slug_settings_billing,
+        name="workspace_slug_settings_billing",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/accounting/",
+        org_views.workspace_slug_settings_accounting,
+        name="workspace_slug_settings_accounting",
+    ),
+    path(
+        "w/<str:workspace_slug>/operations/",
+        org_views.workspace_slug_operations,
+        name="workspace_slug_operations",
+    ),
+    path(
         "w/<str:workspace_slug>/parties/",
         org_views.workspace_slug_parties,
         name="workspace_slug_parties",
+    ),
+    path(
+        "w/<str:workspace_slug>/sales/",
+        org_views.workspace_slug_sales,
+        name="workspace_slug_sales",
+    ),
+    path(
+        "w/<str:workspace_slug>/purchase/",
+        org_views.workspace_slug_purchase,
+        name="workspace_slug_purchase",
     ),
     path(
         "w/<str:workspace_slug>/loans/",
@@ -153,6 +183,16 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         "w/<str:workspace_slug>/accounting/",
         org_views.workspace_slug_accounting,
         name="workspace_slug_accounting",
+    ),
+    path(
+        "w/<str:workspace_slug>/commodity/",
+        org_views.workspace_slug_commodity,
+        name="workspace_slug_commodity",
+    ),
+    path(
+        "w/<str:workspace_slug>/reports/",
+        org_views.workspace_slug_reports,
+        name="workspace_slug_reports",
     ),
 ]
 

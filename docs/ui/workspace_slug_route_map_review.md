@@ -101,3 +101,20 @@ modules plus security absent until real workspace-owned screens exist.
 
 The next safe implementation slice is Phase 11.2: add only the safe redirect
 aliases.
+
+## Phase 11.2 Follow-Up
+
+Phase 11.2 is implemented. The safe redirect aliases are now live for:
+
+- `/w/<workspace_slug>/operations/`
+- `/w/<workspace_slug>/sales/`
+- `/w/<workspace_slug>/purchase/`
+- `/w/<workspace_slug>/commodity/`
+- `/w/<workspace_slug>/reports/`
+- `/w/<workspace_slug>/settings/profile/`
+- `/w/<workspace_slug>/settings/billing/`
+- `/w/<workspace_slug>/settings/accounting/`
+
+Contact remains intentionally absent. Settings roles, modules, numbering, and
+security also remain absent until the interim redirect or real-screen decisions
+are made.

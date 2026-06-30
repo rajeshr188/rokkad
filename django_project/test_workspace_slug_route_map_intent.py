@@ -35,13 +35,13 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
         ):
             self.assertIn(expected, content)
 
-    def test_phase101_workspace_slug_routes_remain_intentionally_absent(self):
+    def test_phase101_unsafe_workspace_slug_routes_remain_intentionally_absent(self):
         absent_route_names = (
-            "workspace_slug_operations",
-            "workspace_slug_sales",
-            "workspace_slug_purchase",
-            "workspace_slug_commodity",
-            "workspace_slug_reports",
+            "workspace_slug_contact",
+            "workspace_slug_settings_roles",
+            "workspace_slug_settings_modules",
+            "workspace_slug_settings_numbering",
+            "workspace_slug_settings_security",
         )
 
         for route_name in absent_route_names:
@@ -50,12 +50,11 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
                     reverse(route_name, kwargs={"workspace_slug": "acme"})
 
         absent_paths = (
-            "/w/acme/operations/",
-            "/w/acme/sales/",
-            "/w/acme/purchase/",
-            "/w/acme/commodity/",
-            "/w/acme/reports/",
             "/w/acme/contact/",
+            "/w/acme/settings/roles/",
+            "/w/acme/settings/modules/",
+            "/w/acme/settings/numbering/",
+            "/w/acme/settings/security/",
         )
 
         for path in absent_paths:
@@ -131,10 +130,18 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
             "workspace_slug_settings_preferences": "/w/acme/settings/preferences/",
             "workspace_slug_settings_team": "/w/acme/settings/team/",
             "workspace_slug_settings_invitations": "/w/acme/settings/invitations/",
+            "workspace_slug_settings_profile": "/w/acme/settings/profile/",
+            "workspace_slug_settings_billing": "/w/acme/settings/billing/",
+            "workspace_slug_settings_accounting": "/w/acme/settings/accounting/",
+            "workspace_slug_operations": "/w/acme/operations/",
             "workspace_slug_parties": "/w/acme/parties/",
+            "workspace_slug_sales": "/w/acme/sales/",
+            "workspace_slug_purchase": "/w/acme/purchase/",
             "workspace_slug_loans": "/w/acme/loans/",
             "workspace_slug_inventory": "/w/acme/inventory/",
             "workspace_slug_accounting": "/w/acme/accounting/",
+            "workspace_slug_commodity": "/w/acme/commodity/",
+            "workspace_slug_reports": "/w/acme/reports/",
         }
 
         self.assertEqual(
@@ -173,6 +180,37 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
             with self.subTest(urlconf=urlconf):
                 with self.assertRaises(Resolver404):
                     resolve("/w/acme/contact/", urlconf=urlconf)
+
+    def test_phase112_safe_deferred_slug_aliases_are_live(self):
+        route_cases = {
+            "workspace_slug_operations": "/w/acme/operations/",
+            "workspace_slug_sales": "/w/acme/sales/",
+            "workspace_slug_purchase": "/w/acme/purchase/",
+            "workspace_slug_commodity": "/w/acme/commodity/",
+            "workspace_slug_reports": "/w/acme/reports/",
+            "workspace_slug_settings_profile": "/w/acme/settings/profile/",
+            "workspace_slug_settings_billing": "/w/acme/settings/billing/",
+            "workspace_slug_settings_accounting": "/w/acme/settings/accounting/",
+        }
+
+        for route_name, expected_path in route_cases.items():
+            with self.subTest(route_name=route_name):
+                self.assertEqual(
+                    reverse(route_name, kwargs={"workspace_slug": "acme"}),
+                    expected_path,
+                )
+                self.assertEqual(resolve(expected_path).url_name, route_name)
+
+    def test_phase112_interim_and_new_screen_settings_aliases_remain_absent(self):
+        for route_name in (
+            "workspace_slug_settings_roles",
+            "workspace_slug_settings_modules",
+            "workspace_slug_settings_numbering",
+            "workspace_slug_settings_security",
+        ):
+            with self.subTest(route_name=route_name):
+                with self.assertRaises(NoReverseMatch):
+                    reverse(route_name, kwargs={"workspace_slug": "acme"})
 
     def test_phase107_review_closes_workspace_slug_route_map_phase(self):
         review_path = DOCS_UI_ROOT / "workspace_slug_route_map_review.md"

@@ -58,6 +58,8 @@ Record this target plan and guard it with tests. Do not add runtime routes.
 
 ### Phase 11.2: Safe Redirect Aliases
 
+Status: complete.
+
 Add redirect aliases only for targets marked `safe redirect target`:
 
 - operations;
@@ -93,6 +95,7 @@ account-level allauth settings.
 
 ## Next Recommended Step
 
-Proceed with Phase 11.2: implement safe redirect aliases for operations, sales,
-purchase, commodity, reports, profile, billing, and accounting. Keep modules and
-security absent until real workspace-owned screens exist.
+Proceed with Phase 11.3 only if interim settings redirects are acceptable:
+settings/roles can point to team management, and settings/numbering can point to
+Girvi series. Otherwise skip directly to Phase 11.4 and design real
+workspace-owned modules and security/audit screens.

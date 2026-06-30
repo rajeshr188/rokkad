@@ -409,6 +409,8 @@ Phase 10.7 workspace slug route-map review is complete in `docs/ui/workspace_slu
 
 Phase 11.1 deferred workspace slug target selection is complete in `docs/ui/workspace_slug_deferred_targets_plan.md`. Operations, sales, and purchase target `dea_business_events_dashboard` because the old sales/purchase runtime apps were removed; commodity targets `dea_commodity_list`; reports targets `dea_reports_hub`; profile, billing, and accounting target `workspace_update`, `subscriptions:dashboard`, and `dea_chart_of_accounts`; roles and numbering are interim targets (`workspace_settings_team`, `girvi:girvi_series_list`); modules and security should stay absent until real workspace-owned screens exist. Phase 11.2 should implement only the safe redirect aliases before the interim or new-screen settings work.
 
+Phase 11.2 safe deferred workspace slug aliases are implemented. Operations/sales/purchase redirect to `dea_business_events_dashboard`, commodity redirects to `dea_commodity_list`, reports redirects to `dea_reports_hub`, settings/profile redirects to `workspace_update`, settings/billing selects the workspace then redirects to `subscriptions:dashboard`, and settings/accounting redirects to `dea_chart_of_accounts`. Contact plus settings roles/modules/numbering/security remain absent until separate decisions.
+
 ## Navigation Memory
 
 Main sidebar direction:

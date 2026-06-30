@@ -157,6 +157,26 @@ def workspace_slug_settings_invitations(request, workspace_slug):
 
 
 @login_required
+def workspace_slug_settings_profile(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return redirect("workspace_update", workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_billing(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    select_url = reverse("workspace_select", kwargs={"workspace_id": workspace.id})
+    billing_url = reverse("subscriptions:dashboard")
+    return redirect(f"{select_url}?next={billing_url}")
+
+
+@login_required
+def workspace_slug_settings_accounting(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("dea_chart_of_accounts")
+
+
+@login_required
 def workspace_slug_parties(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
     return redirect("party:party_list")
@@ -178,6 +198,36 @@ def workspace_slug_inventory(request, workspace_slug):
 def workspace_slug_accounting(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
     return redirect("dea_home")
+
+
+@login_required
+def workspace_slug_operations(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("dea_business_events_dashboard")
+
+
+@login_required
+def workspace_slug_sales(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("dea_business_events_dashboard")
+
+
+@login_required
+def workspace_slug_purchase(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("dea_business_events_dashboard")
+
+
+@login_required
+def workspace_slug_commodity(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("dea_commodity_list")
+
+
+@login_required
+def workspace_slug_reports(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("dea_reports_hub")
 
 
 def _assert_owner_access(request, workspace, allow_platform_admin=True):
