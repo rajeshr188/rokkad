@@ -1,0 +1,32 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Help{% endblock %}
+
+{% block content %}
+<section class="public-section alt">
+    <div class="container">
+        <div class="public-section-header">
+            <div class="public-kicker">Help</div>
+            <h1 class="public-section-title">Get oriented before daily operations begin.</h1>
+            <p class="public-section-copy">
+                Rokkad is organized around workspaces, setup checklists, business documents, and accounting impact. Start with workspace setup, then add parties, products, opening balances, and first transactions.
+            </p>
+        </div>
+
+        <div class="public-card-grid">
+            <article class="public-card">
+                <h2 class="public-card-title">Create a workspace</h2>
+                <p class="public-card-copy">Workspace owners create the business profile, invite team members, and configure settings.</p>
+            </article>
+            <article class="public-card">
+                <h2 class="public-card-title">Complete setup</h2>
+                <p class="public-card-copy">Use the setup checklist for accounting readiness, parties, products, opening stock, and opening balances.</p>
+            </article>
+            <article class="public-card">
+                <h2 class="public-card-title">Run operations</h2>
+                <p class="public-card-copy">Daily ERP work should happen inside the selected workspace, with business documents linked to accounting and audit impact.</p>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock content %}

@@ -1,0 +1,35 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Contact{% endblock %}
+
+{% block content %}
+<section class="public-section alt">
+    <div class="container">
+        <div class="public-section-header">
+            <div class="public-kicker">Contact</div>
+            <h1 class="public-section-title">Talk to us about your business workflow.</h1>
+            <p class="public-section-copy">
+                Share how you manage loans, inventory, commodity, sales, purchases, and accounting today. We use that context to guide onboarding and workspace setup.
+            </p>
+        </div>
+
+        <div class="public-card-grid">
+            <article class="public-card">
+                <div class="public-card-icon"><i class="bi bi-envelope"></i></div>
+                <h2 class="public-card-title">Email</h2>
+                <p class="public-card-copy">Use your preferred support or sales email channel while formal contact routing is finalized.</p>
+            </article>
+            <article class="public-card">
+                <div class="public-card-icon"><i class="bi bi-list-check"></i></div>
+                <h2 class="public-card-title">What to include</h2>
+                <p class="public-card-copy">Business type, locations, team size, current software, and the workflows you want to standardize first.</p>
+            </article>
+            <article class="public-card">
+                <div class="public-card-icon"><i class="bi bi-calendar-check"></i></div>
+                <h2 class="public-card-title">Next step</h2>
+                <p class="public-card-copy">We will map your workspace setup sequence before adding operational data.</p>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock content %}

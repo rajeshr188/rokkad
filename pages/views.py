@@ -23,6 +23,10 @@ class TenantPageView(TemplateView):
     template_name = "pages/tenant.html"
 
 
+class PricingPageView(TemplateView):
+    template_name = "pages/pricing.html"
+
+
 @login_required
 @onboarding_required
 def Dashboard(request):

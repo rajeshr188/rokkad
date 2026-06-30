@@ -383,6 +383,16 @@ Phase 8.7 authorization regression is complete in `django_project/test_authoriza
 
 Phase 8.8 regression closeout is complete in `docs/ui/phase8_regression_consolidation_review.md`. The review records completed guard coverage, deferred scope, compatibility findings, verification commands, expected test log noise, and the tests/documentation-only commit boundary. The next safe SaaS IA action is to commit the Phase 8 set, then start a follow-on alias/template phase for `/pricing/`, missing public templates, short auth aliases, `/invitations/accept/<key>`, and the full `/w/<workspace_slug>/...` route-map rollout.
 
+Phase 9.1 public/auth alias-template rollout planning is complete in `docs/ui/public_auth_alias_template_rollout_plan.md`, with guard coverage in `django_project/test_public_auth_alias_template_rollout_intent.py`. Runtime behavior is unchanged: `/pricing/`, short auth aliases, `/invitations/accept/<key>`, missing public templates, and `/w/<workspace_slug>/...` remain deferred. The next safe SaaS IA slice is Phase 9.2: add `/pricing/` and the missing public templates without changing auth aliases or invitation aliases yet.
+
+Phase 9.2 pricing and missing public templates are implemented. `/pricing/` now resolves through `PricingPageView`, and `templates/pages/pricing.html`, `tenant.html`, `cancellation_and_refund.html`, `contact.html`, `help.html`, and `faq.html` render through `base_public.html`. Short auth aliases, `/invitations/accept/<key>`, and `/w/<workspace_slug>/...` remain deferred. The next safe SaaS IA slice is Phase 9.3: add short auth aliases while preserving `/accounts/...` compatibility paths.
+
+Phase 9.3 short auth aliases are implemented. `/login/`, `/signup/`, and `/password/reset/` redirect to the existing allauth `/accounts/...` implementation paths while preserving query strings. `/invitations/accept/<key>` and `/w/<workspace_slug>/...` remain deferred. The next safe SaaS IA slice is Phase 9.4: add the public invitation accept alias to the orgs-owned adapter.
+
+Phase 9.4 public invitation accept alias is implemented. `/invitations/accept/<key>` now resolves as `public_invitation_accept` to the orgs-owned `team_accept_invitation` adapter while the django-invitations `/invitations/accept-invite/<key>` compatibility path remains available. The next safe SaaS IA slice is Phase 9.5: public/auth alias rollout review and commit preparation before the separate `/w/<workspace_slug>/...` route-map phase.
+
+Phase 9.5 public/auth alias-template rollout review is complete in `docs/ui/public_auth_alias_template_rollout_review.md`. The review records completed pricing/templates/auth/invitation aliases, compatibility findings, verification commands, and the commit boundary. The next safe SaaS IA action is to commit this phase, then start separate `/w/<workspace_slug>/...` route-map planning before slug routes are added.
+
 ## Navigation Memory
 
 Main sidebar direction:

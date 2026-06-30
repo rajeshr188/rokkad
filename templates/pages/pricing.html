@@ -1,0 +1,69 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Pricing{% endblock %}
+
+{% block content %}
+<section class="public-section alt">
+    <div class="container">
+        <div class="public-section-header">
+            <div class="public-kicker">Pricing</div>
+            <h1 class="public-section-title">Start with the controls small teams need, then scale by workspace.</h1>
+            <p class="public-section-copy">
+                Rokkad is being built for owner-led businesses that need loans, inventory, commodity, and accounting workflows in one place. Choose the plan that matches the operational control you need now.
+            </p>
+        </div>
+
+        <div class="public-card-grid">
+            <article class="public-card">
+                <div class="public-card-icon"><i class="bi bi-shop"></i></div>
+                <h2 class="public-card-title">Starter</h2>
+                <p class="public-card-copy">For a single workspace getting basic records, parties, and setup discipline in place.</p>
+                <div class="public-price">Contact us</div>
+                <ul class="public-feature-list">
+                    <li>Workspace dashboard</li>
+                    <li>Parties and basic inventory</li>
+                    <li>Setup checklist</li>
+                    <li>Email support</li>
+                </ul>
+            </article>
+
+            <article class="public-card public-card-featured">
+                <div class="public-card-icon"><i class="bi bi-bank"></i></div>
+                <h2 class="public-card-title">Operations</h2>
+                <p class="public-card-copy">For jewellery, gold loan, inventory, commodity, and accounting teams running daily transactions.</p>
+                <div class="public-price">Recommended</div>
+                <ul class="public-feature-list">
+                    <li>Loan and inventory workflows</li>
+                    <li>Commodity-aware setup</li>
+                    <li>Accounting impact visibility</li>
+                    <li>Team and role controls</li>
+                </ul>
+            </article>
+
+            <article class="public-card">
+                <div class="public-card-icon"><i class="bi bi-building-check"></i></div>
+                <h2 class="public-card-title">Scale</h2>
+                <p class="public-card-copy">For multi-location teams that need stronger controls, reporting, and rollout support.</p>
+                <div class="public-price">Custom</div>
+                <ul class="public-feature-list">
+                    <li>Multiple workspaces</li>
+                    <li>Advanced reports</li>
+                    <li>Audit and security review</li>
+                    <li>Migration support</li>
+                </ul>
+            </article>
+        </div>
+
+        <div class="public-actions mt-4">
+            <a href="{% url 'account_signup' %}" class="btn btn-success btn-lg">
+                <i class="bi bi-person-plus"></i>
+                Create account
+            </a>
+            <a href="{% url 'contact' %}" class="btn btn-outline-dark btn-lg">
+                <i class="bi bi-chat-dots"></i>
+                Talk to us
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock content %}

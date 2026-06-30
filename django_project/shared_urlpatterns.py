@@ -1,5 +1,6 @@
 from django.conf.urls import i18n
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 from apps.orgs import views as org_views
 
@@ -20,6 +21,38 @@ PUBLIC_PLATFORM_URLPATTERNS = [
 # Authentication and invitation entrypoints. These remain shared during the
 # transition because users can arrive from public and tenant domains.
 AUTH_URLPATTERNS = [
+    path(
+        "login/",
+        RedirectView.as_view(
+            pattern_name="account_login",
+            permanent=False,
+            query_string=True,
+        ),
+        name="login",
+    ),
+    path(
+        "signup/",
+        RedirectView.as_view(
+            pattern_name="account_signup",
+            permanent=False,
+            query_string=True,
+        ),
+        name="signup",
+    ),
+    path(
+        "password/reset/",
+        RedirectView.as_view(
+            pattern_name="account_reset_password",
+            permanent=False,
+            query_string=True,
+        ),
+        name="password_reset",
+    ),
+    path(
+        "invitations/accept/<str:key>/",
+        org_views.team_accept_invitation,
+        name="public_invitation_accept",
+    ),
     path("accounts/", include("allauth.urls")),
     path("accounts/", include("allauth.socialaccount.urls")),
     path("invitations/", include("invitations.urls")),

@@ -5,6 +5,7 @@ from apps.tenant_apps.girvi.views import download_template_pack
 from .views import (
     HomePageView,
     TenantPageView,
+    PricingPageView,
     AboutPageView,
     PrivacyPolicy,
     CancellationAndRefund,
@@ -21,6 +22,7 @@ from apps.orgs.views import workspace_selector, workspace_select, team_invitatio
 
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
+    path("pricing/", PricingPageView.as_view(), name="pricing"),
     path("about/", AboutPageView.as_view(), name="about"),
     path("tenant/", TenantPageView.as_view(), name="tenant"),
     path("privacy-policy/", PrivacyPolicy.as_view(), name="privacy_policy"),

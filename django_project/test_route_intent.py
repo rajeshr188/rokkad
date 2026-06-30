@@ -108,6 +108,10 @@ class SaaSRouteIntentTests(SimpleTestCase):
 
     def test_legacy_auth_invitation_and_org_paths_remain_resolvable(self):
         path_cases = {
+            "/login/": "login",
+            "/signup/": "signup",
+            "/password/reset/": "password_reset",
+            "/invitations/accept/example-key/": "public_invitation_accept",
             "/accounts/login/": "account_login",
             "/accounts/signup/": "account_signup",
             "/accounts/password/reset/": "account_reset_password",
@@ -202,13 +206,13 @@ class SaaSRouteIntentTests(SimpleTestCase):
 
         self.assertEqual(active_public_prefixes, legacy_public_prefixes)
 
+    def test_phase92_pricing_route_is_public_and_shared_compatibility_route(self):
+        self.assertEqual(reverse("pricing"), "/pricing/")
+        self.assertEqual(resolve("/pricing/", urlconf=urls).url_name, "pricing")
+        self.assertEqual(resolve("/pricing/", urlconf=tenant_urls).url_name, "pricing")
+
     def test_future_public_and_tenant_route_aliases_are_intentionally_absent(self):
         absent_route_names = (
-            "pricing",
-            "login",
-            "signup",
-            "password_reset",
-            "public_invitation_accept",
             "workspace_slug_dashboard",
             "workspace_slug_settings",
         )
@@ -219,11 +223,6 @@ class SaaSRouteIntentTests(SimpleTestCase):
                     reverse(route_name)
 
         absent_paths = (
-            "/pricing/",
-            "/login/",
-            "/signup/",
-            "/password/reset/",
-            "/invitations/accept/example-key/",
             "/w/acme/",
             "/w/acme/settings/",
             "/w/acme/parties/",

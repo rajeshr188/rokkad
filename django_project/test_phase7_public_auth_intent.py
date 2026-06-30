@@ -60,7 +60,15 @@ class Phase7PublicAuthIntentTests(SimpleTestCase):
         self.assertEqual(_route_prefixes(PUBLIC_PLATFORM_URLPATTERNS), [""])
         self.assertEqual(
             _route_prefixes(AUTH_URLPATTERNS),
-            ["accounts/", "accounts/", "invitations/"],
+            [
+                "login/",
+                "signup/",
+                "password/reset/",
+                "invitations/accept/<str:key>/",
+                "accounts/",
+                "accounts/",
+                "invitations/",
+            ],
         )
 
     def test_current_public_route_inventory_matches_pages_urlconf(self):
@@ -68,6 +76,7 @@ class Phase7PublicAuthIntentTests(SimpleTestCase):
 
         for expected in (
             "home",
+            "pricing",
             "about",
             "tenant",
             "privacy_policy",
@@ -85,9 +94,12 @@ class Phase7PublicAuthIntentTests(SimpleTestCase):
         ):
             self.assertIn(expected, route_names)
 
-        self.assertNotIn("pricing", route_names)
+        self.assertIn("pricing", route_names)
 
     def test_current_auth_routes_remain_allauth_compatibility_paths(self):
+        self.assertEqual(reverse("login"), "/login/")
+        self.assertEqual(reverse("signup"), "/signup/")
+        self.assertEqual(reverse("password_reset"), "/password/reset/")
         self.assertEqual(reverse("account_login"), "/accounts/login/")
         self.assertEqual(reverse("account_signup"), "/accounts/signup/")
         self.assertEqual(reverse("account_reset_password"), "/accounts/password/reset/")
@@ -166,8 +178,9 @@ class Phase7PublicAuthIntentTests(SimpleTestCase):
                 self.assertNotIn("base_public.html", line)
                 self.assertNotIn("base_auth.html", line)
 
-    def test_phase76_records_missing_public_template_gaps_without_fixing_them(self):
-        content = _read("docs/ui/phase7_public_auth_polish_plan.md")
+    def test_phase76_records_historical_missing_public_template_gaps(self):
+        phase7_content = _read("docs/ui/phase7_public_auth_polish_plan.md")
+        rollout_content = _read("docs/ui/public_auth_alias_template_rollout_plan.md")
 
         for expected in (
             "pages/tenant.html",
@@ -176,8 +189,11 @@ class Phase7PublicAuthIntentTests(SimpleTestCase):
             "pages/help.html",
             "pages/faq.html",
         ):
-            self.assertIn(expected, content)
-            self.assertFalse((TEMPLATES_ROOT / expected).exists())
+            self.assertIn(expected, phase7_content)
+            self.assertIn(expected, rollout_content)
+            self.assertTrue((TEMPLATES_ROOT / expected).exists())
+
+        self.assertTrue((TEMPLATES_ROOT / "pages/pricing.html").exists())
 
     def test_phase77_public_auth_visual_vocabulary_is_static_owned(self):
         css = _read("static/css/public.css")
