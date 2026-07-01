@@ -692,9 +692,10 @@ Implementation notes:
 - Public URLConf still does not expose `/portal/...`.
 - Portal selectors validate `PortalIdentity` first and filter by the resolved Party.
 - The portal is read-only; no customer-facing mutations are exposed.
-- Selector/render hardening now covers real tenant sales invoice and payment
-  fixtures for the granted Party while proving another Party's invoice/payment
-  data does not appear in selectors or rendered portal pages.
+- Selector/render hardening now covers real tenant Girvi loan, sales invoice,
+  and payment fixtures for the granted Party while proving another Party's
+  loan/invoice/payment data does not appear in selectors or rendered portal
+  pages.
 - Portal invoice/payment rows render amount and currency explicitly instead of
   relying on implicit `Money.__str__` formatting.
 
