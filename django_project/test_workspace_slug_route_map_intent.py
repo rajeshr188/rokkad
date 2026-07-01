@@ -117,27 +117,76 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
 
     def test_phase104_minimal_slug_aliases_are_live(self):
         route_cases = {
-            "workspace_slug_dashboard": "/w/acme/",
-            "workspace_slug_settings": "/w/acme/settings/",
-            "workspace_slug_settings_preferences": "/w/acme/settings/preferences/",
-            "workspace_slug_settings_team": "/w/acme/settings/team/",
-            "workspace_slug_settings_invitations": "/w/acme/settings/invitations/",
-            "workspace_slug_settings_profile": "/w/acme/settings/profile/",
-            "workspace_slug_settings_billing": "/w/acme/settings/billing/",
-            "workspace_slug_settings_roles": "/w/acme/settings/roles/",
-            "workspace_slug_settings_numbering": "/w/acme/settings/numbering/",
-            "workspace_slug_settings_modules": "/w/acme/settings/modules/",
-            "workspace_slug_settings_security": "/w/acme/settings/security/",
-            "workspace_slug_settings_accounting": "/w/acme/settings/accounting/",
-            "workspace_slug_operations": "/w/acme/operations/",
-            "workspace_slug_parties": "/w/acme/parties/",
-            "workspace_slug_sales": "/w/acme/sales/",
-            "workspace_slug_purchase": "/w/acme/purchase/",
-            "workspace_slug_loans": "/w/acme/loans/",
-            "workspace_slug_inventory": "/w/acme/inventory/",
-            "workspace_slug_accounting": "/w/acme/accounting/",
-            "workspace_slug_commodity": "/w/acme/commodity/",
-            "workspace_slug_reports": "/w/acme/reports/",
+            "workspace_slug_dashboard": ({"workspace_slug": "acme"}, "/w/acme/"),
+            "workspace_slug_settings": ({"workspace_slug": "acme"}, "/w/acme/settings/"),
+            "workspace_slug_settings_preferences": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/preferences/",
+            ),
+            "workspace_slug_settings_team": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/team/",
+            ),
+            "workspace_slug_settings_invitations": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/invitations/",
+            ),
+            "workspace_slug_settings_profile": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/profile/",
+            ),
+            "workspace_slug_settings_billing": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/billing/",
+            ),
+            "workspace_slug_settings_roles": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/roles/",
+            ),
+            "workspace_slug_settings_numbering": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/numbering/",
+            ),
+            "workspace_slug_settings_modules": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/modules/",
+            ),
+            "workspace_slug_settings_security": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/security/",
+            ),
+            "workspace_slug_settings_accounting": (
+                {"workspace_slug": "acme"},
+                "/w/acme/settings/accounting/",
+            ),
+            "workspace_slug_operations": (
+                {"workspace_slug": "acme"},
+                "/w/acme/operations/",
+            ),
+            "workspace_slug_parties": ({"workspace_slug": "acme"}, "/w/acme/parties/"),
+            "workspace_slug_party_create": (
+                {"workspace_slug": "acme"},
+                "/w/acme/parties/new/",
+            ),
+            "workspace_slug_party_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/parties/7/",
+            ),
+            "workspace_slug_party_update": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/parties/7/edit/",
+            ),
+            "workspace_slug_party_merge": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/parties/7/merge/",
+            ),
+            "workspace_slug_sales": ({"workspace_slug": "acme"}, "/w/acme/sales/"),
+            "workspace_slug_purchase": ({"workspace_slug": "acme"}, "/w/acme/purchase/"),
+            "workspace_slug_loans": ({"workspace_slug": "acme"}, "/w/acme/loans/"),
+            "workspace_slug_inventory": ({"workspace_slug": "acme"}, "/w/acme/inventory/"),
+            "workspace_slug_accounting": ({"workspace_slug": "acme"}, "/w/acme/accounting/"),
+            "workspace_slug_commodity": ({"workspace_slug": "acme"}, "/w/acme/commodity/"),
+            "workspace_slug_reports": ({"workspace_slug": "acme"}, "/w/acme/reports/"),
         }
 
         self.assertEqual(
@@ -145,12 +194,9 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
             len(route_cases),
         )
 
-        for route_name, expected_path in route_cases.items():
+        for route_name, (kwargs, expected_path) in route_cases.items():
             with self.subTest(route_name=route_name):
-                self.assertEqual(
-                    reverse(route_name, kwargs={"workspace_slug": "acme"}),
-                    expected_path,
-                )
+                self.assertEqual(reverse(route_name, kwargs=kwargs), expected_path)
                 self.assertEqual(resolve(expected_path).url_name, route_name)
 
     def test_phase11_target_tenant_route_map_is_complete_except_portal(self):

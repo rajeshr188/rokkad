@@ -247,6 +247,7 @@ For each module:
 
 ## Next Recommended Step
 
-Proceed with Phase 13.5a: implement Party read-only deep aliases for list,
-create form, detail, update form, and merge form using redirects first, then
-direct-render only after Party route tests prove no HTMX or POST regressions.
+Phase 13.5a is complete for Party read-only redirect aliases. Start the next
+route-canonicalization phase with Party direct-render deep aliases and internal
+link migration, then move to Product/Inventory, Rates, Notify, Data Tools,
+Girvi, and DEA in that order.

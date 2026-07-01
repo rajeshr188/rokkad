@@ -190,6 +190,26 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         name="workspace_slug_parties",
     ),
     path(
+        "w/<str:workspace_slug>/parties/new/",
+        org_views.workspace_slug_party_create,
+        name="workspace_slug_party_create",
+    ),
+    path(
+        "w/<str:workspace_slug>/parties/<int:pk>/",
+        org_views.workspace_slug_party_detail,
+        name="workspace_slug_party_detail",
+    ),
+    path(
+        "w/<str:workspace_slug>/parties/<int:pk>/edit/",
+        org_views.workspace_slug_party_update,
+        name="workspace_slug_party_update",
+    ),
+    path(
+        "w/<str:workspace_slug>/parties/<int:pk>/merge/",
+        org_views.workspace_slug_party_merge,
+        name="workspace_slug_party_merge",
+    ),
+    path(
         "w/<str:workspace_slug>/sales/",
         org_views.workspace_slug_sales,
         name="workspace_slug_sales",

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from django.test import SimpleTestCase
-from django.urls import resolve, reverse
+from django.urls import Resolver404, resolve, reverse
 
 from django_project import tenant_urls
 
@@ -229,3 +229,68 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         for forbidden in forbidden_remounts:
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, slug_urlpatterns)
+
+    def test_phase135a_party_read_only_deep_aliases_resolve_as_redirects(self):
+        route_cases = {
+            "workspace_slug_party_create": (
+                {"workspace_slug": "acme"},
+                "/w/acme/parties/new/",
+                'redirect("party:party_create")',
+            ),
+            "workspace_slug_party_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/parties/7/",
+                'redirect("party:party_detail", pk=pk)',
+            ),
+            "workspace_slug_party_update": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/parties/7/edit/",
+                'redirect("party:party_update", pk=pk)',
+            ),
+            "workspace_slug_party_merge": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/parties/7/merge/",
+                'redirect("party:party_merge", pk=pk)',
+            ),
+        }
+
+        org_views = _read("apps/orgs/views.py")
+
+        for route_name, (kwargs, path, redirect_call) in route_cases.items():
+            with self.subTest(route_name=route_name):
+                self.assertEqual(reverse(route_name, kwargs=kwargs), path)
+                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+                self.assertIn(f"def {route_name}", org_views)
+                self.assertIn(redirect_call, org_views)
+
+    def test_phase135a_party_nested_mutation_aliases_remain_absent(self):
+        absent_paths = (
+            "/w/acme/parties/7/contacts/save/",
+            "/w/acme/parties/7/addresses/save/",
+            "/w/acme/parties/7/identifiers/save/",
+            "/w/acme/parties/7/documents/save/",
+            "/w/acme/parties/7/roles/add/",
+        )
+
+        for path in absent_paths:
+            with self.subTest(path=path):
+                with self.assertRaises(Resolver404):
+                    resolve(path, urlconf=tenant_urls)
+
+    def test_phase13_review_closes_safe_boundary_not_full_remount(self):
+        review = _read("docs/ui/tenant_route_canonicalization_phase13_review.md")
+
+        for expected in (
+            "Phase 13 is complete at the safe compatibility boundary",
+            "does not remove legacy tenant roots",
+            "does not remount full tenant app",
+            "Party read-only deep aliases",
+            "Nested Party mutation aliases remain absent by design",
+            "direct-render Party deep aliases",
+            "Product/Inventory",
+            "Girvi deep aliases",
+            "DEA deep aliases",
+            "Start the next route-canonicalization phase",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, review)

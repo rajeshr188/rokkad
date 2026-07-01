@@ -435,6 +435,8 @@ Phase 13.3 tenant route direct-rendering is complete for the low-risk top-level 
 
 Phase 13.4 tenant deep-link canonicalization planning is complete in `docs/ui/tenant_deep_link_canonicalization_phase13_4_plan.md`. Do not remount nested tenant app URLConfs under `/w/<workspace_slug>/...` yet. The recommended deep-link order is Party, Product/Inventory, Rates, Notify/Notify V2, Data Tools, Girvi, then DEA. Phase 13.5a should start with Party read-only deep aliases as redirects first.
 
+Phase 13 is complete in `docs/ui/tenant_route_canonicalization_phase13_review.md`. Party read-only deep aliases now exist as redirects for create, detail, edit, and merge. Nested Party mutation aliases remain absent. The next route-canonicalization phase should start with Party direct-render deep aliases and internal link migration before moving to Product/Inventory, Rates, Notify, Data Tools, Girvi, and DEA.
+
 ## Navigation Memory
 
 Main sidebar direction:

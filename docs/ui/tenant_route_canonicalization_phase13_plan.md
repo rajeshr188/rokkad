@@ -163,8 +163,20 @@ rules, and required tests before deep route changes.
 
 ### Phase 13.5: Module-By-Module Canonicalization
 
+Status: complete for the Phase 13 Party read-only redirect-alias slice.
+
 Move deep links one module at a time, keeping legacy URLs as redirects until
 bookmarks and tests stabilize.
+
+Phase 13.5a implements Party read-only deep aliases as redirects only:
+
+- `/w/<workspace_slug>/parties/new/` -> `party:party_create`
+- `/w/<workspace_slug>/parties/<pk>/` -> `party:party_detail`
+- `/w/<workspace_slug>/parties/<pk>/edit/` -> `party:party_update`
+- `/w/<workspace_slug>/parties/<pk>/merge/` -> `party:party_merge`
+
+Nested Party mutations remain legacy-only until POST, HTMX, CSRF, permission,
+and safe-redirect behavior is covered.
 
 ## Non-Negotiables
 
@@ -177,5 +189,6 @@ bookmarks and tests stabilize.
 
 ## Next Recommended Step
 
-Proceed with Phase 13.5a: implement Party read-only deep aliases first, using
-redirect aliases before direct rendering or internal link rewrites.
+Close Phase 13 at the safe Party redirect-alias boundary and start the next
+phase for Party direct-rendering/internal-link migration, followed by Product,
+Rates, Notify, Data Tools, Girvi, and DEA.

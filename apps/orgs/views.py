@@ -262,6 +262,30 @@ def workspace_slug_parties(request, workspace_slug):
 
 
 @login_required
+def workspace_slug_party_create(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("party:party_create")
+
+
+@login_required
+def workspace_slug_party_detail(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("party:party_detail", pk=pk)
+
+
+@login_required
+def workspace_slug_party_update(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("party:party_update", pk=pk)
+
+
+@login_required
+def workspace_slug_party_merge(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    return redirect("party:party_merge", pk=pk)
+
+
+@login_required
 def workspace_slug_loans(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
     from apps.tenant_apps.girvi.views.dashboard import girvi_dashboard
