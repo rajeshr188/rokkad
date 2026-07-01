@@ -84,13 +84,15 @@ class WorkspaceSlugDeferredTargetsIntentTests(SimpleTestCase):
 
         for expected in (
             "Workspace Slug Phase 11 Review",
-            "Phase 11 completes the remaining workspace slug route-map rollout",
+            "Phase 11 completes route availability",
+            "full canonical replacements for the legacy tenant app roots",
             "/w/<workspace_slug>/settings/modules/",
             "/w/<workspace_slug>/settings/security/",
             "Contact remains intentionally absent",
-            "customer/member portal IA",
+            "customer/member portal",
             "/portal/loans/",
             "Company.schema_name",
             "AuditLog",
+            "tenant_route_canonicalization_phase13_plan.md",
         ):
             self.assertIn(expected, content)

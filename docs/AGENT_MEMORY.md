@@ -423,7 +423,9 @@ Phase 12.2 customer/member portal identity design is complete in `docs/ui/custom
 
 Phase 12.3 customer/member portal selector contracts are complete in `docs/ui/customer_portal_selector_contracts_phase12.md`. `apps.tenant_apps.party.portal_selectors` now defines fail-closed read-only summary contracts for dashboard, loans, invoices, payments, documents, and statements. Selectors validate `PortalIdentity` first and raise `PortalSelectorNotImplemented` until real PartyPortalAccess-backed data sources are wired. `/portal/...` routes remain absent. Phase 12.4 should upgrade the customer portal shell/navigation without exposing live routes.
 
-Phase 12.4 customer/member portal shell/navigation is complete in `docs/ui/customer_portal_shell_phase12.md`. `base_customer_portal.html` now owns a portal-only topbar, identity display, disabled pending portal nav, `portal_content`, and `css/customer_portal.css`; it does not include tenant ERP, workspace-admin, or public marketing navigation. `/portal/...` routes remain absent. The tenant `/w/<workspace_slug>/...` route-map aliases from the SaaS IA target are complete except the separate portal route map and intentionally skipped Contact.
+Phase 12.4 customer/member portal shell/navigation is complete in `docs/ui/customer_portal_shell_phase12.md`. `base_customer_portal.html` now owns a portal-only topbar, identity display, disabled pending portal nav, `portal_content`, and `css/customer_portal.css`; it does not include tenant ERP, workspace-admin, or public marketing navigation. `/portal/...` routes remain absent.
+
+Phase 13.1 tenant route canonicalization baseline is complete in `docs/ui/tenant_route_canonicalization_phase13_plan.md`. Important correction: the tenant `/w/<workspace_slug>/...` route-map aliases from the SaaS IA target are available, but they are not full canonical replacements. Legacy tenant roots such as `/dea/`, `/party/`, `/girvi/`, and `/product/` remain active, and many slug entrypoints still redirect to them. Phase 13.2 should convert remaining visible sidebar/dashboard top-level tenant links to existing slug aliases while keeping legacy roots active.
 
 ## Navigation Memory
 

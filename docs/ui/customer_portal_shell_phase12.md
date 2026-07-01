@@ -40,15 +40,17 @@ selectors exist.
 
 ## Workspace Slug Route-Map Verification
 
-The tenant/workspace settings alias map from the SaaS IA target is complete as
+The tenant/workspace settings alias map from the SaaS IA target is available as
 of Phase 11, except for the separate customer/member portal and the intentionally
-skipped Contact route. `docs/ui/workspace_slug_phase11_review.md` lists the live
-`/w/<workspace_slug>/...` routes and `django_project.test_workspace_slug_route_map_intent`
-guards the route names and paths.
+skipped Contact route. It is not a full canonical replacement yet:
+`/w/<workspace_slug>/...` entry routes still redirect to legacy tenant roots
+such as `/dea/`, `/party/`, and `/girvi/`.
+
+`docs/ui/tenant_route_canonicalization_phase13_plan.md` now tracks the separate
+work needed to keep users on canonical slug URLs.
 
 ## Next Recommended Step
 
-Proceed with Phase 12.5 only after deciding whether to add a minimal portal URL
-group with placeholder views or first implement the real `PartyPortalAccess`
-model. The safer next slice is a portal route plan/review before adding live
-`/portal/...` routes.
+Proceed with Phase 13.2 before live portal routes: convert remaining visible
+tenant sidebar/dashboard entry links to slug aliases while keeping legacy tenant
+roots active.

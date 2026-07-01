@@ -12,9 +12,10 @@ related:
 
 # Workspace Slug Phase 11 Review
 
-Phase 11 completes the remaining workspace slug route-map rollout from the SaaS
-IA target route map, except for the intentionally separate customer/member
-portal.
+Phase 11 completes route availability for the remaining workspace slug
+route-map entries from the SaaS IA target route map, except for the
+intentionally separate customer/member portal. It does not make the slug routes
+full canonical replacements for the legacy tenant app roots.
 
 ## Completed
 
@@ -59,6 +60,9 @@ Contact remains intentionally absent because Party is the canonical replacement.
 - Slug aliases use current `Company.schema_name` as the compatibility slug.
 - Existing `/orgs/...`, `/workspace/<id>/settings/...`, and tenant module
   routes remain available.
+- Tenant app roots such as `/dea/`, `/party/`, `/girvi/`, and `/product/`
+  remain active compatibility routes. Many `/w/<workspace_slug>/...` entry
+  routes currently redirect into those roots.
 - Sales and purchase route to DEA business events because the old runtime sales
   and purchase apps were removed.
 - Workspace security is not an account-level allauth security page; it reads
@@ -87,9 +91,13 @@ Contact remains intentionally absent because Party is the canonical replacement.
   interim redirect.
 - A unified numbering-series manager beyond the current Girvi series interim
   redirect.
+- Full tenant route canonicalization that keeps the browser on
+  `/w/<workspace_slug>/...` instead of redirecting to `/dea/`, `/party/`,
+  `/girvi/`, or other legacy tenant roots. See
+  `docs/ui/tenant_route_canonicalization_phase13_plan.md`.
 
 ## Next Recommended Step
 
-Start the customer/member portal IA phase. Begin with route ownership, tenant
-boundary, authenticated portal-user identity, and read-only selector design
-before adding live `/portal/...` routes.
+After the customer/member portal shell checkpoint, start Phase 13 tenant route
+canonicalization. Begin by converting remaining visible sidebar/dashboard
+top-level tenant links to slug aliases while keeping legacy roots active.
