@@ -447,6 +447,8 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("Dismiss", html)
         self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
         self.assertIn(reverse("dea_opening_balance_wizard"), html)
+        self.assertIn(reverse("workspace_slug_accounting", kwargs={"workspace_slug": workspace.schema_name}), html)
+        self.assertNotIn('href="/dea/dashboard/"', html)
 
     def test_workspace_settings_setup_page_renders_checklist(self):
         workspace = _workspace()

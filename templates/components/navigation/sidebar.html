@@ -103,12 +103,12 @@
                 {% endif %}
                 <!-- Accounting/DEA -->
                 {% if 'dea_entry_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'dea_business_events_dashboard' %}active{% endif %}"
-                   href="{% url 'dea_business_events_dashboard' %}">
+                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'dea_business_events_dashboard' or request.resolver_match.url_name == 'workspace_slug_operations' %}active{% endif %}"
+                   href="{% url 'workspace_slug_operations' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-diagram-3"></i> Business Events
                 </a>
-                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'dea_reports_hub' %}active{% endif %}"
-                   href="{% url 'dea_reports_hub' %}">
+                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'dea_reports_hub' or request.resolver_match.url_name == 'workspace_slug_reports' %}active{% endif %}"
+                   href="{% url 'workspace_slug_reports' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-journal-text"></i> Financial Reports
                 </a>
                 <a class="workspace-nav-link {% if request.resolver_match.url_name == 'dea_metal_balance_report' or request.resolver_match.url_name == 'dea_exposure_report' or request.resolver_match.url_name == 'dea_valuation_report' %}active{% endif %}"
@@ -116,8 +116,8 @@
                     <i class="bi bi-safe2"></i> Commodity Reports
                 </a>
                 {% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Accountant' %}
-                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'dea_commodity_list' or request.resolver_match.url_name == 'dea_commodity_create' or request.resolver_match.url_name == 'dea_commodity_detail' or request.resolver_match.url_name == 'dea_commodity_update' %}active{% endif %}"
-                   href="{% url 'dea_commodity_list' %}">
+                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'dea_commodity_list' or request.resolver_match.url_name == 'dea_commodity_create' or request.resolver_match.url_name == 'dea_commodity_detail' or request.resolver_match.url_name == 'dea_commodity_update' or request.resolver_match.url_name == 'workspace_slug_commodity' %}active{% endif %}"
+                   href="{% url 'workspace_slug_commodity' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-boxes"></i> Commodity Master
                 </a>
                 {% endif %}

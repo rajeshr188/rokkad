@@ -429,6 +429,8 @@ Phase 13.1 tenant route canonicalization baseline is complete in `docs/ui/tenant
 
 Phase 12 customer/member portal closeout is complete in `docs/ui/customer_portal_phase12_review.md`. Live `/portal/...` routes remain intentionally absent until a real tenant `PartyPortalAccess`-style grant, database-backed identity lookup, implemented Party-scoped selectors, and cross-party denial tests exist. Do not add placeholder portal routes that only render the shell.
 
+Phase 13.2 tenant visible entry-link canonicalization is complete. Tenant sidebar Business Events, Financial Reports, and Commodity Master now target `workspace_slug_operations`, `workspace_slug_reports`, and `workspace_slug_commodity`; the workspace dashboard DEA Dashboard quick action targets `workspace_slug_accounting`. Legacy `/dea/`, `/party/`, `/girvi/`, `/product/`, and other tenant roots remain active. Phase 13.3 should direct-render slug entry wrappers one low-risk module at a time.
+
 ## Navigation Memory
 
 Main sidebar direction:

@@ -595,6 +595,7 @@ Next recommended SaaS IA slice:
 - Phase 12.4 upgrades the customer/member portal shell in `docs/ui/customer_portal_shell_phase12.md`. `base_customer_portal.html` now has portal-only navigation and a `portal_content` block while keeping `/portal/...` routes absent.
 - Phase 12 closes in `docs/ui/customer_portal_phase12_review.md`. Live `/portal/...` routes remain intentionally deferred until `PartyPortalAccess` or an equivalent tenant Party access grant exists with implemented selectors and cross-party denial tests.
 - Phase 13.1 corrects the tenant route-map interpretation in `docs/ui/tenant_route_canonicalization_phase13_plan.md`: `/w/<workspace_slug>/...` route availability exists, but legacy tenant roots such as `/dea/`, `/party/`, `/girvi/`, and `/product/` remain active and many slug entrypoints redirect into them. Full canonical replacement is a separate module-by-module migration. Next: Phase 13.2 visible tenant sidebar/dashboard entry links.
+- Phase 13.2 moves remaining visible tenant sidebar/dashboard top-level DEA entry links to existing slug aliases: operations, reports, commodity, and accounting dashboard. Legacy tenant roots remain active.
 
 ## J. Files to Change Later
 

@@ -81,6 +81,8 @@ claim the legacy roots are gone.
 
 ### Phase 13.2: Sidebar And Dashboard Entry Links
 
+Status: complete.
+
 Move remaining visible top-level tenant navigation links to the existing slug
 aliases where `effective_workspace.schema_name` is available:
 
@@ -91,6 +93,11 @@ aliases where `effective_workspace.schema_name` is available:
   accounting link is shown
 
 Do not change deep accounting tool links yet.
+
+Phase 13.2 converted the tenant sidebar's Business Events, Financial Reports,
+and Commodity Master entry links to slug aliases. It also converted the
+workspace dashboard DEA Dashboard quick action to `/w/<workspace_slug>/accounting/`.
+Legacy tenant roots remain active.
 
 ### Phase 13.3: Direct-Render Entry Wrappers
 
@@ -131,5 +138,6 @@ bookmarks and tests stabilize.
 
 ## Next Recommended Step
 
-Proceed with Phase 13.2: convert remaining visible sidebar/dashboard top-level
-tenant links to the existing slug aliases, while keeping legacy roots active.
+Proceed with Phase 13.3: replace redirect-only slug entry wrappers with
+direct-render wrappers for one low-risk module entrypoint at a time, while
+keeping legacy roots active.

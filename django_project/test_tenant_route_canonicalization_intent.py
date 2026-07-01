@@ -78,3 +78,29 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
                 self.assertIn("Phase 13", content)
                 self.assertIn("tenant_route_canonicalization_phase13_plan.md", content)
                 self.assertIn("tenant roots", content)
+
+    def test_phase132_visible_tenant_entry_links_use_slug_aliases(self):
+        sidebar = _read("templates/components/navigation/sidebar.html")
+        dashboard = _read("templates/company/workspace_dashboard.html")
+        plan = _read("docs/ui/tenant_route_canonicalization_phase13_plan.md")
+
+        for expected in (
+            "Status: complete",
+            "workspace_slug_operations",
+            "workspace_slug_reports",
+            "workspace_slug_commodity",
+            "workspace_slug_accounting",
+            "Legacy tenant roots remain active",
+            "Phase 13.3",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, plan + sidebar + dashboard)
+
+        for legacy_entry in (
+            "{% url 'dea_business_events_dashboard' %}",
+            "{% url 'dea_reports_hub' %}",
+            "{% url 'dea_commodity_list' %}",
+            "{% url 'dea_dashboard' %}",
+        ):
+            with self.subTest(legacy_entry=legacy_entry):
+                self.assertNotIn(legacy_entry, sidebar + dashboard)

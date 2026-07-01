@@ -84,7 +84,7 @@
                 <div class="tenant-quick-title"><i class="bi bi-sliders me-1"></i>Workspace Settings</div>
                 <div class="tenant-quick-copy">Preferences and workspace controls.</div>
             </a>
-            <a href="{% url 'dea_dashboard' %}" class="tenant-quick-action">
+            <a href="{% url 'workspace_slug_accounting' workspace_slug=workspace.schema_name %}" class="tenant-quick-action">
                 <div class="tenant-quick-title"><i class="bi bi-speedometer2 me-1"></i>DEA Dashboard</div>
                 <div class="tenant-quick-copy">Accounting metrics and reports.</div>
             </a>
