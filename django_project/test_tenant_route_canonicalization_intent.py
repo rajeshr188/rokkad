@@ -191,3 +191,41 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         )
         self.assertIn("return dea_home(request)", accounting_section)
         self.assertNotIn('return redirect("dea_home")', accounting_section)
+
+    def test_phase134_deep_link_plan_exists_before_nested_remounts(self):
+        plan = _read("docs/ui/tenant_deep_link_canonicalization_phase13_4_plan.md")
+        shared_urlpatterns = _read("django_project/shared_urlpatterns.py")
+
+        for expected in (
+            "Tenant Deep-Link Canonicalization Phase 13.4 Plan",
+            "planning and guard phase",
+            "Do not include full app URLConfs under `/w/<workspace_slug>/...` yet",
+            "Do not remove legacy tenant roots",
+            "Party",
+            "Product And Inventory",
+            "Rates",
+            "Notify And Notify V2",
+            "Data Tools",
+            "Girvi",
+            "DEA",
+            "Phase 13.5a",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, plan)
+
+        self.assertIn("Recommended first deep-link module", plan)
+        self.assertIn("/w/<workspace_slug>/parties/<pk>/", plan)
+        self.assertIn("Customer portal `/portal/...` remains out of scope", plan)
+
+        forbidden_remounts = (
+            'include("apps.tenant_apps.party.urls")',
+            'include("apps.tenant_apps.product.urls")',
+            'include("apps.tenant_apps.girvi.urls")',
+            'include("apps.tenant_apps.dea.urls")',
+        )
+        slug_urlpatterns = shared_urlpatterns.split(
+            "CANONICAL_WORKSPACE_SLUG_URLPATTERNS", 1
+        )[1]
+        for forbidden in forbidden_remounts:
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, slug_urlpatterns)

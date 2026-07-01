@@ -146,6 +146,8 @@ deep accounting routes unchanged.
 
 ### Phase 13.4: Module Deep-Link Plan
 
+Status: complete.
+
 Inventory and plan deep route canonicalization for:
 
 - DEA vouchers, reports, accounts, periods, business events, commodity.
@@ -153,6 +155,11 @@ Inventory and plan deep route canonicalization for:
 - Party detail/profile/merge/export.
 - Product stock, pricing, attributes, images.
 - Rates, Notify, data tools.
+
+The detailed plan lives in
+`docs/ui/tenant_deep_link_canonicalization_phase13_4_plan.md`. It records the
+recommended module order, non-goals, alias naming direction, template migration
+rules, and required tests before deep route changes.
 
 ### Phase 13.5: Module-By-Module Canonicalization
 
@@ -170,6 +177,5 @@ bookmarks and tests stabilize.
 
 ## Next Recommended Step
 
-Proceed with Phase 13.4: inventory the remaining deep route canonicalization
-work for DEA, Girvi, Party, Product, Rates, Notify, and data tools before
-changing internal links or remounting nested route groups.
+Proceed with Phase 13.5a: implement Party read-only deep aliases first, using
+redirect aliases before direct rendering or internal link rewrites.

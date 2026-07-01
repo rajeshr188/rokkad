@@ -433,6 +433,8 @@ Phase 13.2 tenant visible entry-link canonicalization is complete. Tenant sideba
 
 Phase 13.3 tenant route direct-rendering is complete for the low-risk top-level entrypoint set. `/w/<workspace_slug>/parties/`, `/inventory/`, `/loans/`, and `/accounting/` preserve the slug URL and delegate to existing Party list, Product home, Girvi dashboard, and DEA home views. DEA operations/sales/purchase/commodity/reports and deep app routes remain compatibility redirects or legacy routes until Phase 13.4 planning.
 
+Phase 13.4 tenant deep-link canonicalization planning is complete in `docs/ui/tenant_deep_link_canonicalization_phase13_4_plan.md`. Do not remount nested tenant app URLConfs under `/w/<workspace_slug>/...` yet. The recommended deep-link order is Party, Product/Inventory, Rates, Notify/Notify V2, Data Tools, Girvi, then DEA. Phase 13.5a should start with Party read-only deep aliases as redirects first.
+
 ## Navigation Memory
 
 Main sidebar direction:

@@ -597,6 +597,7 @@ Next recommended SaaS IA slice:
 - Phase 13.1 corrects the tenant route-map interpretation in `docs/ui/tenant_route_canonicalization_phase13_plan.md`: `/w/<workspace_slug>/...` route availability exists, but legacy tenant roots such as `/dea/`, `/party/`, `/girvi/`, and `/product/` remain active and many slug entrypoints redirect into them. Full canonical replacement is a separate module-by-module migration. Next: Phase 13.2 visible tenant sidebar/dashboard entry links.
 - Phase 13.2 moves remaining visible tenant sidebar/dashboard top-level DEA entry links to existing slug aliases: operations, reports, commodity, and accounting dashboard. Legacy tenant roots remain active.
 - Phase 13.3 direct-render slug entry wrappers are complete for the low-risk top-level entrypoint set. `/w/<workspace_slug>/parties/`, `/inventory/`, `/loans/`, and `/accounting/` now render the existing Party list, Product home, Girvi dashboard, and DEA home views in place. DEA operations/sales/purchase/commodity/reports and deep app routes remain compatibility redirects or legacy routes until Phase 13.4 deep-link planning.
+- Phase 13.4 deep-link canonicalization planning is complete in `docs/ui/tenant_deep_link_canonicalization_phase13_4_plan.md`. Nested app remounting and legacy-root removal remain out of scope. The recommended order is Party, Product/Inventory, Rates, Notify/Notify V2, Data Tools, Girvi, then DEA.
 
 ## J. Files to Change Later
 

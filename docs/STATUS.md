@@ -340,6 +340,7 @@ Rokkad is moving toward a layered architecture:
 - SaaS IA Phase 13.3 inventory slice is complete. `/w/<workspace_slug>/inventory/` direct-renders the existing Product home view while preserving the slug URL; detailed Product routes keep their existing action guards.
 - SaaS IA Phase 13.3 loans slice is complete. `/w/<workspace_slug>/loans/` direct-renders the existing Girvi dashboard while preserving the slug URL and Girvi workspace access guard.
 - SaaS IA Phase 13.3 accounting slice is complete. `/w/<workspace_slug>/accounting/` now direct-renders the existing DEA home view while preserving the slug URL. Phase 13.3 is complete for the low-risk top-level entrypoint set: parties, inventory, loans, and accounting. DEA operations/sales/purchase/commodity/reports and deep app routes remain compatibility redirects or legacy routes. The next recommended action is Phase 13.4 deep-link canonicalization planning.
+- SaaS IA Phase 13.4 deep-link canonicalization planning is complete in [docs/ui/tenant_deep_link_canonicalization_phase13_4_plan.md](ui/tenant_deep_link_canonicalization_phase13_4_plan.md). The plan keeps nested app remounting and legacy-root removal out of scope, recommends Party first, then Product/Inventory, Rates, Notify, Data Tools, Girvi, and DEA, and defines tests required before Phase 13.5. The next recommended action is Phase 13.5a: Party read-only deep aliases as redirects first.
 
 ## Known Pressure Points
 
