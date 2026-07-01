@@ -443,6 +443,8 @@ Phase 14.2 low-risk deep-link canonicalization is complete. Visible Party GET li
 
 Phase 15 compressed Girvi/Loans route canonicalization is complete in `docs/ui/tenant_girvi_route_canonicalization_phase15.md`. Read-only loan list/detail/tab/PDF/report aliases are live under `/w/<workspace_slug>/loans/...`; loan create/update/delete, repayment, release, custody, lifecycle transition, operations-console retry, document/template/storage mutations, DEA, and legacy-root cleanup remain follow-up work.
 
+Phase 16 compressed DEA/Accounting route canonicalization is complete in `docs/ui/tenant_dea_route_canonicalization_phase16.md`. Top-level operations/sales/purchase/commodity/reports slug aliases direct-render existing DEA views, and read-only aliases are live for accounting chart/accounts/ledgers/transactions/reports/vouchers/payments/expenses/journal-entry-vouchers/periods/reconciliation/commodity details. DEA posting, business-event confirm, period mutation, reconciliation import/match, opening balance, commodity setup, and legacy-root cleanup remain follow-up work.
+
 ## Navigation Memory
 
 Main sidebar direction:

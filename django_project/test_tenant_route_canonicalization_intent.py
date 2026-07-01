@@ -547,6 +547,222 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=tenant_urls)
 
+    def test_phase16_dea_read_only_accounting_aliases_resolve(self):
+        route_cases = {
+            "workspace_slug_accounting_chart_of_accounts": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/chart-of-accounts/",
+                "chart_of_accounts(request)",
+            ),
+            "workspace_slug_accounting_accounts": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/accounts/",
+                "account_list(request)",
+            ),
+            "workspace_slug_accounting_account_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/accounting/accounts/7/",
+                "account_detail(request, pk=pk)",
+            ),
+            "workspace_slug_accounting_ledgers": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/ledgers/",
+                "ledger_list(request)",
+            ),
+            "workspace_slug_accounting_ledger_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/accounting/ledgers/7/",
+                "ledger_detail(request, pk=pk)",
+            ),
+            "workspace_slug_accounting_transactions": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/transactions/",
+                "transaction_list(request)",
+            ),
+            "workspace_slug_accounting_trial_balance": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reports/trial-balance/",
+                "trial_balance(request)",
+            ),
+            "workspace_slug_accounting_balance_sheet": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reports/balance-sheet/",
+                "balance_sheet(request)",
+            ),
+            "workspace_slug_accounting_profit_loss": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reports/profit-loss/",
+                "profit_loss(request)",
+            ),
+            "workspace_slug_accounting_income_statement": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reports/income-statement/",
+                "income_statement(request)",
+            ),
+            "workspace_slug_accounting_cash_flow": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reports/cash-flow/",
+                "cash_flow_statement(request)",
+            ),
+            "workspace_slug_accounting_ar_aging": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reports/ar-aging/",
+                "receivables_aging(request)",
+            ),
+            "workspace_slug_accounting_ap_aging": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reports/ap-aging/",
+                "payables_aging(request)",
+            ),
+            "workspace_slug_accounting_financial_ratios": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reports/ratios/",
+                "financial_ratios(request)",
+            ),
+            "workspace_slug_accounting_vouchers": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/vouchers/",
+                "VoucherListView.as_view()(request)",
+            ),
+            "workspace_slug_accounting_voucher_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/accounting/vouchers/7/",
+                "VoucherDetailView.as_view()(request, pk=pk)",
+            ),
+            "workspace_slug_accounting_payments": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/payments/",
+                "PaymentVoucherListView.as_view()(request)",
+            ),
+            "workspace_slug_accounting_payment_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/accounting/payments/7/",
+                "PaymentVoucherDetailView.as_view()(request, pk=pk)",
+            ),
+            "workspace_slug_accounting_expenses": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/expenses/",
+                "ExpenseVoucherListView.as_view()(request)",
+            ),
+            "workspace_slug_accounting_expense_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/accounting/expenses/7/",
+                "ExpenseVoucherDetailView.as_view()(request, pk=pk)",
+            ),
+            "workspace_slug_accounting_journal_entry_vouchers": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/journal-entry-vouchers/",
+                "JournalEntryVoucherListView.as_view()(request)",
+            ),
+            "workspace_slug_accounting_journal_entry_voucher_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/accounting/journal-entry-vouchers/7/",
+                "JournalEntryVoucherDetailView.as_view()(request, pk=pk)",
+            ),
+            "workspace_slug_accounting_periods": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/periods/",
+                "period_list(request)",
+            ),
+            "workspace_slug_accounting_period_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/accounting/periods/7/",
+                "period_detail(request, pk=pk)",
+            ),
+            "workspace_slug_accounting_reconciliation": (
+                {"workspace_slug": "acme"},
+                "/w/acme/accounting/reconciliation/",
+                "BankAccountListView.as_view()(request)",
+            ),
+            "workspace_slug_accounting_reconciliation_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/accounting/reconciliation/7/",
+                "BankReconciliationDetailView.as_view()(request, pk=pk)",
+            ),
+            "workspace_slug_commodity_detail": (
+                {"workspace_slug": "acme", "commodity_id": 7},
+                "/w/acme/commodity/7/",
+                "commodity_detail(request, commodity_id=commodity_id)",
+            ),
+            "workspace_slug_commodity_metal_balance_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/commodity/reports/metal-balance/",
+                "metal_balance_report(request)",
+            ),
+            "workspace_slug_commodity_exposure_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/commodity/reports/exposure/",
+                "exposure_report(request)",
+            ),
+            "workspace_slug_commodity_valuation_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/commodity/reports/valuation/",
+                "valuation_report(request)",
+            ),
+        }
+
+        org_views = _read("apps/orgs/views.py")
+
+        for route_name, (kwargs, path, delegate_call) in route_cases.items():
+            with self.subTest(route_name=route_name):
+                self.assertEqual(reverse(route_name, kwargs=kwargs), path)
+                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+                self.assertIn(f"def {route_name}", org_views)
+                self.assertIn(delegate_call, org_views)
+
+    def test_phase16_dea_top_level_aliases_direct_render_existing_views(self):
+        org_views = _read("apps/orgs/views.py")
+        expected_calls = (
+            "business_events_dashboard(request)",
+            "commodity_list(request)",
+            "reports_hub(request)",
+        )
+
+        for route_name in (
+            "workspace_slug_operations",
+            "workspace_slug_sales",
+            "workspace_slug_purchase",
+            "workspace_slug_commodity",
+            "workspace_slug_reports",
+        ):
+            with self.subTest(route_name=route_name):
+                self.assertIn(f"def {route_name}", org_views)
+
+        for expected_call in expected_calls:
+            with self.subTest(expected_call=expected_call):
+                self.assertIn(expected_call, org_views)
+
+        for redirect_call in (
+            'redirect("dea_business_events_dashboard")',
+            'redirect("dea_commodity_list")',
+            'redirect("dea_reports_hub")',
+        ):
+            with self.subTest(redirect_call=redirect_call):
+                self.assertNotIn(redirect_call, org_views)
+
+    def test_phase16_dea_mutation_aliases_remain_absent(self):
+        absent_paths = (
+            "/w/acme/accounting/vouchers/create/",
+            "/w/acme/accounting/vouchers/7/edit/",
+            "/w/acme/accounting/vouchers/7/post/",
+            "/w/acme/accounting/vouchers/7/reverse/",
+            "/w/acme/accounting/payments/create/",
+            "/w/acme/accounting/expenses/create/",
+            "/w/acme/accounting/expenses/7/post/",
+            "/w/acme/accounting/journal-entry-vouchers/create/",
+            "/w/acme/accounting/periods/create/",
+            "/w/acme/accounting/periods/7/close/",
+            "/w/acme/accounting/reconciliation/import/",
+            "/w/acme/commodity/create/",
+            "/w/acme/commodity/7/edit/",
+            "/w/acme/operations/fixed-sale/7/confirm/",
+        )
+
+        for path in absent_paths:
+            with self.subTest(path=path):
+                with self.assertRaises(Resolver404):
+                    resolve(path, urlconf=tenant_urls)
+
     def test_phase13_review_closes_safe_boundary_not_full_remount(self):
         review = _read("docs/ui/tenant_route_canonicalization_phase13_review.md")
 
