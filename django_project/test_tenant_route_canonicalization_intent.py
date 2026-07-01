@@ -64,8 +64,13 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         org_views = _read("apps/orgs/views.py")
         self.assertIn("CANONICAL_WORKSPACE_SLUG_URLPATTERNS", shared_urlpatterns)
         self.assertIn('return redirect("dea_home")', org_views)
-        self.assertIn('return redirect("party:party_list")', org_views)
         self.assertIn('return redirect("girvi:girvi_dashboard")', org_views)
+
+        parties_section = org_views.split("def workspace_slug_parties", 1)[1].split(
+            "def workspace_slug_loans", 1
+        )[0]
+        self.assertIn("party_list(request)", parties_section)
+        self.assertNotIn('redirect("party:party_list")', parties_section)
 
     def test_phase131_project_docs_no_longer_overclaim_full_canonicalization(self):
         status = _read("docs/STATUS.md")
@@ -104,3 +109,18 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         ):
             with self.subTest(legacy_entry=legacy_entry):
                 self.assertNotIn(legacy_entry, sidebar + dashboard)
+
+    def test_phase133_parties_slug_entry_direct_renders_existing_party_list(self):
+        org_views = _read("apps/orgs/views.py")
+        plan = _read("docs/ui/tenant_route_canonicalization_phase13_plan.md")
+
+        parties_section = org_views.split("def workspace_slug_parties", 1)[1].split(
+            "def workspace_slug_loans", 1
+        )[0]
+
+        self.assertIn("Phase 13.3", plan)
+        self.assertIn("Status: started", plan)
+        self.assertIn("/w/<workspace_slug>/parties/", plan)
+        self.assertIn("from apps.tenant_apps.party.views import party_list", parties_section)
+        self.assertIn("return party_list(request)", parties_section)
+        self.assertNotIn('return redirect("party:party_list")', parties_section)

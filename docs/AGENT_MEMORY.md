@@ -431,6 +431,8 @@ Phase 12 customer/member portal closeout is complete in `docs/ui/customer_portal
 
 Phase 13.2 tenant visible entry-link canonicalization is complete. Tenant sidebar Business Events, Financial Reports, and Commodity Master now target `workspace_slug_operations`, `workspace_slug_reports`, and `workspace_slug_commodity`; the workspace dashboard DEA Dashboard quick action targets `workspace_slug_accounting`. Legacy `/dea/`, `/party/`, `/girvi/`, `/product/`, and other tenant roots remain active. Phase 13.3 should direct-render slug entry wrappers one low-risk module at a time.
 
+Phase 13.3 tenant route direct-rendering has started. `/w/<workspace_slug>/parties/` now preserves the slug URL and delegates to the existing Party list view instead of redirecting to `/party/`. Inventory, loans, accounting, and DEA-backed slug entries still redirect until their entry views are checked individually.
+
 ## Navigation Memory
 
 Main sidebar direction:

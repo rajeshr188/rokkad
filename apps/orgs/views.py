@@ -256,7 +256,9 @@ def workspace_slug_settings_security(request, workspace_slug):
 @login_required
 def workspace_slug_parties(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("party:party_list")
+    from apps.tenant_apps.party.views import party_list
+
+    return party_list(request)
 
 
 @login_required

@@ -101,16 +101,29 @@ Legacy tenant roots remain active.
 
 ### Phase 13.3: Direct-Render Entry Wrappers
 
+Status: started.
+
 For top-level module entrypoints only, replace redirect-only slug views with
 wrappers that preserve the `/w/<workspace_slug>/...` URL while delegating to the
 existing entry view or equivalent read model.
 
 Start with low-risk entrypoints:
 
-- `/w/<workspace_slug>/parties/`
+- `/w/<workspace_slug>/parties/` - direct-renders the existing Party list view
+  while preserving the slug URL.
 - `/w/<workspace_slug>/inventory/`
 - `/w/<workspace_slug>/loans/`
 - `/w/<workspace_slug>/accounting/`
+
+The first Phase 13.3 slice converts `/w/<workspace_slug>/parties/` from a
+redirect-only alias into a direct-render wrapper around the existing
+`party_list` view. This keeps Party's current authorization and query behavior
+as the source of truth while making the browser stay on the canonical slug
+entry URL.
+
+Inventory, loans, and accounting still redirect to their legacy entrypoints and
+should be converted one at a time after checking each target view's assumptions
+about URL names, breadcrumbs, HTMX targets, and selected workspace context.
 
 ### Phase 13.4: Module Deep-Link Plan
 
@@ -138,6 +151,7 @@ bookmarks and tests stabilize.
 
 ## Next Recommended Step
 
-Proceed with Phase 13.3: replace redirect-only slug entry wrappers with
-direct-render wrappers for one low-risk module entrypoint at a time, while
-keeping legacy roots active.
+Proceed with the next Phase 13.3 slice: evaluate `/w/<workspace_slug>/inventory/`
+for direct rendering against the existing Product home view, then convert only
+if its breadcrumbs, form targets, HTMX endpoints, and authorization behavior
+remain unchanged.
