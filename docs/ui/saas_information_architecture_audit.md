@@ -658,7 +658,7 @@ Recommended test coverage:
 
 ## Open Uncertainties
 
-- Customer/member portal ownership is tenant/Party-owned for the read-only MVP. A future branded portal subdomain or public-schema entrypoint remains undecided.
+- Customer/member portal ownership is tenant/Party-owned for the read-only MVP. The MVP keeps tenant-path `/portal/...` routes only; a branded portal subdomain or public-schema entrypoint is deferred until the read-only portal has real users and the invitation/customer-auth lifecycle is stable, and must still use explicit tenant resolution plus `PartyPortalAccess` checks.
 - The final canonical route shape can be domain-based, path-based, or hybrid. Current middleware supports domain resolution and path/profile fallback; the route redesign should decide which behavior is authoritative.
 - Existing bookmarks and legacy aliases need an inventory before route removals.
 - Subscription/payment code needs focused characterization before fixes because current model and view assumptions conflict.

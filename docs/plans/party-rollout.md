@@ -690,8 +690,14 @@ Implementation notes:
 - Only `ACTIVE` access grants resolve through `resolve_portal_identity()`.
 - Tenant `/portal/...` routes are live for dashboard, loans, invoices, payments, documents, and statements.
 - Public URLConf still does not expose `/portal/...`.
+- MVP portal domain strategy is tenant-path only. Branded portal subdomains or
+  public-schema portal entrypoints are deferred until the read-only portal has
+  real users and the invitation/customer-auth lifecycle is stable.
 - Portal selectors validate `PortalIdentity` first and filter by the resolved Party.
 - The portal is read-only; no customer-facing mutations are exposed.
+- Portal access lifecycle transitions are service-owned for existing grants:
+  activate, suspend, and revoke update grant status and emit public workspace
+  audit events using scalar tenant identifiers.
 - Selector/render hardening now covers real tenant Girvi loan, sales invoice,
   and payment fixtures for the granted Party while proving another Party's
   loan/invoice/payment data does not appear in selectors or rendered portal
@@ -708,6 +714,7 @@ Files created or updated:
 - `apps/tenant_apps/party/portal_selectors.py`
 - `apps/tenant_apps/party/portal_views.py`
 - `apps/tenant_apps/party/portal_urls.py`
+- `apps/tenant_apps/party/services/portal_access.py`
 - `apps/tenant_apps/party/migrations/0005_partyportalaccess.py`
 - `apps/tenant_apps/party/tests/test_party_portal.py`
 - `django_project/tenant_urls.py`

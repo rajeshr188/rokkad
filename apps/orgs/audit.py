@@ -98,6 +98,10 @@ class AuditLog(models.Model):
         ("SETTINGS_UPDATE", "Settings Updated"),
         # Preferences
         ("PREFERENCES_UPDATE", "Preferences Updated"),
+        # Customer portal access
+        ("PARTY_PORTAL_ACCESS_ACTIVATE", "Party Portal Access Activated"),
+        ("PARTY_PORTAL_ACCESS_SUSPEND", "Party Portal Access Suspended"),
+        ("PARTY_PORTAL_ACCESS_REVOKE", "Party Portal Access Revoked"),
         # Ownership
         ("OWNERSHIP_TRANSFER", "Ownership Transferred"),
     ]

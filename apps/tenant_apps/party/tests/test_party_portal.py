@@ -1,5 +1,6 @@
 import uuid
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -36,6 +37,12 @@ from apps.tenant_apps.party.portal_views import (
     portal_loans,
     portal_payments,
     portal_statements,
+)
+from apps.tenant_apps.party.services.portal_access import (
+    PortalAccessLifecycleError,
+    activate_portal_access,
+    revoke_portal_access,
+    suspend_portal_access,
 )
 from django_project import tenant_urls, urls
 
@@ -202,6 +209,87 @@ class PartyPortalAccessTests(TenantTestCase):
 
         with self.assertRaises(PortalIdentityDenied):
             resolve_portal_identity(self._request())
+
+    def test_portal_access_lifecycle_activate_logs_and_enables_identity(self):
+        grant = PartyPortalAccess.objects.create(
+            party=self.party,
+            user=self.user,
+            status=PartyPortalAccess.Status.INVITED,
+        )
+
+        with patch(
+            "apps.tenant_apps.party.services.portal_access.AuditLog.log"
+        ) as audit_log:
+            result = activate_portal_access(
+                grant,
+                actor=self.user,
+                request=self._request(),
+            )
+
+        grant.refresh_from_db()
+        identity = resolve_portal_identity(self._request())
+        self.assertTrue(result.changed)
+        self.assertEqual(grant.status, PartyPortalAccess.Status.ACTIVE)
+        self.assertIsNotNone(grant.activated_at)
+        self.assertEqual(identity.access_grant, grant)
+        audit_log.assert_called_once()
+        self.assertEqual(audit_log.call_args.args[0], "PARTY_PORTAL_ACCESS_ACTIVATE")
+        self.assertEqual(audit_log.call_args.kwargs["company"], self.tenant)
+        self.assertEqual(
+            audit_log.call_args.kwargs["data"]["previous_status"],
+            PartyPortalAccess.Status.INVITED,
+        )
+
+    def test_portal_access_lifecycle_suspend_logs_and_disables_identity(self):
+        grant = PartyPortalAccess.objects.create(
+            party=self.party,
+            user=self.user,
+            status=PartyPortalAccess.Status.ACTIVE,
+        )
+
+        with patch(
+            "apps.tenant_apps.party.services.portal_access.AuditLog.log"
+        ) as audit_log:
+            result = suspend_portal_access(
+                grant,
+                actor=self.user,
+                request=self._request(),
+            )
+
+        grant.refresh_from_db()
+        self.assertTrue(result.changed)
+        self.assertEqual(grant.status, PartyPortalAccess.Status.SUSPENDED)
+        with self.assertRaises(PortalIdentityDenied):
+            resolve_portal_identity(self._request())
+        audit_log.assert_called_once()
+        self.assertEqual(audit_log.call_args.args[0], "PARTY_PORTAL_ACCESS_SUSPEND")
+
+    def test_portal_access_lifecycle_revoke_logs_and_blocks_reactivation(self):
+        grant = PartyPortalAccess.objects.create(
+            party=self.party,
+            user=self.user,
+            status=PartyPortalAccess.Status.ACTIVE,
+        )
+
+        with patch(
+            "apps.tenant_apps.party.services.portal_access.AuditLog.log"
+        ) as audit_log:
+            result = revoke_portal_access(
+                grant,
+                actor=self.user,
+                request=self._request(),
+            )
+
+        grant.refresh_from_db()
+        self.assertTrue(result.changed)
+        self.assertEqual(grant.status, PartyPortalAccess.Status.REVOKED)
+        self.assertIsNotNone(grant.revoked_at)
+        with self.assertRaises(PortalIdentityDenied):
+            resolve_portal_identity(self._request())
+        with self.assertRaises(PortalAccessLifecycleError):
+            activate_portal_access(grant, actor=self.user, request=self._request())
+        audit_log.assert_called_once()
+        self.assertEqual(audit_log.call_args.args[0], "PARTY_PORTAL_ACCESS_REVOKE")
 
     def test_document_selector_only_returns_granted_party_documents(self):
         grant = PartyPortalAccess.objects.create(

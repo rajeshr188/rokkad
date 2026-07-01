@@ -1753,6 +1753,9 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		self.assertIn("TEAM_MEMBER_REMOVE", declared)
 		self.assertIn("TEAM_ROLE_CHANGE", declared)
 		self.assertIn("TEAM_INVITE_ACCEPT", declared)
+		self.assertIn("PARTY_PORTAL_ACCESS_ACTIVATE", declared)
+		self.assertIn("PARTY_PORTAL_ACCESS_SUSPEND", declared)
+		self.assertIn("PARTY_PORTAL_ACCESS_REVOKE", declared)
 
 	def test_duplicate_invitation_create_raises_validation_error(self):
 		with patch.object(

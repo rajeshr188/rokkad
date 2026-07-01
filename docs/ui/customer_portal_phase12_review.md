@@ -50,6 +50,17 @@ The current live tenant route set is:
 
 Public URLConf still does not expose `/portal/...`.
 
+## Portal Domain Strategy
+
+The MVP keeps the customer/member portal tenant-path only. Customers use the
+tenant route set under `/portal/...`; the public URLConf does not expose portal
+routes, and there is no branded portal subdomain yet.
+
+A branded portal subdomain or public-schema entrypoint should be designed only
+after the read-only portal has real users and the invitation/customer-auth
+lifecycle is stable. That future design must still resolve an explicit tenant
+and apply the same `PartyPortalAccess` checks before exposing Party data.
+
 ## Live Route Requirements Now Met
 
 - `PartyPortalAccess` exists as a tenant-schema access grant.
@@ -68,6 +79,8 @@ Public URLConf still does not expose `/portal/...`.
 - Staff workspace membership must not imply portal customer access.
 - Portal shell navigation is enabled only for read-only customer portal routes.
 - Customer-facing portal mutation routes remain out of scope.
+- Existing portal access grant state changes are service-owned and auditable;
+  customer-facing invite or self-service mutation routes remain out of scope.
 
 ## Verification
 
@@ -78,6 +91,6 @@ Public URLConf still does not expose `/portal/...`.
 
 ## Next Recommended Step
 
-Keep the portal read-only. The next portal-specific step should be focused
-selector hardening and render coverage for invoices, payments, loans, and
-statements before any customer-facing mutation workflow is designed.
+Keep the portal read-only. The next portal-specific step should be invitation
+and customer-auth lifecycle design for creating grants, email verification, and
+first-login activation before any customer-facing mutation workflow is designed.
