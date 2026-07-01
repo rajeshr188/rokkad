@@ -29,7 +29,7 @@ class CustomerPortalPhase12IntentTests(SimpleTestCase):
             "not add live `/portal/...` routes yet",
             "No first-party `portal` app or URL group is currently installed",
             "identity binding",
-            "PORTAL_USER",
+            "PORTAL_CUSTOMER",
             "get_party_loan_history_summary",
             "Phase 12.2: Portal Identity Design",
         ):

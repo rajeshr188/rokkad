@@ -419,6 +419,8 @@ Phase 11 final review is complete in `docs/ui/workspace_slug_phase11_review.md`.
 
 Phase 12.1 customer/member portal planning is complete in `docs/ui/customer_portal_phase12_plan.md`. `/portal/...` routes remain absent. The portal should be tenant-scoped and Party-backed, with explicit authenticated user-to-tenant Party identity binding before routes are exposed. Phase 12.2 should choose that identity model and add access-helper scaffolding/tests without adding live portal routes.
 
+Phase 12.2 customer/member portal identity design is complete in `docs/ui/customer_portal_identity_phase12.md`. Use Party as the portal customer identity, backed by a future explicit `PartyPortalAccess`-style tenant binding. Do not infer access from email/phone alone. `apps.tenant_apps.party.portal_access.resolve_portal_identity()` is a fail-closed helper scaffold, and `/portal/...` routes remain absent until selector/shell/access tests exist. Phase 12.3 should define read-only selector contracts around `PortalIdentity`.
+
 ## Navigation Memory
 
 Main sidebar direction:

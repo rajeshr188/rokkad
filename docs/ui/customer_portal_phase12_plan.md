@@ -21,7 +21,7 @@ not add live `/portal/...` routes yet.
   a thin alias over `layouts/base.html`.
 - No first-party `portal` app or URL group is currently installed.
 - The target `/portal/...` routes are intentionally absent from current URLConfs.
-- Party has a canonical `PORTAL_USER` role seed, but no user-to-party portal
+- Party has a canonical `PORTAL_CUSTOMER` role seed, but no user-to-party portal
   identity binding exists yet.
 - Party owns customer/member profile, contact, identifier, document, and
   relationship data.
@@ -99,6 +99,8 @@ absence until identity/tenant ownership is designed.
 
 ### Phase 12.2: Portal Identity Design
 
+Status: complete.
+
 Design the tenant Party binding model and access helper. Decide whether it
 lives in a new portal app, Party, or orgs. Do not add live public routes yet.
 
@@ -121,3 +123,7 @@ exist.
 
 Proceed with Phase 12.2: choose and document the portal identity model, then add
 the access-helper scaffold and tests without exposing live `/portal/...` routes.
+
+Phase 12.2 is complete in `docs/ui/customer_portal_identity_phase12.md`. The
+next step is Phase 12.3: define read-only selector contracts around
+`PortalIdentity`.
