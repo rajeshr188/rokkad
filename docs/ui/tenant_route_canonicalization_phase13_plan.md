@@ -30,13 +30,15 @@ The tenant URLConf still mounts runtime apps at their original tenant roots:
 - `/notify-v2/`
 - `/dea/`
 
-The SaaS IA target routes such as `/w/<workspace_slug>/accounting/` and
-`/w/<workspace_slug>/loans/` currently resolve, but the route views redirect to
-the existing app entrypoints. That means the browser still lands on URLs such as
-`/dea/`, `/party/`, and `/girvi/`.
+The SaaS IA target routes now resolve for the top-level tenant entrypoints. The
+low-risk Phase 13.3 entries `/w/<workspace_slug>/parties/`,
+`/inventory/`, `/loans/`, and `/accounting/` direct-render their existing
+module entry views while preserving the slug URL. Other tenant route-map entries
+such as operations, sales, purchase, commodity, reports, and workspace setting
+detail aliases still redirect to existing legacy targets.
 
-This was intentional for compatibility, but it should not be described as full
-canonical route ownership.
+This compatibility layer should not be described as full canonical route
+ownership because deep app links and legacy tenant roots remain active.
 
 ## Boundary Clarification
 
@@ -101,7 +103,7 @@ Legacy tenant roots remain active.
 
 ### Phase 13.3: Direct-Render Entry Wrappers
 
-Status: started.
+Status: complete for the low-risk entrypoint set.
 
 For top-level module entrypoints only, replace redirect-only slug views with
 wrappers that preserve the `/w/<workspace_slug>/...` URL while delegating to the
@@ -115,17 +117,14 @@ Start with low-risk entrypoints:
   view while preserving the slug URL.
 - `/w/<workspace_slug>/loans/` - direct-renders the existing Girvi dashboard
   view while preserving the slug URL.
-- `/w/<workspace_slug>/accounting/`
+- `/w/<workspace_slug>/accounting/` - direct-renders the existing DEA home view
+  while preserving the slug URL.
 
 The first Phase 13.3 slice converts `/w/<workspace_slug>/parties/` from a
 redirect-only alias into a direct-render wrapper around the existing
 `party_list` view. This keeps Party's current authorization and query behavior
 as the source of truth while making the browser stay on the canonical slug
 entry URL.
-
-Accounting still redirects to its legacy entrypoint and should be converted
-after checking the DEA dashboard assumptions about URL names, breadcrumbs, HTMX
-targets, and selected workspace context.
 
 The second Phase 13.3 slice converts `/w/<workspace_slug>/inventory/` from a
 redirect-only alias into a direct-render wrapper around the existing Product
@@ -139,9 +138,11 @@ dashboard view. This preserves Girvi's current entrypoint policy by keeping the
 Girvi workspace access guard as the source of truth and leaving deep loan,
 repayment, release, custody, print, notice, and report routes unchanged.
 
-Accounting still redirects to its legacy entrypoint and should be converted only
-after DEA dashboard links, advanced-accounting permission assumptions, and
-business-event/report navigation are checked.
+The fourth Phase 13.3 slice converts `/w/<workspace_slug>/accounting/` from a
+redirect-only alias into a direct-render wrapper around the existing DEA home
+view. This preserves the current target and keeps the slug wrapper's login
+boundary while leaving DEA operations, sales, purchase, commodity, reports, and
+deep accounting routes unchanged.
 
 ### Phase 13.4: Module Deep-Link Plan
 
@@ -169,8 +170,6 @@ bookmarks and tests stabilize.
 
 ## Next Recommended Step
 
-Proceed with the next Phase 13.3 slice: evaluate
-`/w/<workspace_slug>/accounting/` for direct rendering against the existing DEA
-home/dashboard view, then convert only if dashboard links, advanced accounting
-permission assumptions, HTMX endpoints, and report/business-event navigation
-remain unchanged.
+Proceed with Phase 13.4: inventory the remaining deep route canonicalization
+work for DEA, Girvi, Party, Product, Rates, Notify, and data tools before
+changing internal links or remounting nested route groups.

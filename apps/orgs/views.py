@@ -280,7 +280,9 @@ def workspace_slug_inventory(request, workspace_slug):
 @login_required
 def workspace_slug_accounting(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("dea_home")
+    from apps.tenant_apps.dea.views.common import home as dea_home
+
+    return dea_home(request)
 
 
 @login_required

@@ -63,7 +63,6 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         shared_urlpatterns = _read("django_project/shared_urlpatterns.py")
         org_views = _read("apps/orgs/views.py")
         self.assertIn("CANONICAL_WORKSPACE_SLUG_URLPATTERNS", shared_urlpatterns)
-        self.assertIn('return redirect("dea_home")', org_views)
 
         parties_section = org_views.split("def workspace_slug_parties", 1)[1].split(
             "def workspace_slug_loans", 1
@@ -74,12 +73,17 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         inventory_section = org_views.split("def workspace_slug_inventory", 1)[1].split(
             "def workspace_slug_accounting", 1
         )[0]
+        accounting_section = org_views.split("def workspace_slug_accounting", 1)[1].split(
+            "def workspace_slug_operations", 1
+        )[0]
         self.assertIn("party_list(request)", parties_section)
         self.assertNotIn('redirect("party:party_list")', parties_section)
         self.assertIn("girvi_dashboard(request)", loans_section)
         self.assertNotIn('redirect("girvi:girvi_dashboard")', loans_section)
         self.assertIn("product_home(request)", inventory_section)
         self.assertNotIn('redirect("product_product_home")', inventory_section)
+        self.assertIn("dea_home(request)", accounting_section)
+        self.assertNotIn('redirect("dea_home")', accounting_section)
 
     def test_phase131_project_docs_no_longer_overclaim_full_canonicalization(self):
         status = _read("docs/STATUS.md")
@@ -128,7 +132,7 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         )[0]
 
         self.assertIn("Phase 13.3", plan)
-        self.assertIn("Status: started", plan)
+        self.assertIn("Status: complete for the low-risk entrypoint set", plan)
         self.assertIn("/w/<workspace_slug>/parties/", plan)
         self.assertIn("from apps.tenant_apps.party.views import party_list", parties_section)
         self.assertIn("return party_list(request)", parties_section)
@@ -169,3 +173,21 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         )
         self.assertIn("return girvi_dashboard(request)", loans_section)
         self.assertNotIn('return redirect("girvi:girvi_dashboard")', loans_section)
+
+    def test_phase133_accounting_slug_entry_direct_renders_existing_dea_home(self):
+        org_views = _read("apps/orgs/views.py")
+        plan = _read("docs/ui/tenant_route_canonicalization_phase13_plan.md")
+
+        accounting_section = org_views.split("def workspace_slug_accounting", 1)[1].split(
+            "def workspace_slug_operations", 1
+        )[0]
+
+        self.assertIn("Phase 13.3", plan)
+        self.assertIn("/w/<workspace_slug>/accounting/", plan)
+        self.assertIn("DEA home view", plan)
+        self.assertIn(
+            "from apps.tenant_apps.dea.views.common import home as dea_home",
+            accounting_section,
+        )
+        self.assertIn("return dea_home(request)", accounting_section)
+        self.assertNotIn('return redirect("dea_home")', accounting_section)
