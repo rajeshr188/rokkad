@@ -302,6 +302,138 @@ def workspace_slug_loans(request, workspace_slug):
 
 
 @login_required
+def workspace_slug_loan_list(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_list
+
+    return loan_list(request)
+
+
+@login_required
+def workspace_slug_loan_table(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_table_partial
+
+    return loan_table_partial(request)
+
+
+@login_required
+def workspace_slug_loan_detail(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_detail
+
+    return loan_detail(request, pk=pk)
+
+
+@login_required
+def workspace_slug_loan_detail_items(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_detail_items_tab
+
+    return loan_detail_items_tab(request, pk=pk)
+
+
+@login_required
+def workspace_slug_loan_detail_payments(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_detail_payments_tab
+
+    return loan_detail_payments_tab(request, pk=pk)
+
+
+@login_required
+def workspace_slug_loan_detail_transactions(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_detail_transactions_tab
+
+    return loan_detail_transactions_tab(request, pk=pk)
+
+
+@login_required
+def workspace_slug_loan_detail_statement(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_detail_statement_tab
+
+    return loan_detail_statement_tab(request, pk=pk)
+
+
+@login_required
+def workspace_slug_loan_detail_notices(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_detail_notices_tab
+
+    return loan_detail_notices_tab(request, pk=pk)
+
+
+@login_required
+def workspace_slug_loan_detail_release(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import loan_detail_release_tab
+
+    return loan_detail_release_tab(request, pk=pk)
+
+
+@login_required
+def workspace_slug_loan_pdf(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.loan import print_loan
+
+    return print_loan(request, pk=pk)
+
+
+@login_required
+def workspace_slug_loan_report(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.reports import LoanTimeSeriesReport
+
+    return LoanTimeSeriesReport.as_view()(request)
+
+
+@login_required
+def workspace_slug_loan_by_customer_report(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.reports import LoanByCustomerReport
+
+    return LoanByCustomerReport.as_view()(request)
+
+
+@login_required
+def workspace_slug_loan_crosstab_report(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.reports import LoanCrosstabReport
+
+    return LoanCrosstabReport.as_view()(request)
+
+
+@login_required
+def workspace_slug_loan_list_report(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.reports import LoanListReport
+
+    return LoanListReport.as_view()(request)
+
+
+@login_required
+def workspace_slug_loan_reconciliation_report(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.reports import (
+        loan_accounting_reconciliation_report,
+    )
+
+    return loan_accounting_reconciliation_report(request)
+
+
+@login_required
+def workspace_slug_loan_operational_controls_report(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.girvi.views.reports import (
+        loan_operational_controls_report,
+    )
+
+    return loan_operational_controls_report(request)
+
+
+@login_required
 def workspace_slug_inventory(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
     from apps.tenant_apps.product.views.home import home as product_home

@@ -441,6 +441,8 @@ Phase 14.1 starts the next route-canonicalization phase in `docs/ui/tenant_party
 
 Phase 14.2 low-risk deep-link canonicalization is complete. Visible Party GET links now prefer slug routes when `user_workspace` exists, and read-only aliases are live for Product/Inventory products, stock, stock audit, transactions, statements; Rates and rate sources; Notify notifications and notice groups; and Data Tools export. Product/Rates/Notify/Data Tools mutation routes, nested Party mutations, Party success redirects, Girvi, DEA, and legacy-root cleanup remain follow-up work.
 
+Phase 15 compressed Girvi/Loans route canonicalization is complete in `docs/ui/tenant_girvi_route_canonicalization_phase15.md`. Read-only loan list/detail/tab/PDF/report aliases are live under `/w/<workspace_slug>/loans/...`; loan create/update/delete, repayment, release, custody, lifecycle transition, operations-console retry, document/template/storage mutations, DEA, and legacy-root cleanup remain follow-up work.
+
 ## Navigation Memory
 
 Main sidebar direction:

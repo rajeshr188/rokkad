@@ -436,6 +436,117 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=tenant_urls)
 
+    def test_phase15_girvi_read_only_loan_aliases_resolve(self):
+        route_cases = {
+            "workspace_slug_loan_list": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/list/",
+                "loan_list(request)",
+            ),
+            "workspace_slug_loan_table": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/table/",
+                "loan_table_partial(request)",
+            ),
+            "workspace_slug_loan_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/loans/7/",
+                "loan_detail(request, pk=pk)",
+            ),
+            "workspace_slug_loan_detail_items": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/loans/7/items/",
+                "loan_detail_items_tab(request, pk=pk)",
+            ),
+            "workspace_slug_loan_detail_payments": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/loans/7/payments/",
+                "loan_detail_payments_tab(request, pk=pk)",
+            ),
+            "workspace_slug_loan_detail_transactions": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/loans/7/transactions/",
+                "loan_detail_transactions_tab(request, pk=pk)",
+            ),
+            "workspace_slug_loan_detail_statement": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/loans/7/statement/",
+                "loan_detail_statement_tab(request, pk=pk)",
+            ),
+            "workspace_slug_loan_detail_notices": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/loans/7/notices/",
+                "loan_detail_notices_tab(request, pk=pk)",
+            ),
+            "workspace_slug_loan_detail_release": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/loans/7/release/",
+                "loan_detail_release_tab(request, pk=pk)",
+            ),
+            "workspace_slug_loan_pdf": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/loans/7/pdf/",
+                "print_loan(request, pk=pk)",
+            ),
+            "workspace_slug_loan_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/reports/time-series/",
+                "LoanTimeSeriesReport.as_view()(request)",
+            ),
+            "workspace_slug_loan_by_customer_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/reports/by-customer/",
+                "LoanByCustomerReport.as_view()(request)",
+            ),
+            "workspace_slug_loan_crosstab_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/reports/crosstab/",
+                "LoanCrosstabReport.as_view()(request)",
+            ),
+            "workspace_slug_loan_list_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/reports/list/",
+                "LoanListReport.as_view()(request)",
+            ),
+            "workspace_slug_loan_reconciliation_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/reports/reconciliation/",
+                "loan_accounting_reconciliation_report(request)",
+            ),
+            "workspace_slug_loan_operational_controls_report": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/reports/operational-controls/",
+                "loan_operational_controls_report(request)",
+            ),
+        }
+
+        org_views = _read("apps/orgs/views.py")
+
+        for route_name, (kwargs, path, delegate_call) in route_cases.items():
+            with self.subTest(route_name=route_name):
+                self.assertEqual(reverse(route_name, kwargs=kwargs), path)
+                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+                self.assertIn(f"def {route_name}", org_views)
+                self.assertIn(delegate_call, org_views)
+
+    def test_phase15_girvi_mutation_aliases_remain_absent(self):
+        absent_paths = (
+            "/w/acme/loans/create/",
+            "/w/acme/loans/7/update/",
+            "/w/acme/loans/7/delete/",
+            "/w/acme/loans/7/renew/",
+            "/w/acme/loans/7/repayment/create/",
+            "/w/acme/loans/releases/create/",
+            "/w/acme/loans/7/transition/",
+            "/w/acme/loans/custody/repledge/create/",
+            "/w/acme/loans/operations-console/",
+        )
+
+        for path in absent_paths:
+            with self.subTest(path=path):
+                with self.assertRaises(Resolver404):
+                    resolve(path, urlconf=tenant_urls)
+
     def test_phase13_review_closes_safe_boundary_not_full_remount(self):
         review = _read("docs/ui/tenant_route_canonicalization_phase13_review.md")
 
