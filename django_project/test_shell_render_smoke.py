@@ -307,6 +307,32 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn('id="settings-smoke"', html)
         self.assertIn("Account &amp; Workspace Management", html)
 
+    def test_customer_portal_shell_renders_portal_only_navigation(self):
+        html = _render(
+            """
+            {% extends "base_customer_portal.html" %}
+            {% block title %}Portal Smoke{% endblock %}
+            {% block portal_content %}<section id="portal-smoke">Portal shell</section>{% endblock %}
+            """,
+            request=_authenticated_request("/portal/", url_name="customer_portal_dashboard"),
+            context={
+                "portal_party_name": "Asha Customer",
+                "portal_workspace_name": "Acme Jewellers",
+            },
+            use_request_processors=False,
+        )
+
+        self.assertIn("Portal Smoke", html)
+        self.assertIn('id="portal-smoke"', html)
+        self.assertIn("portal-topbar", html)
+        self.assertIn("portal-sidebar", html)
+        self.assertIn("Asha Customer", html)
+        self.assertIn("My loans", html)
+        self.assertIn("My statements", html)
+        self.assertIn("data-route-pending", html)
+        self.assertNotIn("workspace-sidebar", html)
+        self.assertNotIn("Account &amp; Workspace Management", html)
+
     def test_tenant_shell_renders_workspace_content_marker(self):
         html = _render(
             """

@@ -1,0 +1,37 @@
+{% load i18n %}
+
+<aside class="portal-sidebar" aria-label="{% trans 'Customer portal sections' %}">
+    <div class="portal-sidebar-inner">
+        <div class="portal-section-title">{% trans "My portal" %}</div>
+        <nav class="portal-nav-list">
+            <a class="portal-nav-link disabled" href="#" aria-disabled="true" tabindex="-1" data-route-pending="customer_portal_dashboard">
+                <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                <span>{% trans "Overview" %}</span>
+                <span class="portal-pending-badge">{% trans "Pending" %}</span>
+            </a>
+            <a class="portal-nav-link disabled" href="#" aria-disabled="true" tabindex="-1" data-route-pending="customer_portal_loans">
+                <i class="bi bi-gem" aria-hidden="true"></i>
+                <span>{% trans "My loans" %}</span>
+            </a>
+            <a class="portal-nav-link disabled" href="#" aria-disabled="true" tabindex="-1" data-route-pending="customer_portal_invoices">
+                <i class="bi bi-receipt" aria-hidden="true"></i>
+                <span>{% trans "My invoices" %}</span>
+            </a>
+            <a class="portal-nav-link disabled" href="#" aria-disabled="true" tabindex="-1" data-route-pending="customer_portal_payments">
+                <i class="bi bi-wallet2" aria-hidden="true"></i>
+                <span>{% trans "My payments" %}</span>
+            </a>
+            <a class="portal-nav-link disabled" href="#" aria-disabled="true" tabindex="-1" data-route-pending="customer_portal_documents">
+                <i class="bi bi-folder2-open" aria-hidden="true"></i>
+                <span>{% trans "My documents" %}</span>
+            </a>
+            <a class="portal-nav-link disabled" href="#" aria-disabled="true" tabindex="-1" data-route-pending="customer_portal_statements">
+                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                <span>{% trans "My statements" %}</span>
+            </a>
+        </nav>
+        <div class="portal-sidebar-note">
+            {% trans "Portal routes stay disabled until verified customer access is wired." %}
+        </div>
+    </div>
+</aside>

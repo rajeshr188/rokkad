@@ -113,6 +113,8 @@ selector must accept a verified tenant Party identity and fail closed otherwise.
 
 ### Phase 12.4: Shell And Navigation
 
+Status: complete.
+
 Upgrade `base_customer_portal.html` into a real portal shell with portal-only
 navigation, workspace/customer identity display, and no ERP/sidebar leakage.
 
@@ -125,5 +127,6 @@ exist.
 
 Phase 12.3 is complete in
 `docs/ui/customer_portal_selector_contracts_phase12.md`. The next step is Phase
-12.4: upgrade `base_customer_portal.html` into a real portal shell and
-portal-only navigation while keeping live `/portal/...` routes absent.
+12.4 is complete in `docs/ui/customer_portal_shell_phase12.md`. The next step
+is Phase 12.5 planning: decide whether live portal routes should wait for a real
+`PartyPortalAccess` model or start with guarded placeholder views.

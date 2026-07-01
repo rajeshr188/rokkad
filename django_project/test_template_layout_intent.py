@@ -83,16 +83,22 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         self.assertIn("{% static 'css/public.css' %}", auth_alias)
         self.assertIn("auth-shell", auth_alias)
         self.assertIn("{% static 'css/workspace.css' %}", tenant_alias)
+        self.assertIn("{% static 'css/customer_portal.css' %}", customer_portal_alias)
+        self.assertIn("portal-shell", customer_portal_alias)
 
         for content in (public_alias, auth_alias):
             with self.subTest(shell="public_or_auth"):
                 self.assertNotIn("css/management.css", content)
                 self.assertNotIn("css/workspace.css", content)
 
-        for content in (global_alias, settings_alias, customer_portal_alias):
+        for content in (global_alias, settings_alias):
             with self.subTest(shell="management_or_portal_alias"):
                 self.assertNotIn("css/public.css", content)
                 self.assertNotIn("css/workspace.css", content)
+
+        self.assertNotIn("css/public.css", customer_portal_alias)
+        self.assertNotIn("css/workspace.css", customer_portal_alias)
+        self.assertNotIn("css/management.css", customer_portal_alias)
 
         self.assertNotIn("css/public.css", tenant_alias)
         self.assertNotIn("css/management.css", tenant_alias)
@@ -105,6 +111,7 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
             "base_workspace_settings.html",
             "base_tenant.html",
             "base_customer_portal.html",
+            "components/navigation/customer_portal_nav.html",
             "layouts/management.html",
             "layouts/workspace.html",
             "components/navigation/workspace_switcher.html",
@@ -191,6 +198,37 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
                 violations.append(f"{_relative(path)}: missing workspace_content")
 
         self.assertEqual(violations, [])
+
+    def test_customer_portal_alias_exposes_portal_only_shell(self):
+        portal_alias = (TEMPLATES_ROOT / "base_customer_portal.html").read_text(
+            encoding="utf-8-sig"
+        )
+        portal_nav = (
+            TEMPLATES_ROOT / "components/navigation/customer_portal_nav.html"
+        ).read_text(encoding="utf-8-sig")
+        portal_css = (STATIC_ROOT / "css" / "customer_portal.css").read_text(
+            encoding="utf-8-sig"
+        )
+
+        self.assertIn("{% block portal_content %}", portal_alias)
+        self.assertIn("components/navigation/customer_portal_nav.html", portal_alias)
+        self.assertIn("portal-topbar", portal_alias)
+        self.assertIn("portal-sidebar", portal_nav)
+        self.assertIn("customer_portal_loans", portal_nav)
+        self.assertIn("customer_portal_statements", portal_nav)
+        self.assertIn("data-route-pending", portal_nav)
+        self.assertIn(".portal-shell", portal_css)
+        self.assertIn(".portal-nav-link", portal_css)
+
+        for forbidden in (
+            "workspace-sidebar",
+            "mgmt-sidebar",
+            "workspace_slug_dashboard",
+            "workspace_settings_team",
+            "app_workspaces",
+        ):
+            self.assertNotIn(forbidden, portal_alias)
+            self.assertNotIn(forbidden, portal_nav)
 
     def test_management_alias_children_use_mgmt_content_block(self):
         violations = []

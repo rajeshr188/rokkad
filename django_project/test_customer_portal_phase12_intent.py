@@ -67,15 +67,22 @@ class CustomerPortalPhase12IntentTests(SimpleTestCase):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=tenant_urls)
 
-    def test_phase121_portal_shell_alias_exists_but_is_not_full_shell_yet(self):
+    def test_phase124_portal_shell_alias_is_now_real_shell_without_routes(self):
         portal_alias = (
             TEMPLATES_ROOT / "base_customer_portal.html"
+        ).read_text(encoding="utf-8-sig")
+        portal_nav = (
+            TEMPLATES_ROOT / "components" / "navigation" / "customer_portal_nav.html"
         ).read_text(encoding="utf-8-sig")
         plan = _read("docs/ui/customer_portal_phase12_plan.md")
 
         self.assertIn('extends "layouts/base.html"', portal_alias)
         self.assertIn("base_customer_portal.html", plan)
-        self.assertIn("Upgrade `base_customer_portal.html` into a real portal shell", plan)
+        self.assertIn("portal_content", portal_alias)
+        self.assertIn("customer_portal_nav.html", portal_alias)
+        self.assertIn("data-route-pending", portal_nav)
+        self.assertIn("Phase 12.4", plan)
+        self.assertIn("customer_portal_shell_phase12.md", plan)
 
     def test_phase121_project_docs_point_to_portal_phase(self):
         status = _read("docs/STATUS.md")

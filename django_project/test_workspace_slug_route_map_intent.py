@@ -153,6 +153,68 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
                 )
                 self.assertEqual(resolve(expected_path).url_name, route_name)
 
+    def test_phase11_target_tenant_route_map_is_complete_except_portal(self):
+        ia_audit = _read("docs/ui/saas_information_architecture_audit.md")
+        phase11_review = _read("docs/ui/workspace_slug_phase11_review.md")
+        route_map_source = _read("django_project/shared_urlpatterns.py")
+
+        expected_target_routes = (
+            "/w/<workspace_slug>/",
+            "/w/<workspace_slug>/operations/",
+            "/w/<workspace_slug>/parties/",
+            "/w/<workspace_slug>/sales/",
+            "/w/<workspace_slug>/purchase/",
+            "/w/<workspace_slug>/loans/",
+            "/w/<workspace_slug>/inventory/",
+            "/w/<workspace_slug>/commodity/",
+            "/w/<workspace_slug>/accounting/",
+            "/w/<workspace_slug>/reports/",
+            "/w/<workspace_slug>/settings/",
+            "/w/<workspace_slug>/settings/profile/",
+            "/w/<workspace_slug>/settings/team/",
+            "/w/<workspace_slug>/settings/invitations/",
+            "/w/<workspace_slug>/settings/roles/",
+            "/w/<workspace_slug>/settings/billing/",
+            "/w/<workspace_slug>/settings/modules/",
+            "/w/<workspace_slug>/settings/numbering/",
+            "/w/<workspace_slug>/settings/accounting/",
+            "/w/<workspace_slug>/settings/security/",
+        )
+        expected_route_names = (
+            "workspace_slug_dashboard",
+            "workspace_slug_operations",
+            "workspace_slug_parties",
+            "workspace_slug_sales",
+            "workspace_slug_purchase",
+            "workspace_slug_loans",
+            "workspace_slug_inventory",
+            "workspace_slug_commodity",
+            "workspace_slug_accounting",
+            "workspace_slug_reports",
+            "workspace_slug_settings",
+            "workspace_slug_settings_profile",
+            "workspace_slug_settings_team",
+            "workspace_slug_settings_invitations",
+            "workspace_slug_settings_roles",
+            "workspace_slug_settings_billing",
+            "workspace_slug_settings_modules",
+            "workspace_slug_settings_numbering",
+            "workspace_slug_settings_accounting",
+            "workspace_slug_settings_security",
+        )
+
+        for route in expected_target_routes:
+            with self.subTest(route=route):
+                self.assertIn(route, ia_audit)
+                self.assertIn(route, phase11_review)
+
+        for route_name in expected_route_names:
+            with self.subTest(route_name=route_name):
+                self.assertIn(route_name, route_map_source)
+
+        self.assertIn("customer/member portal", phase11_review)
+        self.assertIn("/portal/loans/", phase11_review)
+
     def test_phase105_tenant_erp_section_aliases_are_live_without_contact(self):
         route_cases = {
             "workspace_slug_parties": "/w/acme/parties/",
