@@ -264,7 +264,9 @@ def workspace_slug_parties(request, workspace_slug):
 @login_required
 def workspace_slug_loans(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("girvi:girvi_dashboard")
+    from apps.tenant_apps.girvi.views.dashboard import girvi_dashboard
+
+    return girvi_dashboard(request)
 
 
 @login_required

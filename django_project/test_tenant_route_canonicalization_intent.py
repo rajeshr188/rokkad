@@ -64,16 +64,20 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         org_views = _read("apps/orgs/views.py")
         self.assertIn("CANONICAL_WORKSPACE_SLUG_URLPATTERNS", shared_urlpatterns)
         self.assertIn('return redirect("dea_home")', org_views)
-        self.assertIn('return redirect("girvi:girvi_dashboard")', org_views)
 
         parties_section = org_views.split("def workspace_slug_parties", 1)[1].split(
             "def workspace_slug_loans", 1
+        )[0]
+        loans_section = org_views.split("def workspace_slug_loans", 1)[1].split(
+            "def workspace_slug_inventory", 1
         )[0]
         inventory_section = org_views.split("def workspace_slug_inventory", 1)[1].split(
             "def workspace_slug_accounting", 1
         )[0]
         self.assertIn("party_list(request)", parties_section)
         self.assertNotIn('redirect("party:party_list")', parties_section)
+        self.assertIn("girvi_dashboard(request)", loans_section)
+        self.assertNotIn('redirect("girvi:girvi_dashboard")', loans_section)
         self.assertIn("product_home(request)", inventory_section)
         self.assertNotIn('redirect("product_product_home")', inventory_section)
 
@@ -147,3 +151,21 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
         )
         self.assertIn("return product_home(request)", inventory_section)
         self.assertNotIn('return redirect("product_product_home")', inventory_section)
+
+    def test_phase133_loans_slug_entry_direct_renders_existing_girvi_dashboard(self):
+        org_views = _read("apps/orgs/views.py")
+        plan = _read("docs/ui/tenant_route_canonicalization_phase13_plan.md")
+
+        loans_section = org_views.split("def workspace_slug_loans", 1)[1].split(
+            "def workspace_slug_inventory", 1
+        )[0]
+
+        self.assertIn("Phase 13.3", plan)
+        self.assertIn("/w/<workspace_slug>/loans/", plan)
+        self.assertIn("Girvi workspace access guard", plan)
+        self.assertIn(
+            "from apps.tenant_apps.girvi.views.dashboard import girvi_dashboard",
+            loans_section,
+        )
+        self.assertIn("return girvi_dashboard(request)", loans_section)
+        self.assertNotIn('return redirect("girvi:girvi_dashboard")', loans_section)

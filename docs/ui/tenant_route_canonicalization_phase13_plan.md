@@ -113,7 +113,8 @@ Start with low-risk entrypoints:
   while preserving the slug URL.
 - `/w/<workspace_slug>/inventory/` - direct-renders the existing Product home
   view while preserving the slug URL.
-- `/w/<workspace_slug>/loans/`
+- `/w/<workspace_slug>/loans/` - direct-renders the existing Girvi dashboard
+  view while preserving the slug URL.
 - `/w/<workspace_slug>/accounting/`
 
 The first Phase 13.3 slice converts `/w/<workspace_slug>/parties/` from a
@@ -122,9 +123,9 @@ redirect-only alias into a direct-render wrapper around the existing
 as the source of truth while making the browser stay on the canonical slug
 entry URL.
 
-Loans and accounting still redirect to their legacy entrypoints and should be
-converted one at a time after checking each target view's assumptions about URL
-names, breadcrumbs, HTMX targets, and selected workspace context.
+Accounting still redirects to its legacy entrypoint and should be converted
+after checking the DEA dashboard assumptions about URL names, breadcrumbs, HTMX
+targets, and selected workspace context.
 
 The second Phase 13.3 slice converts `/w/<workspace_slug>/inventory/` from a
 redirect-only alias into a direct-render wrapper around the existing Product
@@ -132,9 +133,15 @@ home view. This preserves the current Product entrypoint policy: the dashboard
 itself requires login, while detailed product, stock, pricing, image, and
 attribute views continue to enforce their Product action guards.
 
-Loans and accounting still redirect to their legacy entrypoints and should be
-converted only after their dashboard views are checked for workflow-specific
-redirects, form targets, and permission assumptions.
+The third Phase 13.3 slice converts `/w/<workspace_slug>/loans/` from a
+redirect-only alias into a direct-render wrapper around the existing Girvi
+dashboard view. This preserves Girvi's current entrypoint policy by keeping the
+Girvi workspace access guard as the source of truth and leaving deep loan,
+repayment, release, custody, print, notice, and report routes unchanged.
+
+Accounting still redirects to its legacy entrypoint and should be converted only
+after DEA dashboard links, advanced-accounting permission assumptions, and
+business-event/report navigation are checked.
 
 ### Phase 13.4: Module Deep-Link Plan
 
@@ -162,7 +169,8 @@ bookmarks and tests stabilize.
 
 ## Next Recommended Step
 
-Proceed with the next Phase 13.3 slice: evaluate `/w/<workspace_slug>/loans/`
-for direct rendering against the existing Girvi dashboard view, then convert
-only if its workflow links, forms, HTMX endpoints, and role checks remain
-unchanged.
+Proceed with the next Phase 13.3 slice: evaluate
+`/w/<workspace_slug>/accounting/` for direct rendering against the existing DEA
+home/dashboard view, then convert only if dashboard links, advanced accounting
+permission assumptions, HTMX endpoints, and report/business-event navigation
+remain unchanged.
