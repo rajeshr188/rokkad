@@ -445,6 +445,8 @@ Phase 15 compressed Girvi/Loans route canonicalization is complete in `docs/ui/t
 
 Phase 16 compressed DEA/Accounting route canonicalization is complete in `docs/ui/tenant_dea_route_canonicalization_phase16.md`. Top-level operations/sales/purchase/commodity/reports slug aliases direct-render existing DEA views, and read-only aliases are live for accounting chart/accounts/ledgers/transactions/reports/vouchers/payments/expenses/journal-entry-vouchers/periods/reconciliation/commodity details. DEA posting, business-event confirm, period mutation, reconciliation import/match, opening balance, commodity setup, and legacy-root cleanup remain follow-up work.
 
+Phase 17 legacy-root compatibility closeout is complete in `docs/ui/tenant_legacy_root_compatibility_phase17.md`. Legacy roots (`/party/`, `/product/`, `/girvi/`, `/dea/`, `/rates/`, `/notify/`, `/notify-v2/`, `/data-tools/`) remain active compatibility routes. The compressed SaaS IA route-canonicalization work is complete; remaining route work should be module-specific POST/HTMX/success-redirect migration or customer portal runtime access, not a blanket legacy-root redirect.
+
 ## Navigation Memory
 
 Main sidebar direction:

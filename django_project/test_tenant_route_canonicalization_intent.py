@@ -763,6 +763,40 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=tenant_urls)
 
+    def test_phase17_legacy_roots_remain_active_compatibility_routes(self):
+        route_cases = {
+            "/party/": "party_list",
+            "/product/": "product_product_home",
+            "/girvi/": "girvi_dashboard",
+            "/dea/": "dea_home",
+            "/rates/rates/": "rate_list",
+            "/notify/notification/": "notify_notification_list",
+            "/data-tools/export/": "export_form",
+        }
+
+        for path, route_name in route_cases.items():
+            with self.subTest(path=path):
+                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+
+    def test_phase17_compatibility_policy_closes_compressed_route_work(self):
+        policy = _read("docs/ui/tenant_legacy_root_compatibility_phase17.md")
+        audit = _read("docs/ui/saas_information_architecture_audit.md")
+        status = _read("docs/STATUS.md")
+
+        for expected in (
+            "Legacy tenant roots remain active",
+            "compatibility routes",
+            "Do not remove or globally redirect legacy tenant roots yet",
+            "compressed SaaS IA route-canonicalization work is complete",
+            "module-specific workflow migration",
+            "customer portal runtime access",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, policy)
+
+        self.assertIn("Phase 17", audit)
+        self.assertIn("tenant_legacy_root_compatibility_phase17.md", status)
+
     def test_phase13_review_closes_safe_boundary_not_full_remount(self):
         review = _read("docs/ui/tenant_route_canonicalization_phase13_review.md")
 
