@@ -417,6 +417,8 @@ Phase 11.4 workspace modules/security settings screens are implemented. `workspa
 
 Phase 11 final review is complete in `docs/ui/workspace_slug_phase11_review.md`. The target `/w/<workspace_slug>/...` tenant and workspace-settings route map is live except Contact, intentionally skipped for Party, and the customer/member portal route map, which should be the next separate IA phase.
 
+Phase 12.1 customer/member portal planning is complete in `docs/ui/customer_portal_phase12_plan.md`. `/portal/...` routes remain absent. The portal should be tenant-scoped and Party-backed, with explicit authenticated user-to-tenant Party identity binding before routes are exposed. Phase 12.2 should choose that identity model and add access-helper scaffolding/tests without adding live portal routes.
+
 ## Navigation Memory
 
 Main sidebar direction:
