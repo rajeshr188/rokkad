@@ -10,7 +10,7 @@
         <div class="portal-list-row">
             <strong>{{ payment.payment_id }}</strong>
             <span>{{ payment.payment_date }}</span>
-            <span>{{ payment.total_amount }}</span>
+            <span>{{ payment.total_amount.amount }} {{ payment.total_amount.currency }}</span>
         </div>
     {% empty %}
         <p class="portal-empty">{% trans "No payments are available for your portal access." %}</p>

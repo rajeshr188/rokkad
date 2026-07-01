@@ -10,7 +10,7 @@
         <div class="portal-list-row">
             <strong>{{ invoice.invoice_number }}</strong>
             <span>{{ invoice.invoice_date }}</span>
-            <span>{{ invoice.outstanding_balance }}</span>
+            <span>{{ invoice.outstanding_balance.amount }} {{ invoice.outstanding_balance.currency }}</span>
         </div>
     {% empty %}
         <p class="portal-empty">{% trans "No invoices are available for your portal access." %}</p>
