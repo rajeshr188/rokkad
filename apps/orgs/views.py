@@ -270,7 +270,9 @@ def workspace_slug_loans(request, workspace_slug):
 @login_required
 def workspace_slug_inventory(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("product_product_home")
+    from apps.tenant_apps.product.views.home import home as product_home
+
+    return product_home(request)
 
 
 @login_required

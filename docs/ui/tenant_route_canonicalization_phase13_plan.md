@@ -111,7 +111,8 @@ Start with low-risk entrypoints:
 
 - `/w/<workspace_slug>/parties/` - direct-renders the existing Party list view
   while preserving the slug URL.
-- `/w/<workspace_slug>/inventory/`
+- `/w/<workspace_slug>/inventory/` - direct-renders the existing Product home
+  view while preserving the slug URL.
 - `/w/<workspace_slug>/loans/`
 - `/w/<workspace_slug>/accounting/`
 
@@ -121,9 +122,19 @@ redirect-only alias into a direct-render wrapper around the existing
 as the source of truth while making the browser stay on the canonical slug
 entry URL.
 
-Inventory, loans, and accounting still redirect to their legacy entrypoints and
-should be converted one at a time after checking each target view's assumptions
-about URL names, breadcrumbs, HTMX targets, and selected workspace context.
+Loans and accounting still redirect to their legacy entrypoints and should be
+converted one at a time after checking each target view's assumptions about URL
+names, breadcrumbs, HTMX targets, and selected workspace context.
+
+The second Phase 13.3 slice converts `/w/<workspace_slug>/inventory/` from a
+redirect-only alias into a direct-render wrapper around the existing Product
+home view. This preserves the current Product entrypoint policy: the dashboard
+itself requires login, while detailed product, stock, pricing, image, and
+attribute views continue to enforce their Product action guards.
+
+Loans and accounting still redirect to their legacy entrypoints and should be
+converted only after their dashboard views are checked for workflow-specific
+redirects, form targets, and permission assumptions.
 
 ### Phase 13.4: Module Deep-Link Plan
 
@@ -151,7 +162,7 @@ bookmarks and tests stabilize.
 
 ## Next Recommended Step
 
-Proceed with the next Phase 13.3 slice: evaluate `/w/<workspace_slug>/inventory/`
-for direct rendering against the existing Product home view, then convert only
-if its breadcrumbs, form targets, HTMX endpoints, and authorization behavior
-remain unchanged.
+Proceed with the next Phase 13.3 slice: evaluate `/w/<workspace_slug>/loans/`
+for direct rendering against the existing Girvi dashboard view, then convert
+only if its workflow links, forms, HTMX endpoints, and role checks remain
+unchanged.
