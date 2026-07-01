@@ -230,38 +230,43 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, slug_urlpatterns)
 
-    def test_phase135a_party_read_only_deep_aliases_resolve_as_redirects(self):
+    def test_phase141_party_read_only_deep_aliases_direct_render_existing_views(self):
         route_cases = {
             "workspace_slug_party_create": (
                 {"workspace_slug": "acme"},
                 "/w/acme/parties/new/",
-                'redirect("party:party_create")',
+                "from apps.tenant_apps.party.views import party_create",
+                "return party_create(request)",
             ),
             "workspace_slug_party_detail": (
                 {"workspace_slug": "acme", "pk": 7},
                 "/w/acme/parties/7/",
-                'redirect("party:party_detail", pk=pk)',
+                "from apps.tenant_apps.party.views import party_detail",
+                "return party_detail(request, pk=pk)",
             ),
             "workspace_slug_party_update": (
                 {"workspace_slug": "acme", "pk": 7},
                 "/w/acme/parties/7/edit/",
-                'redirect("party:party_update", pk=pk)',
+                "from apps.tenant_apps.party.views import party_update",
+                "return party_update(request, pk=pk)",
             ),
             "workspace_slug_party_merge": (
                 {"workspace_slug": "acme", "pk": 7},
                 "/w/acme/parties/7/merge/",
-                'redirect("party:party_merge", pk=pk)',
+                "from apps.tenant_apps.party.views import party_merge",
+                "return party_merge(request, pk=pk)",
             ),
         }
 
         org_views = _read("apps/orgs/views.py")
 
-        for route_name, (kwargs, path, redirect_call) in route_cases.items():
+        for route_name, (kwargs, path, import_line, return_line) in route_cases.items():
             with self.subTest(route_name=route_name):
                 self.assertEqual(reverse(route_name, kwargs=kwargs), path)
                 self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
                 self.assertIn(f"def {route_name}", org_views)
-                self.assertIn(redirect_call, org_views)
+                self.assertIn(import_line, org_views)
+                self.assertIn(return_line, org_views)
 
     def test_phase135a_party_nested_mutation_aliases_remain_absent(self):
         absent_paths = (

@@ -437,6 +437,8 @@ Phase 13.4 tenant deep-link canonicalization planning is complete in `docs/ui/te
 
 Phase 13 is complete in `docs/ui/tenant_route_canonicalization_phase13_review.md`. Party read-only deep aliases now exist as redirects for create, detail, edit, and merge. Nested Party mutation aliases remain absent. The next route-canonicalization phase should start with Party direct-render deep aliases and internal link migration before moving to Product/Inventory, Rates, Notify, Data Tools, Girvi, and DEA.
 
+Phase 14.1 starts the next route-canonicalization phase in `docs/ui/tenant_party_deep_link_canonicalization_phase14.md`. Party read-only deep aliases for create, detail, edit, and merge now direct-render existing Party views under `/w/<workspace_slug>/parties/...`; Party internal links, successful form redirects, nested mutation routes, and legacy-root removal remain separate follow-up work.
+
 ## Navigation Memory
 
 Main sidebar direction:

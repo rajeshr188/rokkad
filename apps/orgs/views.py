@@ -264,25 +264,33 @@ def workspace_slug_parties(request, workspace_slug):
 @login_required
 def workspace_slug_party_create(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("party:party_create")
+    from apps.tenant_apps.party.views import party_create
+
+    return party_create(request)
 
 
 @login_required
 def workspace_slug_party_detail(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("party:party_detail", pk=pk)
+    from apps.tenant_apps.party.views import party_detail
+
+    return party_detail(request, pk=pk)
 
 
 @login_required
 def workspace_slug_party_update(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("party:party_update", pk=pk)
+    from apps.tenant_apps.party.views import party_update
+
+    return party_update(request, pk=pk)
 
 
 @login_required
 def workspace_slug_party_merge(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("party:party_merge", pk=pk)
+    from apps.tenant_apps.party.views import party_merge
+
+    return party_merge(request, pk=pk)
 
 
 @login_required
