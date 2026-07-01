@@ -421,6 +421,8 @@ Phase 12.1 customer/member portal planning is complete in `docs/ui/customer_port
 
 Phase 12.2 customer/member portal identity design is complete in `docs/ui/customer_portal_identity_phase12.md`. Use Party as the portal customer identity, backed by a future explicit `PartyPortalAccess`-style tenant binding. Do not infer access from email/phone alone. `apps.tenant_apps.party.portal_access.resolve_portal_identity()` is a fail-closed helper scaffold, and `/portal/...` routes remain absent until selector/shell/access tests exist. Phase 12.3 should define read-only selector contracts around `PortalIdentity`.
 
+Phase 12.3 customer/member portal selector contracts are complete in `docs/ui/customer_portal_selector_contracts_phase12.md`. `apps.tenant_apps.party.portal_selectors` now defines fail-closed read-only summary contracts for dashboard, loans, invoices, payments, documents, and statements. Selectors validate `PortalIdentity` first and raise `PortalSelectorNotImplemented` until real PartyPortalAccess-backed data sources are wired. `/portal/...` routes remain absent. Phase 12.4 should upgrade the customer portal shell/navigation without exposing live routes.
+
 ## Navigation Memory
 
 Main sidebar direction:

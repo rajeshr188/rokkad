@@ -106,6 +106,8 @@ lives in a new portal app, Party, or orgs. Do not add live public routes yet.
 
 ### Phase 12.3: Read-Only Selector Contracts
 
+Status: complete.
+
 Define selectors for loans, invoices, payments, documents, and statements. Each
 selector must accept a verified tenant Party identity and fail closed otherwise.
 
@@ -121,9 +123,7 @@ exist.
 
 ## Next Recommended Step
 
-Proceed with Phase 12.2: choose and document the portal identity model, then add
-the access-helper scaffold and tests without exposing live `/portal/...` routes.
-
-Phase 12.2 is complete in `docs/ui/customer_portal_identity_phase12.md`. The
-next step is Phase 12.3: define read-only selector contracts around
-`PortalIdentity`.
+Phase 12.3 is complete in
+`docs/ui/customer_portal_selector_contracts_phase12.md`. The next step is Phase
+12.4: upgrade `base_customer_portal.html` into a real portal shell and
+portal-only navigation while keeping live `/portal/...` routes absent.

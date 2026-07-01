@@ -591,6 +591,7 @@ Next recommended SaaS IA slice:
 - Phase 11 final review in `docs/ui/workspace_slug_phase11_review.md` closes the workspace slug route-map rollout for tenant ERP and workspace settings. The remaining target route-map gap is the separate customer/member portal.
 - Phase 12.1 starts customer/member portal IA in `docs/ui/customer_portal_phase12_plan.md`. `/portal/...` routes remain intentionally absent until tenant Party identity binding, portal access helpers, read-only selectors, and a real customer portal shell are designed. Phase 12.2 should choose the portal identity model.
 - Phase 12.2 chooses a Party-backed portal identity model in `docs/ui/customer_portal_identity_phase12.md`, with a future explicit `PartyPortalAccess`-style tenant binding and a fail-closed `resolve_portal_identity()` helper scaffold. `/portal/...` routes remain absent. Phase 12.3 should define read-only selector contracts around `PortalIdentity`.
+- Phase 12.3 defines fail-closed customer/member portal selector contracts in `docs/ui/customer_portal_selector_contracts_phase12.md`. `apps.tenant_apps.party.portal_selectors` validates `PortalIdentity` before dashboard, loan, invoice, payment, document, or statement reads, then raises `PortalSelectorNotImplemented` until real PartyPortalAccess-backed tenant data sources are wired. `/portal/...` routes remain absent. Phase 12.4 should upgrade the portal shell/navigation without exposing live routes.
 
 ## J. Files to Change Later
 
