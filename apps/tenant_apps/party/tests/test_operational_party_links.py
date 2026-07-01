@@ -21,6 +21,8 @@ from apps.tenant_apps.dea.posting.rules.party_accounts import (
 )
 from apps.tenant_apps.girvi.models import GivenLoan, License, Series, TakenLoan
 from apps.tenant_apps.party.services.customer_bridge import ensure_customer_party
+from apps.tenant_apps.notify.models import Notification, NoticeTypeConfig
+from apps.tenant_apps.notify_v2.models import NotificationRecipient
 
 
 User = get_user_model()
@@ -121,6 +123,25 @@ class OperationalPartyLinkTests(TenantTestCase):
 
         self.assertEqual(sales_invoice.party, self.customer.party)
         self.assertEqual(purchase_invoice.party, self.supplier.party)
+
+    def test_notification_surfaces_sync_party_shadow_fields(self):
+        notice_type = NoticeTypeConfig.objects.create(
+            code=f"PARTY_NOTICE_{uuid.uuid4().hex[:8]}",
+            name="Party Notice",
+            category=NoticeTypeConfig.CategoryChoices.GENERAL,
+        )
+        notification = Notification.objects.create(
+            customer=self.customer,
+            notice_type_config=notice_type,
+            medium_type=Notification.MediumType.Email,
+        )
+        recipient = NotificationRecipient.objects.create(
+            customer=self.customer,
+            name_snapshot=self.customer.name,
+        )
+
+        self.assertEqual(notification.party, self.customer.party)
+        self.assertEqual(recipient.party, self.customer.party)
 
     def test_resolver_prefers_explicit_party_mapping(self):
         self._seed_account_masters()

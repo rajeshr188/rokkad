@@ -13,6 +13,7 @@ TENANT_ADMIN_URLPATTERNS = [
 # global control-plane routes continue to come from shared_urlpatterns below for
 # compatibility until the later route split introduces explicit aliases.
 TENANT_ERP_URLPATTERNS = [
+    path("portal/", include("apps.tenant_apps.party.portal_urls")),
     path("party/", include("apps.tenant_apps.party.urls")),
     path("contact/", include("apps.tenant_apps.contact.urls")),
     path("data-tools/", include("apps.tenant_apps.utils.importing.urls")),

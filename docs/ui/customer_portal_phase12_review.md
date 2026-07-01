@@ -12,8 +12,9 @@ related:
 
 # Customer Portal Phase 12 Review
 
-Phase 12 is complete for architecture, identity, selector contracts, and shell
-readiness. It intentionally does not expose live `/portal/...` routes yet.
+Phase 12 was completed as an architecture, identity, selector-contract, and
+shell-readiness phase. Its original live-route deferral is now superseded by the
+Party rollout read-only portal MVP.
 
 ## Completed
 
@@ -25,19 +26,20 @@ readiness. It intentionally does not expose live `/portal/...` routes yet.
   loans, invoices, payments, documents, and statements.
 - Phase 12.4 upgraded `base_customer_portal.html` into a real portal-only shell
   with pending navigation and no ERP/sidebar leakage.
-- Phase 12.5 closes the phase by deferring live routes until the access-grant
-  model exists.
+- The later Party rollout added the access-grant model, Party-scoped selectors,
+  tenant-only `/portal/...` routes, and read-only portal screens.
 
-## Route Decision
+## Superseded Route Decision
 
-Do not add live `/portal/...` routes with placeholder views.
+The original Phase 12 decision was: do not add live `/portal/...` routes with
+placeholder views.
 
-The current access helper is intentionally fail-closed and the selector
-contracts intentionally raise `PortalSelectorNotImplemented`. Adding routes now
-would create a customer-facing surface that cannot yet prove tenant Party access
-from database state.
+That warning remains valid for placeholder routes, but the route absence itself
+is superseded. Tenant portal routes are now live because they resolve an active
+`PartyPortalAccess`, validate `PortalIdentity`, and read through Party-scoped
+selectors.
 
-The target routes remain absent:
+The current live tenant route set is:
 
 - `/portal/`
 - `/portal/loans/`
@@ -46,16 +48,16 @@ The target routes remain absent:
 - `/portal/documents/`
 - `/portal/statements/`
 
-## Required Before Live Routes
+Public URLConf still does not expose `/portal/...`.
 
-- Add a tenant-schema `PartyPortalAccess` model or equivalent explicit grant.
-- Add migrations and tenant rollout guidance for the access grant.
-- Implement a real tenant binding lookup for `resolve_portal_identity()`.
-- Replace fail-closed selector stubs with Party-scoped query implementations.
-- Add cross-party denial tests for loans, invoices, payments, documents, and
-  statements.
-- Add route tests proving portal users do not receive tenant ERP navigation or
-  staff-only actions.
+## Live Route Requirements Now Met
+
+- `PartyPortalAccess` exists as a tenant-schema access grant.
+- `resolve_portal_identity()` performs a database-backed active-grant lookup.
+- Portal selectors validate `PortalIdentity` before reading tenant data.
+- Tenant tests cover active-grant resolution, inactive-grant denial, and
+  cross-party document isolation.
+- Route tests prove `/portal/...` is tenant-only and absent from public routes.
 
 ## Compatibility Findings
 
@@ -64,17 +66,18 @@ The target routes remain absent:
 - Matching email, phone, WhatsApp, or PAN remains verification input only, not
   authorization.
 - Staff workspace membership must not imply portal customer access.
-- Portal shell rendering is ready, but its navigation remains disabled and
-  marked pending.
+- Portal shell navigation is enabled only for read-only customer portal routes.
+- Customer-facing portal mutation routes remain out of scope.
 
 ## Verification
 
-- `python manage.py test django_project.test_customer_portal_phase12_intent django_project.test_customer_portal_identity_intent django_project.test_customer_portal_selector_contracts_intent django_project.test_template_layout_intent django_project.test_shell_render_smoke --keepdb`
+- `python manage.py test django_project.test_customer_portal_phase12_intent django_project.test_customer_portal_identity_intent django_project.test_customer_portal_selector_contracts_intent django_project.test_customer_portal_phase12_review_intent apps.tenant_apps.party.tests.test_party_portal --keepdb`
+- `python manage.py test django_project.test_template_layout_intent django_project.test_shell_render_smoke --keepdb`
 - `python manage.py check`
-- `git diff --check`
+- `python manage.py makemigrations --check --dry-run`
 
 ## Next Recommended Step
 
-Proceed with Phase 13.2 tenant route canonicalization before adding live portal
-routes. Convert remaining visible tenant sidebar/dashboard entry links to
-existing slug aliases while keeping legacy tenant roots active.
+Keep the portal read-only. The next portal-specific step should be focused
+selector hardening and render coverage for invoices, payments, loans, and
+statements before any customer-facing mutation workflow is designed.

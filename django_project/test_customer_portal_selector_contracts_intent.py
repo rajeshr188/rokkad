@@ -3,11 +3,10 @@ from types import SimpleNamespace
 
 from django.core.exceptions import PermissionDenied
 from django.test import SimpleTestCase
-from django.urls import NoReverseMatch, Resolver404, resolve, reverse
+from django.urls import Resolver404, resolve, reverse
 
 from apps.tenant_apps.party.portal_access import PortalIdentity
 from apps.tenant_apps.party.portal_selectors import (
-    PortalSelectorNotImplemented,
     get_portal_dashboard_summary,
     get_portal_documents_summary,
     get_portal_invoices_summary,
@@ -38,7 +37,6 @@ class CustomerPortalSelectorContractsIntentTests(SimpleTestCase):
             "Phase 12.3 defines",
             "PortalIdentity",
             "validate_portal_identity()",
-            "PortalSelectorNotImplemented",
             "get_portal_loans_summary",
             "get_portal_invoices_summary",
             "get_portal_payments_summary",
@@ -59,8 +57,8 @@ class CustomerPortalSelectorContractsIntentTests(SimpleTestCase):
             "PortalStatementSummary",
             "PortalDashboardSummary",
             "validate_portal_identity",
-            "PortalSelectorNotImplemented",
-            "PartyPortalAccess-backed selector",
+            "get_portal_dashboard_summary",
+            "get_portal_documents_summary",
         ):
             self.assertIn(expected, selectors_source)
 
@@ -84,11 +82,11 @@ class CustomerPortalSelectorContractsIntentTests(SimpleTestCase):
                 with self.assertRaisesMessage(PermissionDenied, "party"):
                     selector(incomplete_identity)
 
-    def test_phase123_selectors_fail_closed_until_real_sources_are_wired(self):
+    def test_phase123_selectors_require_verified_identity_before_data_reads(self):
         identity = PortalIdentity(
             user=SimpleNamespace(is_authenticated=True),
             workspace=SimpleNamespace(schema_name="acme"),
-            party=SimpleNamespace(status="ACTIVE"),
+            party=SimpleNamespace(status="BLOCKED"),
             access_grant=SimpleNamespace(status="ACTIVE"),
         )
 
@@ -101,36 +99,26 @@ class CustomerPortalSelectorContractsIntentTests(SimpleTestCase):
             get_portal_statements_summary,
         ):
             with self.subTest(selector=selector.__name__):
-                with self.assertRaises(PortalSelectorNotImplemented):
+                with self.assertRaises(PermissionDenied):
                     selector(identity)
 
-    def test_phase123_target_portal_routes_still_remain_absent(self):
-        for route_name in (
-            "customer_portal_dashboard",
-            "customer_portal_loans",
-            "customer_portal_invoices",
-            "customer_portal_payments",
-            "customer_portal_documents",
-            "customer_portal_statements",
-        ):
-            with self.subTest(route_name=route_name):
-                with self.assertRaises(NoReverseMatch):
-                    reverse(route_name)
+    def test_phase123_target_portal_routes_are_now_tenant_only(self):
+        route_map = {
+            "customer_portal_dashboard": "/portal/",
+            "customer_portal_loans": "/portal/loans/",
+            "customer_portal_invoices": "/portal/invoices/",
+            "customer_portal_payments": "/portal/payments/",
+            "customer_portal_documents": "/portal/documents/",
+            "customer_portal_statements": "/portal/statements/",
+        }
 
-        for path in (
-            "/portal/",
-            "/portal/loans/",
-            "/portal/invoices/",
-            "/portal/payments/",
-            "/portal/documents/",
-            "/portal/statements/",
-        ):
+        for route_name, path in route_map.items():
+            with self.subTest(route_name=route_name):
+                self.assertEqual(reverse(route_name, urlconf=tenant_urls), path)
+                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
             with self.subTest(path=path, urlconf="public"):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=urls)
-            with self.subTest(path=path, urlconf="tenant"):
-                with self.assertRaises(Resolver404):
-                    resolve(path, urlconf=tenant_urls)
 
     def test_phase123_project_docs_point_to_selector_phase(self):
         status = _read("docs/STATUS.md")

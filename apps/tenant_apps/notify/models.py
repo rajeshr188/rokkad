@@ -266,6 +266,14 @@ class Notification(models.Model):
     customer = models.ForeignKey(
         "contact.Customer", on_delete=models.CASCADE, related_name="notifications"
     )
+    party = models.ForeignKey(
+        "party.Party",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="notifications",
+        help_text="Shadow Party link for the notification recipient during Customer migration.",
+    )
 
     # OLD FIELD - Keep for backward compatibility during migration
     loans = models.ManyToManyField(
@@ -349,6 +357,7 @@ class Notification(models.Model):
         indexes = [
             models.Index(fields=["status", "created"]),
             models.Index(fields=["customer", "notice_type"]),
+            models.Index(fields=["party", "status"]),
         ]
 
     def __str__(self):
@@ -360,6 +369,16 @@ class Notification(models.Model):
         else:
             notice_display = "Unknown"
         return f"{notice_display} to {self.customer} ({self.get_status_display()})"
+
+    def save(self, *args, **kwargs):
+        if not self.party_id:
+            party = getattr(getattr(self, "customer", None), "party", None)
+            if party:
+                self.party = party
+                update_fields = kwargs.get("update_fields")
+                if update_fields is not None:
+                    kwargs["update_fields"] = set(update_fields) | {"party"}
+        super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse("notify_notification_detail", args=(self.pk,))
@@ -516,6 +535,7 @@ class Notification(models.Model):
         item_rows = self.items.all() if self.pk else []
         return {
             "customer": self.customer,
+            "party": self.party,
             "notification": self,
             "items": [
                 {

@@ -1,0 +1,22 @@
+{% extends "base_customer_portal.html" %}
+{% load i18n %}
+
+{% block portal_content %}
+<div class="portal-page-header">
+    <h1>{% trans "My statements" %}</h1>
+</div>
+<div class="portal-list">
+    {% for row in summary.items %}
+        <div class="portal-list-row">
+            <strong>{{ row.label }}</strong>
+            <span>{{ summary.period_label }}</span>
+            <span>{{ row.amount }}</span>
+        </div>
+    {% endfor %}
+    <div class="portal-list-row">
+        <strong>{% trans "Closing balance" %}</strong>
+        <span>{{ summary.period_label }}</span>
+        <span>{{ summary.closing_balance }}</span>
+    </div>
+</div>
+{% endblock %}

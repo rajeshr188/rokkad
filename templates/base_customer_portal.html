@@ -9,7 +9,7 @@
 {% block navbar %}
     <nav class="portal-topbar" aria-label="{% trans 'Customer portal navigation' %}">
         <div class="container-lg portal-topbar-inner">
-            <a class="portal-brand" href="#" aria-label="{% trans 'Rokkad customer portal' %}">
+            <a class="portal-brand" href="{% url 'customer_portal_dashboard' %}" aria-label="{% trans 'Rokkad customer portal' %}">
                 <span class="portal-brand-mark">R</span>
                 <span>
                     <span class="portal-brand-name">Rokkad</span>

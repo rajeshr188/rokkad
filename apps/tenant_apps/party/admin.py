@@ -7,6 +7,7 @@ from .models import (
     PartyContactMethod,
     PartyDocument,
     PartyIdentifier,
+    PartyPortalAccess,
     PartyRelationship,
     PartyRole,
     PartyRoleType,
@@ -100,3 +101,11 @@ class PartyRelationshipAdmin(admin.ModelAdmin):
     list_display = ["from_party", "to_party", "relationship_type", "is_active"]
     list_filter = ["relationship_type", "is_active"]
     search_fields = ["from_party__display_name", "to_party__display_name"]
+
+
+@admin.register(PartyPortalAccess)
+class PartyPortalAccessAdmin(admin.ModelAdmin):
+    list_display = ["party", "user", "status", "invited_at", "activated_at", "revoked_at"]
+    list_filter = ["status"]
+    search_fields = ["party__display_name", "party__party_code", "user__email", "user__username"]
+    readonly_fields = ["created_at", "updated_at"]

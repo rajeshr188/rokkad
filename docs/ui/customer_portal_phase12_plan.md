@@ -15,6 +15,10 @@ Phase 12 starts the customer/member portal route-map work from the SaaS IA
 target structure. This first slice is planning and guard coverage only. It does
 not add live `/portal/...` routes yet.
 
+Update on 2026-07-01: the later Party rollout supersedes this route-absent
+checkpoint. Tenant `/portal/...` routes are now live as a read-only MVP backed
+by explicit `PartyPortalAccess`; public `/portal/...` routes remain absent.
+
 ## Current State
 
 - `templates/base_customer_portal.html` exists as a shell alias, but it is only

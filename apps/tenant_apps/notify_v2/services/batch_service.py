@@ -146,6 +146,13 @@ def _borrower_customer_instance(borrower):
     return None
 
 
+def _borrower_party_instance(borrower):
+    party = getattr(borrower, "party", None)
+    if party is not None:
+        return party
+    return getattr(borrower, "borrower_party", None)
+
+
 def _build_selection_snapshot(loans: Iterable[Any]) -> list[dict[str, Any]]:
     return [
         {
@@ -349,6 +356,7 @@ def create_girvi_reminder_batch(
             customer_instance = _borrower_customer_instance(borrower)
             recipient = NotificationRecipient.objects.create(
                 customer=customer_instance,
+                party=_borrower_party_instance(borrower),
                 name_snapshot=_borrower_name(borrower),
                 email=_borrower_email(borrower),
                 phone=_borrower_phone(borrower),

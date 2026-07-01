@@ -15,6 +15,7 @@ class NotificationForm(forms.ModelForm):
         fields = [
             "group",
             "customer",
+            "party",
             "notice_type_config",
             "medium_type",
             "status",

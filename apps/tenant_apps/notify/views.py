@@ -105,6 +105,7 @@ def notification_list(request):
     ng = (
         Notification.objects.all()
         .select_related("group", "customer")
+        .select_related("party")
         .prefetch_related("loans", "customer__address", "customer__contactno")
     )
     return render(request, "notify/notification_list.html", context={"objects": ng})
@@ -126,7 +127,7 @@ def notification_create(request):
 def notification_detail(request, pk):
     ng = get_object_or_404(
         Notification.objects.select_related(
-            "group", "customer", "notice_type_config"
+            "group", "customer", "party", "notice_type_config"
         ).prefetch_related("items__content_type", "loans"),
         pk=pk,
     )

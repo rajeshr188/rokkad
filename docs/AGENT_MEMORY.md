@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-30
+updated: 2026-07-01
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
@@ -134,7 +134,8 @@ Each document should expose `get_economic_payload()` or equivalent structured da
 - Party stores textual relation identity directly on `Party` through `relation_label` and `relation_name` for values like `S/o Kumar`; structured `PartyRelationship` remains for links to saved Party records.
 - Party duplicate merge is service-backed and conservative: source parties are archived, non-conflicting profile children and DEA mappings are moved, and merges stop on legacy-customer, identifier, or active DEA mapping conflicts.
 - Party list has filtered CSV/XLSX export for Owner/Admin users. The first version is intentionally flat: Party identity fields, contact summary, active roles, and legacy customer linkage; child profile tables remain separate.
-- Party Phase 9 uses nullable shadow FKs on operational documents first. Current shadow links include Girvi borrower/lender loans and DEA sales/purchase invoice vouchers; DEA account resolution prefers explicit Party links and falls back to Customer.
+- Party Phase 9 uses nullable shadow FKs on operational documents first. Current prioritized shadow links include Girvi borrower/lender loans, DEA sales/purchase invoice vouchers, legacy notifications, and Notify v2 recipients; DEA account resolution prefers explicit Party links and falls back to Customer. Approval is intentionally skipped until that workflow becomes a priority again.
+- Party Phase 10 read-only portal MVP is live in tenant URLConf under `/portal/...`. `PartyPortalAccess` links an authenticated user to a tenant Party without workspace membership, `resolve_portal_identity()` requires an active grant and active Party, and portal selectors/pages expose only Party-filtered dashboard, loan, invoice, payment, document, and statement summaries.
 - Party detail loan history now uses a Girvi facade read model that aggregates active/closed Given/Taken loans plus payment, notice, and collateral summaries for both Party-linked and legacy bridged-customer records.
 - Girvi given-loan creation is Party-first while still compatibility-safe: users select an active Party, the create path ensures a legacy `Customer` bridge as needed, and `GivenLoan.borrower` plus `GivenLoan.borrower_party` are both populated.
 - Party codes are tenant-local stable identifiers. Normal creation auto-generates sequential `P-000001` style codes when blank; manual/custom codes remain supported for imports and legacy bridge records.
@@ -417,17 +418,17 @@ Phase 11.4 workspace modules/security settings screens are implemented. `workspa
 
 Phase 11 final review is complete in `docs/ui/workspace_slug_phase11_review.md`. The target `/w/<workspace_slug>/...` tenant and workspace-settings route map is live except Contact, intentionally skipped for Party, and the customer/member portal route map, which should be the next separate IA phase.
 
-Phase 12.1 customer/member portal planning is complete in `docs/ui/customer_portal_phase12_plan.md`. `/portal/...` routes remain absent. The portal should be tenant-scoped and Party-backed, with explicit authenticated user-to-tenant Party identity binding before routes are exposed. Phase 12.2 should choose that identity model and add access-helper scaffolding/tests without adding live portal routes.
+Phase 12.1 customer/member portal planning is complete in `docs/ui/customer_portal_phase12_plan.md`; the later Party Phase 10 runtime slice now supersedes its route-absent checkpoint.
 
-Phase 12.2 customer/member portal identity design is complete in `docs/ui/customer_portal_identity_phase12.md`. Use Party as the portal customer identity, backed by a future explicit `PartyPortalAccess`-style tenant binding. Do not infer access from email/phone alone. `apps.tenant_apps.party.portal_access.resolve_portal_identity()` is a fail-closed helper scaffold, and `/portal/...` routes remain absent until selector/shell/access tests exist. Phase 12.3 should define read-only selector contracts around `PortalIdentity`.
+Phase 12.2 customer/member portal identity design is complete in `docs/ui/customer_portal_identity_phase12.md`. Use Party as the portal customer identity, backed by explicit tenant `PartyPortalAccess`. Do not infer access from email/phone alone. `apps.tenant_apps.party.portal_access.resolve_portal_identity()` now resolves active grants for live tenant portal routes.
 
-Phase 12.3 customer/member portal selector contracts are complete in `docs/ui/customer_portal_selector_contracts_phase12.md`. `apps.tenant_apps.party.portal_selectors` now defines fail-closed read-only summary contracts for dashboard, loans, invoices, payments, documents, and statements. Selectors validate `PortalIdentity` first and raise `PortalSelectorNotImplemented` until real PartyPortalAccess-backed data sources are wired. `/portal/...` routes remain absent. Phase 12.4 should upgrade the customer portal shell/navigation without exposing live routes.
+Phase 12.3 customer/member portal selector contracts are implemented in `docs/ui/customer_portal_selector_contracts_phase12.md`. `apps.tenant_apps.party.portal_selectors` validates `PortalIdentity` first and then returns Party-filtered dashboard, loan, invoice, payment, document, and statement summaries.
 
-Phase 12.4 customer/member portal shell/navigation is complete in `docs/ui/customer_portal_shell_phase12.md`. `base_customer_portal.html` now owns a portal-only topbar, identity display, disabled pending portal nav, `portal_content`, and `css/customer_portal.css`; it does not include tenant ERP, workspace-admin, or public marketing navigation. `/portal/...` routes remain absent.
+Phase 12.4 customer/member portal shell/navigation is complete in `docs/ui/customer_portal_shell_phase12.md`. `base_customer_portal.html` owns a portal-only topbar, identity display, enabled tenant portal nav, `portal_content`, and `css/customer_portal.css`; it does not include tenant ERP, workspace-admin, or public marketing navigation. Tenant `/portal/...` routes are live, and public `/portal/...` remains absent.
 
 Phase 13.1 tenant route canonicalization baseline is complete in `docs/ui/tenant_route_canonicalization_phase13_plan.md`. Important correction: the tenant `/w/<workspace_slug>/...` route-map aliases from the SaaS IA target are available, but they are not full canonical replacements. Legacy tenant roots such as `/dea/`, `/party/`, `/girvi/`, and `/product/` remain active, and many slug entrypoints still redirect to them. Phase 13.2 should convert remaining visible sidebar/dashboard top-level tenant links to existing slug aliases while keeping legacy roots active.
 
-Phase 12 customer/member portal closeout is complete in `docs/ui/customer_portal_phase12_review.md`. Live `/portal/...` routes remain intentionally absent until a real tenant `PartyPortalAccess`-style grant, database-backed identity lookup, implemented Party-scoped selectors, and cross-party denial tests exist. Do not add placeholder portal routes that only render the shell.
+Phase 12 customer/member portal closeout in `docs/ui/customer_portal_phase12_review.md` is superseded by Party Phase 10 read-only portal runtime access. Tenant `/portal/...` routes now require active `PartyPortalAccess`, database-backed identity lookup, implemented Party-scoped selectors, and cross-party denial tests. Do not add portal mutation routes without a separate design/test slice.
 
 Phase 13.2 tenant visible entry-link canonicalization is complete. Tenant sidebar Business Events, Financial Reports, and Commodity Master now target `workspace_slug_operations`, `workspace_slug_reports`, and `workspace_slug_commodity`; the workspace dashboard DEA Dashboard quick action targets `workspace_slug_accounting`. Legacy `/dea/`, `/party/`, `/girvi/`, `/product/`, and other tenant roots remain active. Phase 13.3 should direct-render slug entry wrappers one low-risk module at a time.
 

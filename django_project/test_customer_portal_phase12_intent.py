@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from django.test import SimpleTestCase
-from django.urls import NoReverseMatch, Resolver404, resolve, reverse
+from django.urls import Resolver404, resolve, reverse
 
 from django_project import tenant_urls, urls
 
@@ -35,39 +35,25 @@ class CustomerPortalPhase12IntentTests(SimpleTestCase):
         ):
             self.assertIn(expected, content)
 
-    def test_phase121_target_portal_routes_remain_intentionally_absent(self):
-        absent_route_names = (
-            "customer_portal_dashboard",
-            "customer_portal_loans",
-            "customer_portal_invoices",
-            "customer_portal_payments",
-            "customer_portal_documents",
-            "customer_portal_statements",
-        )
+    def test_customer_portal_routes_are_now_tenant_only(self):
+        route_map = {
+            "customer_portal_dashboard": "/portal/",
+            "customer_portal_loans": "/portal/loans/",
+            "customer_portal_invoices": "/portal/invoices/",
+            "customer_portal_payments": "/portal/payments/",
+            "customer_portal_documents": "/portal/documents/",
+            "customer_portal_statements": "/portal/statements/",
+        }
 
-        for route_name in absent_route_names:
+        for route_name, path in route_map.items():
             with self.subTest(route_name=route_name):
-                with self.assertRaises(NoReverseMatch):
-                    reverse(route_name)
-
-        absent_paths = (
-            "/portal/",
-            "/portal/loans/",
-            "/portal/invoices/",
-            "/portal/payments/",
-            "/portal/documents/",
-            "/portal/statements/",
-        )
-
-        for path in absent_paths:
+                self.assertEqual(reverse(route_name, urlconf=tenant_urls), path)
+                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
             with self.subTest(path=path, urlconf="public"):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=urls)
-            with self.subTest(path=path, urlconf="tenant"):
-                with self.assertRaises(Resolver404):
-                    resolve(path, urlconf=tenant_urls)
 
-    def test_phase124_portal_shell_alias_is_now_real_shell_without_routes(self):
+    def test_phase124_portal_shell_alias_is_now_real_shell_with_tenant_routes(self):
         portal_alias = (
             TEMPLATES_ROOT / "base_customer_portal.html"
         ).read_text(encoding="utf-8-sig")
@@ -80,7 +66,8 @@ class CustomerPortalPhase12IntentTests(SimpleTestCase):
         self.assertIn("base_customer_portal.html", plan)
         self.assertIn("portal_content", portal_alias)
         self.assertIn("customer_portal_nav.html", portal_alias)
-        self.assertIn("data-route-pending", portal_nav)
+        self.assertIn("customer_portal_dashboard", portal_nav)
+        self.assertNotIn("data-route-pending", portal_nav)
         self.assertIn("Phase 12.4", plan)
         self.assertIn("customer_portal_shell_phase12.md", plan)
 

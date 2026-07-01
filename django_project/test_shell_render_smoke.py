@@ -329,7 +329,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("Asha Customer", html)
         self.assertIn("My loans", html)
         self.assertIn("My statements", html)
-        self.assertIn("data-route-pending", html)
+        self.assertIn('href="/portal/loans/"', html)
+        self.assertIn('href="/portal/statements/"', html)
+        self.assertNotIn("data-route-pending", html)
         self.assertNotIn("workspace-sidebar", html)
         self.assertNotIn("Account &amp; Workspace Management", html)
 

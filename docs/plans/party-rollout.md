@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-20
+updated: 2026-07-01
 tags: [plans, party, contact, dea, migration]
 related: [../domain/party.md, ../domain/contact.md, ../domain/accounting.md, ../adr/2026-06-18-party-domain-model.md, ../implementation/contact-model-migration.md, ../implementation/tenant-seeding.md]
 ---
@@ -33,12 +33,11 @@ Completed:
 
 Next:
 
-- Phase 9: Continue operational foreign-key migration for approval/notification and remaining document surfaces beyond Girvi given-loan creation.
+- Continue module-specific Party-first create/edit cutovers as those workflows are prioritized.
 
 Pending:
 
-- Phase 9: Gradual operational foreign-key migration.
-- Phase 10: Portal support.
+- Approval Party migration is intentionally skipped for now because approval is not a current priority.
 
 ## Phase 0: Architecture Decision And Docs
 
@@ -579,7 +578,7 @@ Validation:
 
 ## Phase 9: Gradual Foreign-Key Migration
 
-Status: in progress.
+Status: complete for current prioritized scope. Approval is explicitly skipped.
 
 Goal:
 
@@ -628,14 +627,14 @@ Implementation notes:
 
 Candidate fields:
 
-- `Approval.party`
-- `Notification.party`
+- `Approval.party` is skipped until approval workflows become a priority again.
 
 Acceptance:
 
 - Historical documents remain readable.
 - New documents can resolve party directly.
 - Old Customer fields are kept until compatibility is no longer required.
+- Notification recipient surfaces can resolve Party directly while keeping Customer compatibility.
 
 Validation:
 
@@ -644,9 +643,27 @@ Validation:
 - `.\\.venv314\\Scripts\\python.exe manage.py test apps.tenant_apps.party.tests.test_operational_party_links --keepdb`
 - `.\\.venv314\\Scripts\\python.exe manage.py test apps.tenant_apps.dea.tests.test_party_account_resolution apps.tenant_apps.dea.tests.test_sales_purchase_party_posting --keepdb`
 
+Completed final slice:
+
+- `notify.Notification.party`
+- `notify_v2.NotificationRecipient.party`
+- Save-time sync from `customer.party` for both notification surfaces.
+- Tenant migration backfills for existing bridged notification rows.
+
+Files created or updated in final slice:
+
+- `apps/tenant_apps/notify/models.py`
+- `apps/tenant_apps/notify/forms.py`
+- `apps/tenant_apps/notify/views.py`
+- `apps/tenant_apps/notify/migrations/0005_notification_party.py`
+- `apps/tenant_apps/notify_v2/models.py`
+- `apps/tenant_apps/notify_v2/services/batch_service.py`
+- `apps/tenant_apps/notify_v2/migrations/0002_notificationrecipient_party.py`
+- `apps/tenant_apps/party/tests/test_operational_party_links.py`
+
 ## Phase 10: Portal Support
 
-Status: pending.
+Status: complete for read-only MVP.
 
 Goal:
 
@@ -666,3 +683,41 @@ Acceptance:
 
 - Party can be linked to a user identity.
 - Portal users can only see documents for their linked party.
+
+Implementation notes:
+
+- `PartyPortalAccess` is a tenant model linking a user to a Party without creating a workspace membership.
+- Only `ACTIVE` access grants resolve through `resolve_portal_identity()`.
+- Tenant `/portal/...` routes are live for dashboard, loans, invoices, payments, documents, and statements.
+- Public URLConf still does not expose `/portal/...`.
+- Portal selectors validate `PortalIdentity` first and filter by the resolved Party.
+- The portal is read-only; no customer-facing mutations are exposed.
+
+Files created or updated:
+
+- `apps/tenant_apps/party/models/portal.py`
+- `apps/tenant_apps/party/models/__init__.py`
+- `apps/tenant_apps/party/admin.py`
+- `apps/tenant_apps/party/portal_access.py`
+- `apps/tenant_apps/party/portal_selectors.py`
+- `apps/tenant_apps/party/portal_views.py`
+- `apps/tenant_apps/party/portal_urls.py`
+- `apps/tenant_apps/party/migrations/0005_partyportalaccess.py`
+- `apps/tenant_apps/party/tests/test_party_portal.py`
+- `django_project/tenant_urls.py`
+- `templates/base_customer_portal.html`
+- `templates/components/navigation/customer_portal_nav.html`
+- `templates/party/portal/dashboard.html`
+- `templates/party/portal/loans.html`
+- `templates/party/portal/invoices.html`
+- `templates/party/portal/payments.html`
+- `templates/party/portal/documents.html`
+- `templates/party/portal/statements.html`
+- `static/css/customer_portal.css`
+
+Validation:
+
+- `.\\.venv314\\Scripts\\python.exe manage.py check`
+- `.\\.venv314\\Scripts\\python.exe manage.py makemigrations --check --dry-run`
+- `.\\.venv314\\Scripts\\python.exe manage.py test apps.tenant_apps.party.tests.test_operational_party_links apps.tenant_apps.party.tests.test_party_portal --keepdb`
+- `.\\.venv314\\Scripts\\python.exe manage.py test apps.tenant_apps.party.tests.test_party_portal --keepdb`

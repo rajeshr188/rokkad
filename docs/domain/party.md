@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-20
+updated: 2026-07-01
 tags: [domain, party, contact, accounting]
 related: [../adr/2026-06-18-party-domain-model.md, contact.md, accounting.md, ../flows/dea-posting-flow.md]
 ---
@@ -18,7 +18,7 @@ The compatibility bridge from `contact.Customer` to Party is nullable and one-to
 
 Existing tenant customers have been backfilled into Party records. Backfill is idempotent and can be rerun with `backfill_parties_from_customers --schema <schema> --only-missing`.
 
-Operational documents are migrating to Party through nullable shadow foreign keys while legacy Customer fields remain in place. The current shadow-link slice covers Girvi `GivenLoan.borrower_party`, `TakenLoan.lender_party`, and DEA sales/purchase invoice vouchers.
+Operational documents are migrating to Party through nullable shadow foreign keys while legacy Customer fields remain in place. The current prioritized shadow-link scope covers Girvi `GivenLoan.borrower_party`, `TakenLoan.lender_party`, DEA sales/purchase invoice vouchers, legacy `notify.Notification.party`, and `notify_v2.NotificationRecipient.party`. Approval is intentionally skipped until approval workflows become a priority again.
 
 The tenant Party UI is available under `/party/`. It exposes party list/search/filter, create/edit, detail tabs, role add/end, profile photo camera capture/upload/removal, editable contact/address/KYC/document data, party relationships, DEA account mapping visibility, and linked customer loan activity.
 
@@ -131,3 +131,5 @@ The same real-world person in two workspaces is represented by separate Party re
 - User: authentication identity.
 - Workspace member: internal user with workspace permissions.
 - Customer portal account: external user linked to a party with limited access.
+
+`PartyPortalAccess` is the explicit tenant grant from a user to a Party. Portal access must not be inferred from matching email or phone values. Tenant `/portal/...` routes resolve an active `PartyPortalAccess`, validate the Party is active, and expose read-only dashboard, loans, invoices, payments, documents, and statements filtered to that Party.

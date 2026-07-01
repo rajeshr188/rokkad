@@ -216,7 +216,7 @@ class SaaSTemplateLayoutIntentTests(SimpleTestCase):
         self.assertIn("portal-sidebar", portal_nav)
         self.assertIn("customer_portal_loans", portal_nav)
         self.assertIn("customer_portal_statements", portal_nav)
-        self.assertIn("data-route-pending", portal_nav)
+        self.assertNotIn("data-route-pending", portal_nav)
         self.assertIn(".portal-shell", portal_css)
         self.assertIn(".portal-nav-link", portal_css)
 
