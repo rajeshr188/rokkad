@@ -110,6 +110,7 @@ Status: complete.
 
 Define selectors for loans, invoices, payments, documents, and statements. Each
 selector must accept a verified tenant Party identity and fail closed otherwise.
+See `docs/ui/customer_portal_selector_contracts_phase12.md`.
 
 ### Phase 12.4: Shell And Navigation
 
@@ -117,16 +118,19 @@ Status: complete.
 
 Upgrade `base_customer_portal.html` into a real portal shell with portal-only
 navigation, workspace/customer identity display, and no ERP/sidebar leakage.
+See `docs/ui/customer_portal_shell_phase12.md`.
 
 ### Phase 12.5: Live Portal Routes
 
-Add `/portal/...` routes only after identity, selector, shell, and access tests
-exist.
+Status: deferred by decision.
+
+Do not add `/portal/...` routes yet. Phase 12.5 closes the phase by recording
+that live routes must wait for a real `PartyPortalAccess` model or equivalent
+tenant Party access grant, database-backed lookup, implemented selectors, and
+cross-party denial tests.
 
 ## Next Recommended Step
 
-Phase 12.3 is complete in
-`docs/ui/customer_portal_selector_contracts_phase12.md`. The next step is Phase
-12.4 is complete in `docs/ui/customer_portal_shell_phase12.md`. The next step
-is Phase 12.5 planning: decide whether live portal routes should wait for a real
-`PartyPortalAccess` model or start with guarded placeholder views.
+Phase 12 is complete in `docs/ui/customer_portal_phase12_review.md`. Live
+`/portal/...` routes remain deferred until a real tenant Party portal access
+grant exists. Proceed with Phase 13.2 tenant route canonicalization.

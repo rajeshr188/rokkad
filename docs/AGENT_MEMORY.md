@@ -427,6 +427,8 @@ Phase 12.4 customer/member portal shell/navigation is complete in `docs/ui/custo
 
 Phase 13.1 tenant route canonicalization baseline is complete in `docs/ui/tenant_route_canonicalization_phase13_plan.md`. Important correction: the tenant `/w/<workspace_slug>/...` route-map aliases from the SaaS IA target are available, but they are not full canonical replacements. Legacy tenant roots such as `/dea/`, `/party/`, `/girvi/`, and `/product/` remain active, and many slug entrypoints still redirect to them. Phase 13.2 should convert remaining visible sidebar/dashboard top-level tenant links to existing slug aliases while keeping legacy roots active.
 
+Phase 12 customer/member portal closeout is complete in `docs/ui/customer_portal_phase12_review.md`. Live `/portal/...` routes remain intentionally absent until a real tenant `PartyPortalAccess`-style grant, database-backed identity lookup, implemented Party-scoped selectors, and cross-party denial tests exist. Do not add placeholder portal routes that only render the shell.
+
 ## Navigation Memory
 
 Main sidebar direction:
