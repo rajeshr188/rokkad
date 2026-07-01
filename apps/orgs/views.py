@@ -310,6 +310,147 @@ def workspace_slug_inventory(request, workspace_slug):
 
 
 @login_required
+def workspace_slug_inventory_products(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.product.views.product import product_list
+
+    return product_list(request)
+
+
+@login_required
+def workspace_slug_inventory_product_detail(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.product.views.product import product_detail
+
+    return product_detail(request, pk=pk)
+
+
+@login_required
+def workspace_slug_inventory_stock(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.product.views.stock import stock_list
+
+    return stock_list(request)
+
+
+@login_required
+def workspace_slug_inventory_stock_detail(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.product.views.stock import StockDetailView
+
+    return StockDetailView.as_view()(request, pk=pk)
+
+
+@login_required
+def workspace_slug_inventory_stock_audit(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.product.views.stock import audit_stock
+
+    return audit_stock(request)
+
+
+@login_required
+def workspace_slug_inventory_transactions(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.product.views.stock import StockTransactionListView
+
+    return StockTransactionListView.as_view()(request)
+
+
+@login_required
+def workspace_slug_inventory_statements(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.product.views.stock import StockStatementListView
+
+    return StockStatementListView.as_view()(request)
+
+
+@login_required
+def workspace_slug_rates(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.rates.views import rate_list
+
+    return rate_list(request)
+
+
+@login_required
+def workspace_slug_rate_detail(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.rates.views import rate_detail
+
+    return rate_detail(request, pk=pk)
+
+
+@login_required
+def workspace_slug_rate_sources(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.rates.views import ratesource_list
+
+    return ratesource_list(request)
+
+
+@login_required
+def workspace_slug_rate_source_detail(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.rates.views import ratesource_detail
+
+    return ratesource_detail(request, pk=pk)
+
+
+@login_required
+def workspace_slug_notifications(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.notify.views import notification_list
+
+    return notification_list(request)
+
+
+@login_required
+def workspace_slug_notification_detail(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.notify.views import notification_detail
+
+    return notification_detail(request, pk=pk)
+
+
+@login_required
+def workspace_slug_notice_groups(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.notify.views import noticegroup_list
+
+    return noticegroup_list(request)
+
+
+@login_required
+def workspace_slug_notice_group_detail(request, workspace_slug, pk):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.notify.views import noticegroup_detail
+
+    return noticegroup_detail(request, pk=pk)
+
+
+@login_required
+def workspace_slug_data_tools_export(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.utils.importing.views import export_form
+
+    return export_form(request)
+
+
+@login_required
+def workspace_slug_data_tools_export_data(
+    request,
+    workspace_slug,
+    model_name,
+    export_format,
+):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.utils.importing.views import export_data
+
+    return export_data(request, model_name=model_name, export_format=export_format)
+
+
+@login_required
 def workspace_slug_accounting(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
     from apps.tenant_apps.dea.views.common import home as dea_home

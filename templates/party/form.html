@@ -8,7 +8,7 @@
         <h1 class="h3 mb-1">{{ title }}</h1>
         {% if party %}<div class="text-muted small">{{ party.party_code }} · {{ party.display_name }}</div>{% endif %}
     </div>
-    <a class="btn btn-outline-secondary" href="{% if party %}{% url 'party:party_detail' party.pk %}{% else %}{% url 'party:party_list' %}{% endif %}">
+    <a class="btn btn-outline-secondary" href="{% if party and user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% elif party %}{% url 'party:party_detail' party.pk %}{% elif user_workspace %}{% url 'workspace_slug_parties' workspace_slug=user_workspace.schema_name %}{% else %}{% url 'party:party_list' %}{% endif %}">
         <i class="bi bi-arrow-left"></i> Back
     </a>
 </div>
@@ -96,7 +96,7 @@
     </div>
 
     <div class="d-flex justify-content-end gap-2 mt-4">
-        <a class="btn btn-outline-secondary" href="{% if party %}{% url 'party:party_detail' party.pk %}{% else %}{% url 'party:party_list' %}{% endif %}">Cancel</a>
+        <a class="btn btn-outline-secondary" href="{% if party and user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% elif party %}{% url 'party:party_detail' party.pk %}{% elif user_workspace %}{% url 'workspace_slug_parties' workspace_slug=user_workspace.schema_name %}{% else %}{% url 'party:party_list' %}{% endif %}">Cancel</a>
         <button class="btn btn-primary" type="submit">
             <i class="bi bi-check2"></i> {{ submit_label }}
         </button>

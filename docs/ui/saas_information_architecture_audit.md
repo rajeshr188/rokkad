@@ -600,6 +600,7 @@ Next recommended SaaS IA slice:
 - Phase 13.4 deep-link canonicalization planning is complete in `docs/ui/tenant_deep_link_canonicalization_phase13_4_plan.md`. Nested app remounting and legacy-root removal remain out of scope. The recommended order is Party, Product/Inventory, Rates, Notify/Notify V2, Data Tools, Girvi, then DEA.
 - Phase 13 is complete in `docs/ui/tenant_route_canonicalization_phase13_review.md`. Party read-only deep aliases are available as redirects for create, detail, edit, and merge. Direct-render Party deep aliases, nested Party mutations, internal link migration, Product/Inventory, Rates, Notify, Data Tools, Girvi, DEA, and legacy-root removal are deferred to the next route-canonicalization phase.
 - Phase 14.1 starts the next route-canonicalization phase in `docs/ui/tenant_party_deep_link_canonicalization_phase14.md`. Party read-only deep aliases for create, detail, edit, and merge now direct-render existing Party views after workspace slug validation. Party internal links, successful form redirects, nested mutation aliases, Product/Inventory, Rates, Notify, Data Tools, Girvi, DEA, and legacy-root removal remain deferred.
+- Phase 14.2 completes the low-risk compressed batch. Visible Party GET links prefer slug aliases when workspace context exists; Product/Inventory, Rates, Notify, and Data Tools export have read-only slug aliases. Mutation routes, nested Party forms, Party success redirects, Girvi, DEA, customer portal runtime, deeper UI redesign, and legacy-root cleanup remain deferred.
 
 ## J. Files to Change Later
 

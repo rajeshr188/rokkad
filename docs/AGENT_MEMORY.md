@@ -439,6 +439,8 @@ Phase 13 is complete in `docs/ui/tenant_route_canonicalization_phase13_review.md
 
 Phase 14.1 starts the next route-canonicalization phase in `docs/ui/tenant_party_deep_link_canonicalization_phase14.md`. Party read-only deep aliases for create, detail, edit, and merge now direct-render existing Party views under `/w/<workspace_slug>/parties/...`; Party internal links, successful form redirects, nested mutation routes, and legacy-root removal remain separate follow-up work.
 
+Phase 14.2 low-risk deep-link canonicalization is complete. Visible Party GET links now prefer slug routes when `user_workspace` exists, and read-only aliases are live for Product/Inventory products, stock, stock audit, transactions, statements; Rates and rate sources; Notify notifications and notice groups; and Data Tools export. Product/Rates/Notify/Data Tools mutation routes, nested Party mutations, Party success redirects, Girvi, DEA, and legacy-root cleanup remain follow-up work.
+
 ## Navigation Memory
 
 Main sidebar direction:

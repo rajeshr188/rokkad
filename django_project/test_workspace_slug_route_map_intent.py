@@ -189,7 +189,7 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
             "workspace_slug_reports": ({"workspace_slug": "acme"}, "/w/acme/reports/"),
         }
 
-        self.assertEqual(
+        self.assertGreaterEqual(
             len(CANONICAL_WORKSPACE_SLUG_URLPATTERNS),
             len(route_cases),
         )

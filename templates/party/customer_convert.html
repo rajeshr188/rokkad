@@ -8,7 +8,7 @@
         <h1 class="h3 mb-1">Convert Customer</h1>
         <div class="text-muted small">Link an existing legacy customer to a Party record.</div>
     </div>
-    <a class="btn btn-outline-secondary" href="{% url 'party:party_list' %}">
+    <a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_parties' workspace_slug=user_workspace.schema_name %}{% else %}{% url 'party:party_list' %}{% endif %}">
         <i class="bi bi-arrow-left"></i> Back
     </a>
 </div>

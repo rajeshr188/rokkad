@@ -12,7 +12,7 @@ related:
   - apps/tenant_apps/party/views.py
 ---
 
-# Tenant Party Deep-Link Canonicalization Phase 14
+# Tenant Low-Risk Deep-Link Canonicalization Phase 14
 
 Phase 14 starts the post-Phase-13 route-canonicalization work.
 
@@ -44,9 +44,52 @@ decorators remain the source of authorization truth.
   - roles.
 - Legacy `/party/...` routes remain active compatibility routes.
 
+## Phase 14.2 Completed
+
+Visible Party GET links now prefer slug routes when `user_workspace` is
+available:
+
+- Party list create/detail/edit links;
+- Party form back/cancel links;
+- Party detail back/edit/related-party/cancel/edit-tab links;
+- Convert Customer back link.
+
+The Convert Customer workflow itself remains legacy-only because there is no
+slug alias for that mutation-oriented flow yet.
+
+Read-only slug aliases are also available for low-risk module surfaces:
+
+- `/w/<workspace_slug>/inventory/products/`
+- `/w/<workspace_slug>/inventory/products/<pk>/`
+- `/w/<workspace_slug>/inventory/stock/`
+- `/w/<workspace_slug>/inventory/stock/<pk>/`
+- `/w/<workspace_slug>/inventory/stock/audit/`
+- `/w/<workspace_slug>/inventory/transactions/`
+- `/w/<workspace_slug>/inventory/statements/`
+- `/w/<workspace_slug>/rates/`
+- `/w/<workspace_slug>/rates/<pk>/`
+- `/w/<workspace_slug>/rates/sources/`
+- `/w/<workspace_slug>/rates/sources/<pk>/`
+- `/w/<workspace_slug>/notifications/`
+- `/w/<workspace_slug>/notifications/<pk>/`
+- `/w/<workspace_slug>/notifications/notice-groups/`
+- `/w/<workspace_slug>/notifications/notice-groups/<pk>/`
+- `/w/<workspace_slug>/data-tools/export/`
+- `/w/<workspace_slug>/data-tools/export/<model_name>/<export_format>/`
+
+These wrappers validate the workspace slug and then delegate to existing module
+views, preserving Product, Rates, Notify, and Data Tools authorization.
+
+Mutation aliases remain absent for this low-risk batch:
+
+- Product create/edit/delete and stock movement routes;
+- Rates create/edit/delete routes;
+- Notify create/delete/print routes;
+- Data Tools import routes;
+- nested Party mutation routes.
+
 ## Next Recommended Step
 
-Migrate visible Party page-level links to slug routes where workspace schema
-context is reliable, starting with list-to-detail/create/edit/merge links.
-Keep nested form actions and HTMX mutation endpoints on legacy routes until
-dedicated POST regression tests exist.
+Start the compressed Girvi/Loans phase. Add read-only loan list/detail/report
+aliases first, then handle repayment, release, custody, document, and lifecycle
+mutation routes only after focused regression coverage exists.

@@ -282,6 +282,160 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=tenant_urls)
 
+    def test_phase142_party_visible_get_links_prefer_slug_routes(self):
+        template_cases = {
+            "templates/party/list.html": (
+                "workspace_slug_party_create",
+                "workspace_slug_party_detail",
+                "workspace_slug_party_update",
+            ),
+            "templates/party/form.html": (
+                "workspace_slug_party_detail",
+                "workspace_slug_parties",
+            ),
+            "templates/party/detail.html": (
+                "workspace_slug_parties",
+                "workspace_slug_party_detail",
+                "workspace_slug_party_update",
+            ),
+            "templates/party/customer_convert.html": ("workspace_slug_parties",),
+        }
+
+        for template_path, expected_routes in template_cases.items():
+            content = _read(template_path)
+            with self.subTest(template_path=template_path):
+                for route_name in expected_routes:
+                    self.assertIn(route_name, content)
+
+        detail = _read("templates/party/detail.html")
+        for legacy_mutation_route in (
+            "party:party_contact_add",
+            "party:party_address_add",
+            "party:party_identifier_add",
+            "party:party_document_add",
+            "party:party_role_add",
+        ):
+            with self.subTest(legacy_mutation_route=legacy_mutation_route):
+                self.assertIn(legacy_mutation_route, detail)
+
+    def test_phase142_low_risk_read_only_module_aliases_resolve(self):
+        route_cases = {
+            "workspace_slug_inventory_products": (
+                {"workspace_slug": "acme"},
+                "/w/acme/inventory/products/",
+                "product_list(request)",
+            ),
+            "workspace_slug_inventory_product_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/inventory/products/7/",
+                "product_detail(request, pk=pk)",
+            ),
+            "workspace_slug_inventory_stock": (
+                {"workspace_slug": "acme"},
+                "/w/acme/inventory/stock/",
+                "stock_list(request)",
+            ),
+            "workspace_slug_inventory_stock_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/inventory/stock/7/",
+                "StockDetailView.as_view()(request, pk=pk)",
+            ),
+            "workspace_slug_inventory_stock_audit": (
+                {"workspace_slug": "acme"},
+                "/w/acme/inventory/stock/audit/",
+                "audit_stock(request)",
+            ),
+            "workspace_slug_inventory_transactions": (
+                {"workspace_slug": "acme"},
+                "/w/acme/inventory/transactions/",
+                "StockTransactionListView.as_view()(request)",
+            ),
+            "workspace_slug_inventory_statements": (
+                {"workspace_slug": "acme"},
+                "/w/acme/inventory/statements/",
+                "StockStatementListView.as_view()(request)",
+            ),
+            "workspace_slug_rates": (
+                {"workspace_slug": "acme"},
+                "/w/acme/rates/",
+                "rate_list(request)",
+            ),
+            "workspace_slug_rate_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/rates/7/",
+                "rate_detail(request, pk=pk)",
+            ),
+            "workspace_slug_rate_sources": (
+                {"workspace_slug": "acme"},
+                "/w/acme/rates/sources/",
+                "ratesource_list(request)",
+            ),
+            "workspace_slug_rate_source_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/rates/sources/7/",
+                "ratesource_detail(request, pk=pk)",
+            ),
+            "workspace_slug_notifications": (
+                {"workspace_slug": "acme"},
+                "/w/acme/notifications/",
+                "notification_list(request)",
+            ),
+            "workspace_slug_notification_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/notifications/7/",
+                "notification_detail(request, pk=pk)",
+            ),
+            "workspace_slug_notice_groups": (
+                {"workspace_slug": "acme"},
+                "/w/acme/notifications/notice-groups/",
+                "noticegroup_list(request)",
+            ),
+            "workspace_slug_notice_group_detail": (
+                {"workspace_slug": "acme", "pk": 7},
+                "/w/acme/notifications/notice-groups/7/",
+                "noticegroup_detail(request, pk=pk)",
+            ),
+            "workspace_slug_data_tools_export": (
+                {"workspace_slug": "acme"},
+                "/w/acme/data-tools/export/",
+                "export_form(request)",
+            ),
+            "workspace_slug_data_tools_export_data": (
+                {
+                    "workspace_slug": "acme",
+                    "model_name": "Party",
+                    "export_format": "csv",
+                },
+                "/w/acme/data-tools/export/Party/csv/",
+                "export_data(request, model_name=model_name, export_format=export_format)",
+            ),
+        }
+
+        org_views = _read("apps/orgs/views.py")
+
+        for route_name, (kwargs, path, delegate_call) in route_cases.items():
+            with self.subTest(route_name=route_name):
+                self.assertEqual(reverse(route_name, kwargs=kwargs), path)
+                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+                self.assertIn(f"def {route_name}", org_views)
+                self.assertIn(delegate_call, org_views)
+
+    def test_phase142_low_risk_mutation_aliases_remain_absent(self):
+        absent_paths = (
+            "/w/acme/inventory/products/7/update/",
+            "/w/acme/inventory/stock/create/",
+            "/w/acme/rates/new/",
+            "/w/acme/rates/7/edit/",
+            "/w/acme/notifications/create/",
+            "/w/acme/notifications/7/delete/",
+            "/w/acme/data-tools/import/",
+        )
+
+        for path in absent_paths:
+            with self.subTest(path=path):
+                with self.assertRaises(Resolver404):
+                    resolve(path, urlconf=tenant_urls)
+
     def test_phase13_review_closes_safe_boundary_not_full_remount(self):
         review = _read("docs/ui/tenant_route_canonicalization_phase13_review.md")
 
