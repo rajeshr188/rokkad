@@ -151,11 +151,11 @@ class Phase7UIPolishIntentTests(SimpleTestCase):
         task_partial = _read("templates/components/setup/setup_checklist_task.html")
 
         self.assertIn(
-            '{% include "components/setup/setup_checklist_task.html" with item=item workspace_id=company.id task_id_prefix="setup-task" heading_level="h2" %}',
+            '{% include "components/setup/setup_checklist_task.html" with item=item workspace_id=company.id workspace_slug=company.schema_name task_id_prefix="setup-task" heading_level="h2" %}',
             setup_template,
         )
         self.assertIn(
-            '{% include "components/setup/setup_checklist_task.html" with item=item workspace_id=workspace.id task_id_prefix="dashboard-setup-task" heading_level="h3" %}',
+            '{% include "components/setup/setup_checklist_task.html" with item=item workspace_id=workspace.id workspace_slug=workspace.schema_name task_id_prefix="dashboard-setup-task" heading_level="h3" %}',
             dashboard_template,
         )
         self.assertIn('heading_level == "h3"', task_partial)

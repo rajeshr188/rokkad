@@ -28,6 +28,22 @@
     <!-- Team Members List -->
     <div class="row">
         <div class="col-12">
+            {% if seat_capacity.has_limit %}
+            <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+                <div>
+                    <div class="fw-semibold">
+                        <i class="bi bi-people"></i> Seats in use: {{ seat_capacity.members_used }}/{{ seat_capacity.limit }}
+                    </div>
+                    <div class="small text-muted">
+                        Includes active workspace members. Remaining seats: {{ seat_capacity.members_remaining }}.
+                    </div>
+                </div>
+                <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-arrow-up-right"></i> Upgrade plan
+                </a>
+            </div>
+            {% endif %}
+
             {% if memberships %}
             <div class="card shadow-sm">
                 <div class="card-body">

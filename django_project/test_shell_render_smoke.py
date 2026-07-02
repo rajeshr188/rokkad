@@ -200,6 +200,8 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             f'?next={reverse("subscriptions:dashboard")}'
         )
         self.assertIn(f'href="{billing_href}"', html)
+        self.assertIn(f'href="{reverse("subscriptions:dashboard")}"', html)
+        self.assertIn(f'href="{reverse("subscriptions:plan-list")}"', html)
 
         for label in (
             "My Workspaces",
@@ -212,6 +214,8 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             "Sent Invitations",
             "My Invitations",
             "Billing",
+            "Billing Dashboard",
+            "Subscription Plans",
             "Account Settings",
             "Profile",
         ):
@@ -401,6 +405,13 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
                     status="incomplete",
                     action_label="Add opening balances",
                 ),
+                SimpleNamespace(
+                    key="parties",
+                    title="Parties",
+                    description="Add customers, suppliers, brokers, or employees.",
+                    status="incomplete",
+                    action_label="Add parties",
+                ),
             ),
         )
         setup_state = SimpleNamespace(
@@ -446,9 +457,11 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("1/2 complete", html)
         self.assertIn("mgmt-setup-hero", html)
         self.assertIn("Opening balances", html)
+        self.assertIn("Parties", html)
         self.assertIn("Dismiss", html)
         self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
         self.assertIn(reverse("dea_opening_balance_wizard"), html)
+        self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)
         self.assertIn(reverse("workspace_slug_accounting", kwargs={"workspace_slug": workspace.schema_name}), html)
         self.assertNotIn('href="/dea/dashboard/"', html)
 
@@ -472,6 +485,13 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
                     description="Create the first business event.",
                     status="incomplete",
                     action_label="Create transaction",
+                ),
+                SimpleNamespace(
+                    key="parties",
+                    title="Parties",
+                    description="Add customers, suppliers, brokers, or employees.",
+                    status="incomplete",
+                    action_label="Add parties",
                 ),
             ),
         )
@@ -502,7 +522,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("Workspace setup", html)
         self.assertIn("1/2 complete", html)
         self.assertIn("First transaction", html)
+        self.assertIn("Parties", html)
         self.assertIn("Mark setup complete", html)
         self.assertIn("Dismiss dashboard card", html)
         self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
         self.assertIn(reverse("dea_business_events_dashboard"), html)
+        self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)

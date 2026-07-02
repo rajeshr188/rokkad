@@ -29,15 +29,20 @@ Completed:
 - Phase 7.3: Party textual relation identity.
 - Phase 7.4: Party profile photo camera capture.
 - Phase 8: Customer conversion and duplicate merge.
+- Phase 9: Gradual operational foreign-key migration with nullable shadow Party fields for loans, invoices, purchases, notify, and notify_v2.
+- Phase 10: Read-only tenant portal support with `PartyPortalAccess`, tenant `/portal/...` routes, and Party-scoped selectors.
 - Party list filtered CSV/XLSX export for Owner/Admin users.
 
 Next:
 
 - Continue module-specific Party-first create/edit cutovers as those workflows are prioritized.
+- Begin Party route canonicalization for deep-read slug aliases and internal Party link migration once coverage exists.
+- Design portal invitation and customer-auth lifecycle before any portal-facing mutation surfaces.
 
 Pending:
 
 - Approval Party migration is intentionally skipped for now because approval is not a current priority.
+- Public or branded portal entrypoints remain deferred until tenant-path portal behavior and grant lifecycle are stable.
 
 ## Phase 0: Architecture Decision And Docs
 

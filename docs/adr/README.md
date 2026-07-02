@@ -20,5 +20,6 @@ Accepted and historical architecture decisions live here.
 - [Dynamic sidebar rendering](dynamic-sidebar-rendering.md)
 - [Girvi flow boundaries with DEA](girvi-flow-boundaries-with-dea.md)
 - [Girvi release and interest accrual lifecycle boundary](2026-06-27-girvi-release-accrual-lifecycle-boundary.md)
+- [Tenant-billed subscription architecture](2026-07-02-tenant-billed-subscription-architecture.md)
 
 Older decision index files were preserved as [old decisions README](old-decisions-readme.md) and [decision log](decision-log.md).

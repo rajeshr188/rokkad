@@ -122,7 +122,7 @@
     </div>
     <div class="mgmt-setup-grid mt-3">
         {% for item in setup_checklist.items %}
-        {% include "components/setup/setup_checklist_task.html" with item=item workspace_id=workspace.id task_id_prefix="dashboard-setup-task" heading_level="h3" %}
+        {% include "components/setup/setup_checklist_task.html" with item=item workspace_id=workspace.id workspace_slug=workspace.schema_name task_id_prefix="dashboard-setup-task" heading_level="h3" %}
         {% endfor %}
     </div>
 </section>

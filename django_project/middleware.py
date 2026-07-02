@@ -6,8 +6,8 @@ from django.urls import resolve
 from django.utils import timezone
 from django.contrib import messages
 from django_tenants.utils import get_public_schema_name
-from apps.subscriptions.models import Subscription
 from apps.orgs.tenant_context import resolve_request_workspace
+from apps.subscriptions.services import SubscriptionAccessService
 
 
 class HtmxMessagesMiddleware(MiddlewareMixin):
@@ -42,6 +42,9 @@ class HtmxMessagesMiddleware(MiddlewareMixin):
         )
 
         return response
+
+
+subscription_access_service = SubscriptionAccessService()
 
 
 class SubscriptionValidationMiddleware(MiddlewareMixin):
@@ -120,64 +123,45 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
         if workspace.schema_name == get_public_schema_name():
             return None
 
-        # Check subscription
+        # Centralized subscription evaluation.
         try:
-            subscription = workspace.subscription
+            decision = subscription_access_service.evaluate_access(
+                user=request.user,
+                workspace=workspace,
+            )
 
-            # Check if active
-            if not subscription.is_active:
-                messages.warning(
-                    request,
-                    "⚠️ Your subscription has expired. Please renew to continue using this workspace.",
-                )
+            if not decision.allowed:
+                if decision.reason == "NO_SUBSCRIPTION":
+                    try:
+                        current_url = resolve(request.path).url_name
+                    except Exception:
+                        return None
+
+                    if (
+                        current_url
+                        and not current_url.startswith("subscriptions:")
+                        and "tenant" in request.path.lower()
+                    ):
+                        messages.warning(
+                            request,
+                            "⚠️ No active subscription found. Please set up billing to continue.",
+                        )
+                        return redirect("subscriptions:plan-list")
+
+                    return None
+
+                messages.warning(request, decision.message or "Subscription access is unavailable.")
                 return redirect("subscriptions:dashboard")
 
-            # Check if past due
-            if subscription.status == "past_due":
-                messages.warning(
-                    request,
-                    "⚠️ Payment is overdue. Please update your billing information.",
-                )
-                return redirect("subscriptions:dashboard")
-
-            # Warn if ending soon (7 days or less)
-            if subscription.end_date:
+            subscription = decision.subscription
+            if subscription and getattr(subscription, "end_date", None):
                 days_left = (subscription.end_date - timezone.now()).days
                 if 0 <= days_left <= 7:
                     messages.info(
                         request, f"Your subscription will renew in {days_left} days."
                     )
 
-        except Subscription.DoesNotExist:
-            # No subscription attached to workspace yet
-            # Allow user to navigate to plans/checkout to create one
-            # Only block tenant-specific features
-            try:
-                current_url = resolve(request.path).url_name
-            except Exception:
-                return None
-
-            # If accessing tenant-specific data (not billing/plan pages), redirect
-            if (
-                current_url
-                and not current_url.startswith("subscriptions:")
-                and "tenant" in request.path.lower()
-            ):
-                messages.warning(
-                    request,
-                    "⚠️ No active subscription found. Please set up billing to continue.",
-                )
-                return redirect("subscriptions:plan-list")
-
-            return None
-
-        except AttributeError:
-            # Workspace exists but doesn't have subscription attribute
-            # This shouldn't happen, but allow request to proceed
-            return None
-
         except Exception as e:
-            # Log error but don't block request
             import logging
 
             logger = logging.getLogger(__name__)

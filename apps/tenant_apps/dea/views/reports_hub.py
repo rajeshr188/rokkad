@@ -2,10 +2,13 @@ from django.contrib.auth.decorators import login_required
 from django.template.response import TemplateResponse
 from django.urls import reverse
 
+from apps.subscriptions.decorators import subscription_feature_required
+
 from .access import can_view_dea_accountant_tools
 
 
 @login_required
+@subscription_feature_required("advanced_reporting")
 def reports_hub(request):
     """Centralized hub for all financial and operational reports."""
     commodity_items = [

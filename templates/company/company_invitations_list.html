@@ -26,6 +26,35 @@
         </div>
     </div>
 
+    {% if seat_capacity %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <h2 class="h6 mb-1">Seat capacity</h2>
+                        <p class="text-muted mb-0">
+                            Using {{ seat_capacity.total_in_use }} of {{ seat_capacity.max_users }} seats
+                            ({{ seat_capacity.active_members }} active, {{ seat_capacity.pending_invitations }} pending invites).
+                        </p>
+                        {% if seat_capacity.remaining <= 0 %}
+                        <p class="text-danger small mb-0 mt-2">No remaining seats. New invitations may be blocked until capacity is freed or upgraded.</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-md-end">
+                        <span class="badge {% if seat_capacity.remaining > 0 %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}">
+                            {{ seat_capacity.remaining }} seats remaining
+                        </span>
+                        <div class="mt-2">
+                            <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-primary">Upgrade plan</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Invitations List -->
     <div class="row">
         <div class="col-12">

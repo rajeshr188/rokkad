@@ -70,6 +70,12 @@
                             <li><a class="dropdown-item" href="{% url 'my_memberships' %}"><i class="bi bi-diagram-3"></i> My Memberships</a></li>
                             <li><a class="dropdown-item" href="{% url 'userprofile_update' request.user.profile.id %}"><i class="bi bi-pencil-square"></i> Edit Profile</a></li>
                             <li><a class="dropdown-item" href="{% url 'workspace_management' %}"><i class="bi bi-briefcase-fill"></i> Workspace Management</a></li>
+                            {% if user_role == 'Owner' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header text-uppercase small">Billing</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'subscriptions:dashboard' %}"><i class="bi bi-credit-card"></i> Billing Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{% url 'subscriptions:plan-list' %}"><i class="bi bi-receipt"></i> Subscription Plans</a></li>
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header text-uppercase small">Account</h6></li>
                             <li><a class="dropdown-item" href="{% url 'account_settings' %}"><i class="bi bi-shield-lock"></i> Account Settings</a></li>

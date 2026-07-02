@@ -32,14 +32,23 @@
                     <h2 class="h5 mb-0">{{ module.name }}</h2>
                     {% if module.status == "Active" %}
                     <span class="badge bg-success">Active</span>
+                    {% elif module.status == "Billing Required" %}
+                    <span class="badge bg-warning text-dark">Billing Required</span>
                     {% else %}
                     <span class="badge bg-secondary">{{ module.status }}</span>
                     {% endif %}
                 </div>
                 <p class="text-muted small mb-3">{{ module.description }}</p>
-                {% if module.route_name %}
+                {% if module.lock_reason %}
+                <p class="small text-muted mb-3">{{ module.lock_reason }}</p>
+                {% endif %}
+                {% if module.route_name and module.is_openable %}
                 <a href="{% url module.route_name %}" class="btn btn-sm btn-outline-secondary">
                     Open
+                </a>
+                {% elif module.status != "Active" and module.upgrade_url %}
+                <a href="{{ module.upgrade_url }}" class="btn btn-sm btn-outline-primary">
+                    Upgrade plan
                 </a>
                 {% else %}
                 <span class="text-muted small">No live workspace screen yet</span>

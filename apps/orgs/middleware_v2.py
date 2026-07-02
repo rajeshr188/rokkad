@@ -28,8 +28,11 @@ from django_tenants.utils import (
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import Company, Membership
 from apps.orgs.permissions import is_platform_admin
+from apps.subscriptions.services import SubscriptionAccessService
 
 logger = logging.getLogger(__name__)
+
+subscription_access_service = SubscriptionAccessService()
 
 
 class SecureWorkspaceMiddleware(MiddlewareMixin):
@@ -388,11 +391,20 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
                 "message": "You are not a member of this workspace.",
             }
 
-        # Future: Check 3: Subscription status
+        # Centralized subscription and entitlement evaluation.
         if "subscriptions" in settings.INSTALLED_APPS:
-            subscription_check = self._check_subscription(workspace)
-            if not subscription_check["allowed"]:
-                return subscription_check
+            decision = subscription_access_service.evaluate_access(
+                user=user,
+                workspace=workspace,
+                membership=membership,
+            )
+            if not decision.allowed:
+                return {
+                    "allowed": False,
+                    "reason": decision.reason,
+                    "message": decision.message,
+                    "membership": membership,
+                }
 
         # ✅ All checks passed - AUTHORIZED
         logger.debug(
@@ -406,48 +418,6 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             "message": "",
             "membership": membership,
         }
-
-    def _check_subscription(self, workspace):
-        """Check if workspace subscription is active"""
-        try:
-            from apps.subscriptions.models import Subscription
-
-            subscription = (
-                Subscription.objects.filter(company=workspace)
-                .order_by("-created_at")
-                .first()
-            )
-
-            if not subscription:
-                return {
-                    "allowed": False,
-                    "reason": "NO_SUBSCRIPTION",
-                    "message": "This workspace does not have an active subscription.",
-                }
-
-            if hasattr(subscription, "is_expired") and subscription.is_expired():
-                return {
-                    "allowed": False,
-                    "reason": "SUBSCRIPTION_EXPIRED",
-                    "message": "This workspace subscription has expired.",
-                }
-
-            if hasattr(subscription, "is_suspended") and subscription.is_suspended():
-                return {
-                    "allowed": False,
-                    "reason": "SUBSCRIPTION_SUSPENDED",
-                    "message": "This workspace subscription has been suspended.",
-                }
-
-        except ImportError:
-            # Subscriptions app not installed, skip check
-            pass
-        except Exception as e:
-            logger.error(
-                f"Error checking subscription for workspace {workspace.id}: {e}"
-            )
-
-        return {"allowed": True, "reason": "SUBSCRIPTION_ACTIVE", "message": ""}
 
     def _get_user_workspace(self, user):
         """Safely get user's workspace"""

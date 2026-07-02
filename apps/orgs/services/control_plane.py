@@ -6,6 +6,10 @@ from django_tenants.utils import get_public_schema_name, remove_www, schema_cont
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import Company, CompanyInvitation, Domain, Membership, Role
+from apps.orgs.services.membership_capacity import (
+    ensure_role_change_within_capacity,
+    ensure_workspace_has_member_capacity,
+)
 from apps.orgs.services import role_policy
 
 
@@ -122,6 +126,12 @@ def archive_workspace(*, company, actor, request):
 
 def create_membership(*, user, company, role, request, actor=None, invite_reason=""):
     """Create membership in public schema."""
+    ensure_workspace_has_member_capacity(
+        workspace=company,
+        include_pending_invitations=False,
+        extra_slots=1,
+    )
+
     with _public_schema_context():
         membership, created = Membership.objects.get_or_create(
             user=user,
@@ -169,6 +179,12 @@ def remove_membership(*, membership, actor, request):
 
 def change_membership_role(*, membership, new_role, actor, request):
     """Change membership role in public schema."""
+    ensure_role_change_within_capacity(
+        workspace=membership.company,
+        old_role=membership.role,
+        new_role=new_role,
+    )
+
     role_policy.assert_can_change_role(
         actor=actor,
         workspace=membership.company,
@@ -202,6 +218,12 @@ def send_team_invitation(*, form, actor, company, request):
         workspace=company,
         role=form.cleaned_data["role"],
     )
+    ensure_workspace_has_member_capacity(
+        workspace=company,
+        include_pending_invitations=True,
+        extra_slots=1,
+    )
+
     with _public_schema_context():
         invitation = form.save()
 
@@ -239,6 +261,11 @@ def send_onboarding_team_invitations(
 
         for email in email_addresses:
             try:
+                ensure_workspace_has_member_capacity(
+                    workspace=company,
+                    include_pending_invitations=True,
+                    extra_slots=1,
+                )
                 invitation = CompanyInvitation.create(
                     email=email,
                     company=company,
@@ -263,6 +290,11 @@ def accept_invitation(*, invitation, user, request):
     with _public_schema_context():
         existing = Membership.objects.filter(user=user, company=invitation.company).exists()
         if not existing:
+            ensure_workspace_has_member_capacity(
+                workspace=invitation.company,
+                include_pending_invitations=False,
+                extra_slots=1,
+            )
             Membership.objects.create(
                 user=user,
                 company=invitation.company,

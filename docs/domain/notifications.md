@@ -15,5 +15,6 @@ Notifications handle user-facing alerts, workflow messages, batching, and future
 - Prefer explicit notification events over ad hoc messages scattered through views.
 - Keep batching and delivery workflows testable.
 - Preserve V2 redesign notes until the app is fully consolidated.
+- See [implementation audit](../implementation/whatsapp-notifications-architecture-audit.md) for the current state, risks, and target WhatsApp architecture.
 
 Archived notification sources are preserved in [archive/notifications](../archive/notifications/).

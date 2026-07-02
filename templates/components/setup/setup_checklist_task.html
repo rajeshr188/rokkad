@@ -26,7 +26,9 @@
         {% elif item.key == "opening_balances" %}
         <a href="{% url 'dea_opening_balance_wizard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% elif item.key == "parties" %}
-        <a href="{% url 'party_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% if workspace_slug %}
+        <a href="{% url 'workspace_slug_parties' workspace_slug=workspace_slug %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        {% endif %}
         {% elif item.key == "products" %}
         <a href="{% url 'product_product_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% elif item.key == "opening_stock" %}

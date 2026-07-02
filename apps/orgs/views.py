@@ -36,13 +36,88 @@ from .models import Company, CompanyInvitation, Membership, Role
 from .permissions import get_effective_permissions, is_platform_admin
 from .registries import company_preference_registry
 from .services import control_plane
+from .services.membership_capacity import get_workspace_seat_capacity_snapshot
 from .services import role_policy
 from .services.dashboard_selectors import get_workspace_dashboard_context
 from .tenant_context import resolve_request_workspace
+from apps.subscriptions.services import SubscriptionAccessService
 
 # Create your views here.
 logger = logging.getLogger(__name__)
 User = get_user_model()
+subscription_access_service = SubscriptionAccessService()
+
+WORKSPACE_MODULE_REGISTRY = [
+    {
+        "name": "Accounting",
+        "description": "Chart of accounts, vouchers, journals, reports, and posting controls.",
+        "route_name": "dea_home",
+        "default_status": "Active",
+    },
+    {
+        "name": "Operations",
+        "description": "DEA business-event workflows for sales, purchase, settlement, and commodity previews.",
+        "route_name": "dea_business_events_dashboard",
+        "default_status": "Active",
+    },
+    {
+        "name": "Parties",
+        "description": "Customer, supplier, broker, employee, KYC, and relationship records.",
+        "route_name": "party:party_list",
+        "default_status": "Active",
+    },
+    {
+        "name": "Loans",
+        "description": "Girvi loan workflows, collateral custody, releases, repayments, and notices.",
+        "route_name": "girvi:girvi_dashboard",
+        "default_status": "Active",
+    },
+    {
+        "name": "Inventory",
+        "description": "Product catalog, stock records, stock movements, pricing, and physical audit.",
+        "route_name": "product_product_home",
+        "default_status": "Active",
+    },
+    {
+        "name": "Commodity",
+        "description": "Commodity master data and accounting-linked commodity reporting.",
+        "route_name": "dea_commodity_list",
+        "default_status": "Active",
+    },
+    {
+        "name": "Notifications",
+        "description": "Operational notification batches and delivery settings.",
+        "route_name": "notify_v2_index",
+        "default_status": "Active",
+    },
+    {
+        "name": "Customer Portal",
+        "description": "Future customer-facing loans, invoices, payments, documents, and statements.",
+        "route_name": "",
+        "default_status": "Planned",
+    },
+    {
+        "name": "Advanced Reporting",
+        "description": "Advanced financial and operational reporting surfaces.",
+        "route_name": "dea_reports_hub",
+        "feature_code": "advanced_reporting",
+        "default_status": "Active",
+    },
+    {
+        "name": "API Access",
+        "description": "Programmatic API integration access for this workspace.",
+        "route_name": "",
+        "feature_code": "api",
+        "default_status": "Active",
+    },
+    {
+        "name": "Custom Fields",
+        "description": "Custom fields for advanced workflow and data capture scenarios.",
+        "route_name": "",
+        "feature_code": "custom_fields",
+        "default_status": "Active",
+    },
+]
 
 
 def has_permission(user, tenant, permission_codename):
@@ -126,57 +201,45 @@ def _get_workspace_from_slug(workspace_slug):
     )
 
 
-def _workspace_module_statuses():
-    return [
-        {
-            "name": "Accounting",
-            "status": "Active",
-            "description": "Chart of accounts, vouchers, journals, reports, and posting controls.",
-            "route_name": "dea_home",
-        },
-        {
-            "name": "Operations",
-            "status": "Active",
-            "description": "DEA business-event workflows for sales, purchase, settlement, and commodity previews.",
-            "route_name": "dea_business_events_dashboard",
-        },
-        {
-            "name": "Parties",
-            "status": "Active",
-            "description": "Customer, supplier, broker, employee, KYC, and relationship records.",
-            "route_name": "party:party_list",
-        },
-        {
-            "name": "Loans",
-            "status": "Active",
-            "description": "Girvi loan workflows, collateral custody, releases, repayments, and notices.",
-            "route_name": "girvi:girvi_dashboard",
-        },
-        {
-            "name": "Inventory",
-            "status": "Active",
-            "description": "Product catalog, stock records, stock movements, pricing, and physical audit.",
-            "route_name": "product_product_home",
-        },
-        {
-            "name": "Commodity",
-            "status": "Active",
-            "description": "Commodity master data and accounting-linked commodity reporting.",
-            "route_name": "dea_commodity_list",
-        },
-        {
-            "name": "Notifications",
-            "status": "Active",
-            "description": "Operational notification batches and delivery settings.",
-            "route_name": "notify_v2_index",
-        },
-        {
-            "name": "Customer Portal",
-            "status": "Planned",
-            "description": "Future customer-facing loans, invoices, payments, documents, and statements.",
-            "route_name": "",
-        },
-    ]
+def _workspace_module_statuses(*, workspace, user):
+    evaluated_modules = []
+    for module_config in WORKSPACE_MODULE_REGISTRY:
+        module = {
+            "name": module_config["name"],
+            "description": module_config["description"],
+            "route_name": module_config.get("route_name", ""),
+            "status": module_config.get("default_status", "Active"),
+            "lock_reason": "",
+            "is_openable": False,
+            "upgrade_url": "",
+        }
+
+        feature_code = module_config.get("feature_code")
+        route_name = module.get("route_name")
+
+        if feature_code:
+            decision = subscription_access_service.evaluate_access(
+                user=user,
+                workspace=workspace,
+                feature_code=feature_code,
+            )
+            if decision.allowed:
+                module["status"] = "Active"
+                module["is_openable"] = bool(route_name)
+            elif decision.reason in {"NO_SUBSCRIPTION", "SUBSCRIPTION_INACTIVE"}:
+                module["status"] = "Billing Required"
+                module["lock_reason"] = decision.message
+                module["upgrade_url"] = reverse("subscriptions:dashboard")
+            else:
+                module["status"] = "Locked"
+                module["lock_reason"] = decision.message
+                module["upgrade_url"] = reverse("subscriptions:dashboard")
+        else:
+            module["is_openable"] = bool(route_name) and module["status"] == "Active"
+
+        evaluated_modules.append(module)
+
+    return evaluated_modules
 
 
 @login_required
@@ -1048,7 +1111,10 @@ def workspace_modules(request, workspace_id=None, company_id=None):
         {
             "company": company,
             "workspace": company,
-            "modules": _workspace_module_statuses(),
+            "modules": _workspace_module_statuses(
+                workspace=company,
+                user=request.user,
+            ),
             "user_role": access_context["role_name"],
         },
     )
@@ -1211,6 +1277,10 @@ def companyinvitations_list(request, workspace_id=None):
             allow_platform_admin=True,
         )
 
+    seat_capacity = None
+    if isinstance(workspace, Company):
+        seat_capacity = get_workspace_seat_capacity_snapshot(workspace=workspace)
+
     invitations = CompanyInvitation.objects.select_related(
         "company", "role", "inviter"
     ).order_by("-created")
@@ -1236,6 +1306,7 @@ def companyinvitations_list(request, workspace_id=None):
             "invitations": invitations_with_state,
             "current_workspace": workspace,
             "workspace": workspace,
+            "seat_capacity": seat_capacity,
         },
     )
 
@@ -1259,6 +1330,7 @@ def team_invite(request, workspace_id=None, company_id=None):
         required_permissions={"team_invite"},
         allow_platform_admin=True,
     )
+    seat_capacity = get_workspace_seat_capacity_snapshot(workspace=company)
 
     if request.method == "POST":
         form = CompanyInvitationForm(
@@ -1291,6 +1363,7 @@ def team_invite(request, workspace_id=None, company_id=None):
             "form": form,
             "company": company,
             "workspace": company,
+            "seat_capacity": seat_capacity,
             "url": reverse("team_invite", kwargs={"workspace_id": workspace_id}),
         },
     )
@@ -1350,11 +1423,15 @@ def team_accept_invitation(request, key):
         messages.info(request, f"Invitation is already {current_state}.")
         return redirect("team_invitations")
 
-    control_plane.accept_invitation(
-        invitation=invitation,
-        user=request.user,
-        request=request,
-    )
+    try:
+        control_plane.accept_invitation(
+            invitation=invitation,
+            user=request.user,
+            request=request,
+        )
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+        return redirect("team_invitations")
 
     if hasattr(request.user, "profile"):
         request.user.profile.workspace = invitation.company
@@ -1522,6 +1599,14 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
                 actor=request.user,
                 request=request,
             )
+        except ValidationError as exc:
+            messages.error(request, str(exc))
+            if request.htmx:
+                return JsonResponse(
+                    {"success": False, "error": str(exc)},
+                    status=400,
+                )
+            return redirect("workspace_detail", workspace_id=workspace_id)
         except PermissionDenied as exc:
             messages.error(request, str(exc))
             if request.htmx:
@@ -1579,6 +1664,7 @@ def membership_list(request, workspace_id=None):
         "workspace": workspace,
         "memberships": memberships,
         "workspace_count": memberships.count(),
+        "seat_capacity": get_workspace_seat_capacity_snapshot(workspace=workspace),
         "can_change_role": "team_change_role" in access["effective_permissions"],
         "can_remove_member": "team_remove" in access["effective_permissions"],
     }
@@ -1971,6 +2057,9 @@ def workspace_select(request, workspace_id):
     return redirect("workspace_dashboard", workspace_id=workspace.id)
 
 
+subscription_access_service = SubscriptionAccessService()
+
+
 def subscription_required(view_func):
     """
     Decorator to ensure workspace has active subscription.
@@ -1985,32 +2074,29 @@ def subscription_required(view_func):
         if not workspace:
             return redirect("workspace_list")
 
-        # Check subscription
-        try:
-            subscription = workspace.subscription
+        decision = subscription_access_service.evaluate_access(
+            user=request.user,
+            workspace=workspace,
+        )
 
-            if not subscription.is_active:
+        if not decision.allowed:
+            if decision.reason == "NO_SUBSCRIPTION":
                 messages.warning(
-                    request, "Subscription expired. Please renew to continue."
+                    request, "No active subscription found. Please set up billing."
                 )
                 return redirect("subscriptions:dashboard")
 
-            # Warn if due soon (7 days or less)
-            if (
-                subscription.end_date
-                and (subscription.end_date - timezone.now()).days <= 7
-            ):
+            messages.warning(request, decision.message or "Subscription access is unavailable.")
+            return redirect("subscriptions:dashboard")
+
+        subscription = decision.subscription
+        if subscription and getattr(subscription, "end_date", None):
+            days_left = (subscription.end_date - timezone.now()).days
+            if 0 <= days_left <= 7:
                 messages.warning(
                     request,
-                    f"Subscription renews in {(subscription.end_date - timezone.now()).days} days",
+                    f"Subscription renews in {days_left} days",
                 )
-
-        except AttributeError:
-            # No subscription attached
-            messages.warning(
-                request, "No active subscription found. Please set up billing."
-            )
-            return redirect("subscriptions:dashboard")
 
         return view_func(request, *args, **kwargs)
 

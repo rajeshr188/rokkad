@@ -16,6 +16,20 @@
         </div>
         <div class="card-body">
             {{ form.media }}
+
+            {% if seat_capacity.has_limit %}
+            <div class="alert alert-warning" role="alert">
+                <div class="fw-semibold mb-1">
+                    <i class="bi bi-people"></i> Seat capacity: {{ seat_capacity.members_and_pending_used }}/{{ seat_capacity.limit }}
+                </div>
+                <div class="small mb-2">
+                    This count includes active members and pending invitations. Remaining seats: {{ seat_capacity.members_and_pending_remaining }}.
+                </div>
+                <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-arrow-up-right"></i> Upgrade plan
+                </a>
+            </div>
+            {% endif %}
             
             {% if form.errors %}
             <div class="alert alert-danger">

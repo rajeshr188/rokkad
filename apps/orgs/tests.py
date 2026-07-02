@@ -520,9 +520,9 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		self.assertIn("team_invite", dashboard_html)
 		self.assertIn("setup_checklist", dashboard_html)
 		self.assertIn("Workspace setup", dashboard_html)
-		self.assertIn("workspace_settings_preferences", dashboard_html)
-		self.assertIn("dea_opening_balance_wizard", dashboard_html)
-		self.assertIn("dea_business_events_dashboard", dashboard_html)
+		self.assertIn("workspace_slug_accounting", dashboard_html)
+		self.assertIn("setup_checklist_task.html", dashboard_html)
+		self.assertIn("workspace_settings_setup_state", dashboard_html)
 
 	def test_workspace_setup_page_uses_settings_shell_and_checklist(self):
 		with open("templates/company/workspace_setup.html", "r") as f:
@@ -532,8 +532,8 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		self.assertIn("setup_checklist", setup_html)
 		self.assertIn("Workspace setup", setup_html)
 		self.assertIn("workspace_settings_home", setup_html)
-		self.assertIn("workspace_settings_invite", setup_html)
-		self.assertIn("dea_business_events_dashboard", setup_html)
+		self.assertIn("workspace_settings_setup_state", setup_html)
+		self.assertIn("setup_checklist_task.html", setup_html)
 
 	def test_workspace_dashboard_context_includes_setup_checklist(self):
 		workspace = SimpleNamespace(
@@ -990,11 +990,13 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 
 	def test_team_invite_requires_workspace_team_invite_permission(self):
 		company = SimpleNamespace(id=9, is_deleted=False)
+		seat_capacity = SimpleNamespace(has_limit=True, limit=5, members_and_pending_used=5)
 		request = self.factory.get("/orgs/workspace/9/team/invite/")
 		request.user = SimpleNamespace(id=1, is_superuser=False, is_authenticated=True)
 
 		with patch("apps.orgs.views.get_object_or_404", return_value=company), \
 			 patch("apps.orgs.views._assert_workspace_access", return_value={"effective_permissions": {"team_invite"}}) as mock_access, \
+			 patch("apps.orgs.views.get_workspace_seat_capacity_snapshot", return_value=seat_capacity), \
 			 patch("apps.orgs.views.CompanyInvitationForm") as mock_form, \
 			 patch("apps.orgs.views.render") as mock_render:
 			self._team_invite_view()(request, workspace_id=9)
@@ -1007,6 +1009,8 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		)
 		mock_form.assert_called_once_with(inviter=request.user, company=company)
 		mock_render.assert_called_once()
+		context = mock_render.call_args.args[2]
+		self.assertIs(context["seat_capacity"], seat_capacity)
 
 	def test_send_team_invitation_service_enforces_role_grant_policy(self):
 		form = SimpleNamespace(cleaned_data={"role": SimpleNamespace(name="Admin")})
@@ -1162,9 +1166,12 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 
 		memberships = FakeMembershipQuerySet()
 
+		seat_capacity = SimpleNamespace(has_limit=True, limit=7, members_used=5)
+
 		with patch("apps.orgs.views.get_object_or_404", return_value=workspace) as mock_get, \
 			 patch("apps.orgs.views.resolve_request_workspace") as mock_resolve, \
 			 patch("apps.orgs.views._assert_workspace_access", return_value={"effective_permissions": {"team_change_role", "team_remove"}}) as mock_access, \
+			 patch("apps.orgs.views.get_workspace_seat_capacity_snapshot", return_value=seat_capacity), \
 			 patch.object(org_views.Membership.objects, "select_related", return_value=memberships), \
 			 patch("apps.orgs.views.render") as mock_render:
 			org_views.membership_list.__wrapped__(request, workspace_id=9)
@@ -1180,6 +1187,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		self.assertEqual(memberships.filter_kwargs, {"company": workspace})
 		context = mock_render.call_args.args[2]
 		self.assertIs(context["workspace"], workspace)
+		self.assertIs(context["seat_capacity"], seat_capacity)
 		self.assertTrue(context["can_change_role"])
 		self.assertTrue(context["can_remove_member"])
 
@@ -1233,6 +1241,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		mock_redirect,
 	):
 		company = SimpleNamespace(id=9)
+		seat_capacity = SimpleNamespace(has_limit=False)
 		request = self.factory.post(
 			"/workspace/9/settings/invitations/new/",
 			{"email": "member@example.com"},
@@ -1242,6 +1251,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 
 		with patch("apps.orgs.views.get_object_or_404", return_value=company), \
 			 patch("apps.orgs.views._assert_workspace_access"), \
+			 patch("apps.orgs.views.get_workspace_seat_capacity_snapshot", return_value=seat_capacity), \
 			 patch("apps.orgs.views.CompanyInvitationForm", return_value=form), \
 			 patch("apps.orgs.views.control_plane.send_team_invitation"):
 			self._team_invite_view()(request, workspace_id=9)
@@ -1379,6 +1389,39 @@ class DirectInvitationAcceptAdapterTests(SimpleTestCase):
 
 		mock_as_view.assert_called_once()
 		self.assertIs(response, fallback_response)
+
+	@patch("apps.orgs.views.redirect")
+	@patch("apps.orgs.views.messages")
+	def test_authenticated_matching_user_seat_limit_error_redirects_to_invitations(
+		self,
+		mock_messages,
+		mock_redirect,
+	):
+		from apps.orgs import views as org_views
+
+		invitation = SimpleNamespace(
+			email="user@example.com",
+			company=SimpleNamespace(id=9, name="Acme"),
+			role=SimpleNamespace(name="Member"),
+			lifecycle_state=lambda: CompanyInvitation.Status.PENDING,
+		)
+		request = self.factory.get("/orgs/team/invitations/accept/key123/")
+		request.user = SimpleNamespace(
+			email="user@example.com",
+			is_authenticated=True,
+		)
+		fake_queryset = SimpleNamespace(first=lambda: invitation)
+		fake_manager = SimpleNamespace(filter=lambda **_kwargs: fake_queryset)
+
+		with patch.object(org_views.CompanyInvitation.objects, "select_related", return_value=fake_manager), \
+			 patch(
+				"apps.orgs.views.control_plane.accept_invitation",
+				side_effect=ValidationError("Workspace seat limit reached (5/5). Upgrade your plan to add more members."),
+			):
+			org_views.team_accept_invitation(request, key="key123")
+
+		mock_messages.error.assert_called_once()
+		mock_redirect.assert_called_once_with("team_invitations")
 
 	@patch("apps.orgs.views.redirect")
 	@patch("apps.orgs.views.messages")
@@ -1654,6 +1697,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
 			 patch.object(control_plane.Role.objects, "get", return_value=member_role) as mock_role_get, \
 			 patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role") as assert_can_invite, \
+			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity") as mock_capacity, \
 			 patch.object(
 				control_plane.CompanyInvitation,
 				"create",
@@ -1673,6 +1717,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 			workspace=company,
 			role=member_role,
 		)
+		self.assertEqual(mock_capacity.call_count, 2)
 		self.assertEqual(create_invitation.call_count, 2)
 		invitation.send_invitation.assert_called_once_with(request)
 		self.assertEqual(result["invited_count"], 1)
@@ -1691,8 +1736,11 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		)
 		actor = SimpleNamespace(id=1, email="owner@example.com")
 		role = SimpleNamespace(name="Admin")
+		old_role = membership.role
 
 		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
+			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity") as mock_capacity, \
+			 patch("apps.orgs.services.control_plane.ensure_role_change_within_capacity") as mock_role_capacity, \
 			 patch.object(control_plane.Membership.objects, "get_or_create", return_value=(membership, True)), \
 			 patch("apps.orgs.services.control_plane.role_policy.assert_can_change_role"), \
 			 patch("apps.orgs.services.control_plane.role_policy.assert_can_remove_membership"), \
@@ -1717,6 +1765,39 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 			)
 
 		self.assertEqual(mock_ctx.call_count, 3)
+		mock_capacity.assert_called_once_with(
+			workspace=membership.company,
+			include_pending_invitations=False,
+			extra_slots=1,
+		)
+		mock_role_capacity.assert_called_once_with(
+			workspace=membership.company,
+			old_role=old_role,
+			new_role=role,
+		)
+
+	def test_send_team_invitation_blocks_when_workspace_is_at_seat_limit(self):
+		form = SimpleNamespace(cleaned_data={"role": SimpleNamespace(name="Member")})
+		company = SimpleNamespace(id=9)
+		actor = SimpleNamespace(id=1)
+
+		with patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role") as mock_policy, \
+			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity", side_effect=ValidationError("limit reached")), \
+			 patch("apps.orgs.services.control_plane._public_schema_context") as mock_ctx:
+			with self.assertRaises(ValidationError):
+				control_plane.send_team_invitation(
+					form=form,
+					actor=actor,
+					company=company,
+					request=SimpleNamespace(),
+				)
+
+		mock_policy.assert_called_once_with(
+			actor=actor,
+			workspace=company,
+			role=form.cleaned_data["role"],
+		)
+		mock_ctx.assert_not_called()
 
 	def test_invitation_mutations_are_audited(self):
 		company = SimpleNamespace(id=9, name="Acme")
@@ -1743,6 +1824,34 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		self.assertIn("TEAM_INVITE_ACCEPT", actions)
 		self.assertIn("TEAM_INVITE_DECLINE", actions)
 		self.assertIn("TEAM_INVITE_REVOKE", actions)
+
+	def test_accept_invitation_blocks_membership_create_when_workspace_is_full(self):
+		company = SimpleNamespace(id=9, name="Acme")
+		invitation = SimpleNamespace(
+			email="invitee@example.com",
+			company=company,
+			role=SimpleNamespace(name="Member"),
+			accept=MagicMock(),
+		)
+		user = SimpleNamespace(id=7, email="invitee@example.com")
+
+		fake_membership_filter = SimpleNamespace(exists=lambda: False)
+
+		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()), \
+			 patch.object(control_plane.Membership.objects, "filter", return_value=fake_membership_filter), \
+			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity", side_effect=ValidationError("limit reached")), \
+			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create, \
+			 patch("apps.orgs.services.control_plane.AuditLog.log") as mock_audit:
+			with self.assertRaises(ValidationError):
+				control_plane.accept_invitation(
+					invitation=invitation,
+					user=user,
+					request=SimpleNamespace(),
+				)
+
+		mock_membership_create.assert_not_called()
+		invitation.accept.assert_not_called()
+		mock_audit.assert_not_called()
 
 	def test_audit_actions_match_declared_choices(self):
 		from apps.orgs.audit import AuditLog
@@ -2075,16 +2184,18 @@ class InvitationSignalHandlerTests(SimpleTestCase):
 
 		fake_qs = SimpleNamespace(first=lambda: user)
 		with patch.object(org_signals.User.objects, "filter", return_value=fake_qs), \
-			 patch.object(org_signals.Membership.objects, "get_or_create") as mock_get_or_create, \
+			 patch("apps.orgs.signals.control_plane.create_membership") as mock_create_membership, \
 			 patch.object(org_signals.PendingInvitation.objects, "get_or_create") as mock_pending:
 			org_signals.create_membership(
 				sender=object(), email="User@Example.com", invitation=invitation
 			)
 
-		mock_get_or_create.assert_called_once_with(
+		mock_create_membership.assert_called_once_with(
 			user=user,
 			company=invitation.company,
-			defaults={"role": invitation.role},
+			role=invitation.role,
+			request=None,
+			invite_reason="invitation_accept",
 		)
 		mock_pending.assert_not_called()
 
@@ -2142,10 +2253,7 @@ class InvitationSignalHandlerTests(SimpleTestCase):
 			org_signals.transaction,
 			"atomic",
 			return_value=contextlib.nullcontext(),
-		), patch.object(
-			org_signals.Membership.objects,
-			"get_or_create",
-		) as mock_get_or_create, patch.object(
+		), patch("apps.orgs.signals.control_plane.create_membership") as mock_create_membership, patch.object(
 			pending_1,
 			"delete",
 		) as delete_1, patch.object(
@@ -2154,9 +2262,38 @@ class InvitationSignalHandlerTests(SimpleTestCase):
 		) as delete_2:
 			org_signals.create_membership_on_signup(sender=object(), user=user)
 
-		self.assertEqual(mock_get_or_create.call_count, 2)
+		self.assertEqual(mock_create_membership.call_count, 2)
 		delete_1.assert_called_once()
 		delete_2.assert_called_once()
+
+	def test_user_signed_up_keeps_pending_invitation_when_seat_limited(self):
+		user = SimpleNamespace(email="user@example.com")
+		pending = SimpleNamespace(
+			id=11,
+			company=SimpleNamespace(id=1),
+			role=SimpleNamespace(name="Member"),
+			delete=MagicMock(),
+		)
+
+		class PendingQS:
+			def select_related(self, *_args):
+				return [pending]
+
+		with patch.object(
+			org_signals.PendingInvitation.objects,
+			"filter",
+			return_value=PendingQS(),
+		), patch.object(
+			org_signals.transaction,
+			"atomic",
+			return_value=contextlib.nullcontext(),
+		), patch(
+			"apps.orgs.signals.control_plane.create_membership",
+			side_effect=ValidationError("limit reached"),
+		):
+			org_signals.create_membership_on_signup(sender=object(), user=user)
+
+		pending.delete.assert_not_called()
 
 	def test_user_signed_up_without_email_is_noop(self):
 		with patch.object(org_signals.PendingInvitation.objects, "filter") as mock_filter:
@@ -2164,3 +2301,69 @@ class InvitationSignalHandlerTests(SimpleTestCase):
 				sender=object(), user=SimpleNamespace(email="")
 			)
 		mock_filter.assert_not_called()
+
+
+class WorkspaceModuleEntitlementTests(SimpleTestCase):
+	def test_workspace_modules_map_entitlement_outcomes(self):
+		workspace = SimpleNamespace(id=9, schema_name="acme")
+		user = SimpleNamespace(id=1, is_authenticated=True)
+
+		def _decision_for(feature_code):
+			if feature_code == "advanced_reporting":
+				return SimpleNamespace(allowed=True, reason="AUTHORIZED", message="")
+			if feature_code == "api":
+				return SimpleNamespace(
+					allowed=False,
+					reason="NO_SUBSCRIPTION",
+					message="No active subscription found.",
+				)
+			return SimpleNamespace(
+				allowed=False,
+				reason="FEATURE_BLOCKED",
+				message="Custom fields are not enabled on your plan.",
+			)
+
+		with patch.object(
+			org_views.subscription_access_service,
+			"evaluate_access",
+			side_effect=lambda **kwargs: _decision_for(kwargs["feature_code"]),
+		) as mock_eval:
+			modules = org_views._workspace_module_statuses(workspace=workspace, user=user)
+
+		self.assertEqual(mock_eval.call_count, 3)
+
+		advanced = next(item for item in modules if item["name"] == "Advanced Reporting")
+		api = next(item for item in modules if item["name"] == "API Access")
+		custom_fields = next(item for item in modules if item["name"] == "Custom Fields")
+
+		self.assertEqual(advanced["status"], "Active")
+		self.assertTrue(advanced["is_openable"])
+
+		self.assertEqual(api["status"], "Billing Required")
+		self.assertFalse(api["is_openable"])
+		self.assertTrue(api["upgrade_url"])
+
+		self.assertEqual(custom_fields["status"], "Locked")
+		self.assertEqual(
+			custom_fields["lock_reason"],
+			"Custom fields are not enabled on your plan.",
+		)
+
+	def test_workspace_modules_keep_planned_and_active_base_states(self):
+		workspace = SimpleNamespace(id=9, schema_name="acme")
+		user = SimpleNamespace(id=1, is_authenticated=True)
+
+		with patch.object(
+			org_views.subscription_access_service,
+			"evaluate_access",
+			return_value=SimpleNamespace(allowed=True, reason="AUTHORIZED", message=""),
+		):
+			modules = org_views._workspace_module_statuses(workspace=workspace, user=user)
+
+		portal = next(item for item in modules if item["name"] == "Customer Portal")
+		accounting = next(item for item in modules if item["name"] == "Accounting")
+
+		self.assertEqual(portal["status"], "Planned")
+		self.assertFalse(portal["is_openable"])
+		self.assertEqual(accounting["status"], "Active")
+		self.assertTrue(accounting["is_openable"])

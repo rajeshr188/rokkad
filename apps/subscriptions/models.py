@@ -157,6 +157,14 @@ class Subscription(models.Model):
 
         super().save(*args, **kwargs)
 
+        from apps.subscriptions.services import (
+            ensure_billing_account_for_subscription,
+            ensure_entitlements_for_subscription,
+        )
+
+        ensure_billing_account_for_subscription(self)
+        ensure_entitlements_for_subscription(self)
+
     def is_trial_active(self):
         """Check if company is still in trial period"""
         return (
@@ -230,6 +238,116 @@ class Subscription(models.Model):
             ).exists()
 
         return False
+
+
+class BillingAccount(models.Model):
+    """Workspace-level billing account used by the subscription service."""
+
+    company = models.OneToOneField(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="billing_account",
+        verbose_name=_("Company/Workspace"),
+    )
+    provider = models.CharField(max_length=50, default="razorpay")
+    provider_customer_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("Provider Customer ID"),
+    )
+    billing_email = models.EmailField(null=True, blank=True)
+    billing_phone = models.CharField(max_length=32, blank=True)
+    contact_name = models.CharField(max_length=255, blank=True)
+    gstin = models.CharField(max_length=20, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Billing Account")
+        verbose_name_plural = _("Billing Accounts")
+
+    def __str__(self):
+        return f"{self.company.name} billing"
+
+
+class SubscriptionEntitlement(models.Model):
+    """Feature and limit entitlements for a workspace subscription."""
+
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        related_name="entitlements",
+        verbose_name=_("Subscription"),
+    )
+    feature_code = models.CharField(max_length=100, verbose_name=_("Feature Code"))
+    enabled = models.BooleanField(default=True)
+    value = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("subscription", "feature_code")
+        verbose_name = _("Subscription Entitlement")
+        verbose_name_plural = _("Subscription Entitlements")
+
+    def __str__(self):
+        return f"{self.subscription.company.name} / {self.feature_code}"
+
+
+class ProviderWebhookEvent(models.Model):
+    """Persisted provider webhook events for safe replay and audit."""
+
+    class StatusChoices(models.TextChoices):
+        RECEIVED = "received", "Received"
+        PROCESSED = "processed", "Processed"
+        FAILED = "failed", "Failed"
+
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        related_name="webhook_events",
+        null=True,
+        blank=True,
+        verbose_name=_("Subscription"),
+    )
+    provider = models.CharField(max_length=50, default="razorpay")
+    event_type = models.CharField(max_length=100, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.RECEIVED,
+    )
+    error_message = models.TextField(blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = _("Provider Webhook Event")
+        verbose_name_plural = _("Provider Webhook Events")
+
+
+class SubscriptionEvent(models.Model):
+    """Lifecycle and billing events for a workspace subscription."""
+
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        related_name="events",
+        verbose_name=_("Subscription"),
+    )
+    event_type = models.CharField(max_length=100, verbose_name=_("Event Type"))
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = _("Subscription Event")
+        verbose_name_plural = _("Subscription Events")
 
 
 class Invoice(models.Model):

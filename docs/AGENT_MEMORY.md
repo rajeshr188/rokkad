@@ -117,6 +117,7 @@ Each document should expose `get_economic_payload()` or equivalent structured da
 ## Architecture Rules
 
 - Other apps should import DEA through `apps.tenant_apps.dea.facade`.
+- Tenancy architecture review is documented in `docs/implementation/tenancy-architecture-audit-rls-vs-django-tenants.md`: Rokkad should not attempt a big-bang RLS conversion now. The preferred direction is a hybrid migration path that keeps `django-tenants` running while adding explicit workspace ownership, separating workspace slug from `Company.schema_name`, and preparing tenant-owned models, constraints, reports, jobs, and isolation tests for a later shared-schema PostgreSQL RLS cutover.
 - Other apps should import Girvi cross-domain reads through `apps.tenant_apps.girvi.facade` or selectors.
 - Girvi lifecycle work should prefer command/use-case services over model methods or large view logic.
 - Girvi runtime lifecycle is canonicalized: `GivenLoan` uses `LoanLifecycleState`, legacy loan statuses/actions are compatibility aliases, and `TakenLoan` uses a smaller dedicated lifecycle.

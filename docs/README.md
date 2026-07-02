@@ -62,6 +62,8 @@ This folder is the living documentation system. Historical notes, audits, and su
 - [Dynamic preferences](implementation/dynamic-preferences.md)
 - [UI principles](implementation/ui-principles.md)
 - [Workspace context](implementation/workspace-context.md)
+- [Subscription architecture blueprint](implementation/subscription-architecture-blueprint.md)
+- [Subscription implementation checklist](implementation/subscription-implementation-checklist.md)
 - [Troubleshooting](implementation/troubleshooting.md)
 
 ## Decisions

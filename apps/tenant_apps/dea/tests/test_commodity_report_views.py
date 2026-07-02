@@ -1,6 +1,8 @@
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -91,6 +93,20 @@ class CommodityReportViewTests(TenantTestCase):
         self.assertContains(response, reverse("dea_metal_balance_report"))
         self.assertContains(response, reverse("dea_exposure_report"))
         self.assertContains(response, reverse("dea_valuation_report"))
+
+    def test_reports_hub_redirects_to_billing_when_advanced_reporting_blocked(self):
+        with patch(
+            "apps.subscriptions.decorators.subscription_access_service.evaluate_access",
+            return_value=SimpleNamespace(
+                allowed=False,
+                reason="FEATURE_BLOCKED",
+                message="Advanced reporting is not enabled for this plan.",
+            ),
+        ):
+            response = self.client.get(reverse("dea_reports_hub"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("subscriptions:dashboard"))
 
     def test_accounting_dashboard_links_to_commodity_reports(self):
         response = self.client.get(reverse("dea_dashboard"))
