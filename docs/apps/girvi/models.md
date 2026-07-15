@@ -3,7 +3,7 @@ status: active
 owner: girvi
 updated: 2026-06-18
 tags: [girvi, models, domain]
-related: [README.md, architecture.md, workflows.md, ../../domain/girvi.md]
+related: [README.md, architecture.md, workflows.md, ../../domain/girvi.md, ../../adr/2026-07-05-girvi-series-number-sequence.md, ../../plans/girvi-number-sequence-migration-plan.md]
 ---
 
 # Girvi Models
@@ -114,8 +114,19 @@ Important fields:
 - `release_date`
 - `released_by -> Customer`
 - `created_by -> User`
+- settlement snapshot fields:
+  - `settlement_basis`
+  - `settlement_principal_amount`
+  - `settlement_interest_amount`
+  - `settlement_total_amount`
+  - `selector_interest_quote`
+  - `accrual_interest_gross`
+  - `interest_paid_snapshot`
+  - `interest_basis_variance`
 
 `Release.save()` generates a release id using `ReleaseIDGenerator` and requires `created_by` on creation.
+
+Release settlement snapshots preserve the final settlement numbers used for release posting and Form H output. Runtime previews may still use selector-computed interest, but release execution prefers posted accrual rows through the release date when available and falls back to selector compatibility when accrual-row authority is not yet safe for that loan.
 
 `LoanRenewal` in `models/renewal.py` records a renewal from source loan to successor loan. It stores mode, renewal date, interest/principal paid, top-up amount, creator, and notes.
 
@@ -151,6 +162,16 @@ It enforces `period_end > period_start` and uniqueness per loan/period.
 - `deactivated_for_releases`
 
 `signals.py` calls `series.check_and_apply_deactivation()` after `GivenLoan`/`TakenLoan` saves and deletes.
+
+Accepted numbering direction:
+
+- Keep `License -> Series -> GivenLoan/TakenLoan/Release`.
+- Treat `Series` as the business/register/control bucket.
+- Move generated document-number allocation to series-scoped sequence rows with one row per document kind.
+- Target document kinds are `GIVEN_LOAN`, `TAKEN_LOAN`, `GIVEN_LOAN_RELEASE`, and `TAKEN_LOAN_SETTLEMENT`.
+- Existing `Series.prefix` and `Series.max_limit` remain compatibility fields until the migration plan is implemented.
+
+See [../../adr/2026-07-05-girvi-series-number-sequence.md](../../adr/2026-07-05-girvi-series-number-sequence.md) and [../../plans/girvi-number-sequence-migration-plan.md](../../plans/girvi-number-sequence-migration-plan.md).
 
 ## Statements and Templates
 

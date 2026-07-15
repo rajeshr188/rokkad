@@ -261,6 +261,54 @@ class PR1RepaymentViewTests(SimpleTestCase):
         mock_success.assert_called_once()
         mock_warning.assert_not_called()
 
+    @patch("apps.tenant_apps.girvi.views.loanpayment.reverse", return_value="/girvi/loan/1/")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.messages.success")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.GivenLoanRepaymentService.execute")
+    @patch("apps.tenant_apps.girvi.views.loanpayment.get_object_or_404")
+    def test_repeated_post_forwards_the_same_browser_idempotency_key(
+        self,
+        mock_get_object_or_404,
+        mock_execute,
+        _mock_success,
+        _mock_reverse,
+    ):
+        loan = MagicMock(pk=1)
+        loan.get_loan_amount = Decimal("1000.00")
+        loan.outstanding_interest = Decimal("100.00")
+        loan.get_total_principal_payments.return_value = Decimal("0.00")
+        loan.get_total_interest_payments.return_value = Decimal("0.00")
+        mock_get_object_or_404.return_value = loan
+        mock_execute.return_value = SimpleNamespace(
+            warnings=[],
+            errors=[],
+            success_message="Payment already recorded and posted to accounting.",
+        )
+        post_data = {
+            "total_amount": "100.00",
+            "payment_date": "2026-03-23T10:30",
+            "payment_method": "CASH",
+            "reference_number": "",
+            "idempotency_key": "browser-submit-1",
+            "interest_amount": "20.00",
+            "description": "test",
+        }
+
+        for _attempt in range(2):
+            request = self.factory.post(
+                "/girvi/loanpayment/1/create/",
+                data=post_data,
+            )
+            request.user = self.user
+            request.htmx = False
+            loan_payment_create_view.__wrapped__(request, pk=1)
+
+        self.assertEqual(mock_execute.call_count, 2)
+        submitted_keys = [
+            call.args[0].cleaned_data["idempotency_key"]
+            for call in mock_execute.call_args_list
+        ]
+        self.assertEqual(submitted_keys, ["browser-submit-1", "browser-submit-1"])
+
 
 class PR3TakenLoanRepaymentViewTests(SimpleTestCase):
     def setUp(self):

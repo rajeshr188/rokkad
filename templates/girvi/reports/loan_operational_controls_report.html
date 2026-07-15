@@ -10,6 +10,24 @@
     <a href="{% url 'girvi:girvi_dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
   </div>
 
+  {% if data_unavailable_count %}
+    <div class="alert alert-warning" role="alert">
+      <div class="fw-semibold mb-1">Some non-financial report data is unavailable.</div>
+      <div class="small mb-0">{{ data_unavailable_count }} section(s) could not be evaluated and are listed below.</div>
+    </div>
+  {% endif %}
+
+  {% if selector_warnings %}
+    <div class="alert alert-light border" role="alert">
+      <div class="fw-semibold mb-1">Selector Warnings</div>
+      <div class="small mb-0">
+        {% for warning in selector_warnings %}
+          <div>- {{ warning }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
   <div class="row g-3 mb-4">
     <div class="col-lg-2 col-md-4 col-6"><div class="card"><div class="card-body py-2 text-center"><div class="small text-muted">Current</div><div class="h5 mb-0">{{ aging_bucket_counts.current }}</div></div></div></div>
     <div class="col-lg-2 col-md-4 col-6"><div class="card"><div class="card-body py-2 text-center"><div class="small text-muted">1-30</div><div class="h5 mb-0">{{ aging_bucket_counts.b1_30 }}</div></div></div></div>
@@ -37,6 +55,41 @@
   <div class="card">
     <div class="card-header"><h5 class="mb-0">Rate Exceptions</h5></div>
     <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>Loan</th><th>Item</th><th>Type</th><th>Issue</th><th>Interest Rate</th><th>Market Rate</th><th></th></tr></thead><tbody>{% for row in rate_exception_rows %}<tr><td>{{ row.loan_id }}</td><td>{{ row.item_desc|default:'-' }}</td><td>{{ row.item_type }}</td><td>{{ row.issue }}</td><td>{{ row.configured_interest_rate }}</td><td>{{ row.market_rate|default:'-' }}</td><td class="text-end"><a href="{{ row.detail_url }}" class="btn btn-sm btn-outline-primary">Open</a></td></tr>{% empty %}<tr><td colspan="7" class="text-center text-muted py-3">No rate exceptions found.</td></tr>{% endfor %}</tbody></table></div></div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Data Unavailable</h5>
+      <span class="badge bg-warning text-dark">{{ data_unavailable_count }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-striped mb-0">
+          <thead>
+            <tr>
+              <th>Loan</th>
+              <th>Borrower</th>
+              <th>Section</th>
+              <th>Reason</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in data_unavailable_rows %}
+              <tr>
+                <td>{{ row.loan_id }}</td>
+                <td>{{ row.borrower_name }}</td>
+                <td>{{ row.section }}</td>
+                <td>{{ row.reason }}</td>
+                <td class="text-end"><a href="{{ row.detail_url }}" class="btn btn-sm btn-outline-primary">Open</a></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-center text-muted py-3">No unavailable rows.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

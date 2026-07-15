@@ -5,7 +5,6 @@ from typing import Optional
 
 from django.db import transaction
 
-from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.girvi.flows import (
     build_runtime_loan_flow,
     normalize_legacy_given_loan_status,
@@ -19,6 +18,7 @@ from apps.tenant_apps.girvi.models.renewal import LoanRenewal
 
 from .accrual import InterestAccrualCommand, InterestAccrualService
 from .payment import record_loan_disbursal
+from .preferences import is_loan_catchup_on_renewal_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -157,9 +157,8 @@ class LoanRenewalService:
                     "workspace",
                     None,
                 )
-                prefs = CompanyPreferences(workspace)
 
-                if prefs.loan_catchup_on_renewal:
+                if is_loan_catchup_on_renewal_enabled(workspace):
                     accrual_result = InterestAccrualService.execute(
                         InterestAccrualCommand(
                             loan=loan,

@@ -4,7 +4,10 @@ from unittest.mock import patch
 
 from django.test import RequestFactory, SimpleTestCase
 
-from apps.tenant_apps.girvi.selectors import build_operational_controls_report
+from apps.tenant_apps.girvi.selectors import (
+    SettlementDataUnavailableError,
+    build_operational_controls_report,
+)
 from apps.tenant_apps.girvi.views.reports import loan_operational_controls_report
 
 
@@ -56,6 +59,36 @@ class OperationalControlsSelectorTests(SimpleTestCase):
         self.assertEqual(len(report["release_ready"]["rows"]), 1)
         self.assertEqual(report["rate_exceptions"]["total"], 1)
 
+    @patch("apps.tenant_apps.girvi.selectors.reverse", return_value="/girvi/loan/1/")
+    def test_report_adds_data_unavailable_row_when_settlement_fails(
+        self,
+        _mock_reverse,
+    ):
+        loan = SimpleNamespace(
+            pk=1,
+            loan_id="GL-001",
+            borrower=SimpleNamespace(name="Asha"),
+            is_released=False,
+            loanitems=_FakeLoanItems([]),
+        )
+
+        with patch(
+            "apps.tenant_apps.girvi.selectors.build_loan_settlement_balance",
+            side_effect=SettlementDataUnavailableError(
+                "settlement_down",
+                "Loan settlement balance could not be calculated safely.",
+                loan_id="GL-001",
+                section="settlement",
+            ),
+        ):
+            report = build_operational_controls_report(loans=[loan])
+
+        self.assertEqual(report["data_unavailable_count"], 1)
+        self.assertEqual(len(report["data_unavailable_rows"]), 1)
+        self.assertEqual(report["data_unavailable_rows"][0]["issue_code"], "data_unavailable")
+        self.assertEqual(report["data_unavailable_rows"][0]["section"], "settlement")
+        self.assertEqual(len(report["aging"]["rows"]), 0)
+
 
 class OperationalControlsViewTests(SimpleTestCase):
     def setUp(self):
@@ -91,6 +124,9 @@ class OperationalControlsViewTests(SimpleTestCase):
                 "custody": {"rows": [{"loan_id": "GL-001"}]},
                 "release_ready": {"rows": [{"loan_id": "GL-001"}], "ready_count": 0},
                 "rate_exceptions": {"rows": [], "total": 0},
+                "warnings": [],
+                "data_unavailable_rows": [],
+                "data_unavailable_count": 0,
                 "generated_at": "2026-06-22T10:00:00",
                 "scanned_loans": 1,
             },
@@ -101,6 +137,9 @@ class OperationalControlsViewTests(SimpleTestCase):
             "release_ready_count": 0,
             "rate_exception_rows": [],
             "rate_exception_total": 0,
+            "selector_warnings": [],
+            "data_unavailable_rows": [],
+            "data_unavailable_count": 0,
         }
         response = SimpleNamespace(status_code=200)
         mock_render.return_value = response
@@ -113,3 +152,5 @@ class OperationalControlsViewTests(SimpleTestCase):
         self.assertIn("custody_rows", context)
         self.assertIn("release_ready_rows", context)
         self.assertIn("rate_exception_rows", context)
+        self.assertIn("data_unavailable_rows", context)
+        self.assertIn("data_unavailable_count", context)

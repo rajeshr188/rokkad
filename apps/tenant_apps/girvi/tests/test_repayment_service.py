@@ -29,10 +29,13 @@ class GivenLoanRepaymentServiceTests(SimpleTestCase):
 
     @patch("apps.tenant_apps.girvi.service_modules.repayment.GivenLoanPostingService")
     @patch("apps.tenant_apps.girvi.service_modules.repayment.InterestAccrualService.execute")
-    @patch("apps.tenant_apps.girvi.service_modules.repayment.CompanyPreferences")
+    @patch(
+        "apps.tenant_apps.girvi.service_modules.repayment.is_loan_catchup_on_receipt_enabled",
+        return_value=True,
+    )
     def test_execute_runs_catchup_accrual_before_repayment_posting(
         self,
-        mock_preferences,
+        _mock_catchup_enabled,
         mock_accrue,
         mock_posting_service,
     ):
@@ -47,7 +50,6 @@ class GivenLoanRepaymentServiceTests(SimpleTestCase):
         )
         user = SimpleNamespace(id=1, profile=SimpleNamespace(workspace="workspace"))
         payment = SimpleNamespace(payment_id="PAY-1")
-        mock_preferences.return_value = SimpleNamespace(loan_catchup_on_receipt=True)
         mock_accrue.return_value = SimpleNamespace(success=True, message="ok")
         mock_posting_service.return_value.post_repayment.return_value = (payment, True)
 
@@ -79,12 +81,15 @@ class GivenLoanRepaymentServiceTests(SimpleTestCase):
         self.assertNotIn("create_release", payload)
 
     @patch("apps.tenant_apps.girvi.service_modules.repayment.GivenLoanPostingService")
-    @patch("apps.tenant_apps.girvi.service_modules.repayment.CompanyPreferences")
+    @patch(
+        "apps.tenant_apps.girvi.service_modules.repayment.is_loan_catchup_on_receipt_enabled",
+        return_value=False,
+    )
     @patch("apps.tenant_apps.girvi.service_modules.repayment.logger.exception")
     def test_execute_returns_error_when_posting_fails(
         self,
         _mock_logger_exception,
-        mock_preferences,
+        _mock_catchup_enabled,
         mock_posting_service,
     ):
         loan = SimpleNamespace(
@@ -97,7 +102,6 @@ class GivenLoanRepaymentServiceTests(SimpleTestCase):
             get_total_payments=lambda: Decimal("0.00"),
         )
         user = SimpleNamespace(id=1)
-        mock_preferences.return_value = SimpleNamespace(loan_catchup_on_receipt=False)
         mock_posting_service.return_value.post_repayment.side_effect = RuntimeError("boom")
 
         result = GivenLoanRepaymentService.execute(
@@ -329,4 +333,46 @@ class TakenLoanRepaymentServiceTests(SimpleTestCase):
         self.assertTrue(result.accounting_posted)
         self.assertFalse(result.payment_created)
         self.assertEqual(result.payment, existing)
+        loan.create_payment.assert_not_called()
+
+    def test_execute_returns_existing_taken_payment_for_duplicate_idempotency_marker(self):
+        existing = SimpleNamespace(payment_id="TPAY-IDEM")
+        loan = MagicMock()
+        loan.pk = 42
+        loan.get_loan_amount = Decimal("800.00")
+        loan.outstanding_interest = Decimal("80.00")
+        loan.get_total_principal_payments.return_value = Decimal("0.00")
+        loan.get_total_interest_payments.return_value = Decimal("0.00")
+        loan.payments.filter.return_value.order_by.return_value.first.return_value = existing
+        user = SimpleNamespace(id=1)
+        cleaned_data = {
+            "total_amount": Decimal("800.00"),
+            "interest_amount": Decimal("80.00"),
+            "payment_date": datetime(2026, 4, 6, 10, 30),
+            "payment_method": "BANK",
+            "reference_number": "",
+            "idempotency_key": "taken-idem-1",
+            "description": "taken repayment",
+            "is_final_payment": False,
+        }
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.repayment.transaction.atomic",
+            return_value=nullcontext(),
+        ):
+            result = TakenLoanRepaymentService.execute(
+                RepaymentCommand(
+                    loan=loan,
+                    cleaned_data=cleaned_data,
+                    created_by=user,
+                )
+            )
+
+        self.assertTrue(result.accounting_posted)
+        self.assertFalse(result.payment_created)
+        self.assertEqual(result.payment, existing)
+        loan.payments.filter.assert_any_call(
+            direction="PAYMENT",
+            reference_number="REPAYMENT-TAKEN-42-taken-idem-1",
+        )
         loan.create_payment.assert_not_called()

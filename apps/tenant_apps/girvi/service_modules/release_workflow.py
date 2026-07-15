@@ -113,6 +113,7 @@ class ReleaseWorkflowService:
         outstanding_amount = readiness.get("outstanding_amount")
         release_ready = bool(readiness.get("can_release", False))
         settlement_clear = bool(readiness.get("dues_clear", release_ready))
+        settlement_collectable = bool(readiness.get("settlement_collectable", False))
         custody_clear = bool(readiness.get("custody_clear", release_ready))
         total_with_lenders = readiness.get("total_with_lenders", 0)
         recipient = released_by or getattr(release_preview, "released_by", None)
@@ -138,10 +139,22 @@ class ReleaseWorkflowService:
         steps = [
             ReleaseFlowStep(
                 label="Settlement",
-                status="Clear" if settlement_clear else "Pending",
+                status=(
+                    "Clear"
+                    if settlement_clear
+                    else "To Collect"
+                    if settlement_collectable
+                    else "Blocked"
+                ),
                 detail=f"Outstanding: {outstanding_amount}",
-                passed=settlement_clear,
-                badge_class="bg-success" if settlement_clear else "bg-danger",
+                passed=settlement_clear or settlement_collectable,
+                badge_class=(
+                    "bg-success"
+                    if settlement_clear
+                    else "bg-info text-dark"
+                    if settlement_collectable
+                    else "bg-danger"
+                ),
             ),
             ReleaseFlowStep(
                 label="Custody",

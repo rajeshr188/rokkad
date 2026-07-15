@@ -20,7 +20,7 @@ related: [README.md, architecture.md, models.md, userflows.md, refactor-plan.md]
 | Disbursal | transition POST | `loan_transition_view` | `DisbursePayload` | `DisburseTransitionCommand`, `record_loan_disbursal()` | transition form | loan status, `LoanChangeLog`, DEA payment records | DEA voucher/posting |
 | Given repayment | `girvi/loanpayment/<pk>/create/` | `loan_payment_create_view` | `GivenLoanRepaymentForm`, `InterestAccrualCommand` | `InterestAccrualService`, `GivenLoanPostingService` | `loanpayment/givenloan_repayment_form.html` | optional `LoanInterestAccrual`, DEA payment records | DEA voucher/posting |
 | Taken repayment | `girvi/takenloan/<pk>/payment/create/` | `taken_loan_payment_create_view` | `TakenLoanRepaymentForm` | model helper plus DEA facade | `loanpayment/takenloan_repayment_form.html` | DEA payment records | DEA voucher/posting |
-| Release | `girvi/release/<pk>/create/` | `release_create` | `ReleaseForm`, `ReleaseCreateCommand` | `ReleaseLifecycleService` | `release/release_form.html` | `Release`, loan status, item custody, `LoanChangeLog`, optional accrual rows, DEA payment records | DEA release receipt/posting |
+| Release | `girvi/release/<pk>/create/` | `release_create` | `ReleaseForm`, `ReleaseCreateCommand` | `ReleaseLifecycleService` | `release/release_form.html` | `Release`, settlement snapshot fields, loan status, item custody, `LoanChangeLog`, optional accrual rows, DEA payment records | DEA release receipt/posting |
 | Bulk release | `girvi/bulk_release/`, `submit_release_formset/` | `bulk_release`, `submit_release_formset` | `BulkReleaseForm`, release formset | `BulkReleaseService` | `release/bulk_release.html`, `release/release_formset.html` | same as release per row | same as release per row |
 | Renewal | `girvi/loan/renew/<pk>/` | `loan_renew` | `LoanRenewForm`, `LoanRenewalCommand` | `LoanRenewalService` | `loan/loan_renew.html` | new `GivenLoan`, cloned `LoanItem`, source status, `LoanRenewal`, optional accrual/payment records | DEA payment/disbursal posting |
 | Custody return | custody return URLs | `return_item_from_lender`, `return_all_items_from_lender` | POST fields | custody service/model methods | redirects or custody partials | `LoanItem`, `RepledgeHistory` | none |
@@ -223,25 +223,81 @@ Service: `ReleaseLifecycleService`
 Flow:
 
 1. User starts release from loan detail.
-2. Custody check verifies whether any items are with lenders.
+2. Custody check verifies whether any items are with lenders and whether final settlement can be calculated.
 3. If all items are in vault, the release form opens.
 4. `ReleaseForm` validates selected loan/date/released_by.
-5. `ReleaseLifecycleService.preview()` checks if the lifecycle can request/complete closure.
+5. `ReleaseLifecycleService.preview()` checks that the loan is in a release-settlement-capable lifecycle state.
 6. `execute()` optionally runs catch-up accrual (`loan_catchup_on_release`).
-7. Creates `Release`.
+7. Builds the release settlement basis: posted accrual rows through release date minus paid interest when available. Selector or accrual-query errors fail the release; only the explicit no-posted-accrual-rows case uses `SELECTOR_COMPATIBILITY`.
 8. Moves collateral items to customer where possible.
-9. Runs `request_closure` if needed, then `complete_closure`.
-10. Posts release receipt through `record_loan_release()`.
-11. Redirects to loan detail.
+9. Creates `Release` with settlement snapshot fields.
+10. Posts the final release receipt through `record_loan_release()` using the release settlement snapshot when dues remain.
+11. Runs `request_closure` if needed, then `complete_closure`.
+12. Redirects to loan detail.
+
+Release does not require prepayment through the normal repayment screen. If final dues remain and the settlement amount is calculable, the release workflow itself is the final settlement path: calculate dues -> post receipt -> release collateral -> close loan. Generic closure without receipt remains blocked.
 
 Database changes:
 
 - `LoanInterestAccrual` when catch-up creates rows.
-- `Release`
+- `Release` settlement snapshot fields:
+  - `settlement_basis`
+  - `settlement_principal_amount`
+  - `settlement_interest_amount`
+  - `settlement_total_amount`
+  - selector/accrual variance fields
 - `LoanItem.custody_status`
 - `GivenLoan.status`
 - `LoanChangeLog`
 - DEA `PaymentVoucher` and ledger records.
+
+### Example: Accrual-Row Release Settlement
+
+Assume a given loan is released on `2026-04-10`:
+
+| Field | Value |
+| --- | --- |
+| Loan ID | `GL-001` |
+| Loan date | `2026-01-10` |
+| Principal | `Rs 10,000` |
+| Monthly interest | `Rs 200` |
+| Release date | `2026-04-10` |
+| Interest already paid | `Rs 200` |
+
+At preview time, the UI may quote interest using `loan_interest_due()` so the user can see the expected settlement before committing the release.
+
+At submit time, `ReleaseLifecycleService.execute()` runs the authoritative flow:
+
+```text
+2026-01-10 -> 2026-02-10 = Rs 200 accrual
+2026-02-10 -> 2026-03-10 = Rs 200 accrual
+2026-03-10 -> 2026-04-10 = Rs 200 accrual
+
+Gross accrued interest = Rs 600
+Interest already paid  = Rs 200
+Final interest due     = Rs 400
+Principal due          = Rs 10,000
+Settlement total       = Rs 10,400
+```
+
+The release row snapshots the values used for closure and accounting:
+
+| Snapshot field | Value |
+| --- | --- |
+| `settlement_basis` | `ACCRUAL_ROWS` |
+| `settlement_principal_amount` | `Rs 10,000` |
+| `settlement_interest_amount` | `Rs 400` |
+| `settlement_total_amount` | `Rs 10,400` |
+| `selector_interest_quote` | `Rs 400` |
+| `accrual_interest_gross` | `Rs 600` |
+| `interest_paid_snapshot` | `Rs 200` |
+| `interest_basis_variance` | `Rs 0` |
+
+DEA release receipt posting uses the release snapshot instead of recomputing interest later. In this example, the receipt posts `Rs 10,000` principal and `Rs 400` interest, matching the release row and Form H.
+
+If no posted accrual rows exist through the release date, the release snapshot uses `settlement_basis = SELECTOR_COMPATIBILITY` with compatibility code `NO_POSTED_ACCRUAL_ROWS`. That keeps old behavior operational while making the exception visible. Query/calculation failures are not compatibility results and fail the release transaction. The reconciliation report flags compatibility-basis releases and other integrity issues such as closed loans without releases, release rows with custody still outside the customer, release receipts whose interest differs from the snapshot, and releases without expected vouchers.
+
+Custody handoff persists through the custody-owned save path. This preserves the normal rule that collateral details cannot be edited after approval while allowing release, repledge, and return workflows to persist only their custody fields.
 
 ## Bulk Release
 

@@ -1,10 +1,11 @@
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from ..forms import LoanForm, SeriesForm
+from ..forms import LoanCreateForm, SeriesForm
 from ..models import Series
-from ..services import LoanIDGenerator
+from ..services import GirviNumberSequenceService, LoanIDGenerator
 
 # @login_required
 # def next_loanid(request):
@@ -40,12 +41,12 @@ def next_loanid(request):
         series_id = request.GET.get("series", None)
         if series_id:
             series = get_object_or_404(Series, id=series_id)
-            # Generate preview using LoanIDGenerator
-            loan_id = LoanIDGenerator.generate(series)
+            # Preview only; allocation happens when the document is saved.
+            loan_id = LoanIDGenerator.preview(series)
         else:
             loan_id = ""
 
-        form = LoanForm(initial={"loan_id": loan_id})
+        form = LoanCreateForm(initial={"loan_id": loan_id})
         context = {
             "field": form["loan_id"],
         }
@@ -69,7 +70,33 @@ def series_list(request):
 @login_required
 def series_detail(request, pk):
     series = get_object_or_404(Series, pk=pk)
-    return render(request, "girvi/series/series_detail.html", {"series": series})
+    context = {
+        "series": series,
+        "sequence_summaries": GirviNumberSequenceService.summaries_for_series(series),
+    }
+    return render(request, "girvi/series/series_detail.html", context)
+
+
+@login_required
+def series_sync_sequences(request, pk):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    series = get_object_or_404(Series, pk=pk)
+    summaries = GirviNumberSequenceService.sync_all_for_series(
+        series,
+        apply=True,
+        updated_by=request.user,
+    )
+    created_count = sum(1 for summary in summaries if summary["created"])
+    messages.success(
+        request,
+        (
+            f"Number sequences synced for {series}. "
+            f"{created_count} created, {len(summaries) - created_count} updated."
+        ),
+    )
+    return redirect("girvi:girvi_series_detail", pk=series.pk)
 
 
 @login_required

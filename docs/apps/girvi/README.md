@@ -51,3 +51,4 @@ The app is currently between two architectural eras:
 - [Userflows](userflows.md)
 - [Refactor Plan](refactor-plan.md)
 - [URL Compatibility Matrix](url-compatibility-matrix.md)
+- [Loans Rewrite Roadmap](../../plans/loans-rewrite-roadmap.md)

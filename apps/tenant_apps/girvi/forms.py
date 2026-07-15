@@ -1,4 +1,5 @@
 from datetime import date
+import uuid
 from decimal import Decimal
 import logging
 
@@ -11,7 +12,6 @@ from django.utils import timezone
 from django_select2 import forms as s2forms
 from django_select2.forms import ModelSelect2Widget
 
-from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.contact.forms import CustomerWidget
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.party.models import Party
@@ -34,6 +34,7 @@ from apps.tenant_apps.girvi.service_modules.loan_form_validation import (
 from apps.tenant_apps.girvi.service_modules.repayment_form_validation import (
     RepaymentFormValidationService,
 )
+from apps.tenant_apps.girvi.service_modules.preferences import get_disbursal_policy
 
 
 logger = logging.getLogger(__name__)
@@ -1089,7 +1090,7 @@ class DisburseLoanForm(forms.Form):
         self.loan = kwargs.pop("loan", None)
         workspace = kwargs.pop("workspace", None)
         super().__init__(*args, **kwargs)
-        self._prefs = CompanyPreferences(workspace) if workspace is not None else None
+        self._prefs = get_disbursal_policy(workspace) if workspace is not None else None
 
         if self._prefs is not None:
             min_charge = Decimal(str(self._prefs.loan_minimum_document_charge or Decimal("0.00")))
@@ -1666,6 +1667,10 @@ class GivenLoanRepaymentForm(forms.Form):
         max_length=100,
         required=False,
     )
+    idempotency_key = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput,
+    )
     interest_amount = forms.DecimalField(
         label="Interest Portion",
         required=False,
@@ -1687,6 +1692,8 @@ class GivenLoanRepaymentForm(forms.Form):
     def __init__(self, *args, loan=None, **kwargs):
         self.loan = loan
         super().__init__(*args, **kwargs)
+        if not self.is_bound and not self.initial.get("idempotency_key"):
+            self.initial["idempotency_key"] = uuid.uuid4().hex
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1721,6 +1728,10 @@ class TakenLoanRepaymentForm(forms.Form):
         max_length=100,
         required=False,
     )
+    idempotency_key = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput,
+    )
     interest_amount = forms.DecimalField(
         label="Interest Portion",
         required=False,
@@ -1742,6 +1753,8 @@ class TakenLoanRepaymentForm(forms.Form):
     def __init__(self, *args, loan=None, **kwargs):
         self.loan = loan
         super().__init__(*args, **kwargs)
+        if not self.is_bound and not self.initial.get("idempotency_key"):
+            self.initial["idempotency_key"] = uuid.uuid4().hex
 
     def clean(self):
         cleaned_data = super().clean()

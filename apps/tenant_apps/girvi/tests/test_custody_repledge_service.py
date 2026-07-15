@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 
-from apps.tenant_apps.girvi.models import Series
+from apps.tenant_apps.girvi.models import Series, TakenLoan
 from apps.tenant_apps.girvi.service_modules.custody import (
     create_repledge_from_items,
     _resolve_repledge_series,
@@ -113,27 +113,11 @@ class CustodyRepledgeServiceTests(SimpleTestCase):
     def test_loan_id_generator_can_use_taken_loan_table_for_sequence(self):
         series = MagicMock(spec=Series)
         series.id = 5
-        series.prefix = "T"
-        series.format_loan_id.return_value = "T00008"
-        last_loan = MagicMock(loan_id="T00007")
-        loan_model = MagicMock()
-        loan_model.objects.filter.return_value.order_by.return_value.first.return_value = (
-            last_loan
-        )
-
-        with (
-            patch(
-                "apps.tenant_apps.girvi.service_modules.id_generation.transaction.atomic",
-                return_value=nullcontext(),
-            ),
-            patch(
-                "apps.tenant_apps.girvi.service_modules.id_generation.Series.objects.select_for_update"
-            ) as lock_series,
-        ):
-            lock_series.return_value.get.return_value = series
-
-            loan_id = LoanIDGenerator.generate(series, loan_model=loan_model)
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.id_generation.GirviNumberSequenceService.allocate",
+            return_value="T00008",
+        ) as allocate:
+            loan_id = LoanIDGenerator.generate(series, loan_model=TakenLoan)
 
         self.assertEqual(loan_id, "T00008")
-        loan_model.objects.filter.assert_called_once_with(series=series)
-        series.format_loan_id.assert_called_once_with(8)
+        allocate.assert_called_once_with(series, "TAKEN_LOAN")

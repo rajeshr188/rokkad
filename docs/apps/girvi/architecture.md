@@ -1,7 +1,7 @@
 ---
 status: active
 owner: girvi
-updated: 2026-06-18
+updated: 2026-07-05
 tags: [girvi, architecture, django]
 related: [README.md, models.md, workflows.md, userflows.md, refactor-plan.md, ../../adr/girvi-flow-boundaries-with-dea.md]
 ---
@@ -52,6 +52,7 @@ Domain/application services:
 - `service_modules/payment.py`: loan disbursal/release/reversal accounting facade calls.
 - `service_modules/loan_posting.py`: repayment/release/auction/sale posting orchestration.
 - `service_modules/accrual.py`: interest-accrual preview/execution and DEA posting.
+- `service_modules/preferences.py`: Girvi runtime preference adapter over central `PreferenceService`, preserving legacy `Loan__...` and `Interest_Rate__...` storage while avoiding direct runtime `CompanyPreferences` imports.
 - `service_modules/release_lifecycle.py`: release creation, catch-up accrual, status movement, custody update, accounting receipt.
 - `service_modules/renewal.py`: source-loan renewal, successor-loan creation, catch-up accrual, disbursal posting.
 - `service_modules/custody.py`: custody read models and commands.
@@ -81,6 +82,8 @@ Ideal direction:
 
 `views -> forms/selectors/services -> models -> DEA facade for accounting effects`
 
+Girvi runtime preference reads should go through `service_modules/preferences.py`, not through `apps.orgs.preferences.CompanyPreferences` directly.
+
 Current reality:
 
 - Views sometimes still compute business decisions directly, especially around loan detail metrics, merge/delete guards, and payment setup.
@@ -97,4 +100,3 @@ Current reality:
 - `tasks.py` has notification tasks that reference undefined legacy names (`Loan`, `Customer`, and `pending_loans`).
 - `transition_registry.py` still carries legacy UI/state registry rows alongside canonical transition rows.
 - `models/__init__.py` wildcard-imports both legacy and refactored model modules, increasing accidental legacy usage risk.
-

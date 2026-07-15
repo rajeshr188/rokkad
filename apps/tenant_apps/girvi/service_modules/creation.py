@@ -261,7 +261,7 @@ class LoanCreationService:
                 errors.extend(list(getattr(exc, "messages", None) or [str(exc)]))
         if not expected_loan_id and command.series and getattr(command.series, "is_active", False):
             try:
-                expected_loan_id = LoanIDGenerator.generate(command.series)
+                expected_loan_id = LoanIDGenerator.preview(command.series)
             except Exception as exc:
                 logger.warning("Could not preview next loan ID: %s", exc)
                 warnings.append(f"Could not preview next loan ID: {exc}")

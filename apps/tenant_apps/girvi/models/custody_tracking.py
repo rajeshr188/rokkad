@@ -134,6 +134,10 @@ class LoanItemWithCustody(models.Model):
 
     # === CUSTODY OPERATIONS ===
 
+    def _save_custody_state(self, *field_names):
+        """Persist custody mutations without invoking collateral edit guards."""
+        super().save(update_fields=list(field_names))
+
     def repledge_to(self, taken_loan, amount: Decimal, user, notes=""):
         """
         Repledge this item to a TakenLoan.
@@ -163,7 +167,12 @@ class LoanItemWithCustody(models.Model):
         self.repledged_to = taken_loan
         self.repledged_amount = amount
         self.repledged_at = timezone.now()
-        self.save()
+        self._save_custody_state(
+            "custody_status",
+            "repledged_to",
+            "repledged_amount",
+            "repledged_at",
+        )
 
         # Create history record
         RepledgeHistory.objects.create(
@@ -216,7 +225,12 @@ class LoanItemWithCustody(models.Model):
         self.repledged_to = None
         self.repledged_amount = None
         self.repledged_at = None
-        self.save()
+        self._save_custody_state(
+            "custody_status",
+            "repledged_to",
+            "repledged_amount",
+            "repledged_at",
+        )
 
         return self
 
@@ -245,7 +259,7 @@ class LoanItemWithCustody(models.Model):
                 )
 
         self.custody_status = ItemCustodyStatus.WITH_CUSTOMER
-        self.save()
+        self._save_custody_state("custody_status")
 
         return self
 

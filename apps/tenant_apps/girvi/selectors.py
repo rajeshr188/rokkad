@@ -25,6 +25,7 @@ from collections import Counter
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import logging
+from types import SimpleNamespace
 
 from django.db.models import (
     Case,
@@ -59,6 +60,7 @@ from .lifecycle import (
     CANONICAL_APPROVED,
     CANONICAL_REJECTED,
     CANONICAL_CANCELLED,
+    CANONICAL_CLOSED,
     canonical_status,
 )
 from .models import GivenLoan, TakenLoan
@@ -91,6 +93,24 @@ class RepaymentPreview:
     suggested_interest_amount: Decimal
     suggested_principal_amount: Decimal
     is_settled: bool
+
+
+class SelectorDataUnavailableError(RuntimeError):
+    """Typed selector failure for explicit reliability handling."""
+
+    def __init__(self, code, message, *, loan_id="", section=""):
+        self.code = code
+        self.loan_id = str(loan_id or "")
+        self.section = section
+        super().__init__(message)
+
+
+class SettlementDataUnavailableError(SelectorDataUnavailableError):
+    """Raised when settlement values cannot be calculated safely."""
+
+
+class ReconciliationDataUnavailableError(SelectorDataUnavailableError):
+    """Raised when reconciliation data cannot be read safely."""
 
 
 # ---------------------------------------------------------------------------
@@ -515,14 +535,74 @@ def build_dashboard_operational_queue(
     npa_candidates = []
     cure_candidates = []
     notice_candidates = []
+    warnings = []
+    data_unavailable_rows = []
 
     for loan in loans:
         try:
             settlement = build_loan_settlement_balance(loan)
-            policy = evaluate_overdue_policy(loan, as_of_date=today)
-            flow = build_runtime_loan_flow(loan, user, workspace)
-        except Exception:
+        except SettlementDataUnavailableError as exc:
+            logger.warning(
+                "Dashboard queue settlement unavailable for loan %s: %s",
+                getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                exc,
+            )
+            warnings.append(str(exc))
+            data_unavailable_rows.append(
+                _build_data_unavailable_row(
+                    loan=loan,
+                    section="settlement",
+                    reason=str(exc),
+                )
+            )
             continue
+
+        try:
+            policy = evaluate_overdue_policy(loan, as_of_date=today)
+        except Exception as exc:
+            logger.warning(
+                "Dashboard queue overdue-policy unavailable for loan %s: %s",
+                getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                exc,
+            )
+            warnings.append(
+                f"Loan {getattr(loan, 'loan_id', getattr(loan, 'pk', ''))}: overdue policy unavailable."
+            )
+            data_unavailable_rows.append(
+                _build_data_unavailable_row(
+                    loan=loan,
+                    section="overdue_policy",
+                    reason="Overdue policy could not be evaluated for queue actions.",
+                )
+            )
+            policy = SimpleNamespace(
+                maturity_date=None,
+                settlement_amount=settlement.total_outstanding,
+                current_value=Decimal("0.00"),
+                undersecured=False,
+                is_overdue=False,
+                is_npa=False,
+            )
+
+        try:
+            flow = build_runtime_loan_flow(loan, user, workspace)
+        except Exception as exc:
+            logger.warning(
+                "Dashboard queue transition flow unavailable for loan %s: %s",
+                getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                exc,
+            )
+            warnings.append(
+                f"Loan {getattr(loan, 'loan_id', getattr(loan, 'pk', ''))}: transition actions unavailable."
+            )
+            data_unavailable_rows.append(
+                _build_data_unavailable_row(
+                    loan=loan,
+                    section="transition_flow",
+                    reason="Lifecycle transition flow is unavailable for this loan.",
+                )
+            )
+            flow = None
 
         notifications = getattr(loan, "notifications", None)
         draft_notice_exists = False
@@ -541,9 +621,9 @@ def build_dashboard_operational_queue(
             draft_notice_exists=draft_notice_exists,
         )
 
-        mark_overdue = getattr(flow, "mark_overdue", None)
-        mark_npa = getattr(flow, "mark_npa", None)
-        cure_to_current = getattr(flow, "cure_to_current", None)
+        mark_overdue = getattr(flow, "mark_overdue", None) if flow else None
+        mark_npa = getattr(flow, "mark_npa", None) if flow else None
+        cure_to_current = getattr(flow, "cure_to_current", None) if flow else None
 
         if (
             getattr(loan, "status", None) == CANONICAL_ACTIVE_CURRENT
@@ -586,12 +666,15 @@ def build_dashboard_operational_queue(
         "npa_candidates": npa_candidates[:limit],
         "cure_candidates": cure_candidates[:limit],
         "notice_candidates": notice_candidates[:limit],
+        "warnings": warnings,
+        "data_unavailable_rows": data_unavailable_rows,
         "counts": {
             "due_today": len(due_today),
             "overdue_candidates": len(overdue_candidates),
             "npa_candidates": len(npa_candidates),
             "cure_candidates": len(cure_candidates),
             "notice_candidates": len(notice_candidates),
+            "data_unavailable": len(data_unavailable_rows),
         },
     }
 
@@ -614,6 +697,52 @@ def _is_release_payment(payment):
     return marker.startswith("RELEASE-")
 
 
+def _is_repayment_payment(payment):
+    marker = str(getattr(payment, "reference_number", "") or "")
+    return (
+        getattr(payment, "direction", "") == "RECEIPT"
+        and not _is_release_payment(payment)
+        and getattr(payment, "reversal_of_id", None) is None
+        and getattr(payment, "payment_type", "") != "DISBURSAL"
+    )
+
+
+def _iter_related(value):
+    if value is None:
+        return []
+    if hasattr(value, "all"):
+        return list(value.all())
+    return list(value or [])
+
+
+def _money_decimal(value):
+    amount = getattr(value, "amount", value)
+    try:
+        return Decimal(str(amount or 0))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal("0.00")
+
+
+def _release_snapshot_decimal(release, field_name):
+    if release is None:
+        return Decimal("0.00")
+    return _money_decimal(getattr(release, field_name, 0))
+
+
+def _release_payment_interest(payment):
+    return _money_decimal(getattr(payment, "interest_amount", 0))
+
+
+def _loan_has_non_customer_release_custody(loan):
+    items = _iter_related(getattr(loan, "loanitems", None))
+    mismatches = []
+    for item in items:
+        custody_status = getattr(item, "custody_status", None)
+        if custody_status and custody_status != "with_customer":
+            mismatches.append(item)
+    return mismatches
+
+
 def build_loan_accounting_reconciliation_report(*, limit=200, loans=None):
     """Return loans with accounting mismatches for operational reconciliation."""
     if loans is None:
@@ -627,7 +756,15 @@ def build_loan_accounting_reconciliation_report(*, limit=200, loans=None):
     issue_counts = Counter()
 
     for loan in loans:
-        payments = list(getattr(loan, "payments", []).all()) if hasattr(getattr(loan, "payments", None), "all") else list(getattr(loan, "payments", []) or [])
+        try:
+            payments = _iter_related(getattr(loan, "payments", None))
+        except Exception as exc:
+            raise ReconciliationDataUnavailableError(
+                "payments_relation_unavailable",
+                "Cannot read loan payments for reconciliation.",
+                loan_id=getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                section="reconciliation",
+            ) from exc
 
         posted_disbursal = any(
             getattr(payment, "posted", False)
@@ -637,19 +774,33 @@ def build_loan_accounting_reconciliation_report(*, limit=200, loans=None):
             for payment in payments
         )
         unposted_payments = [payment for payment in payments if not getattr(payment, "posted", False)]
-        posted_release_receipt = any(
-            getattr(payment, "posted", False)
-            and getattr(payment, "direction", "") == "RECEIPT"
-            and _is_release_payment(payment)
-            and getattr(payment, "reversal_of_id", None) is None
+        posted_release_receipts = [
+            payment
             for payment in payments
-        )
+            if (
+                getattr(payment, "posted", False)
+                and getattr(payment, "direction", "") == "RECEIPT"
+                and _is_release_payment(payment)
+                and getattr(payment, "reversal_of_id", None) is None
+            )
+        ]
+        posted_release_receipt = bool(posted_release_receipts)
+        posted_repayments = [
+            payment
+            for payment in payments
+            if getattr(payment, "posted", False) and _is_repayment_payment(payment)
+        ]
 
         has_release = False
         try:
             has_release = bool(getattr(loan, "release", None))
-        except Exception:
-            has_release = False
+        except Exception as exc:
+            raise ReconciliationDataUnavailableError(
+                "release_relation_unavailable",
+                "Cannot read release relation for reconciliation.",
+                loan_id=getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                section="reconciliation",
+            ) from exc
 
         base_payload = {
             "loan": loan,
@@ -697,6 +848,161 @@ def build_loan_accounting_reconciliation_report(*, limit=200, loans=None):
                 }
             )
 
+        if canonical_status(getattr(loan, "status", "")) == CANONICAL_CLOSED and not has_release:
+            issue_counts["closed_without_release"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "closed_without_release",
+                    "issue_label": "Closed without release",
+                    "severity": "high",
+                    "details": "Loan is closed but no Release document is linked.",
+                }
+            )
+
+        release = None
+        if has_release:
+            try:
+                release = getattr(loan, "release", None)
+            except Exception as exc:
+                raise ReconciliationDataUnavailableError(
+                    "release_document_unavailable",
+                    "Cannot load release document for reconciliation.",
+                    loan_id=getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                    section="reconciliation",
+                ) from exc
+
+        try:
+            non_customer_items = _loan_has_non_customer_release_custody(loan) if has_release else []
+        except Exception as exc:
+            raise ReconciliationDataUnavailableError(
+                "release_custody_read_failed",
+                "Cannot evaluate custody consistency for release reconciliation.",
+                loan_id=getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                section="reconciliation",
+            ) from exc
+        if non_customer_items:
+            issue_counts["release_custody_mismatch"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "release_custody_mismatch",
+                    "issue_label": "Release custody mismatch",
+                    "severity": "high",
+                    "details": (
+                        "Release exists but "
+                        f"{len(non_customer_items)} collateral item(s) are not with customer."
+                    ),
+                }
+            )
+
+        if (
+            release is not None
+            and getattr(release, "settlement_basis", "") == "SELECTOR_COMPATIBILITY"
+        ):
+            issue_counts["release_selector_compatibility_basis"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "release_selector_compatibility_basis",
+                    "issue_label": "Release used compatibility settlement",
+                    "severity": "medium",
+                    "details": (
+                        "Release was finalized without posted accrual rows and used "
+                        "the selector compatibility basis."
+                    ),
+                }
+            )
+
+        release_interest = _release_snapshot_decimal(
+            release,
+            "settlement_interest_amount",
+        )
+        if release_interest > Decimal("0.00") and posted_release_receipts:
+            posted_interest = sum(
+                (_release_payment_interest(payment) for payment in posted_release_receipts),
+                Decimal("0.00"),
+            )
+            if abs(posted_interest - release_interest) > Decimal("0.01"):
+                issue_counts["release_receipt_interest_mismatch"] += 1
+                issue_rows.append(
+                    {
+                        **base_payload,
+                        "issue_code": "release_receipt_interest_mismatch",
+                        "issue_label": "Release receipt interest mismatch",
+                        "severity": "high",
+                        "details": (
+                            f"Release interest snapshot {release_interest} does not match "
+                            f"posted release receipt interest {posted_interest}."
+                        ),
+                    }
+                )
+
+        release_variance = abs(
+            _release_snapshot_decimal(
+                release,
+                "interest_basis_variance",
+            )
+        )
+        if release_variance > Decimal("0.01"):
+            issue_counts["release_interest_basis_variance"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "release_interest_basis_variance",
+                    "issue_label": "Release interest basis variance",
+                    "severity": "medium",
+                    "details": (
+                        "Release selector interest quote differs from accrual-row "
+                        f"settlement by {release_variance}."
+                    ),
+                }
+            )
+
+        repayment_refs = Counter(
+            str(getattr(payment, "reference_number", "") or "")
+            for payment in posted_repayments
+        )
+        duplicate_references = [
+            reference
+            for reference, count in repayment_refs.items()
+            if reference and count > 1
+        ]
+        if duplicate_references:
+            issue_counts["duplicate_repayment_reference"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "duplicate_repayment_reference",
+                    "issue_label": "Duplicate repayment reference",
+                    "severity": "high",
+                    "details": (
+                        "Multiple posted repayment receipts share reference(s): "
+                        + ", ".join(duplicate_references[:5])
+                    ),
+                }
+            )
+
+        missing_idempotency_marker_count = sum(
+            1
+            for payment in posted_repayments
+            if not str(getattr(payment, "reference_number", "") or "")
+        )
+        if missing_idempotency_marker_count:
+            issue_counts["repayment_missing_idempotency_marker"] += 1
+            issue_rows.append(
+                {
+                    **base_payload,
+                    "issue_code": "repayment_missing_idempotency_marker",
+                    "issue_label": "Repayment missing idempotency marker",
+                    "severity": "medium",
+                    "details": (
+                        f"{missing_idempotency_marker_count} posted repayment receipt(s) "
+                        "have no reference/idempotency marker."
+                    ),
+                }
+            )
+
         if posted_disbursal and not _should_have_disbursal_voucher(loan):
             issue_counts["posted_voucher_state_mismatch"] += 1
             issue_rows.append(
@@ -728,6 +1034,23 @@ def build_loan_accounting_reconciliation_report(*, limit=200, loans=None):
             "failed_payment_posting": issue_counts["failed_payment_posting"],
             "release_without_voucher": issue_counts["release_without_voucher"],
             "posted_voucher_state_mismatch": issue_counts["posted_voucher_state_mismatch"],
+            "closed_without_release": issue_counts["closed_without_release"],
+            "release_custody_mismatch": issue_counts["release_custody_mismatch"],
+            "release_receipt_interest_mismatch": issue_counts[
+                "release_receipt_interest_mismatch"
+            ],
+            "release_interest_basis_variance": issue_counts[
+                "release_interest_basis_variance"
+            ],
+            "release_selector_compatibility_basis": issue_counts[
+                "release_selector_compatibility_basis"
+            ],
+            "duplicate_repayment_reference": issue_counts[
+                "duplicate_repayment_reference"
+            ],
+            "repayment_missing_idempotency_marker": issue_counts[
+                "repayment_missing_idempotency_marker"
+            ],
         },
         "total_issues": sum(issue_counts.values()),
         "generated_at": timezone.now(),
@@ -774,19 +1097,49 @@ def build_operational_controls_report(*, limit=200, loans=None, as_of_date=None)
     custody_rows = []
     release_ready_rows = []
     rate_exception_rows = []
+    data_unavailable_rows = []
+    warnings = []
     aging_buckets = Counter()
     today = as_of_date or timezone.localdate()
 
     for loan in loans:
         try:
             settlement = build_loan_settlement_balance(loan)
-        except Exception:
+        except SettlementDataUnavailableError as exc:
+            logger.warning(
+                "Operational controls settlement unavailable for loan %s: %s",
+                getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                exc,
+            )
+            warnings.append(str(exc))
+            data_unavailable_rows.append(
+                _build_data_unavailable_row(
+                    loan=loan,
+                    section="settlement",
+                    reason=str(exc),
+                )
+            )
             continue
 
         try:
             policy = evaluate_overdue_policy(loan, as_of_date=today)
             maturity_date = policy.maturity_date
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Operational controls overdue-policy unavailable for loan %s: %s",
+                getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                exc,
+            )
+            warnings.append(
+                f"Loan {getattr(loan, 'loan_id', getattr(loan, 'pk', ''))}: overdue policy unavailable."
+            )
+            data_unavailable_rows.append(
+                _build_data_unavailable_row(
+                    loan=loan,
+                    section="overdue_policy",
+                    reason="Overdue policy could not be evaluated.",
+                )
+            )
             maturity_date = None
 
         days_overdue = 0
@@ -809,9 +1162,27 @@ def build_operational_controls_report(*, limit=200, loans=None, as_of_date=None)
 
         items_relation = getattr(loan, "loanitems", None)
         if items_relation is not None:
-            in_vault = items_relation.filter(custody_status=ItemCustodyStatus.IN_VAULT).count()
-            with_lender = items_relation.filter(custody_status=ItemCustodyStatus.WITH_LENDER).count()
-            with_customer = items_relation.filter(custody_status=ItemCustodyStatus.WITH_CUSTOMER).count()
+            try:
+                in_vault = items_relation.filter(custody_status=ItemCustodyStatus.IN_VAULT).count()
+                with_lender = items_relation.filter(custody_status=ItemCustodyStatus.WITH_LENDER).count()
+                with_customer = items_relation.filter(custody_status=ItemCustodyStatus.WITH_CUSTOMER).count()
+            except Exception as exc:
+                logger.warning(
+                    "Operational controls custody unavailable for loan %s: %s",
+                    getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                    exc,
+                )
+                warnings.append(
+                    f"Loan {getattr(loan, 'loan_id', getattr(loan, 'pk', ''))}: custody distribution unavailable."
+                )
+                data_unavailable_rows.append(
+                    _build_data_unavailable_row(
+                        loan=loan,
+                        section="custody",
+                        reason="Collateral custody distribution could not be read.",
+                    )
+                )
+                continue
             total_items = in_vault + with_lender + with_customer
             custody_rows.append(
                 {
@@ -843,23 +1214,40 @@ def build_operational_controls_report(*, limit=200, loans=None, as_of_date=None)
                 }
             )
 
-            for item in items_relation.all():
-                market_rate = RateCacheService.get_rate_or_none(getattr(item, "itemtype", ""))
-                interest_rate = _as_decimal(getattr(item, "interestrate", Decimal("0.00")))
-                if market_rate is None or interest_rate <= Decimal("0.00"):
-                    rate_exception_rows.append(
-                        {
-                            "loan": loan,
-                            "loan_id": getattr(loan, "loan_id", ""),
-                            "item_id": getattr(item, "pk", None),
-                            "item_type": getattr(item, "itemtype", ""),
-                            "item_desc": getattr(item, "itemdesc", ""),
-                            "configured_interest_rate": interest_rate,
-                            "market_rate": market_rate,
-                            "issue": "missing_market_rate" if market_rate is None else "invalid_interest_rate",
-                            "detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
-                        }
+            try:
+                for item in items_relation.all():
+                    market_rate = RateCacheService.get_rate_or_none(getattr(item, "itemtype", ""))
+                    interest_rate = _as_decimal(getattr(item, "interestrate", Decimal("0.00")))
+                    if market_rate is None or interest_rate <= Decimal("0.00"):
+                        rate_exception_rows.append(
+                            {
+                                "loan": loan,
+                                "loan_id": getattr(loan, "loan_id", ""),
+                                "item_id": getattr(item, "pk", None),
+                                "item_type": getattr(item, "itemtype", ""),
+                                "item_desc": getattr(item, "itemdesc", ""),
+                                "configured_interest_rate": interest_rate,
+                                "market_rate": market_rate,
+                                "issue": "missing_market_rate" if market_rate is None else "invalid_interest_rate",
+                                "detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
+                            }
+                        )
+            except Exception as exc:
+                logger.warning(
+                    "Operational controls rate exceptions unavailable for loan %s: %s",
+                    getattr(loan, "loan_id", getattr(loan, "pk", "")),
+                    exc,
+                )
+                warnings.append(
+                    f"Loan {getattr(loan, 'loan_id', getattr(loan, 'pk', ''))}: rate exception scan unavailable."
+                )
+                data_unavailable_rows.append(
+                    _build_data_unavailable_row(
+                        loan=loan,
+                        section="rate_exceptions",
+                        reason="Rate exception scan could not be completed for this loan.",
                     )
+                )
 
     aging_rows.sort(key=lambda row: row["days_overdue"], reverse=True)
     custody_rows.sort(key=lambda row: row["with_lender"], reverse=True)
@@ -890,6 +1278,9 @@ def build_operational_controls_report(*, limit=200, loans=None, as_of_date=None)
             "rows": rate_exception_rows[:limit],
             "total": len(rate_exception_rows),
         },
+        "warnings": warnings,
+        "data_unavailable_rows": data_unavailable_rows,
+        "data_unavailable_count": len(data_unavailable_rows),
         "generated_at": timezone.now(),
         "scanned_loans": len(loans),
     }
@@ -907,6 +1298,9 @@ def build_operational_controls_report_context(*, report=None):
         "release_ready_count": report["release_ready"]["ready_count"],
         "rate_exception_rows": report["rate_exceptions"]["rows"],
         "rate_exception_total": report["rate_exceptions"]["total"],
+        "selector_warnings": report.get("warnings", []),
+        "data_unavailable_rows": report.get("data_unavailable_rows", []),
+        "data_unavailable_count": report.get("data_unavailable_count", 0),
     }
 
 
@@ -1072,12 +1466,39 @@ def _sum_payment_component(loan, *, direction, field_name):
     if payments_relation is None or not getattr(loan, "pk", None):
         return Decimal("0.00")
 
+    if not hasattr(payments_relation, "filter"):
+        raise SettlementDataUnavailableError(
+            "payment_relation_invalid",
+            "Loan payments relation is missing queryset filter support.",
+            loan_id=getattr(loan, "loan_id", getattr(loan, "pk", "")),
+            section="settlement",
+        )
+
     try:
         queryset = payments_relation.filter(direction=direction)
         total = queryset.aggregate(total=Sum(field_name))["total"]
         return _decimal_round(total)
-    except Exception:
-        return Decimal("0.00")
+    except Exception as exc:
+        raise SettlementDataUnavailableError(
+            "payment_aggregation_failed",
+            f"Unable to aggregate payment component '{field_name}' for settlement.",
+            loan_id=getattr(loan, "loan_id", getattr(loan, "pk", "")),
+            section="settlement",
+        ) from exc
+
+
+def _build_data_unavailable_row(*, loan, section, reason):
+    return {
+        "loan": loan,
+        "loan_id": getattr(loan, "loan_id", ""),
+        "borrower_name": getattr(getattr(loan, "borrower", None), "name", ""),
+        "section": section,
+        "issue_code": "data_unavailable",
+        "issue_label": "Data unavailable",
+        "reason": reason,
+        "data_unavailable": True,
+        "detail_url": reverse("girvi:girvi_loan_detail", args=[loan.pk]),
+    }
 
 
 def build_loan_settlement_balance(loan, *, loan_kind="given", as_of_date=None):
@@ -1088,83 +1509,93 @@ def build_loan_settlement_balance(loan, *, loan_kind="given", as_of_date=None):
     include both principal and interest. Legacy helper methods remain as a
     fallback for old rows and lightweight tests.
     """
-    loan_amount_attr = getattr(loan, "get_loan_amount", None)
-    has_loan_amount = loan_amount_attr is not None
-    explicit_attrs = vars(loan) if hasattr(loan, "__dict__") else {}
-    outstanding_interest = explicit_attrs.get("outstanding_interest")
-    if outstanding_interest is not None:
-        interest_due = _decimal_round(outstanding_interest)
-    else:
-        interest_due_getter = getattr(loan, "interest_outstanding", None)
-        if callable(interest_due_getter):
-            interest_due = _decimal_round(interest_due_getter(as_of_date))
+    try:
+        loan_amount_attr = getattr(loan, "get_loan_amount", None)
+        has_loan_amount = loan_amount_attr is not None
+        explicit_attrs = vars(loan) if hasattr(loan, "__dict__") else {}
+        outstanding_interest = explicit_attrs.get("outstanding_interest")
+        if outstanding_interest is not None:
+            interest_due = _decimal_round(outstanding_interest)
         else:
-            outstanding_interest = getattr(loan, "outstanding_interest", None)
-            if outstanding_interest is not None:
-                interest_due = _decimal_round(outstanding_interest)
+            interest_due_getter = getattr(loan, "interest_outstanding", None)
+            if callable(interest_due_getter):
+                interest_due = _decimal_round(interest_due_getter(as_of_date))
             else:
-                interest_due_attr = getattr(loan, "interest_due", None)
-                if callable(interest_due_attr):
-                    interest_due = _decimal_round(interest_due_attr(as_of_date))
+                outstanding_interest = getattr(loan, "outstanding_interest", None)
+                if outstanding_interest is not None:
+                    interest_due = _decimal_round(outstanding_interest)
                 else:
-                    interest_due = _decimal_round(interest_due_attr)
+                    interest_due_attr = getattr(loan, "interest_due", None)
+                    if callable(interest_due_attr):
+                        interest_due = _decimal_round(interest_due_attr(as_of_date))
+                    else:
+                        interest_due = _decimal_round(interest_due_attr)
 
-    payment_direction = "PAYMENT" if loan_kind == "taken" else "RECEIPT"
-    principal_paid = _sum_payment_component(
-        loan, direction=payment_direction, field_name="principal_amount"
-    )
-    interest_paid = _sum_payment_component(
-        loan, direction=payment_direction, field_name="interest_amount"
-    )
-    total_paid = _sum_payment_component(
-        loan, direction=payment_direction, field_name="amount_in_base_currency"
-    )
+        payment_direction = "PAYMENT" if loan_kind == "taken" else "RECEIPT"
+        principal_paid = _sum_payment_component(
+            loan, direction=payment_direction, field_name="principal_amount"
+        )
+        interest_paid = _sum_payment_component(
+            loan, direction=payment_direction, field_name="interest_amount"
+        )
+        total_paid = _sum_payment_component(
+            loan, direction=payment_direction, field_name="amount_in_base_currency"
+        )
 
-    if principal_paid == Decimal("0.00"):
-        principal_getter = getattr(loan, "get_total_principal_payments", None)
-        if callable(principal_getter):
-            principal_paid = _decimal_round(principal_getter())
-    if interest_paid == Decimal("0.00"):
-        interest_getter = getattr(loan, "get_total_interest_payments", None)
-        if callable(interest_getter):
-            interest_paid = _decimal_round(interest_getter())
-    if total_paid == Decimal("0.00"):
-        total_getter = getattr(loan, "get_total_payments", None)
-        if callable(total_getter):
-            total_paid = _decimal_round(total_getter())
-        else:
-            total_attr = getattr(loan, "total_paid", None)
-            total_paid = _decimal_round(total_attr)
+        if principal_paid == Decimal("0.00"):
+            principal_getter = getattr(loan, "get_total_principal_payments", None)
+            if callable(principal_getter):
+                principal_paid = _decimal_round(principal_getter())
+        if interest_paid == Decimal("0.00"):
+            interest_getter = getattr(loan, "get_total_interest_payments", None)
+            if callable(interest_getter):
+                interest_paid = _decimal_round(interest_getter())
+        if total_paid == Decimal("0.00"):
+            total_getter = getattr(loan, "get_total_payments", None)
+            if callable(total_getter):
+                total_paid = _decimal_round(total_getter())
+            else:
+                total_attr = getattr(loan, "total_paid", None)
+                total_paid = _decimal_round(total_attr)
 
-    total_due_attr = getattr(loan, "total_due", None)
-    if callable(total_due_attr):
-        total_due_attr = total_due_attr()
-    legacy_total_due = _decimal_round(total_due_attr)
+        total_due_attr = getattr(loan, "total_due", None)
+        if callable(total_due_attr):
+            total_due_attr = total_due_attr()
+        legacy_total_due = _decimal_round(total_due_attr)
 
-    principal_base = _decimal_round(loan_amount_attr) if has_loan_amount else Decimal("0.00")
-    if not has_loan_amount and legacy_total_due > 0:
-        principal_base = max(legacy_total_due - interest_due, Decimal("0.00"))
+        principal_base = _decimal_round(loan_amount_attr) if has_loan_amount else Decimal("0.00")
+        if not has_loan_amount and legacy_total_due > 0:
+            principal_base = max(legacy_total_due - interest_due, Decimal("0.00"))
 
-    principal_outstanding = max(principal_base - principal_paid, Decimal("0.00"))
-    total_due = principal_base + interest_due
-    if not has_loan_amount and legacy_total_due > 0:
-        total_due = legacy_total_due
-    component_outstanding = principal_outstanding + interest_due
-    total_outstanding = max(total_due - total_paid, Decimal("0.00"))
-    if principal_paid or interest_paid:
-        total_outstanding = max(component_outstanding, Decimal("0.00"))
-    overpayment = max(total_paid - total_due, Decimal("0.00"))
+        principal_outstanding = max(principal_base - principal_paid, Decimal("0.00"))
+        total_due = principal_base + interest_due
+        if not has_loan_amount and legacy_total_due > 0:
+            total_due = legacy_total_due
+        component_outstanding = principal_outstanding + interest_due
+        total_outstanding = max(total_due - total_paid, Decimal("0.00"))
+        if principal_paid or interest_paid:
+            total_outstanding = max(component_outstanding, Decimal("0.00"))
+        overpayment = max(total_paid - total_due, Decimal("0.00"))
 
-    return LoanSettlementBalance(
-        principal_due=principal_outstanding,
-        interest_due=interest_due,
-        principal_paid=principal_paid,
-        interest_paid=interest_paid,
-        total_paid=total_paid,
-        total_due=total_due,
-        total_outstanding=total_outstanding,
-        overpayment=overpayment,
-    )
+        return LoanSettlementBalance(
+            principal_due=principal_outstanding,
+            interest_due=interest_due,
+            principal_paid=principal_paid,
+            interest_paid=interest_paid,
+            total_paid=total_paid,
+            total_due=total_due,
+            total_outstanding=total_outstanding,
+            overpayment=overpayment,
+        )
+    except SettlementDataUnavailableError:
+        raise
+    except Exception as exc:
+        raise SettlementDataUnavailableError(
+            "settlement_calculation_failed",
+            "Loan settlement balance could not be calculated safely.",
+            loan_id=getattr(loan, "loan_id", getattr(loan, "pk", "")),
+            section="settlement",
+        ) from exc
 
 
 def build_repayment_preview(loan, *, loan_kind="given", as_of_date=None):
@@ -1240,11 +1671,12 @@ def build_given_loan_release_action(loan):
     return {
         "title": "Start Release Workflow",
         "icon": ">",
-        "button_class": "btn-success" if not needs_settlement else "btn-outline-secondary",
+        "button_class": "btn-success",
         "href": reverse("girvi:release_loan_check_custody", args=[loan.id]),
-        "disabled": needs_settlement,
+        "disabled": False,
         "outstanding_amount": outstanding_amount,
         "closure_exception_approved": closure_exception,
+        "needs_final_settlement": needs_settlement,
     }
 
 

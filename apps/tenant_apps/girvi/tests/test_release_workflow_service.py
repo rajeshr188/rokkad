@@ -72,7 +72,30 @@ class ReleaseWorkflowServiceTests(SimpleTestCase):
         self.assertIn("Loan has outstanding dues", context.blockers)
         self.assertIn("Loan GL-42 cannot be released in status Draft.", context.blockers)
         self.assertEqual(context.warnings, ["Review release date."])
-        self.assertEqual(context.steps[0].status, "Pending")
+        self.assertEqual(context.steps[0].status, "Blocked")
+
+    def test_build_flow_context_allows_collectable_final_settlement(self):
+        loan = self._loan()
+        preview = SimpleNamespace(errors=[], warnings=[], released_by="Demo Receiver")
+
+        context = ReleaseWorkflowService.build_flow_context(
+            loan,
+            user=self._user(),
+            checklist={
+                "can_release": True,
+                "dues_clear": False,
+                "settlement_collectable": True,
+                "custody_clear": True,
+                "outstanding_amount": "500.00",
+                "total_with_lenders": 0,
+                "blockers": [],
+            },
+            preview=preview,
+        )
+
+        self.assertTrue(context.can_submit)
+        self.assertEqual(context.steps[0].status, "To Collect")
+        self.assertIn("settlement receipt", context.posting_detail)
 
     @patch("apps.tenant_apps.girvi.service_modules.release_workflow.ReleaseLifecycleService.execute")
     def test_submit_returns_success_shape(self, execute_mock):

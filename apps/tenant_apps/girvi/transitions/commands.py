@@ -285,6 +285,44 @@ class MarkSoldTransitionCommand(BaseLoanTransitionCommand):
             )
 
 
+class WriteOffTransitionCommand(BaseLoanTransitionCommand):
+    transition_name = "write_off_loan"
+
+    def execute(self, transition_method, payload=None) -> TransitionResult:
+        from decimal import Decimal
+
+        from apps.tenant_apps.girvi.service_modules.settlement_adjustments import (
+            SettlementAdjustmentCommand,
+            SettlementAdjustmentService,
+            SettlementAdjustmentType,
+        )
+
+        payload_kwargs = self._payload_to_kwargs(payload)
+        outstanding = getattr(self.loan, "outstanding_amount", None)
+        if outstanding is not None and Decimal(str(outstanding)) <= Decimal("0.00"):
+            return TransitionResult(
+                success=False,
+                level="error",
+                message="Fully settled loans must be closed, not written off.",
+            )
+
+        result = SettlementAdjustmentService.execute(
+            SettlementAdjustmentCommand(
+                loan=self.loan,
+                adjustment_type=SettlementAdjustmentType.WRITE_OFF,
+                created_by=self.user,
+                reason=payload_kwargs.get("reason", ""),
+                principal_amount=getattr(self.loan, "outstanding_principal", Decimal("0.00")),
+                interest_amount=getattr(self.loan, "outstanding_interest", Decimal("0.00")),
+            )
+        )
+        return TransitionResult(
+            success=result.success,
+            level="success" if result.success else "error",
+            message=result.message,
+        )
+
+
 class UndoDisburseTransitionCommand(BaseLoanTransitionCommand):
     transition_name = "undo_disburse"
 
@@ -417,7 +455,7 @@ TRANSITION_COMMAND_REGISTRY = {
     "cancel_auction": GenericForwardTransitionCommand,
     "complete_auction": MarkAuctionedTransitionCommand,
     "close_after_auction": GenericForwardTransitionCommand,
-    "write_off_loan": GenericForwardTransitionCommand,
+    "write_off_loan": WriteOffTransitionCommand,
     "activate": DisburseTransitionCommand,
     "request_settlement": GenericForwardTransitionCommand,
     "complete_settlement": GenericForwardTransitionCommand,

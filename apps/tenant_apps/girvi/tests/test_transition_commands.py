@@ -239,7 +239,7 @@ class TransitionCommandRegistryTests(SimpleTestCase):
         self.assertEqual(loan.status, LoanLifecycleState.AUCTION_COMPLETE)
 
     @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
-    def test_write_off_allows_residual_balance_with_reason(self, _mock_permission):
+    def test_write_off_requires_adjustment_document_for_residual_balance(self, _mock_permission):
         loan = _DummyLoan(LoanLifecycleState.AUCTION_COMPLETE)
         loan.outstanding_amount = Decimal("100.00")
 
@@ -249,8 +249,10 @@ class TransitionCommandRegistryTests(SimpleTestCase):
             reason="approved loss decision",
         )
 
-        self.assertTrue(result.success)
-        self.assertEqual(loan.status, LoanLifecycleState.WRITTEN_OFF)
+        self.assertFalse(result.success)
+        self.assertEqual(result.level, "error")
+        self.assertIn("requires an explicit settlement adjustment document", result.message)
+        self.assertEqual(loan.status, LoanLifecycleState.AUCTION_COMPLETE)
 
     def test_cure_to_current_rejects_when_balance_outstanding(self):
         loan = _DummyLoan(LoanLifecycleState.ACTIVE_OVERDUE)

@@ -43,6 +43,62 @@
         </div>
       </div>
     </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Closed without release</div>
+          <div class="h4 mb-0">{{ report_counts.closed_without_release }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Release custody mismatch</div>
+          <div class="h4 mb-0">{{ report_counts.release_custody_mismatch }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Release interest mismatch</div>
+          <div class="h4 mb-0">{{ report_counts.release_receipt_interest_mismatch }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-warning h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Interest basis variance</div>
+          <div class="h4 mb-0">{{ report_counts.release_interest_basis_variance }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-warning h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small">Compatibility settlements</div>
+          <div class="h4 mb-0">{{ report_counts.release_selector_compatibility_basis }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Duplicate repayment references</div>
+          <div class="h4 mb-0">{{ report_counts.duplicate_repayment_reference }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-warning h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Repayments without markers</div>
+          <div class="h4 mb-0">{{ report_counts.repayment_missing_idempotency_marker }}</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="card">

@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -44,6 +45,54 @@ class Release(models.Model):
     # Relationship Fields
     loan = models.OneToOneField(
         "girvi.GivenLoan", on_delete=models.CASCADE, related_name="release"
+    )
+    settlement_basis = models.CharField(
+        max_length=32,
+        default="SELECTOR_COMPATIBILITY",
+        verbose_name=_("Settlement Basis"),
+        help_text=_("Source used for final release settlement interest."),
+    )
+    settlement_principal_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name=_("Settlement Principal Amount"),
+    )
+    settlement_interest_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name=_("Settlement Interest Amount"),
+    )
+    settlement_total_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name=_("Settlement Total Amount"),
+    )
+    selector_interest_quote = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name=_("Selector Interest Quote"),
+    )
+    accrual_interest_gross = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name=_("Accrual Interest Gross"),
+    )
+    interest_paid_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name=_("Interest Paid Snapshot"),
+    )
+    interest_basis_variance = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name=_("Interest Basis Variance"),
     )
     objects = ReleaseManager()
 

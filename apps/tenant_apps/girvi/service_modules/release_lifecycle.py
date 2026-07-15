@@ -4,16 +4,24 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.girvi.flows import (
     build_runtime_loan_flow,
     normalize_legacy_given_loan_status,
 )
 from apps.tenant_apps.girvi.lifecycle import V2_CLOSURE_STATUSES
+from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
 from apps.tenant_apps.girvi.models.custody_tracking import ItemCustodyStatus
 
 from .accrual import InterestAccrualCommand, InterestAccrualService
 from .payment import record_loan_release
+from .preferences import (
+    is_loan_catchup_on_release_enabled,
+    is_loan_release_fail_closed_on_accrual_error_enabled,
+)
+from .release_settlement import (
+    apply_release_settlement_snapshot,
+    build_release_settlement_basis,
+)
 
 
 @dataclass
@@ -50,6 +58,7 @@ class ReleaseCreateResult:
     failed_stage: str = ""
     stage_errors: dict[str, list[str]] = dc_field(default_factory=dict)
     stage_warnings: dict[str, list[str]] = dc_field(default_factory=dict)
+    settlement_basis: object | None = None
 
 
 class ReleaseLifecycleService:
@@ -59,16 +68,23 @@ class ReleaseLifecycleService:
     STAGE_ACCRUAL = "accrual_catchup"
     STAGE_CUSTODY = "custody_transferred"
     STAGE_RELEASE_SAVE = "release_saved"
-    STAGE_CLOSURE = "closure_completed"
     STAGE_POSTING = "posting_completed"
+    STAGE_CLOSURE = "closure_completed"
+
+    RELEASE_SETTLEMENT_STATUSES = {
+        LoanLifecycleState.ACTIVE_CURRENT,
+        LoanLifecycleState.ACTIVE_OVERDUE,
+        LoanLifecycleState.ACTIVE_NPA,
+        LoanLifecycleState.CLOSURE_PENDING,
+    }
 
     STAGES = (
         STAGE_READINESS,
         STAGE_ACCRUAL,
         STAGE_CUSTODY,
         STAGE_RELEASE_SAVE,
-        STAGE_CLOSURE,
         STAGE_POSTING,
+        STAGE_CLOSURE,
     )
 
     @classmethod
@@ -151,28 +167,10 @@ class ReleaseLifecycleService:
             )
 
         if loan and created_by and existing_release is None:
-            workspace = getattr(getattr(created_by, "profile", None), "workspace", None)
-            flow = build_runtime_loan_flow(
-                loan,
-                created_by,
-                workspace,
-            )
-            can_release = False
             current_status = normalize_legacy_given_loan_status(
                 getattr(loan, "status", "")
             )
-            use_v2_closure = current_status in V2_CLOSURE_STATUSES
-            deliver = getattr(flow, "deliver", None)
-            request_closure = getattr(flow, "request_closure", None)
-            complete_closure = getattr(flow, "complete_closure", None)
-
-            if use_v2_closure:
-                if request_closure and request_closure.can_proceed():
-                    can_release = True
-                elif complete_closure and complete_closure.can_proceed():
-                    can_release = True
-            elif deliver and deliver.can_proceed():
-                can_release = True
+            can_release = current_status in ReleaseLifecycleService.RELEASE_SETTLEMENT_STATUSES
 
             if not can_release:
                 errors.append(
@@ -222,11 +220,10 @@ class ReleaseLifecycleService:
 
         try:
             with transaction.atomic():
-                prefs = CompanyPreferences(workspace)
                 current_stage = ReleaseLifecycleService.STAGE_ACCRUAL
-                if prefs.loan_catchup_on_release:
+                if is_loan_catchup_on_release_enabled(workspace):
                     fail_closed_on_accrual_error = bool(
-                        prefs.loan_release_fail_closed_on_accrual_error
+                        is_loan_release_fail_closed_on_accrual_error_enabled(workspace)
                     )
                     accrual_result = InterestAccrualService.execute(
                         InterestAccrualCommand(
@@ -269,6 +266,36 @@ class ReleaseLifecycleService:
                     released_by=command.released_by,
                     created_by=created_by,
                 )
+                settlement_basis = build_release_settlement_basis(
+                    command.loan,
+                    command.release_date,
+                )
+                apply_release_settlement_snapshot(release, settlement_basis)
+                if not settlement_basis.used_accrual_rows:
+                    compatibility_code = getattr(
+                        settlement_basis,
+                        "compatibility_code",
+                        "SELECTOR_COMPATIBILITY",
+                    )
+                    compatibility_reason = getattr(
+                        settlement_basis,
+                        "compatibility_reason",
+                        "Selector compatibility settlement was required.",
+                    )
+                    issue_text = (
+                        "Final release settlement used selector compatibility basis "
+                        f"({compatibility_code}): {compatibility_reason}"
+                    )
+                    warnings.append(issue_text)
+                    stage_warnings.setdefault(
+                        ReleaseLifecycleService.STAGE_ACCRUAL,
+                        [],
+                    ).append(issue_text)
+                    if (
+                        stage_outcomes.get(ReleaseLifecycleService.STAGE_ACCRUAL)
+                        == "completed"
+                    ):
+                        stage_outcomes[ReleaseLifecycleService.STAGE_ACCRUAL] = "warning"
                 current_stage = ReleaseLifecycleService.STAGE_CUSTODY
                 ReleaseLifecycleService._release_items_to_customer(
                     command.loan,
@@ -278,6 +305,15 @@ class ReleaseLifecycleService:
 
                 current_stage = ReleaseLifecycleService.STAGE_RELEASE_SAVE
                 release.save()
+                stage_outcomes[current_stage] = "completed"
+
+                current_stage = ReleaseLifecycleService.STAGE_POSTING
+                release_posting = record_loan_release(release, created_by=created_by)
+                if isinstance(release_posting, tuple):
+                    payment, payment_created = release_posting
+                else:
+                    payment = release_posting
+                    payment_created = bool(release_posting)
                 stage_outcomes[current_stage] = "completed"
 
                 current_status = normalize_legacy_given_loan_status(
@@ -317,15 +353,6 @@ class ReleaseLifecycleService:
                     )
                 stage_outcomes[current_stage] = "completed"
 
-                current_stage = ReleaseLifecycleService.STAGE_POSTING
-                release_posting = record_loan_release(release, created_by=created_by)
-                if isinstance(release_posting, tuple):
-                    payment, payment_created = release_posting
-                else:
-                    payment = release_posting
-                    payment_created = bool(release_posting)
-                stage_outcomes[current_stage] = "completed"
-
             message = f"Loan {command.loan.loan_id} released successfully."
             if payment is None:
                 warnings.append(
@@ -356,6 +383,7 @@ class ReleaseLifecycleService:
                 stage_outcomes=stage_outcomes,
                 stage_errors=stage_errors,
                 stage_warnings=stage_warnings,
+                settlement_basis=settlement_basis,
             )
         except ValidationError as exc:
             error_list = list(getattr(exc, "messages", None) or [str(exc)])

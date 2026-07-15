@@ -33,19 +33,21 @@ class InterestAccrualTriggerTests(SimpleTestCase):
     @patch("apps.tenant_apps.girvi.views.loanpayment.reverse", return_value="/girvi/loan/1/")
     @patch("apps.tenant_apps.girvi.views.loanpayment.messages.success")
     @patch("apps.tenant_apps.girvi.service_modules.repayment.GivenLoanPostingService.post_repayment")
-    @patch("apps.tenant_apps.girvi.service_modules.repayment.CompanyPreferences")
+    @patch(
+        "apps.tenant_apps.girvi.service_modules.repayment.is_loan_catchup_on_receipt_enabled",
+        return_value=True,
+    )
     @patch("apps.tenant_apps.girvi.views.loanpayment.get_object_or_404")
     def test_payment_view_triggers_interest_catchup_before_receipt(
         self,
         mock_get_object_or_404,
-        mock_company_preferences,
+        _mock_catchup_enabled,
         mock_post_repayment,
         _mock_success,
         _mock_reverse,
     ):
         payment = MagicMock(payment_id="PAY-1")
         mock_post_repayment.return_value = (payment, True)
-        mock_company_preferences.return_value = SimpleNamespace(loan_catchup_on_receipt=True)
 
         loan = MagicMock()
         loan.pk = 1
@@ -127,6 +129,12 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.girvi.service_modules.release_lifecycle.InterestAccrualService.execute"
         ) as mock_accrue, patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.is_loan_catchup_on_release_enabled",
+            return_value=True,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.is_loan_release_fail_closed_on_accrual_error_enabled",
+            return_value=False,
+        ), patch(
             "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release",
             return_value=(MagicMock(payment_id="PAY-REL"), True),
         ):
@@ -203,6 +211,9 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.girvi.service_modules.renewal.InterestAccrualService.execute"
         ) as mock_accrue, patch(
+            "apps.tenant_apps.girvi.service_modules.renewal.is_loan_catchup_on_renewal_enabled",
+            return_value=True,
+        ), patch(
             "apps.tenant_apps.girvi.service_modules.renewal.build_runtime_loan_flow",
             side_effect=[source_flow, new_flow],
         ):
@@ -279,8 +290,8 @@ class InterestAccrualCommandTests(SimpleTestCase):
         with patch.object(command, "_tenant_queryset", return_value=[tenant]), patch.object(
             command, "_loan_queryset", return_value=[loan]
         ), patch(
-            "apps.tenant_apps.girvi.management.commands.accrue_loan_interest.CompanyPreferences",
-            return_value=SimpleNamespace(loan_accrual_timing="EOM"),
+            "apps.tenant_apps.girvi.management.commands.accrue_loan_interest.get_loan_accrual_timing",
+            return_value="EOM",
         ), patch(
             "apps.tenant_apps.girvi.management.commands.accrue_loan_interest.tenant_context",
             side_effect=lambda _tenant: nullcontext(),
@@ -309,8 +320,8 @@ class InterestAccrualCommandTests(SimpleTestCase):
         with patch.object(command, "_tenant_queryset", return_value=[tenant]), patch.object(
             command, "_loan_queryset", return_value=[loan]
         ), patch(
-            "apps.tenant_apps.girvi.management.commands.accrue_loan_interest.CompanyPreferences",
-            return_value=SimpleNamespace(loan_accrual_timing="BOM"),
+            "apps.tenant_apps.girvi.management.commands.accrue_loan_interest.get_loan_accrual_timing",
+            return_value="BOM",
         ), patch(
             "apps.tenant_apps.girvi.management.commands.accrue_loan_interest.tenant_context",
             side_effect=lambda _tenant: nullcontext(),

@@ -7,12 +7,16 @@ from django.utils import timezone
 from django_tenants.utils import tenant_context
 
 from apps.orgs.models import Company
-from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.girvi.models import GivenLoan, LoanLifecycleState
 from apps.tenant_apps.girvi.service_modules.accrual import (
     AccrualTriggerSource,
     InterestAccrualCommand,
     InterestAccrualService,
+)
+from apps.tenant_apps.girvi.service_modules.preferences import (
+    get_loan_accrual_timing,
+    is_loan_auto_post_accruals_enabled,
+    is_loan_backfill_posting_allowed,
 )
 
 
@@ -103,7 +107,7 @@ class Command(BaseCommand):
         return qs.order_by("loan_date", "pk")
 
     def _scheduled_run_due(self, tenant, as_of_date):
-        timing = str(getattr(CompanyPreferences(tenant), "loan_accrual_timing", "EOM") or "EOM").upper()
+        timing = get_loan_accrual_timing(tenant).upper()
         if timing == "BOM":
             return as_of_date.day == 1, timing
 
@@ -176,19 +180,15 @@ class Command(BaseCommand):
                     self.stdout.write("  No eligible open loans found.")
                     continue
 
-                tenant_prefs = None
-                if post_to_accounting:
-                    tenant_prefs = CompanyPreferences(tenant)
-
                 for loan in loans:
                     effective_post_to_accounting = post_to_accounting
-                    if effective_post_to_accounting and tenant_prefs is not None:
-                        effective_post_to_accounting = bool(
-                            getattr(tenant_prefs, "loan_auto_post_accruals", True)
+                    if effective_post_to_accounting:
+                        effective_post_to_accounting = is_loan_auto_post_accruals_enabled(
+                            tenant
                         )
                         if backfill and effective_post_to_accounting:
-                            effective_post_to_accounting = bool(
-                                getattr(tenant_prefs, "loan_allow_backfill_posting", False)
+                            effective_post_to_accounting = (
+                                is_loan_backfill_posting_allowed(tenant)
                             )
 
                     run_notes = (

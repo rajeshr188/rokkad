@@ -199,9 +199,9 @@
               {% endif %}
             {% endif %}
           </div>
-          {% if release_action and release_action.disabled %}
+          {% if release_action and release_action.needs_final_settlement %}
             <div class="small text-muted mt-2">
-              Settle outstanding due (currently ₹{{ release_action.outstanding_amount|floatformat:2 }}) using Add Payment, then start release.
+              Final settlement due: ₹{{ release_action.outstanding_amount|floatformat:2 }}. Release submit will collect and post this receipt.
             </div>
           {% endif %}
         </div>
@@ -732,13 +732,18 @@
     {% if release_action %}
       {% if release_action.disabled %}
       <div class="alert alert-warning py-2 mt-3 mb-2" role="alert">
-        Outstanding due: <strong>₹{{ release_action.outstanding_amount|floatformat:2 }}</strong>.
-        Record payment(s) first, then start release.
+        Release is currently blocked by workflow readiness checks.
       </div>
       <button class="btn btn-outline-secondary btn-sm" type="button" disabled>
         {{ release_action.icon }} {{ release_action.title }}
       </button>
       {% else %}
+      {% if release_action.needs_final_settlement %}
+      <div class="alert alert-info py-2 mt-3 mb-2" role="alert">
+        Final settlement due: <strong>₹{{ release_action.outstanding_amount|floatformat:2 }}</strong>.
+        Release submit will post the final receipt before closing the loan.
+      </div>
+      {% endif %}
       <a class="btn btn-success btn-sm" href="{{ release_action.href }}">
         {{ release_action.icon }} {{ release_action.title }}
       </a>

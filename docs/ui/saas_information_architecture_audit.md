@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-29
+updated: 2026-07-04
 tags: [ui, saas, information-architecture, tenancy, audit]
 related: [screen_designs.md, htmx_interactions.md, ../AGENT_MEMORY.md, ../STATUS.md, ../domain/workspace-auth.md, ../domain/accounting.md]
 ---
@@ -32,7 +32,7 @@ Current classification comes from `django_project/settings/base.py`.
 | --- | --- |
 | Shared/public schema | `django_tenants`, `apps.orgs`, Django core apps, `allauth`, `guardian`, `dynamic_preferences`, `accounts`, `apps.onboarding`, `apps.subscriptions`, `pages`, `invitations`, `slick_reporting` |
 | Tenant schema | `apps.tenant_apps.contact`, `apps.tenant_apps.party`, `apps.tenant_apps.girvi`, `apps.tenant_apps.product`, `apps.tenant_apps.terms`, `apps.tenant_apps.rates`, `apps.tenant_apps.notify`, `apps.tenant_apps.notify_v2`, `apps.tenant_apps.dea` |
-| Present but not runtime-installed | `apps.tenant_apps.Chitfund`, `apps.tenant_apps.savings_scheme`, some tenant utility subpackages |
+| Present but not runtime-installed | `apps.tenant_apps.savings_scheme`, some tenant utility subpackages |
 
 ### URL Structure
 

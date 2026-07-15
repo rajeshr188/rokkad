@@ -68,7 +68,12 @@ def build_release_custody_check(loan):
 
 
 def build_release_readiness_checklist(loan):
-    """Return a single release checklist with settlement and custody gates."""
+    """Return a release checklist with settlement quote and custody gates.
+
+    Outstanding dues do not block release by themselves because release submit
+    owns the final settlement receipt. Settlement calculation failure still
+    blocks release because there is no reliable amount to collect/post.
+    """
     items_by_custody = group_loan_items_by_custody(loan)
     with_lender = items_by_custody[ItemCustodyStatus.WITH_LENDER]
 
@@ -88,15 +93,16 @@ def build_release_readiness_checklist(loan):
         settlement_error is None
         and (outstanding_amount <= Decimal("0.00") or closure_exception_approved)
     )
+    settlement_collectable = (
+        settlement_error is None
+        and outstanding_amount > Decimal("0.00")
+        and not closure_exception_approved
+    )
     custody_clear = len(with_lender) == 0
 
     blockers = []
     if settlement_error:
         blockers.append(settlement_error)
-    elif outstanding_amount > Decimal("0.00") and not closure_exception_approved:
-        blockers.append(
-            f"Loan has outstanding dues of {outstanding_amount}. Record repayment before release."
-        )
 
     if with_lender:
         blockers.append(
@@ -112,6 +118,7 @@ def build_release_readiness_checklist(loan):
         "outstanding_amount": outstanding_amount,
         "closure_exception_approved": closure_exception_approved,
         "dues_clear": dues_clear,
+        "settlement_collectable": settlement_collectable,
         "items_by_custody": items_by_custody,
         "items_by_lender": group_items_by_lender(with_lender),
         "needs_return": bool(with_lender),

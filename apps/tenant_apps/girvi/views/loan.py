@@ -18,7 +18,6 @@ from moneyed import Money
 
 # from django_fsm import has_transition_perm,can_proceed
 # from django_fsm_log.models import StateLog
-from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.contact.facade import customer_queryset
 from apps.tenant_apps.girvi.models.license import Series
 from apps.tenant_apps.party.services.customer_bridge import ensure_party_customer
@@ -70,6 +69,10 @@ from ..service_modules.bulk_operations import (
     LoanMergeCommand,
 )
 from ..service_modules.loan_workflow import LoanWorkflowService
+from ..service_modules.preferences import (
+    get_interest_rate_for_metal,
+    get_loan_default_date_preference,
+)
 from ..service_modules.transition_workflow import TransitionWorkflowService
 from .access import girvi_permission_required, girvi_workspace_required
 logger = logging.getLogger(__name__)
@@ -173,8 +176,7 @@ def loans_created_on_day_excluding_current_month(request):
 def ld(request):
     # TODO get last date by series
 
-    prefs = CompanyPreferences(request.user.profile.workspace)
-    default_date = prefs.loan_default_date
+    default_date = get_loan_default_date_preference(request.user.profile.workspace)
     user_timezone = "Asia/Kolkata"
     user_tz = pytz.timezone(user_timezone)
     if default_date == "N":
@@ -203,14 +205,7 @@ def get_interestrate(request):
                 field_prefix = key[: -len("-itemtype")]
                 break
 
-    interest = 0
-    prefs = CompanyPreferences(request.user.profile.workspace)
-    if metal == "Gold":
-        interest = prefs.interest_rate_gold
-    elif metal == "Silver":
-        interest = prefs.interest_rate_silver
-    else:
-        interest = prefs.interest_rate_other
+    interest = get_interest_rate_for_metal(request.user.profile.workspace, metal)
 
     form = LoanItemForm(prefix=field_prefix or None, initial={"interestrate": interest})
     context = {

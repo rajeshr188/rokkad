@@ -43,7 +43,7 @@
               </div>
             {% endfor %}
 
-            {% if dues_clear %}
+            {% if dues_clear or settlement_collectable %}
               {% now 'Y-m-d' as today_date %}
               <form method="post" action="{% url 'girvi:release_loan_with_return' loan.id %}" class="mt-3">
                 {% csrf_token %}
@@ -55,7 +55,9 @@
           {% endif %}
 
           <div class="d-flex gap-2 mt-4 flex-wrap">
-            {% if not dues_clear %}
+            {% if settlement_collectable %}
+              <a href="{% url 'girvi:girvi_release_create' loan.pk %}" class="btn btn-primary">Collect Final Settlement</a>
+            {% elif not dues_clear %}
               <a href="{% url 'girvi:girvi_loanpayment_create' loan.pk %}" class="btn btn-primary">Record Repayment</a>
             {% endif %}
             {% if can_release %}

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-27
+updated: 2026-07-06
 tags: [plans, active, girvi, release, accrual]
 related: [../adr/2026-06-27-girvi-release-accrual-lifecycle-boundary.md, ../STATUS.md, ../implementation/girvi-services.md]
 ---
@@ -31,7 +31,7 @@ Out of scope:
 2. Slice R2: Introduce explicit release stage outcomes.
 3. Slice R3: Add configurable accrual failure policy for release.
 4. Slice R4: Add release integrity reconciliation checks.
-5. Slice R5: Decide authoritative release-time interest basis.
+5. Slice R5: Implement authoritative release-time interest basis.
 
 ## Slice R1: Ordering Invariant
 
@@ -135,27 +135,58 @@ Test gate:
 1. Selector/service tests for mismatch classification.
 2. Route/report tests if a UI/report surface is added.
 
-## Slice R5: Authoritative Interest Basis Decision
+## Slice R5: Authoritative Interest Basis Implementation
 
 Objective:
 
-Finalize whether release-time settlement interest remains selector-computed or becomes accrual-row authoritative.
+Move final release-time settlement interest to an accrual-row authoritative basis while keeping selector-computed interest available for preview and compatibility fallback.
+
+Accepted decision:
+
+1. Repayment and release previews may continue to show selector-computed interest from `loan_interest_due()` as the operational quote.
+2. Before final release, release execution must run catch-up accrual through `release_date` when catch-up is enabled.
+3. Final release settlement interest should then be derived from eligible `LoanInterestAccrual` rows through the release date, minus interest already paid.
+4. The final release document or equivalent source record must snapshot the settled interest amount so future policy/rate changes do not rewrite historical settlement.
+5. Implementation uses R4 reconciliation checks so the cutover can detect under-accrual, over-accrual, missing posting, and selector-vs-accrual variance.
 
 Tasks:
 
-1. Produce an evidence note comparing both approaches on current data flows.
-2. Decide and document in follow-up ADR or ADR amendment.
-3. Implement only after decision acceptance with migration/test plan.
+1. Add a release settlement basis helper that can calculate:
+   - selector quote
+   - accrual-row gross recognized interest through release date
+   - paid interest
+   - final accrual-row interest due
+   - variance between selector quote and accrual-row due
+2. Ensure release catch-up creates all missing accrual periods through `release_date` before the final settlement amount is calculated.
+3. Define eligible rows for release settlement:
+   - rows for the same `GivenLoan`
+   - `period_end <= release_date`
+   - status allowed by policy, initially `POSTED` plus same-transaction rows when posting is required and succeeds
+4. Add a compatibility path for tenants where accrual posting is disabled:
+   - release can use newly created draft accrual rows only when the release policy explicitly allows non-posted accrual settlement
+   - otherwise release should fail closed or warn according to the existing accrual failure policy
+5. Snapshot final release interest/principal/total settlement values on the release source record or an explicit settlement snapshot model.
+6. Update release preview UI/read model to show both the current quote and any accrual catch-up periods that will be created before completion.
+7. Add reconciliation checks for:
+   - selector quote differs from accrual-row settlement beyond rounding tolerance
+   - release completed without accrual rows through release date
+   - posted release receipt interest does not match the release settlement snapshot
+8. Keep repayment settlement on selector-computed preview until a separate repayment accrual-authority decision is made.
 
 Acceptance criteria:
 
-1. Decision artifact accepted.
-2. Clear compatibility approach for existing loans and reports.
+1. Existing release preview behavior remains stable before final submission.
+2. Final release settlement uses accrual-row due after catch-up when the cutover flag/policy is enabled.
+3. Historical releases retain their original settlement numbers through persisted snapshots.
+4. Reconciliation can classify selector-vs-accrual variances without blocking read-only reporting.
+5. Existing loans without complete accrual history have a documented backfill or compatibility path.
 
 Test gate:
 
-1. Decision-level architecture review complete.
-2. No implementation starts before decision acceptance.
+1. Release lifecycle tests for accrual-row final settlement.
+2. Reconciliation tests for missing accrual rows, selector/accrual variance, and release receipt mismatch.
+3. Backfill/compatibility tests for existing loans with partial accrual history.
+4. Existing release, repayment, and accrual service tests remain green.
 
 ## Risks
 
@@ -180,5 +211,6 @@ Test gate:
 - [x] R1 ordering invariant established and covered by regression test.
 - [x] R2 stage outcome model implemented.
 - [x] R3 catch-up fail policy preference implemented.
-- [ ] R4 reconciliation checks implemented.
-- [ ] R5 authoritative interest basis decision accepted.
+- [x] R4 reconciliation checks implemented in the existing loan accounting reconciliation report.
+- [x] R5 authoritative interest basis decision accepted: final release settlement should become accrual-row authoritative after catch-up/reconciliation safeguards.
+- [x] R5 authoritative interest basis implemented with release settlement snapshots, accrual-row basis when posted accrual rows exist, and selector compatibility fallback.

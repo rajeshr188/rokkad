@@ -102,6 +102,42 @@ class TransitionSideEffectsTests(SimpleTestCase):
             ]
         )
 
+    def test_disbursal_components_are_persisted_from_transition_payload_snapshot(self):
+        loan = SimpleNamespace(
+            status=LoanLifecycleState.APPROVED,
+            get_loan_amount=Decimal("1000.00"),
+            disbursal_upfront_interest_deduction=Decimal("0.00"),
+            disbursal_document_charge=Decimal("0.00"),
+            save=MagicMock(),
+        )
+
+        def transition_method(**_kwargs):
+            loan.status = LoanLifecycleState.ACTIVE_CURRENT
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.transition_side_effects.transaction.atomic",
+            return_value=nullcontext(),
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.preferences.get_disbursal_policy",
+            side_effect=AssertionError("disbursal persistence must not re-read preferences"),
+        ):
+            result = execute_disbursal_transition(
+                loan=loan,
+                user=SimpleNamespace(),
+                transition_method=transition_method,
+                payload_kwargs={
+                    "disbursed_by": "cashier",
+                    "upfront_interest_deduction": Decimal("100.00"),
+                    "document_charge": Decimal("25.00"),
+                },
+                active_statuses={LoanLifecycleState.ACTIVE_CURRENT},
+                post_disbursal=MagicMock(return_value=(SimpleNamespace(payment_id="PV-2"), True)),
+            )
+
+        self.assertTrue(result.success)
+        self.assertEqual(loan.disbursal_upfront_interest_deduction, Decimal("100.00"))
+        self.assertEqual(loan.disbursal_document_charge, Decimal("25.00"))
+
     def test_execute_disbursal_transition_rejects_deductions_exceeding_principal(self):
         loan = SimpleNamespace(
             status=LoanLifecycleState.APPROVED,

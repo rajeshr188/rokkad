@@ -11,6 +11,9 @@ from django.utils import timezone
 from moneyed import Money
 
 from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
+from apps.tenant_apps.girvi.service_modules.repayment_idempotency import (
+    build_repayment_idempotency_marker,
+)
 from .posting_adapter import (
     create_and_post_voucher_for_doc,
     find_payment_by_marker,
@@ -38,6 +41,13 @@ class GivenLoanPostingService:
 
         with transaction.atomic():
             reference_number = payment_payload.get("reference_number", "")
+            if not reference_number:
+                reference_number = build_repayment_idempotency_marker(
+                    loan,
+                    payment_payload,
+                    loan_kind="given",
+                )
+                payment_payload = {**payment_payload, "reference_number": reference_number}
             if reference_number:
                 existing = None
                 payments = getattr(loan, "payments", None)
@@ -53,38 +63,22 @@ class GivenLoanPostingService:
                 if existing:
                     return existing, False
 
-            if reference_number:
-                return create_and_post_voucher_for_doc(
-                    loan,
-                    direction="RECEIPT",
-                    payment_type="RECEIPT",
-                    total_amount=total_amount,
-                    amount_in_base_currency=total_amount,
-                    payment_date=payment_payload.get("payment_date", timezone.now()),
-                    payment_method=payment_payload.get("payment_method", "CASH"),
-                    reference_number=reference_number,
-                    description=payment_payload.get("description", ""),
-                    is_final_payment=bool(payment_payload.get("is_final_payment", False)),
-                    create_release=False,
-                    principal_amount=principal_amount,
-                    interest_amount=interest_amount,
-                    created_by=user,
-                )
-
-            payment = loan.create_payment(
-                amount=total_amount,
-                principal=principal_amount,
-                interest=interest_amount,
+            return create_and_post_voucher_for_doc(
+                loan,
+                direction="RECEIPT",
+                payment_type="RECEIPT",
+                total_amount=total_amount,
+                amount_in_base_currency=total_amount,
                 payment_date=payment_payload.get("payment_date", timezone.now()),
                 payment_method=payment_payload.get("payment_method", "CASH"),
                 reference_number=reference_number,
                 description=payment_payload.get("description", ""),
-                is_final=bool(payment_payload.get("is_final_payment", False)),
+                is_final_payment=bool(payment_payload.get("is_final_payment", False)),
                 create_release=False,
+                principal_amount=principal_amount,
+                interest_amount=interest_amount,
                 created_by=user,
             )
-            post_payment_voucher(payment, user)
-            return payment, True
 
     def post_release(self, release, user):
         """Create and post a GivenLoan release receipt."""
@@ -92,9 +86,26 @@ class GivenLoanPostingService:
         if loan is None or not hasattr(loan, "outstanding_principal"):
             raise ValueError("post_release requires a release with a Loan-like .loan")
 
-        outstanding = loan.outstanding_principal
-        interest_amount = self._normalize_money(loan.interest_due())
-        total_amount = self._normalize_money(outstanding) + interest_amount
+        snapshot_total = self._release_snapshot_amount(
+            release,
+            "settlement_total_amount",
+        )
+        if snapshot_total is not None and snapshot_total > 0:
+            outstanding = self._release_snapshot_amount(
+                release,
+                "settlement_principal_amount",
+            )
+            interest_amount = self._normalize_money(
+                self._release_snapshot_amount(
+                    release,
+                    "settlement_interest_amount",
+                )
+            )
+            total_amount = self._normalize_money(snapshot_total)
+        else:
+            outstanding = loan.outstanding_principal
+            interest_amount = self._normalize_money(loan.interest_due())
+            total_amount = self._normalize_money(outstanding) + interest_amount
 
         if total_amount.amount <= 0:
             return None, False
@@ -120,6 +131,17 @@ class GivenLoanPostingService:
             interest_amount=interest_amount,
             created_by=user,
         )
+
+    @staticmethod
+    def _release_snapshot_amount(release, field_name):
+        value = getattr(release, field_name, None)
+        if value in (None, ""):
+            return None
+        amount = getattr(value, "amount", value)
+        try:
+            return Decimal(str(amount))
+        except Exception:
+            return None
 
     def post_auction_recovery(self, loan: GivenLoan, amount, user):
         """Create and post an auction recovery payment for a GivenLoan."""

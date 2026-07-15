@@ -48,15 +48,15 @@
                                         <strong>{{ license.date_expires|date:"M d, Y" }}</strong>
                                     </td>
                                     <td>
-                                        {% if license.days_until_expiry %}
+                                        {% if license.days_until_expiry_value is not None %}
                                             {% if license.is_expired %}
-                                                <span class="badge bg-danger">Expired {{ license.days_until_expiry|abs }} days ago</span>
-                                            {% elif license.days_until_expiry <= 7 %}
-                                                <span class="badge bg-danger">{{ license.days_until_expiry }} days</span>
-                                            {% elif license.days_until_expiry <= 30 %}
-                                                <span class="badge bg-warning">{{ license.days_until_expiry }} days</span>
+                                                <span class="badge bg-danger">Expired {{ license.expired_days }} days ago</span>
+                                            {% elif license.days_until_expiry_value <= 7 %}
+                                                <span class="badge bg-danger">{{ license.days_until_expiry_value }} days</span>
+                                            {% elif license.days_until_expiry_value <= 30 %}
+                                                <span class="badge bg-warning">{{ license.days_until_expiry_value }} days</span>
                                             {% else %}
-                                                <span class="badge bg-info">{{ license.days_until_expiry }} days</span>
+                                                <span class="badge bg-info">{{ license.days_until_expiry_value }} days</span>
                                             {% endif %}
                                         {% else %}
                                             N/A

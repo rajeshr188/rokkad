@@ -23,6 +23,52 @@
 					<span>{% if series.is_active %}Active{% else %}Inactive{% endif %}</span>
 				</li>
 			</ul>
+			<div class="border rounded mb-3">
+				<div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+					<div>
+						<h2 class="h6 mb-1">Number Sequences</h2>
+						<div class="small text-muted">Generated loan and release IDs use these sequence rows.</div>
+					</div>
+					<form method="post" action="{% url 'girvi:girvi_series_sync_sequences' series.pk %}">
+						{% csrf_token %}
+						<button class="btn btn-outline-primary btn-sm" type="submit">Sync Sequences</button>
+					</form>
+				</div>
+				<div class="table-responsive">
+					<table class="table table-sm mb-0 align-middle">
+						<thead>
+							<tr>
+								<th>Document</th>
+								<th>Status</th>
+								<th>Next ID</th>
+								<th>Last Allocated</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for summary in sequence_summaries %}
+							<tr>
+								<td>{{ summary.label }}</td>
+								<td>
+									{% if summary.is_configured %}
+									<span class="badge bg-success">Configured</span>
+									{% else %}
+									<span class="badge bg-warning text-dark">Missing</span>
+									{% endif %}
+								</td>
+								<td>{{ summary.preview|default:"-" }}</td>
+								<td>
+									{% if summary.sequence and summary.sequence.last_allocated_number %}
+									{{ summary.sequence.last_allocated_number }}
+									{% else %}
+									-
+									{% endif %}
+								</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</div>
 			<div class="d-flex gap-2">
 				<a class="btn btn-primary btn-sm" href="{% url 'girvi:girvi_series_update' series.pk %}">Edit</a>
 				<a class="btn btn-warning btn-sm" href="{% url 'girvi:girvi_activate_series' series.pk %}">Toggle Active</a>

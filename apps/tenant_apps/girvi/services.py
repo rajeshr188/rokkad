@@ -44,7 +44,11 @@ from .service_modules.creation import (
     LoanCreationService,
     LoanItemCreateInput,
 )
-from .service_modules.id_generation import LoanIDGenerator, ReleaseIDGenerator
+from .service_modules.id_generation import (
+    GirviNumberSequenceService,
+    LoanIDGenerator,
+    ReleaseIDGenerator,
+)
 from .service_modules.printing import LoanPrintService
 from .service_modules.release_lifecycle import (
     ReleaseCreateCommand,
@@ -89,6 +93,7 @@ __all__ = [
     "ReleaseCreateCommand",
     "ReleaseCreatePreview",
     "ReleaseCreateResult",
+    "GirviNumberSequenceService",
     "LoanIDGenerator",
     "ReleaseIDGenerator",
     "LoanTransitionService",

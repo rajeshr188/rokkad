@@ -1,9 +1,9 @@
 ---
 status: active
 owner: project
-updated: 2026-06-27
-tags: [plans, active, girvi, dea, party]
-related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, ../flows/dea-posting-flow.md, ../archive/girvi/GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC.md, party-rollout.md]
+updated: 2026-07-05
+tags: [plans, active, girvi, dea, party, configuration]
+related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, ../flows/dea-posting-flow.md, ../archive/girvi/GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC.md, party-rollout.md, centralized-preferences-architecture-plan.md]
 ---
 
 # Active Plan
@@ -56,3 +56,11 @@ The accepted release/accrual boundary ADR is now tracked as an execution plan wi
 Plan:
 
 - [Girvi release and accrual hardening plan](girvi-release-accrual-hardening.md)
+
+## Centralized Preferences Architecture
+
+The first configuration foundation is live in `apps.configuration`, but runtime replacement, central workspace UI, migration from legacy Girvi preference keys, and audit snapshot hardening remain active follow-up work.
+
+Plan:
+
+- [Centralized preferences architecture plan](centralized-preferences-architecture-plan.md)

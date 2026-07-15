@@ -59,12 +59,14 @@ SHARED_APPS = [
     "djmoney",
     "widget_tweaks",
     "dynamic_preferences",
+    "dynamic_preferences.users",
     "django_htmx",
     "import_export",
     "colorfield",
     "guardian",  # Object-level permissions
     # Local
     "accounts",
+    "apps.configuration",
     "apps.onboarding",  # User onboarding flow
     "apps.subscriptions",
     "pages",

@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
@@ -74,9 +75,9 @@ class GivenLoanPostingServiceTests(TestCase):
         self.assertFalse(created)
         mock_create.assert_not_called()
 
-    def test_post_repayment_posts_using_post_payment_voucher_when_no_reference_number(self):
+    def test_post_repayment_uses_idempotency_marker_when_no_reference_number(self):
         loan = self._fake_loan()
-        loan.create_payment.return_value = SimpleNamespace(payment_id="PAY-001")
+        fake_payment = SimpleNamespace(payment_id="PAY-001")
         payload = {
             "total_amount": 100,
             "interest_amount": 10,
@@ -84,21 +85,56 @@ class GivenLoanPostingServiceTests(TestCase):
             "payment_date": "2026-06-15",
             "payment_method": "CASH",
             "reference_number": "",
+            "idempotency_key": "idem-1",
             "description": "Test repayment",
             "is_final_payment": False,
         }
         user = self._fake_user()
 
         with patch(
-            "apps.tenant_apps.girvi.service_modules.loan_posting.post_payment_voucher"
-        ) as mock_post:
+            "apps.tenant_apps.girvi.service_modules.loan_posting.create_and_post_voucher_for_doc",
+            return_value=(fake_payment, True),
+        ) as mock_create:
             payment, created = GivenLoanPostingService().post_repayment(
                 loan, payload, user
             )
 
         self.assertEqual(payment.payment_id, "PAY-001")
         self.assertTrue(created)
-        mock_post.assert_called_once_with(payment, user)
+        _, kwargs = mock_create.call_args
+        self.assertEqual(kwargs["reference_number"], "REPAYMENT-GIVEN-1-idem-1")
+
+    def test_post_repayment_returns_existing_for_duplicate_idempotency_marker(self):
+        loan = self._fake_loan()
+        existing = SimpleNamespace(payment_id="PAY-IDEM")
+        loan.payments = MagicMock()
+        loan.payments.filter.return_value.order_by.return_value.first.return_value = existing
+        payload = {
+            "total_amount": 100,
+            "interest_amount": 10,
+            "principal_amount": 90,
+            "payment_date": "2026-06-15",
+            "payment_method": "CASH",
+            "reference_number": "",
+            "idempotency_key": "idem-1",
+            "description": "Test repayment",
+            "is_final_payment": False,
+        }
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.loan_posting.create_and_post_voucher_for_doc"
+        ) as mock_create:
+            payment, created = GivenLoanPostingService().post_repayment(
+                loan, payload, self._fake_user()
+            )
+
+        self.assertEqual(payment, existing)
+        self.assertFalse(created)
+        loan.payments.filter.assert_called_once_with(
+            direction="RECEIPT",
+            reference_number="REPAYMENT-GIVEN-1-idem-1",
+        )
+        mock_create.assert_not_called()
 
     def test_post_release_returns_none_false_when_outstanding_is_zero(self):
         loan = SimpleNamespace(
@@ -117,6 +153,40 @@ class GivenLoanPostingServiceTests(TestCase):
 
         self.assertIsNone(payment)
         self.assertFalse(created)
+
+    def test_post_release_uses_release_settlement_snapshot_when_available(self):
+        loan = SimpleNamespace(
+            loan_id="GL-001",
+            outstanding_principal=Money(999, "INR"),
+            interest_due=MagicMock(return_value=Money(999, "INR")),
+        )
+        release = SimpleNamespace(
+            loan=loan,
+            pk=1,
+            release_date="2026-06-15",
+            release_id="REL-001",
+            settlement_principal_amount=Decimal("500.00"),
+            settlement_interest_amount=Decimal("125.00"),
+            settlement_total_amount=Decimal("625.00"),
+        )
+        fake_payment = SimpleNamespace(payment_id="PAY-REL")
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.loan_posting.create_and_post_voucher_for_doc",
+            return_value=(fake_payment, True),
+        ) as mock_create:
+            payment, created = GivenLoanPostingService().post_release(
+                release,
+                self._fake_user(),
+            )
+
+        self.assertEqual(payment, fake_payment)
+        self.assertTrue(created)
+        _, kwargs = mock_create.call_args
+        self.assertEqual(kwargs["principal_amount"], Decimal("500.00"))
+        self.assertEqual(kwargs["interest_amount"].amount, Decimal("125.00"))
+        self.assertEqual(kwargs["total_amount"].amount, Decimal("625.00"))
+        loan.interest_due.assert_not_called()
 
     def test_post_auction_recovery_returns_existing_payment_when_marker_exists(self):
         class FakeGivenLoan:

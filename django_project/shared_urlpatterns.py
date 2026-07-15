@@ -2,6 +2,7 @@ from django.conf.urls import i18n
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from apps.configuration import views as configuration_views
 from apps.orgs import views as org_views
 
 
@@ -83,7 +84,7 @@ CANONICAL_CONTROL_PLANE_URLPATTERNS = [
     ),
     path(
         "workspace/<int:workspace_id>/settings/preferences/",
-        org_views.CompanyPreferenceBuilder.as_view(),
+        configuration_views.WorkspacePreferenceBuilder.as_view(),
         name="workspace_settings_preferences",
     ),
     path(

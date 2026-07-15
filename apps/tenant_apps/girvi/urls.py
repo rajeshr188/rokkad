@@ -7,6 +7,33 @@ from .views import custody_views
 
 app_name = "girvi"
 
+# Canonical-vs-alias route naming contract for duplicate path entries.
+# Canonical names are used by runtime reverse() calls and templates.
+# Alias names are frozen compatibility entries and should not be used in new code.
+GIRVI_CANONICAL_ROUTE_NAMES = {
+    "loan_list_report": "girvi_loan_list_report",
+    "loan_transition": "girvi_loan_transition",
+    "statement_list": "girvi_statement_list",
+    "statement_create": "girvi_statement_create",
+    "statement_update": "girvi_statement_update",
+    "storage_boxes_list": "girvi_storage_boxes",
+    "storage_boxes_add": "girvi_add_storage_box",
+    "storage_boxes_update": "girvi_update_storage_box",
+    "storage_boxes_delete": "girvi_delete_storage_box",
+}
+
+GIRVI_FROZEN_ALIAS_ROUTE_NAMES = {
+    "loan_list_report": "Loan_list_repot",
+    "loan_transition": "loan_transition",
+    "statement_list": "statement_list",
+    "statement_create": "statement_create",
+    "statement_update": "statement_update",
+    "storage_boxes_list": "storage_boxes",
+    "storage_boxes_add": "add_storage_box",
+    "storage_boxes_update": "update_storage_box",
+    "storage_boxes_delete": "delete_storage_box",
+}
+
 CORE_URLPATTERNS = [
     # Notifications and utility endpoints
     path(
@@ -216,12 +243,15 @@ LOAN_URLPATTERNS = [
         name="loan_crosstab_legacy",
     ),
     path(
-        "girvi/loan-listreport/", views.LoanListReport.as_view(), name="Loan_list_repot"
+        "girvi/loan-listreport/",
+        views.LoanListReport.as_view(),
+        name=GIRVI_CANONICAL_ROUTE_NAMES["loan_list_report"],
     ),
+    # Alias freeze: keep until compatibility removal phase.
     path(
         "girvi/loan-listreport/",
         views.LoanListReport.as_view(),
-        name="girvi_loan_list_report",
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["loan_list_report"],
     ),
     path(
         "girvi/loan/inventory-audit/export/",
@@ -232,12 +262,15 @@ LOAN_URLPATTERNS = [
     path("girvi/unreleased/", views.generate_unreleased_pdf, name="girvi_unreleased"),
     path("girvi/grid-template/", views.print_grid_template, name="girvi_grid_template"),
     path(
-        "loan/<int:pk>/transition/", views.loan_transition_view, name="loan_transition"
+        "loan/<int:pk>/transition/",
+        views.loan_transition_view,
+        name=GIRVI_CANONICAL_ROUTE_NAMES["loan_transition"],
     ),
+    # Alias freeze: keep until compatibility removal phase.
     path(
         "loan/<int:pk>/transition/",
         views.loan_transition_view,
-        name="girvi_loan_transition",
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["loan_transition"],
     ),
 ]
 
@@ -332,6 +365,11 @@ SERIES_URLPATTERNS = [
         "girvi/series/<int:pk>/activate",
         views.activate_series,
         name="girvi_activate_series",
+    ),
+    path(
+        "girvi/series/<int:pk>/sync-sequences/",
+        views.series_sync_sequences,
+        name="girvi_series_sync_sequences",
     ),
     path(
         "girvi/series/next-loanid/", views.next_loanid, name="girvi_series_next_loanid"
@@ -531,27 +569,38 @@ CUSTODY_URLPATTERNS = [
 ]
 
 STATEMENT_URLPATTERNS = [
-    path("statements/", views.verification_session_list, name="statement_list"),
-    path("statements/", views.verification_session_list, name="girvi_statement_list"),
     path(
-        "statement/create/",
-        views.verification_session_create,
-        name="statement_create",
+        "statements/",
+        views.verification_session_list,
+        name=GIRVI_CANONICAL_ROUTE_NAMES["statement_list"],
+    ),
+    # Alias freeze: keep until compatibility removal phase.
+    path(
+        "statements/",
+        views.verification_session_list,
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["statement_list"],
     ),
     path(
         "statement/create/",
         views.verification_session_create,
-        name="girvi_statement_create",
+        name=GIRVI_CANONICAL_ROUTE_NAMES["statement_create"],
+    ),
+    # Alias freeze: keep until compatibility removal phase.
+    path(
+        "statement/create/",
+        views.verification_session_create,
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["statement_create"],
     ),
     path(
         "statement/<int:pk>/toggle_complete",
         views.verification_session_toggle,
-        name="statement_update",
+        name=GIRVI_CANONICAL_ROUTE_NAMES["statement_update"],
     ),
+    # Alias freeze: keep until compatibility removal phase.
     path(
         "statement/<int:pk>/toggle_complete",
         views.verification_session_toggle,
-        name="girvi_statement_update",
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["statement_update"],
     ),
     path(
         "statement/<int:pk>/detail/",
@@ -576,29 +625,49 @@ STATEMENT_URLPATTERNS = [
 ]
 
 STORAGE_BOX_URLPATTERNS = [
-    path("storage_boxes/", views.list_storage_boxes, name="storage_boxes"),
-    path("storage_boxes/", views.list_storage_boxes, name="girvi_storage_boxes"),
-    path("storage_boxes/add/", views.add_storage_box, name="add_storage_box"),
-    path("storage_boxes/add/", views.add_storage_box, name="girvi_add_storage_box"),
     path(
-        "storage_boxes/update/<int:pk>/",
-        views.update_storage_box,
-        name="update_storage_box",
+        "storage_boxes/",
+        views.list_storage_boxes,
+        name=GIRVI_CANONICAL_ROUTE_NAMES["storage_boxes_list"],
+    ),
+    # Alias freeze: keep until compatibility removal phase.
+    path(
+        "storage_boxes/",
+        views.list_storage_boxes,
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["storage_boxes_list"],
+    ),
+    path(
+        "storage_boxes/add/",
+        views.add_storage_box,
+        name=GIRVI_CANONICAL_ROUTE_NAMES["storage_boxes_add"],
+    ),
+    # Alias freeze: keep until compatibility removal phase.
+    path(
+        "storage_boxes/add/",
+        views.add_storage_box,
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["storage_boxes_add"],
     ),
     path(
         "storage_boxes/update/<int:pk>/",
         views.update_storage_box,
-        name="girvi_update_storage_box",
+        name=GIRVI_CANONICAL_ROUTE_NAMES["storage_boxes_update"],
+    ),
+    # Alias freeze: keep until compatibility removal phase.
+    path(
+        "storage_boxes/update/<int:pk>/",
+        views.update_storage_box,
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["storage_boxes_update"],
     ),
     path(
         "storage_boxes/delete/<int:pk>/",
         views.delete_storage_box,
-        name="delete_storage_box",
+        name=GIRVI_CANONICAL_ROUTE_NAMES["storage_boxes_delete"],
     ),
+    # Alias freeze: keep until compatibility removal phase.
     path(
         "storage_boxes/delete/<int:pk>/",
         views.delete_storage_box,
-        name="girvi_delete_storage_box",
+        name=GIRVI_FROZEN_ALIAS_ROUTE_NAMES["storage_boxes_delete"],
     ),
 ]
 

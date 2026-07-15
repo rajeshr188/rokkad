@@ -1,7 +1,7 @@
 ---
 status: active
 owner: girvi
-updated: 2026-06-21
+updated: 2026-07-15
 tags: [girvi, urls, compatibility, p6]
 related: [README.md, workflows.md, refactor-plan.md, ../../STATUS.md]
 ---
@@ -42,16 +42,20 @@ These are duplicate route names bound to multiple paths and should remain by des
 
 ## Current Usage Signals
 
-High-signal active references indicate aliases cannot be removed in one step:
+Current runtime references use canonical names for the alias families in this matrix.
+Alias names are now compatibility-only and exercised by route-intent tests.
 
-- `girvi_storage_boxes` used in dashboard and loan list templates.
-- `storage_boxes` also used in base navigation templates.
-- statement templates use `girvi_statement_*` naming.
-- transition action construction uses `girvi_loan_transition`.
-
-This supports an incremental migration: first normalize all internal reverse/template usage to canonical names, then remove temporary aliases in a later change.
+This supports a controlled removal phase: keep aliases for one release window,
+monitor for external reverse usage, then prune in one audited patch.
 
 ## Cleanup Sequence (P6)
+
+Current progress (2026-07-15):
+
+- Canonical names are now published in `apps/tenant_apps/girvi/urls.py` as `GIRVI_CANONICAL_ROUTE_NAMES`.
+- Alias names are frozen as compatibility entries in `GIRVI_FROZEN_ALIAS_ROUTE_NAMES`.
+- Canonical entries are listed before aliases for duplicate paths so resolver intent is explicit.
+- Route-intent tests now guard canonical resolution and alias compatibility.
 
 1. Keep canonical and alias names together; do not delete routes yet.
 2. Normalize all internal reverse/template references to canonical names.

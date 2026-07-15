@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from django.core.exceptions import ValidationError
@@ -117,6 +118,63 @@ class ReleaseLifecycleServiceTests(TestCase):
         self.assertEqual(result.stage_outcomes["closure_completed"], "completed")
         self.assertEqual(result.stage_outcomes["posting_completed"], "completed")
         self.assertEqual(result.failed_stage, "")
+
+    def test_execute_snapshots_release_settlement_basis_before_posting(self):
+        loan = self._fake_loan()
+        user = self._fake_user()
+        basis = SimpleNamespace(
+            basis="ACCRUAL_ROWS",
+            principal_due=Decimal("500.00"),
+            final_interest_due=Decimal("125.00"),
+            total_due=Decimal("625.00"),
+            selector_interest_quote=Decimal("150.00"),
+            accrual_interest_gross=Decimal("175.00"),
+            interest_paid=Decimal("50.00"),
+            variance=Decimal("25.00"),
+            used_accrual_rows=True,
+        )
+
+        class FakeRelease:
+            def __init__(self, **kwargs):
+                self.__dict__.update(kwargs)
+                self.saved = False
+                self.release_id = "RL0001"
+
+            def save(self):
+                self.saved = True
+
+        flow = MagicMock()
+        flow.request_closure.can_proceed.return_value = True
+        flow.complete_closure.can_proceed.return_value = True
+        fake_payment = SimpleNamespace(payment_id="PAY-1")
+
+        with patch(
+            "apps.tenant_apps.girvi.services.apps.get_model",
+            return_value=FakeRelease,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_release_settlement_basis",
+            return_value=basis,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.build_runtime_loan_flow",
+            return_value=flow,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.record_loan_release",
+            return_value=(fake_payment, True),
+        ) as post_release:
+            result = ReleaseLifecycleService.execute(
+                ReleaseCreateCommand(
+                    loan=loan,
+                    created_by=user,
+                    release_date="2026-04-01",
+                    released_by=None,
+                )
+            )
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.release.settlement_basis, "ACCRUAL_ROWS")
+        self.assertEqual(result.release.settlement_interest_amount, Decimal("125.00"))
+        self.assertEqual(result.settlement_basis, basis)
+        post_release.assert_called_once_with(result.release, created_by=user)
 
     def test_create_release_rejects_illegal_transition(self):
         loan = self._fake_loan()
@@ -363,14 +421,12 @@ class ReleaseLifecycleServiceTests(TestCase):
         flow.request_closure.can_proceed.return_value = True
         flow.complete_closure.can_proceed.return_value = True
         fake_payment = SimpleNamespace(payment_id="PAY-1")
-        prefs = SimpleNamespace(
-            loan_catchup_on_release=False,
-            loan_release_fail_closed_on_accrual_error=False,
-        )
-
         with patch(
-            "apps.tenant_apps.girvi.service_modules.release_lifecycle.CompanyPreferences",
-            return_value=prefs,
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.is_loan_catchup_on_release_enabled",
+            return_value=False,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.is_loan_release_fail_closed_on_accrual_error_enabled",
+            return_value=False,
         ), patch(
             "apps.tenant_apps.girvi.services.apps.get_model",
             return_value=self._fake_release_model(),
@@ -403,10 +459,6 @@ class ReleaseLifecycleServiceTests(TestCase):
         flow.request_closure.can_proceed.return_value = True
         flow.complete_closure.can_proceed.return_value = True
         fake_payment = SimpleNamespace(payment_id="PAY-1")
-        prefs = SimpleNamespace(
-            loan_catchup_on_release=True,
-            loan_release_fail_closed_on_accrual_error=False,
-        )
         accrual_result = SimpleNamespace(
             success=False,
             message="accrual posting failed",
@@ -414,8 +466,11 @@ class ReleaseLifecycleServiceTests(TestCase):
         )
 
         with patch(
-            "apps.tenant_apps.girvi.service_modules.release_lifecycle.CompanyPreferences",
-            return_value=prefs,
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.is_loan_catchup_on_release_enabled",
+            return_value=True,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.is_loan_release_fail_closed_on_accrual_error_enabled",
+            return_value=False,
         ), patch(
             "apps.tenant_apps.girvi.services.apps.get_model",
             return_value=self._fake_release_model(),
@@ -445,10 +500,6 @@ class ReleaseLifecycleServiceTests(TestCase):
     def test_execute_fails_closed_when_accrual_fails_and_policy_enabled(self):
         loan = self._fake_loan()
         user = self._fake_user()
-        prefs = SimpleNamespace(
-            loan_catchup_on_release=True,
-            loan_release_fail_closed_on_accrual_error=True,
-        )
         accrual_result = SimpleNamespace(
             success=False,
             message="accrual posting failed",
@@ -456,8 +507,11 @@ class ReleaseLifecycleServiceTests(TestCase):
         )
 
         with patch(
-            "apps.tenant_apps.girvi.service_modules.release_lifecycle.CompanyPreferences",
-            return_value=prefs,
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.is_loan_catchup_on_release_enabled",
+            return_value=True,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.release_lifecycle.is_loan_release_fail_closed_on_accrual_error_enabled",
+            return_value=True,
         ), patch(
             "apps.tenant_apps.girvi.service_modules.release_lifecycle.InterestAccrualService.execute",
             return_value=accrual_result,

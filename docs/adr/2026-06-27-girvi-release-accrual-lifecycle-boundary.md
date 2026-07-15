@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-06-27
+updated: 2026-07-06
 tags: [adr, girvi, dea, lifecycle, accrual]
 related: [girvi-flow-boundaries-with-dea.md, 2026-06-24-dea-document-voucher-journal-lifecycle.md, ../implementation/girvi-services.md]
 ---
@@ -67,7 +67,8 @@ Girvi GivenLoan release is defined as a compound business workflow with one auth
 3. Data and contracts:
    - Release remains the persisted source document for release completion.
    - LoanInterestAccrual remains the persisted source document for periodic interest accrual.
-   - Settlement readiness continues to be calculated from the canonical settlement selector until a future ADR explicitly makes accrual rows authoritative for release-time interest due.
+   - Settlement preview may continue to use the canonical settlement selector for an immediate operational quote.
+   - Final release settlement should move to an accrual-row authoritative basis after catch-up accrual and reconciliation checks guarantee the required rows exist through the release date.
    - Release and accrual posting continue through DEA adapters and posting services with idempotent markers.
 
 4. Operational model:
@@ -112,9 +113,11 @@ Girvi GivenLoan release is defined as a compound business workflow with one auth
 4. Slice 4: add release integrity reconciliation checks and reporting.
    - Assertions: closed loan has release row, release row has all items with customer, positive outstanding at release has posted release receipt unless explicitly waived.
    - Exit criteria: report route or selector output used by operations console and covered by tests.
-5. Slice 5: decide authoritative release-time interest basis.
-   - Decision point: continue selector recomputation or shift to posted accrual rows for release-time interest due.
-   - Exit criteria: follow-up ADR or amendment accepted and implemented.
+5. Slice 5: implement authoritative release-time interest basis.
+   - Accepted target: final release settlement uses accrual rows after release-date catch-up, not raw runtime selector recomputation.
+   - Preview rule: repayment and release screens may continue to display selector-computed interest before final submission.
+   - Finalization rule: release execution runs catch-up accrual through `release_date`, then calculates final release interest from eligible accrual rows minus interest already paid.
+   - Exit criteria: final release amount is snapshotted on the release document or equivalent source record, reconciliation can compare selector quote versus accrual-row settlement, and compatibility tests cover existing loans.
 
 Rollback criteria:
 - Roll back this direction if release completion regularly requires operational pauses between custody handoff and closure that cannot be represented safely inside one orchestrated use case.
@@ -144,6 +147,7 @@ Rollback criteria:
    - release custody mutation must occur before release persistence
    - accrual preview must cap effective end date at release date
    - settlement selector must remain stable for principal, interest, and overpayment splits
+   - accrual-row release settlement must equal posted/draft eligible accruals through release date minus interest already paid after catch-up
 
 2. Integration:
    - settled loan with in-vault items releases successfully end to end
@@ -174,12 +178,15 @@ Rollback criteria:
 
 1. Should catch-up accrual failure be fail-closed by default for all tenants or controlled by preference?
 2. Should release preview show the exact accrual periods that will be backfilled before completion?
-3. Should settlement due for release eventually be computed from persisted accrual rows after posting instead of from runtime selector logic?
-4. Should ClosurePending remain a short-lived technical waypoint or become a true operational hold state with explicit user actions?
+3. Should ClosurePending remain a short-lived technical waypoint or become a true operational hold state with explicit user actions?
+
+Resolved on 2026-07-06:
+
+1. Release-time settlement interest should eventually become accrual-row authoritative. Runtime selector interest remains the preview and fallback quote until catch-up, reconciliation, and compatibility tests are complete.
 
 ## Review Trigger
 
 Revisit when:
 1. Girvi release moves to asynchronous or outbox-driven posting.
-2. Monthly accrual becomes the authoritative source for release-time interest settlement.
+2. Monthly accrual-row settlement implementation materially changes the release data model or accounting posting contract.
 3. Operational users need a multi-step physical handoff workflow that cannot be modeled safely inside one release orchestrator.

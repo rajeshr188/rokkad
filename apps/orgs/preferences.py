@@ -1,9 +1,10 @@
 from decimal import Decimal
 
 from dynamic_preferences.registries import global_preferences_registry
-from dynamic_preferences.settings import preferences_settings
 
+from apps.configuration.services import PreferenceService
 from .models import CompanyPreferenceModel
+from .registries import company_preference_registry
 
 
 class CompanyPreferences:
@@ -27,26 +28,16 @@ class CompanyPreferences:
 
     def __init__(self, company=None):
         self.company = company
-        self._global_prefs = global_preferences_registry.manager()
-        self._overrides = set()
-        if company is not None:
-            try:
-                self._overrides = set(
-                    CompanyPreferenceModel.objects.filter(instance=company).values_list(
-                        "section", "name"
-                    )
-                )
-            except Exception:
-                self._overrides = set()
 
     def _get(self, key):
-        section, name = key.split(preferences_settings.SECTION_KEY_SEPARATOR, 1)
-        try:
-            if self.company is not None and (section, name) in self._overrides:
-                return self.company.preferences[key]
-            return self._global_prefs[key]
-        except Exception:
-            return self.DEFAULTS.get(key)
+        return PreferenceService.get_workspace_from_registry(
+            workspace=self.company,
+            key=key,
+            workspace_registry=company_preference_registry,
+            workspace_preference_model=CompanyPreferenceModel,
+            global_registry=global_preferences_registry,
+            default=self.DEFAULTS.get(key),
+        )
 
     @property
     def loan_default_date(self):

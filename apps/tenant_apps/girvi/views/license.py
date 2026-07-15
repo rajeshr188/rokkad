@@ -120,11 +120,20 @@ class LicenseExpiryReportView(LoginRequiredMixin, ListView):
         licenses = License.objects.all()
 
         # Get licenses expiring within 90 days
-        expiring = [l for l in licenses if l.is_expiring_soon(days=90)]
+        expiring = []
+        for license_obj in licenses:
+            days_until_expiry = license_obj.days_until_expiry()
+            if license_obj.is_expiring_soon(days=90):
+                license_obj.days_until_expiry_value = days_until_expiry
+                license_obj.expired_days = (
+                    abs(days_until_expiry) if days_until_expiry is not None else None
+                )
+                expiring.append(license_obj)
+
         return sorted(
             expiring,
-            key=lambda x: x.days_until_expiry()
-            if x.days_until_expiry()
+            key=lambda x: x.days_until_expiry_value
+            if x.days_until_expiry_value is not None
             else float("inf"),
         )
 

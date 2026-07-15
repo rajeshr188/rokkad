@@ -56,7 +56,7 @@ class LoanCreationServiceTests(SimpleTestCase):
         )
 
         with patch(
-            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.generate",
+            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.preview",
             return_value="A0002",
         ):
             preview = LoanCreationService.preview(command)
@@ -85,7 +85,7 @@ class LoanCreationServiceTests(SimpleTestCase):
         )
 
         with patch(
-            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.generate",
+            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.preview",
             return_value="A0004",
         ):
             preview = LoanCreationService.preview(command)
@@ -117,7 +117,7 @@ class LoanCreationServiceTests(SimpleTestCase):
         )
 
         with patch(
-            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.generate",
+            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.preview",
             return_value="A0005",
         ), patch(
             "apps.tenant_apps.girvi.services.RateCacheService.get_rate_or_none",
@@ -155,7 +155,7 @@ class LoanCreationServiceTests(SimpleTestCase):
         )
 
         with patch(
-            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.generate",
+            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.preview",
             return_value="A0006",
         ), patch(
             "apps.tenant_apps.girvi.services.RateCacheService.get_rate_or_none",
@@ -179,7 +179,7 @@ class LoanCreationServiceTests(SimpleTestCase):
         )
 
         with patch(
-            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.generate",
+            "apps.tenant_apps.girvi.service_modules.creation.LoanIDGenerator.preview",
             return_value="A0003",
         ):
             preview = LoanCreationService.preview(command)
@@ -201,12 +201,8 @@ class LoanCreationServiceTests(SimpleTestCase):
         )
 
         with patch(
-            "apps.tenant_apps.girvi.views.loan.CompanyPreferences",
-            return_value=SimpleNamespace(
-                interest_rate_gold=1.5,
-                interest_rate_silver=2.25,
-                interest_rate_other=3.0,
-            ),
+            "apps.tenant_apps.girvi.views.loan.get_interest_rate_for_metal",
+            return_value=Decimal("2.25"),
         ), patch(
             "django_project.context_processors.get_effective_permissions",
             return_value=set(),
@@ -264,6 +260,45 @@ class LoanCreationServiceTests(SimpleTestCase):
 
         self.assertEqual(attrs["hx-target"], "#div_id_items-0-interestrate")
         self.assertIn("girvi/loan/get-interestrate/", attrs["hx-get"])
+
+    def test_initial_item_interest_rate_is_persisted_as_snapshot_value(self):
+        created_items = []
+
+        class FakeLoanItem:
+            def __init__(self, **kwargs):
+                self.__dict__.update(kwargs)
+
+            def full_clean(self):
+                return None
+
+            def save(self):
+                self.interest = (self.interestrate / 100) * self.loanamount
+                created_items.append(self)
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.creation.LoanItem",
+            FakeLoanItem,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.preferences.get_interest_rate_for_metal",
+            side_effect=AssertionError("loan creation must not re-read preferences"),
+        ):
+            result = LoanCreationService._create_initial_items(
+                loan=SimpleNamespace(pk=1, loan_id="GL-SNAP-1"),
+                initial_items=[
+                    LoanItemCreateInput(
+                        itemdesc="Gold ring",
+                        itemtype="Gold",
+                        quantity=1,
+                        weight=Decimal("10.000"),
+                        purity=Decimal("75.00"),
+                        loanamount=Decimal("1000.00"),
+                        interestrate=Decimal("2.25"),
+                    )
+                ],
+            )
+
+        self.assertEqual(result[0].interestrate, Decimal("2.25"))
+        self.assertEqual(created_items[0].interest, Decimal("22.5000"))
 
     def test_initial_item_formset_allows_blank_extra_rows(self):
         data = {

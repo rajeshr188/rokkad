@@ -5,7 +5,6 @@ from dataclasses import dataclass, field as dc_field
 
 from django.db import transaction
 
-from apps.orgs.preferences import CompanyPreferences
 from apps.tenant_apps.girvi.integrations.dea_adapter import post_payment_voucher
 from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
 from apps.tenant_apps.girvi.service_modules.accrual import (
@@ -13,6 +12,12 @@ from apps.tenant_apps.girvi.service_modules.accrual import (
     InterestAccrualService,
 )
 from apps.tenant_apps.girvi.service_modules.loan_posting import GivenLoanPostingService
+from apps.tenant_apps.girvi.service_modules.preferences import (
+    is_loan_catchup_on_receipt_enabled,
+)
+from apps.tenant_apps.girvi.service_modules.repayment_idempotency import (
+    build_repayment_idempotency_marker,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +51,7 @@ def _build_repayment_payload(cleaned_data):
         "payment_date": cleaned_data["payment_date"],
         "payment_method": cleaned_data["payment_method"],
         "reference_number": cleaned_data.get("reference_number", ""),
+        "idempotency_key": cleaned_data.get("idempotency_key", ""),
         "description": cleaned_data.get("description", ""),
         "is_final_payment": cleaned_data.get("is_final_payment", False),
     }
@@ -135,8 +141,7 @@ class GivenLoanRepaymentService:
     @classmethod
     def _run_catchup_accrual(cls, command: RepaymentCommand, result: RepaymentResult):
         workspace = command.workspace or _workspace_for_user(command.created_by)
-        prefs = CompanyPreferences(workspace)
-        if not prefs.loan_catchup_on_receipt:
+        if not is_loan_catchup_on_receipt_enabled(workspace):
             return
 
         cleaned_data = command.cleaned_data
@@ -210,6 +215,34 @@ class TakenLoanRepaymentService:
                         created=False,
                     )
                     return result
+
+                if not reference_number:
+                    reference_number = build_repayment_idempotency_marker(
+                        command.loan,
+                        payload,
+                        loan_kind="taken",
+                    )
+                    payload["reference_number"] = reference_number
+                    if payments is not None:
+                        existing = (
+                            payments.filter(
+                                direction="PAYMENT",
+                                reference_number=reference_number,
+                            )
+                            .order_by("pk")
+                            .first()
+                        )
+                    if existing:
+                        result.payment = existing
+                        result.payment_created = False
+                        result.accounting_posted = True
+                        result.success_message = _repayment_success_message(
+                            existing,
+                            payload,
+                            settlement,
+                            created=False,
+                        )
+                        return result
 
                 payment = command.loan.create_payment(
                     amount=payload["total_amount"],

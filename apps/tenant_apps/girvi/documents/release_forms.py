@@ -12,11 +12,25 @@ def _build_settlement_balance(loan):
     return build_loan_settlement_balance(loan)
 
 
+def _release_amount(release, field_name):
+    value = getattr(release, field_name, None)
+    if value in (None, ""):
+        return None
+    try:
+        if value > 0:
+            return value
+    except TypeError:
+        return None
+    return None
+
+
 def generate_form_h(release):
     """Build the Form H receipt PDF for a loan release."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     settlement = _build_settlement_balance(release.loan)
+    snapshot_interest = _release_amount(release, "settlement_interest_amount")
+    snapshot_total = _release_amount(release, "settlement_total_amount")
 
     styles = getSampleStyleSheet()
     centered_style = ParagraphStyle(
@@ -57,8 +71,13 @@ def generate_form_h(release):
             "",
         ],
         ["Amount of Loan Rs: ", "", f"{release.loan.loan_amount}", ""],
-        ["Interest", "", f"{settlement.interest_due}", ""],
-        [Paragraph("Total", centered_style), "", f"{settlement.total_outstanding}", ""],
+        ["Interest", "", f"{snapshot_interest or settlement.interest_due}", ""],
+        [
+            Paragraph("Total", centered_style),
+            "",
+            f"{snapshot_total or settlement.total_outstanding}",
+            "",
+        ],
         ["", "", "", ""],
         [
             Paragraph("Signature ", centered_style),

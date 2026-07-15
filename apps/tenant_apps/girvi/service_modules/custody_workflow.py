@@ -41,9 +41,12 @@ class CustodyWorkflowService:
         if getattr(loan, "is_released", False):
             return ReleaseWithReturnGate(is_released=True)
 
-        if not checklist.get("dues_clear", False):
+        if not (
+            checklist.get("dues_clear", False)
+            or checklist.get("settlement_collectable", False)
+        ):
             return ReleaseWithReturnGate(
-                block_message="Release is blocked until settlement dues are cleared.",
+                block_message="Release is blocked until settlement can be calculated.",
                 redirect_to_checklist=True,
             )
 
