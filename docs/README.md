@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-17
+updated: 2026-07-04
 tags: [docs, navigation, architecture]
 related: [STATUS.md, ROADMAP.md, GLOSSARY.md, AGENT_MEMORY.md]
 ---
@@ -65,6 +65,12 @@ This folder is the living documentation system. Historical notes, audits, and su
 - [Subscription architecture blueprint](implementation/subscription-architecture-blueprint.md)
 - [Subscription implementation checklist](implementation/subscription-implementation-checklist.md)
 - [Troubleshooting](implementation/troubleshooting.md)
+
+## Product Docs
+
+- [Reverse-engineered BRD](product/business-requirements-document-reverse-engineered.md)
+- [Client and investor BRD](product/business-requirements-document-client-investor.md)
+- [BRD gap report and phased delivery plan](plans/brd-gap-report-phased-delivery-plan.md)
 
 ## Decisions
 
