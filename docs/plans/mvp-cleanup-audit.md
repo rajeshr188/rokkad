@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-21
+updated: 2026-07-04
 tags: [cleanup, mvp, audit, legacy-import]
 related: [../STATUS.md, ../AGENT_MEMORY.md, ../apps/girvi/refactor-plan.md, ../apps/dea/refactor-plan.md, party-rollout.md]
 ---
@@ -40,11 +40,6 @@ This report began as a cleanup audit. On 2026-06-19, the experimental `sales`, `
 
 These are absent from `TENANT_APPS`/`SHARED_APPS`, absent from root URL includes, and have no external references outside their own app folders.
 
-- `apps/tenant_apps/Chitfund/`
-  - Models: `Contact`, `Chit`, `Collection`, `Allotment`
-  - Views/forms/admin/tests/urls are self-contained.
-  - App config has stale `name = "Chitfund"` rather than the project module path.
-  - Not part of current MVP architecture.
 - `apps/tenant_apps/savings_scheme/`
   - Not installed and not URL-included.
   - No external references found.
@@ -126,6 +121,10 @@ These are active despite looking legacy or transitional.
 
 ### Removed Experimental Runtime
 
+- `apps/tenant_apps/Chitfund/`
+  - Removed on 2026-07-04 after confirming it was absent from `TENANT_APPS`/`SHARED_APPS`, not URL-included, and had no external runtime references.
+  - Removed models were `Contact`, `Chit`, `Collection`, and `Allotment`.
+  - The app had a stale app config path (`name = "Chitfund"`) and was not part of the current MVP architecture.
 - `apps/tenant_apps/sales`, `apps/tenant_apps/purchase`, and `apps/tenant_apps/approval`
   - Removed from `TENANT_APPS`, tenant URLs, navigation, templates, and runtime references on 2026-06-19.
   - App migration histories were removed with the apps.
@@ -221,8 +220,8 @@ These are active despite looking legacy or transitional.
 
 ### Chitfund
 
-- Definitely unused. First candidate for quarantine/removal.
-- Preserve only if business owner says chitfund is future MVP.
+- Removed on 2026-07-04 as an unused, non-installed tenant app.
+- Future chitfund workflows, if revived, should be redesigned as a new Party/accounting-aware domain rather than restoring this disconnected app.
 
 ### contact
 
@@ -322,14 +321,15 @@ These are active despite looking legacy or transitional.
 ### Commit 1: Audit Guardrails Only
 
 - Add this report.
-- Add/adjust architecture tests that prove `Chitfund` and `savings_scheme` are not installed or URL-included.
+- Add/adjust architecture tests that prove `savings_scheme` is not installed or URL-included.
 - Run:
   - `python manage.py check`
   - focused architecture tests
 
 ### Commit 2: Quarantine Definitely Unused Apps
 
-- Move `Chitfund` and `savings_scheme` to an archive location or remove them from runtime tree, without touching migrations for installed apps.
+- `Chitfund` was removed on 2026-07-04.
+- Move `savings_scheme` to an archive location or remove it from the runtime tree, without touching migrations for installed apps.
 - If deleting app folders, first confirm no future legacy import mapping needs these models.
 - Run:
   - `python manage.py check`
