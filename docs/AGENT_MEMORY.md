@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-07-01
+updated: 2026-07-15
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
@@ -85,6 +85,18 @@ Use source documents:
 
 Do not make accounting models depend directly on UI forms. UI creates documents; posting rules create vouchers and journal entries.
 
+Girvi document numbering uses `GirviNumberSequence` rows as locked allocation state, but runtime preview/allocation must still check existing document IDs and skip stale sequence values. A create screen must show the next available ID for the selected series, while save-time allocation remains the authority.
+
+Girvi custody transitions own custody-field persistence. `LoanItem`'s normal post-approval edit guard must remain intact, but release/repledge/return operations must use the custody-only persistence path so an in-memory custody change cannot be mistaken for a database handoff.
+
+Girvi final release settlement must fail on selector or accrual-query errors. `SELECTOR_COMPATIBILITY` is reserved for the explicit no-posted-accrual-rows case and must remain visible in reconciliation.
+
+The planned side-by-side loans rewrite should use explicit `PawnLoan` and `FundingLoan` concepts rather than a single over-generic `Loan` model. `PawnLoan` replaces customer-facing GivenLoan semantics; `FundingLoan` replaces lender/repledge TakenLoan semantics.
+
+The loans rewrite is PawnLoan-first. A regulatory license belongs to one workspace and owns multiple bounded pawn-loan/release numbering series; official loan numbers allocate at draft creation and never recycle. Loan economics and policy are snapshotted at disbursal, loan events use a durable idempotent DEA outbox, posted corrections use strict reverse-order administrator reversals, and closure requires both zero balance and completed collateral return. Legacy Girvi remains write owner of its existing active loans during coexistence; the new app owns only newly created loans, with unified source-labelled reads across both systems.
+
+The authoritative loans rewrite execution order is the `E0-E7` plan in `docs/plans/loans-rewrite-roadmap.md`, governed by `docs/adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md`. The older numbered capability list is reference material only. Implementation starts at `E1.1`; FundingLoan, notices, auctions, renewals, and portal integration remain essential post-MVP vertical slices and must not be introduced as partial runtime models.
+
 ## Accounting Architecture
 
 Other domains should not bypass DEA for ledger effects.
@@ -129,6 +141,7 @@ Each document should expose `get_economic_payload()` or equivalent structured da
 - Current DEA sales/purchase invoice posting paths resolve customer/supplier accounts by party role and purpose (`CUSTOMER_RECEIVABLE`, `SUPPLIER_PAYABLE`) instead of direct `Customer.account` reads.
 - Experimental operational `sales`, `purchase`, and `approval` tenant apps were removed from runtime on 2026-06-19. DEA `SalesInvoiceVoucher` and `PurchaseInvoiceVoucher` remain accounting documents; future commerce/procurement apps must be rebuilt around commodity, inventory, settlement, and DEA posting boundaries rather than gold/silver-as-currency balances.
 - Party has a tenant UI at `/party/` for list/search/filter, create/edit, detail tabs, role add/end, read-only contact/address/KYC data, DEA party account mapping visibility, and linked customer loan activity.
+- Centralized preference architecture has started in `apps.configuration` and is planned in `docs/plans/centralized-preferences-architecture-plan.md`: new code should use `PreferenceService` instead of raw dynamic-preferences managers. `WorkspacePreferenceModel`/`workspace_preferences_registry` are additive, `dynamic_preferences.users` is installed for UI-only user preferences, and existing Girvi `CompanyPreferences` remains a compatibility facade for legacy `Loan__...` and `Interest_Rate__...` keys. That facade delegates legacy registry resolution to `PreferenceService.get_workspace_from_registry(...)`; current Girvi runtime preference reads use `apps.tenant_apps.girvi.service_modules.preferences` instead of importing `CompanyPreferences` directly. Canonical workspace settings preferences render the central registry, the legacy Girvi preference page remains reachable, `migrate_preferences_to_workspace --dry-run` inventories old Girvi rows, and `--apply` writes explicit legacy Girvi mappings to central lowercase `loan__...` keys. Phase 6 snapshot coverage has started for Girvi loan item interest rates and disbursal deduction components; Phase 10 compatibility retirement still waits for broader snapshot/migration evidence.
 - Party profile data is editable from Party detail: single profile photo, contact methods, addresses, identifiers, and documents can be maintained directly before Phase 9 operational foreign-key migration work.
 - Party profile photos can be maintained from Party detail by either choosing an image file or capturing an image from the device camera.
 - Party contact forms validate phone/mobile/WhatsApp through `django-phonenumber-field` with region `IN`, store phone numbers in E.164 format, and Party relationships are maintained from the Party detail Relationships tab.
@@ -175,6 +188,9 @@ Each document should expose `get_economic_payload()` or equivalent structured da
 - Girvi repayment use cases belong in `service_modules.repayment`: GivenLoan receipt catch-up accrual, repayment payload shaping, DEA posting delegation, TakenLoan repayment posting, and result messages should stay out of `views.loanpayment`.
 - Girvi repayment UI capture presets belong in `service_modules.repayment_workflow` and should be derived from the shared repayment preview. Given/Taken repayment screens expose exact-settlement, interest-only, and principal-only presets while service success messages report total, principal, interest, and remaining outstanding.
 - Girvi release UI readiness belongs in `service_modules.release_workflow`: `build_flow_context` is the shared read model for release pages and custody-check pages, covering settlement, custody, recipient, Form H document expectation, and accounting-posting expectation while `submit` remains the guarded mutation path.
+- Girvi release-time settlement interest is implemented with persisted release snapshots: repayment/release previews may keep using selector-computed `loan_interest_due()` as an operational quote, while final release execution runs catch-up accrual through the release date, snapshots settlement values on `Release`, uses eligible posted `LoanInterestAccrual` rows minus paid interest when available, and falls back to selector compatibility when accrual-row authority is not safe for that loan. Release can collect/post the final settlement receipt itself before completing closure; generic closure without settlement remains blocked.
+- Girvi non-cash closure must use explicit settlement adjustment document paths. Current `SettlementAdjustmentService` names write-off, interest waiver, settlement discount, auction shortfall write-off, and admin correction as fail-closed categories until each has a source document, audit/approval path, and DEA posting implementation.
+- Girvi generated document numbers belong to `GirviNumberSequence` rows scoped by series and document kind. Previews must be non-consuming, allocation must lock the sequence row, missing sequence rows should self-initialize from existing document IDs, Series detail exposes sequence status/sync, existing manual IDs stay supported with cross-table uniqueness checks, and blank repayment references must use service-owned `REPAYMENT-*` idempotency markers instead of direct model payment creation.
 - Party-centric Girvi loan history belongs behind `apps.tenant_apps.girvi.facade.get_party_loan_history_summary`; Party views/templates should consume that read model for active/closed loans, outstanding split, payment totals, notices, collateral, repayment shortcuts, and release/Form H document links instead of importing Girvi models directly.
 - Girvi-to-DEA accounting readiness belongs in `apps.tenant_apps.girvi.integrations.dea_adapter`: it owns posting event contract versioning, event type/rule metadata, idempotency keys, source-document economic payload extraction, posting-status reads, and reversal delegation. Runtime Girvi code should not import DEA internals directly.
 - Girvi bulk merge/delete use cases belong in `service_modules.bulk_operations`: selection parsing, guard validation, merge orchestration, delete orchestration, and structured operation errors should stay out of `views.loan`.
