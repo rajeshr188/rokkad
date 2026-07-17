@@ -221,7 +221,7 @@ are stable enough to design fields without guessing.
 Acceptance: tenant migrations apply with `migrate_schemas`; constraints and
 cross-workspace rejection are tested; no runtime route uses the models.
 
-#### E2.2 Implement License And Series Services
+#### E2.2 Implement License And Series Services — Completed 2026-07-17
 
 - Add service-owned create/update/activate/expire operations.
 - Keep expired licenses readable and block new issuance.
@@ -534,7 +534,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E2.1 complete; E2.2 is the next executable slice.**
+Status: **E2.2 complete; E2.3 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA
