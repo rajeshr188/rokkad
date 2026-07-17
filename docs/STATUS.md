@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-07-15
+updated: 2026-07-17
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -386,6 +386,10 @@ Rokkad is moving toward a layered architecture:
 - Loans rewrite naming is now explicit in [docs/plans/loans-rewrite-roadmap.md](plans/loans-rewrite-roadmap.md): the replacement app should use `PawnLoan` for customer pawn/gold loans and `FundingLoan` for lender/repledge funding loans instead of collapsing both workflows into one over-generic `Loan` model.
 - Loans rewrite architecture clarification is now recorded in [docs/plans/loans-rewrite-roadmap.md](plans/loans-rewrite-roadmap.md): workspace regulatory licenses own bounded pawn-loan/release series; loan policy is snapshotted at disbursal; repayment, accrual, partial-release LTV, closure, strict reversal, and durable DEA outbox rules are explicit; the MVP is PawnLoan-first; legacy Girvi services its own active loans; and unified source-labelled reads cover coexistence.
 - Loans rewrite execution hardening is complete in [docs/plans/loans-rewrite-roadmap.md](plans/loans-rewrite-roadmap.md) and [ADR 2026-07-15](adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md). The authoritative `E0-E7` order now places policy contracts, license/series setup, durable outbox, DEA readiness, reversals, release/custody, operational proof, unified reads, and feature-gated cutover before production enablement. The plan is ready to begin `E1.1` as a separate implementation slice.
+- Loans rewrite `E1.1` is complete: `apps.tenant_apps.loans` now has an unregistered, model-free package skeleton for domain, models, services, selectors, integrations, management commands, and tests. `LoansConfig` imports without Django setup or database access; no settings, URL, migration, or runtime behavior changed. The next executable slice is `E1.2`.
+- Loans rewrite `E1.2` is complete: `LoansConfig` is registered in `TENANT_APPS` without URLs, admin, permissions, models, or migrations. Focused smoke coverage verifies app-registry identity, tenant-app membership, an empty model registry, and `makemigrations loans --check --dry-run` stability. The next executable slice is `E1.3`.
+- Loans rewrite `E1.3` is complete: database-free domain modules define stored PawnLoan lifecycle states and their complete transition matrix, derived operational states, transaction/event kinds, custody, document, posting, and reversal vocabulary. Legacy Given/Taken names map explicitly to Pawn/Funding concepts, while FundingLoan vocabulary is marked post-MVP and runtime-disabled. The next executable slice is `E1.4`.
+- Loans rewrite `E1.4` and the Phase 1 gate are complete: immutable pure-Python contracts define workspace policy defaults, optional license overrides, validation, deterministic resolution, and versioned disbursal snapshots for interest method, partial-month slabs, capitalization interval, cash/accrual recognition, valuation, maximum LTV, and per-period currency rounding. The next executable slice is `E2.1`, which introduces the first Loans tenant schema and must use `migrate_schemas`.
 
 ## Known Pressure Points
 

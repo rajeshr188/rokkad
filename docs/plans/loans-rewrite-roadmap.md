@@ -166,7 +166,7 @@ Rollback: documentation only.
 
 ### Phase 1: Package And Pure Domain Foundation
 
-#### E1.1 Create Empty App Skeleton
+#### E1.1 Create Empty App Skeleton — Completed 2026-07-17
 
 - Create `apps.tenant_apps.loans` with packages for domain, models, services,
   selectors, integrations, management commands, and tests.
@@ -175,7 +175,7 @@ Rollback: documentation only.
 Acceptance: `LoansConfig` imports without database access and existing tests are
 unchanged.
 
-#### E1.2 Register Model-Free Tenant App
+#### E1.2 Register Model-Free Tenant App — Completed 2026-07-17
 
 - Add `loans` to tenant installed apps with an empty model package.
 - Add app-registry and `makemigrations --check` coverage.
@@ -183,7 +183,7 @@ unchanged.
 Acceptance: Django starts, no loans migration is generated, and Girvi behavior
 is unchanged.
 
-#### E1.3 Define Pure Domain Vocabulary
+#### E1.3 Define Pure Domain Vocabulary — Completed 2026-07-17
 
 - Define PawnLoan lifecycle, transaction/event kinds, custody states, document
   kinds, posting states, reversal types, and stored-versus-derived state rules.
@@ -193,7 +193,7 @@ is unchanged.
 Acceptance: pure modules import without Django/database access and transition
 matrix tests cover every stored PawnLoan state.
 
-#### E1.4 Define Policy Contracts
+#### E1.4 Define Policy Contracts — Completed 2026-07-17
 
 - Define typed policy values for interest method, partial-month slab,
   capitalization interval, accounting recognition, valuation method, maximum
@@ -534,7 +534,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **ready to begin E1.1 after the documentation baseline is accepted.**
+Status: **Phase 1 (E1.1-E1.4) complete; E2.1 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

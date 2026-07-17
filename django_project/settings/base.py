@@ -79,6 +79,7 @@ SHARED_APPS = [
 TENANT_APPS = [
     "apps.tenant_apps.contact",
     "apps.tenant_apps.party",
+    "apps.tenant_apps.loans.apps.LoansConfig",
     "apps.tenant_apps.girvi",
     "apps.tenant_apps.product",
     "apps.tenant_apps.terms",
