@@ -189,9 +189,14 @@ class LoanNumberSequence(models.Model):
 
     def clean(self):
         super().clean()
-        if self.next_number > self.maximum_number:
+        if self.next_number > self.maximum_number + 1:
             raise ValidationError(
-                {"next_number": "Next number cannot exceed the sequence maximum."}
+                {
+                    "next_number": (
+                        "Next number cannot exceed the exhausted marker immediately "
+                        "after the sequence maximum."
+                    )
+                }
             )
 
     def save(self, *args, **kwargs):

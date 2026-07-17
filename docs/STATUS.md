@@ -84,6 +84,7 @@ Rokkad is moving toward a layered architecture:
 
 ## Recently Stabilized
 
+- Loans rewrite E2.3 is complete: pawn-loan and release numbering have non-consuming previews and atomic PostgreSQL row-locked allocation, committed allocations never recycle, sequence exhaustion fails closed at the configured maximum, and a two-connection concurrency test proves unique serialization. The pawn draft service will call the dedicated allocation entry point during E2.5.
 - Loans rewrite E2.2 is complete: tenant-only services own license and series setup, expired or inactive licenses remain readable but fail issuance eligibility, multiple active licenses are supported per workspace, and guarded sequence configuration changes are recorded in the public workspace audit trail. E2.3 locked number allocation is next.
 - Girvi audit follow-up Phases 1-6 are complete. A tenant-schema integration test now covers Party bridge/collateral creation through real DEA disbursal, repayment, release accrual, custody, snapshot, receipt, and closure; repayment repeated-key/different-key behavior is covered; settlement failures fail closed instead of silently becoming zero; selector-compatibility releases are reconciliation-visible; and the consolidated stabilization suite passes 74 tests.
 - Girvi release custody persistence now uses an explicit custody-only save path. Normal collateral edits remain blocked after approval, while release/repledge/return custody transitions can persist their owned fields without being mistaken for general loan-item edits.

@@ -155,6 +155,6 @@ class LicenseSeriesServiceTests(TenantTestCase):
                     series=series,
                     document_kind=LoanDocumentKind.PAWN_LOAN,
                     prefix="PL-",
-                    maximum_number=7,
+                    maximum_number=6,
                     actor=self.user,
                 )

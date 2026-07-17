@@ -189,12 +189,12 @@ class LoansCoreModelTests(TenantTestCase):
                 prefix="OTHER",
             )
 
-    def test_sequence_rejects_next_number_above_maximum(self):
+    def test_sequence_rejects_next_number_beyond_exhausted_marker(self):
         sequence = LoanNumberSequence(
             series=self.series_a,
             document_kind=LoanDocumentKind.PAWN_LOAN.value,
             prefix="A",
-            next_number=101,
+            next_number=102,
             maximum_number=100,
         )
 

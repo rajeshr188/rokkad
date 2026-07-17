@@ -230,7 +230,7 @@ cross-workspace rejection are tested; no runtime route uses the models.
 Acceptance: multiple active licenses per workspace work; license/series cannot
 cross workspaces; expiry rules match the ADR.
 
-#### E2.3 Implement Locked Number Allocation
+#### E2.3 Implement Locked Number Allocation — Completed 2026-07-17
 
 - Add non-consuming preview and atomic allocation for pawn loan and release
   sequences.
@@ -534,7 +534,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E2.2 complete; E2.3 is the next executable slice.**
+Status: **E2.3 complete; E2.4 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA
