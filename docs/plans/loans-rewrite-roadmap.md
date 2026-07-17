@@ -209,7 +209,7 @@ are stable enough to design fields without guessing.
 
 ### Phase 2: Core Schema, Setup, And Drafting
 
-#### E2.1 Add Core Models And Tenant Migration
+#### E2.1 Add Core Models And Tenant Migration — Completed 2026-07-17
 
 - Add `LoanLicense`, `LoanSeries`, `LoanNumberSequence`, `PawnLoan`,
   `PawnCollateralItem`, `LoanPolicySnapshot`, and `LoanChangeLog`.
@@ -534,7 +534,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **Phase 1 (E1.1-E1.4) complete; E2.1 is the next executable slice.**
+Status: **E2.1 complete; E2.2 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

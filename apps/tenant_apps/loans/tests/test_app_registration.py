@@ -9,7 +9,7 @@ from django.test import SimpleTestCase
 class LoansAppRegistrationTests(SimpleTestCase):
     databases = {"default"}
 
-    def test_loans_is_registered_as_a_model_free_tenant_app(self):
+    def test_loans_is_registered_as_a_tenant_app(self):
         app_config = apps.get_app_config("loans")
 
         self.assertEqual(app_config.name, "apps.tenant_apps.loans")
@@ -18,7 +18,18 @@ class LoansAppRegistrationTests(SimpleTestCase):
             "apps.tenant_apps.loans.apps.LoansConfig",
             settings.TENANT_APPS,
         )
-        self.assertEqual(list(app_config.get_models()), [])
+        self.assertEqual(
+            {model.__name__ for model in app_config.get_models()},
+            {
+                "LoanChangeLog",
+                "LoanLicense",
+                "LoanNumberSequence",
+                "LoanPolicySnapshot",
+                "LoanSeries",
+                "PawnCollateralItem",
+                "PawnLoan",
+            },
+        )
 
     def test_loans_has_no_pending_model_migrations(self):
         stdout = StringIO()

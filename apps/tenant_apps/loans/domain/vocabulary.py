@@ -62,6 +62,12 @@ class CollateralCustodyState(StringEnum):
     WITH_FUNDING_LENDER = "WITH_FUNDING_LENDER"
 
 
+class CollateralMetal(StringEnum):
+    GOLD = "GOLD"
+    SILVER = "SILVER"
+    OTHER = "OTHER"
+
+
 class LoanDocumentKind(StringEnum):
     PAWN_LOAN = "PAWN_LOAN"
     PAWN_LOAN_RELEASE = "PAWN_LOAN_RELEASE"

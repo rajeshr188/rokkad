@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-07-15
+updated: 2026-07-17
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
@@ -96,6 +96,8 @@ The planned side-by-side loans rewrite should use explicit `PawnLoan` and `Fundi
 The loans rewrite is PawnLoan-first. A regulatory license belongs to one workspace and owns multiple bounded pawn-loan/release numbering series; official loan numbers allocate at draft creation and never recycle. Loan economics and policy are snapshotted at disbursal, loan events use a durable idempotent DEA outbox, posted corrections use strict reverse-order administrator reversals, and closure requires both zero balance and completed collateral return. Legacy Girvi remains write owner of its existing active loans during coexistence; the new app owns only newly created loans, with unified source-labelled reads across both systems.
 
 The authoritative loans rewrite execution order is the `E0-E7` plan in `docs/plans/loans-rewrite-roadmap.md`, governed by `docs/adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md`. The older numbered capability list is reference material only. Implementation starts at `E1.1`; FundingLoan, notices, auctions, renewals, and portal integration remain essential post-MVP vertical slices and must not be introduced as partial runtime models.
+
+Loans rewrite Phase 1 and `E2.1` are implemented. The registered tenant app has pure PawnLoan vocabulary/policy contracts and tenant migration `0001_initial` for `LoanLicense`, `LoanSeries`, `LoanNumberSequence`, `PawnLoan`, `PawnCollateralItem`, `LoanPolicySnapshot`, and `LoanChangeLog`. Licenses and loans carry explicit workspace ownership and reject workspace values that do not match the active tenant; borrowers link directly to tenant `party.Party`. No Loans URLs, UI, workflow services, accounting events, repayments, accruals, releases, FundingLoan, or outbox runtime exist yet.
 
 ## Accounting Architecture
 
