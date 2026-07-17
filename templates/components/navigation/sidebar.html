@@ -101,6 +101,12 @@
                     <i class="bi bi-cash-coin"></i> Girvi
                 </a>
                 {% endif %}
+                {% if role_name == 'Owner' or role_name == 'Admin' %}
+                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'loans' %}active{% endif %}"
+                   href="{% url 'loans:license_list' %}">
+                    <i class="bi bi-ui-checks-grid"></i> New Loans Setup
+                </a>
+                {% endif %}
                 <!-- Accounting/DEA -->
                 {% if 'dea_entry_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.url_name == 'dea_business_events_dashboard' or request.resolver_match.url_name == 'workspace_slug_operations' %}active{% endif %}"

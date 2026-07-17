@@ -1,0 +1,51 @@
+{% extends "base_tenant.html" %}
+
+{% block title %}{{ license.name }}{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <a class="small text-decoration-none" href="{% url 'loans:license_list' %}">← Loan setup</a>
+    <h1 class="h3 mt-2 mb-1">{{ license.name }}</h1>
+    <div class="text-muted">{{ license.license_number }} · {{ license.issuing_authority|default:"Issuing authority not recorded" }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'loans:license_update' license.pk %}">Edit</a>
+    {% if license.is_active %}
+      <form method="post" action="{% url 'loans:license_expire' license.pk %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Deactivate</button></form>
+    {% elif not license.is_expired %}
+      <form method="post" action="{% url 'loans:license_activate' license.pk %}">{% csrf_token %}<button class="btn btn-outline-success" type="submit">Activate</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-4"><div class="card-body d-flex flex-wrap gap-4">
+  <div><div class="small text-muted">Validity</div>{{ license.issued_on }} – {{ license.expires_on }}</div>
+  <div><div class="small text-muted">Readiness</div>
+    {% if license.is_expired %}<span class="badge text-bg-danger">Expired — new drafts blocked</span>
+    {% elif license.is_active %}<span class="badge text-bg-success">Active</span>
+    {% else %}<span class="badge text-bg-secondary">Inactive — new drafts blocked</span>{% endif %}
+  </div>
+</div></div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div><h2 class="h5 mb-1">Numbering series</h2><div class="small text-muted">Loan and release counters are independent and previews do not consume numbers.</div></div>
+  <a class="btn btn-primary" href="{% url 'loans:series_create' license.pk %}">Add series</a>
+</div>
+<div class="card"><div class="table-responsive">
+  <table class="table align-middle mb-0">
+    <thead><tr><th>Series</th><th>Pawn loan next</th><th>Release next</th><th>Readiness</th><th></th></tr></thead>
+    <tbody>
+    {% for row in series_rows %}
+      <tr>
+        <td><strong>{{ row.series.name }}</strong><div class="small text-muted">{{ row.series.code }}</div></td>
+        <td>{% if row.loan_preview.value %}<code>{{ row.loan_preview.value }}</code>{% else %}<span class="text-danger small">{{ row.loan_preview.error }}</span>{% endif %}</td>
+        <td>{% if row.release_preview.value %}<code>{{ row.release_preview.value }}</code>{% else %}<span class="text-danger small">{{ row.release_preview.error }}</span>{% endif %}</td>
+        <td>{% if row.series.is_active and license.is_active and not license.is_expired and row.loan_preview.value and row.release_preview.value %}<span class="badge text-bg-success">Ready</span>{% else %}<span class="badge text-bg-warning">Not ready</span>{% endif %}</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:series_update' row.series.pk %}">Configure</a></td>
+      </tr>
+    {% empty %}<tr><td colspan="5" class="text-center py-5 text-muted">Add a series to configure loan and release numbering.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div></div>
+{% endblock %}

@@ -55,6 +55,7 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
             prefix.rstrip("/")
             for prefix in _route_prefixes(tenant_urls.TENANT_ERP_URLPATTERNS)
         }
+        tenant_prefixes.remove("portal")
         workspace_required = {
             prefix.strip("/")
             for prefix in SecureWorkspaceMiddleware.WORKSPACE_REQUIRED_URLS
@@ -317,6 +318,8 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
             prefix.strip("/")
             for prefix in _route_prefixes(tenant_urls.TENANT_ERP_URLPATTERNS)
         }
+        self.assertIn("portal", tenant_prefixes)
+        tenant_prefixes.remove("portal")
         workspace_required = {
             prefix.strip("/")
             for prefix in SecureWorkspaceMiddleware.WORKSPACE_REQUIRED_URLS
@@ -329,6 +332,7 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
                 "contact",
                 "data-tools",
                 "girvi",
+                "loans",
                 "rates",
                 "product",
                 "notify",

@@ -1,0 +1,38 @@
+{% extends "base_tenant.html" %}
+
+{% block title %}Loan setup{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">Loan licenses and numbering</h1>
+    <p class="text-muted mb-0">Set up regulatory licenses and bounded loan/release series before drafting pawn loans.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'loans:license_create' %}">Add license</a>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr><th>License</th><th>Validity</th><th>Status</th><th>Series</th><th></th></tr></thead>
+      <tbody>
+      {% for license in licenses %}
+        <tr>
+          <td><strong>{{ license.name }}</strong><div class="small text-muted">{{ license.license_number }}</div></td>
+          <td>{{ license.issued_on }} – {{ license.expires_on }}</td>
+          <td>
+            {% if license.is_expired %}<span class="badge text-bg-danger">Expired</span>
+            {% elif license.is_active %}<span class="badge text-bg-success">Active</span>
+            {% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}
+          </td>
+          <td>{{ license.series.count }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:license_detail' license.pk %}">Open setup</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-center py-5 text-muted">No regulatory loan license has been configured.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

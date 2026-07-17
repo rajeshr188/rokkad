@@ -240,7 +240,7 @@ cross workspaces; expiry rules match the ADR.
 Acceptance: concurrency, uniqueness, cancellation gaps, non-reuse, and maximum
 exhaustion are tested.
 
-#### E2.4 Add License/Series Setup UI
+#### E2.4 Add License/Series Setup UI — Completed 2026-07-17
 
 - Add permission-gated list, detail, create, update, expiry, and series setup.
 - Show active/exhausted/expired readiness and the next non-consuming preview.
@@ -534,7 +534,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E2.3 complete; E2.4 is the next executable slice.**
+Status: **E2.4 complete; E2.5 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

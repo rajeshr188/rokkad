@@ -63,6 +63,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
     WORKSPACE_REQUIRED_URLS = [
         "/party/",
         "/girvi/",
+        "/loans/",
         "/dea/",
         "/sales/",
         "/purchase/",

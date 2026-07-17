@@ -18,6 +18,7 @@ TENANT_ERP_URLPATTERNS = [
     path("contact/", include("apps.tenant_apps.contact.urls")),
     path("data-tools/", include("apps.tenant_apps.utils.importing.urls")),
     path("girvi/", include("apps.tenant_apps.girvi.urls")),
+    path("loans/", include("apps.tenant_apps.loans.urls")),
     path("rates/", include("apps.tenant_apps.rates.urls")),
     path("product/", include("apps.tenant_apps.product.urls")),
     path("notify/", include("apps.tenant_apps.notify.urls")),
