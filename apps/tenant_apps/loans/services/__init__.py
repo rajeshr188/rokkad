@@ -28,6 +28,13 @@ from .pawn_drafts import (
     create_pawn_draft,
     update_pawn_draft,
 )
+from .pawn_lifecycle import (
+    PawnLifecycleError,
+    approve_pawn_loan,
+    cancel_pawn_loan,
+    reopen_pawn_loan,
+    transfer_expired_draft_setup,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -53,4 +60,9 @@ __all__ = (
     "UpdatePawnDraftCommand",
     "create_pawn_draft",
     "update_pawn_draft",
+    "PawnLifecycleError",
+    "approve_pawn_loan",
+    "cancel_pawn_loan",
+    "reopen_pawn_loan",
+    "transfer_expired_draft_setup",
 )

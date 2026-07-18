@@ -28,6 +28,7 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "LoanSeries",
                 "PawnCollateralItem",
                 "PawnLoan",
+                "PawnLoanApprovalSnapshot",
             },
         )
 

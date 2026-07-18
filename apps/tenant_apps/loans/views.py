@@ -12,6 +12,8 @@ from apps.tenant_apps.loans.forms import (
     LoanSeriesSetupForm,
     PawnCollateralDraftFormSet,
     PawnDraftForm,
+    PawnSetupTransferForm,
+    PawnTransitionReasonForm,
 )
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnLoan
 from apps.tenant_apps.loans.services import (
@@ -32,6 +34,11 @@ from apps.tenant_apps.loans.services import (
     UpdatePawnDraftCommand,
     create_pawn_draft,
     update_pawn_draft,
+    PawnLifecycleError,
+    approve_pawn_loan,
+    cancel_pawn_loan,
+    reopen_pawn_loan,
+    transfer_expired_draft_setup,
 )
 
 
@@ -100,6 +107,49 @@ def pawn_loan_update(request, pk):
 def pawn_loan_detail(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     return render(request, "loans/pawn/detail.html", {"loan": loan})
+
+
+@loans_workspace_required
+@require_POST
+def pawn_loan_approve(request, pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    try:
+        approve_pawn_loan(loan.pk, actor=request.user)
+        messages.success(request, f"{loan.loan_number} approved. Its economic payload is frozen.")
+    except (PawnLifecycleError, ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    return redirect("loans:pawn_loan_detail", pk=loan.pk)
+
+
+@loans_workspace_required
+def pawn_loan_reopen(request, pk):
+    return _reason_transition(request, pk, "reopen")
+
+
+@loans_workspace_required
+def pawn_loan_cancel(request, pk):
+    return _reason_transition(request, pk, "cancel")
+
+
+@loans_workspace_required
+def pawn_loan_transfer_setup(request, pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    form = PawnSetupTransferForm(request.POST or None, workspace=request.loans_workspace)
+    if request.method == "POST" and form.is_valid():
+        try:
+            transfer_expired_draft_setup(
+                loan.pk,
+                license_id=form.cleaned_data["license"].pk,
+                series_id=form.cleaned_data["series"].pk,
+                reason=form.cleaned_data["reason"],
+                actor=request.user,
+            )
+        except (PawnLifecycleError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Draft moved to active license setup and requires approval again.")
+            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+    return render(request, "loans/pawn/transition_form.html", {"loan": loan, "form": form, "action_label": "Transfer setup"})
 
 
 @loans_setup_required
@@ -362,4 +412,30 @@ def _update_command(form, formset):
         loan_date=data["loan_date"],
         tenure_months=data["tenure_months"],
         collateral=_collateral_inputs(formset),
+    )
+
+
+def _reason_transition(request, pk, action):
+    loan = _pawn_loan_for_workspace(request, pk)
+    form = PawnTransitionReasonForm(request.POST or None)
+    labels = {"reopen": "Return to draft", "cancel": "Cancel loan"}
+    if request.method == "POST" and form.is_valid():
+        try:
+            if action == "reopen":
+                reopen_pawn_loan(
+                    loan.pk, reason=form.cleaned_data["reason"], actor=request.user
+                )
+            else:
+                cancel_pawn_loan(
+                    loan.pk, reason=form.cleaned_data["reason"], actor=request.user
+                )
+        except (PawnLifecycleError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, f"{loan.loan_number}: {labels[action].lower()} completed.")
+            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+    return render(
+        request,
+        "loans/pawn/transition_form.html",
+        {"loan": loan, "form": form, "action_label": labels[action]},
     )

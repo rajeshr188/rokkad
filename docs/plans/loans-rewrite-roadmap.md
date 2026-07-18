@@ -265,7 +265,7 @@ collateral fails atomically; number allocation never produces duplicates.
 Acceptance: staff can create and correct a draft without entering an incomplete
 lifecycle; Girvi navigation remains primary.
 
-#### E2.7 Implement Approval, Reopen, And Cancellation
+#### E2.7 Implement Approval, Reopen, And Cancellation — Completed 2026-07-18
 
 - Approve `DRAFT -> APPROVED`; return approved/undisbursed loans to draft only
   with a reason; cancel draft/approved loans with a reason.
@@ -275,8 +275,9 @@ lifecycle; Girvi navigation remains primary.
 Acceptance: transition matrix, immutable approval snapshot, audit trail, and
 invalid transitions are tested.
 
-Phase 2 gate: a user can complete license/series setup and create, edit, approve,
-reopen, and cancel loans without accounting or production navigation changes.
+Phase 2 gate — **Passed 2026-07-18**: a user can complete license/series setup
+and create, edit, approve, reopen, and cancel loans without accounting or
+production navigation changes.
 
 ### Phase 3: DEA Delivery And Financial Servicing
 
@@ -534,7 +535,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E2.6 complete; E2.7 is the next executable slice.**
+Status: **Phase 2 complete; E3.1 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

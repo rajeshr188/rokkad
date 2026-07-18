@@ -119,3 +119,30 @@ PawnCollateralDraftFormSet = forms.formset_factory(
     min_num=1,
     validate_min=True,
 )
+
+
+class PawnTransitionReasonForm(forms.Form):
+    reason = forms.CharField(widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}))
+
+
+class PawnSetupTransferForm(forms.Form):
+    license = forms.ModelChoiceField(queryset=LoanLicense.objects.none())
+    series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
+    reason = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}))
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["license"].queryset = LoanLicense.objects.filter(workspace=workspace)
+        self.fields["series"].queryset = LoanSeries.objects.filter(
+            license__workspace=workspace
+        ).select_related("license")
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-select" if isinstance(field, forms.ModelChoiceField) else "form-control")
+
+    def clean(self):
+        cleaned = super().clean()
+        license = cleaned.get("license")
+        series = cleaned.get("series")
+        if license and series and series.license_id != license.pk:
+            self.add_error("series", "Series must belong to the selected license.")
+        return cleaned

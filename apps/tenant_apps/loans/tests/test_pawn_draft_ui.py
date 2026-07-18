@@ -93,7 +93,7 @@ class PawnDraftUiTests(TenantTestCase):
 
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
         self.assertContains(detail, loan.loan_number)
-        self.assertContains(detail, "Approval and disbursal are not available")
+        self.assertContains(detail, "Disbursal is not available yet")
 
         payload = self._payload(license, series)
         payload["principal_amount"] = "12500.00"
@@ -134,6 +134,45 @@ class PawnDraftUiTests(TenantTestCase):
 
         self.assertEqual(self.client.get(reverse("loans:pawn_loan_list")).status_code, 200)
         self.assertEqual(self.client.get(reverse("loans:license_list")).status_code, 403)
+
+    def test_staff_can_approve_reopen_reapprove_and_cancel_through_ui(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+
+        response = self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
+        self.assertEqual(response.status_code, 302)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "APPROVED")
+        self.assertEqual(loan.approval_snapshots.count(), 1)
+
+        response = self.client.post(
+            reverse("loans:pawn_loan_reopen", args=[loan.pk]),
+            {"reason": "Correct collateral valuation"},
+        )
+        self.assertEqual(response.status_code, 302)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "DRAFT")
+        self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
+        self.assertEqual(loan.approval_snapshots.count(), 2)
+
+        response = self.client.post(
+            reverse("loans:pawn_loan_cancel", args=[loan.pk]),
+            {"reason": "Borrower withdrew"},
+        )
+        self.assertEqual(response.status_code, 302)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "CANCELLED")
+
+    def test_reason_form_does_not_transition_when_reason_is_missing(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+
+        response = self.client.post(reverse("loans:pawn_loan_cancel", args=[loan.pk]), {"reason": ""})
+        self.assertEqual(response.status_code, 200)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "DRAFT")
 
     def _configured_setup(self):
         license = LoanLicense.objects.create(

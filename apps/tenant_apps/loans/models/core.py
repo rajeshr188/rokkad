@@ -493,3 +493,43 @@ class LoanChangeLog(models.Model):
                 name="loans_change_event_idx",
             ),
         ]
+
+
+class PawnLoanApprovalSnapshot(models.Model):
+    loan = models.ForeignKey(
+        PawnLoan,
+        on_delete=models.PROTECT,
+        related_name="approval_snapshots",
+    )
+    version = models.PositiveIntegerField()
+    payload = models.JSONField()
+    fingerprint = models.CharField(max_length=64)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_approvals",
+    )
+    approved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("loan_id", "version")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("loan", "version"),
+                name="loans_approval_loan_version_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(version__gt=0),
+                name="loans_approval_version_positive",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("Approval snapshots are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Approval snapshots cannot be deleted.")
