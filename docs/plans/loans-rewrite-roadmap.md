@@ -248,7 +248,7 @@ exhaustion are tested.
 Acceptance: a workspace owner can complete regulatory setup without admin-site
 access; unauthorized and cross-workspace access fail closed.
 
-#### E2.5 Implement PawnLoan Draft Service
+#### E2.5 Implement PawnLoan Draft Service — Completed 2026-07-18
 
 - Create the draft, number, borrower link, valuation inputs, and collateral in
   one transaction.
@@ -534,7 +534,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E2.4 complete; E2.5 is the next executable slice.**
+Status: **E2.5 complete; E2.6 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

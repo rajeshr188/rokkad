@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-07-17
+updated: 2026-07-18
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -84,6 +84,7 @@ Rokkad is moving toward a layered architecture:
 
 ## Recently Stabilized
 
+- Loans rewrite E2.5 is complete: service commands create and edit PawnLoan drafts atomically from active tenant Party IDs, matching license/series setup, validated economics, and validated collateral inputs. Official numbering allocates inside the creation transaction, persistence failures roll the counter back, and durable `LoanChangeLog` rows capture creation plus before/after draft edits.
 - Loans rewrite E2.4 is complete: Owner/Admin users can manage regulatory licenses and bounded loan/release series from tenant-only `/loans/setup/` screens without admin-site access. The UI exposes active, inactive, expired, exhausted, and ready states plus non-consuming next-number previews; workspace-filtered lookups and middleware authorization fail closed.
 - Loans rewrite E2.3 is complete: pawn-loan and release numbering have non-consuming previews and atomic PostgreSQL row-locked allocation, committed allocations never recycle, sequence exhaustion fails closed at the configured maximum, and a two-connection concurrency test proves unique serialization. The pawn draft service will call the dedicated allocation entry point during E2.5.
 - Loans rewrite E2.2 is complete: tenant-only services own license and series setup, expired or inactive licenses remain readable but fail issuance eligibility, multiple active licenses are supported per workspace, and guarded sequence configuration changes are recorded in the public workspace audit trail.

@@ -20,6 +20,14 @@ from .number_allocation import (
     allocate_release_number,
     preview_number,
 )
+from .pawn_drafts import (
+    CollateralDraftInput,
+    CreatePawnDraftCommand,
+    PawnDraftError,
+    UpdatePawnDraftCommand,
+    create_pawn_draft,
+    update_pawn_draft,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -39,4 +47,10 @@ __all__ = (
     "allocate_pawn_loan_number",
     "allocate_release_number",
     "preview_number",
+    "CollateralDraftInput",
+    "CreatePawnDraftCommand",
+    "PawnDraftError",
+    "UpdatePawnDraftCommand",
+    "create_pawn_draft",
+    "update_pawn_draft",
 )
