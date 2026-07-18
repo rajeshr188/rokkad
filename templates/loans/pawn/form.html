@@ -1,0 +1,16 @@
+{% extends "base_tenant.html" %}
+{% block title %}{% if loan %}Edit {{ loan.loan_number }}{% else %}Create PawnLoan draft{% endif %}{% endblock %}
+{% block workspace_content %}
+<div class="mb-4"><a class="small text-decoration-none" href="{% url 'loans:pawn_loan_list' %}">&larr; PawnLoan drafts</a><h1 class="h3 mt-2">{% if loan %}Edit {{ loan.loan_number }}{% else %}Create PawnLoan draft{% endif %}</h1><p class="text-muted">Saving creates only an editable draft. It does not approve, disburse, or post accounting.</p></div>
+<form method="post" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-3">Loan details</h2><div class="row g-3">
+  {% for field in form %}<div class="col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endfor %}
+  </div></div></div>
+  <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-1">Collateral</h2><p class="small text-muted">Net weight excludes stones and non-metal material. Purity is a percentage, for example 91.6 for 22K.</p>
+    {{ formset.management_form }}{% if formset.non_form_errors %}<div class="alert alert-danger">{{ formset.non_form_errors }}</div>{% endif %}
+    {% for item_form in formset %}<div class="border rounded p-3 mb-3"><div class="row g-3">{% for field in item_form.visible_fields %}<div class="{% if field.name == 'description' %}col-md-6{% else %}col-md-3{% endif %}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endfor %}</div></div>{% endfor %}
+  </div></div>
+  <button class="btn btn-primary" type="submit">Save draft</button> <a class="btn btn-outline-secondary" href="{% if loan %}{% url 'loans:pawn_loan_detail' loan.pk %}{% else %}{% url 'loans:pawn_loan_list' %}{% endif %}">Cancel</a>
+</form>
+{% endblock %}

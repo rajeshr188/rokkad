@@ -1,0 +1,9 @@
+{% extends "base_tenant.html" %}
+{% block title %}PawnLoan setup required{% endblock %}
+{% block workspace_content %}
+<div class="card"><div class="card-body py-5 text-center">
+  <h1 class="h3">PawnLoan setup required</h1><p class="text-muted">{{ readiness.message }}</p>
+  <a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>
+  <a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_list' %}">Back to drafts</a>
+</div></div>
+{% endblock %}

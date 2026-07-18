@@ -1,0 +1,18 @@
+{% extends "base_tenant.html" %}
+{% block title %}PawnLoan drafts{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+  <div><h1 class="h3 mb-1">New PawnLoans</h1><p class="text-muted mb-0">Internal rewrite preview. Existing Girvi loans remain in Girvi.</p></div>
+  {% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% else %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}
+</div>
+{% if not readiness.ready %}<div class="alert alert-warning"><strong>Setup required.</strong> {{ readiness.message }}</div>{% endif %}
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>Loan</th><th>Borrower</th><th>Principal</th><th>State</th><th>Date</th><th></th></tr></thead>
+  <tbody>{% for loan in loans %}<tr>
+    <td><strong>{{ loan.loan_number }}</strong><div class="small text-muted">{{ loan.license.license_number }}/{{ loan.series.code }}</div></td>
+    <td>{{ loan.borrower.display_name }}<div class="small text-muted">{{ loan.borrower.party_code }}</div></td>
+    <td>{{ loan.principal_amount }}</td><td><span class="badge text-bg-secondary">{{ loan.get_state_display }}</span></td><td>{{ loan.loan_date }}</td>
+    <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Open</a></td>
+  </tr>{% empty %}<tr><td colspan="6" class="text-center py-5 text-muted">No new-app PawnLoan drafts yet. Girvi remains the primary loan workspace.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

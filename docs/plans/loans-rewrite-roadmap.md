@@ -257,7 +257,7 @@ access; unauthorized and cross-workspace access fail closed.
 Acceptance: invalid Party, license, series, principal, purity, weight, or
 collateral fails atomically; number allocation never produces duplicates.
 
-#### E2.6 Add Draft/List/Detail UI
+#### E2.6 Add Draft/List/Detail UI — Completed 2026-07-18
 
 - Expose internal feature-hidden list, create, edit, and detail screens.
 - Show setup blockers and a clear primary next action.
@@ -534,7 +534,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E2.5 complete; E2.6 is the next executable slice.**
+Status: **E2.6 complete; E2.7 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA
