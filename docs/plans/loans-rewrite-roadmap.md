@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-07-15
+updated: 2026-08-03
 tags: [loans, girvi, rewrite, roadmap, planning]
 related: [../STATUS.md, ../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, ../apps/girvi/README.md, ../domain/girvi.md, ../domain/accounting.md, girvi-release-accrual-hardening.md, girvi-number-sequence-migration-plan.md]
 ---
@@ -291,7 +291,7 @@ production navigation changes.
 Acceptance: domain event plus outbox commit atomically; repeated delivery cannot
 duplicate DEA effects; failure remains observable and retryable.
 
-#### E3.2 Define And Implement DEA Adapter Contracts
+#### E3.2 Define And Implement DEA Adapter Contracts — Completed 2026-08-03
 
 - Implement PawnLoan payloads for disbursal, repayment, accrual,
   capitalization, release receipt, and reversal.
@@ -535,7 +535,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E3.1 complete; E3.2 is the next executable slice.**
+Status: **E3.2 complete; E3.3 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA
