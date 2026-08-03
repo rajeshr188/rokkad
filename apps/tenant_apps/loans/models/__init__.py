@@ -15,6 +15,7 @@ from .core import (
     PawnLoanInterestAccrual,
     PawnLoanRelease,
     PawnLoanReleaseItem,
+    PawnLoanReleaseReversal,
     current_tenant_workspace_id,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "PawnLoanInterestAccrual",
     "PawnLoanRelease",
     "PawnLoanReleaseItem",
+    "PawnLoanReleaseReversal",
     "current_tenant_workspace_id",
 ]

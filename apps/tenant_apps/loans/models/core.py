@@ -722,6 +722,13 @@ class PawnLoanRelease(models.Model):
         on_delete=models.PROTECT,
         related_name="release",
     )
+    catch_up_accrual = models.OneToOneField(
+        PawnLoanInterestAccrual,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="release_catch_up",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -768,6 +775,11 @@ class PawnLoanRelease(models.Model):
         if self.loan_id and self.workspace_id:
             if self.loan.workspace_id != self.workspace_id:
                 errors["loan"] = "Release loan must belong to its workspace."
+        if self.catch_up_accrual_id and self.loan_id:
+            if self.catch_up_accrual.loan_id != self.loan_id:
+                errors["catch_up_accrual"] = (
+                    "Release catch-up accrual must belong to the same loan."
+                )
         if self.settlement_amount != (
             self.principal_amount + self.interest_amount + self.fee_amount
         ):
@@ -836,6 +848,13 @@ class PawnCollateralCustodyEvent(models.Model):
         on_delete=models.PROTECT,
         related_name="custody_events",
     )
+    release_reversal = models.ForeignKey(
+        "PawnLoanReleaseReversal",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
     from_state = models.CharField(
         max_length=32,
         choices=enum_choices(CollateralCustodyState),
@@ -879,6 +898,80 @@ class PawnCollateralCustodyEvent(models.Model):
             raise ValidationError(
                 {"collateral_item": "Custody item must belong to the release loan."}
             )
+        if (
+            self.release_reversal_id
+            and self.release_id
+            and self.release_reversal.release_id != self.release_id
+        ):
+            raise ValidationError(
+                {"release_reversal": "Custody reversal must match the release."}
+            )
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Collateral custody events cannot be deleted.")
+
+
+class PawnLoanReleaseReversal(models.Model):
+    """Immutable compensation record; the original release is never edited."""
+
+    release = models.OneToOneField(
+        PawnLoanRelease,
+        on_delete=models.PROTECT,
+        related_name="reversal",
+    )
+    accounting_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="release_reversal",
+    )
+    catch_up_reversal_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="release_catch_up_reversal",
+    )
+    reason = models.TextField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_release_reversals_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan release reversals are immutable.")
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if not str(self.reason or "").strip():
+            errors["reason"] = "A reversal reason is required."
+        if self.release_id and self.accounting_event_id:
+            if (
+                self.accounting_event.reversal_of_id
+                != self.release.accounting_event_id
+            ):
+                errors["accounting_event"] = (
+                    "Release reversal event must compensate the release event."
+                )
+        if self.catch_up_reversal_event_id and self.release_id:
+            catch_up_event_id = (
+                self.release.catch_up_accrual.accounting_event_id
+                if self.release.catch_up_accrual_id
+                else None
+            )
+            if self.catch_up_reversal_event.reversal_of_id != catch_up_event_id:
+                errors["catch_up_reversal_event"] = (
+                    "Catch-up reversal must compensate the release catch-up accrual."
+                )
+        if errors:
+            raise ValidationError(errors)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan release reversals cannot be deleted.")

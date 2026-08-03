@@ -169,8 +169,9 @@ def release_pawn_loan_in_full(
         raise PawnReleaseError(str(exc)) from exc
 
     allocation = allocate_release_number(series=loan.series, actor=actor)
+    catch_up_row = None
     if partial_accrual:
-        _record_release_accrual(
+        catch_up_row = _record_release_accrual(
             loan,
             preview=partial_accrual,
             actor=actor,
@@ -214,6 +215,7 @@ def release_pawn_loan_in_full(
             catch_up_interest=catch_up_interest,
         ),
         accounting_event=event,
+        catch_up_accrual=catch_up_row,
         created_by=actor,
     )
     snapshots = {item.collateral_item_id: item for item in readiness.item_valuations}
@@ -383,8 +385,9 @@ def release_pawn_loan_partially(
         raise PawnReleaseError(str(exc)) from exc
 
     allocation = allocate_release_number(series=loan.series, actor=actor)
+    catch_up_row = None
     if partial_accrual:
-        _record_release_accrual(
+        catch_up_row = _record_release_accrual(
             loan,
             preview=partial_accrual,
             actor=actor,
@@ -430,6 +433,7 @@ def release_pawn_loan_partially(
             catch_up_interest=catch_up_interest,
         ),
         accounting_event=event,
+        catch_up_accrual=catch_up_row,
         created_by=actor,
     )
     by_id = {item.pk: item for item in collateral}
@@ -532,7 +536,7 @@ def _record_release_accrual(loan, *, preview, actor, delivery_handler):
             actor=actor,
             delivery_handler=delivery_handler,
         )
-    PawnLoanInterestAccrual.objects.create(
+    accrual = PawnLoanInterestAccrual.objects.create(
         loan=loan,
         period_number=preview.period_number,
         period_start=preview.period_start,
@@ -559,6 +563,7 @@ def _record_release_accrual(loan, *, preview, actor, delivery_handler):
             "outbox_id": outbox.pk if outbox else None,
         },
     )
+    return accrual
 
 
 def _money_amount(value, loan):

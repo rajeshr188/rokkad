@@ -47,6 +47,7 @@ from apps.tenant_apps.loans.models import (
     PawnCollateralCustodyEvent,
     PawnLoanInterestAccrual,
     PawnLoanRelease,
+    PawnLoanReleaseReversal,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -751,7 +752,6 @@ class PawnDisbursalServiceTests(TenantTestCase):
                 reason="Conflicting replacement reason",
                 actor=self.tenant.owner,
             )
-
         with patch(
             "apps.tenant_apps.loans.services.pawn_reversal.timezone.localdate",
             return_value=date(2026, 8, 3),
@@ -1083,6 +1083,148 @@ class PawnDisbursalServiceTests(TenantTestCase):
             as_of_date=date(2026, 8, 3),
         )
         self.assertTrue(final_balance.closure_ready)
+        with self.assertRaises(PawnReversalError):
+            reverse_pawn_loan_event(
+                result.accounting_event.pk,
+                reason="Must reverse the later full release first",
+                actor=self.tenant.owner,
+            )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            reversed_full = reverse_pawn_loan_event(
+                final_release.accounting_event.pk,
+                reason="Undo final release before partial release",
+                actor=self.tenant.owner,
+            )
+        reversed_full.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        selected_item.refresh_from_db()
+        second_item.refresh_from_db()
+        self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(
+            selected_item.custody_state,
+            CollateralCustodyState.WITH_CUSTOMER.value,
+        )
+        self.assertEqual(
+            second_item.custody_state,
+            CollateralCustodyState.IN_VAULT.value,
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            reversed_partial = reverse_pawn_loan_event(
+                result.accounting_event.pk,
+                reason="Partial release selected the wrong item",
+                actor=self.tenant.owner,
+            )
+        reversed_partial.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        selected_item.refresh_from_db()
+        self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(
+            selected_item.custody_state,
+            CollateralCustodyState.IN_VAULT.value,
+        )
+        restored_balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertEqual(restored_balance.principal_outstanding, Decimal("50000.00"))
+        self.assertEqual(restored_balance.interest_outstanding, Decimal("0.00"))
+
+    def test_full_release_reversal_restores_accounting_custody_and_lifecycle(self):
+        self._activate_loan()
+        source = RateSource.objects.create(name="Reversal", location="Market")
+        Rate.objects.create(
+            metal=Rate.Metal.GOLD,
+            currency=Rate.Currency.INR,
+            purity=Rate.Purity.K24,
+            buying_rate=Decimal("6000.00"),
+            selling_rate=Decimal("6100.00"),
+            rate_source=source,
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            released = release_pawn_loan_in_full(
+                self.loan.pk,
+                settlement_amount=Decimal("51000.00"),
+                request_key="release-to-reverse",
+                actor=self.actor,
+            )
+        released.outbox.refresh_from_db()
+        original_payload = released.accounting_event.payload
+        collateral = self.loan.collateral_items.get()
+
+        with self.assertRaises(PawnReversalError):
+            reverse_pawn_loan_event(
+                released.accounting_event.pk,
+                reason="Unauthorized correction",
+                actor=self.actor,
+            )
+        collateral.custody_state = CollateralCustodyState.WITH_FUNDING_LENDER.value
+        collateral.save(update_fields=["custody_state", "updated_at"])
+        with self.assertRaises(PawnReversalError):
+            reverse_pawn_loan_event(
+                released.accounting_event.pk,
+                reason="Custody is incompatible",
+                actor=self.tenant.owner,
+            )
+        collateral.custody_state = CollateralCustodyState.WITH_CUSTOMER.value
+        collateral.save(update_fields=["custody_state", "updated_at"])
+
+        with self.captureOnCommitCallbacks(execute=True):
+            reversed_release = reverse_pawn_loan_event(
+                released.accounting_event.pk,
+                reason="Release recorded before physical handoff",
+                actor=self.tenant.owner,
+            )
+        reversed_release.outbox.refresh_from_db()
+        reversed_release.catch_up_reversal_event.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        collateral.refresh_from_db()
+        released.accounting_event.refresh_from_db()
+
+        self.assertEqual(reversed_release.outbox.status, LoanOutboxStatus.POSTED.value)
+        self.assertEqual(
+            reversed_release.catch_up_reversal_event.outbox.status,
+            LoanOutboxStatus.POSTED.value,
+        )
+        self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(
+            collateral.custody_state,
+            CollateralCustodyState.IN_VAULT.value,
+        )
+        self.assertEqual(released.accounting_event.payload, original_payload)
+        self.assertEqual(PawnLoanRelease.objects.filter(loan=self.loan).count(), 1)
+        reversal_record = PawnLoanReleaseReversal.objects.get(
+            release=released.release
+        )
+        self.assertEqual(
+            reversal_record.reason,
+            "Release recorded before physical handoff",
+        )
+        self.assertEqual(released.release.custody_events.count(), 2)
+        balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertEqual(balance.principal_outstanding, Decimal("50000.00"))
+        self.assertEqual(balance.interest_outstanding, Decimal("0.00"))
+        self.assertFalse(balance.collateral_return_complete)
+        restarted = preview_pawn_loan_accruals(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )[0]
+        self.assertEqual(restarted.period_number, 1)
+        self.assertEqual(restarted.period_start, date(2026, 8, 3))
+        original_voucher = Voucher.objects.get(pk=released.outbox.dea_voucher_id)
+        self.assertEqual(original_voucher.status, VoucherStatus.REVERSED)
+
+        repeated = reverse_pawn_loan_event(
+            released.accounting_event.pk,
+            reason="Release recorded before physical handoff",
+            actor=self.tenant.owner,
+        )
+        self.assertTrue(repeated.already_reversed)
+        self.assertEqual(repeated.release_reversal.pk, reversal_record.pk)
 
     def _activate_loan(self, policy=None):
         self._seed_dea_disbursal_setup()

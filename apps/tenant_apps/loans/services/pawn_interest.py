@@ -79,7 +79,13 @@ def preview_pawn_loan_accruals(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnInterestError("Only an active PawnLoan can accrue interest.")
     policy = loan.policy_snapshot
-    last_finalized = loan.interest_accruals.order_by("-period_number").first()
+    last_finalized = (
+        loan.interest_accruals.exclude(
+            release_catch_up__reversal__isnull=False
+        )
+        .order_by("-period_number")
+        .first()
+    )
     capitalized_boundaries = _capitalized_boundaries(loan)
     if (
         last_finalized

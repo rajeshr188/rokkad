@@ -393,7 +393,7 @@ preconditions; zero balance alone never closes a loan.
 Acceptance: retained collateral remains within LTV policy and released items
 cannot be released twice.
 
-#### E4.4 Implement Release Reversal
+#### E4.4 Implement Release Reversal — Completed 2026-08-03
 
 - Add administrator-only reverse-order release reversal with custody restoration
   and compensating DEA events.
@@ -403,8 +403,8 @@ cannot be released twice.
 Acceptance: original release remains immutable and custody/accounting/lifecycle
 return to a reconciled state.
 
-Phase 4 gate: full and partial release, closure, catch-up accrual, custody, and
-all MVP reversal paths pass end-to-end tests.
+Phase 4 gate — **Passed 2026-08-03**: full and partial release, closure,
+catch-up accrual, custody, and all MVP reversal paths pass end-to-end tests.
 
 ### Phase 5: Complete Staff MVP And Operational Proof
 
@@ -538,7 +538,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E4.3 complete; E4.4 is the next executable slice.**
+Status: **E4.4 and the Phase 4 gate are complete; E5.1 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA
