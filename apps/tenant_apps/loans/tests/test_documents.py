@@ -163,6 +163,27 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         self.assertEqual(result.file_name, "pawn_release_RL-A-00001.pdf")
         self.assertIn("release:27:RL-A-00001:release-fingerprint-29", result.verification_id)
 
+    def test_operational_release_memo_does_not_require_an_outbox(self):
+        event = SimpleNamespace(pk=30, payload_fingerprint="operational-release-30")
+        release = SimpleNamespace(
+            pk=28,
+            loan=self.loan,
+            accounting_event=event,
+            release_number="RL-A-00002",
+            effective_date=date(2026, 8, 3),
+            is_full_release=False,
+            principal_amount=Decimal("0"),
+            interest_amount=Decimal("0"),
+            fee_amount=Decimal("0"),
+            settlement_amount=Decimal("0"),
+            items=_Manager(),
+        )
+
+        result = PawnLoanDocumentService.render_release_memo(release)
+
+        self.assertTrue(result.pdf.startswith(b"%PDF"))
+        self.assertEqual(result.file_name, "pawn_release_RL-A-00002.pdf")
+
     def test_receipt_rejects_non_repayment_source(self):
         event = SimpleNamespace(event_kind=TransactionKind.DISBURSAL.value)
 

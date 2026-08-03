@@ -137,6 +137,7 @@ class PawnLoanDocumentService:
     def render_release_memo(cls, release):
         loan = release.loan
         event = release.accounting_event
+        outbox = cls._related_or_none(event, "outbox")
         reversal = cls._related_or_none(release, "reversal")
         verification = cls._verification(
             loan,
@@ -156,8 +157,19 @@ class PawnLoanDocumentService:
             ("Interest settled", cls._money(release.interest_amount)),
             ("Fees settled", cls._money(release.fee_amount)),
             ("Total settlement", cls._money(release.settlement_amount)),
-            ("Accounting delivery", event.outbox.get_status_display()),
-            ("DEA voucher / journal", f"{event.outbox.dea_voucher_id or '—'} / {event.outbox.dea_journal_entry_id or '—'}"),
+            (
+                "Accounting delivery",
+                outbox.get_status_display() if outbox else "Not required",
+            ),
+            (
+                "DEA voucher / journal",
+                (
+                    f"{outbox.dea_voucher_id or 'Not available'} / "
+                    f"{outbox.dea_journal_entry_id or 'Not available'}"
+                    if outbox
+                    else "Not applicable"
+                ),
+            ),
         ]
         item_rows = [["Item ID", "Description", "Value at release", "Returned at"]]
         for release_item in release.items.all():

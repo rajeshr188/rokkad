@@ -476,7 +476,7 @@ operations runbook document tenant-aware deployment, hidden-MVP enablement,
 rollback, reconciliation, and support procedures. The focused nine-test setup
 and diagnostics suite passes without a Loans schema change.
 
-#### E5.5 Run MVP End-To-End And Tenant-Isolation Suite
+#### E5.5 Run MVP End-To-End And Tenant-Isolation Suite — Completed 2026-08-03
 
 - Cover setup through closure for simple/compound and cash/accrual policies,
   posting failure/retry, every reversal, partial release, expired license,
@@ -485,8 +485,17 @@ and diagnostics suite passes without a Loans schema change.
 Acceptance: the full suite passes using tenant-aware migrations and real DEA
 posting fixtures.
 
-Phase 5 gate: the PawnLoan MVP is operationally complete but still hidden from
-production navigation.
+Result: the complete 134-test Loans suite passes while provisioning isolated
+tenant schemas and exercising real DEA posting fixtures. Together the gate
+covers setup through closure for cash/accrual and simple/compound policies,
+failed delivery and retry, disbursal/repayment/accrual/capitalization/release
+reversals, partial then full release, expired licenses, exhausted sequences,
+and cross-workspace denial. The gate corrected the registered-model inventory
+and made release PDFs represent operational events that legitimately require
+no accounting outbox.
+
+Phase 5 gate: **passed 2026-08-03.** The PawnLoan MVP is operationally complete
+but still hidden from production navigation.
 
 ### Phase 6: Girvi Coexistence And Controlled Cutover
 
@@ -572,7 +581,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E5.4 is complete; E5.5 MVP end-to-end and tenant-isolation verification is the next executable slice.**
+Status: **E5.5 and the Phase 5 gate are complete; E6.1 unified coexistence reads is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

@@ -27,10 +27,15 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "LoanPolicySnapshot",
                 "LoanSeries",
                 "PawnCollateralItem",
+                "PawnCollateralCustodyEvent",
                 "PawnLoan",
                 "PawnLoanAccountingEvent",
                 "PawnLoanAccountingOutbox",
                 "PawnLoanApprovalSnapshot",
+                "PawnLoanInterestAccrual",
+                "PawnLoanRelease",
+                "PawnLoanReleaseItem",
+                "PawnLoanReleaseReversal",
             },
         )
 
