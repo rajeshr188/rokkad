@@ -51,6 +51,7 @@ from apps.tenant_apps.loans.services import (
     PawnDisbursalError,
     PawnRepaymentError,
     PawnInterestError,
+    PawnReversalError,
     approve_pawn_loan,
     assert_pawn_loan_financial_actions_allowed,
     create_pawn_draft,
@@ -59,6 +60,7 @@ from apps.tenant_apps.loans.services import (
     capitalize_pawn_loan_interest,
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
+    reverse_pawn_loan_event,
     record_pawn_loan_repayment,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
@@ -472,6 +474,25 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertTrue(repeated.already_finalized)
         self.assertEqual(repeated.accrual.pk, result.accrual.pk)
 
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_reversal.timezone.localdate",
+            return_value=date(2026, 9, 10),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                reversed_accrual = reverse_pawn_loan_event(
+                    result.accounting_event.pk,
+                    reason="Cash accrual correction",
+                    actor=self.tenant.owner,
+                )
+        reversed_accrual.outbox.refresh_from_db()
+        self.assertEqual(
+            reversed_accrual.outbox.status,
+            LoanOutboxStatus.POSTED.value,
+        )
+        self.assertIsNone(reversed_accrual.outbox.dea_voucher_id)
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 9, 10))
+        self.assertEqual(balance.interest_outstanding, Decimal("0.00"))
+
     def test_accrual_policy_posts_receivable_income_and_capitalization(self):
         policy = resolve_policy(
             workspace_defaults=WorkspacePolicyDefaults(
@@ -629,6 +650,187 @@ class PawnDisbursalServiceTests(TenantTestCase):
             Decimal("1000.00"),
         )
         self.assertEqual(balance.original_principal_outstanding, Decimal("50000.00"))
+
+    def test_reversal_requires_admin_reason_and_newest_first_order(self):
+        self._activate_loan()
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                repayment = record_pawn_loan_repayment(
+                    self.loan.pk,
+                    amount=Decimal("1000.00"),
+                    request_key="reversal-target",
+                    actor=self.actor,
+                )
+        repayment.outbox.refresh_from_db()
+        disbursal = self.loan.accounting_events.get(
+            event_kind=TransactionKind.DISBURSAL.value
+        )
+        original_repayment_payload = dict(repayment.accounting_event.payload)
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_reversal.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ):
+            with self.assertRaises(PawnReversalError):
+                reverse_pawn_loan_event(
+                    repayment.accounting_event.pk,
+                    reason="Unauthorized correction",
+                    actor=self.actor,
+                )
+            with self.assertRaises(PawnReversalError):
+                reverse_pawn_loan_event(
+                    repayment.accounting_event.pk,
+                    reason="",
+                    actor=self.tenant.owner,
+                )
+            with self.assertRaises(PawnReversalError):
+                reverse_pawn_loan_event(
+                    disbursal.pk,
+                    reason="Wrong order",
+                    actor=self.tenant.owner,
+                )
+
+            with self.captureOnCommitCallbacks(execute=True):
+                repayment_reversal = reverse_pawn_loan_event(
+                    repayment.accounting_event.pk,
+                    reason="Duplicate borrower receipt",
+                    actor=self.tenant.owner,
+                )
+        repayment_reversal.outbox.refresh_from_db()
+        self.assertEqual(
+            repayment_reversal.outbox.status,
+            LoanOutboxStatus.POSTED.value,
+        )
+        repayment_voucher = Voucher.objects.get(pk=repayment.outbox.dea_voucher_id)
+        self.assertEqual(repayment_voucher.status, VoucherStatus.REVERSED)
+        reversal_entry = repayment_voucher.journal_entries.get(
+            pk=repayment_reversal.outbox.dea_journal_entry_id
+        )
+        self.assertEqual(
+            reversal_entry.is_reversal_of_id,
+            repayment.outbox.dea_journal_entry_id,
+        )
+        repayment.accounting_event.refresh_from_db()
+        self.assertEqual(repayment.accounting_event.payload, original_repayment_payload)
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 8, 3))
+        self.assertEqual(balance.principal_outstanding, Decimal("50000.00"))
+
+        repeated = reverse_pawn_loan_event(
+            repayment.accounting_event.pk,
+            reason="Duplicate borrower receipt",
+            actor=self.tenant.owner,
+        )
+        self.assertTrue(repeated.already_reversed)
+        self.assertEqual(
+            repeated.reversal_event.pk,
+            repayment_reversal.reversal_event.pk,
+        )
+        with self.assertRaises(PawnReversalError):
+            reverse_pawn_loan_event(
+                repayment.accounting_event.pk,
+                reason="Conflicting replacement reason",
+                actor=self.tenant.owner,
+            )
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_reversal.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                disbursal_reversal = reverse_pawn_loan_event(
+                    disbursal.pk,
+                    reason="Loan was disbursed in error",
+                    actor=self.tenant.owner,
+                )
+        disbursal_reversal.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.state, PawnLoanState.APPROVED.value)
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 8, 3))
+        self.assertEqual(balance.principal_outstanding, Decimal("0.00"))
+        self.assertEqual(balance.total_due, Decimal("0.00"))
+        self.assertEqual(
+            self.loan.change_log.filter(
+                event_kind=PawnLoanEventKind.REVERSAL_RECORDED.value
+            ).count(),
+            2,
+        )
+
+    def test_accrual_and_capitalization_reverse_in_strict_order(self):
+        policy = resolve_policy(
+            workspace_defaults=WorkspacePolicyDefaults(
+                interest_method=InterestMethod.COMPOUND,
+                capitalization_interval_periods=1,
+                accounting_recognition=AccountingRecognition.ACCRUAL,
+            )
+        )
+        self._activate_loan(policy)
+        self._open_period(date(2026, 9, 1), date(2026, 9, 30), "September 2026")
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+            return_value=date(2026, 9, 2),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                accrual = finalize_pawn_loan_accrual(
+                    self.loan.pk,
+                    period_number=1,
+                    actor=self.actor,
+                )
+        with self.captureOnCommitCallbacks(execute=True):
+            capitalization = capitalize_pawn_loan_interest(
+                self.loan.pk,
+                through_period_number=1,
+                actor=self.actor,
+            )
+        accrual.outbox.refresh_from_db()
+        capitalization.outbox.refresh_from_db()
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_reversal.timezone.localdate",
+            return_value=date(2026, 9, 2),
+        ):
+            with self.assertRaises(PawnReversalError):
+                reverse_pawn_loan_event(
+                    accrual.accounting_event.pk,
+                    reason="Must reverse capitalization first",
+                    actor=self.tenant.owner,
+                )
+            with self.captureOnCommitCallbacks(execute=True):
+                cap_reversal = reverse_pawn_loan_event(
+                    capitalization.accounting_event.pk,
+                    reason="Incorrect capitalization",
+                    actor=self.tenant.owner,
+                )
+        cap_reversal.outbox.refresh_from_db()
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 9, 2))
+        self.assertEqual(balance.principal_outstanding, Decimal("50000.00"))
+        self.assertEqual(balance.interest_outstanding, Decimal("1000.00"))
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_reversal.timezone.localdate",
+            return_value=date(2026, 9, 2),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                accrual_reversal = reverse_pawn_loan_event(
+                    accrual.accounting_event.pk,
+                    reason="Incorrect accrual period",
+                    actor=self.tenant.owner,
+                )
+        accrual_reversal.outbox.refresh_from_db()
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 9, 2))
+        self.assertEqual(balance.principal_outstanding, Decimal("50000.00"))
+        self.assertEqual(balance.interest_outstanding, Decimal("0.00"))
+        self.assertEqual(PawnLoanInterestAccrual.objects.filter(loan=self.loan).count(), 1)
+        self.assertEqual(
+            Voucher.objects.get(pk=accrual.outbox.dea_voucher_id).status,
+            VoucherStatus.REVERSED,
+        )
+        self.assertEqual(
+            Voucher.objects.get(pk=capitalization.outbox.dea_voucher_id).status,
+            VoucherStatus.REVERSED,
+        )
 
     def _activate_loan(self, policy=None):
         self._seed_dea_disbursal_setup()

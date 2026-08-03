@@ -39,6 +39,7 @@ def record_loan_accounting_event(
     payload: dict,
     actor=None,
     delivery_handler: DeliveryHandler | None = None,
+    reversal_of: PawnLoanAccountingEvent | None = None,
 ) -> tuple[PawnLoanAccountingEvent, PawnLoanAccountingOutbox]:
     """Persist source intent and outbox atomically, then attempt delivery on commit."""
     kind = TransactionKind(event_kind).value
@@ -56,6 +57,7 @@ def record_loan_accounting_event(
                 "payload": payload,
                 "payload_fingerprint": fingerprint,
                 "created_by": actor,
+                "reversal_of": reversal_of,
             },
         )
         outbox, outbox_created = PawnLoanAccountingOutbox.objects.get_or_create(

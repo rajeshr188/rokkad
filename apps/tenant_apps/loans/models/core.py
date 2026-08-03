@@ -551,6 +551,13 @@ class PawnLoanAccountingEvent(models.Model):
     payload = models.JSONField()
     payload_fingerprint = models.CharField(max_length=64)
     idempotency_key = models.CharField(max_length=180, unique=True)
+    reversal_of = models.OneToOneField(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="reversed_by_event",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -566,6 +573,21 @@ class PawnLoanAccountingEvent(models.Model):
             models.Index(
                 fields=("loan", "event_kind", "effective_date"),
                 name="loans_acct_event_lookup_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        event_kind=TransactionKind.REVERSAL.value,
+                        reversal_of__isnull=False,
+                    )
+                    | (
+                        ~Q(event_kind=TransactionKind.REVERSAL.value)
+                        & Q(reversal_of__isnull=True)
+                    )
+                ),
+                name="loans_event_reversal_link_valid",
             ),
         ]
 

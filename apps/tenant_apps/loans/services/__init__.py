@@ -72,6 +72,11 @@ from .pawn_interest import (
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
 )
+from .pawn_reversal import (
+    PawnReversalError,
+    PawnReversalResult,
+    reverse_pawn_loan_event,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -129,4 +134,7 @@ __all__ = (
     "capitalize_pawn_loan_interest",
     "finalize_pawn_loan_accrual",
     "preview_pawn_loan_accruals",
+    "PawnReversalError",
+    "PawnReversalResult",
+    "reverse_pawn_loan_event",
 )

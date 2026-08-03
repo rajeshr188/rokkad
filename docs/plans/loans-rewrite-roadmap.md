@@ -351,7 +351,7 @@ idempotent; pending posting blocks dependent events; balances reconcile.
 Acceptance: period generation, partial-month slabs, rounding, simple/compound
 behavior, cash/accrual behavior, and idempotency are covered.
 
-#### E3.8 Implement Reversal Foundation
+#### E3.8 Implement Reversal Foundation — Completed 2026-08-03
 
 - Add administrator-only, reason-required reversal source records and services
   for disbursal, repayment, accrual, and capitalization.
@@ -538,7 +538,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E3.7 complete; E3.8 is the next executable slice.**
+Status: **E3.8 and the Phase 3 gate are complete; E4.1 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA
