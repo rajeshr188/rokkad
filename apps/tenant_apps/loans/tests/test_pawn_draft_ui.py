@@ -125,6 +125,22 @@ class PawnDraftUiTests(TenantTestCase):
         response = self.client.get(reverse("loans:license_list"))
         self.assertNotContains(response, reverse("loans:pawn_loan_list"))
 
+    def test_internal_reports_render_all_operational_sections(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+
+        response = self.client.get(reverse("loans:pawn_loan_reports"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Reports &amp; reconciliation")
+        self.assertContains(response, "Actionable reconciliation")
+        self.assertContains(response, "Active, due &amp; overdue")
+        self.assertContains(response, "Finalized accruals")
+        self.assertContains(response, "Repayments")
+        self.assertContains(response, "Releases")
+        self.assertContains(response, "Collateral custody")
+        self.assertContains(response, "Posting health")
+
     def test_workspace_member_can_use_internal_draft_ui_but_not_setup(self):
         User = get_user_model()
         member = User.objects.create_user(

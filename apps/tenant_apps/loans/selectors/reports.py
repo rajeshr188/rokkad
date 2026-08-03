@@ -1,0 +1,397 @@
+"""Canonical PawnLoan operational reports and cross-boundary reconciliation."""
+
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+
+from django.core.exceptions import ObjectDoesNotExist
+
+from apps.tenant_apps.dea import facade as dea_facade
+from apps.tenant_apps.loans.domain import (
+    CollateralCustodyState,
+    LoanOutboxStatus,
+    PawnLoanState,
+    TransactionKind,
+)
+from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
+from apps.tenant_apps.loans.selectors.balances import (
+    PawnLoanBalanceSelectorError,
+    calculate_pawn_loan_balance,
+)
+
+
+ZERO = Decimal("0")
+
+
+@dataclass(frozen=True)
+class PawnLoanPortfolioRow:
+    loan: object
+    balance: object | None
+    balance_error: str
+    status: str
+
+
+@dataclass(frozen=True)
+class PawnLoanReconciliationIssue:
+    code: str
+    severity: str
+    message: str
+    loan: object
+    event: object | None = None
+    outbox: object | None = None
+    collateral_item: object | None = None
+    action: str = "Review the loan and its source records."
+
+
+@dataclass(frozen=True)
+class PawnLoanReportBundle:
+    as_of_date: date
+    portfolio: tuple[PawnLoanPortfolioRow, ...]
+    accruals: tuple[object, ...]
+    repayments: tuple[object, ...]
+    releases: tuple[object, ...]
+    custody_items: tuple[object, ...]
+    posting_events: tuple[object, ...]
+    issues: tuple[PawnLoanReconciliationIssue, ...]
+
+    @property
+    def active_count(self):
+        return sum(row.loan.state == PawnLoanState.ACTIVE.value for row in self.portfolio)
+
+    @property
+    def overdue_count(self):
+        return sum(bool(row.balance and row.balance.is_overdue) for row in self.portfolio)
+
+    @property
+    def total_principal_outstanding(self):
+        return sum(
+            (row.balance.principal_outstanding for row in self.portfolio if row.balance),
+            ZERO,
+        )
+
+    @property
+    def total_due(self):
+        return sum((row.balance.total_due for row in self.portfolio if row.balance), ZERO)
+
+
+def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise ValueError("PawnLoan reports require an active tenant schema.")
+    loans = tuple(
+        PawnLoan.objects.filter(workspace_id=workspace_id)
+        .select_related("borrower", "license", "series", "policy_snapshot")
+        .prefetch_related(
+            "collateral_items__custody_history",
+            "collateral_items__release_items__release__reversal",
+            "accounting_events__outbox",
+            "accounting_events__reversed_by_event",
+            "interest_accruals",
+            "releases__items",
+        )
+        .order_by("loan_number")
+    )
+    return build_pawn_loan_reports(
+        loans,
+        as_of_date=as_of_date,
+        dea_inspector=dea_facade.inspect_pawn_loan_accounting_reference,
+    )
+
+
+def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector):
+    portfolio = []
+    accruals = []
+    repayments = []
+    releases = []
+    custody_items = []
+    posting_events = []
+    issues = []
+    for loan in loans:
+        events = tuple(loan.accounting_events.all())
+        collateral = tuple(loan.collateral_items.all())
+        balance = None
+        balance_error = ""
+        try:
+            balance = calculate_pawn_loan_balance(
+                loan,
+                events=events,
+                collateral_items=collateral,
+                policy_snapshot=_optional_policy(loan),
+                as_of_date=as_of_date,
+            )
+        except (PawnLoanBalanceSelectorError, ValueError) as exc:
+            balance_error = str(exc)
+            issues.append(_issue("BALANCE_DERIVATION_ERROR", loan, balance_error))
+        portfolio.append(
+            PawnLoanPortfolioRow(
+                loan=loan,
+                balance=balance,
+                balance_error=balance_error,
+                status=_portfolio_status(loan, balance),
+            )
+        )
+        accruals.extend(loan.interest_accruals.all())
+        repayments.extend(
+            event for event in events if event.event_kind == TransactionKind.REPAYMENT.value
+        )
+        releases.extend(loan.releases.all())
+        custody_items.extend(collateral)
+        for event in events:
+            try:
+                posting_events.append(event.outbox)
+            except (AttributeError, ObjectDoesNotExist):
+                pass
+        issues.extend(_loan_issues(loan, events, collateral, balance, dea_inspector))
+    return PawnLoanReportBundle(
+        as_of_date=as_of_date,
+        portfolio=tuple(portfolio),
+        accruals=tuple(accruals),
+        repayments=tuple(repayments),
+        releases=tuple(releases),
+        custody_items=tuple(custody_items),
+        posting_events=tuple(posting_events),
+        issues=tuple(issues),
+    )
+
+
+def _loan_issues(loan, events, collateral, balance, dea_inspector):
+    issues = []
+    if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value} and not any(
+        event.event_kind == TransactionKind.DISBURSAL.value for event in events
+    ):
+        issues.append(
+            _issue(
+                "MISSING_DISBURSAL_EVENT",
+                loan,
+                "Active or closed loan has no disbursal source event.",
+                action="Review lifecycle history before further servicing.",
+            )
+        )
+    seen_intents = set()
+    for event in events:
+        intent = (event.event_kind, event.payload_fingerprint)
+        if intent in seen_intents:
+            issues.append(
+                _issue(
+                    "DUPLICATE_ACCOUNTING_INTENT",
+                    loan,
+                    "More than one source event has the same kind and economic payload.",
+                    event=event,
+                    action="Reverse the later duplicate in strict event order.",
+                )
+            )
+        seen_intents.add(intent)
+        issues.extend(_event_issues(loan, event, dea_inspector))
+    issues.extend(_custody_issues(loan, collateral))
+    if loan.state == PawnLoanState.CLOSED.value and balance and not balance.closure_ready:
+        issues.append(
+            _issue(
+                "CLOSED_LOAN_NOT_RECONCILED",
+                loan,
+                "Closed loan does not have both zero balance and fully returned collateral.",
+                action="Review releases, custody history, and accounting reversals.",
+            )
+        )
+    return issues
+
+
+def _event_issues(loan, event, dea_inspector):
+    try:
+        outbox = event.outbox
+    except (AttributeError, ObjectDoesNotExist):
+        return [
+            _issue(
+                "MISSING_ACCOUNTING_OUTBOX",
+                loan,
+                "Accounting source event has no durable delivery record.",
+                event=event,
+                action="Escalate for data repair before further servicing.",
+            )
+        ]
+    if (
+        event.payload_fingerprint != outbox.payload_fingerprint
+        or event.idempotency_key != outbox.idempotency_key
+        or event.payload != outbox.payload
+    ):
+        return [
+            _issue(
+                "OUTBOX_PAYLOAD_MISMATCH",
+                loan,
+                "Accounting source intent and durable outbox payload differ.",
+                event=event,
+                outbox=outbox,
+                action="Escalate for immutable source/outbox reconciliation.",
+            )
+        ]
+    if outbox.status == LoanOutboxStatus.FAILED.value:
+        return [
+            _issue(
+                "FAILED_ACCOUNTING_DELIVERY",
+                loan,
+                outbox.last_error or "Accounting delivery failed.",
+                event=event,
+                outbox=outbox,
+                action="Correct setup if needed, then retry this outbox event.",
+            )
+        ]
+    if outbox.status in {
+        LoanOutboxStatus.PENDING.value,
+        LoanOutboxStatus.PROCESSING.value,
+    }:
+        return [
+            _issue(
+                "PENDING_ACCOUNTING_DELIVERY",
+                loan,
+                "Accounting delivery has not completed.",
+                severity="WARNING",
+                event=event,
+                outbox=outbox,
+                action="Wait for delivery or inspect operations diagnostics if stale.",
+            )
+        ]
+    if not _requires_dea_reference(event):
+        if outbox.dea_voucher_id is not None or outbox.dea_journal_entry_id is not None:
+            return [
+                _issue(
+                    "UNEXPECTED_DEA_REFERENCE",
+                    loan,
+                    "Operational-only event unexpectedly references DEA records.",
+                    event=event,
+                    outbox=outbox,
+                )
+            ]
+        return []
+    if outbox.dea_voucher_id is None or outbox.dea_journal_entry_id is None:
+        return [
+            _issue(
+                "MISSING_DEA_REFERENCE",
+                loan,
+                "Posted accounting event is missing its DEA voucher or journal reference.",
+                event=event,
+                outbox=outbox,
+                action="Inspect delivery evidence before retrying or reversing.",
+            )
+        ]
+    source_event_id = event.reversal_of_id or event.pk
+    evidence = dea_inspector(
+        voucher_id=outbox.dea_voucher_id,
+        journal_entry_id=outbox.dea_journal_entry_id,
+        source_event_id=source_event_id,
+    )
+    issues = []
+    checks = (
+        (not evidence.voucher_exists, "DEA_VOUCHER_MISSING", "Referenced DEA voucher does not exist."),
+        (not evidence.journal_exists, "DEA_JOURNAL_MISSING", "Referenced DEA journal entry does not exist."),
+        (evidence.voucher_exists and not evidence.source_matches, "DEA_SOURCE_MISMATCH", "DEA voucher points to a different source event."),
+        (evidence.journal_exists and not evidence.journal_matches_voucher, "DEA_JOURNAL_MISMATCH", "DEA journal entry belongs to a different voucher."),
+        (evidence.voucher_exists and evidence.voucher_status not in {"POSTED", "REVERSED", "CORRECTED"}, "DEA_VOUCHER_NOT_FINAL", "Referenced DEA voucher is not in a final accounting state."),
+        (evidence.debit_total != evidence.credit_total, "DEA_VOUCHER_UNBALANCED", "DEA voucher debit and credit totals differ."),
+        (evidence.source_voucher_count > 1, "DUPLICATE_DEA_ACCOUNTING", "Source event has more than one non-draft DEA voucher."),
+        (evidence.voucher_exists and evidence.debit_total != _event_amount(event), "BALANCE_VOUCHER_MISMATCH", "Source-event economic total differs from the DEA voucher total."),
+    )
+    for failed, code, message in checks:
+        if failed:
+            issues.append(_issue(code, loan, message, event=event, outbox=outbox))
+    return issues
+
+
+def _custody_issues(loan, collateral):
+    issues = []
+    for item in collateral:
+        if loan.state in {
+            PawnLoanState.DRAFT.value,
+            PawnLoanState.APPROVED.value,
+            PawnLoanState.CANCELLED.value,
+        } and item.custody_state != CollateralCustodyState.IN_VAULT.value:
+            issues.append(_custody_issue(loan, item, "Pre-disbursal or cancelled loan has collateral outside the vault."))
+        if loan.state == PawnLoanState.CLOSED.value and item.custody_state != CollateralCustodyState.WITH_CUSTOMER.value:
+            issues.append(_custody_issue(loan, item, "Closed loan still has collateral outside customer custody."))
+        history = tuple(item.custody_history.all())
+        if history and history[-1].to_state != item.custody_state:
+            issues.append(_custody_issue(loan, item, "Current custody does not match the latest immutable custody event."))
+        if item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value and not item.release_items.exists():
+            issues.append(_custody_issue(loan, item, "Customer-held collateral has no release document item."))
+    return issues
+
+
+def _custody_issue(loan, item, message):
+    return _issue(
+        "IMPOSSIBLE_CUSTODY",
+        loan,
+        message,
+        collateral_item=item,
+        action="Review release and custody history; correct only through reversal.",
+    )
+
+
+def _requires_dea_reference(event):
+    if event.event_kind in {
+        TransactionKind.INTEREST_ACCRUAL.value,
+        TransactionKind.INTEREST_CAPITALIZATION.value,
+    }:
+        detail_key = (
+            "accrual"
+            if event.event_kind == TransactionKind.INTEREST_ACCRUAL.value
+            else "capitalization"
+        )
+        return (event.payload.get(detail_key) or {}).get("accounting_recognition") != "CASH"
+    if event.event_kind == TransactionKind.RELEASE_RECEIPT.value:
+        return _event_amount(event) != ZERO
+    if event.event_kind == TransactionKind.REVERSAL.value:
+        try:
+            return event.reversal_of.outbox.dea_voucher_id is not None
+        except ObjectDoesNotExist:
+            return True
+    return True
+
+
+def _event_amount(event):
+    values = event.payload.get("values") or {}
+    kind = event.event_kind
+    if kind == TransactionKind.REVERSAL.value:
+        kind = (event.payload.get("reversal") or {}).get("original_event_kind")
+    if kind == TransactionKind.DISBURSAL.value:
+        keys = ("principal",)
+    elif kind in {TransactionKind.REPAYMENT.value, TransactionKind.RELEASE_RECEIPT.value}:
+        keys = ("principal", "interest", "fees")
+    else:
+        keys = ("interest",)
+    return sum((Decimal(str(values.get(key, "0"))) for key in keys), ZERO)
+
+
+def _portfolio_status(loan, balance):
+    if loan.state != PawnLoanState.ACTIVE.value or not balance:
+        return loan.state
+    if not balance.posting_ready:
+        return "ACCOUNTING_BLOCKED"
+    if balance.is_overdue:
+        return "OVERDUE"
+    if balance.closure_ready:
+        return "CLOSURE_READY"
+    return "ACTIVE"
+
+
+def _optional_policy(loan):
+    try:
+        return loan.policy_snapshot
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+
+
+def _issue(code, loan, message, *, severity="ERROR", **kwargs):
+    return PawnLoanReconciliationIssue(
+        code=code,
+        severity=severity,
+        message=message,
+        loan=loan,
+        **kwargs,
+    )
+
+
+__all__ = [
+    "PawnLoanPortfolioRow",
+    "PawnLoanReconciliationIssue",
+    "PawnLoanReportBundle",
+    "build_pawn_loan_reports",
+    "get_pawn_loan_reports",
+]

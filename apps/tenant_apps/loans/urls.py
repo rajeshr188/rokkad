@@ -6,6 +6,7 @@ app_name = "loans"
 
 urlpatterns = [
     path("internal/", views.pawn_loan_list, name="pawn_loan_list"),
+    path("internal/reports/", views.pawn_loan_reports, name="pawn_loan_reports"),
     path("internal/create/", views.pawn_loan_create, name="pawn_loan_create"),
     path("internal/<int:pk>/", views.pawn_loan_detail, name="pawn_loan_detail"),
     path("internal/<int:pk>/edit/", views.pawn_loan_update, name="pawn_loan_update"),

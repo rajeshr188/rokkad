@@ -425,13 +425,23 @@ and confirmation, failed-posting retry, and administrator reversal. Current
 balances, custody, setup failures, accrual availability, release-readiness
 blockers, and pending/failed accounting are visible on the workflow screens.
 
-#### E5.2 Add Reports And Reconciliation
+#### E5.2 Add Reports And Reconciliation — Completed 2026-08-03
 
 - Add active, due/overdue, accrual, repayment, release, custody, posting-health,
   and accounting-reconciliation reports from selectors.
 
 Acceptance: missing/failed/duplicate accounting, impossible custody, and
 balance-voucher mismatches are categorized and actionable.
+
+Result: a tenant-scoped report selector and feature-hidden staff report now
+cover active/due/overdue balances, finalized accruals, repayments, releases,
+collateral custody, and outbox posting health. Reconciliation categorizes
+missing or failed delivery records, duplicate source intent or DEA documents,
+source/outbox drift, invalid DEA references, source-link and journal-link
+mismatches, unbalanced/non-final vouchers, source-total versus voucher-total
+drift, impossible custody, and closed-loan inconsistencies. DEA evidence is
+read only through its public facade, and every finding links back to its loan
+with a corrective action; eligible failed deliveries expose controlled retry.
 
 #### E5.3 Add Essential PDFs
 
@@ -545,7 +555,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E5.1 is complete; E5.2 reports and reconciliation is the next executable slice.**
+Status: **E5.2 is complete; E5.3 essential PDFs is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

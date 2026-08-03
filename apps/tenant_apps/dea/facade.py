@@ -28,6 +28,10 @@ from apps.tenant_apps.dea.facades.loan_events import (
     post_pawn_loan_release_event,
     reverse_pawn_loan_accounting_event,
 )
+from apps.tenant_apps.dea.facades.loan_reconciliation import (
+    LoanAccountingReference,
+    inspect_pawn_loan_accounting_reference,
+)
 from apps.tenant_apps.dea.facades.payments import (
     create_and_post_payment,
     find_payment_by_marker,
@@ -47,6 +51,7 @@ __all__ = [
     "Balance",
     "LoanPostingPrerequisites",
     "LoanEventPostingReceipt",
+    "LoanAccountingReference",
     "create_and_post_payment",
     "ensure_customer_account",
     "find_payment_by_marker",
@@ -54,6 +59,7 @@ __all__ = [
     "get_ledger_transactions_for_journal_entries",
     "get_loan_posting_prerequisites",
     "get_loan_journal_entries",
+    "inspect_pawn_loan_accounting_reference",
     "has_other_posted_payments",
     "post_interest_accrual_batch",
     "post_pawn_loan_disbursal_event",

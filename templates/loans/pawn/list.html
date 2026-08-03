@@ -3,7 +3,7 @@
 {% block workspace_content %}
 <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
   <div><h1 class="h3 mb-1">New PawnLoans</h1><p class="text-muted mb-0">Internal rewrite preview. Existing Girvi loans remain in Girvi.</p></div>
-  {% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% else %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}
+  <div class="d-flex gap-2"><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reports' %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% else %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>
 </div>
 {% if not readiness.ready %}<div class="alert alert-warning"><strong>Setup required.</strong> {{ readiness.message }}</div>{% endif %}
 <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">

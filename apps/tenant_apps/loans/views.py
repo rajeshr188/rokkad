@@ -40,6 +40,7 @@ from apps.tenant_apps.loans.models import (
 )
 from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
+    get_pawn_loan_reports,
     get_pawn_loan_release_readiness,
 )
 from apps.tenant_apps.loans.services import (
@@ -85,6 +86,16 @@ def pawn_loan_list(request):
     ).order_by("-created_at")
     readiness = _draft_readiness(request.loans_workspace)
     return render(request, "loans/pawn/list.html", {"loans": loans, "readiness": readiness})
+
+
+@loans_workspace_required
+def pawn_loan_reports(request):
+    report = get_pawn_loan_reports(as_of_date=timezone.localdate())
+    return render(
+        request,
+        "loans/pawn/reports.html",
+        {"report": report, "can_administer": _can_administer(request)},
+    )
 
 
 @loans_workspace_required
