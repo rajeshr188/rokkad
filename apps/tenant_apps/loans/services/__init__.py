@@ -84,6 +84,11 @@ from .pawn_release import (
     release_pawn_loan_partially,
     release_pawn_loan_in_full,
 )
+from .documents import (
+    PawnLoanDocumentError,
+    PawnLoanDocumentResult,
+    PawnLoanDocumentService,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -149,4 +154,7 @@ __all__ = (
     "PawnReleaseError",
     "release_pawn_loan_partially",
     "release_pawn_loan_in_full",
+    "PawnLoanDocumentError",
+    "PawnLoanDocumentResult",
+    "PawnLoanDocumentService",
 )

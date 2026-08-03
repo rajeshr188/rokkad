@@ -3,6 +3,7 @@ import uuid
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -37,6 +38,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanAccountingOutbox,
     PawnLoanAccountingEvent,
+    PawnLoanRelease,
 )
 from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
@@ -76,6 +78,8 @@ from apps.tenant_apps.loans.services import (
     release_pawn_loan_in_full,
     release_pawn_loan_partially,
     reverse_pawn_loan_event,
+    PawnLoanDocumentService,
+    PawnLoanDocumentError,
 )
 
 
@@ -95,6 +99,57 @@ def pawn_loan_reports(request):
         request,
         "loans/pawn/reports.html",
         {"report": report, "can_administer": _can_administer(request)},
+    )
+
+
+@loans_workspace_required
+def pawn_loan_ticket_pdf(request, pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    try:
+        result = PawnLoanDocumentService.render_loan_ticket(loan)
+    except PawnLoanDocumentError as exc:
+        return HttpResponse(str(exc), status=409, content_type="text/plain")
+    return PawnLoanDocumentService.build_pdf_response(result)
+
+
+@loans_workspace_required
+def pawn_repayment_receipt_pdf(request, pk, event_pk):
+    event = get_object_or_404(
+        PawnLoanAccountingEvent.objects.select_related(
+            "loan",
+            "loan__workspace",
+            "loan__license",
+            "loan__borrower",
+            "outbox",
+            "reversed_by_event",
+        ),
+        pk=event_pk,
+        loan_id=pk,
+        loan__workspace=request.loans_workspace,
+        event_kind=TransactionKind.REPAYMENT.value,
+    )
+    return PawnLoanDocumentService.build_pdf_response(
+        PawnLoanDocumentService.render_repayment_receipt(event)
+    )
+
+
+@loans_workspace_required
+def pawn_release_memo_pdf(request, release_pk):
+    release = get_object_or_404(
+        PawnLoanRelease.objects.select_related(
+            "workspace",
+            "loan",
+            "loan__license",
+            "loan__borrower",
+            "accounting_event",
+            "accounting_event__outbox",
+            "reversal",
+        ).prefetch_related("items__collateral_item"),
+        pk=release_pk,
+        workspace=request.loans_workspace,
+    )
+    return PawnLoanDocumentService.build_pdf_response(
+        PawnLoanDocumentService.render_release_memo(release)
     )
 
 
@@ -659,6 +714,8 @@ def _pawn_loan_for_workspace(request, pk):
             "change_log__actor",
             "accounting_events__outbox",
             "accounting_events__reversed_by_event",
+            "releases__items__collateral_item",
+            "approval_snapshots",
         ),
         pk=pk,
         workspace=request.loans_workspace,

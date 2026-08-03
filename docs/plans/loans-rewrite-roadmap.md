@@ -443,12 +443,21 @@ drift, impossible custody, and closed-loan inconsistencies. DEA evidence is
 read only through its public facade, and every finding links back to its loan
 with a corrective action; eligible failed deliveries expose controlled retry.
 
-#### E5.3 Add Essential PDFs
+#### E5.3 Add Essential PDFs — Completed 2026-08-03
 
 - Add fixed loan ticket, repayment receipt, and release memo/Form H equivalent.
 
 Acceptance: documents contain stable source IDs, workspace/license identity,
 amount splits, and verification fixtures.
+
+Result: workspace-scoped PDF routes and one document service generate the fixed
+loan ticket, repayment receipt, and release memo/Form H equivalent. The ticket
+refuses editable drafts and reads economics/collateral from the latest immutable
+approval snapshot. Receipts read immutable repayment-event splits; release
+memos read immutable release headers and item valuation snapshots. Every PDF
+contains workspace, regulatory license, loan and source-record IDs, source
+fingerprints, relevant accounting/reversal state, amount splits, signatures,
+and a deterministic verification ID also returned as a response header.
 
 #### E5.4 Add Operations Diagnostics And Runbook
 
@@ -555,7 +564,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E5.2 is complete; E5.3 essential PDFs is the next executable slice.**
+Status: **E5.3 is complete; E5.4 operations diagnostics and runbook is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

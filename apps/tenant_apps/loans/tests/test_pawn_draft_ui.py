@@ -18,6 +18,10 @@ from apps.tenant_apps.loans.models import (
     LoanNumberSequence,
     LoanSeries,
     PawnLoan,
+    PawnLoanAccountingEvent,
+    PawnLoanAccountingOutbox,
+    PawnLoanRelease,
+    PawnLoanReleaseItem,
 )
 from apps.tenant_apps.party.models import Party
 
@@ -97,6 +101,9 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(detail, loan.loan_number)
         self.assertContains(detail, "Recommended next step")
         self.assertContains(detail, "Approve loan")
+        self.assertNotContains(detail, "Loan ticket PDF")
+        ticket = self.client.get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]))
+        self.assertEqual(ticket.status_code, 409)
 
         payload = self._payload(license, series)
         payload["principal_amount"] = "12500.00"
@@ -140,6 +147,79 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(response, "Releases")
         self.assertContains(response, "Collateral custody")
         self.assertContains(response, "Posting health")
+
+    def test_essential_pdf_routes_use_workspace_scoped_immutable_sources(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
+        repayment = PawnLoanAccountingEvent.objects.create(
+            loan=loan,
+            event_kind="REPAYMENT",
+            effective_date=date(2026, 8, 3),
+            payload={
+                "values": {
+                    "principal": "450",
+                    "interest": "50",
+                    "overdue_interest": "20",
+                    "current_interest": "30",
+                    "fees": "0",
+                },
+                "repayment": {"amount_received": "500"},
+            },
+            payload_fingerprint="receipt-fixture",
+            idempotency_key="receipt-fixture",
+            created_by=self.owner,
+        )
+        PawnLoanAccountingOutbox.objects.create(
+            event=repayment,
+            idempotency_key="receipt-fixture",
+            payload=repayment.payload,
+            payload_fingerprint="receipt-fixture",
+            status="POSTED",
+            dea_voucher_id=101,
+            dea_journal_entry_id=102,
+        )
+        release_event = PawnLoanAccountingEvent.objects.create(
+            loan=loan,
+            event_kind="RELEASE_RECEIPT",
+            effective_date=date(2026, 8, 3),
+            payload={"values": {"principal": "10000", "interest": "0", "fees": "0"}},
+            payload_fingerprint="release-fixture",
+            idempotency_key="release-fixture",
+            created_by=self.owner,
+        )
+        release = PawnLoanRelease.objects.create(
+            workspace=self.tenant,
+            loan=loan,
+            release_number="RL-A-00001",
+            request_key="release-document-fixture",
+            effective_date=date(2026, 8, 3),
+            is_full_release=True,
+            settlement_amount=Decimal("10000"),
+            principal_amount=Decimal("10000"),
+            interest_amount=Decimal("0"),
+            fee_amount=Decimal("0"),
+            accounting_event=release_event,
+            created_by=self.owner,
+        )
+        PawnLoanReleaseItem.objects.create(
+            release=release,
+            collateral_item=loan.collateral_items.get(),
+            valuation_snapshot={"valuation_amount": "50000"},
+        )
+
+        routes = (
+            reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]),
+            reverse("loans:pawn_repayment_receipt_pdf", args=[loan.pk, repayment.pk]),
+            reverse("loans:pawn_release_memo_pdf", args=[release.pk]),
+        )
+        for url in routes:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response["Content-Type"], "application/pdf")
+            self.assertTrue(response.content.startswith(b"%PDF"))
+            self.assertTrue(response["X-Rokkad-Verification-ID"].startswith("ROKKAD|"))
 
     def test_workspace_member_can_use_internal_draft_ui_but_not_setup(self):
         User = get_user_model()
