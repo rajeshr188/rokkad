@@ -301,7 +301,7 @@ duplicate DEA effects; failure remains observable and retryable.
 Acceptance: every payload has source identity, effective date, economic values,
 fingerprint, and idempotency key; direct DEA model/posting imports are guarded.
 
-#### E3.3 Add Accounting Readiness Selector
+#### E3.3 Add Accounting Readiness Selector — Completed 2026-08-03
 
 - Check open period, funding cash/bank account, borrower receivable mapping,
   interest-income mapping, and applicable fee mappings.
@@ -535,7 +535,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E3.2 complete; E3.3 is the next executable slice.**
+Status: **E3.3 complete; E3.4 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

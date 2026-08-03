@@ -15,6 +15,10 @@ from apps.tenant_apps.dea.facades.journals import (
     post_interest_accrual_batch,
     post_journal_entry_voucher,
 )
+from apps.tenant_apps.dea.facades.loan_readiness import (
+    LoanPostingPrerequisites,
+    get_loan_posting_prerequisites,
+)
 from apps.tenant_apps.dea.facades.payments import (
     create_and_post_payment,
     find_payment_by_marker,
@@ -32,11 +36,13 @@ from apps.tenant_apps.dea.facades.reads import (
 
 __all__ = [
     "Balance",
+    "LoanPostingPrerequisites",
     "create_and_post_payment",
     "ensure_customer_account",
     "find_payment_by_marker",
     "get_account_transactions_for_journal_entries",
     "get_ledger_transactions_for_journal_entries",
+    "get_loan_posting_prerequisites",
     "get_loan_journal_entries",
     "has_other_posted_payments",
     "post_interest_accrual_batch",
