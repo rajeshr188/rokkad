@@ -82,6 +82,13 @@ class PostingState(StringEnum):
     REVERSED = "REVERSED"
 
 
+class LoanOutboxStatus(StringEnum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    POSTED = "POSTED"
+    FAILED = "FAILED"
+
+
 class ReversalType(StringEnum):
     DISBURSAL = "DISBURSAL"
     REPAYMENT = "REPAYMENT"

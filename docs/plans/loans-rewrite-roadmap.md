@@ -281,7 +281,7 @@ production navigation changes.
 
 ### Phase 3: DEA Delivery And Financial Servicing
 
-#### E3.1 Add Durable Accounting Outbox
+#### E3.1 Add Durable Accounting Outbox — Completed 2026-07-30
 
 - Add a loan accounting-event source record and outbox delivery record with
   deterministic idempotency key, payload fingerprint, attempts, status, error,
@@ -535,7 +535,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **Phase 2 complete; E3.1 is the next executable slice.**
+Status: **E3.1 complete; E3.2 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

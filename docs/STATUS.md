@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-07-18
+updated: 2026-07-30
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -84,6 +84,7 @@ Rokkad is moving toward a layered architecture:
 
 ## Recently Stabilized
 
+- Loans rewrite E3.1 is complete: tenant models now persist atomic PawnLoan accounting-event source intent and durable delivery outbox rows with deterministic idempotency keys, canonical payload fingerprints, attempts, status, errors, delivery timestamps, and DEA reference IDs. Delivery is attempted only after commit through an injected adapter seam; failures remain observable and Owner/Admin-only retry is exposed without creating DEA posting rules prematurely.
 - Loans rewrite E2.7 and the Phase 2 gate are complete: row-locked services enforce approve, reopen, cancel, and unavailable-license transfer transitions. Approval creates versioned append-only snapshots of borrower/setup/economics/collateral with deterministic fingerprints; reopen and cancel require audited reasons, replacement setup consumes a new regulatory number, and internal UI actions introduce no accounting or production navigation behavior.
 - Loans rewrite E2.6 is complete: feature-hidden `/loans/internal/` screens provide workspace-member list, create, edit, and detail access for new-app PawnLoan drafts. Readiness blockers direct users to Party or Owner/Admin loan setup, all writes remain service-owned and draft-only, and no primary navigation entry displaces Girvi.
 - Loans rewrite E2.5 is complete: service commands create and edit PawnLoan drafts atomically from active tenant Party IDs, matching license/series setup, validated economics, and validated collateral inputs. Official numbering allocates inside the creation transaction, persistence failures roll the counter back, and durable `LoanChangeLog` rows capture creation plus before/after draft edits.

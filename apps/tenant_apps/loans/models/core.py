@@ -12,11 +12,13 @@ from apps.tenant_apps.loans.domain import (
     CollateralMetal,
     DisbursalPolicySnapshot,
     InterestMethod,
+    LoanOutboxStatus,
     LoanDocumentKind,
     PartialMonthMethod,
     PawnLoanEventKind,
     PawnLoanState,
     RoundingMethod,
+    TransactionKind,
     ValuationMethod,
 )
 
@@ -533,3 +535,72 @@ class PawnLoanApprovalSnapshot(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Approval snapshots cannot be deleted.")
+
+
+class PawnLoanAccountingEvent(models.Model):
+    loan = models.ForeignKey(
+        PawnLoan,
+        on_delete=models.PROTECT,
+        related_name="accounting_events",
+    )
+    event_kind = models.CharField(
+        max_length=32,
+        choices=enum_choices(TransactionKind),
+    )
+    effective_date = models.DateField(db_index=True)
+    payload = models.JSONField()
+    payload_fingerprint = models.CharField(max_length=64)
+    idempotency_key = models.CharField(max_length=180, unique=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_accounting_events",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("loan_id", "created_at", "id")
+        indexes = [
+            models.Index(
+                fields=("loan", "event_kind", "effective_date"),
+                name="loans_acct_event_lookup_idx",
+            ),
+        ]
+
+
+class PawnLoanAccountingOutbox(models.Model):
+    event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="outbox",
+    )
+    idempotency_key = models.CharField(max_length=180, unique=True)
+    payload = models.JSONField()
+    payload_fingerprint = models.CharField(max_length=64)
+    contract_version = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(
+        max_length=16,
+        choices=enum_choices(LoanOutboxStatus),
+        default=LoanOutboxStatus.PENDING.value,
+        db_index=True,
+    )
+    attempt_count = models.PositiveIntegerField(default=0)
+    available_at = models.DateTimeField(default=timezone.now, db_index=True)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True, default="")
+    dea_voucher_id = models.PositiveBigIntegerField(null=True, blank=True)
+    dea_journal_entry_id = models.PositiveBigIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("id",)
+        indexes = [
+            models.Index(
+                fields=("status", "available_at"),
+                name="loans_outbox_due_idx",
+            ),
+        ]

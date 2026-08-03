@@ -13,6 +13,7 @@ urlpatterns = [
     path("internal/<int:pk>/reopen/", views.pawn_loan_reopen, name="pawn_loan_reopen"),
     path("internal/<int:pk>/cancel/", views.pawn_loan_cancel, name="pawn_loan_cancel"),
     path("internal/<int:pk>/transfer-setup/", views.pawn_loan_transfer_setup, name="pawn_loan_transfer_setup"),
+    path("internal/outbox/<int:pk>/retry/", views.pawn_outbox_retry, name="pawn_outbox_retry"),
     path("setup/", views.license_list, name="license_list"),
     path("setup/licenses/create/", views.license_create, name="license_create"),
     path("setup/licenses/<int:pk>/", views.license_detail, name="license_detail"),

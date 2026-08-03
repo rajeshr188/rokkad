@@ -35,6 +35,13 @@ from .pawn_lifecycle import (
     reopen_pawn_loan,
     transfer_expired_draft_setup,
 )
+from .accounting_outbox import (
+    DeliveryReceipt,
+    LoanAccountingOutboxError,
+    deliver_outbox_event,
+    record_loan_accounting_event,
+    retry_failed_outbox_event,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -65,4 +72,9 @@ __all__ = (
     "cancel_pawn_loan",
     "reopen_pawn_loan",
     "transfer_expired_draft_setup",
+    "DeliveryReceipt",
+    "LoanAccountingOutboxError",
+    "deliver_outbox_event",
+    "record_loan_accounting_event",
+    "retry_failed_outbox_event",
 )

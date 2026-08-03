@@ -28,6 +28,8 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "LoanSeries",
                 "PawnCollateralItem",
                 "PawnLoan",
+                "PawnLoanAccountingEvent",
+                "PawnLoanAccountingOutbox",
                 "PawnLoanApprovalSnapshot",
             },
         )

@@ -8,6 +8,8 @@ from .core import (
     LoanSeries,
     PawnCollateralItem,
     PawnLoan,
+    PawnLoanAccountingEvent,
+    PawnLoanAccountingOutbox,
     PawnLoanApprovalSnapshot,
     current_tenant_workspace_id,
 )
@@ -20,6 +22,8 @@ __all__ = [
     "LoanSeries",
     "PawnCollateralItem",
     "PawnLoan",
+    "PawnLoanAccountingEvent",
+    "PawnLoanAccountingOutbox",
     "PawnLoanApprovalSnapshot",
     "current_tenant_workspace_id",
 ]

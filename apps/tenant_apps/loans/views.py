@@ -15,7 +15,12 @@ from apps.tenant_apps.loans.forms import (
     PawnSetupTransferForm,
     PawnTransitionReasonForm,
 )
-from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnLoan
+from apps.tenant_apps.loans.models import (
+    LoanLicense,
+    LoanSeries,
+    PawnLoan,
+    PawnLoanAccountingOutbox,
+)
 from apps.tenant_apps.loans.services import (
     LicenseSeriesError,
     NumberAllocationError,
@@ -39,6 +44,8 @@ from apps.tenant_apps.loans.services import (
     cancel_pawn_loan,
     reopen_pawn_loan,
     transfer_expired_draft_setup,
+    LoanAccountingOutboxError,
+    retry_failed_outbox_event,
 )
 
 
@@ -150,6 +157,22 @@ def pawn_loan_transfer_setup(request, pk):
             messages.success(request, "Draft moved to active license setup and requires approval again.")
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return render(request, "loans/pawn/transition_form.html", {"loan": loan, "form": form, "action_label": "Transfer setup"})
+
+
+@loans_setup_required
+@require_POST
+def pawn_outbox_retry(request, pk):
+    outbox = get_object_or_404(
+        PawnLoanAccountingOutbox.objects.select_related("event__loan"),
+        pk=pk,
+        event__loan__workspace=request.loans_workspace,
+    )
+    try:
+        retry_failed_outbox_event(outbox.pk)
+        messages.success(request, f"Accounting outbox event #{outbox.pk} queued for retry.")
+    except LoanAccountingOutboxError as exc:
+        messages.error(request, str(exc))
+    return redirect("loans:pawn_loan_detail", pk=outbox.event.loan_id)
 
 
 @loans_setup_required
