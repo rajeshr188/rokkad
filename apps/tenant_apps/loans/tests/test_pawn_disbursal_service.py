@@ -48,6 +48,7 @@ from apps.tenant_apps.loans.services import (
     deliver_outbox_event,
     disburse_pawn_loan,
 )
+from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
 from apps.tenant_apps.party.models import Party
 
 
@@ -245,6 +246,14 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(account_txn.ledgerno.name, "BORROWER_LOAN_CTRL")
         self.assertEqual(account_txn.XactTypeCode_id, "Dr")
         self.assertTrue(journal_entry.validate_balanced()[0])
+        balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertEqual(balance.principal_outstanding, Decimal("50000.00"))
+        self.assertEqual(balance.total_due, Decimal("50000.00"))
+        self.assertTrue(balance.posting_ready)
+        self.assertFalse(balance.closure_ready)
 
         repeated = deliver_outbox_event(result.outbox.pk)
         self.assertEqual(repeated.attempt_count, 1)

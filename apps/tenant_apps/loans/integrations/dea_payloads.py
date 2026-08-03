@@ -26,6 +26,7 @@ class PawnLoanDeaPayload:
     values: dict[str, Decimal]
     source_event_id: int | None = None
     reversal_of_event_id: int | None = None
+    reversal_of_event_kind: TransactionKind | None = None
     reversal_reason: str = ""
     currency: str = "INR"
     contract_version: int = 1
@@ -41,8 +42,14 @@ class PawnLoanDeaPayload:
             if not name or Decimal(str(amount)) < 0:
                 raise LoanDeaPayloadError("Economic values must be named and non-negative.")
         if self.event_kind == TransactionKind.REVERSAL:
-            if not self.reversal_of_event_id or not self.reversal_reason.strip():
-                raise LoanDeaPayloadError("Reversal requires original event identity and reason.")
+            if (
+                not self.reversal_of_event_id
+                or not self.reversal_of_event_kind
+                or not self.reversal_reason.strip()
+            ):
+                raise LoanDeaPayloadError(
+                    "Reversal requires original event identity, kind, and reason."
+                )
 
     @property
     def source_identity(self):
@@ -81,6 +88,7 @@ class PawnLoanDeaPayload:
             },
             "reversal": {
                 "original_event_id": self.reversal_of_event_id,
+                "original_event_kind": self.reversal_of_event_kind.value,
                 "reason": self.reversal_reason,
             }
             if self.event_kind == TransactionKind.REVERSAL
@@ -139,6 +147,7 @@ def reversal_payload(
         values,
         source_event_id,
         reversal_of_event_id=original_event_id,
+        reversal_of_event_kind=original_kind,
         reversal_reason=reason,
     )
 

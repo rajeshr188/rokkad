@@ -323,7 +323,7 @@ with precise blockers.
 Acceptance: disbursal is once-only; expired-license and readiness failures are
 blocked; retry is idempotent; accounting and operational state reconcile.
 
-#### E3.5 Implement Balance And Settlement Selectors
+#### E3.5 Implement Balance And Settlement Selectors — Completed 2026-08-03
 
 - Centralize principal, fees, paid/unpaid interest, total due, overdue, closure
   readiness, and posting readiness.
@@ -538,7 +538,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E3.4 complete; E3.5 is the next executable slice.**
+Status: **E3.5 complete; E3.6 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

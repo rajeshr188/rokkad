@@ -95,6 +95,10 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                 payload.idempotency_key,
                 f"loans:dea:{self.loan.pk}:{payload.event_kind.value}:{payload.fingerprint}",
             )
+        self.assertEqual(
+            payloads[-1].to_dict()["reversal"]["original_event_kind"],
+            TransactionKind.RELEASE_RECEIPT.value,
+        )
 
     def test_fingerprint_and_idempotency_key_change_with_economic_values(self):
         first = disbursal_payload(
