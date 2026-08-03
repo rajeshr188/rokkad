@@ -111,6 +111,8 @@ def repayment_payload(
     fee_amount=Decimal("0"),
     overdue_interest_amount=Decimal("0"),
     current_interest_amount=Decimal("0"),
+    original_principal_amount=None,
+    capitalized_interest_principal_amount=Decimal("0"),
     source_event_id=None,
 ):
     return _payload(
@@ -119,6 +121,12 @@ def repayment_payload(
         effective_date,
         {
             "principal": principal_amount,
+            "original_principal": (
+                principal_amount
+                if original_principal_amount is None
+                else original_principal_amount
+            ),
+            "capitalized_interest_principal": capitalized_interest_principal_amount,
             "interest": interest_amount,
             "overdue_interest": overdue_interest_amount,
             "current_interest": current_interest_amount,

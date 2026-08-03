@@ -24,6 +24,14 @@ class PawnLoanRepaymentRule(BasePostingRule):
         payload = event.payload or {}
         values = payload.get("values", {})
         principal = _amount(values, "principal")
+        capitalized_interest_principal = _amount(
+            values,
+            "capitalized_interest_principal",
+        )
+        if capitalized_interest_principal > principal:
+            raise ValidationError(
+                "Capitalized-interest principal cannot exceed total principal."
+            )
         interest = _amount(values, "interest")
         fees = _amount(values, "fees")
         total = principal + interest + fees
@@ -43,14 +51,30 @@ class PawnLoanRepaymentRule(BasePostingRule):
         currency = payload.get("currency") or "INR"
         lines = []
         if principal:
-            lines.append(
-                _receipt_line(
-                    cash_id,
-                    _ledger_id("LOAN_PRINCIPAL_CTRL"),
-                    principal,
-                    currency,
-                )
+            recognition = (payload.get("repayment") or {}).get(
+                "accounting_recognition", "CASH"
             )
+            principal_control_amount = principal
+            if recognition == "CASH":
+                principal_control_amount -= capitalized_interest_principal
+            if principal_control_amount:
+                lines.append(
+                    _receipt_line(
+                        cash_id,
+                        _ledger_id("LOAN_PRINCIPAL_CTRL"),
+                        principal_control_amount,
+                        currency,
+                    )
+                )
+            if recognition == "CASH" and capitalized_interest_principal:
+                lines.append(
+                    _receipt_line(
+                        cash_id,
+                        _ledger_id("INTEREST_INCOME"),
+                        capitalized_interest_principal,
+                        currency,
+                    )
+                )
         if interest:
             recognition = (payload.get("repayment") or {}).get(
                 "accounting_recognition", "CASH"
@@ -69,14 +93,22 @@ class PawnLoanRepaymentRule(BasePostingRule):
             )
         account_lines = []
         if principal:
+            account_principal = principal
+            if (payload.get("repayment") or {}).get(
+                "accounting_recognition", "CASH"
+            ) == "CASH":
+                account_principal -= capitalized_interest_principal
+        else:
+            account_principal = Decimal("0")
+        if account_principal:
             account_lines.append(
                 AccountLine(
                     ledger_id=_ledger_id("BORROWER_LOAN_CTRL"),
                     account_id=borrower_account.pk,
                     side="Cr",
                     currency=currency,
-                    amount=principal,
-                    amount_base=principal,
+                    amount=account_principal,
+                    amount_base=account_principal,
                     xact_type_ext="RP",
                 )
             )

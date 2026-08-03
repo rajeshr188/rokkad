@@ -604,3 +604,70 @@ class PawnLoanAccountingOutbox(models.Model):
                 name="loans_outbox_due_idx",
             ),
         ]
+
+
+class PawnLoanInterestAccrual(models.Model):
+    """Immutable, currency-rounded monthly interest recognition row."""
+
+    loan = models.ForeignKey(
+        PawnLoan,
+        on_delete=models.PROTECT,
+        related_name="interest_accruals",
+    )
+    period_number = models.PositiveIntegerField()
+    period_start = models.DateField()
+    period_end = models.DateField(db_index=True)
+    period_fraction = models.DecimalField(max_digits=8, decimal_places=4)
+    calculation_base = models.DecimalField(max_digits=30, decimal_places=12)
+    unrounded_interest = models.DecimalField(max_digits=30, decimal_places=12)
+    recognized_interest = models.DecimalField(max_digits=18, decimal_places=4)
+    accounting_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="interest_accrual",
+    )
+    finalized_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_interest_accruals",
+    )
+    finalized_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("loan_id", "period_number")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("loan", "period_number"),
+                name="loans_accrual_loan_period_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(period_number__gt=0),
+                name="loans_accrual_period_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(period_end__gte=F("period_start")),
+                name="loans_accrual_dates_ordered",
+            ),
+            models.CheckConstraint(
+                condition=Q(period_fraction__gt=0) & Q(period_fraction__lte=1),
+                name="loans_accrual_fraction_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(calculation_base__gte=0)
+                & Q(unrounded_interest__gte=0)
+                & Q(recognized_interest__gte=0),
+                name="loans_accrual_amounts_nonnegative",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("Finalized PawnLoan interest accruals are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Finalized PawnLoan interest accruals cannot be deleted.")

@@ -341,7 +341,7 @@ simple/compound and cash/accrual cases are covered.
 Acceptance: overpayment fails or is explicitly represented; duplicate submit is
 idempotent; pending posting blocks dependent events; balances reconcile.
 
-#### E3.7 Implement Accrual And Capitalization
+#### E3.7 Implement Accrual And Capitalization — Completed 2026-08-03
 
 - Preview and finalize high-precision monthly periods with rounded accrual rows.
 - Under accrual policy, enqueue DEA accrual posting; under cash policy, retain
@@ -538,7 +538,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E3.6 complete; E3.7 is the next executable slice.**
+Status: **E3.7 complete; E3.8 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

@@ -39,7 +39,11 @@ class PawnLoanBalance:
     principal_disbursed: Decimal
     principal_capitalized: Decimal
     principal_paid: Decimal
+    original_principal_paid: Decimal
+    capitalized_interest_principal_paid: Decimal
     principal_outstanding: Decimal
+    original_principal_outstanding: Decimal
+    capitalized_interest_principal_outstanding: Decimal
     interest_accrued: Decimal
     interest_capitalized: Decimal
     interest_paid: Decimal
@@ -98,6 +102,8 @@ def calculate_pawn_loan_balance(
         "principal_disbursed": ZERO,
         "principal_capitalized": ZERO,
         "principal_paid": ZERO,
+        "original_principal_paid": ZERO,
+        "capitalized_interest_principal_paid": ZERO,
         "interest_accrued": ZERO,
         "interest_capitalized": ZERO,
         "interest_paid": ZERO,
@@ -119,6 +125,13 @@ def calculate_pawn_loan_balance(
         totals["principal_disbursed"]
         + totals["principal_capitalized"]
         - totals["principal_paid"]
+    )
+    original_principal_outstanding = (
+        totals["principal_disbursed"] - totals["original_principal_paid"]
+    )
+    capitalized_interest_principal_outstanding = (
+        totals["principal_capitalized"]
+        - totals["capitalized_interest_principal_paid"]
     )
     interest_outstanding = (
         totals["interest_accrued"]
@@ -153,7 +166,17 @@ def calculate_pawn_loan_balance(
         principal_disbursed=_money(totals["principal_disbursed"], quantum),
         principal_capitalized=_money(totals["principal_capitalized"], quantum),
         principal_paid=_money(totals["principal_paid"], quantum),
+        original_principal_paid=_money(totals["original_principal_paid"], quantum),
+        capitalized_interest_principal_paid=_money(
+            totals["capitalized_interest_principal_paid"], quantum
+        ),
         principal_outstanding=_money(principal_outstanding, quantum),
+        original_principal_outstanding=_money(
+            original_principal_outstanding, quantum
+        ),
+        capitalized_interest_principal_outstanding=_money(
+            capitalized_interest_principal_outstanding, quantum
+        ),
         interest_accrued=_money(totals["interest_accrued"], quantum),
         interest_capitalized=_money(totals["interest_capitalized"], quantum),
         interest_paid=_money(totals["interest_paid"], quantum),
@@ -197,7 +220,25 @@ def _apply_event(totals, event):
         totals["principal_disbursed"] += principal
         totals["fees_assessed"] += fees_assessed
     elif kind in (TransactionKind.REPAYMENT, TransactionKind.RELEASE_RECEIPT):
+        capitalized_component = (
+            _amount(values, "capitalized_interest_principal") * multiplier
+        )
+        if "capitalized_interest_principal" not in values:
+            if multiplier < 0:
+                capitalized_component = ZERO
+            else:
+                available_capitalized = (
+                    totals["principal_capitalized"]
+                    - totals["capitalized_interest_principal_paid"]
+                )
+                capitalized_component = min(principal, available_capitalized)
+        if multiplier > 0 and capitalized_component > principal:
+            raise PawnLoanBalanceSelectorError(
+                "Principal payment capitalized-interest split exceeds principal."
+            )
         totals["principal_paid"] += principal
+        totals["capitalized_interest_principal_paid"] += capitalized_component
+        totals["original_principal_paid"] += principal - capitalized_component
         totals["interest_paid"] += interest
         totals["fees_paid"] += fees
     elif kind == TransactionKind.INTEREST_ACCRUAL:
@@ -244,6 +285,18 @@ def _validate_nonnegative_totals(totals):
             raise PawnLoanBalanceSelectorError(
                 f"PawnLoan event history makes {label} negative."
             )
+    if totals["original_principal_paid"] > totals["principal_disbursed"]:
+        raise PawnLoanBalanceSelectorError(
+            "PawnLoan event history over-settles principal (original component)."
+        )
+    if (
+        totals["capitalized_interest_principal_paid"]
+        > totals["principal_capitalized"]
+    ):
+        raise PawnLoanBalanceSelectorError(
+            "PawnLoan event history over-settles principal "
+            "(capitalized-interest component)."
+        )
 
 
 def _optional_policy_snapshot(loan):

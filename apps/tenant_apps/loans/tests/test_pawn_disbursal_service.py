@@ -10,13 +10,18 @@ from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import (
+    AccountingRecognition,
     CollateralMetal,
     CollateralCustodyState,
+    InterestMethod,
     LoanDocumentKind,
     LoanOutboxStatus,
     PawnLoanEventKind,
     PawnLoanState,
+    PartialMonthMethod,
     TransactionKind,
+    WorkspacePolicyDefaults,
+    resolve_policy,
 )
 from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.facade import resolve_party_account
@@ -38,17 +43,22 @@ from apps.tenant_apps.loans.models import (
     LoanPolicySnapshot,
     LoanSeries,
     PawnLoanAccountingEvent,
+    PawnLoanInterestAccrual,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
     CreatePawnDraftCommand,
     PawnDisbursalError,
     PawnRepaymentError,
+    PawnInterestError,
     approve_pawn_loan,
     assert_pawn_loan_financial_actions_allowed,
     create_pawn_draft,
     deliver_outbox_event,
     disburse_pawn_loan,
+    capitalize_pawn_loan_interest,
+    finalize_pawn_loan_accrual,
+    preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
@@ -412,6 +422,242 @@ class PawnDisbursalServiceTests(TenantTestCase):
                     amount=Decimal("50.00"),
                     request_key="dependent-repayment",
                 )
+
+    def test_cash_accrual_finalizes_full_period_and_previews_partial_slab(self):
+        policy = resolve_policy(
+            workspace_defaults=WorkspacePolicyDefaults(
+                partial_month_method=PartialMonthMethod.SLAB,
+                partial_month_cutoff_days=15,
+                partial_month_lower_fraction=Decimal("0.5"),
+            )
+        )
+        self._activate_loan(policy)
+
+        previews = preview_pawn_loan_accruals(
+            self.loan.pk,
+            as_of_date=date(2026, 9, 10),
+        )
+        self.assertEqual([item.period_number for item in previews], [1, 2])
+        self.assertEqual(previews[0].recognized_interest, Decimal("1000.00"))
+        self.assertEqual(previews[1].period_fraction, Decimal("0.5"))
+        self.assertEqual(previews[1].recognized_interest, Decimal("500.00"))
+        self.assertTrue(previews[1].is_partial)
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+            return_value=date(2026, 9, 10),
+        ):
+            with self.assertRaises(PawnInterestError):
+                finalize_pawn_loan_accrual(self.loan.pk, period_number=2)
+            with self.captureOnCommitCallbacks(execute=True):
+                result = finalize_pawn_loan_accrual(
+                    self.loan.pk,
+                    period_number=1,
+                    actor=self.actor,
+                )
+        result.outbox.refresh_from_db()
+
+        self.assertEqual(result.outbox.status, LoanOutboxStatus.POSTED.value)
+        self.assertIsNone(result.outbox.dea_voucher_id)
+        self.assertEqual(result.accrual.unrounded_interest, Decimal("1000"))
+        self.assertEqual(result.accrual.recognized_interest, Decimal("1000.00"))
+        self.assertEqual(PawnLoanInterestAccrual.objects.filter(loan=self.loan).count(), 1)
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 9, 10))
+        self.assertEqual(balance.interest_outstanding, Decimal("1000.00"))
+
+        repeated = finalize_pawn_loan_accrual(
+            self.loan.pk,
+            period_number=1,
+        )
+        self.assertTrue(repeated.already_finalized)
+        self.assertEqual(repeated.accrual.pk, result.accrual.pk)
+
+    def test_accrual_policy_posts_receivable_income_and_capitalization(self):
+        policy = resolve_policy(
+            workspace_defaults=WorkspacePolicyDefaults(
+                interest_method=InterestMethod.COMPOUND,
+                capitalization_interval_periods=1,
+                accounting_recognition=AccountingRecognition.ACCRUAL,
+            )
+        )
+        self._activate_loan(policy)
+        self._open_period(date(2026, 9, 1), date(2026, 9, 30), "September 2026")
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+            return_value=date(2026, 9, 2),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                accrual = finalize_pawn_loan_accrual(
+                    self.loan.pk,
+                    period_number=1,
+                    actor=self.actor,
+                )
+        accrual.outbox.refresh_from_db()
+        self.assertEqual(accrual.outbox.status, LoanOutboxStatus.POSTED.value)
+        accrual_voucher = Voucher.objects.get(pk=accrual.outbox.dea_voucher_id)
+        accrual_txn = LedgerTransaction.objects.get(
+            journal_entry_id=accrual.outbox.dea_journal_entry_id
+        )
+        self.assertEqual(accrual_voucher.voucher_type.name, "PAWN_LOAN_INTEREST_ACCRUAL")
+        self.assertEqual(accrual_txn.ledgerno_dr.name, "INTEREST_RECEIVABLE")
+        self.assertEqual(accrual_txn.ledgerno.name, "INTEREST_INCOME")
+        accrual_account_txn = AccountTransaction.objects.get(
+            journal_entry_id=accrual.outbox.dea_journal_entry_id
+        )
+        self.assertEqual(accrual_account_txn.XactTypeCode_id, "Dr")
+
+        with self.captureOnCommitCallbacks(execute=True):
+            capitalized = capitalize_pawn_loan_interest(
+                self.loan.pk,
+                through_period_number=1,
+                actor=self.actor,
+            )
+        capitalized.outbox.refresh_from_db()
+        self.assertEqual(capitalized.outbox.status, LoanOutboxStatus.POSTED.value)
+        capitalization_voucher = Voucher.objects.get(
+            pk=capitalized.outbox.dea_voucher_id
+        )
+        capitalization_txn = LedgerTransaction.objects.get(
+            journal_entry_id=capitalized.outbox.dea_journal_entry_id
+        )
+        self.assertEqual(
+            capitalization_voucher.voucher_type.name,
+            "PAWN_LOAN_INTEREST_CAPITALIZATION",
+        )
+        self.assertEqual(capitalization_txn.ledgerno_dr.name, "LOAN_PRINCIPAL_CTRL")
+        self.assertEqual(capitalization_txn.ledgerno.name, "INTEREST_RECEIVABLE")
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 9, 2))
+        self.assertEqual(balance.principal_outstanding, Decimal("51000.00"))
+        self.assertEqual(balance.interest_outstanding, Decimal("0.00"))
+
+        repeated = capitalize_pawn_loan_interest(
+            self.loan.pk,
+            through_period_number=1,
+        )
+        self.assertTrue(repeated.already_recorded)
+        self.assertEqual(repeated.accounting_event.pk, capitalized.accounting_event.pk)
+
+    def test_compound_preview_uses_capitalized_principal_for_next_cycle(self):
+        policy = resolve_policy(
+            workspace_defaults=WorkspacePolicyDefaults(
+                interest_method=InterestMethod.COMPOUND,
+                capitalization_interval_periods=2,
+                accounting_recognition=AccountingRecognition.CASH,
+            )
+        )
+        self._activate_loan(policy)
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+            return_value=date(2026, 10, 2),
+        ):
+            with self.assertRaises(PawnInterestError):
+                finalize_pawn_loan_accrual(self.loan.pk, period_number=2)
+
+        for period_number, business_date in (
+            (1, date(2026, 9, 2)),
+            (2, date(2026, 10, 2)),
+        ):
+            with patch(
+                "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+                return_value=business_date,
+            ):
+                with self.captureOnCommitCallbacks(execute=True):
+                    finalized = finalize_pawn_loan_accrual(
+                        self.loan.pk,
+                        period_number=period_number,
+                        actor=self.actor,
+                    )
+            finalized.outbox.refresh_from_db()
+            self.assertEqual(finalized.outbox.status, LoanOutboxStatus.POSTED.value)
+
+        self.assertEqual(
+            preview_pawn_loan_accruals(
+                self.loan.pk,
+                as_of_date=date(2026, 11, 2),
+                include_partial=False,
+            ),
+            (),
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            capitalized = capitalize_pawn_loan_interest(
+                self.loan.pk,
+                through_period_number=2,
+                actor=self.actor,
+            )
+        capitalized.outbox.refresh_from_db()
+        self.assertEqual(capitalized.outbox.status, LoanOutboxStatus.POSTED.value)
+        self.assertIsNone(capitalized.outbox.dea_voucher_id)
+
+        previews = preview_pawn_loan_accruals(
+            self.loan.pk,
+            as_of_date=date(2026, 11, 2),
+            include_partial=False,
+        )
+        self.assertEqual(len(previews), 1)
+        self.assertEqual(previews[0].period_number, 3)
+        self.assertEqual(previews[0].calculation_base, Decimal("52000.00"))
+        self.assertEqual(previews[0].recognized_interest, Decimal("1040.00"))
+
+        self._open_period(date(2026, 11, 1), date(2026, 11, 30), "November 2026")
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 11, 2),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                repayment = record_pawn_loan_repayment(
+                    self.loan.pk,
+                    amount=Decimal("1000.00"),
+                    request_key="capitalized-interest-collection",
+                    actor=self.actor,
+                )
+        repayment.outbox.refresh_from_db()
+        repayment_txn = LedgerTransaction.objects.get(
+            journal_entry_id=repayment.outbox.dea_journal_entry_id
+        )
+        self.assertEqual(repayment_txn.ledgerno_dr.name, "CASH")
+        self.assertEqual(repayment_txn.ledgerno.name, "INTEREST_INCOME")
+        self.assertFalse(
+            AccountTransaction.objects.filter(
+                journal_entry_id=repayment.outbox.dea_journal_entry_id
+            ).exists()
+        )
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 11, 2))
+        self.assertEqual(
+            balance.capitalized_interest_principal_outstanding,
+            Decimal("1000.00"),
+        )
+        self.assertEqual(balance.original_principal_outstanding, Decimal("50000.00"))
+
+    def _activate_loan(self, policy=None):
+        self._seed_dea_disbursal_setup()
+        policy_patch = patch(
+            "apps.tenant_apps.loans.services.pawn_disbursal.resolve_policy",
+            return_value=policy,
+        ) if policy else None
+        if policy_patch:
+            policy_patch.start()
+        try:
+            with self.captureOnCommitCallbacks(execute=True):
+                result = disburse_pawn_loan(
+                    self.loan.pk,
+                    effective_date=date(2026, 8, 3),
+                    actor=self.actor,
+                )
+        finally:
+            if policy_patch:
+                policy_patch.stop()
+        result.outbox.refresh_from_db()
+        self.assertEqual(result.outbox.status, LoanOutboxStatus.POSTED.value)
+        return result
+
+    def _open_period(self, start, end, name):
+        AccountingPeriod.objects.get_or_create(
+            start_date=start,
+            end_date=end,
+            defaults={"name": name, "status": "OPEN"},
+        )
 
     def _seed_dea_disbursal_setup(self):
         debit, _ = TransactionType_DE.objects.get_or_create(

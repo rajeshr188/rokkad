@@ -11,6 +11,7 @@ from .core import (
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanApprovalSnapshot,
+    PawnLoanInterestAccrual,
     current_tenant_workspace_id,
 )
 
@@ -25,5 +26,6 @@ __all__ = [
     "PawnLoanAccountingEvent",
     "PawnLoanAccountingOutbox",
     "PawnLoanApprovalSnapshot",
+    "PawnLoanInterestAccrual",
     "current_tenant_workspace_id",
 ]

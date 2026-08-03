@@ -46,6 +46,7 @@ Implementation status:
 - Girvi borrower/lender and DEA sales/purchase invoice posting rules now use explicit role/purpose account resolution.
 - The side-by-side Loans app delivers `PawnLoanAccountingEvent` disbursals through the public DEA facade. DEA's `PAWN_LOAN_DISBURSAL` rule owns the source-linked voucher, open-period enforcement, principal-control/cash journal effect, and borrower loan-receivable attribution; repeated delivery returns the existing posted effect.
 - The side-by-side Loans repayment service persists the current-date allocation and source event before delivery. DEA's `PAWN_LOAN_REPAYMENT` rule owns cash receipt posting to principal control, interest income or interest receivable according to the immutable policy snapshot, fee income, and borrower subledger attribution. Unresolved delivery blocks dependent loan events, and repeated request keys or delivery do not duplicate the accounting effect.
+- PawnLoan monthly accrual rows retain high-precision calculations and store currency-rounded recognized amounts. Under accrual accounting, DEA's `PAWN_LOAN_INTEREST_ACCRUAL` rule debits interest receivable and credits interest income with borrower attribution; explicit capitalization reclassifies interest receivable into principal control. Under cash accounting, accrual and capitalization remain operational-only, and repayment preserves the capitalized-interest component so collection credits interest income instead of principal control.
 
 ## BusinessDoc Classification
 

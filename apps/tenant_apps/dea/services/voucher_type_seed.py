@@ -6,6 +6,8 @@ from apps.tenant_apps.dea.models import VoucherType
 SEEDED_VOUCHER_TYPES = {
     "PAWN_LOAN_DISBURSAL": "PawnLoan principal paid to borrower",
     "PAWN_LOAN_REPAYMENT": "PawnLoan repayment received from borrower",
+    "PAWN_LOAN_INTEREST_ACCRUAL": "PawnLoan interest receivable recognized",
+    "PAWN_LOAN_INTEREST_CAPITALIZATION": "PawnLoan interest capitalized into principal",
     "GIVENLOAN_RECEIPT": "GivenLoan repayment receipt (cash received from borrower)",
     "GIVENLOAN_PAYMENT": "GivenLoan disbursal payment (cash paid to borrower)",
     "TAKENLOAN_RECEIPT": "TakenLoan disbursal receipt (cash received from lender)",

@@ -62,6 +62,16 @@ from .pawn_repayment import (
     allocate_repayment,
     record_pawn_loan_repayment,
 )
+from .pawn_interest import (
+    AccrualFinalizationResult,
+    AccrualPeriodPreview,
+    CapitalizationResult,
+    PawnInterestError,
+    calculate_accrual_interest,
+    capitalize_pawn_loan_interest,
+    finalize_pawn_loan_accrual,
+    preview_pawn_loan_accruals,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -111,4 +121,12 @@ __all__ = (
     "RepaymentAllocation",
     "allocate_repayment",
     "record_pawn_loan_repayment",
+    "AccrualFinalizationResult",
+    "AccrualPeriodPreview",
+    "CapitalizationResult",
+    "PawnInterestError",
+    "calculate_accrual_interest",
+    "capitalize_pawn_loan_interest",
+    "finalize_pawn_loan_accrual",
+    "preview_pawn_loan_accruals",
 )

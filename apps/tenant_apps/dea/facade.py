@@ -22,6 +22,8 @@ from apps.tenant_apps.dea.facades.loan_readiness import (
 from apps.tenant_apps.dea.facades.loan_events import (
     LoanEventPostingReceipt,
     post_pawn_loan_disbursal_event,
+    post_pawn_loan_interest_accrual_event,
+    post_pawn_loan_interest_capitalization_event,
     post_pawn_loan_repayment_event,
 )
 from apps.tenant_apps.dea.facades.payments import (
@@ -53,6 +55,8 @@ __all__ = [
     "has_other_posted_payments",
     "post_interest_accrual_batch",
     "post_pawn_loan_disbursal_event",
+    "post_pawn_loan_interest_accrual_event",
+    "post_pawn_loan_interest_capitalization_event",
     "post_pawn_loan_repayment_event",
     "post_journal_entry_voucher",
     "post_payment_voucher",

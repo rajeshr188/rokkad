@@ -91,6 +91,11 @@ class PawnLoanBalanceSelectorTests(SimpleTestCase):
 
         self.assertEqual(balance.principal_capitalized, Decimal("600.00"))
         self.assertEqual(balance.principal_outstanding, Decimal("10100.00"))
+        self.assertEqual(balance.original_principal_outstanding, Decimal("10000.00"))
+        self.assertEqual(
+            balance.capitalized_interest_principal_outstanding,
+            Decimal("100.00"),
+        )
         self.assertEqual(balance.interest_capitalized, Decimal("600.00"))
         self.assertEqual(balance.interest_outstanding, Decimal("200.00"))
         self.assertEqual(balance.overdue_interest_outstanding, Decimal("0.00"))

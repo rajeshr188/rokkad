@@ -45,3 +45,35 @@ def post_pawn_loan_repayment_event(source_event, *, actor=None):
     if journal_entry is None:
         raise ValidationError("DEA did not return a journal entry for the repayment.")
     return LoanEventPostingReceipt(voucher.pk, journal_entry.pk)
+
+
+def post_pawn_loan_interest_accrual_event(source_event, *, actor=None):
+    return _post_interest_event(
+        source_event,
+        event_kind="INTEREST_ACCRUAL",
+        voucher_type="PAWN_LOAN_INTEREST_ACCRUAL",
+        actor=actor,
+    )
+
+
+def post_pawn_loan_interest_capitalization_event(source_event, *, actor=None):
+    return _post_interest_event(
+        source_event,
+        event_kind="INTEREST_CAPITALIZATION",
+        voucher_type="PAWN_LOAN_INTEREST_CAPITALIZATION",
+        actor=actor,
+    )
+
+
+def _post_interest_event(source_event, *, event_kind, voucher_type, actor):
+    if getattr(source_event, "event_kind", None) != event_kind:
+        raise ValidationError(f"Only a PawnLoan {event_kind} event is supported here.")
+    voucher, journal_entry = create_and_post_voucher_for_doc(
+        doc=source_event,
+        user=actor or getattr(source_event, "created_by", None),
+        voucher_type_input=voucher_type,
+        engine=DjangoPostingEngine(),
+    )
+    if journal_entry is None:
+        raise ValidationError("DEA did not return a journal entry for the interest event.")
+    return LoanEventPostingReceipt(voucher.pk, journal_entry.pk)

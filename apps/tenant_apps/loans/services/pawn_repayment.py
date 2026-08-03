@@ -106,6 +106,17 @@ def record_pawn_loan_repayment(
         overdue_interest_amount=allocation.overdue_interest,
         current_interest_amount=allocation.current_interest,
         fee_amount=allocation.fees,
+        original_principal_amount=(
+            allocation.principal
+            - min(
+                allocation.principal,
+                balance.capitalized_interest_principal_outstanding,
+            )
+        ),
+        capitalized_interest_principal_amount=min(
+            allocation.principal,
+            balance.capitalized_interest_principal_outstanding,
+        ),
     ).to_dict()
     payload["repayment"] = {
         "request_key": request_key,
