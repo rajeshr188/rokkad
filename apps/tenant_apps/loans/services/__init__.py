@@ -49,6 +49,12 @@ from .accounting_readiness import (
     assess_pawn_loan_accounting_readiness,
     require_pawn_loan_accounting_readiness,
 )
+from .pawn_disbursal import (
+    PawnDisbursalError,
+    PawnDisbursalResult,
+    assert_pawn_loan_financial_actions_allowed,
+    disburse_pawn_loan,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -89,4 +95,8 @@ __all__ = (
     "PawnLoanAccountingReadiness",
     "assess_pawn_loan_accounting_readiness",
     "require_pawn_loan_accounting_readiness",
+    "PawnDisbursalError",
+    "PawnDisbursalResult",
+    "assert_pawn_loan_financial_actions_allowed",
+    "disburse_pawn_loan",
 )

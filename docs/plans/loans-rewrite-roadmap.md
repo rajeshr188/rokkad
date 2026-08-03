@@ -310,7 +310,7 @@ fingerprint, and idempotency key; direct DEA model/posting imports are guarded.
 Acceptance: drafting remains available when incomplete; disbursal fails closed
 with precise blockers.
 
-#### E3.4 Implement Disbursal
+#### E3.4 Implement Disbursal — Completed 2026-08-03
 
 - Add transaction/source records, resolve and persist the policy snapshot, move
   `APPROVED -> ACTIVE`, and enqueue `PAWN_LOAN_DISBURSED` atomically.
@@ -535,7 +535,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E3.3 complete; E3.4 is the next executable slice.**
+Status: **E3.4 complete; E3.5 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA
