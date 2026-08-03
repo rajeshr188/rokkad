@@ -58,6 +58,7 @@ class PawnLoanBalance:
     accounting_recognition: str | None
     is_overdue: bool
     financially_settled: bool
+    collateral_partially_returned: bool
     collateral_return_complete: bool
     closure_ready: bool
     posting_ready: bool
@@ -152,6 +153,13 @@ def calculate_pawn_loan_balance(
     has_disbursal = totals["principal_disbursed"] > ZERO
     financially_settled = has_disbursal and total_due == ZERO
     collateral_items = tuple(collateral_items)
+    returned_item_count = sum(
+        item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value
+        for item in collateral_items
+    )
+    collateral_partially_returned = (
+        0 < returned_item_count < len(collateral_items)
+    )
     collateral_return_complete = bool(collateral_items) and all(
         item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value
         for item in collateral_items
@@ -191,6 +199,7 @@ def calculate_pawn_loan_balance(
         accounting_recognition=getattr(policy_snapshot, "accounting_recognition", None),
         is_overdue=as_of_date > due_date and total_due > ZERO,
         financially_settled=financially_settled,
+        collateral_partially_returned=collateral_partially_returned,
         collateral_return_complete=collateral_return_complete,
         closure_ready=financially_settled and collateral_return_complete,
         posting_ready=not posting_blockers,

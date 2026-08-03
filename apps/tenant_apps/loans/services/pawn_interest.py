@@ -79,13 +79,28 @@ def preview_pawn_loan_accruals(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnInterestError("Only an active PawnLoan can accrue interest.")
     policy = loan.policy_snapshot
-    finalized = set(loan.interest_accruals.values_list("period_number", flat=True))
+    last_finalized = loan.interest_accruals.order_by("-period_number").first()
     capitalized_boundaries = _capitalized_boundaries(loan)
+    if (
+        last_finalized
+        and policy.interest_method == InterestMethod.COMPOUND.value
+        and (
+            last_finalized.period_number
+            % policy.capitalization_interval_periods
+            == 0
+        )
+        and last_finalized.period_number not in capitalized_boundaries
+    ):
+        return ()
     previews = []
-    period_number = 1
+    if last_finalized:
+        period_number = last_finalized.period_number + 1
+        period_start = last_finalized.period_end + timedelta(days=1)
+    else:
+        period_number = 1
+        period_start = loan.loan_date
     while True:
-        period_start = _add_months(loan.loan_date, period_number - 1)
-        exclusive_end = _add_months(loan.loan_date, period_number)
+        exclusive_end = _add_months(period_start, 1)
         completed_end = exclusive_end - timedelta(days=1)
         if completed_end <= as_of_date:
             period_end = completed_end
@@ -98,27 +113,26 @@ def preview_pawn_loan_accruals(
         else:
             break
 
-        if period_number not in finalized:
-            balance = get_pawn_loan_balance(loan.pk, as_of_date=period_start)
-            base = balance.principal_outstanding
-            unrounded, recognized = calculate_accrual_interest(
-                calculation_base=base,
-                monthly_interest_rate=loan.monthly_interest_rate,
+        balance = get_pawn_loan_balance(loan.pk, as_of_date=period_start)
+        base = balance.principal_outstanding
+        unrounded, recognized = calculate_accrual_interest(
+            calculation_base=base,
+            monthly_interest_rate=loan.monthly_interest_rate,
+            period_fraction=fraction,
+            currency_quantum=policy.currency_quantum,
+        )
+        previews.append(
+            AccrualPeriodPreview(
+                period_number=period_number,
+                period_start=period_start,
+                period_end=period_end,
                 period_fraction=fraction,
-                currency_quantum=policy.currency_quantum,
+                calculation_base=base,
+                unrounded_interest=unrounded,
+                recognized_interest=recognized,
+                is_partial=is_partial,
             )
-            previews.append(
-                AccrualPeriodPreview(
-                    period_number=period_number,
-                    period_start=period_start,
-                    period_end=period_end,
-                    period_fraction=fraction,
-                    calculation_base=base,
-                    unrounded_interest=unrounded,
-                    recognized_interest=recognized,
-                    is_partial=is_partial,
-                )
-            )
+        )
 
         if is_partial:
             break
@@ -129,6 +143,7 @@ def preview_pawn_loan_accruals(
         ):
             break
         period_number += 1
+        period_start = exclusive_end
     return tuple(previews)
 
 

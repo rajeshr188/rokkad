@@ -385,7 +385,7 @@ test-covered.
 Acceptance: release fails closed on settlement, accrual, custody, or posting
 preconditions; zero balance alone never closes a loan.
 
-#### E4.3 Implement Partial Release
+#### E4.3 Implement Partial Release — Completed 2026-08-03
 
 - Release selected items after the calculated minimum settlement succeeds.
 - Keep the loan active and derive partial-release state from custody.
@@ -538,7 +538,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E4.2 complete; E4.3 is the next executable slice.**
+Status: **E4.3 complete; E4.4 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

@@ -17,6 +17,9 @@ from apps.tenant_apps.loans.integrations import (
     reversal_payload,
     resolve_borrower_account,
 )
+from apps.tenant_apps.loans.integrations.dea_delivery import (
+    deliver_loan_accounting_event,
+)
 
 
 class PawnLoanDeaPayloadContractTests(SimpleTestCase):
@@ -165,3 +168,21 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
         self.assertNotIn("apps.tenant_apps.dea.models", source)
         self.assertNotIn("apps.tenant_apps.dea.posting", source)
         self.assertNotIn("apps.tenant_apps.dea.services", source)
+
+    def test_zero_settlement_release_is_operational_only(self):
+        event = SimpleNamespace(
+            event_kind=TransactionKind.RELEASE_RECEIPT.value,
+            payload={
+                "values": {"principal": "0", "interest": "0", "fees": "0"}
+            },
+            created_by=None,
+        )
+        with patch(
+            "apps.tenant_apps.loans.integrations.dea_delivery.dea_facade."
+            "post_pawn_loan_release_event"
+        ) as post:
+            receipt = deliver_loan_accounting_event(event)
+
+        self.assertIsNone(receipt.dea_voucher_id)
+        self.assertIsNone(receipt.dea_journal_entry_id)
+        post.assert_not_called()

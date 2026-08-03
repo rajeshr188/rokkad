@@ -42,6 +42,7 @@ from apps.tenant_apps.loans.models import (
     LoanNumberSequence,
     LoanPolicySnapshot,
     LoanSeries,
+    PawnCollateralItem,
     PawnLoanAccountingEvent,
     PawnCollateralCustodyEvent,
     PawnLoanInterestAccrual,
@@ -65,6 +66,7 @@ from apps.tenant_apps.loans.services import (
     reverse_pawn_loan_event,
     record_pawn_loan_repayment,
     release_pawn_loan_in_full,
+    release_pawn_loan_partially,
     PawnReleaseError,
 )
 from apps.tenant_apps.loans.selectors import (
@@ -957,6 +959,130 @@ class PawnDisbursalServiceTests(TenantTestCase):
             self.loan.collateral_items.get().custody_state,
             CollateralCustodyState.IN_VAULT.value,
         )
+
+    def test_partial_release_enforces_minimum_and_retained_ltv(self):
+        second_item = PawnCollateralItem.objects.create(
+            loan=self.loan,
+            description="Second gold item",
+            metal=CollateralMetal.GOLD.value,
+            gross_weight=Decimal("10"),
+            net_weight=Decimal("9"),
+            purity_percentage=Decimal("91.6"),
+            latest_appraised_value=Decimal("50000.00"),
+        )
+        self._activate_loan()
+        source = RateSource.objects.create(name="Partial", location="Market")
+        Rate.objects.create(
+            metal=Rate.Metal.GOLD,
+            currency=Rate.Currency.INR,
+            purity=Rate.Purity.K24,
+            buying_rate=Decimal("6000.00"),
+            selling_rate=Decimal("6100.00"),
+            rate_source=source,
+        )
+        selected_item = self.loan.collateral_items.exclude(pk=second_item.pk).get()
+
+        with self.assertRaises(PawnReleaseError):
+            release_pawn_loan_partially(
+                self.loan.pk,
+                selected_item_ids=(selected_item.pk,),
+                settlement_amount=Decimal("11428.79"),
+                request_key="partial-underpayment",
+                actor=self.actor,
+            )
+        self.assertFalse(PawnLoanRelease.objects.filter(loan=self.loan).exists())
+        selected_item.refresh_from_db()
+        self.assertEqual(
+            selected_item.custody_state,
+            CollateralCustodyState.IN_VAULT.value,
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            result = release_pawn_loan_partially(
+                self.loan.pk,
+                selected_item_ids=(selected_item.pk,),
+                settlement_amount=Decimal("11428.80"),
+                request_key="partial-1",
+                actor=self.actor,
+            )
+
+        result.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        selected_item.refresh_from_db()
+        second_item.refresh_from_db()
+        self.assertFalse(result.release.is_full_release)
+        self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(result.outbox.status, LoanOutboxStatus.POSTED.value)
+        self.assertEqual(
+            selected_item.custody_state,
+            CollateralCustodyState.WITH_CUSTOMER.value,
+        )
+        self.assertEqual(
+            second_item.custody_state,
+            CollateralCustodyState.IN_VAULT.value,
+        )
+        self.assertEqual(result.release.items.count(), 1)
+        balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertEqual(balance.principal_outstanding, Decimal("39571.20"))
+        self.assertEqual(balance.total_due, Decimal("39571.20"))
+        self.assertTrue(balance.collateral_partially_returned)
+        self.assertFalse(balance.collateral_return_complete)
+        self.assertEqual(
+            result.release.valuation_snapshot["retained_ltv_after_minimum_settlement"],
+            "0.8",
+        )
+        next_period = preview_pawn_loan_accruals(
+            self.loan.pk,
+            as_of_date=date(2026, 9, 4),
+            include_partial=False,
+        )[0]
+        self.assertEqual(next_period.period_number, 2)
+        self.assertEqual(next_period.period_start, date(2026, 8, 4))
+        self.assertEqual(next_period.period_end, date(2026, 9, 3))
+        self.assertEqual(next_period.calculation_base, Decimal("39571.20"))
+
+        repeated = release_pawn_loan_partially(
+            self.loan.pk,
+            selected_item_ids=(selected_item.pk,),
+            settlement_amount=Decimal("11428.80"),
+            request_key="partial-1",
+            actor=self.actor,
+        )
+        self.assertTrue(repeated.already_released)
+        with self.assertRaises(PawnReleaseError):
+            release_pawn_loan_partially(
+                self.loan.pk,
+                selected_item_ids=(selected_item.pk,),
+                settlement_amount=Decimal("0.00"),
+                request_key="partial-repeat-item",
+                actor=self.actor,
+            )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            final_release = release_pawn_loan_in_full(
+                self.loan.pk,
+                settlement_amount=Decimal("39571.20"),
+                request_key="full-after-partial",
+                actor=self.actor,
+            )
+        final_release.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        second_item.refresh_from_db()
+        self.assertEqual(final_release.outbox.status, LoanOutboxStatus.POSTED.value)
+        self.assertEqual(self.loan.state, PawnLoanState.CLOSED.value)
+        self.assertEqual(final_release.release.items.count(), 1)
+        self.assertEqual(
+            second_item.custody_state,
+            CollateralCustodyState.WITH_CUSTOMER.value,
+        )
+        final_balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertTrue(final_balance.closure_ready)
 
     def _activate_loan(self, policy=None):
         self._seed_dea_disbursal_setup()

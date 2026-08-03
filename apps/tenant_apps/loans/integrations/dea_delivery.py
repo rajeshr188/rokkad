@@ -1,6 +1,7 @@
 """Concrete Loans-to-DEA outbox delivery adapter."""
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 from apps.tenant_apps.dea import facade as dea_facade
 from apps.tenant_apps.loans.domain import TransactionKind
@@ -45,6 +46,13 @@ def deliver_loan_accounting_event(event):
             actor=event.created_by,
         )
     if event.event_kind == TransactionKind.RELEASE_RECEIPT.value:
+        values = event.payload.get("values") or {}
+        if not any(Decimal(str(values.get(key, "0"))) for key in (
+            "principal",
+            "interest",
+            "fees",
+        )):
+            return OperationalOnlyDeliveryReceipt()
         return dea_facade.post_pawn_loan_release_event(
             event,
             actor=event.created_by,

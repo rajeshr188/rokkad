@@ -57,6 +57,9 @@ class PawnFullReleaseResult:
     already_released: bool = False
 
 
+PawnPartialReleaseResult = PawnFullReleaseResult
+
+
 @transaction.atomic
 def release_pawn_loan_in_full(
     loan_id: int,
@@ -92,6 +95,13 @@ def release_pawn_loan_in_full(
     )
     if not collateral:
         raise PawnReleaseError("A PawnLoan without collateral cannot be released.")
+    outstanding_collateral = tuple(
+        item
+        for item in collateral
+        if item.custody_state != CollateralCustodyState.WITH_CUSTOMER.value
+    )
+    if not outstanding_collateral:
+        raise PawnReleaseError("Every collateral item has already been returned.")
     try:
         assert_pawn_loan_financial_actions_allowed(loan.pk)
         missing_accruals = preview_pawn_loan_accruals(
@@ -115,7 +125,7 @@ def release_pawn_loan_in_full(
         )
         readiness = get_pawn_loan_release_readiness(
             loan.pk,
-            selected_item_ids=tuple(item.pk for item in collateral),
+            selected_item_ids=tuple(item.pk for item in outstanding_collateral),
             as_of_date=effective_date,
         )
         if not readiness.ready:
@@ -208,7 +218,7 @@ def release_pawn_loan_in_full(
     )
     snapshots = {item.collateral_item_id: item for item in readiness.item_valuations}
     now = timezone.now()
-    for item in collateral:
+    for item in outstanding_collateral:
         snapshot = snapshots[item.pk]
         PawnLoanReleaseItem.objects.create(
             release=release,
@@ -251,6 +261,220 @@ def release_pawn_loan_in_full(
         metadata={"release_id": release.pk},
     )
     return PawnFullReleaseResult(loan, release, event, outbox)
+
+
+@transaction.atomic
+def release_pawn_loan_partially(
+    loan_id: int,
+    *,
+    selected_item_ids,
+    settlement_amount,
+    request_key: str,
+    actor=None,
+    delivery_handler: DeliveryHandler | None = None,
+) -> PawnPartialReleaseResult:
+    """Settle the policy minimum and return only selected collateral items."""
+    loan = _locked_loan(loan_id)
+    request_key = _request_key(request_key)
+    amount = _money_amount(settlement_amount, loan)
+    selected_ids = tuple(dict.fromkeys(int(value) for value in selected_item_ids))
+    existing = loan.releases.filter(request_key=request_key).first()
+    if existing:
+        recorded_ids = tuple(
+            existing.items.order_by("collateral_item_id").values_list(
+                "collateral_item_id",
+                flat=True,
+            )
+        )
+        if (
+            existing.is_full_release
+            or existing.settlement_amount != amount
+            or recorded_ids != tuple(sorted(selected_ids))
+        ):
+            raise PawnReleaseError(
+                "Release request key was already used with different instructions."
+            )
+        return PawnPartialReleaseResult(
+            loan,
+            existing,
+            existing.accounting_event,
+            existing.accounting_event.outbox,
+            True,
+        )
+    if loan.state != PawnLoanState.ACTIVE.value:
+        raise PawnReleaseError("Only an active PawnLoan can be partially released.")
+    if not selected_ids:
+        raise PawnReleaseError("Select at least one collateral item for release.")
+
+    effective_date = timezone.localdate()
+    collateral = tuple(
+        PawnCollateralItem.objects.select_for_update().filter(loan=loan)
+    )
+    try:
+        assert_pawn_loan_financial_actions_allowed(loan.pk)
+        completed = preview_pawn_loan_accruals(
+            loan.pk,
+            as_of_date=effective_date,
+            include_partial=False,
+        )
+        if completed:
+            raise PawnReleaseError(
+                "Finalize every completed interest period before releasing collateral."
+            )
+        partial_candidates = preview_pawn_loan_accruals(
+            loan.pk,
+            as_of_date=effective_date,
+            include_partial=True,
+        )
+        partial_accrual = (
+            partial_candidates[0]
+            if partial_candidates and partial_candidates[0].is_partial
+            else None
+        )
+        readiness = get_pawn_loan_release_readiness(
+            loan.pk,
+            selected_item_ids=selected_ids,
+            as_of_date=effective_date,
+        )
+        if not readiness.ready:
+            raise PawnReleaseError(
+                "PawnLoan is not ready for partial release: "
+                + "; ".join(blocker.message for blocker in readiness.blockers)
+            )
+        if readiness.is_full_release:
+            raise PawnReleaseError("Use full release when returning every item.")
+        catch_up_interest = (
+            partial_accrual.recognized_interest if partial_accrual else Decimal("0")
+        )
+        required_settlement = readiness.minimum_settlement + catch_up_interest
+        if amount != required_settlement:
+            raise PawnReleaseError(
+                "Partial release settlement must equal the calculated minimum of "
+                f"{required_settlement}."
+            )
+        balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
+        principal_amount = readiness.principal_reduction_required
+        if principal_amount >= balance.principal_outstanding:
+            raise PawnReleaseError(
+                "Partial release cannot settle all principal while collateral remains."
+            )
+        fee_amount = balance.fees_outstanding
+        interest_amount = (
+            balance.interest_outstanding + catch_up_interest
+        )
+        capitalized_principal = min(
+            principal_amount,
+            balance.capitalized_interest_principal_outstanding,
+        )
+        recognition = loan.policy_snapshot.accounting_recognition
+        if amount > 0:
+            require_pawn_loan_accounting_readiness(
+                loan,
+                effective_date=effective_date,
+                requires_fee_income=fee_amount > 0,
+                requires_interest_receivable=(
+                    recognition == AccountingRecognition.ACCRUAL.value
+                    and interest_amount > 0
+                ),
+            )
+    except PawnReleaseError:
+        raise
+    except Exception as exc:
+        raise PawnReleaseError(str(exc)) from exc
+
+    allocation = allocate_release_number(series=loan.series, actor=actor)
+    if partial_accrual:
+        _record_release_accrual(
+            loan,
+            preview=partial_accrual,
+            actor=actor,
+            delivery_handler=delivery_handler,
+        )
+    payload = release_receipt_payload(
+        loan,
+        effective_date=effective_date,
+        principal_amount=principal_amount,
+        interest_amount=interest_amount,
+        fee_amount=fee_amount,
+        original_principal_amount=principal_amount - capitalized_principal,
+        capitalized_interest_principal_amount=capitalized_principal,
+    ).to_dict()
+    payload["release"] = {
+        "request_key": request_key,
+        "release_number": allocation.value,
+        "is_full_release": False,
+        "selected_item_ids": list(selected_ids),
+        "accounting_recognition": recognition,
+    }
+    event, outbox = record_loan_accounting_event(
+        loan.pk,
+        event_kind=TransactionKind.RELEASE_RECEIPT,
+        effective_date=effective_date,
+        payload=payload,
+        actor=actor,
+        delivery_handler=delivery_handler,
+    )
+    release = PawnLoanRelease.objects.create(
+        workspace=loan.workspace,
+        loan=loan,
+        release_number=allocation.value,
+        request_key=request_key,
+        effective_date=effective_date,
+        is_full_release=False,
+        settlement_amount=amount,
+        principal_amount=principal_amount,
+        interest_amount=interest_amount,
+        fee_amount=fee_amount,
+        valuation_snapshot=_readiness_snapshot(
+            readiness,
+            catch_up_interest=catch_up_interest,
+        ),
+        accounting_event=event,
+        created_by=actor,
+    )
+    by_id = {item.pk: item for item in collateral}
+    snapshots = {item.collateral_item_id: item for item in readiness.item_valuations}
+    now = timezone.now()
+    for item_id in selected_ids:
+        item = by_id[item_id]
+        PawnLoanReleaseItem.objects.create(
+            release=release,
+            collateral_item=item,
+            valuation_snapshot=_json_snapshot(snapshots[item_id]),
+            returned_at=now,
+        )
+        PawnCollateralCustodyEvent.objects.create(
+            collateral_item=item,
+            release=release,
+            from_state=item.custody_state,
+            to_state=CollateralCustodyState.WITH_CUSTOMER.value,
+            effective_date=effective_date,
+            actor=actor,
+        )
+        item.custody_state = CollateralCustodyState.WITH_CUSTOMER.value
+        item.save(update_fields=["custody_state", "updated_at"])
+
+    if not PawnCollateralItem.objects.filter(
+        loan=loan,
+        custody_state=CollateralCustodyState.IN_VAULT.value,
+    ).exists():
+        raise PawnReleaseError("Partial release must retain collateral in the vault.")
+    LoanChangeLog.objects.create(
+        loan=loan,
+        event_kind=PawnLoanEventKind.RELEASE_COMPLETED.value,
+        from_state=PawnLoanState.ACTIVE.value,
+        to_state=PawnLoanState.ACTIVE.value,
+        actor=actor,
+        metadata={
+            "release_id": release.pk,
+            "release_number": release.release_number,
+            "is_full_release": False,
+            "selected_item_ids": list(selected_ids),
+            "retained_item_ids": list(readiness.retained_item_ids),
+            "retained_ltv": str(readiness.retained_ltv_after_minimum_settlement),
+        },
+    )
+    return PawnPartialReleaseResult(loan, release, event, outbox)
 
 
 def _locked_loan(loan_id):
@@ -356,6 +580,16 @@ def _readiness_snapshot(readiness, *, catch_up_interest):
         "valuation_method": readiness.valuation_method,
         "maximum_ltv_ratio": str(readiness.maximum_ltv_ratio),
         "selected_collateral_value": str(readiness.selected_collateral_value),
+        "retained_collateral_value": str(readiness.retained_collateral_value),
+        "principal_reduction_required": str(
+            readiness.principal_reduction_required
+        ),
+        "principal_after_minimum_settlement": str(
+            readiness.principal_after_minimum_settlement
+        ),
+        "retained_ltv_after_minimum_settlement": str(
+            readiness.retained_ltv_after_minimum_settlement
+        ),
         "base_minimum_settlement": str(readiness.minimum_settlement),
         "release_day_catch_up_interest": str(catch_up_interest),
         "minimum_settlement": str(
