@@ -44,6 +44,8 @@ class PawnLoanBalance:
     interest_capitalized: Decimal
     interest_paid: Decimal
     interest_outstanding: Decimal
+    overdue_interest_outstanding: Decimal
+    current_interest_outstanding: Decimal
     fees_assessed: Decimal
     fees_paid: Decimal
     fees_outstanding: Decimal
@@ -142,6 +144,8 @@ def calculate_pawn_loan_balance(
         for item in collateral_items
     )
     due_date = _add_months(loan.loan_date, loan.tenure_months)
+    overdue_interest = interest_outstanding if as_of_date > due_date else ZERO
+    current_interest = interest_outstanding - overdue_interest
     return PawnLoanBalance(
         loan_id=loan.pk,
         as_of_date=as_of_date,
@@ -154,6 +158,8 @@ def calculate_pawn_loan_balance(
         interest_capitalized=_money(totals["interest_capitalized"], quantum),
         interest_paid=_money(totals["interest_paid"], quantum),
         interest_outstanding=_money(interest_outstanding, quantum),
+        overdue_interest_outstanding=_money(overdue_interest, quantum),
+        current_interest_outstanding=_money(current_interest, quantum),
         fees_assessed=_money(totals["fees_assessed"], quantum),
         fees_paid=_money(totals["fees_paid"], quantum),
         fees_outstanding=_money(fees_outstanding, quantum),

@@ -30,3 +30,18 @@ def post_pawn_loan_disbursal_event(source_event, *, actor=None):
         dea_voucher_id=voucher.pk,
         dea_journal_entry_id=journal_entry.pk,
     )
+
+
+def post_pawn_loan_repayment_event(source_event, *, actor=None):
+    """Idempotently convert one durable PawnLoan repayment into DEA effects."""
+    if getattr(source_event, "event_kind", None) != "REPAYMENT":
+        raise ValidationError("Only a PawnLoan repayment event is supported here.")
+    voucher, journal_entry = create_and_post_voucher_for_doc(
+        doc=source_event,
+        user=actor or getattr(source_event, "created_by", None),
+        voucher_type_input="PAWN_LOAN_REPAYMENT",
+        engine=DjangoPostingEngine(),
+    )
+    if journal_entry is None:
+        raise ValidationError("DEA did not return a journal entry for the repayment.")
+    return LoanEventPostingReceipt(voucher.pk, journal_entry.pk)

@@ -331,7 +331,7 @@ blocked; retry is idempotent; accounting and operational state reconcile.
 Acceptance: no view or later service duplicates balance math; representative
 simple/compound and cash/accrual cases are covered.
 
-#### E3.6 Implement Repayment
+#### E3.6 Implement Repayment — Completed 2026-08-03
 
 - Use current business date and allocate fees, overdue interest, current
   interest, then principal.
@@ -538,7 +538,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E3.5 complete; E3.6 is the next executable slice.**
+Status: **E3.6 complete; E3.7 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

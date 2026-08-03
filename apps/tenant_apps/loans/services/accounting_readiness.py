@@ -40,6 +40,7 @@ def assess_pawn_loan_accounting_readiness(
     *,
     effective_date: date,
     requires_fee_income: bool = False,
+    requires_interest_receivable: bool = False,
 ) -> PawnLoanAccountingReadiness:
     """Return precise, actionable disbursal blockers without mutating setup."""
     prerequisites = dea_facade.get_loan_posting_prerequisites(
@@ -102,6 +103,15 @@ def assess_pawn_loan_accounting_readiness(
                 "dea_ledger_list",
             )
         )
+    if requires_interest_receivable and not prerequisites.interest_receivable_ledger:
+        blockers.append(
+            _blocker(
+                "INTEREST_RECEIVABLE_ACCOUNT_REQUIRED",
+                "An INTEREST_RECEIVABLE ledger is required for accrual accounting.",
+                "Manage receivable ledgers",
+                "dea_ledger_list",
+            )
+        )
     if requires_fee_income and not prerequisites.fee_income_ledger:
         blockers.append(
             _blocker(
@@ -119,12 +129,14 @@ def require_pawn_loan_accounting_readiness(
     *,
     effective_date: date,
     requires_fee_income: bool = False,
+    requires_interest_receivable: bool = False,
 ) -> PawnLoanAccountingReadiness:
     """Fail closed for the E3.4 disbursal command and later financial actions."""
     readiness = assess_pawn_loan_accounting_readiness(
         loan,
         effective_date=effective_date,
         requires_fee_income=requires_fee_income,
+        requires_interest_receivable=requires_interest_receivable,
     )
     if not readiness.ready:
         raise PawnLoanAccountingNotReadyError(readiness)

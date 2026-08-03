@@ -15,6 +15,11 @@ def deliver_loan_accounting_event(event):
             event,
             actor=event.created_by,
         )
+    if event.event_kind == TransactionKind.REPAYMENT.value:
+        return dea_facade.post_pawn_loan_repayment_event(
+            event,
+            actor=event.created_by,
+        )
     raise UnsupportedLoanAccountingEvent(
         f"No DEA delivery adapter is registered for {event.event_kind}."
     )

@@ -11,6 +11,7 @@ from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import (
     CollateralMetal,
+    CollateralCustodyState,
     LoanDocumentKind,
     LoanOutboxStatus,
     PawnLoanEventKind,
@@ -42,11 +43,13 @@ from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
     CreatePawnDraftCommand,
     PawnDisbursalError,
+    PawnRepaymentError,
     approve_pawn_loan,
     assert_pawn_loan_financial_actions_allowed,
     create_pawn_draft,
     deliver_outbox_event,
     disburse_pawn_loan,
+    record_pawn_loan_repayment,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
 from apps.tenant_apps.party.models import Party
@@ -260,6 +263,156 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(Voucher.objects.filter(pk=voucher.pk).count(), 1)
         self.assertEqual(voucher.journal_entries.count(), 1)
 
+    def test_repayment_posts_to_dea_reconciles_balance_and_keeps_collateral(self):
+        self._seed_dea_disbursal_setup()
+        with self.captureOnCommitCallbacks(execute=True):
+            disbursal = disburse_pawn_loan(
+                self.loan.pk,
+                effective_date=date(2026, 8, 3),
+                actor=self.actor,
+            )
+        disbursal.outbox.refresh_from_db()
+        self.assertEqual(disbursal.outbox.status, LoanOutboxStatus.POSTED.value)
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                repayment = record_pawn_loan_repayment(
+                    self.loan.pk,
+                    amount=Decimal("1000.00"),
+                    request_key="repayment-001",
+                    actor=self.actor,
+                )
+        repayment.outbox.refresh_from_db()
+
+        self.assertEqual(repayment.outbox.status, LoanOutboxStatus.POSTED.value)
+        self.assertEqual(repayment.allocation.principal, Decimal("1000.00"))
+        self.assertEqual(repayment.allocation.interest, Decimal("0.00"))
+        self.assertEqual(repayment.allocation.fees, Decimal("0.00"))
+        voucher = Voucher.objects.get(pk=repayment.outbox.dea_voucher_id)
+        self.assertEqual(voucher.voucher_type.name, "PAWN_LOAN_REPAYMENT")
+        journal_entry = voucher.journal_entries.get(
+            pk=repayment.outbox.dea_journal_entry_id
+        )
+        ledger_txn = LedgerTransaction.objects.get(journal_entry=journal_entry)
+        self.assertEqual(ledger_txn.ledgerno_dr.name, "CASH")
+        self.assertEqual(ledger_txn.ledgerno.name, "LOAN_PRINCIPAL_CTRL")
+        self.assertEqual(ledger_txn.amount.amount, Decimal("1000.00"))
+        account_txn = AccountTransaction.objects.get(journal_entry=journal_entry)
+        self.assertEqual(account_txn.ledgerno.name, "BORROWER_LOAN_CTRL")
+        self.assertEqual(account_txn.XactTypeCode_id, "Cr")
+        self.assertTrue(journal_entry.validate_balanced()[0])
+
+        balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertEqual(balance.principal_paid, Decimal("1000.00"))
+        self.assertEqual(balance.principal_outstanding, Decimal("49000.00"))
+        self.assertEqual(balance.total_due, Decimal("49000.00"))
+        self.assertTrue(balance.posting_ready)
+        self.assertEqual(
+            self.loan.collateral_items.get().custody_state,
+            CollateralCustodyState.IN_VAULT.value,
+        )
+
+        repeated = record_pawn_loan_repayment(
+            self.loan.pk,
+            amount=Decimal("1000.00"),
+            request_key="repayment-001",
+        )
+        self.assertTrue(repeated.already_recorded)
+        self.assertEqual(repeated.accounting_event.pk, repayment.accounting_event.pk)
+        self.assertEqual(
+            PawnLoanAccountingEvent.objects.filter(
+                loan=self.loan,
+                event_kind=TransactionKind.REPAYMENT.value,
+            ).count(),
+            1,
+        )
+        with self.assertRaises(PawnRepaymentError):
+            record_pawn_loan_repayment(
+                self.loan.pk,
+                amount=Decimal("999.00"),
+                request_key="repayment-001",
+            )
+
+    def test_repayment_rejects_overpayment_without_recording_an_event(self):
+        self._seed_dea_disbursal_setup()
+        with self.captureOnCommitCallbacks(execute=True):
+            disbursal = disburse_pawn_loan(
+                self.loan.pk,
+                effective_date=date(2026, 8, 3),
+                actor=self.actor,
+            )
+        disbursal.outbox.refresh_from_db()
+        self.assertEqual(
+            disbursal.outbox.status,
+            LoanOutboxStatus.POSTED.value,
+            disbursal.outbox.last_error,
+        )
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ):
+            with self.assertRaises(PawnRepaymentError):
+                record_pawn_loan_repayment(
+                    self.loan.pk,
+                    amount=Decimal("50000.01"),
+                    request_key="overpayment",
+                )
+
+        self.assertFalse(
+            PawnLoanAccountingEvent.objects.filter(
+                loan=self.loan,
+                event_kind=TransactionKind.REPAYMENT.value,
+            ).exists()
+        )
+
+    def test_pending_repayment_blocks_a_different_dependent_repayment(self):
+        self._seed_dea_disbursal_setup()
+        with self.captureOnCommitCallbacks(execute=True):
+            disbursal = disburse_pawn_loan(
+                self.loan.pk,
+                effective_date=date(2026, 8, 3),
+                actor=self.actor,
+            )
+        disbursal.outbox.refresh_from_db()
+        self.assertEqual(
+            disbursal.outbox.status,
+            LoanOutboxStatus.POSTED.value,
+            disbursal.outbox.last_error,
+        )
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ):
+            with self.captureOnCommitCallbacks(execute=False) as callbacks:
+                first = record_pawn_loan_repayment(
+                    self.loan.pk,
+                    amount=Decimal("100.00"),
+                    request_key="pending-repayment",
+                )
+            self.assertEqual(len(callbacks), 1)
+            self.assertEqual(first.outbox.status, LoanOutboxStatus.PENDING.value)
+
+            repeated = record_pawn_loan_repayment(
+                self.loan.pk,
+                amount=Decimal("100.00"),
+                request_key="pending-repayment",
+            )
+            self.assertTrue(repeated.already_recorded)
+            with self.assertRaises(PawnRepaymentError):
+                record_pawn_loan_repayment(
+                    self.loan.pk,
+                    amount=Decimal("50.00"),
+                    request_key="dependent-repayment",
+                )
+
     def _seed_dea_disbursal_setup(self):
         debit, _ = TransactionType_DE.objects.get_or_create(
             XactTypeCode="Dr", defaults={"name": "Debit"}
@@ -280,6 +433,14 @@ class PawnDisbursalServiceTests(TenantTestCase):
             Ledger.objects.get_or_create(name=key, defaults={"AccountType": asset})
         Ledger.objects.get_or_create(
             name="INTEREST_INCOME", defaults={"AccountType": income}
+        )
+        Ledger.objects.get_or_create(
+            name="INTEREST_RECEIVABLE",
+            defaults={"AccountType": asset, "code": "1.90"},
+        )
+        Ledger.objects.get_or_create(
+            name="DOCUMENT_CHARGE_INCOME",
+            defaults={"AccountType": income, "code": "4.90"},
         )
         AccountingPeriod.objects.get_or_create(
             start_date=date(2026, 8, 1),

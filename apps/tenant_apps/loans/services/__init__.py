@@ -55,6 +55,13 @@ from .pawn_disbursal import (
     assert_pawn_loan_financial_actions_allowed,
     disburse_pawn_loan,
 )
+from .pawn_repayment import (
+    PawnRepaymentError,
+    PawnRepaymentResult,
+    RepaymentAllocation,
+    allocate_repayment,
+    record_pawn_loan_repayment,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -99,4 +106,9 @@ __all__ = (
     "PawnDisbursalResult",
     "assert_pawn_loan_financial_actions_allowed",
     "disburse_pawn_loan",
+    "PawnRepaymentError",
+    "PawnRepaymentResult",
+    "RepaymentAllocation",
+    "allocate_repayment",
+    "record_pawn_loan_repayment",
 )

@@ -45,6 +45,7 @@ Implementation status:
 - `contact.Customer.account` remains a compatibility read alias for older code. New posting code should use the DEA facade resolver and pass an explicit role/purpose.
 - Girvi borrower/lender and DEA sales/purchase invoice posting rules now use explicit role/purpose account resolution.
 - The side-by-side Loans app delivers `PawnLoanAccountingEvent` disbursals through the public DEA facade. DEA's `PAWN_LOAN_DISBURSAL` rule owns the source-linked voucher, open-period enforcement, principal-control/cash journal effect, and borrower loan-receivable attribution; repeated delivery returns the existing posted effect.
+- The side-by-side Loans repayment service persists the current-date allocation and source event before delivery. DEA's `PAWN_LOAN_REPAYMENT` rule owns cash receipt posting to principal control, interest income or interest receivable according to the immutable policy snapshot, fee income, and borrower subledger attribution. Unresolved delivery blocks dependent loan events, and repeated request keys or delivery do not duplicate the accounting effect.
 
 ## BusinessDoc Classification
 

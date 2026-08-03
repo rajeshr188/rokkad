@@ -103,13 +103,27 @@ def disbursal_payload(loan, *, effective_date, principal_amount, source_event_id
 
 
 def repayment_payload(
-    loan, *, effective_date, principal_amount, interest_amount, fee_amount=Decimal("0"), source_event_id=None
+    loan,
+    *,
+    effective_date,
+    principal_amount,
+    interest_amount,
+    fee_amount=Decimal("0"),
+    overdue_interest_amount=Decimal("0"),
+    current_interest_amount=Decimal("0"),
+    source_event_id=None,
 ):
     return _payload(
         loan,
         TransactionKind.REPAYMENT,
         effective_date,
-        {"principal": principal_amount, "interest": interest_amount, "fees": fee_amount},
+        {
+            "principal": principal_amount,
+            "interest": interest_amount,
+            "overdue_interest": overdue_interest_amount,
+            "current_interest": current_interest_amount,
+            "fees": fee_amount,
+        },
         source_event_id,
     )
 
