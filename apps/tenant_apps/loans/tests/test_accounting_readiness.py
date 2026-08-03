@@ -24,7 +24,9 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
     )
     def test_returns_precise_actionable_blockers_for_missing_setup(self, prerequisites, reverse):
         reverse.side_effect = lambda route: f"/{route}/"
-        prerequisites.return_value = LoanPostingPrerequisites(None, None, None, None, None)
+        prerequisites.return_value = LoanPostingPrerequisites(
+            None, None, None, None, None, None, None
+        )
 
         readiness = assess_pawn_loan_accounting_readiness(
             self.loan,
@@ -38,6 +40,8 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
             [
                 "OPEN_ACCOUNTING_PERIOD_REQUIRED",
                 "FUNDING_CASH_ACCOUNT_REQUIRED",
+                "LOAN_PRINCIPAL_CONTROL_REQUIRED",
+                "BORROWER_LOAN_CONTROL_REQUIRED",
                 "BORROWER_RECEIVABLE_REQUIRED",
                 "INTEREST_INCOME_ACCOUNT_REQUIRED",
                 "FEE_INCOME_ACCOUNT_REQUIRED",
@@ -55,7 +59,7 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
     )
     def test_ready_when_required_prerequisites_exist(self, prerequisites):
         prerequisites.return_value = LoanPostingPrerequisites(
-            object(), object(), object(), object(), True
+            object(), object(), object(), object(), True, object(), object()
         )
 
         readiness = require_pawn_loan_accounting_readiness(
@@ -71,7 +75,7 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
     )
     def test_fee_mapping_is_not_required_until_a_fee_applies(self, prerequisites):
         prerequisites.return_value = LoanPostingPrerequisites(
-            object(), object(), object(), object(), None
+            object(), object(), object(), object(), None, object(), object()
         )
 
         readiness = assess_pawn_loan_accounting_readiness(
@@ -86,7 +90,9 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
         "apps.tenant_apps.loans.services.accounting_readiness.dea_facade.get_loan_posting_prerequisites"
     )
     def test_require_fails_closed_with_the_full_readiness_result(self, prerequisites):
-        prerequisites.return_value = LoanPostingPrerequisites(None, object(), object(), object(), True)
+        prerequisites.return_value = LoanPostingPrerequisites(
+            None, object(), object(), object(), True, object(), object()
+        )
 
         with self.assertRaises(PawnLoanAccountingNotReadyError) as raised:
             require_pawn_loan_accounting_readiness(

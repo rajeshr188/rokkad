@@ -55,6 +55,7 @@ def _resolve_voucher_date(doc):
         "movement_date",
         "period_end",
         "period_start",
+        "effective_date",
         "date",
     )
 

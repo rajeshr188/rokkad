@@ -20,6 +20,8 @@ class LoanPostingPrerequisites:
     borrower_account: object | None
     interest_income_ledger: object | None
     fee_income_ledger: object | None
+    principal_control_ledger: object | None
+    borrower_control_ledger: object | None
 
 
 def get_loan_posting_prerequisites(
@@ -54,4 +56,10 @@ def get_loan_posting_prerequisites(
             if requires_fee_income
             else True
         ),
+        principal_control_ledger=Ledger.objects.filter(
+            name="LOAN_PRINCIPAL_CTRL"
+        ).first(),
+        borrower_control_ledger=Ledger.objects.filter(
+            name="BORROWER_LOAN_CTRL"
+        ).first(),
     )

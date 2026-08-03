@@ -19,6 +19,10 @@ from apps.tenant_apps.dea.facades.loan_readiness import (
     LoanPostingPrerequisites,
     get_loan_posting_prerequisites,
 )
+from apps.tenant_apps.dea.facades.loan_events import (
+    LoanEventPostingReceipt,
+    post_pawn_loan_disbursal_event,
+)
 from apps.tenant_apps.dea.facades.payments import (
     create_and_post_payment,
     find_payment_by_marker,
@@ -37,6 +41,7 @@ from apps.tenant_apps.dea.facades.reads import (
 __all__ = [
     "Balance",
     "LoanPostingPrerequisites",
+    "LoanEventPostingReceipt",
     "create_and_post_payment",
     "ensure_customer_account",
     "find_payment_by_marker",
@@ -46,6 +51,7 @@ __all__ = [
     "get_loan_journal_entries",
     "has_other_posted_payments",
     "post_interest_accrual_batch",
+    "post_pawn_loan_disbursal_event",
     "post_journal_entry_voucher",
     "post_payment_voucher",
     "resolve_customer_account",

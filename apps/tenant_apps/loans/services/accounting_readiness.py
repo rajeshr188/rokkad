@@ -66,6 +66,24 @@ def assess_pawn_loan_accounting_readiness(
                 "dea_ledger_list",
             )
         )
+    if not prerequisites.principal_control_ledger:
+        blockers.append(
+            _blocker(
+                "LOAN_PRINCIPAL_CONTROL_REQUIRED",
+                "A LOAN_PRINCIPAL_CTRL ledger is required before disbursal.",
+                "Manage loan ledgers",
+                "dea_ledger_list",
+            )
+        )
+    if not prerequisites.borrower_control_ledger:
+        blockers.append(
+            _blocker(
+                "BORROWER_LOAN_CONTROL_REQUIRED",
+                "A BORROWER_LOAN_CTRL ledger is required before disbursal.",
+                "Manage loan ledgers",
+                "dea_ledger_list",
+            )
+        )
     if not prerequisites.borrower_account:
         blockers.append(
             _blocker(

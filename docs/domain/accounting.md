@@ -44,6 +44,7 @@ Implementation status:
 - `dea.Account.contact` is now a foreign key so one bridged `Customer`/`Party` can have multiple subledger accounts.
 - `contact.Customer.account` remains a compatibility read alias for older code. New posting code should use the DEA facade resolver and pass an explicit role/purpose.
 - Girvi borrower/lender and DEA sales/purchase invoice posting rules now use explicit role/purpose account resolution.
+- The side-by-side Loans app delivers `PawnLoanAccountingEvent` disbursals through the public DEA facade. DEA's `PAWN_LOAN_DISBURSAL` rule owns the source-linked voucher, open-period enforcement, principal-control/cash journal effect, and borrower loan-receivable attribution; repeated delivery returns the existing posted effect.
 
 ## BusinessDoc Classification
 

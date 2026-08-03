@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
@@ -15,6 +16,20 @@ from apps.tenant_apps.loans.domain import (
     PawnLoanEventKind,
     PawnLoanState,
     TransactionKind,
+)
+from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.dea.facade import resolve_party_account
+from apps.tenant_apps.dea.models import (
+    AccountTransaction,
+    AccountType,
+    AccountType_Ext,
+    AccountingPeriod,
+    EntityType,
+    Ledger,
+    LedgerTransaction,
+    TransactionType_DE,
+    Voucher,
+    VoucherStatus,
 )
 from apps.tenant_apps.loans.models import (
     LoanLicense,
@@ -189,3 +204,87 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertNotIn("apps.tenant_apps.dea.models", source)
         self.assertNotIn("apps.tenant_apps.dea.posting", source)
         self.assertNotIn("apps.tenant_apps.dea.services", source)
+
+        delivery_source = (
+            Path(__file__).parents[1] / "integrations" / "dea_delivery.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "from apps.tenant_apps.dea import facade as dea_facade",
+            delivery_source,
+        )
+        self.assertNotIn("apps.tenant_apps.dea.models", delivery_source)
+        self.assertNotIn("apps.tenant_apps.dea.posting", delivery_source)
+        self.assertNotIn("apps.tenant_apps.dea.services", delivery_source)
+
+    def test_default_adapter_posts_balanced_dea_voucher_and_is_idempotent(self):
+        self._seed_dea_disbursal_setup()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            result = disburse_pawn_loan(
+                self.loan.pk,
+                effective_date=date(2026, 8, 3),
+                actor=self.actor,
+            )
+        result.outbox.refresh_from_db()
+
+        self.assertEqual(result.outbox.status, LoanOutboxStatus.POSTED.value)
+        voucher = Voucher.objects.get(pk=result.outbox.dea_voucher_id)
+        journal_entry = voucher.journal_entries.get(pk=result.outbox.dea_journal_entry_id)
+        self.assertEqual(voucher.status, VoucherStatus.POSTED)
+        self.assertEqual(voucher.voucher_type.name, "PAWN_LOAN_DISBURSAL")
+        self.assertEqual(voucher.voucher_date, date(2026, 8, 3))
+        self.assertEqual(
+            voucher.doc_content_type,
+            ContentType.objects.get_for_model(PawnLoanAccountingEvent),
+        )
+        ledger_txn = LedgerTransaction.objects.get(journal_entry=journal_entry)
+        self.assertEqual(ledger_txn.ledgerno_dr.name, "LOAN_PRINCIPAL_CTRL")
+        self.assertEqual(ledger_txn.ledgerno.name, "CASH")
+        self.assertEqual(ledger_txn.amount.amount, Decimal("50000.00"))
+        account_txn = AccountTransaction.objects.get(journal_entry=journal_entry)
+        self.assertEqual(account_txn.ledgerno.name, "BORROWER_LOAN_CTRL")
+        self.assertEqual(account_txn.XactTypeCode_id, "Dr")
+        self.assertTrue(journal_entry.validate_balanced()[0])
+
+        repeated = deliver_outbox_event(result.outbox.pk)
+        self.assertEqual(repeated.attempt_count, 1)
+        self.assertEqual(Voucher.objects.filter(pk=voucher.pk).count(), 1)
+        self.assertEqual(voucher.journal_entries.count(), 1)
+
+    def _seed_dea_disbursal_setup(self):
+        debit, _ = TransactionType_DE.objects.get_or_create(
+            XactTypeCode="Dr", defaults={"name": "Debit"}
+        )
+        AccountType_Ext.objects.get_or_create(
+            description="Debtor", defaults={"XactTypeCode": debit}
+        )
+        EntityType.objects.get_or_create(name="Person")
+        asset, _ = AccountType.objects.get_or_create(
+            AccountType="Asset",
+            defaults={"description": "Asset Account", "code_prefix": "1"},
+        )
+        income, _ = AccountType.objects.get_or_create(
+            AccountType="Income",
+            defaults={"description": "Income Account", "code_prefix": "4"},
+        )
+        for key in ("CASH", "LOAN_PRINCIPAL_CTRL", "BORROWER_LOAN_CTRL"):
+            Ledger.objects.get_or_create(name=key, defaults={"AccountType": asset})
+        Ledger.objects.get_or_create(
+            name="INTEREST_INCOME", defaults={"AccountType": income}
+        )
+        AccountingPeriod.objects.get_or_create(
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 31),
+            defaults={"name": "August 2026", "status": "OPEN"},
+        )
+        Customer.objects.create(
+            firstname=f"Borrower-{uuid.uuid4().hex[:8]}",
+            lastname="PawnLoan",
+            party=self.loan.borrower,
+        )
+        resolve_party_account(
+            self.loan.borrower,
+            role_key="BORROWER",
+            purpose="BORROWER_LOAN_RECEIVABLE",
+            create=True,
+        )

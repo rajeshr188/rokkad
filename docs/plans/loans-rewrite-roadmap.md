@@ -316,6 +316,9 @@ with precise blockers.
   `APPROVED -> ACTIVE`, and enqueue `PAWN_LOAN_DISBURSED` atomically.
 - Attempt immediate posting and block dependent financial actions while pending
   or failed.
+- Deliver disbursal through the public DEA facade to a dedicated
+  `PAWN_LOAN_DISBURSAL` posting rule; the DEA voucher remains linked to the
+  immutable loan accounting event and repeated delivery reuses the same effect.
 
 Acceptance: disbursal is once-only; expired-license and readiness failures are
 blocked; retry is idempotent; accounting and operational state reconcile.

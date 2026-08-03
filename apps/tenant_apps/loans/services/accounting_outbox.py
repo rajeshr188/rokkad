@@ -97,7 +97,7 @@ def deliver_outbox_event(
     outbox.attempt_count += 1
     outbox.save(update_fields=["status", "claimed_at", "attempt_count", "updated_at"])
     try:
-        receipt = (delivery_handler or _unconfigured_delivery)(outbox.event)
+        receipt = (delivery_handler or _default_delivery)(outbox.event)
     except Exception as exc:  # Delivery failures are durable, never swallowed.
         outbox.status = LoanOutboxStatus.FAILED.value
         outbox.last_error = str(exc)[:4000]
@@ -169,7 +169,9 @@ def _fingerprint(payload):
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _unconfigured_delivery(event):
-    raise LoanAccountingOutboxError(
-        f"No DEA delivery adapter is registered for {event.event_kind}."
+def _default_delivery(event):
+    from apps.tenant_apps.loans.integrations.dea_delivery import (
+        deliver_loan_accounting_event,
     )
+
+    return deliver_loan_accounting_event(event)
