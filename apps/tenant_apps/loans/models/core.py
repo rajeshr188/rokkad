@@ -693,3 +693,192 @@ class PawnLoanInterestAccrual(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Finalized PawnLoan interest accruals cannot be deleted.")
+
+
+class PawnLoanRelease(models.Model):
+    """Immutable settlement document authorizing a physical collateral return."""
+
+    workspace = models.ForeignKey(
+        "orgs.Company",
+        on_delete=models.PROTECT,
+        related_name="pawn_loan_releases",
+    )
+    loan = models.ForeignKey(
+        PawnLoan,
+        on_delete=models.PROTECT,
+        related_name="releases",
+    )
+    release_number = models.CharField(max_length=64)
+    request_key = models.CharField(max_length=120)
+    effective_date = models.DateField(db_index=True)
+    is_full_release = models.BooleanField(default=True)
+    settlement_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    interest_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    fee_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    valuation_snapshot = models.JSONField(default=dict)
+    accounting_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="release",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_releases_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("loan_id", "effective_date", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "release_number"),
+                name="loans_release_workspace_number_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("loan", "request_key"),
+                name="loans_release_loan_request_uniq",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(settlement_amount__gte=0)
+                    & Q(principal_amount__gte=0)
+                    & Q(interest_amount__gte=0)
+                    & Q(fee_amount__gte=0)
+                ),
+                name="loans_release_amounts_nonnegative",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan releases are immutable.")
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        tenant_workspace_id = current_tenant_workspace_id()
+        if tenant_workspace_id and self.workspace_id != tenant_workspace_id:
+            errors["workspace"] = "Release workspace must match the active tenant."
+        if self.loan_id and self.workspace_id:
+            if self.loan.workspace_id != self.workspace_id:
+                errors["loan"] = "Release loan must belong to its workspace."
+        if self.settlement_amount != (
+            self.principal_amount + self.interest_amount + self.fee_amount
+        ):
+            errors["settlement_amount"] = (
+                "Settlement must equal principal, interest, and fees."
+            )
+        if errors:
+            raise ValidationError(errors)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan releases cannot be deleted.")
+
+
+class PawnLoanReleaseItem(models.Model):
+    release = models.ForeignKey(
+        PawnLoanRelease,
+        on_delete=models.PROTECT,
+        related_name="items",
+    )
+    collateral_item = models.ForeignKey(
+        PawnCollateralItem,
+        on_delete=models.PROTECT,
+        related_name="release_items",
+    )
+    valuation_snapshot = models.JSONField(default=dict)
+    returned_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ("release_id", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("release", "collateral_item"),
+                name="loans_release_item_uniq",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan release items are immutable.")
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if (
+            self.release_id
+            and self.collateral_item_id
+            and self.release.loan_id != self.collateral_item.loan_id
+        ):
+            raise ValidationError(
+                {"collateral_item": "Released collateral must belong to the loan."}
+            )
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan release items cannot be deleted.")
+
+
+class PawnCollateralCustodyEvent(models.Model):
+    collateral_item = models.ForeignKey(
+        PawnCollateralItem,
+        on_delete=models.PROTECT,
+        related_name="custody_history",
+    )
+    release = models.ForeignKey(
+        PawnLoanRelease,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
+    from_state = models.CharField(
+        max_length=32,
+        choices=enum_choices(CollateralCustodyState),
+    )
+    to_state = models.CharField(
+        max_length=32,
+        choices=enum_choices(CollateralCustodyState),
+    )
+    effective_date = models.DateField(db_index=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_collateral_custody_events",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("collateral_item_id", "created_at", "id")
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(from_state=F("to_state")),
+                name="loans_custody_state_changes",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("Collateral custody events are immutable.")
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if (
+            self.release_id
+            and self.collateral_item_id
+            and self.release.loan_id != self.collateral_item.loan_id
+        ):
+            raise ValidationError(
+                {"collateral_item": "Custody item must belong to the release loan."}
+            )
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Collateral custody events cannot be deleted.")

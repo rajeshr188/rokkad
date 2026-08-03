@@ -77,6 +77,11 @@ from .pawn_reversal import (
     PawnReversalResult,
     reverse_pawn_loan_event,
 )
+from .pawn_release import (
+    PawnFullReleaseResult,
+    PawnReleaseError,
+    release_pawn_loan_in_full,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -137,4 +142,7 @@ __all__ = (
     "PawnReversalError",
     "PawnReversalResult",
     "reverse_pawn_loan_event",
+    "PawnFullReleaseResult",
+    "PawnReleaseError",
+    "release_pawn_loan_in_full",
 )

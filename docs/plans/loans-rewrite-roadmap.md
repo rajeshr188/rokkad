@@ -375,7 +375,7 @@ reversals reconcile with DEA under failure and duplicate-delivery tests.
 Acceptance: purity/net-weight/rate/appraisal snapshots and LTV boundary cases are
 test-covered.
 
-#### E4.2 Add Release Models And Full Release
+#### E4.2 Add Release Models And Full Release — Completed 2026-08-03
 
 - Add release/header items and custody history.
 - Run catch-up accrual integrity, collect final settlement when needed, transfer
@@ -538,7 +538,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E4.1 complete; E4.2 is the next executable slice.**
+Status: **E4.2 complete; E4.3 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

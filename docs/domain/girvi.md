@@ -54,7 +54,8 @@ the same release and auction semantics as customer pawn loans:
 - Keep accounting effects out of models and views; delegate posting to DEA through facade/services.
 - Use `girvi.facade` for cross-app reads.
 - Standardize lifecycle language; old status values are accepted only through compatibility mappings.
-- The side-by-side Loans app release-readiness selector snapshots net weight, purity, appraisal, and as-of public-facade metal-rate inputs. It applies the disbursal-snapshotted valuation method and computes the minimum fees/interest plus principal settlement required to keep retained collateral within the maximum LTV. It is read-only; release persistence and custody handoff remain owned by the later release workflow.
+- The side-by-side Loans app release-readiness selector snapshots net weight, purity, appraisal, and as-of public-facade metal-rate inputs. It applies the disbursal-snapshotted valuation method and computes the minimum fees/interest plus principal settlement required to keep retained collateral within the maximum LTV.
+- Full release is an atomic, immutable workflow: completed accrual periods and prior accounting must be resolved first; release-day partial-period interest is finalized under the snapshotted slab policy; the exact resulting balance is collected through source-linked DEA events/outboxes; the release header, item valuation evidence, and custody history are persisted; and the loan closes only after every collateral item is returned to the customer. Partial release and release reversal remain separate later slices.
 
 ## Current Active Work
 

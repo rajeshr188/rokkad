@@ -43,7 +43,9 @@ from apps.tenant_apps.loans.models import (
     LoanPolicySnapshot,
     LoanSeries,
     PawnLoanAccountingEvent,
+    PawnCollateralCustodyEvent,
     PawnLoanInterestAccrual,
+    PawnLoanRelease,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -62,6 +64,8 @@ from apps.tenant_apps.loans.services import (
     preview_pawn_loan_accruals,
     reverse_pawn_loan_event,
     record_pawn_loan_repayment,
+    release_pawn_loan_in_full,
+    PawnReleaseError,
 )
 from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
@@ -113,6 +117,13 @@ class PawnDisbursalServiceTests(TenantTestCase):
             series=series,
             document_kind=LoanDocumentKind.PAWN_LOAN.value,
             prefix="PL-A-",
+            width=5,
+            maximum_number=10000,
+        )
+        LoanNumberSequence.objects.create(
+            series=series,
+            document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE.value,
+            prefix="RL-A-",
             width=5,
             maximum_number=10000,
         )
@@ -863,6 +874,89 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )
         self.assertEqual(readiness.item_valuations[0].rate_id, rate.pk)
         self.assertEqual(readiness.minimum_settlement, Decimal("50000.00"))
+
+    def test_full_release_posts_settlement_returns_custody_and_closes(self):
+        self._activate_loan()
+        source = RateSource.objects.create(name="Release", location="Market")
+        Rate.objects.create(
+            metal=Rate.Metal.GOLD,
+            currency=Rate.Currency.INR,
+            purity=Rate.Purity.K24,
+            buying_rate=Decimal("6000.00"),
+            selling_rate=Decimal("6100.00"),
+            rate_source=source,
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            result = release_pawn_loan_in_full(
+                self.loan.pk,
+                settlement_amount=Decimal("51000.00"),
+                request_key="release-1",
+                actor=self.actor,
+            )
+
+        result.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        collateral = self.loan.collateral_items.get()
+        self.assertEqual(self.loan.state, PawnLoanState.CLOSED.value)
+        self.assertEqual(
+            collateral.custody_state,
+            CollateralCustodyState.WITH_CUSTOMER.value,
+        )
+        self.assertEqual(result.release.release_number, "RL-A-00001")
+        self.assertEqual(result.release.interest_amount, Decimal("1000.00"))
+        self.assertEqual(
+            self.loan.interest_accruals.get().period_fraction,
+            Decimal("1.0000"),
+        )
+        self.assertEqual(result.outbox.status, LoanOutboxStatus.POSTED.value)
+        self.assertEqual(PawnLoanRelease.objects.filter(loan=self.loan).count(), 1)
+        self.assertEqual(
+            PawnCollateralCustodyEvent.objects.filter(
+                collateral_item=collateral,
+                from_state=CollateralCustodyState.IN_VAULT.value,
+                to_state=CollateralCustodyState.WITH_CUSTOMER.value,
+            ).count(),
+            1,
+        )
+        balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertTrue(balance.financially_settled)
+        self.assertTrue(balance.collateral_return_complete)
+        self.assertTrue(balance.closure_ready)
+
+        repeated = release_pawn_loan_in_full(
+            self.loan.pk,
+            settlement_amount=Decimal("51000.00"),
+            request_key="release-1",
+            actor=self.actor,
+        )
+        self.assertTrue(repeated.already_released)
+        self.assertEqual(repeated.release.pk, result.release.pk)
+
+    def test_full_release_fails_before_mutation_when_accrual_is_missing(self):
+        self._activate_loan()
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_release.preview_pawn_loan_accruals",
+            return_value=(object(),),
+        ):
+            with self.assertRaises(PawnReleaseError):
+                release_pawn_loan_in_full(
+                    self.loan.pk,
+                    settlement_amount=Decimal("50000.00"),
+                    request_key="release-missing-accrual",
+                    actor=self.actor,
+                )
+
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
+        self.assertFalse(PawnLoanRelease.objects.filter(loan=self.loan).exists())
+        self.assertEqual(
+            self.loan.collateral_items.get().custody_state,
+            CollateralCustodyState.IN_VAULT.value,
+        )
 
     def _activate_loan(self, policy=None):
         self._seed_dea_disbursal_setup()

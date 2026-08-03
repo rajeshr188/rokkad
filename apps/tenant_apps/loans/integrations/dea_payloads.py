@@ -145,13 +145,33 @@ def capitalization_payload(loan, *, effective_date, interest_amount, source_even
 
 
 def release_receipt_payload(
-    loan, *, effective_date, principal_amount, interest_amount, fee_amount=Decimal("0"), source_event_id=None
+    loan,
+    *,
+    effective_date,
+    principal_amount,
+    interest_amount,
+    fee_amount=Decimal("0"),
+    original_principal_amount=None,
+    capitalized_interest_principal_amount=Decimal("0"),
+    source_event_id=None,
 ):
     return _payload(
         loan,
         TransactionKind.RELEASE_RECEIPT,
         effective_date,
-        {"principal": principal_amount, "interest": interest_amount, "fees": fee_amount},
+        {
+            "principal": principal_amount,
+            "original_principal": (
+                principal_amount
+                if original_principal_amount is None
+                else original_principal_amount
+            ),
+            "capitalized_interest_principal": (
+                capitalized_interest_principal_amount
+            ),
+            "interest": interest_amount,
+            "fees": fee_amount,
+        },
         source_event_id,
     )
 
