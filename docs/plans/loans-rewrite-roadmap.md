@@ -365,7 +365,7 @@ reversals reconcile with DEA under failure and duplicate-delivery tests.
 
 ### Phase 4: Release, Custody, And Closure
 
-#### E4.1 Implement Valuation And Release Readiness
+#### E4.1 Implement Valuation And Release Readiness — Completed 2026-08-03
 
 - Resolve calculated metal value, latest appraisal, or lower-of-both policy.
 - Calculate partial-release minimum settlement from fees/interest plus the
@@ -538,7 +538,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E3.8 and the Phase 3 gate are complete; E4.1 is the next executable slice.**
+Status: **E4.1 complete; E4.2 is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

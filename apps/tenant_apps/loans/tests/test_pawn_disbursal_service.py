@@ -63,8 +63,12 @@ from apps.tenant_apps.loans.services import (
     reverse_pawn_loan_event,
     record_pawn_loan_repayment,
 )
-from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
+from apps.tenant_apps.loans.selectors import (
+    get_pawn_loan_balance,
+    get_pawn_loan_release_readiness,
+)
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.rates.models import Rate, RateSource
 
 
 class PawnDisbursalServiceTests(TenantTestCase):
@@ -831,6 +835,34 @@ class PawnDisbursalServiceTests(TenantTestCase):
             Voucher.objects.get(pk=capitalization.outbox.dea_voucher_id).status,
             VoucherStatus.REVERSED,
         )
+
+    def test_release_readiness_uses_tenant_rate_and_canonical_balance(self):
+        self._activate_loan()
+        rate_source = RateSource.objects.create(name="Local", location="Market")
+        rate = Rate.objects.create(
+            metal=Rate.Metal.GOLD,
+            currency=Rate.Currency.INR,
+            purity=Rate.Purity.K24,
+            buying_rate=Decimal("6000.00"),
+            selling_rate=Decimal("6100.00"),
+            rate_source=rate_source,
+        )
+        collateral = self.loan.collateral_items.get()
+
+        readiness = get_pawn_loan_release_readiness(
+            self.loan.pk,
+            selected_item_ids=(collateral.pk,),
+            as_of_date=date(2026, 8, 3),
+        )
+
+        self.assertTrue(readiness.ready)
+        self.assertTrue(readiness.is_full_release)
+        self.assertEqual(
+            readiness.item_valuations[0].calculated_metal_value,
+            Decimal("49464.00"),
+        )
+        self.assertEqual(readiness.item_valuations[0].rate_id, rate.pk)
+        self.assertEqual(readiness.minimum_settlement, Decimal("50000.00"))
 
     def _activate_loan(self, policy=None):
         self._seed_dea_disbursal_setup()
