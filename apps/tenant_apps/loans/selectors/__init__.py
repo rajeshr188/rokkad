@@ -22,6 +22,13 @@ from .reports import (
     build_pawn_loan_reports,
     get_pawn_loan_reports,
 )
+from .operations import (
+    AccountingSetupRow,
+    PawnLoanOperationsSnapshot,
+    OperationsBlocker,
+    SequenceHealthRow,
+    get_pawn_loan_operations_snapshot,
+)
 
 __all__ = [
     "PawnLoanBalance",
@@ -40,4 +47,9 @@ __all__ = [
     "PawnLoanReportBundle",
     "build_pawn_loan_reports",
     "get_pawn_loan_reports",
+    "AccountingSetupRow",
+    "PawnLoanOperationsSnapshot",
+    "OperationsBlocker",
+    "SequenceHealthRow",
+    "get_pawn_loan_operations_snapshot",
 ]

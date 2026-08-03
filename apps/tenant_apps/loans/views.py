@@ -44,6 +44,7 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
     get_pawn_loan_reports,
     get_pawn_loan_release_readiness,
+    get_pawn_loan_operations_snapshot,
 )
 from apps.tenant_apps.loans.services import (
     LicenseSeriesError,
@@ -523,7 +524,23 @@ def pawn_outbox_retry(request, pk):
         messages.success(request, f"Accounting outbox event #{outbox.pk} queued for retry.")
     except LoanAccountingOutboxError as exc:
         messages.error(request, str(exc))
+    if request.POST.get("next") == "operations":
+        return redirect("loans:pawn_operations_console")
     return redirect("loans:pawn_loan_detail", pk=outbox.event.loan_id)
+
+
+@loans_setup_required
+def pawn_operations_console(request):
+    return render(
+        request,
+        "loans/setup/operations_console.html",
+        {"snapshot": get_pawn_loan_operations_snapshot()},
+    )
+
+
+@loans_setup_required
+def pawn_operations_runbook(request):
+    return render(request, "loans/setup/operations_runbook.html")
 
 
 @loans_setup_required

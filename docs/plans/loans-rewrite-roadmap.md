@@ -459,7 +459,7 @@ contains workspace, regulatory license, loan and source-record IDs, source
 fingerprints, relevant accounting/reversal state, amount splits, signatures,
 and a deterministic verification ID also returned as a response header.
 
-#### E5.4 Add Operations Diagnostics And Runbook
+#### E5.4 Add Operations Diagnostics And Runbook — Completed 2026-08-03
 
 - Add permission-gated outbox health/retry, series readiness, accounting setup,
   recent reversals, and audit visibility.
@@ -467,6 +467,14 @@ and a deterministic verification ID also returned as a response header.
 
 Acceptance: operators can diagnose every known blocked state without shell or
 database access.
+
+Result: Owner/Admin users have a tenant-scoped operations console for outbox
+counts, failed-event retry, stale processing claims, regulatory sequence
+readiness, serviceable-loan accounting prerequisites, recent reversals, and
+lifecycle audit evidence. A linked in-product guide and the canonical
+operations runbook document tenant-aware deployment, hidden-MVP enablement,
+rollback, reconciliation, and support procedures. The focused nine-test setup
+and diagnostics suite passes without a Loans schema change.
 
 #### E5.5 Run MVP End-To-End And Tenant-Isolation Suite
 
@@ -564,7 +572,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E5.3 is complete; E5.4 operations diagnostics and runbook is the next executable slice.**
+Status: **E5.4 is complete; E5.5 MVP end-to-end and tenant-isolation verification is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

@@ -1,5 +1,6 @@
 import uuid
-from datetime import date
+from datetime import date, timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -7,13 +8,23 @@ from django.core.exceptions import PermissionDenied
 from django.db import connection
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
+from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.tenant_apps.loans.access import assert_loans_setup_access
 from apps.tenant_apps.loans.domain import LoanDocumentKind
-from apps.tenant_apps.loans.models import LoanLicense, LoanNumberSequence, LoanSeries
+from apps.tenant_apps.loans.models import (
+    LoanChangeLog,
+    LoanLicense,
+    LoanNumberSequence,
+    LoanSeries,
+    PawnLoan,
+    PawnLoanAccountingEvent,
+    PawnLoanAccountingOutbox,
+)
 from apps.tenant_apps.loans.views import _license_for_workspace
+from apps.tenant_apps.party.models import Party
 from apps.orgs.models import Membership, Role
 
 
@@ -178,6 +189,124 @@ class LoansSetupUiTests(TenantTestCase):
             LoanLicense, pk=999, workspace=self.tenant
         )
 
+    def test_operations_console_surfaces_mvp_blockers_and_audit_evidence(self):
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-A-00001", state="APPROVED")
+        event = PawnLoanAccountingEvent.objects.create(
+            loan=loan,
+            event_kind="DISBURSAL",
+            effective_date=date(2026, 8, 1),
+            payload={"values": {"principal": "10000.00"}},
+            payload_fingerprint="event-fingerprint",
+            idempotency_key="operations-event-1",
+            created_by=self.owner,
+        )
+        outbox = PawnLoanAccountingOutbox.objects.create(
+            event=event,
+            idempotency_key="operations-outbox-1",
+            payload={"event": "DISBURSAL"},
+            payload_fingerprint="outbox-fingerprint",
+            status="FAILED",
+            attempt_count=2,
+            last_error="DEA posting unavailable",
+        )
+        stale_event = PawnLoanAccountingEvent.objects.create(
+            loan=loan,
+            event_kind="INTEREST_ACCRUAL",
+            effective_date=date(2026, 8, 2),
+            payload={},
+            payload_fingerprint="stale-event-fingerprint",
+            idempotency_key="operations-event-2",
+            created_by=self.owner,
+        )
+        PawnLoanAccountingOutbox.objects.create(
+            event=stale_event,
+            idempotency_key="operations-outbox-2",
+            payload={},
+            payload_fingerprint="stale-outbox-fingerprint",
+            status="PROCESSING",
+            claimed_at=timezone.now() - timedelta(minutes=30),
+        )
+        release_sequence = LoanNumberSequence.objects.get(
+            series=series,
+            document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE.value,
+        )
+        release_sequence.next_number = release_sequence.maximum_number + 1
+        release_sequence.save(update_fields=["next_number"])
+        LoanChangeLog.objects.create(
+            loan=loan,
+            event_kind="APPROVED",
+            from_state="DRAFT",
+            to_state="APPROVED",
+            actor=self.owner,
+        )
+
+        response = self.tenant_get(reverse("loans:pawn_operations_console"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "PawnLoan operations console")
+        self.assertContains(response, "Ready to allocate")
+        self.assertContains(response, "EXHAUSTED")
+        self.assertContains(response, "Stale processing claims need support review")
+        self.assertContains(response, "DEA posting unavailable")
+        self.assertContains(response, loan.loan_number)
+        self.assertContains(response, "Accounting setup by serviceable loan")
+        self.assertContains(response, "Recent lifecycle audit")
+        self.assertContains(response, reverse("loans:pawn_outbox_retry", args=[outbox.pk]))
+        self.assertContains(response, reverse("loans:pawn_operations_runbook"))
+
+    def test_operations_retry_returns_to_console(self):
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-A-00002")
+        event = PawnLoanAccountingEvent.objects.create(
+            loan=loan,
+            event_kind="DISBURSAL",
+            effective_date=date(2026, 8, 1),
+            payload={},
+            payload_fingerprint="retry-event-fingerprint",
+            idempotency_key="operations-retry-event",
+            created_by=self.owner,
+        )
+        outbox = PawnLoanAccountingOutbox.objects.create(
+            event=event,
+            idempotency_key="operations-retry-outbox",
+            payload={},
+            payload_fingerprint="retry-outbox-fingerprint",
+            status="FAILED",
+        )
+
+        with patch(
+            "apps.tenant_apps.loans.views.retry_failed_outbox_event"
+        ) as retry:
+            response = self.tenant_post(
+                reverse("loans:pawn_outbox_retry", args=[outbox.pk]),
+                {"next": "operations"},
+            )
+
+        self.assertRedirects(
+            response,
+            reverse("loans:pawn_operations_console"),
+            fetch_redirect_response=False,
+        )
+        retry.assert_called_once_with(outbox.pk)
+
+    def test_operations_pages_require_owner_or_admin(self):
+        member = get_user_model().objects.create_user(
+            username=f"operations-member-{uuid.uuid4().hex[:8]}"
+        )
+        member_role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.create(user=member, company=self.tenant, role=member_role)
+        self.client.force_login(member)
+
+        self.assertEqual(
+            self.tenant_get(reverse("loans:pawn_operations_console")).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:pawn_operations_runbook")).status_code,
+            403,
+        )
+
     def _configured_setup(self):
         license = LoanLicense.objects.create(
             workspace=self.tenant,
@@ -202,3 +331,18 @@ class LoansSetupUiTests(TenantTestCase):
                 maximum_number=10000,
             )
         return license, series
+
+    def _loan(self, license, series, number, *, state="DRAFT"):
+        return PawnLoan.objects.create(
+            workspace=self.tenant,
+            license=license,
+            series=series,
+            borrower=Party.objects.create(display_name=f"Borrower {number}"),
+            loan_number=number,
+            state=state,
+            principal_amount=Decimal("10000.00"),
+            monthly_interest_rate=Decimal("2.000000"),
+            loan_date=date(2026, 8, 1),
+            created_by=self.owner,
+            updated_by=self.owner,
+        )
