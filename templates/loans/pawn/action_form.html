@@ -1,0 +1,53 @@
+{% extends "base_tenant.html" %}
+{% block title %}{{ action_label }} · {{ loan.loan_number }}{% endblock %}
+{% block workspace_content %}
+<div class="row justify-content-center">
+  <div class="col-xl-8">
+    <a class="small text-decoration-none" href="{% url 'loans:pawn_loan_detail' loan.pk %}">&larr; {{ loan.loan_number }}</a>
+    <h1 class="h3 mt-2 mb-1">{{ action_label }}</h1>
+    <p class="text-muted mb-4">{{ description }}</p>
+
+    {% if balance %}
+      <div class="card mb-3"><div class="card-body row g-3">
+        <div class="col-md-4"><div class="small text-muted">Principal outstanding</div>{{ balance.principal_outstanding }}</div>
+        <div class="col-md-4"><div class="small text-muted">Interest outstanding</div>{{ balance.interest_outstanding }}</div>
+        <div class="col-md-4"><div class="small text-muted">Total due</div><strong>{{ balance.total_due }}</strong></div>
+      </div></div>
+    {% endif %}
+
+    {% if quote %}
+      <div class="card mb-3"><div class="card-header">Release readiness</div><div class="card-body">
+        {% if quote.error %}<div class="alert alert-danger mb-0">{{ quote.error }}</div>{% else %}
+          <div class="row g-3 mb-3">
+            <div class="col-md-4"><div class="small text-muted">Minimum settlement</div><strong>{{ quote.minimum_settlement|default_if_none:"Unavailable" }}</strong></div>
+            <div class="col-md-4"><div class="small text-muted">Interest and fees first</div>{{ quote.fees_and_interest_settlement }}</div>
+            <div class="col-md-4"><div class="small text-muted">Principal reduction</div>{{ quote.principal_reduction_required|default_if_none:"Unavailable" }}</div>
+          </div>
+          {% for blocker in quote.blockers %}<div class="alert alert-warning py-2 mb-2">{{ blocker.message }}</div>{% empty %}<div class="alert alert-success mb-0">Collateral and accounting checks passed.</div>{% endfor %}
+        {% endif %}
+      </div></div>
+    {% endif %}
+
+    {% if previews %}
+      <div class="card mb-3"><div class="card-header">Eligible periods</div><ul class="list-group list-group-flush">
+        {% for preview in previews %}<li class="list-group-item">Period {{ preview.period_number }}: {{ preview.period_start }} to {{ preview.period_end }} — {{ preview.recognized_interest }}</li>{% endfor %}
+      </ul></div>
+    {% endif %}
+
+    {% if accounting_event %}
+      <div class="alert alert-warning">Event #{{ accounting_event.pk }}: {{ accounting_event.get_event_kind_display }} on {{ accounting_event.effective_date }}</div>
+    {% endif %}
+
+    <form method="post" class="card"><div class="card-body">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        {% if field.is_hidden %}{{ field }}{% else %}
+          <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>
+        {% endif %}
+      {% endfor %}
+      <div class="d-flex gap-2">{% if supports_preview %}<button class="btn btn-outline-primary" type="submit" name="action" value="preview">Preview minimum</button>{% endif %}<button class="btn btn-primary" type="submit" name="action" value="confirm">{{ action_label }}</button><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a></div>
+    </div></form>
+  </div>
+</div>
+{% endblock %}

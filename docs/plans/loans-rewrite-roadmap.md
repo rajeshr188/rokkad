@@ -408,7 +408,7 @@ catch-up accrual, custody, and all MVP reversal paths pass end-to-end tests.
 
 ### Phase 5: Complete Staff MVP And Operational Proof
 
-#### E5.1 Add Controlled Lifecycle UI
+#### E5.1 Add Controlled Lifecycle UI — Completed 2026-08-03
 
 - Add approval/reopen/cancel, disbursal, repayment, accrual, full/partial
   release, retry, and reversal screens with permissions and primary-next-action
@@ -417,6 +417,13 @@ catch-up accrual, custody, and all MVP reversal paths pass end-to-end tests.
 
 Acceptance: a representative staff user can traverse the complete lifecycle
 without admin-site or manual database intervention.
+
+Result: the feature-hidden staff detail now recommends the next valid action and
+links every implemented lifecycle command: approval/reopen/cancel, disbursal,
+repayment, accrual/capitalization, full release, two-step partial-release quote
+and confirmation, failed-posting retry, and administrator reversal. Current
+balances, custody, setup failures, accrual availability, release-readiness
+blockers, and pending/failed accounting are visible on the workflow screens.
 
 #### E5.2 Add Reports And Reconciliation
 
@@ -538,7 +545,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E4.4 and the Phase 4 gate are complete; E5.1 is the next executable slice.**
+Status: **E5.1 is complete; E5.2 reports and reconciliation is the next executable slice.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

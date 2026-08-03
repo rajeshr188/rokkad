@@ -146,3 +146,72 @@ class PawnSetupTransferForm(forms.Form):
         if license and series and series.license_id != license.pk:
             self.add_error("series", "Series must belong to the selected license.")
         return cleaned
+
+
+class PawnDisbursalForm(forms.Form):
+    effective_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["effective_date"].widget.attrs["class"] = "form-control"
+
+
+class PawnRepaymentForm(forms.Form):
+    amount = forms.DecimalField(max_digits=18, decimal_places=2, min_value=0.01)
+    request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["amount"].widget.attrs["class"] = "form-control"
+
+
+class PawnAccrualForm(forms.Form):
+    period_number = forms.IntegerField(min_value=1)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["period_number"].widget.attrs["class"] = "form-control"
+
+
+class PawnCapitalizationForm(forms.Form):
+    through_period_number = forms.IntegerField(min_value=1)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["through_period_number"].widget.attrs["class"] = "form-control"
+
+
+class PawnFullReleaseForm(forms.Form):
+    settlement_amount = forms.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+    )
+    request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["settlement_amount"].widget.attrs["class"] = "form-control"
+
+
+class PawnPartialReleaseForm(PawnFullReleaseForm):
+    selected_items = forms.ModelMultipleChoiceField(
+        queryset=PawnCollateralItem.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    def __init__(self, *args, loan, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["settlement_amount"].required = False
+        self.fields["settlement_amount"].help_text = (
+            "Preview the selected collateral first, then enter the displayed minimum."
+        )
+        self.fields["selected_items"].queryset = loan.collateral_items.filter(
+            custody_state="IN_VAULT"
+        ).order_by("pk")
+
+
+class PawnReversalForm(forms.Form):
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"})
+    )
