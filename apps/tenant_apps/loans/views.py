@@ -47,6 +47,7 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_operations_snapshot,
 )
 from apps.tenant_apps.loans.services import (
+    PawnBorrowerAccountingSetupError,
     LicenseSeriesError,
     NumberAllocationError,
     activate_license,
@@ -81,6 +82,8 @@ from apps.tenant_apps.loans.services import (
     reverse_pawn_loan_event,
     PawnLoanDocumentService,
     PawnLoanDocumentError,
+    assess_pawn_loan_accounting_readiness,
+    ensure_pawn_borrower_accounting,
 )
 
 
@@ -280,12 +283,59 @@ def pawn_loan_disburse(request, pk):
         else:
             messages.success(request, f"{loan.loan_number} disbursed and queued for accounting.")
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
+    readiness = None
+    readiness_error = ""
+    effective_date = (
+        form.cleaned_data.get("effective_date")
+        if form.is_bound and form.is_valid()
+        else timezone.localdate()
+    )
+    try:
+        readiness = assess_pawn_loan_accounting_readiness(
+            loan,
+            effective_date=effective_date,
+        )
+    except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+        readiness_error = str(exc)
     return _render_action(
         request,
         loan,
         form,
         "Disburse loan",
         "This posts the approved principal through DEA and activates the loan.",
+        {
+            "accounting_readiness": readiness,
+            "accounting_readiness_error": readiness_error,
+            "can_administer": _can_administer(request),
+        },
+    )
+
+
+@loans_setup_required
+def pawn_borrower_account_setup(request, pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    if request.method == "POST":
+        try:
+            result = ensure_pawn_borrower_accounting(
+                loan.pk,
+                actor=request.user,
+                request=request,
+            )
+        except PawnBorrowerAccountingSetupError as exc:
+            messages.error(request, str(exc))
+        else:
+            if result.mapping_created:
+                messages.success(
+                    request,
+                    f"Borrower accounting account {result.account} is ready.",
+                )
+            else:
+                messages.info(request, "The borrower accounting mapping was already ready.")
+            return redirect("loans:pawn_loan_disburse", pk=loan.pk)
+    return render(
+        request,
+        "loans/pawn/borrower_account_setup.html",
+        {"loan": loan},
     )
 
 

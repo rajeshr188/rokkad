@@ -494,6 +494,12 @@ and cross-workspace denial. The gate corrected the registered-model inventory
 and made release PDFs represent operational events that legitimately require
 no accounting outbox.
 
+Post-gate usability hardening: the borrower-receivable readiness blocker now
+links Owner/Admin users to an idempotent setup workflow that composes the Party
+compatibility bridge with DEA's public account resolver. It creates no posting
+effect and removes the need for Django admin or database access before
+disbursement.
+
 Phase 5 gate: **passed 2026-08-03.** The PawnLoan MVP is operationally complete
 but still hidden from production navigation.
 

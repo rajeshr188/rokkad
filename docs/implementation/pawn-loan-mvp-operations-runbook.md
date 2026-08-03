@@ -102,7 +102,11 @@ The console treats a `PROCESSING` claim older than 15 minutes as stale.
 
 ## Accounting setup blocker
 
-Use the action link shown beside each blocker. Re-run the Operations Console
+Use the action link shown beside each blocker. For
+`BORROWER_RECEIVABLE_REQUIRED`, an Owner/Admin can use **Set up borrower
+accounting** to atomically create or reuse the Party compatibility Customer,
+DEA account, and active `BORROWER / BORROWER_LOAN_RECEIVABLE` mapping. This is
+setup only and creates no voucher or journal. Re-run the Operations Console
 after setup. An approved/active loan is ready only when its current-date DEA
 prerequisites pass; accrual-policy loans also require interest receivable setup.
 

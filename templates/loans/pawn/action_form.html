@@ -38,6 +38,22 @@
       <div class="alert alert-warning">Event #{{ accounting_event.pk }}: {{ accounting_event.get_event_kind_display }} on {{ accounting_event.effective_date }}</div>
     {% endif %}
 
+    {% if accounting_readiness_error %}
+      <div class="alert alert-danger"><strong>Accounting readiness could not be checked.</strong> {{ accounting_readiness_error }}</div>
+    {% elif accounting_readiness and not accounting_readiness.ready %}
+      <div class="card border-warning mb-3"><div class="card-header">Accounting setup required</div><div class="card-body">
+        {% for blocker in accounting_readiness.blockers %}
+          <div class="mb-2"><strong>{{ blocker.code }}</strong>: {{ blocker.message }}
+            {% if blocker.action_url %}
+              {% if blocker.code != 'BORROWER_RECEIVABLE_REQUIRED' or can_administer %}<a class="ms-1" href="{{ blocker.action_url }}">{{ blocker.action_label }}</a>{% else %}<span class="text-muted ms-1">Ask an Owner or Admin to configure it.</span>{% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div></div>
+    {% elif accounting_readiness.ready %}
+      <div class="alert alert-success">Accounting prerequisites are ready for this effective date.</div>
+    {% endif %}
+
     <form method="post" class="card"><div class="card-body">
       {% csrf_token %}
       {{ form.non_field_errors }}

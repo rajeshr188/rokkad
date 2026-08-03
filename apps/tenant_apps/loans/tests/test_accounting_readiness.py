@@ -15,7 +15,7 @@ from apps.tenant_apps.loans.services.accounting_readiness import (
 
 class PawnLoanAccountingReadinessTests(SimpleTestCase):
     def setUp(self):
-        self.loan = SimpleNamespace(borrower=SimpleNamespace(pk=31))
+        self.loan = SimpleNamespace(pk=29, borrower=SimpleNamespace(pk=31))
         self.effective_date = date(2026, 8, 3)
 
     @patch("apps.tenant_apps.loans.services.accounting_readiness.reverse")
@@ -23,7 +23,7 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
         "apps.tenant_apps.loans.services.accounting_readiness.dea_facade.get_loan_posting_prerequisites"
     )
     def test_returns_precise_actionable_blockers_for_missing_setup(self, prerequisites, reverse):
-        reverse.side_effect = lambda route: f"/{route}/"
+        reverse.side_effect = lambda route, args=(): f"/{route}/{'/'.join(map(str, args))}"
         prerequisites.return_value = LoanPostingPrerequisites(
             None, None, None, None, None, None, None, None
         )
@@ -48,6 +48,9 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
             ],
         )
         self.assertTrue(all(blocker.action_url for blocker in readiness.blockers))
+        borrower_blocker = readiness.blockers[4]
+        self.assertEqual(borrower_blocker.action_label, "Set up borrower accounting")
+        self.assertIn("29", borrower_blocker.action_url)
         prerequisites.assert_called_once_with(
             party=self.loan.borrower,
             effective_date=self.effective_date,

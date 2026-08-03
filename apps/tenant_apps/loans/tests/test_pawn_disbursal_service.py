@@ -57,10 +57,12 @@ from apps.tenant_apps.loans.services import (
     PawnInterestError,
     PawnReversalError,
     approve_pawn_loan,
+    assess_pawn_loan_accounting_readiness,
     assert_pawn_loan_financial_actions_allowed,
     create_pawn_draft,
     deliver_outbox_event,
     disburse_pawn_loan,
+    ensure_pawn_borrower_accounting,
     capitalize_pawn_loan_interest,
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
@@ -249,6 +251,40 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertNotIn("apps.tenant_apps.dea.models", delivery_source)
         self.assertNotIn("apps.tenant_apps.dea.posting", delivery_source)
         self.assertNotIn("apps.tenant_apps.dea.services", delivery_source)
+
+    @patch("apps.tenant_apps.loans.services.borrower_accounting.AuditLog.log")
+    def test_borrower_accounting_setup_is_real_idempotent_and_unblocks_readiness(
+        self, audit
+    ):
+        self._seed_dea_disbursal_setup(include_borrower_account=False)
+
+        first = ensure_pawn_borrower_accounting(
+            self.loan.pk,
+            actor=self.tenant.owner,
+        )
+        second = ensure_pawn_borrower_accounting(
+            self.loan.pk,
+            actor=self.tenant.owner,
+        )
+
+        self.assertTrue(first.customer_created)
+        self.assertTrue(first.mapping_created)
+        self.assertFalse(second.customer_created)
+        self.assertFalse(second.mapping_created)
+        self.assertEqual(first.account.pk, second.account.pk)
+        self.assertEqual(first.mapping.pk, second.mapping.pk)
+        self.assertEqual(first.mapping.role_key, "BORROWER")
+        self.assertEqual(first.mapping.purpose, "BORROWER_LOAN_RECEIVABLE")
+        self.assertEqual(first.mapping.status, "ACTIVE")
+        self.assertEqual(first.mapping.control_ledger.name, "BORROWER_LOAN_CTRL")
+        self.assertEqual(self.loan.borrower.legacy_customer.pk, first.customer.pk)
+        self.assertTrue(
+            assess_pawn_loan_accounting_readiness(
+                self.loan,
+                effective_date=date(2026, 8, 3),
+            ).ready
+        )
+        audit.assert_called_once()
 
     def test_default_adapter_posts_balanced_dea_voucher_and_is_idempotent(self):
         self._seed_dea_disbursal_setup()
@@ -1255,7 +1291,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
             defaults={"name": name, "status": "OPEN"},
         )
 
-    def _seed_dea_disbursal_setup(self):
+    def _seed_dea_disbursal_setup(self, *, include_borrower_account=True):
         debit, _ = TransactionType_DE.objects.get_or_create(
             XactTypeCode="Dr", defaults={"name": "Debit"}
         )
@@ -1289,14 +1325,15 @@ class PawnDisbursalServiceTests(TenantTestCase):
             end_date=date(2026, 8, 31),
             defaults={"name": "August 2026", "status": "OPEN"},
         )
-        Customer.objects.create(
-            firstname=f"Borrower-{uuid.uuid4().hex[:8]}",
-            lastname="PawnLoan",
-            party=self.loan.borrower,
-        )
-        resolve_party_account(
-            self.loan.borrower,
-            role_key="BORROWER",
-            purpose="BORROWER_LOAN_RECEIVABLE",
-            create=True,
-        )
+        if include_borrower_account:
+            Customer.objects.create(
+                firstname=f"Borrower-{uuid.uuid4().hex[:8]}",
+                lastname="PawnLoan",
+                party=self.loan.borrower,
+            )
+            resolve_party_account(
+                self.loan.borrower,
+                role_key="BORROWER",
+                purpose="BORROWER_LOAN_RECEIVABLE",
+                create=True,
+            )

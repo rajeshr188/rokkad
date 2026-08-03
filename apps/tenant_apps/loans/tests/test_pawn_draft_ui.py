@@ -222,6 +222,9 @@ class PawnDraftUiTests(TenantTestCase):
             self.assertTrue(response["X-Rokkad-Verification-ID"].startswith("ROKKAD|"))
 
     def test_workspace_member_can_use_internal_draft_ui_but_not_setup(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
         User = get_user_model()
         member = User.objects.create_user(
             username=f"pawn-staff-{uuid.uuid4().hex[:8]}",
@@ -233,6 +236,12 @@ class PawnDraftUiTests(TenantTestCase):
 
         self.assertEqual(self.client.get(reverse("loans:pawn_loan_list")).status_code, 200)
         self.assertEqual(self.client.get(reverse("loans:license_list")).status_code, 403)
+        self.assertEqual(
+            self.client.get(
+                reverse("loans:pawn_borrower_account_setup", args=[loan.pk])
+            ).status_code,
+            403,
+        )
 
     def test_staff_can_approve_reopen_reapprove_and_cancel_through_ui(self):
         license, series = self._configured_setup()
@@ -298,6 +307,46 @@ class PawnDraftUiTests(TenantTestCase):
             loan.pk,
             effective_date=date(2026, 8, 3),
             actor=self.owner,
+        )
+
+    def test_disbursal_blocker_guides_admin_through_borrower_account_setup(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
+
+        disbursement = self.client.get(
+            reverse("loans:pawn_loan_disburse", args=[loan.pk])
+        )
+
+        setup_url = reverse("loans:pawn_borrower_account_setup", args=[loan.pk])
+        self.assertContains(disbursement, "Accounting setup required")
+        self.assertContains(disbursement, "BORROWER_RECEIVABLE_REQUIRED")
+        self.assertContains(disbursement, setup_url)
+
+        setup = self.client.get(setup_url)
+        self.assertContains(setup, "Set up borrower accounting")
+        self.assertContains(setup, "BORROWER_LOAN_RECEIVABLE")
+
+        result = SimpleNamespace(
+            mapping_created=True,
+            account="DR0001 | Draft Borrower",
+        )
+        with patch(
+            "apps.tenant_apps.loans.views.ensure_pawn_borrower_accounting",
+            return_value=result,
+        ) as command:
+            response = self.client.post(setup_url)
+
+        self.assertRedirects(
+            response,
+            reverse("loans:pawn_loan_disburse", args=[loan.pk]),
+            fetch_redirect_response=False,
+        )
+        command.assert_called_once_with(
+            loan.pk,
+            actor=self.owner,
+            request=response.wsgi_request,
         )
 
     def test_active_detail_exposes_complete_staff_lifecycle_and_repayment_command(self):

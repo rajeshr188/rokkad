@@ -89,6 +89,11 @@ from .documents import (
     PawnLoanDocumentResult,
     PawnLoanDocumentService,
 )
+from .borrower_accounting import (
+    PawnBorrowerAccountingSetupError,
+    PawnBorrowerAccountingSetupResult,
+    ensure_pawn_borrower_accounting,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -157,4 +162,7 @@ __all__ = (
     "PawnLoanDocumentError",
     "PawnLoanDocumentResult",
     "PawnLoanDocumentService",
+    "PawnBorrowerAccountingSetupError",
+    "PawnBorrowerAccountingSetupResult",
+    "ensure_pawn_borrower_accounting",
 )

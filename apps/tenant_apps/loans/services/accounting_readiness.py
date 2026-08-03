@@ -90,8 +90,9 @@ def assess_pawn_loan_accounting_readiness(
             _blocker(
                 "BORROWER_RECEIVABLE_REQUIRED",
                 "The borrower needs an active loan-receivable account mapping.",
-                "Review chart of accounts",
-                "dea_chart_of_accounts",
+                "Set up borrower accounting",
+                "loans:pawn_borrower_account_setup",
+                route_args=(loan.pk,) if getattr(loan, "pk", None) else (),
             )
         )
     if not prerequisites.interest_income_ledger:
@@ -143,9 +144,9 @@ def require_pawn_loan_accounting_readiness(
     return readiness
 
 
-def _blocker(code, message, action_label, route_name):
+def _blocker(code, message, action_label, route_name, *, route_args=()):
     try:
-        action_url = reverse(route_name)
+        action_url = reverse(route_name, args=route_args)
     except NoReverseMatch:
         action_url = None
     return AccountingReadinessBlocker(
