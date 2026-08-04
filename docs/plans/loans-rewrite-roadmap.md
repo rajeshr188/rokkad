@@ -613,6 +613,17 @@ The expanded 153-test tenant-aware Loans suite passes with real DEA fixtures.
 Acceptance: users create new loans only in Loans while both source systems remain
 correctly represented in unified reads.
 
+Development execution on 2026-08-04: `jcl1` is enabled through the audited
+workspace preference and now routes canonical new-loan navigation to Loans.
+Direct Girvi origination redirects to Loans, while the Girvi list and existing
+record servicing, the Loans operations console, and the unified coexistence
+view remain available. Coexistence comparison reports zero mismatches and all
+six automated readiness checks pass. Because `jcl1` is a development workspace
+with no production-data recovery requirement, the product owner explicitly
+accepted skipping formal backup-restore, support/monitoring ownership, and
+operator sign-off for this development cutover. Those controls remain mandatory
+before enabling any workspace containing production data.
+
 Phase 6 gate: controlled production cutover succeeds and remains reversible by
 feature flag without changing record ownership.
 
@@ -653,7 +664,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E6.4 engineering hardening and the `jcl1` technical lifecycle/rollback rehearsal are complete. Isolated backup restore, support/monitoring ownership, target-staff permission review, and real operator acceptance remain before E6.5.**
+Status: **E6.5 development cutover is active for `jcl1`; Loans is primary for new loans and Girvi remains legacy-servicing only. The Phase 6 production gate remains pending until the complete E6.4 manual readiness register is satisfied for a production workspace.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

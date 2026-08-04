@@ -77,7 +77,9 @@ at INR 1,000 debit and credit. The operational release event is posted without
 fabricating DEA financial records. The loan ticket, repayment receipt, and
 release memo all rendered valid non-empty PDFs. Post-pilot Loans reconciliation
 and Girvi/Loans comparison returned zero findings/mismatches. The audited
-cutover values are `True` followed by `False`, and the flag is currently off.
+cutover values were `True` followed by `False`, and the flag was off when that
+technical pilot concluded. The later development cutover below supersedes that
+workspace state.
 
 ## Manual sign-off register
 
@@ -92,6 +94,20 @@ cutover values are `True` followed by `False`, and the flag is currently off.
 
 E6.5 must not enable a production workspace until this register is completed for
 that workspace and the command returns GO with `--fail-on-blocker`.
+
+## Development-workspace exception
+
+On 2026-08-04 the product owner confirmed that `jcl1` is a development
+workspace whose old data does not require production recovery guarantees. It
+was therefore enabled for E6.5 development use without falsely acknowledging
+the five remaining manual production checks. Canonical and direct-origination
+routing, legacy Girvi visibility, unified coexistence, operations access, all
+six automated checks, and zero-mismatch comparison were verified after
+enablement.
+
+This exception changes neither the fail-closed command nor the production
+decision above. It permits development feedback against the primary Loans UI;
+it is not reusable evidence for a workspace containing real business data.
 
 The final engineering regression gate passed 153 tenant-aware Loans tests with
 real DEA fixtures on 2026-08-04.
