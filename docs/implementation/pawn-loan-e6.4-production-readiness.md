@@ -57,16 +57,38 @@ ledger-only lines for financial totals while retaining account lines as
 subledger evidence. The same unchanged tenant data then passed Loans
 reconciliation and coexistence comparison with zero findings.
 
+## `jcl1` technical pilot on 2026-08-04
+
+A pre-pilot custom-format PostgreSQL backup was written to the ignored local
+artifact `backup/pre_jcl1_loans_pilot_20260804.dump`; `pg_restore --list`
+validated its archive structure. A restore into an isolated database has not
+yet been performed, so the backup/restore acknowledgement remains pending.
+
+The audited workspace feature flag was enabled and then guaranteed back off
+after the pilot. The normal Loans services created Party `5` and PawnLoan `4`,
+official number `PL-00004`, for `E6.4 Technical Pilot 2026-08-04`. The workflow
+completed draft, approval, guided borrower accounting setup, disbursal, full
+repayment, zero-settlement full release, collateral return, and closure. The
+loan remains closed with zero due and closure readiness true; its consumed loan
+and release numbers remain permanent evidence and must not be recycled.
+
+Both financial events are posted, source-linked, journal-linked, and balanced
+at INR 1,000 debit and credit. The operational release event is posted without
+fabricating DEA financial records. The loan ticket, repayment receipt, and
+release memo all rendered valid non-empty PDFs. Post-pilot Loans reconciliation
+and Girvi/Loans comparison returned zero findings/mismatches. The audited
+cutover values are `True` followed by `False`, and the flag is currently off.
+
 ## Manual sign-off register
 
 | Check | Current evidence | Sign-off |
 | --- | --- | --- |
-| Backup/restore | Procedure documented; target backup and restore not performed in this code session | Pending |
-| Rollback | Automated feature-off record-preservation test passes; live operational rehearsal pending | Pending |
+| Backup/restore | Pre-pilot backup created and archive listed successfully; isolated restore still pending | Pending |
+| Rollback | `jcl1` audited enable/disable rehearsal completed; `PL-00004` retained and remains Loans-owned | Engineering complete |
 | Support | Runbook and required evidence list exist; named pilot support owner pending | Pending |
 | Monitoring | Operations console and gate cover failed/stale outbox and reconciliation; alert ownership pending | Pending |
 | Permissions | Automated Owner/Admin/member boundaries pass; target staff review pending | Pending |
-| Pilot workflow | Full lifecycle is covered by tenant tests; real operator acceptance pending | Pending |
+| Pilot workflow | `jcl1` technical full lifecycle completed; real staff/operator acceptance pending | Pending |
 
 E6.5 must not enable a production workspace until this register is completed for
 that workspace and the command returns GO with `--fail-on-blocker`.

@@ -653,7 +653,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E6.4 engineering hardening is implemented and automated checks pass for `jcl1`; live backup/support/monitoring/permissions/rollback/pilot sign-off remains before E6.5.**
+Status: **E6.4 engineering hardening and the `jcl1` technical lifecycle/rollback rehearsal are complete. Isolated backup restore, support/monitoring ownership, target-staff permission review, and real operator acceptance remain before E6.5.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA
