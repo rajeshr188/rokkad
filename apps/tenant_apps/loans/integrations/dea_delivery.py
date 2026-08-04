@@ -62,6 +62,61 @@ def deliver_loan_accounting_event(event):
             event,
             actor=event.created_by,
         )
+    if event.event_kind == TransactionKind.RENEWAL_SETTLEMENT.value:
+        from apps.tenant_apps.loans.models import PawnLoanAccountingEvent
+
+        values = event.payload.get("values") or {}
+        renewal = event.payload.get("renewal") or {}
+        catch_up_event_id = renewal.get("catch_up_event_id")
+        if catch_up_event_id:
+            try:
+                catch_up = PawnLoanAccountingEvent.objects.select_related(
+                    "outbox"
+                ).get(
+                    pk=catch_up_event_id,
+                    loan_id=event.loan_id,
+                    event_kind=TransactionKind.INTEREST_ACCRUAL.value,
+                )
+            except PawnLoanAccountingEvent.DoesNotExist as exc:
+                raise UnsupportedLoanAccountingEvent(
+                    "Renewal settlement is missing its catch-up accrual event."
+                ) from exc
+            if catch_up.outbox.status != "POSTED":
+                raise UnsupportedLoanAccountingEvent(
+                    "Renewal catch-up accrual must post before settlement."
+                )
+        if (
+            Decimal(str(values.get("interest", "0"))) == 0
+            and Decimal(str(values.get("fees", "0"))) == 0
+            and Decimal(str(renewal.get("source_control_principal", "0")))
+            == Decimal(str(renewal.get("successor_control_principal", "0")))
+        ):
+            return OperationalOnlyDeliveryReceipt()
+        return dea_facade.post_pawn_loan_renewal_event(
+            event,
+            actor=event.created_by,
+        )
+    if event.event_kind == TransactionKind.RENEWAL_OPENING.value:
+        from apps.tenant_apps.loans.models import PawnLoanAccountingEvent
+
+        settlement_event_id = (event.payload.get("renewal") or {}).get(
+            "settlement_event_id"
+        )
+        try:
+            settlement = PawnLoanAccountingEvent.objects.select_related("outbox").get(
+                pk=settlement_event_id,
+                loan__workspace_id=event.loan.workspace_id,
+                event_kind=TransactionKind.RENEWAL_SETTLEMENT.value,
+            )
+        except PawnLoanAccountingEvent.DoesNotExist as exc:
+            raise UnsupportedLoanAccountingEvent(
+                "Renewal opening is missing its settlement event."
+            ) from exc
+        if settlement.outbox.status != "POSTED":
+            raise UnsupportedLoanAccountingEvent(
+                "Renewal settlement must post before the successor opening."
+            )
+        return OperationalOnlyDeliveryReceipt()
     if event.event_kind == TransactionKind.REVERSAL.value:
         return dea_facade.reverse_pawn_loan_accounting_event(
             event,

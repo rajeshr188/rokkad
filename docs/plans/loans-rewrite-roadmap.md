@@ -682,9 +682,30 @@ document and authorization workflow; neither amount may be hidden in recovery.
 Migration `loans.0010` is applied to local tenant schemas and the complete
 164-test tenant-aware Loans suite passes.
 
-#### E7.3 Add Renewal Workflows
+#### E7.3 Add Renewal Workflows — Completed 2026-08-04
 
 - Add pay-and-renew and top-up renewal with successor-loan audit links.
+
+Acceptance: renewal uses the current business date, settles all interest and
+fees, carries a positive principal into exactly one newly numbered successor,
+and either accepts a principal paydown or a top-up but never both. Current
+collateral valuation and the source policy's maximum LTV cap the successor.
+Every source collateral item must remain in the vault and gains an explicit
+one-to-one successor lineage. Accounting posts only the real net principal cash
+movement plus collected interest and fees. Reversal is administrator-only,
+reason-required, newest-first, and restores both loans and custody together.
+
+Result: tenant migration `loans.0011` adds immutable renewal and renewal-
+reversal aggregates, collateral lineage, and renewal custody states. The
+service supports pay-and-renew and top-up modes, catch-up accrual dependencies,
+idempotent request keys, snapshotted valuation/LTV evidence, source closure,
+and successor activation. `RENEWAL_SETTLEMENT` posts through a dedicated DEA
+rule using the net source-to-successor principal change; `RENEWAL_OPENING` is an
+operational balance-establishment event that can complete only after settlement
+posts. The loan UI exposes renewal, lineage, a verification PDF, and composite
+reversal. Reconciliation understands operational openings and renewal custody
+without weakening missing-voucher checks for economic events. The complete
+170-test tenant-aware Loans suite passes in three exhaustive groups.
 
 #### E7.4 Add FundingLoan And Repledging
 

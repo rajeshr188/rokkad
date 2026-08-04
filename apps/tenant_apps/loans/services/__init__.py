@@ -112,6 +112,13 @@ from .pawn_auctions import (
     reverse_pawn_loan_auction,
     start_pawn_loan_auction,
 )
+from .pawn_renewals import (
+    PawnRenewalError,
+    PawnRenewalResult,
+    PawnRenewalReversalResult,
+    renew_pawn_loan,
+    reverse_pawn_loan_renewal,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -197,4 +204,9 @@ __all__ = (
     "initiate_pawn_loan_auction",
     "reverse_pawn_loan_auction",
     "start_pawn_loan_auction",
+    "PawnRenewalError",
+    "PawnRenewalResult",
+    "PawnRenewalReversalResult",
+    "renew_pawn_loan",
+    "reverse_pawn_loan_renewal",
 )

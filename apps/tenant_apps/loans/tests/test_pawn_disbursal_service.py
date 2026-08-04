@@ -18,9 +18,11 @@ from apps.tenant_apps.loans.domain import (
     LoanDocumentKind,
     LoanOutboxStatus,
     PawnLoanEventKind,
+    PawnLoanRenewalMode,
     PawnLoanState,
     PartialMonthMethod,
     TransactionKind,
+    ValuationMethod,
     WorkspacePolicyDefaults,
     resolve_policy,
 )
@@ -54,6 +56,8 @@ from apps.tenant_apps.loans.models import (
     PawnLoanInterestAccrual,
     PawnLoanRelease,
     PawnLoanReleaseReversal,
+    PawnLoanRenewal,
+    PawnLoanRenewalReversal,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -81,12 +85,16 @@ from apps.tenant_apps.loans.services import (
     cancel_pawn_loan_auction,
     complete_pawn_loan_auction,
     initiate_pawn_loan_auction,
+    PawnRenewalError,
+    renew_pawn_loan,
+    reverse_pawn_loan_renewal,
     reverse_pawn_loan_auction,
     start_pawn_loan_auction,
 )
 from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
     get_pawn_loan_release_readiness,
+    get_pawn_loan_reports,
 )
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.rates.models import Rate, RateSource
@@ -1393,6 +1401,193 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )
         self.assertEqual(cancelled.state, "CANCELLED")
         self.assertEqual(PawnLoanAuction.objects.filter(loan=self.loan).count(), 1)
+
+    def test_pay_and_renew_posts_net_settlement_and_composite_reversal(self):
+        self._activate_loan()
+        self._create_release_rate(
+            RateSource.objects.create(name="Renewal", location="Market")
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
+            return_value=(),
+        ), self.captureOnCommitCallbacks(execute=True):
+            result = renew_pawn_loan(
+                self.loan.pk,
+                mode=PawnLoanRenewalMode.PAY_AND_RENEW,
+                renewal_date=date(2026, 8, 3),
+                principal_paid=Decimal("11000.00"),
+                top_up_amount=Decimal("0.00"),
+                successor_license_id=self.loan.license_id,
+                successor_series_id=self.loan.series_id,
+                monthly_interest_rate=Decimal("2.000000"),
+                tenure_months=3,
+                request_key="renew-paydown-1",
+                actor=self.actor,
+            )
+
+        result.source_loan.refresh_from_db()
+        result.successor_loan.refresh_from_db()
+        result.settlement_outbox.refresh_from_db()
+        result.opening_outbox.refresh_from_db()
+        self.assertEqual(result.source_loan.state, PawnLoanState.CLOSED.value)
+        self.assertEqual(result.successor_loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(result.renewal.successor_principal_amount, Decimal("39000.00"))
+        self.assertIsNotNone(result.settlement_outbox.dea_voucher_id)
+        self.assertIsNone(result.opening_outbox.dea_voucher_id)
+        self.assertEqual(
+            get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 8, 3)).principal_outstanding,
+            Decimal("0.00"),
+        )
+        self.assertEqual(
+            get_pawn_loan_balance(result.successor_loan.pk, as_of_date=date(2026, 8, 3)).principal_outstanding,
+            Decimal("39000.00"),
+        )
+        source_item = self.loan.collateral_items.get()
+        successor_item = result.successor_loan.collateral_items.get()
+        self.assertEqual(source_item.custody_state, CollateralCustodyState.RENEWAL_TRANSFERRED.value)
+        self.assertEqual(successor_item.renewed_from_id, source_item.pk)
+        reports = get_pawn_loan_reports(as_of_date=date(2026, 8, 3))
+        self.assertEqual(
+            [(issue.code, issue.loan.loan_number) for issue in reports.issues],
+            [],
+        )
+
+        with self.assertRaisesRegex(PawnReversalError, "renewal reversal workflow"):
+            reverse_pawn_loan_event(
+                result.settlement_event.pk,
+                reason="Use composite reversal",
+                actor=self.tenant.owner,
+            )
+        with self.captureOnCommitCallbacks(execute=True):
+            reversed_result = reverse_pawn_loan_renewal(
+                result.renewal.pk,
+                reason="Renewal entered against the wrong series",
+                actor=self.tenant.owner,
+            )
+
+        result.source_loan.refresh_from_db()
+        result.successor_loan.refresh_from_db()
+        source_item.refresh_from_db()
+        successor_item.refresh_from_db()
+        self.assertEqual(result.source_loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(result.successor_loan.state, PawnLoanState.CANCELLED.value)
+        self.assertEqual(source_item.custody_state, CollateralCustodyState.IN_VAULT.value)
+        self.assertEqual(successor_item.custody_state, CollateralCustodyState.RENEWAL_REVERSED.value)
+        self.assertTrue(PawnLoanRenewalReversal.objects.filter(renewal=result.renewal).exists())
+        self.assertEqual(
+            get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 8, 4)).principal_outstanding,
+            Decimal("50000.00"),
+        )
+        self.assertEqual(
+            get_pawn_loan_balance(result.successor_loan.pk, as_of_date=date(2026, 8, 4)).principal_outstanding,
+            Decimal("0.00"),
+        )
+        self.assertFalse(reversed_result.already_reversed)
+
+    def test_renewal_is_idempotent(self):
+        self._activate_loan()
+        self._create_release_rate(
+            RateSource.objects.create(name="Renew idem", location="Market")
+        )
+        call = dict(
+            mode=PawnLoanRenewalMode.PAY_AND_RENEW,
+            renewal_date=date(2026, 8, 3),
+            principal_paid=Decimal("11000.00"),
+            top_up_amount=Decimal("0.00"),
+            successor_license_id=self.loan.license_id,
+            successor_series_id=self.loan.series_id,
+            monthly_interest_rate=Decimal("2.000000"),
+            tenure_months=3,
+            request_key="renew-idempotent-1",
+            actor=self.actor,
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
+            return_value=(),
+        ), self.captureOnCommitCallbacks(execute=True):
+            first = renew_pawn_loan(self.loan.pk, **call)
+            second = renew_pawn_loan(self.loan.pk, **call)
+
+        self.assertFalse(first.already_renewed)
+        self.assertTrue(second.already_renewed)
+        self.assertEqual(first.renewal.pk, second.renewal.pk)
+        self.assertEqual(PawnLoanRenewal.objects.filter(source_loan=self.loan).count(), 1)
+
+    def test_top_up_renewal_rejects_principal_above_snapshot_ltv(self):
+        self._activate_loan()
+        self._create_release_rate(
+            RateSource.objects.create(name="Renew LTV", location="Market")
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
+            return_value=(),
+        ):
+            with self.assertRaisesRegex(PawnRenewalError, "exceeds the allowed"):
+                renew_pawn_loan(
+                    self.loan.pk,
+                    mode=PawnLoanRenewalMode.TOP_UP_RENEW,
+                    renewal_date=date(2026, 8, 3),
+                    principal_paid=Decimal("0.00"),
+                    top_up_amount=Decimal("1000.00"),
+                    successor_license_id=self.loan.license_id,
+                    successor_series_id=self.loan.series_id,
+                    monthly_interest_rate=Decimal("2.000000"),
+                    tenure_months=3,
+                    request_key="renew-topup-ltv",
+                    actor=self.actor,
+                )
+
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
+        self.assertFalse(PawnLoanRenewal.objects.filter(source_loan=self.loan).exists())
+
+    def test_top_up_renewal_increases_successor_principal_with_net_cash_posting(self):
+        self.loan.collateral_items.update(latest_appraised_value=Decimal("100000.00"))
+        policy = resolve_policy(
+            WorkspacePolicyDefaults(
+                valuation_method=ValuationMethod.LATEST_APPRAISAL,
+                maximum_ltv_ratio=Decimal("0.80"),
+            )
+        )
+        self._activate_loan(policy=policy)
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
+            return_value=(),
+        ), self.captureOnCommitCallbacks(execute=True):
+            result = renew_pawn_loan(
+                self.loan.pk,
+                mode=PawnLoanRenewalMode.TOP_UP_RENEW,
+                renewal_date=date(2026, 8, 3),
+                principal_paid=Decimal("0.00"),
+                top_up_amount=Decimal("10000.00"),
+                successor_license_id=self.loan.license_id,
+                successor_series_id=self.loan.series_id,
+                monthly_interest_rate=Decimal("2.000000"),
+                tenure_months=3,
+                request_key="renew-topup-success",
+                actor=self.actor,
+            )
+
+        result.settlement_outbox.refresh_from_db()
+        self.assertEqual(result.renewal.successor_principal_amount, Decimal("60000.00"))
+        self.assertIsNotNone(result.settlement_outbox.dea_voucher_id)
+        voucher = Voucher.objects.get(pk=result.settlement_outbox.dea_voucher_id)
+        self.assertEqual(
+            voucher.lines.get(side="Dr", account__isnull=True).amount.amount,
+            Decimal("10000.00"),
+        )
 
     def _activate_loan(self, policy=None):
         self._seed_dea_disbursal_setup()

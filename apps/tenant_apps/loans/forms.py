@@ -5,6 +5,7 @@ from apps.tenant_apps.loans.domain import (
     CollateralMetal,
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
+    PawnLoanRenewalMode,
 )
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnCollateralItem
 from apps.tenant_apps.party.models import Party
@@ -290,3 +291,56 @@ class PawnAuctionCompletionForm(forms.Form):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+
+
+class PawnRenewalForm(forms.Form):
+    mode = forms.ChoiceField(
+        choices=[
+            (PawnLoanRenewalMode.PAY_AND_RENEW.value, "Pay and renew"),
+            (PawnLoanRenewalMode.TOP_UP_RENEW.value, "Top-up renewal"),
+        ],
+        widget=forms.RadioSelect,
+        initial=PawnLoanRenewalMode.PAY_AND_RENEW.value,
+    )
+    principal_paid = forms.DecimalField(
+        max_digits=18, decimal_places=2, min_value=0, initial=0
+    )
+    top_up_amount = forms.DecimalField(
+        max_digits=18, decimal_places=2, min_value=0, initial=0
+    )
+    successor_license = forms.ModelChoiceField(queryset=LoanLicense.objects.none())
+    successor_series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
+    monthly_interest_rate = forms.DecimalField(
+        max_digits=9, decimal_places=6, min_value=0
+    )
+    tenure_months = forms.IntegerField(min_value=1, max_value=600)
+    request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["successor_license"].queryset = LoanLicense.objects.filter(
+            workspace=workspace,
+            is_active=True,
+        ).order_by("name")
+        self.fields["successor_series"].queryset = LoanSeries.objects.filter(
+            license__workspace=workspace,
+            license__is_active=True,
+            is_active=True,
+        ).select_related("license").order_by("license__name", "name")
+        for name, field in self.fields.items():
+            if name != "mode":
+                field.widget.attrs.setdefault(
+                    "class",
+                    "form-select" if name in {"successor_license", "successor_series"} else "form-control",
+                )
+
+    def clean(self):
+        cleaned = super().clean()
+        license = cleaned.get("successor_license")
+        series = cleaned.get("successor_series")
+        if license and series and series.license_id != license.pk:
+            self.add_error(
+                "successor_series",
+                "Successor series must belong to the selected license.",
+            )
+        return cleaned

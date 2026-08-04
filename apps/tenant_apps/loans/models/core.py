@@ -18,6 +18,7 @@ from apps.tenant_apps.loans.domain import (
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
     PawnLoanAuctionState,
+    PawnLoanRenewalMode,
     PawnLoanEventKind,
     PawnLoanState,
     RoundingMethod,
@@ -336,6 +337,13 @@ class PawnCollateralItem(models.Model):
         choices=enum_choices(CollateralCustodyState),
         default=CollateralCustodyState.IN_VAULT.value,
         db_index=True,
+    )
+    renewed_from = models.OneToOneField(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="renewed_as",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -860,6 +868,13 @@ class PawnCollateralCustodyEvent(models.Model):
         on_delete=models.PROTECT,
         related_name="custody_events",
     )
+    renewal = models.ForeignKey(
+        "PawnLoanRenewal",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
     release_reversal = models.ForeignKey(
         "PawnLoanReleaseReversal",
         null=True,
@@ -869,6 +884,13 @@ class PawnCollateralCustodyEvent(models.Model):
     )
     auction_reversal = models.ForeignKey(
         "PawnLoanAuctionReversal",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
+    renewal_reversal = models.ForeignKey(
+        "PawnLoanRenewalReversal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -901,8 +923,21 @@ class PawnCollateralCustodyEvent(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
-                    (Q(release__isnull=False) & Q(auction__isnull=True))
-                    | (Q(release__isnull=True) & Q(auction__isnull=False))
+                    (
+                        Q(release__isnull=False)
+                        & Q(auction__isnull=True)
+                        & Q(renewal__isnull=True)
+                    )
+                    | (
+                        Q(release__isnull=True)
+                        & Q(auction__isnull=False)
+                        & Q(renewal__isnull=True)
+                    )
+                    | (
+                        Q(release__isnull=True)
+                        & Q(auction__isnull=True)
+                        & Q(renewal__isnull=False)
+                    )
                 ),
                 name="loans_custody_one_source",
             ),
@@ -929,6 +964,14 @@ class PawnCollateralCustodyEvent(models.Model):
                 raise ValidationError(
                     {"collateral_item": "Custody item must belong to the auction loan."}
                 )
+        if self.renewal_id and self.collateral_item_id:
+            if self.collateral_item.loan_id not in {
+                self.renewal.source_loan_id,
+                self.renewal.successor_loan_id,
+            }:
+                raise ValidationError(
+                    {"collateral_item": "Custody item must belong to the renewal chain."}
+                )
         if self.auction_reversal_id and self.auction_id:
             if self.auction_reversal.auction_id != self.auction_id:
                 raise ValidationError(
@@ -937,6 +980,15 @@ class PawnCollateralCustodyEvent(models.Model):
         elif self.auction_reversal_id:
             raise ValidationError(
                 {"auction_reversal": "Auction reversal custody requires its auction."}
+            )
+        if self.renewal_reversal_id and self.renewal_id:
+            if self.renewal_reversal.renewal_id != self.renewal_id:
+                raise ValidationError(
+                    {"renewal_reversal": "Custody reversal must match the renewal."}
+                )
+        elif self.renewal_reversal_id:
+            raise ValidationError(
+                {"renewal_reversal": "Renewal reversal custody requires its renewal."}
             )
         if self.release_reversal_id and self.release_id:
             if self.release_reversal.release_id != self.release_id:
@@ -1269,3 +1321,158 @@ class PawnLoanAuctionReversal(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("PawnLoan auction reversals cannot be deleted.")
+
+
+class PawnLoanRenewal(models.Model):
+    """Immutable completed renewal linking one source loan to its successor."""
+
+    workspace = models.ForeignKey(
+        "orgs.Company", on_delete=models.PROTECT, related_name="pawn_loan_renewals"
+    )
+    source_loan = models.OneToOneField(
+        PawnLoan, on_delete=models.PROTECT, related_name="renewal_as_source"
+    )
+    successor_loan = models.OneToOneField(
+        PawnLoan, on_delete=models.PROTECT, related_name="origin_renewal"
+    )
+    renewal_number = models.CharField(max_length=96)
+    request_key = models.CharField(max_length=120)
+    mode = models.CharField(max_length=20, choices=enum_choices(PawnLoanRenewalMode))
+    renewal_date = models.DateField(db_index=True)
+    source_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    source_capitalized_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    interest_settled = models.DecimalField(max_digits=18, decimal_places=4)
+    fees_settled = models.DecimalField(max_digits=18, decimal_places=4)
+    principal_paid = models.DecimalField(max_digits=18, decimal_places=4)
+    top_up_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    successor_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    successor_capitalized_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    valuation_snapshot = models.JSONField(default=dict)
+    settlement_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="renewal_settlement",
+    )
+    opening_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="renewal_opening",
+    )
+    catch_up_accrual = models.OneToOneField(
+        PawnLoanInterestAccrual,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="renewal_catch_up",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_renewals_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-renewal_date", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "renewal_number"),
+                name="loans_renewal_workspace_number_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("workspace", "request_key"),
+                name="loans_renewal_workspace_request_uniq",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        tenant_workspace_id = current_tenant_workspace_id()
+        if tenant_workspace_id and self.workspace_id != tenant_workspace_id:
+            errors["workspace"] = "Renewal workspace must match the active tenant."
+        if self.source_loan_id and self.successor_loan_id:
+            if self.source_loan_id == self.successor_loan_id:
+                errors["successor_loan"] = "Renewal successor must be a different loan."
+            if self.source_loan.workspace_id != self.workspace_id or self.successor_loan.workspace_id != self.workspace_id:
+                errors["workspace"] = "Both renewal loans must belong to the workspace."
+            if self.source_loan.borrower_id != self.successor_loan.borrower_id:
+                errors["successor_loan"] = "Renewal successor must retain the borrower."
+        amounts = (
+            self.source_principal_amount,
+            self.source_capitalized_principal_amount,
+            self.interest_settled,
+            self.fees_settled,
+            self.principal_paid,
+            self.top_up_amount,
+            self.successor_principal_amount,
+            self.successor_capitalized_principal_amount,
+        )
+        if any(value is None or value < 0 for value in amounts):
+            errors["successor_principal_amount"] = "Renewal amounts must be non-negative."
+        if self.source_principal_amount is not None and self.principal_paid is not None and self.top_up_amount is not None:
+            if self.successor_principal_amount != self.source_principal_amount - self.principal_paid + self.top_up_amount:
+                errors["successor_principal_amount"] = "Successor principal does not reconcile to the renewal."
+        if self.successor_principal_amount is not None and self.successor_principal_amount <= 0:
+            errors["successor_principal_amount"] = "Renewal successor principal must be positive."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan renewals are immutable.")
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan renewals cannot be deleted.")
+
+
+class PawnLoanRenewalReversal(models.Model):
+    renewal = models.OneToOneField(
+        PawnLoanRenewal, on_delete=models.PROTECT, related_name="reversal"
+    )
+    settlement_reversal_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="renewal_settlement_reversal",
+    )
+    opening_reversal_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="renewal_opening_reversal",
+    )
+    catch_up_reversal_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="renewal_catch_up_reversal",
+    )
+    reason = models.TextField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_renewal_reversals_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan renewal reversals are immutable.")
+        if not str(self.reason or "").strip():
+            raise ValidationError({"reason": "A renewal reversal reason is required."})
+        if self.renewal_id and self.settlement_reversal_event_id:
+            if self.settlement_reversal_event.reversal_of_id != self.renewal.settlement_event_id:
+                raise ValidationError({"settlement_reversal_event": "Reversal must compensate the settlement event."})
+        if self.renewal_id and self.opening_reversal_event_id:
+            if self.opening_reversal_event.reversal_of_id != self.renewal.opening_event_id:
+                raise ValidationError({"opening_reversal_event": "Reversal must compensate the opening event."})
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan renewal reversals cannot be deleted.")

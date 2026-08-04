@@ -77,6 +77,21 @@ def post_pawn_loan_auction_recovery_event(source_event, *, actor=None):
     return LoanEventPostingReceipt(voucher.pk, journal_entry.pk)
 
 
+def post_pawn_loan_renewal_event(source_event, *, actor=None):
+    """Post one source/successor renewal as its net cash and control movement."""
+    if getattr(source_event, "event_kind", None) != "RENEWAL_SETTLEMENT":
+        raise ValidationError("Only a PawnLoan renewal settlement is supported here.")
+    voucher, journal_entry = create_and_post_voucher_for_doc(
+        doc=source_event,
+        user=actor or getattr(source_event, "created_by", None),
+        voucher_type_input="PAWN_LOAN_RENEWAL",
+        engine=DjangoPostingEngine(),
+    )
+    if journal_entry is None:
+        raise ValidationError("DEA did not return a journal entry for renewal.")
+    return LoanEventPostingReceipt(voucher.pk, journal_entry.pk)
+
+
 def post_pawn_loan_interest_accrual_event(source_event, *, actor=None):
     return _post_interest_event(
         source_event,

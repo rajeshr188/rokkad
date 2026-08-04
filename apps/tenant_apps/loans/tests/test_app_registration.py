@@ -40,6 +40,8 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "PawnLoanRelease",
                 "PawnLoanReleaseItem",
                 "PawnLoanReleaseReversal",
+                "PawnLoanRenewal",
+                "PawnLoanRenewalReversal",
             },
         )
 

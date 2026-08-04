@@ -280,6 +280,67 @@ class PawnLoanDocumentService:
             pdf,
         )
 
+    @classmethod
+    def render_renewal_memo(cls, renewal):
+        source = renewal.source_loan
+        successor = renewal.successor_loan
+        reversal = cls._related_or_none(renewal, "reversal")
+        verification = cls._verification(
+            source,
+            f"renewal:{renewal.pk}:{renewal.settlement_event.payload_fingerprint}",
+        )
+        details = cls._identity_rows(source) + [
+            ("Document", "Pawn loan renewal memo"),
+            ("Renewal source ID", f"PawnLoanRenewal:{renewal.pk}"),
+            ("Renewal number", renewal.renewal_number),
+            ("Document status", f"Reversed by {reversal.pk}" if reversal else "Completed"),
+            ("Renewal date", renewal.renewal_date),
+            ("Mode", renewal.get_mode_display()),
+            ("Source loan", source.loan_number),
+            ("Successor loan", successor.loan_number),
+            ("Borrower", f"{source.borrower.display_name} ({source.borrower.party_code})"),
+            ("Source principal settled", cls._money(renewal.source_principal_amount)),
+            ("Interest settled", cls._money(renewal.interest_settled)),
+            ("Fees settled", cls._money(renewal.fees_settled)),
+            ("Principal paid", cls._money(renewal.principal_paid)),
+            ("Top-up disbursed", cls._money(renewal.top_up_amount)),
+            ("Successor principal", cls._money(renewal.successor_principal_amount)),
+            ("Settlement accounting", renewal.settlement_event.outbox.get_status_display()),
+            ("Successor opening", renewal.opening_event.outbox.get_status_display()),
+        ]
+        rows = [["Source item", "Successor item", "Description", "Value"]]
+        successor_by_source = {
+            item.renewed_from_id: item
+            for item in successor.collateral_items.select_related("renewed_from")
+        }
+        values = {
+            item["source_item_id"]: item
+            for item in (renewal.valuation_snapshot.get("items") or [])
+        }
+        for source_item in source.collateral_items.order_by("pk"):
+            successor_item = successor_by_source.get(source_item.pk)
+            value = values.get(source_item.pk) or {}
+            rows.append(
+                [
+                    str(source_item.pk),
+                    str(successor_item.pk) if successor_item else "Not linked",
+                    source_item.description,
+                    cls._money(value.get("valuation_amount")),
+                ]
+            )
+        pdf = cls._build_pdf(
+            title="Pawn Loan Renewal Memo",
+            details=details,
+            verification_id=verification,
+            sections=(("Collateral lineage", rows),),
+        )
+        return PawnLoanDocumentResult(
+            "renewal",
+            f"pawn_renewal_{renewal.renewal_number}.pdf",
+            verification,
+            pdf,
+        )
+
     @staticmethod
     def build_pdf_response(result, *, inline=True):
         disposition = "inline" if inline else "attachment"

@@ -31,8 +31,9 @@ It is not yet a complete Girvi replacement.
 - Girvi remains the write owner of existing Girvi loans.
 - Phase 6 coexistence, comparison, gating, and development cutover are complete.
 - E7.1 repayment, interest-due, overdue, and release-confirmation notices are
-  implemented through Notify v2. FundingLoan, repledging, renewals, auction
-  recovery, and portal integration remain essential future workflows.
+  implemented through Notify v2. E7.2 auction/recovery and E7.3 renewals are
+  implemented. FundingLoan, repledging, and portal integration remain
+  essential future workflows.
 - Several Girvi operational conveniences need explicit carry-forward or
   rejection decisions before Girvi can be retired.
 
@@ -301,6 +302,23 @@ The original event remains immutable. Loans writes compensating domain evidence
 and asks DEA to reverse the posted voucher. Release reversal also restores
 custody only when the current physical state is compatible with the reversal.
 
+### 11. Renewal
+
+Renewal is not an in-place edit. It atomically closes one source PawnLoan and
+activates one newly numbered successor while retaining the borrower, cloning
+the immutable policy boundary, and linking each cloned collateral item to its
+source item. Interest and fees settle fully. Pay-and-renew reduces carried
+principal; top-up renewal increases it. The successor must remain within the
+source snapshot's current valuation and maximum LTV.
+
+DEA receives one `RENEWAL_SETTLEMENT` event for the real net cash movement:
+the difference between source and successor control principal, plus interest
+and fees collected. The successor `RENEWAL_OPENING` establishes its canonical
+balance without inventing a second gross disbursal voucher and cannot deliver
+before settlement. Reversal is a composite operation: it reverses the opening
+and settlement newest-first, restores the source to active/in-vault, and marks
+the successor cancelled with reversed lineage custody.
+
 ## Improvements Delivered By The Rewrite
 
 1. Explicit PawnLoan and future FundingLoan aggregate ownership.
@@ -347,8 +365,8 @@ remaining business record depends on it.
 | --- | --- | --- |
 | Funding loans | `TakenLoan`, lender repayment, lender statements | No `FundingLoan` aggregate or payable accounting |
 | Repledging | Select collateral, create lender loan, track lender custody and return | Deliberately blocked until FundingLoan exists |
-| Renewal | Pay-and-renew and successor loan behavior | No renewal aggregate or successor audit link |
-| Top-up renewal | Existing operational renewal path | No top-up workflow |
+| Renewal | Pay-and-renew and successor loan behavior | Implemented with immutable source/successor audit and collateral lineage |
+| Top-up renewal | Existing operational renewal path | Implemented with current valuation/LTV enforcement and net DEA cash posting |
 | Notices | Reminder, overdue, interest, auction, and release notification paths | Repayment, interest-due, overdue, release-confirmation, and auction-source notices implemented through Notify v2 |
 | Auction/recovery | Auction lifecycle and accounting/recovery posting | Initiate/start/cancel/complete/reverse, custody evidence, PDFs, and DEA exact-debt recovery implemented; shortfall write-off and borrower-surplus settlement remain deferred |
 | Customer portal | Girvi/Party loan visibility can be exposed through existing portal work | New Loans statements, receipts, notices, and releases are not integrated |
@@ -446,7 +464,7 @@ immutable event history. Performance work should follow measurement.
 4. Execute E6.4 by piloting the implemented PawnLoan lifecycle in one workspace.
 5. Resolve usability and accounting-setup friction found during the pilot.
 6. Complete E6.4 and E6.5 production enablement gates.
-7. Keep E7.1 notices operational and implement renewals plus auction/recovery as complete vertical slices.
+7. Keep E7.1 notices, E7.2 auction/recovery, and E7.3 renewals operational as complete vertical slices.
 8. Implement FundingLoan and repledging as one coherent lender workflow.
 9. Integrate Loans documents and statements with the customer portal.
 10. Review every P2 parity item with real users before Girvi retirement.

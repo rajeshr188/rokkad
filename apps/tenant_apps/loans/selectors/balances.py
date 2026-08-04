@@ -156,6 +156,7 @@ def calculate_pawn_loan_balance(
     resolved_custody_states = {
         CollateralCustodyState.WITH_CUSTOMER.value,
         CollateralCustodyState.AUCTION_DISPOSED.value,
+        CollateralCustodyState.RENEWAL_TRANSFERRED.value,
     }
     returned_item_count = sum(
         item.custody_state in resolved_custody_states for item in collateral_items
@@ -231,10 +232,22 @@ def _apply_event(totals, event):
     if kind == TransactionKind.DISBURSAL:
         totals["principal_disbursed"] += principal
         totals["fees_assessed"] += fees_assessed
+    elif kind == TransactionKind.RENEWAL_OPENING:
+        capitalized_component = _amount(
+            values, "capitalized_interest_principal"
+        ) * multiplier
+        if multiplier > 0 and capitalized_component > principal:
+            raise PawnLoanBalanceSelectorError(
+                "Renewal opening capitalized principal exceeds total principal."
+            )
+        totals["principal_disbursed"] += principal - capitalized_component
+        totals["principal_capitalized"] += capitalized_component
+        totals["fees_assessed"] += fees_assessed
     elif kind in (
         TransactionKind.REPAYMENT,
         TransactionKind.RELEASE_RECEIPT,
         TransactionKind.AUCTION_RECOVERY,
+        TransactionKind.RENEWAL_SETTLEMENT,
     ):
         capitalized_component = (
             _amount(values, "capitalized_interest_principal") * multiplier

@@ -38,6 +38,8 @@ REVERSIBLE_EVENT_KINDS = frozenset(
         TransactionKind.INTEREST_CAPITALIZATION.value,
         TransactionKind.RELEASE_RECEIPT.value,
         TransactionKind.AUCTION_RECOVERY.value,
+        TransactionKind.RENEWAL_SETTLEMENT.value,
+        TransactionKind.RENEWAL_OPENING.value,
     }
 )
 
@@ -64,6 +66,7 @@ def reverse_pawn_loan_event(
     actor,
     delivery_handler: DeliveryHandler | None = None,
     allow_auction_recovery: bool = False,
+    allow_renewal: bool = False,
 ) -> PawnReversalResult:
     original = _locked_original_event(original_event_id)
     _require_administrator(actor, original.loan.workspace)
@@ -78,6 +81,13 @@ def reverse_pawn_loan_event(
     ):
         raise PawnReversalError(
             "Auction recovery must use its auction reversal workflow so custody is restored."
+        )
+    if original.event_kind in {
+        TransactionKind.RENEWAL_SETTLEMENT.value,
+        TransactionKind.RENEWAL_OPENING.value,
+    } and not allow_renewal:
+        raise PawnReversalError(
+            "Renewal events must use the renewal reversal workflow so both loans and custody are restored."
         )
 
     existing = _existing_reversal(original)

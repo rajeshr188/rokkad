@@ -337,6 +337,25 @@ def _event_requires_dea_reference(event):
             (Decimal(str(values.get(key, "0"))) for key in ("principal", "interest", "fees")),
             ZERO,
         ) != ZERO
+    if event.event_kind == TransactionKind.RENEWAL_OPENING.value:
+        return False
+    if event.event_kind == TransactionKind.RENEWAL_SETTLEMENT.value:
+        values = event.payload.get("values") or {}
+        renewal = event.payload.get("renewal") or {}
+        source_control = Decimal(
+            str(renewal.get("source_control_principal", "0"))
+        )
+        successor_control = Decimal(
+            str(renewal.get("successor_control_principal", "0"))
+        )
+        return any(
+            amount != ZERO
+            for amount in (
+                source_control - successor_control,
+                Decimal(str(values.get("interest", "0"))),
+                Decimal(str(values.get("fees", "0"))),
+            )
+        )
     if event.event_kind == TransactionKind.REVERSAL.value:
         try:
             return event.reversal_of.outbox.dea_voucher_id is not None

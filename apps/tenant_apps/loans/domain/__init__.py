@@ -2,6 +2,7 @@
 
 from .compatibility import LEGACY_AGGREGATE_NAME_MAP
 from .auctions import PawnLoanAuctionState
+from .renewals import PawnLoanRenewalMode
 from .future_funding import FUNDING_LOAN_RUNTIME_SUPPORTED, FundingLoanState
 from .notices import (
     PawnLoanNoticeChannel,
@@ -57,6 +58,7 @@ __all__ = [
     "PartialMonthMethod",
     "PawnLoanNoticeChannel",
     "PawnLoanAuctionState",
+    "PawnLoanRenewalMode",
     "PawnLoanNoticeKind",
     "PawnLoanNoticeStatus",
     "PawnLoanDerivedState",

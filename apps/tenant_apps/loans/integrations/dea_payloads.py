@@ -202,6 +202,50 @@ def auction_recovery_payload(
     )
 
 
+def renewal_settlement_payload(
+    loan,
+    *,
+    effective_date,
+    principal_amount,
+    capitalized_interest_principal_amount,
+    interest_amount,
+    fee_amount,
+    source_event_id=None,
+):
+    return _payload(
+        loan,
+        TransactionKind.RENEWAL_SETTLEMENT,
+        effective_date,
+        {
+            "principal": principal_amount,
+            "capitalized_interest_principal": capitalized_interest_principal_amount,
+            "interest": interest_amount,
+            "fees": fee_amount,
+        },
+        source_event_id,
+    )
+
+
+def renewal_opening_payload(
+    loan,
+    *,
+    effective_date,
+    principal_amount,
+    capitalized_interest_principal_amount,
+    source_event_id=None,
+):
+    return _payload(
+        loan,
+        TransactionKind.RENEWAL_OPENING,
+        effective_date,
+        {
+            "principal": principal_amount,
+            "capitalized_interest_principal": capitalized_interest_principal_amount,
+        },
+        source_event_id,
+    )
+
+
 def reversal_payload(
     loan, *, effective_date, original_event_id, original_event_kind, values, reason, source_event_id=None
 ):

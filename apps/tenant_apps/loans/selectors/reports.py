@@ -157,7 +157,12 @@ def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector):
 def _loan_issues(loan, events, collateral, balance, dea_inspector):
     issues = []
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value} and not any(
-        event.event_kind == TransactionKind.DISBURSAL.value for event in events
+        event.event_kind
+        in {
+            TransactionKind.DISBURSAL.value,
+            TransactionKind.RENEWAL_OPENING.value,
+        }
+        for event in events
     ):
         issues.append(
             _issue(
@@ -183,12 +188,23 @@ def _loan_issues(loan, events, collateral, balance, dea_inspector):
         seen_intents.add(intent)
         issues.extend(_event_issues(loan, event, dea_inspector))
     issues.extend(_custody_issues(loan, collateral))
-    if loan.state == PawnLoanState.CLOSED.value and balance and not balance.closure_ready:
+    renewal_transferred = bool(collateral) and all(
+        item.custody_state == CollateralCustodyState.RENEWAL_TRANSFERRED.value
+        for item in collateral
+    )
+    closed_reconciled = bool(
+        balance
+        and (
+            balance.closure_ready
+            or (balance.financially_settled and renewal_transferred)
+        )
+    )
+    if loan.state == PawnLoanState.CLOSED.value and not closed_reconciled:
         issues.append(
             _issue(
                 "CLOSED_LOAN_NOT_RECONCILED",
                 loan,
-                "Closed loan does not have both zero balance and fully returned collateral.",
+                "Closed loan does not have zero balance and completed release or renewal custody.",
                 action="Review releases, custody history, and accounting reversals.",
             )
         )
@@ -298,13 +314,21 @@ def _event_issues(loan, event, dea_inspector):
 def _custody_issues(loan, collateral):
     issues = []
     for item in collateral:
+        allowed_pre_active_custody = {CollateralCustodyState.IN_VAULT.value}
+        if loan.state == PawnLoanState.CANCELLED.value:
+            allowed_pre_active_custody.add(
+                CollateralCustodyState.RENEWAL_REVERSED.value
+            )
         if loan.state in {
             PawnLoanState.DRAFT.value,
             PawnLoanState.APPROVED.value,
             PawnLoanState.CANCELLED.value,
-        } and item.custody_state != CollateralCustodyState.IN_VAULT.value:
+        } and item.custody_state not in allowed_pre_active_custody:
             issues.append(_custody_issue(loan, item, "Pre-disbursal or cancelled loan has collateral outside the vault."))
-        if loan.state == PawnLoanState.CLOSED.value and item.custody_state != CollateralCustodyState.WITH_CUSTOMER.value:
+        if loan.state == PawnLoanState.CLOSED.value and item.custody_state not in {
+            CollateralCustodyState.WITH_CUSTOMER.value,
+            CollateralCustodyState.RENEWAL_TRANSFERRED.value,
+        }:
             issues.append(_custody_issue(loan, item, "Closed loan still has collateral outside customer custody."))
         history = tuple(item.custody_history.all())
         if history and history[-1].to_state != item.custody_state:
@@ -337,6 +361,25 @@ def _requires_dea_reference(event):
         return (event.payload.get(detail_key) or {}).get("accounting_recognition") != "CASH"
     if event.event_kind == TransactionKind.RELEASE_RECEIPT.value:
         return _event_amount(event) != ZERO
+    if event.event_kind == TransactionKind.RENEWAL_OPENING.value:
+        return False
+    if event.event_kind == TransactionKind.RENEWAL_SETTLEMENT.value:
+        values = event.payload.get("values") or {}
+        renewal = event.payload.get("renewal") or {}
+        source_control = Decimal(
+            str(renewal.get("source_control_principal", "0"))
+        )
+        successor_control = Decimal(
+            str(renewal.get("successor_control_principal", "0"))
+        )
+        return any(
+            amount != ZERO
+            for amount in (
+                source_control - successor_control,
+                Decimal(str(values.get("interest", "0"))),
+                Decimal(str(values.get("fees", "0"))),
+            )
+        )
     if event.event_kind == TransactionKind.REVERSAL.value:
         try:
             return event.reversal_of.outbox.dea_voucher_id is not None
@@ -354,6 +397,19 @@ def _event_amount(event):
         keys = ("principal",)
     elif kind in {TransactionKind.REPAYMENT.value, TransactionKind.RELEASE_RECEIPT.value}:
         keys = ("principal", "interest", "fees")
+    elif kind == TransactionKind.RENEWAL_SETTLEMENT.value:
+        renewal = event.payload.get("renewal") or {}
+        source_control = Decimal(
+            str(renewal.get("source_control_principal", "0"))
+        )
+        successor_control = Decimal(
+            str(renewal.get("successor_control_principal", "0"))
+        )
+        return abs(source_control - successor_control) + Decimal(
+            str(values.get("interest", "0"))
+        ) + Decimal(str(values.get("fees", "0")))
+    elif kind == TransactionKind.RENEWAL_OPENING.value:
+        return ZERO
     else:
         keys = ("interest",)
     return sum((Decimal(str(values.get(key, "0"))) for key in keys), ZERO)

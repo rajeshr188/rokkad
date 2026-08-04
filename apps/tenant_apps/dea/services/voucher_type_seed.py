@@ -8,6 +8,7 @@ SEEDED_VOUCHER_TYPES = {
     "PAWN_LOAN_REPAYMENT": "PawnLoan repayment received from borrower",
     "PAWN_LOAN_RELEASE": "PawnLoan final settlement and collateral release",
     "PAWN_LOAN_AUCTION_RECOVERY": "PawnLoan full-debt auction recovery receipt",
+    "PAWN_LOAN_RENEWAL": "PawnLoan renewal net settlement",
     "PAWN_LOAN_INTEREST_ACCRUAL": "PawnLoan interest receivable recognized",
     "PAWN_LOAN_INTEREST_CAPITALIZATION": "PawnLoan interest capitalized into principal",
     "GIVENLOAN_RECEIPT": "GivenLoan repayment receipt (cash received from borrower)",

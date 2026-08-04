@@ -10,6 +10,17 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans rewrite E7.3 is complete: immutable `PawnLoanRenewal` evidence links
+  one closed source to one active, newly numbered successor for pay-and-renew
+  and top-up workflows. Renewal settles interest/fees, validates current
+  collateral value against the snapshotted LTV policy, preserves item-level
+  lineage and vault custody, and posts only the net principal cash movement
+  through DEA. Administrator-only composite reversal restores both loans and
+  both custody records newest-first. The internal UI exposes renewal, lineage,
+  PDF evidence, and reversal. Tenant migration `loans.0011` is ready; focused
+  service, posting-contract, reconciliation, idempotency, LTV, and reversal
+  coverage passes, as does the complete 170-test tenant-aware Loans suite in
+  three exhaustive groups. E7.4 FundingLoan and repledging is next.
 - Loans rewrite E7.2 is complete: `PawnLoanAuction` owns the overdue-loan
   auction lifecycle, source-linked notice, buyer/recovery evidence, immutable
   collateral snapshots, and custody movement to `AUCTION_DISPOSED`. Exact

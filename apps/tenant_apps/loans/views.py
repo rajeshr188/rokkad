@@ -3,6 +3,7 @@ import uuid
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -34,6 +35,7 @@ from apps.tenant_apps.loans.forms import (
     PawnLoanNoticeForm,
     PawnAuctionInitiateForm,
     PawnAuctionCompletionForm,
+    PawnRenewalForm,
     PawnPartialReleaseForm,
     PawnRepaymentForm,
     PawnReversalForm,
@@ -48,6 +50,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoanAccountingOutbox,
     PawnLoanNotice,
     PawnLoanAuction,
+    PawnLoanRenewal,
     PawnLoanRelease,
 )
 from apps.tenant_apps.loans.selectors import (
@@ -71,6 +74,7 @@ from apps.tenant_apps.loans.services import (
     PawnLoanDocumentService,
     PawnLoanNoticeError,
     PawnAuctionError,
+    PawnRenewalError,
     UpdatePawnDraftCommand,
     activate_license,
     approve_pawn_loan,
@@ -90,6 +94,8 @@ from apps.tenant_apps.loans.services import (
     cancel_pawn_loan_auction,
     complete_pawn_loan_auction,
     reverse_pawn_loan_auction,
+    renew_pawn_loan,
+    reverse_pawn_loan_renewal,
     expire_license,
     finalize_pawn_loan_accrual,
     preview_number,
@@ -287,6 +293,14 @@ def pawn_loan_detail(request, pk):
         "can_administer": _can_administer(request),
         "notice_rows": get_pawn_loan_notice_rows(loan),
         "auctions": loan.auctions.select_related("accounting_event__outbox").order_by("-attempt_number"),
+        "renewals": PawnLoanRenewal.objects.filter(
+            Q(source_loan=loan) | Q(successor_loan=loan)
+        ).select_related(
+            "source_loan",
+            "successor_loan",
+            "settlement_event__outbox",
+            "opening_event__outbox",
+        ),
     }
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value}:
         try:
@@ -814,6 +828,94 @@ def pawn_loan_auction_recovery_pdf(request, auction_pk):
 
 
 @loans_workspace_required
+def pawn_loan_renew(request, pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    initial = {
+        "request_key": uuid.uuid4().hex,
+        "successor_license": loan.license_id,
+        "successor_series": loan.series_id,
+        "monthly_interest_rate": loan.monthly_interest_rate,
+        "tenure_months": loan.tenure_months,
+    }
+    form = PawnRenewalForm(
+        request.POST or None,
+        workspace=request.loans_workspace,
+        initial=initial,
+    )
+    balance = None
+    if loan.state == PawnLoanState.ACTIVE.value:
+        try:
+            balance = get_pawn_loan_balance(loan.pk, as_of_date=timezone.localdate())
+        except (ValidationError, ValueError):
+            pass
+    if request.method == "POST" and form.is_valid():
+        try:
+            result = renew_pawn_loan(
+                loan.pk,
+                mode=form.cleaned_data["mode"],
+                renewal_date=timezone.localdate(),
+                principal_paid=form.cleaned_data["principal_paid"],
+                top_up_amount=form.cleaned_data["top_up_amount"],
+                successor_license_id=form.cleaned_data["successor_license"].pk,
+                successor_series_id=form.cleaned_data["successor_series"].pk,
+                monthly_interest_rate=form.cleaned_data["monthly_interest_rate"],
+                tenure_months=form.cleaned_data["tenure_months"],
+                request_key=form.cleaned_data["request_key"],
+                actor=request.user,
+            )
+        except (PawnRenewalError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(
+                request,
+                f"Renewal completed. Successor loan {result.successor_loan.loan_number} is active.",
+            )
+            return redirect("loans:pawn_loan_detail", pk=result.successor_loan.pk)
+    return _render_action(
+        request,
+        loan,
+        form,
+        "Renew pawn loan",
+        "Interest and fees settle in full. Principal is either paid down or topped up, and vault custody transfers to a new numbered successor loan.",
+        {"balance": balance},
+    )
+
+
+@loans_workspace_required
+def pawn_loan_renewal_reverse(request, renewal_pk):
+    renewal = _pawn_renewal_for_workspace(request, renewal_pk)
+    form = PawnReversalForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            reverse_pawn_loan_renewal(
+                renewal.pk,
+                reason=form.cleaned_data["reason"],
+                actor=request.user,
+            )
+        except (PawnRenewalError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, f"Renewal {renewal.renewal_number} reversed.")
+            return redirect("loans:pawn_loan_detail", pk=renewal.source_loan_id)
+    return _render_action(
+        request,
+        renewal.source_loan,
+        form,
+        "Reverse renewal",
+        "Administrator-only. The successor must have no later activity and both collateral records must remain in compatible custody.",
+        {"renewal": renewal},
+    )
+
+
+@loans_workspace_required
+def pawn_loan_renewal_pdf(request, renewal_pk):
+    renewal = _pawn_renewal_for_workspace(request, renewal_pk)
+    return PawnLoanDocumentService.build_pdf_response(
+        PawnLoanDocumentService.render_renewal_memo(renewal)
+    )
+
+
+@loans_workspace_required
 def pawn_loan_transfer_setup(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     form = PawnSetupTransferForm(request.POST or None, workspace=request.loans_workspace)
@@ -1076,6 +1178,22 @@ def _pawn_auction_for_workspace(request, pk):
     )
 
 
+def _pawn_renewal_for_workspace(request, pk):
+    return get_object_or_404(
+        PawnLoanRenewal.objects.select_related(
+            "source_loan",
+            "source_loan__workspace",
+            "source_loan__license",
+            "source_loan__borrower",
+            "successor_loan",
+            "settlement_event__outbox",
+            "opening_event__outbox",
+        ),
+        pk=pk,
+        workspace=request.loans_workspace,
+    )
+
+
 def _draft_readiness(workspace):
     from apps.tenant_apps.party.models import Party
 
@@ -1289,6 +1407,8 @@ def _accounting_rows(loan, *, can_administer):
                     not in {
                         TransactionKind.REVERSAL.value,
                         TransactionKind.AUCTION_RECOVERY.value,
+                        TransactionKind.RENEWAL_SETTLEMENT.value,
+                        TransactionKind.RENEWAL_OPENING.value,
                     }
                     and reversed_event is None
                 ),

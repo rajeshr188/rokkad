@@ -14,6 +14,8 @@ from apps.tenant_apps.loans.integrations import (
     capitalization_payload,
     disbursal_payload,
     release_receipt_payload,
+    renewal_opening_payload,
+    renewal_settlement_payload,
     repayment_payload,
     reversal_payload,
     resolve_borrower_account,
@@ -23,6 +25,9 @@ from apps.tenant_apps.loans.integrations.dea_delivery import (
 )
 from apps.tenant_apps.dea.posting.rules.pawn_loan_auction import (
     PawnLoanAuctionRecoveryRule,
+)
+from apps.tenant_apps.dea.posting.rules.pawn_loan_renewal import (
+    PawnLoanRenewalRule,
 )
 
 
@@ -77,6 +82,22 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                 interest_amount="200",
                 source_event_id=6,
             ),
+            renewal_settlement_payload(
+                self.loan,
+                effective_date=self.effective_date,
+                principal_amount="9200",
+                capitalized_interest_principal_amount="0",
+                interest_amount="200",
+                fee_amount="0",
+                source_event_id=7,
+            ),
+            renewal_opening_payload(
+                self.loan,
+                effective_date=self.effective_date,
+                principal_amount="8500",
+                capitalized_interest_principal_amount="0",
+                source_event_id=8,
+            ),
             reversal_payload(
                 self.loan,
                 effective_date=self.effective_date,
@@ -84,7 +105,7 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                 original_event_kind=TransactionKind.RELEASE_RECEIPT,
                 values={"principal": "9200", "interest": "200"},
                 reason="Customer receipt entered twice.",
-                source_event_id=7,
+                source_event_id=9,
             ),
         ]
 
@@ -97,6 +118,8 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                 TransactionKind.INTEREST_CAPITALIZATION,
                 TransactionKind.RELEASE_RECEIPT,
                 TransactionKind.AUCTION_RECOVERY,
+                TransactionKind.RENEWAL_SETTLEMENT,
+                TransactionKind.RENEWAL_OPENING,
                 TransactionKind.REVERSAL,
             ],
         )
@@ -215,6 +238,68 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
 
         self.assertIs(receipt, expected)
         post.assert_called_once_with(event, actor=None)
+
+    def test_unchanged_renewal_principal_without_charges_is_operational_only(self):
+        event = SimpleNamespace(
+            event_kind=TransactionKind.RENEWAL_SETTLEMENT.value,
+            payload={
+                "values": {"interest": "0", "fees": "0"},
+                "renewal": {
+                    "source_control_principal": "10000",
+                    "successor_control_principal": "10000",
+                },
+            },
+            created_by=None,
+        )
+        with patch(
+            "apps.tenant_apps.loans.integrations.dea_delivery.dea_facade."
+            "post_pawn_loan_renewal_event"
+        ) as post:
+            receipt = deliver_loan_accounting_event(event)
+
+        self.assertIsNone(receipt.dea_voucher_id)
+        post.assert_not_called()
+
+    def test_renewal_rule_posts_only_net_principal_and_cash_interest(self):
+        event = SimpleNamespace(
+            pk=17,
+            idempotency_key="renewal-17",
+            payload_fingerprint="fingerprint",
+            effective_date=self.effective_date,
+            event_kind=TransactionKind.RENEWAL_SETTLEMENT.value,
+            payload={
+                "currency": "INR",
+                "values": {"interest": "200", "fees": "50"},
+                "renewal": {
+                    "successor_loan_id": 72,
+                    "source_control_principal": "10000",
+                    "successor_control_principal": "8500",
+                    "accounting_recognition": "CASH",
+                },
+            },
+            loan=SimpleNamespace(borrower=object()),
+        )
+        ledger_ids = {
+            "CASH": 1,
+            "LOAN_PRINCIPAL_CTRL": 2,
+            "INTEREST_INCOME": 3,
+            "DOCUMENT_CHARGE_INCOME": 4,
+            "BORROWER_LOAN_CTRL": 5,
+        }
+        with patch(
+            "apps.tenant_apps.dea.posting.rules.pawn_loan_renewal.resolve_party_account",
+            return_value=SimpleNamespace(account=SimpleNamespace(pk=99)),
+        ), patch(
+            "apps.tenant_apps.dea.posting.rules.pawn_loan_renewal._ledger_id",
+            side_effect=lambda key: ledger_ids[key],
+        ):
+            bundle = PawnLoanRenewalRule().build_posting(SimpleNamespace(doc=event))
+
+        self.assertEqual(
+            [line.amount for line in bundle.ledger_lines],
+            [Decimal("1500"), Decimal("200"), Decimal("50")],
+        )
+        self.assertEqual(bundle.account_lines[0].amount, Decimal("1500"))
 
     def test_auction_rule_reads_accrual_recognition_from_auction_snapshot(self):
         event = SimpleNamespace(
