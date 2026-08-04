@@ -30,7 +30,12 @@ SUPPORTED_PAWN_LOAN_NOTICE_KINDS = frozenset(
         PawnLoanNoticeKind.INTEREST_DUE,
         PawnLoanNoticeKind.OVERDUE_NOTICE,
         PawnLoanNoticeKind.RELEASE_CONFIRMATION,
+        PawnLoanNoticeKind.AUCTION_NOTICE,
     }
+)
+
+STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS = frozenset(
+    SUPPORTED_PAWN_LOAN_NOTICE_KINDS - {PawnLoanNoticeKind.AUCTION_NOTICE}
 )
 
 
@@ -39,4 +44,5 @@ __all__ = [
     "PawnLoanNoticeKind",
     "PawnLoanNoticeStatus",
     "SUPPORTED_PAWN_LOAN_NOTICE_KINDS",
+    "STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS",
 ]

@@ -62,6 +62,21 @@ def post_pawn_loan_release_event(source_event, *, actor=None):
     return LoanEventPostingReceipt(voucher.pk, journal_entry.pk)
 
 
+def post_pawn_loan_auction_recovery_event(source_event, *, actor=None):
+    """Idempotently convert one full-debt auction recovery into DEA effects."""
+    if getattr(source_event, "event_kind", None) != "AUCTION_RECOVERY":
+        raise ValidationError("Only a PawnLoan auction recovery event is supported here.")
+    voucher, journal_entry = create_and_post_voucher_for_doc(
+        doc=source_event,
+        user=actor or getattr(source_event, "created_by", None),
+        voucher_type_input="PAWN_LOAN_AUCTION_RECOVERY",
+        engine=DjangoPostingEngine(),
+    )
+    if journal_entry is None:
+        raise ValidationError("DEA did not return a journal entry for auction recovery.")
+    return LoanEventPostingReceipt(voucher.pk, journal_entry.pk)
+
+
 def post_pawn_loan_interest_accrual_event(source_event, *, actor=None):
     return _post_interest_event(
         source_event,

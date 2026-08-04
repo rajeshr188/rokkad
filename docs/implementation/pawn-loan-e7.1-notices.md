@@ -27,9 +27,9 @@ the linked `NotificationJob` by the notice read selector.
 - Release confirmation: closed loan with recorded release evidence.
 
 Email requires the Party email snapshot. SMS and WhatsApp require the Party
-phone snapshot. Auction notice requests fail closed because a valid auction
-notice must reference the future E7.2 recovery source document and custody
-workflow.
+phone snapshot. E7.2 now permits an auction notice only when it references the
+same loan's Loans-owned `PawnLoanAuction`; staff still cannot create a detached
+auction notice from the general notice form.
 
 ## Delivery
 

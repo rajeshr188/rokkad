@@ -102,6 +102,16 @@ from .pawn_notices import (
     dispatch_due_pawn_loan_notices,
     dispatch_pawn_loan_notice,
 )
+from .pawn_auctions import (
+    PawnAuctionCompletionResult,
+    PawnAuctionError,
+    PawnAuctionReversalResult,
+    cancel_pawn_loan_auction,
+    complete_pawn_loan_auction,
+    initiate_pawn_loan_auction,
+    reverse_pawn_loan_auction,
+    start_pawn_loan_auction,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -179,4 +189,12 @@ __all__ = (
     "create_pawn_loan_notice",
     "dispatch_due_pawn_loan_notices",
     "dispatch_pawn_loan_notice",
+    "PawnAuctionCompletionResult",
+    "PawnAuctionError",
+    "PawnAuctionReversalResult",
+    "cancel_pawn_loan_auction",
+    "complete_pawn_loan_auction",
+    "initiate_pawn_loan_auction",
+    "reverse_pawn_loan_auction",
+    "start_pawn_loan_auction",
 )

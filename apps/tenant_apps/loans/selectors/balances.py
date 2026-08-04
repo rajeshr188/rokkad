@@ -153,15 +153,18 @@ def calculate_pawn_loan_balance(
     has_disbursal = totals["principal_disbursed"] > ZERO
     financially_settled = has_disbursal and total_due == ZERO
     collateral_items = tuple(collateral_items)
+    resolved_custody_states = {
+        CollateralCustodyState.WITH_CUSTOMER.value,
+        CollateralCustodyState.AUCTION_DISPOSED.value,
+    }
     returned_item_count = sum(
-        item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value
-        for item in collateral_items
+        item.custody_state in resolved_custody_states for item in collateral_items
     )
     collateral_partially_returned = (
         0 < returned_item_count < len(collateral_items)
     )
     collateral_return_complete = bool(collateral_items) and all(
-        item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value
+        item.custody_state in resolved_custody_states
         for item in collateral_items
     )
     due_date = _add_months(loan.loan_date, loan.tenure_months)
@@ -228,7 +231,11 @@ def _apply_event(totals, event):
     if kind == TransactionKind.DISBURSAL:
         totals["principal_disbursed"] += principal
         totals["fees_assessed"] += fees_assessed
-    elif kind in (TransactionKind.REPAYMENT, TransactionKind.RELEASE_RECEIPT):
+    elif kind in (
+        TransactionKind.REPAYMENT,
+        TransactionKind.RELEASE_RECEIPT,
+        TransactionKind.AUCTION_RECOVERY,
+    ):
         capitalized_component = (
             _amount(values, "capitalized_interest_principal") * multiplier
         )

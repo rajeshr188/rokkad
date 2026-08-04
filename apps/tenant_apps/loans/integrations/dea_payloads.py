@@ -176,6 +176,32 @@ def release_receipt_payload(
     )
 
 
+def auction_recovery_payload(
+    loan,
+    *,
+    effective_date,
+    principal_amount,
+    interest_amount,
+    fee_amount=Decimal("0"),
+    original_principal_amount=None,
+    capitalized_interest_principal_amount=Decimal("0"),
+    source_event_id=None,
+):
+    return _payload(
+        loan,
+        TransactionKind.AUCTION_RECOVERY,
+        effective_date,
+        {
+            "principal": principal_amount,
+            "original_principal": principal_amount if original_principal_amount is None else original_principal_amount,
+            "capitalized_interest_principal": capitalized_interest_principal_amount,
+            "interest": interest_amount,
+            "fees": fee_amount,
+        },
+        source_event_id,
+    )
+
+
 def reversal_payload(
     loan, *, effective_date, original_event_id, original_event_kind, values, reason, source_event_id=None
 ):

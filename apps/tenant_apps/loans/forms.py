@@ -1,7 +1,7 @@
 from django import forms
 
 from apps.tenant_apps.loans.domain import (
-    SUPPORTED_PAWN_LOAN_NOTICE_KINDS,
+    STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS,
     CollateralMetal,
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
@@ -242,7 +242,7 @@ class PawnLoanNoticeForm(forms.Form):
         choices=[
             (kind.value, kind.name.replace("_", " ").title())
             for kind in PawnLoanNoticeKind
-            if kind in SUPPORTED_PAWN_LOAN_NOTICE_KINDS
+            if kind in STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS
         ]
     )
     channel = forms.ChoiceField(
@@ -263,3 +263,30 @@ class PawnLoanNoticeForm(forms.Form):
         self.fields["notice_kind"].widget.attrs["class"] = "form-select"
         self.fields["channel"].widget.attrs["class"] = "form-select"
         self.fields["scheduled_for"].widget.attrs["class"] = "form-control"
+
+
+class PawnAuctionInitiateForm(forms.Form):
+    scheduled_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    channel = forms.ChoiceField(
+        choices=[
+            (channel.value, channel.name.title())
+            for channel in PawnLoanNoticeChannel
+        ]
+    )
+    request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["scheduled_date"].widget.attrs["class"] = "form-control"
+        self.fields["channel"].widget.attrs["class"] = "form-select"
+
+
+class PawnAuctionCompletionForm(forms.Form):
+    recovery_amount = forms.DecimalField(max_digits=18, decimal_places=2, min_value=0.01)
+    buyer_name = forms.CharField(max_length=255)
+    buyer_reference = forms.CharField(max_length=120, required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"

@@ -16,26 +16,34 @@ from .base import BasePostingRule
 class PawnLoanReleaseRule(BasePostingRule):
     voucher_type = "PAWN_LOAN_RELEASE"
     rule_version = "1"
+    event_kind = "RELEASE_RECEIPT"
+    event_label = "release"
+    recognition_section = "release"
 
     def build_posting(self, ctx) -> PostingBundle:
         event = ctx.doc
-        if getattr(event, "event_kind", None) != "RELEASE_RECEIPT":
-            raise ValidationError("PAWN_LOAN_RELEASE requires a release event.")
+        if getattr(event, "event_kind", None) != self.event_kind:
+            raise ValidationError(
+                f"{self.voucher_type} requires a {self.event_label} event."
+            )
         payload = event.payload or {}
         values = payload.get("values", {})
-        principal = _amount(values, "principal")
+        principal = _amount(values, "principal", self.event_label)
         capitalized_interest_principal = _amount(
             values,
             "capitalized_interest_principal",
+            self.event_label,
         )
         if capitalized_interest_principal > principal:
             raise ValidationError(
                 "Capitalized-interest principal cannot exceed total principal."
             )
-        interest = _amount(values, "interest")
-        fees = _amount(values, "fees")
+        interest = _amount(values, "interest", self.event_label)
+        fees = _amount(values, "fees", self.event_label)
         if principal + interest + fees <= 0:
-            raise ValidationError("PawnLoan release settlement must be positive.")
+            raise ValidationError(
+                f"PawnLoan {self.event_label} settlement must be positive."
+            )
 
         resolved = resolve_party_account(
             event.loan.borrower,
@@ -48,7 +56,7 @@ class PawnLoanReleaseRule(BasePostingRule):
         borrower_account = getattr(resolved, "account", resolved)
         cash_id = _ledger_id("CASH")
         currency = payload.get("currency") or "INR"
-        recognition = (payload.get("release") or {}).get(
+        recognition = (payload.get(self.recognition_section) or {}).get(
             "accounting_recognition", "CASH"
         )
         lines = []
@@ -121,10 +129,10 @@ class PawnLoanReleaseRule(BasePostingRule):
         }
 
 
-def _amount(values, key):
+def _amount(values, key, event_label):
     amount = Decimal(str(values.get(key, "0")))
     if amount < 0:
-        raise ValidationError(f"Release {key} cannot be negative.")
+        raise ValidationError(f"PawnLoan {event_label} {key} cannot be negative.")
     return amount
 
 

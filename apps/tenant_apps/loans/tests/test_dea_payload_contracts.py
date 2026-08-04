@@ -10,6 +10,7 @@ from apps.tenant_apps.loans.domain import TransactionKind
 from apps.tenant_apps.loans.integrations import (
     LoanDeaPayloadError,
     accrual_payload,
+    auction_recovery_payload,
     capitalization_payload,
     disbursal_payload,
     release_receipt_payload,
@@ -19,6 +20,9 @@ from apps.tenant_apps.loans.integrations import (
 )
 from apps.tenant_apps.loans.integrations.dea_delivery import (
     deliver_loan_accounting_event,
+)
+from apps.tenant_apps.dea.posting.rules.pawn_loan_auction import (
+    PawnLoanAuctionRecoveryRule,
 )
 
 
@@ -66,6 +70,13 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                 interest_amount="200",
                 source_event_id=5,
             ),
+            auction_recovery_payload(
+                self.loan,
+                effective_date=self.effective_date,
+                principal_amount="9200",
+                interest_amount="200",
+                source_event_id=6,
+            ),
             reversal_payload(
                 self.loan,
                 effective_date=self.effective_date,
@@ -73,7 +84,7 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                 original_event_kind=TransactionKind.RELEASE_RECEIPT,
                 values={"principal": "9200", "interest": "200"},
                 reason="Customer receipt entered twice.",
-                source_event_id=6,
+                source_event_id=7,
             ),
         ]
 
@@ -85,6 +96,7 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                 TransactionKind.INTEREST_ACCRUAL,
                 TransactionKind.INTEREST_CAPITALIZATION,
                 TransactionKind.RELEASE_RECEIPT,
+                TransactionKind.AUCTION_RECOVERY,
                 TransactionKind.REVERSAL,
             ],
         )
@@ -186,3 +198,57 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
         self.assertIsNone(receipt.dea_voucher_id)
         self.assertIsNone(receipt.dea_journal_entry_id)
         post.assert_not_called()
+
+    def test_auction_delivery_uses_dedicated_dea_facade(self):
+        event = SimpleNamespace(
+            event_kind=TransactionKind.AUCTION_RECOVERY.value,
+            payload={"values": {"principal": "10000", "interest": "0", "fees": "0"}},
+            created_by=None,
+        )
+        expected = SimpleNamespace(dea_voucher_id=41, dea_journal_entry_id=42)
+        with patch(
+            "apps.tenant_apps.loans.integrations.dea_delivery.dea_facade."
+            "post_pawn_loan_auction_recovery_event",
+            return_value=expected,
+        ) as post:
+            receipt = deliver_loan_accounting_event(event)
+
+        self.assertIs(receipt, expected)
+        post.assert_called_once_with(event, actor=None)
+
+    def test_auction_rule_reads_accrual_recognition_from_auction_snapshot(self):
+        event = SimpleNamespace(
+            event_kind=TransactionKind.AUCTION_RECOVERY.value,
+            payload={
+                "currency": "INR",
+                "values": {
+                    "principal": "10000",
+                    "capitalized_interest_principal": "0",
+                    "interest": "200",
+                    "fees": "0",
+                },
+                "auction": {"accounting_recognition": "ACCRUAL"},
+            },
+            loan=SimpleNamespace(borrower=object()),
+        )
+        ledger_ids = {
+            "CASH": 1,
+            "LOAN_PRINCIPAL_CTRL": 2,
+            "INTEREST_RECEIVABLE": 3,
+            "INTEREST_INCOME": 4,
+            "DOCUMENT_CHARGE_INCOME": 5,
+            "BORROWER_LOAN_CTRL": 6,
+        }
+        with patch(
+            "apps.tenant_apps.dea.posting.rules.pawn_loan_release.resolve_party_account",
+            return_value=SimpleNamespace(account=SimpleNamespace(pk=99)),
+        ), patch(
+            "apps.tenant_apps.dea.posting.rules.pawn_loan_release._ledger_id",
+            side_effect=lambda key: ledger_ids[key],
+        ):
+            bundle = PawnLoanAuctionRecoveryRule().build_posting(
+                SimpleNamespace(doc=event)
+            )
+
+        self.assertIn(ledger_ids["INTEREST_RECEIVABLE"], [line.credit_ledger_id for line in bundle.ledger_lines])
+        self.assertNotIn(ledger_ids["INTEREST_INCOME"], [line.credit_ledger_id for line in bundle.ledger_lines])

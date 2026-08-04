@@ -141,7 +141,7 @@ class PawnLoanNoticeTests(TenantTestCase):
             )
 
     def test_auction_and_ineligible_overdue_notice_fail_closed(self):
-        with self.assertRaisesRegex(PawnLoanNoticeError, "future auction"):
+        with self.assertRaisesRegex(PawnLoanNoticeError, "source auction"):
             self._create_notice(notice_kind=PawnLoanNoticeKind.AUCTION_NOTICE)
         with self.assertRaisesRegex(PawnLoanNoticeError, "not overdue"):
             self._create_notice(notice_kind=PawnLoanNoticeKind.OVERDUE_NOTICE)

@@ -54,6 +54,7 @@ def create_pawn_loan_notice(
     scheduled_for: datetime | None = None,
     actor=None,
     dispatch_due: bool = True,
+    source_auction_id: int | None = None,
 ) -> PawnLoanNotice:
     loan = _locked_loan(loan_id)
     request_key = str(request_key or "").strip()
@@ -65,9 +66,20 @@ def create_pawn_loan_notice(
     except ValueError as exc:
         raise PawnLoanNoticeError("Unsupported notice kind or delivery channel.") from exc
     if kind not in SUPPORTED_PAWN_LOAN_NOTICE_KINDS:
-        raise PawnLoanNoticeError(
-            "Auction notices require the future auction/recovery workflow and cannot be sent yet."
-        )
+        raise PawnLoanNoticeError("Unsupported PawnLoan notice kind.")
+    source_auction = None
+    if kind == PawnLoanNoticeKind.AUCTION_NOTICE:
+        from apps.tenant_apps.loans.models import PawnLoanAuction
+
+        source_auction = PawnLoanAuction.objects.filter(
+            pk=source_auction_id,
+            loan=loan,
+            workspace_id=loan.workspace_id,
+        ).first()
+        if source_auction is None:
+            raise PawnLoanNoticeError("Auction notice requires its Loans-owned source auction.")
+    elif source_auction_id is not None:
+        raise PawnLoanNoticeError("Only an auction notice can reference an auction.")
 
     scheduled_for = scheduled_for or timezone.now()
     if timezone.is_naive(scheduled_for):
@@ -82,6 +94,10 @@ def create_pawn_loan_notice(
             raise PawnLoanNoticeError(
                 "This notice request key was already used with different instructions."
             )
+        if existing.source_auction_id != getattr(source_auction, "pk", None):
+            raise PawnLoanNoticeError(
+                "This notice request key was already used for a different source."
+            )
         return existing
 
     notice_as_of_date = timezone.localtime(scheduled_for).date()
@@ -89,7 +105,13 @@ def create_pawn_loan_notice(
     _require_notice_eligibility(loan, balance, kind)
     recipient_email = (loan.borrower.primary_email or "").strip()
     recipient_phone = (loan.borrower.primary_phone or "").strip()
-    payload = _payload_snapshot(loan, balance, kind, as_of_date=notice_as_of_date)
+    payload = _payload_snapshot(
+        loan,
+        balance,
+        kind,
+        as_of_date=notice_as_of_date,
+        source_auction=source_auction,
+    )
     notice = PawnLoanNotice.objects.create(
         workspace=loan.workspace,
         loan=loan,
@@ -102,6 +124,7 @@ def create_pawn_loan_notice(
         recipient_phone=recipient_phone,
         payload_snapshot=payload,
         created_by=actor,
+        source_auction=source_auction,
     )
     reference = create_pawn_notice_job(notice)
     notice.notification_event_id = reference.event_id
@@ -192,6 +215,10 @@ def _locked_loan(loan_id):
 
 
 def _require_notice_eligibility(loan, balance, kind):
+    if kind == PawnLoanNoticeKind.AUCTION_NOTICE:
+        if loan.state != PawnLoanState.ACTIVE.value or not balance.is_overdue:
+            raise PawnLoanNoticeError("Auction notice requires an active overdue PawnLoan.")
+        return
     if kind == PawnLoanNoticeKind.RELEASE_CONFIRMATION:
         if loan.state != PawnLoanState.CLOSED.value or not loan.releases.exists():
             raise PawnLoanNoticeError("Release confirmation requires a closed, released PawnLoan.")
@@ -206,8 +233,8 @@ def _require_notice_eligibility(loan, balance, kind):
         raise PawnLoanNoticeError("This PawnLoan has no amount due.")
 
 
-def _payload_snapshot(loan, balance, kind, *, as_of_date):
-    return {
+def _payload_snapshot(loan, balance, kind, *, as_of_date, source_auction=None):
+    payload = {
         "event_key": kind.value,
         "customer": {
             "name": loan.borrower.display_name,
@@ -230,6 +257,14 @@ def _payload_snapshot(loan, balance, kind, *, as_of_date):
         "total_amount": str(balance.total_due),
         "generated_at": timezone.now().isoformat(),
     }
+    if source_auction is not None:
+        payload["auction"] = {
+            "id": source_auction.pk,
+            "number": source_auction.auction_number,
+            "notice_date": source_auction.notice_date.isoformat(),
+            "scheduled_date": source_auction.scheduled_date.isoformat(),
+        }
+    return payload
 
 
 __all__ = [

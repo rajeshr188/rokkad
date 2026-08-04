@@ -37,6 +37,7 @@ REVERSIBLE_EVENT_KINDS = frozenset(
         TransactionKind.INTEREST_ACCRUAL.value,
         TransactionKind.INTEREST_CAPITALIZATION.value,
         TransactionKind.RELEASE_RECEIPT.value,
+        TransactionKind.AUCTION_RECOVERY.value,
     }
 )
 
@@ -62,6 +63,7 @@ def reverse_pawn_loan_event(
     reason: str,
     actor,
     delivery_handler: DeliveryHandler | None = None,
+    allow_auction_recovery: bool = False,
 ) -> PawnReversalResult:
     original = _locked_original_event(original_event_id)
     _require_administrator(actor, original.loan.workspace)
@@ -70,6 +72,13 @@ def reverse_pawn_loan_event(
         raise PawnReversalError("A reversal reason is required.")
     if original.event_kind not in REVERSIBLE_EVENT_KINDS:
         raise PawnReversalError("This PawnLoan event kind cannot be reversed.")
+    if (
+        original.event_kind == TransactionKind.AUCTION_RECOVERY.value
+        and not allow_auction_recovery
+    ):
+        raise PawnReversalError(
+            "Auction recovery must use its auction reversal workflow so custody is restored."
+        )
 
     existing = _existing_reversal(original)
     if existing:

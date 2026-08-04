@@ -57,6 +57,11 @@ def deliver_loan_accounting_event(event):
             event,
             actor=event.created_by,
         )
+    if event.event_kind == TransactionKind.AUCTION_RECOVERY.value:
+        return dea_facade.post_pawn_loan_auction_recovery_event(
+            event,
+            actor=event.created_by,
+        )
     if event.event_kind == TransactionKind.REVERSAL.value:
         return dea_facade.reverse_pawn_loan_accounting_event(
             event,

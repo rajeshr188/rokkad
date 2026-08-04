@@ -1,12 +1,14 @@
 """Pure loan-domain vocabulary and policies."""
 
 from .compatibility import LEGACY_AGGREGATE_NAME_MAP
+from .auctions import PawnLoanAuctionState
 from .future_funding import FUNDING_LOAN_RUNTIME_SUPPORTED, FundingLoanState
 from .notices import (
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
     PawnLoanNoticeStatus,
     SUPPORTED_PAWN_LOAN_NOTICE_KINDS,
+    STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS,
 )
 from .policies import (
     AccountingRecognition,
@@ -54,6 +56,7 @@ __all__ = [
     "LoanOutboxStatus",
     "PartialMonthMethod",
     "PawnLoanNoticeChannel",
+    "PawnLoanAuctionState",
     "PawnLoanNoticeKind",
     "PawnLoanNoticeStatus",
     "PawnLoanDerivedState",
@@ -67,6 +70,7 @@ __all__ = [
     "ValuationMethod",
     "WorkspacePolicyDefaults",
     "SUPPORTED_PAWN_LOAN_NOTICE_KINDS",
+    "STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS",
     "can_transition",
     "resolve_policy",
 ]

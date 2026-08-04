@@ -48,6 +48,8 @@ from apps.tenant_apps.loans.models import (
     LoanSeries,
     PawnCollateralItem,
     PawnLoanAccountingEvent,
+    PawnLoanAuction,
+    PawnLoanAuctionReversal,
     PawnCollateralCustodyEvent,
     PawnLoanInterestAccrual,
     PawnLoanRelease,
@@ -75,6 +77,12 @@ from apps.tenant_apps.loans.services import (
     release_pawn_loan_in_full,
     release_pawn_loan_partially,
     PawnReleaseError,
+    PawnAuctionError,
+    cancel_pawn_loan_auction,
+    complete_pawn_loan_auction,
+    initiate_pawn_loan_auction,
+    reverse_pawn_loan_auction,
+    start_pawn_loan_auction,
 )
 from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
@@ -82,6 +90,7 @@ from apps.tenant_apps.loans.selectors import (
 )
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.rates.models import Rate, RateSource
+from apps.tenant_apps.notify_v2.models import NotificationJob
 
 
 class PawnDisbursalServiceTests(TenantTestCase):
@@ -1250,6 +1259,140 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )
         self.assertTrue(repeated.already_reversed)
         self.assertEqual(repeated.release_reversal.pk, reversal_record.pk)
+
+    def test_auction_recovery_posts_closes_and_reverses_with_custody_evidence(self):
+        self._activate_loan()
+        self._open_period(date(2026, 12, 1), date(2026, 12, 31), "December 2026")
+        self.loan.borrower.primary_email = "auction-borrower@example.com"
+        self.loan.borrower.save(update_fields=["primary_email"])
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 4),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_notices.timezone.localdate",
+            return_value=date(2026, 12, 4),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_notices.timezone.now",
+            return_value=timezone.make_aware(datetime(2026, 12, 4, 10, 0)),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                auction = initiate_pawn_loan_auction(
+                    self.loan.pk,
+                    scheduled_date=date(2026, 12, 5),
+                    channel="EMAIL",
+                    request_key="auction-1",
+                    actor=self.tenant.owner,
+                )
+
+        notice = auction.notice
+        NotificationJob.objects.filter(pk=notice.notification_job_id).update(
+            status=NotificationJob.Status.SENT,
+            sent_at=timezone.now(),
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 5),
+        ):
+            auction = start_pawn_loan_auction(auction.pk, actor=self.tenant.owner)
+            with patch(
+                "apps.tenant_apps.loans.services.pawn_auctions.preview_pawn_loan_accruals",
+                return_value=(),
+            ):
+                with self.assertRaisesRegex(PawnAuctionError, "exactly clear"):
+                    complete_pawn_loan_auction(
+                        auction.pk,
+                        recovery_amount=Decimal("49999.00"),
+                        buyer_name="Auction Buyer",
+                        actor=self.tenant.owner,
+                    )
+                with self.captureOnCommitCallbacks(execute=True):
+                    completed = complete_pawn_loan_auction(
+                        auction.pk,
+                        recovery_amount=Decimal("50000.00"),
+                        buyer_name="Auction Buyer",
+                        buyer_reference="SALE-001",
+                        actor=self.tenant.owner,
+                    )
+
+        completed.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        collateral = self.loan.collateral_items.get()
+        collateral.refresh_from_db()
+        self.assertEqual(completed.outbox.status, LoanOutboxStatus.POSTED.value)
+        self.assertEqual(completed.accounting_event.event_kind, TransactionKind.AUCTION_RECOVERY.value)
+        self.assertEqual(self.loan.state, PawnLoanState.CLOSED.value)
+        self.assertEqual(collateral.custody_state, CollateralCustodyState.AUCTION_DISPOSED.value)
+        self.assertEqual(completed.auction.items.count(), 1)
+        self.assertEqual(completed.auction.items.get().snapshot["description"], "Gold")
+        with self.assertRaisesRegex(PawnReversalError, "auction reversal workflow"):
+            reverse_pawn_loan_event(
+                completed.accounting_event.pk,
+                reason="Must restore custody too",
+                actor=self.tenant.owner,
+            )
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 5),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                reversed_auction = reverse_pawn_loan_auction(
+                    completed.auction.pk,
+                    reason="Buyer settlement was voided",
+                    actor=self.tenant.owner,
+                )
+
+        reversed_auction.recovery_reversal_event.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        collateral.refresh_from_db()
+        self.assertEqual(
+            reversed_auction.recovery_reversal_event.outbox.status,
+            LoanOutboxStatus.POSTED.value,
+        )
+        self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(collateral.custody_state, CollateralCustodyState.IN_VAULT.value)
+        self.assertTrue(PawnLoanAuctionReversal.objects.filter(auction=auction).exists())
+
+    def test_in_progress_auction_can_be_cancelled_but_requires_admin_reason(self):
+        self._activate_loan()
+        self.loan.borrower.primary_email = "cancel-auction@example.com"
+        self.loan.borrower.save(update_fields=["primary_email"])
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 4),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_notices.timezone.localdate",
+            return_value=date(2026, 12, 4),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_notices.timezone.now",
+            return_value=timezone.make_aware(datetime(2026, 12, 4, 10, 0)),
+        ):
+            auction = initiate_pawn_loan_auction(
+                self.loan.pk,
+                scheduled_date=date(2026, 12, 5),
+                channel="EMAIL",
+                request_key="auction-cancel",
+                actor=self.tenant.owner,
+            )
+        NotificationJob.objects.filter(pk=auction.notice.notification_job_id).update(
+            status=NotificationJob.Status.SENT,
+            sent_at=timezone.now(),
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 5),
+        ):
+            auction = start_pawn_loan_auction(auction.pk, actor=self.tenant.owner)
+        with self.assertRaisesRegex(PawnAuctionError, "requires a reason"):
+            cancel_pawn_loan_auction(auction.pk, reason="", actor=self.tenant.owner)
+        cancelled = cancel_pawn_loan_auction(
+            auction.pk,
+            reason="Borrower settled before auction",
+            actor=self.tenant.owner,
+        )
+        self.assertEqual(cancelled.state, "CANCELLED")
+        self.assertEqual(PawnLoanAuction.objects.filter(loan=self.loan).count(), 1)
 
     def _activate_loan(self, policy=None):
         self._seed_dea_disbursal_setup()

@@ -17,6 +17,7 @@ from apps.tenant_apps.loans.domain import (
     PartialMonthMethod,
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
+    PawnLoanAuctionState,
     PawnLoanEventKind,
     PawnLoanState,
     RoundingMethod,
@@ -847,11 +848,27 @@ class PawnCollateralCustodyEvent(models.Model):
     )
     release = models.ForeignKey(
         PawnLoanRelease,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
+    auction = models.ForeignKey(
+        "PawnLoanAuction",
+        null=True,
+        blank=True,
         on_delete=models.PROTECT,
         related_name="custody_events",
     )
     release_reversal = models.ForeignKey(
         "PawnLoanReleaseReversal",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
+    auction_reversal = models.ForeignKey(
+        "PawnLoanAuctionReversal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -882,6 +899,13 @@ class PawnCollateralCustodyEvent(models.Model):
                 condition=~Q(from_state=F("to_state")),
                 name="loans_custody_state_changes",
             ),
+            models.CheckConstraint(
+                condition=(
+                    (Q(release__isnull=False) & Q(auction__isnull=True))
+                    | (Q(release__isnull=True) & Q(auction__isnull=False))
+                ),
+                name="loans_custody_one_source",
+            ),
         ]
 
     def save(self, *args, **kwargs):
@@ -900,13 +924,28 @@ class PawnCollateralCustodyEvent(models.Model):
             raise ValidationError(
                 {"collateral_item": "Custody item must belong to the release loan."}
             )
-        if (
-            self.release_reversal_id
-            and self.release_id
-            and self.release_reversal.release_id != self.release_id
-        ):
+        if self.auction_id and self.collateral_item_id:
+            if self.auction.loan_id != self.collateral_item.loan_id:
+                raise ValidationError(
+                    {"collateral_item": "Custody item must belong to the auction loan."}
+                )
+        if self.auction_reversal_id and self.auction_id:
+            if self.auction_reversal.auction_id != self.auction_id:
+                raise ValidationError(
+                    {"auction_reversal": "Custody reversal must match the auction."}
+                )
+        elif self.auction_reversal_id:
             raise ValidationError(
-                {"release_reversal": "Custody reversal must match the release."}
+                {"auction_reversal": "Auction reversal custody requires its auction."}
+            )
+        if self.release_reversal_id and self.release_id:
+            if self.release_reversal.release_id != self.release_id:
+                raise ValidationError(
+                    {"release_reversal": "Custody reversal must match the release."}
+                )
+        elif self.release_reversal_id:
+            raise ValidationError(
+                {"release_reversal": "Release reversal custody requires its release."}
             )
 
     def delete(self, *args, **kwargs):
@@ -1008,6 +1047,13 @@ class PawnLoanNotice(models.Model):
     payload_snapshot = models.JSONField(default=dict)
     notification_event_id = models.PositiveBigIntegerField(null=True, blank=True)
     notification_job_id = models.PositiveBigIntegerField(null=True, blank=True)
+    source_auction = models.OneToOneField(
+        "PawnLoanAuction",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="notice",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -1053,9 +1099,173 @@ class PawnLoanNotice(models.Model):
             PawnLoanNoticeChannel.WHATSAPP.value,
         } and not self.recipient_phone:
             errors["recipient_phone"] = "SMS/WhatsApp delivery requires a recipient phone."
+        if self.source_auction_id:
+            if self.notice_kind != PawnLoanNoticeKind.AUCTION_NOTICE.value:
+                errors["source_auction"] = "Only an auction notice can reference an auction."
+            elif self.source_auction.loan_id != self.loan_id:
+                errors["source_auction"] = "Auction notice must reference the same loan."
+        elif self.notice_kind == PawnLoanNoticeKind.AUCTION_NOTICE.value:
+            errors["source_auction"] = "Auction notice requires its source auction."
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         self.clean()
         return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan notices cannot be deleted.")
+
+
+class PawnLoanAuction(models.Model):
+    """Loan-owned recovery process; accounting remains an immutable event."""
+
+    workspace = models.ForeignKey(
+        "orgs.Company", on_delete=models.PROTECT, related_name="pawn_loan_auctions"
+    )
+    loan = models.ForeignKey(PawnLoan, on_delete=models.PROTECT, related_name="auctions")
+    auction_number = models.CharField(max_length=96)
+    attempt_number = models.PositiveIntegerField()
+    request_key = models.CharField(max_length=120)
+    state = models.CharField(
+        max_length=20,
+        choices=enum_choices(PawnLoanAuctionState),
+        default=PawnLoanAuctionState.INITIATED.value,
+        db_index=True,
+    )
+    notice_date = models.DateField()
+    scheduled_date = models.DateField(db_index=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_reason = models.TextField(blank=True)
+    buyer_name = models.CharField(max_length=255, blank=True)
+    buyer_reference = models.CharField(max_length=120, blank=True)
+    recovery_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    principal_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    interest_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    fee_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    accounting_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="auction",
+    )
+    catch_up_accrual = models.OneToOneField(
+        PawnLoanInterestAccrual,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="auction_catch_up",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_auctions_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("loan_id", "attempt_number")
+        constraints = [
+            models.UniqueConstraint(fields=("workspace", "auction_number"), name="loans_auction_workspace_number_uniq"),
+            models.UniqueConstraint(fields=("loan", "attempt_number"), name="loans_auction_loan_attempt_uniq"),
+            models.UniqueConstraint(fields=("loan", "request_key"), name="loans_auction_loan_request_uniq"),
+        ]
+        indexes = [
+            models.Index(fields=("workspace", "state", "scheduled_date"), name="loans_auction_state_date_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        tenant_workspace_id = current_tenant_workspace_id()
+        if tenant_workspace_id and self.workspace_id != tenant_workspace_id:
+            errors["workspace"] = "Auction workspace must match the active tenant."
+        if self.loan_id and self.workspace_id and self.loan.workspace_id != self.workspace_id:
+            errors["loan"] = "Auction loan must belong to its workspace."
+        if self.scheduled_date and self.notice_date and self.scheduled_date <= self.notice_date:
+            errors["scheduled_date"] = "Auction must be scheduled after its notice date."
+        if self.state == PawnLoanAuctionState.COMPLETED.value:
+            required = {
+                "recovery_amount": self.recovery_amount,
+                "principal_amount": self.principal_amount,
+                "interest_amount": self.interest_amount,
+                "fee_amount": self.fee_amount,
+                "accounting_event": self.accounting_event_id,
+                "completed_at": self.completed_at,
+                "buyer_name": self.buyer_name,
+            }
+            for field, value in required.items():
+                if value in (None, ""):
+                    errors[field] = "Completed auction is missing required recovery evidence."
+            if all(value is not None for value in (self.recovery_amount, self.principal_amount, self.interest_amount, self.fee_amount)):
+                if self.recovery_amount != self.principal_amount + self.interest_amount + self.fee_amount:
+                    errors["recovery_amount"] = "Recovery must equal principal, interest, and fees."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan auctions cannot be deleted.")
+
+
+class PawnLoanAuctionItem(models.Model):
+    auction = models.ForeignKey(PawnLoanAuction, on_delete=models.PROTECT, related_name="items")
+    collateral_item = models.ForeignKey(PawnCollateralItem, on_delete=models.PROTECT, related_name="auction_items")
+    snapshot = models.JSONField(default=dict)
+    disposed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ("auction_id", "id")
+        constraints = [models.UniqueConstraint(fields=("auction", "collateral_item"), name="loans_auction_item_uniq")]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan auction items are immutable.")
+        if self.auction_id and self.collateral_item_id and self.auction.loan_id != self.collateral_item.loan_id:
+            raise ValidationError({"collateral_item": "Auction item must belong to the auction loan."})
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan auction items cannot be deleted.")
+
+
+class PawnLoanAuctionReversal(models.Model):
+    auction = models.OneToOneField(PawnLoanAuction, on_delete=models.PROTECT, related_name="reversal")
+    accounting_event = models.OneToOneField(PawnLoanAccountingEvent, on_delete=models.PROTECT, related_name="auction_reversal")
+    catch_up_reversal_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="auction_catch_up_reversal",
+    )
+    reason = models.TextField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_auction_reversals_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan auction reversals are immutable.")
+        if not str(self.reason or "").strip():
+            raise ValidationError({"reason": "A reversal reason is required."})
+        if self.auction_id and self.accounting_event_id and self.accounting_event.reversal_of_id != self.auction.accounting_event_id:
+            raise ValidationError({"accounting_event": "Auction reversal must compensate the recovery event."})
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan auction reversals cannot be deleted.")

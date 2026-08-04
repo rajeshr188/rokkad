@@ -659,9 +659,28 @@ service rejects direct attempts. Six focused domain/service/command tests and
 two UI regressions pass; the complete 160-test tenant-aware Loans suite passes,
 and the migration is applied to local tenant schemas.
 
-#### E7.2 Add Auction And Recovery
+#### E7.2 Add Auction And Recovery — Completed 2026-08-04
 
 - Add auction/recovery documents, custody, and DEA recovery posting.
+
+Acceptance: only an active overdue PawnLoan with all collateral in the vault can
+enter auction. Its Loans-owned auction notice must be sent before the scheduled
+auction starts. Completion snapshots the buyer, exact debt allocation, and every
+disposed collateral item; posts recovery through the Loans outbox and DEA; and
+closes the loan. Administrator-only, reason-required reversal restores both the
+accounting and custody evidence. Dependent operations remain newest-first.
+
+Result: tenant migration `loans.0010` adds the `PawnLoanAuction`, immutable
+auction-item snapshot, auction reversal, auction-linked notice, and generalized
+custody-source evidence. The detail UI supports initiate, start, cancel,
+complete, reverse, auction notice PDF, and recovery memo PDF. `AUCTION_RECOVERY`
+has a stable Loans payload, durable outbox delivery, dedicated DEA posting rule,
+voucher type, and reversal path. The safe first boundary accepts only a recovery
+that exactly equals the canonical debt. Shortfall write-off and borrower-surplus
+distribution are explicitly deferred because each needs its own accounting
+document and authorization workflow; neither amount may be hidden in recovery.
+Migration `loans.0010` is applied to local tenant schemas and the complete
+164-test tenant-aware Loans suite passes.
 
 #### E7.3 Add Renewal Workflows
 

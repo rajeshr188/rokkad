@@ -195,6 +195,91 @@ class PawnLoanDocumentService:
             pdf,
         )
 
+    @classmethod
+    def render_auction_notice(cls, auction):
+        loan = auction.loan
+        reversal = cls._related_or_none(auction, "reversal")
+        verification = cls._verification(
+            loan,
+            f"auction-notice:{auction.pk}:{auction.auction_number}",
+        )
+        details = cls._identity_rows(loan) + [
+            ("Document", "Pawn loan auction notice"),
+            ("Auction source ID", f"PawnLoanAuction:{auction.pk}"),
+            ("Auction number", auction.auction_number),
+            ("Document status", f"Recovery reversed by {reversal.pk}" if reversal else auction.get_state_display()),
+            ("Official loan number", loan.loan_number),
+            ("Borrower", f"{loan.borrower.display_name} ({loan.borrower.party_code})"),
+            ("Notice date", auction.notice_date),
+            ("Scheduled auction date", auction.scheduled_date),
+            ("Notice delivery job", getattr(auction.notice, "notification_job_id", "Not available")),
+        ]
+        pdf = cls._build_pdf(
+            title="Pawn Loan Auction Notice",
+            details=details,
+            verification_id=verification,
+        )
+        return PawnLoanDocumentResult(
+            "auction_notice",
+            f"pawn_auction_notice_{auction.auction_number}.pdf",
+            verification,
+            pdf,
+        )
+
+    @classmethod
+    def render_auction_recovery_memo(cls, auction):
+        if not auction.accounting_event_id:
+            raise PawnLoanDocumentError(
+                "Auction recovery memo is available only after completion."
+            )
+        loan = auction.loan
+        event = auction.accounting_event
+        outbox = event.outbox
+        reversal = cls._related_or_none(auction, "reversal")
+        verification = cls._verification(
+            loan,
+            f"auction-recovery:{auction.pk}:{event.payload_fingerprint}",
+        )
+        details = cls._identity_rows(loan) + [
+            ("Document", "Pawn loan auction recovery memo"),
+            ("Auction source ID", f"PawnLoanAuction:{auction.pk}"),
+            ("Auction number", auction.auction_number),
+            ("Document status", f"Reversed by auction reversal {reversal.pk}" if reversal else "Completed"),
+            ("Effective date", event.effective_date),
+            ("Buyer", auction.buyer_name),
+            ("Buyer reference", auction.buyer_reference or "Not recorded"),
+            ("Principal recovered", cls._money(auction.principal_amount)),
+            ("Interest recovered", cls._money(auction.interest_amount)),
+            ("Fees recovered", cls._money(auction.fee_amount)),
+            ("Total recovery", cls._money(auction.recovery_amount)),
+            ("Accounting delivery", outbox.get_status_display()),
+            ("DEA voucher / journal", f"{outbox.dea_voucher_id or 'Not available'} / {outbox.dea_journal_entry_id or 'Not available'}"),
+        ]
+        rows = [["Item ID", "Description", "Metal", "Net weight", "Purity"]]
+        for auction_item in auction.items.select_related("collateral_item"):
+            snapshot = auction_item.snapshot or {}
+            rows.append(
+                [
+                    str(auction_item.collateral_item_id),
+                    snapshot.get("description", auction_item.collateral_item.description),
+                    snapshot.get("metal", ""),
+                    snapshot.get("net_weight", ""),
+                    snapshot.get("purity_percentage", ""),
+                ]
+            )
+        pdf = cls._build_pdf(
+            title="Pawn Loan Auction Recovery Memo",
+            details=details,
+            verification_id=verification,
+            sections=(("Collateral disposed", rows),),
+        )
+        return PawnLoanDocumentResult(
+            "auction_recovery",
+            f"pawn_auction_recovery_{auction.auction_number}.pdf",
+            verification,
+            pdf,
+        )
+
     @staticmethod
     def build_pdf_response(result, *, inline=True):
         disposition = "inline" if inline else "attachment"

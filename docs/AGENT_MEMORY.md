@@ -62,6 +62,13 @@ Users should create business documents, not manual journal entries.
 
 ## Important Domain Concepts
 
+Loans rewrite Phase 7 status: E7.1 notice intent/delivery integration and E7.2
+PawnLoan auction/recovery are implemented. Auction completion is deliberately
+limited to exact canonical-debt recovery; shortfall write-off and
+borrower-surplus distribution require future explicit accounting documents.
+Auction collateral uses immutable snapshots and custody events, and correction
+uses administrator-only compensating reversal rather than mutation.
+
 Use a generic party model where possible:
 
 - Customer

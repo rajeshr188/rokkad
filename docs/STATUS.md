@@ -10,6 +10,16 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans rewrite E7.2 is complete: `PawnLoanAuction` owns the overdue-loan
+  auction lifecycle, source-linked notice, buyer/recovery evidence, immutable
+  collateral snapshots, and custody movement to `AUCTION_DISPOSED`. Exact
+  full-debt recovery posts through the Loans outbox to a dedicated DEA voucher
+  rule and closes the loan; administrator-only reversal posts compensation,
+  restores vault custody, and reopens it. The loan detail exposes lifecycle
+  actions plus notice/recovery PDFs. Shortfall write-off and borrower-surplus
+  settlement deliberately fail closed pending explicit documents. Tenant
+  migration `loans.0010` is applied to local tenant schemas; the focused
+  real-posting tests and complete 164-test tenant-aware Loans suite pass.
 - Loans rewrite E7.1 is complete: `PawnLoanNotice` persists tenant-scoped,
   idempotent notice intent plus recipient/financial snapshots and Notify IDs for
   repayment reminders, interest due, overdue notices, and release confirmations.
@@ -18,7 +28,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   detail UI and scheduler instead of storing a duplicate `notice sent` flag.
   Immediate delivery runs after commit, future work runs through tenant command
   `dispatch_pawn_loan_notices`, and failed jobs can be retried from the loan.
-  Auction notices fail closed until E7.2. Tenant migration `loans.0009` is
+  Auction notices now require an E7.2 source auction. Tenant migration `loans.0009` is
   applied locally; six focused notice tests, two UI regressions, and the full
   160-test tenant-aware Loans suite pass.
 

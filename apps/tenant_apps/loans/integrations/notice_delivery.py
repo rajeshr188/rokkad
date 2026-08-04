@@ -43,6 +43,11 @@ _EVENT_DEFAULTS = {
         "Pawn loan release confirmation",
         "Dear {{ customer.name }}, pawn loan {{ loans.0.loan_id }} has been settled and its collateral release recorded.",
     ),
+    "AUCTION_NOTICE": (
+        "pawn_loan.auction_notice",
+        "Pawn loan auction notice",
+        "Dear {{ customer.name }}, collateral for pawn loan {{ loans.0.loan_id }} is scheduled for auction on {{ auction.scheduled_date }}. Total due is INR {{ loans.0.total_due }} as of {{ loans.0.as_of_date }}.",
+    ),
 }
 
 

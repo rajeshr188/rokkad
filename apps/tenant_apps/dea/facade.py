@@ -26,6 +26,7 @@ from apps.tenant_apps.dea.facades.loan_events import (
     post_pawn_loan_interest_capitalization_event,
     post_pawn_loan_repayment_event,
     post_pawn_loan_release_event,
+    post_pawn_loan_auction_recovery_event,
     reverse_pawn_loan_accounting_event,
 )
 from apps.tenant_apps.dea.facades.loan_reconciliation import (
@@ -67,6 +68,7 @@ __all__ = [
     "post_pawn_loan_interest_capitalization_event",
     "post_pawn_loan_repayment_event",
     "post_pawn_loan_release_event",
+    "post_pawn_loan_auction_recovery_event",
     "reverse_pawn_loan_accounting_event",
     "post_journal_entry_voucher",
     "post_payment_voucher",

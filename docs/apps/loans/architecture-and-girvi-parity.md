@@ -349,8 +349,8 @@ remaining business record depends on it.
 | Repledging | Select collateral, create lender loan, track lender custody and return | Deliberately blocked until FundingLoan exists |
 | Renewal | Pay-and-renew and successor loan behavior | No renewal aggregate or successor audit link |
 | Top-up renewal | Existing operational renewal path | No top-up workflow |
-| Notices | Reminder, overdue, interest, auction, and release notification paths | Repayment, interest-due, overdue, and release-confirmation vertical slice implemented; auction notices wait for E7.2 recovery ownership |
-| Auction/recovery | Auction lifecycle and accounting/recovery posting | No auction, sale recovery, custody, document, or reversal workflow |
+| Notices | Reminder, overdue, interest, auction, and release notification paths | Repayment, interest-due, overdue, release-confirmation, and auction-source notices implemented through Notify v2 |
+| Auction/recovery | Auction lifecycle and accounting/recovery posting | Initiate/start/cancel/complete/reverse, custody evidence, PDFs, and DEA exact-debt recovery implemented; shortfall write-off and borrower-surplus settlement remain deferred |
 | Customer portal | Girvi/Party loan visibility can be exposed through existing portal work | New Loans statements, receipts, notices, and releases are not integrated |
 
 ### P2: Girvi operational capabilities requiring carry-forward decisions
