@@ -18,6 +18,7 @@ from apps.tenant_apps.loans.domain import (
     TransactionKind,
 )
 from apps.tenant_apps.loans.forms import (
+    LoanModuleFeatureGateForm,
     LoanLicenseForm,
     LoanSeriesSetupForm,
     PawnCollateralDraftFormSet,
@@ -32,6 +33,10 @@ from apps.tenant_apps.loans.forms import (
     PawnSetupTransferForm,
     PawnTransitionReasonForm,
 )
+from apps.tenant_apps.loans.feature_flags import (
+    get_loan_module_feature_state,
+    set_new_loans_enabled,
+)
 from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanSeries,
@@ -45,6 +50,7 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_reports,
     get_pawn_loan_release_readiness,
     get_pawn_loan_operations_snapshot,
+    get_unified_loan_portfolio,
 )
 from apps.tenant_apps.loans.services import (
     PawnBorrowerAccountingSetupError,
@@ -107,6 +113,47 @@ def pawn_loan_reports(request):
 
 
 @loans_workspace_required
+def unified_loan_portfolio(request):
+    portfolio = get_unified_loan_portfolio(as_of_date=timezone.localdate())
+    return render(
+        request,
+        "loans/pawn/coexistence.html",
+        {"portfolio": portfolio},
+    )
+
+
+@loans_setup_required
+def loan_module_feature_gate(request):
+    state = get_loan_module_feature_state(request.loans_workspace)
+    form = LoanModuleFeatureGateForm(
+        request.POST if request.method == "POST" else None,
+        initial={"enabled": state.enabled},
+    )
+    if request.method == "POST" and form.is_valid():
+        state = set_new_loans_enabled(
+            request.loans_workspace,
+            enabled=form.cleaned_data["enabled"],
+            actor=request.user,
+        )
+        if state.enabled:
+            messages.success(
+                request,
+                "Loans is now the new-loan entrypoint. Existing Girvi loans remain serviceable in Girvi.",
+            )
+        else:
+            messages.success(
+                request,
+                "Girvi is again the new-loan entrypoint. Existing Loans records were preserved.",
+            )
+        return redirect("loans:loan_module_feature_gate")
+    return render(
+        request,
+        "loans/setup/feature_gate.html",
+        {"form": form, "feature_state": state},
+    )
+
+
+@loans_workspace_required
 def pawn_loan_ticket_pdf(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     try:
@@ -162,7 +209,14 @@ def pawn_loan_create(request):
     readiness = _draft_readiness(request.loans_workspace)
     if not readiness["ready"]:
         return render(request, "loans/pawn/blocked.html", {"readiness": readiness})
-    form = PawnDraftForm(request.POST or None, workspace=request.loans_workspace)
+    initial = None
+    if request.method == "GET" and request.GET.get("party"):
+        initial = {"borrower": request.GET["party"]}
+    form = PawnDraftForm(
+        request.POST or None,
+        workspace=request.loans_workspace,
+        initial=initial,
+    )
     formset = PawnCollateralDraftFormSet(request.POST or None, prefix="collateral")
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         try:

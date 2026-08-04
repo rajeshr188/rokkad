@@ -50,7 +50,14 @@ def inspect_pawn_loan_accounting_reference(
     debit_total = Decimal("0")
     credit_total = Decimal("0")
     if voucher:
-        for line in voucher.lines.all():
+        lines = tuple(voucher.lines.all())
+        ledger_only_lines = tuple(line for line in lines if not line.account_id)
+        financial_lines = (
+            ledger_only_lines
+            if _lines_are_balanced(ledger_only_lines)
+            else lines
+        )
+        for line in financial_lines:
             amount = Decimal(str(line.amount.amount))
             if line.side == VoucherLine.LineSide.DR:
                 debit_total += amount
@@ -66,6 +73,20 @@ def inspect_pawn_loan_accounting_reference(
         debit_total=debit_total,
         credit_total=credit_total,
     )
+
+
+def _lines_are_balanced(lines):
+    if not lines:
+        return False
+    debit_total = Decimal("0")
+    credit_total = Decimal("0")
+    for line in lines:
+        amount = Decimal(str(line.amount.amount))
+        if line.side == VoucherLine.LineSide.DR:
+            debit_total += amount
+        else:
+            credit_total += amount
+    return debit_total > 0 and credit_total > 0 and abs(debit_total - credit_total) <= Decimal("0.01")
 
 
 __all__ = ["LoanAccountingReference", "inspect_pawn_loan_accounting_reference"]

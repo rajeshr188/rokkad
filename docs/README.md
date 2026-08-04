@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-07-04
+updated: 2026-08-04
 tags: [docs, navigation, architecture]
 related: [STATUS.md, ROADMAP.md, GLOSSARY.md, AGENT_MEMORY.md]
 ---
@@ -34,6 +34,7 @@ This folder is the living documentation system. Historical notes, audits, and su
 
 ## App Internals
 
+- [Loans architecture and Girvi parity review](apps/loans/architecture-and-girvi-parity.md)
 - [Girvi app overview](apps/girvi/README.md)
 - [Girvi architecture](apps/girvi/architecture.md)
 - [Girvi models](apps/girvi/models.md)

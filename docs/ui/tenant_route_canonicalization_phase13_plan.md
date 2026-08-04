@@ -115,8 +115,10 @@ Start with low-risk entrypoints:
   while preserving the slug URL.
 - `/w/<workspace_slug>/inventory/` - direct-renders the existing Product home
   view while preserving the slug URL.
-- `/w/<workspace_slug>/loans/` - direct-renders the existing Girvi dashboard
-  view while preserving the slug URL.
+- `/w/<workspace_slug>/loans/` - preserves the slug URL and delegates to Girvi
+  while `loan__new_module_enabled` is false, or to the Loans PawnLoan list while
+  it is true. The feature flag changes new-loan ownership only; deep servicing
+  routes stay in each record's owning app.
 - `/w/<workspace_slug>/accounting/` - direct-renders the existing DEA home view
   while preserving the slug URL.
 
@@ -132,11 +134,13 @@ home view. This preserves the current Product entrypoint policy: the dashboard
 itself requires login, while detailed product, stock, pricing, image, and
 attribute views continue to enforce their Product action guards.
 
-The third Phase 13.3 slice converts `/w/<workspace_slug>/loans/` from a
-redirect-only alias into a direct-render wrapper around the existing Girvi
-dashboard view. This preserves Girvi's current entrypoint policy by keeping the
-Girvi workspace access guard as the source of truth and leaving deep loan,
-repayment, release, custody, print, notice, and report routes unchanged.
+The third Phase 13.3 slice converted `/w/<workspace_slug>/loans/` from a
+redirect-only alias into a direct-render wrapper. Loans rewrite E6.3 later made
+that wrapper feature-gated: Girvi remains the default, while enabled workspaces
+render the Loans PawnLoan list. Both delegated views keep their own workspace
+access guard as the source of truth—the Girvi workspace access guard when the
+flag is off and the Loans workspace access guard when it is on. Deep servicing
+routes remain unchanged and owned by the app that owns each record.
 
 The fourth Phase 13.3 slice converts `/w/<workspace_slug>/accounting/` from a
 redirect-only alias into a direct-render wrapper around the existing DEA home

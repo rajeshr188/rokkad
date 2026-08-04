@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -7,6 +7,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
+from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import (
@@ -24,7 +25,10 @@ from apps.tenant_apps.loans.domain import (
     resolve_policy,
 )
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.facade import resolve_party_account
+from apps.tenant_apps.dea.facade import (
+    inspect_pawn_loan_accounting_reference,
+    resolve_party_account,
+)
 from apps.tenant_apps.dea.models import (
     AccountTransaction,
     AccountType,
@@ -105,6 +109,12 @@ class PawnDisbursalServiceTests(TenantTestCase):
     def setUp(self):
         super().setUp()
         connection.set_tenant(self.tenant)
+        release_date = patch(
+            "apps.tenant_apps.loans.services.pawn_release.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        )
+        release_date.start()
+        self.addCleanup(release_date.stop)
         self.actor = get_user_model().objects.create_user(
             username=f"disbursal-{uuid.uuid4().hex[:8]}",
             email=f"disbursal-{uuid.uuid4().hex[:8]}@example.com",
@@ -315,6 +325,13 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(account_txn.ledgerno.name, "BORROWER_LOAN_CTRL")
         self.assertEqual(account_txn.XactTypeCode_id, "Dr")
         self.assertTrue(journal_entry.validate_balanced()[0])
+        evidence = inspect_pawn_loan_accounting_reference(
+            voucher_id=voucher.pk,
+            journal_entry_id=journal_entry.pk,
+            source_event_id=result.outbox.event_id,
+        )
+        self.assertEqual(evidence.debit_total, Decimal("50000.00"))
+        self.assertEqual(evidence.credit_total, Decimal("50000.00"))
         balance = get_pawn_loan_balance(
             self.loan.pk,
             as_of_date=date(2026, 8, 3),
@@ -888,14 +905,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
     def test_release_readiness_uses_tenant_rate_and_canonical_balance(self):
         self._activate_loan()
         rate_source = RateSource.objects.create(name="Local", location="Market")
-        rate = Rate.objects.create(
-            metal=Rate.Metal.GOLD,
-            currency=Rate.Currency.INR,
-            purity=Rate.Purity.K24,
-            buying_rate=Decimal("6000.00"),
-            selling_rate=Decimal("6100.00"),
-            rate_source=rate_source,
-        )
+        rate = self._create_release_rate(rate_source)
         collateral = self.loan.collateral_items.get()
 
         readiness = get_pawn_loan_release_readiness(
@@ -916,14 +926,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
     def test_full_release_posts_settlement_returns_custody_and_closes(self):
         self._activate_loan()
         source = RateSource.objects.create(name="Release", location="Market")
-        Rate.objects.create(
-            metal=Rate.Metal.GOLD,
-            currency=Rate.Currency.INR,
-            purity=Rate.Purity.K24,
-            buying_rate=Decimal("6000.00"),
-            selling_rate=Decimal("6100.00"),
-            rate_source=source,
-        )
+        self._create_release_rate(source)
 
         with self.captureOnCommitCallbacks(execute=True):
             result = release_pawn_loan_in_full(
@@ -1008,14 +1011,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )
         self._activate_loan()
         source = RateSource.objects.create(name="Partial", location="Market")
-        Rate.objects.create(
-            metal=Rate.Metal.GOLD,
-            currency=Rate.Currency.INR,
-            purity=Rate.Purity.K24,
-            buying_rate=Decimal("6000.00"),
-            selling_rate=Decimal("6100.00"),
-            rate_source=source,
-        )
+        self._create_release_rate(source)
         selected_item = self.loan.collateral_items.exclude(pk=second_item.pk).get()
 
         with self.assertRaises(PawnReleaseError):
@@ -1170,14 +1166,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
     def test_full_release_reversal_restores_accounting_custody_and_lifecycle(self):
         self._activate_loan()
         source = RateSource.objects.create(name="Reversal", location="Market")
-        Rate.objects.create(
-            metal=Rate.Metal.GOLD,
-            currency=Rate.Currency.INR,
-            purity=Rate.Purity.K24,
-            buying_rate=Decimal("6000.00"),
-            selling_rate=Decimal("6100.00"),
-            rate_source=source,
-        )
+        self._create_release_rate(source)
         with self.captureOnCommitCallbacks(execute=True):
             released = release_pawn_loan_in_full(
                 self.loan.pk,
@@ -1283,6 +1272,21 @@ class PawnDisbursalServiceTests(TenantTestCase):
         result.outbox.refresh_from_db()
         self.assertEqual(result.outbox.status, LoanOutboxStatus.POSTED.value)
         return result
+
+    def _create_release_rate(self, source):
+        rate = Rate.objects.create(
+            metal=Rate.Metal.GOLD,
+            currency=Rate.Currency.INR,
+            purity=Rate.Purity.K24,
+            buying_rate=Decimal("6000.00"),
+            selling_rate=Decimal("6100.00"),
+            rate_source=source,
+        )
+        Rate.objects.filter(pk=rate.pk).update(
+            timestamp=timezone.make_aware(datetime(2026, 8, 3, 12, 0))
+        )
+        rate.refresh_from_db()
+        return rate
 
     def _open_period(self, start, end, name):
         AccountingPeriod.objects.get_or_create(

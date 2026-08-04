@@ -1,0 +1,33 @@
+{% extends "base_tenant.html" %}
+
+{% block title %}Loans pilot cutover{% endblock %}
+
+{% block workspace_content %}
+<div class="mb-4">
+  <h1 class="h3 mb-1">Loans pilot cutover</h1>
+  <p class="text-muted mb-0">Choose where this workspace originates new pawn loans. Record ownership never moves between apps.</p>
+</div>
+
+<div class="card border-{% if feature_state.enabled %}success{% else %}secondary{% endif %}">
+  <div class="card-body">
+    <div class="alert alert-{% if feature_state.enabled %}success{% else %}secondary{% endif %}">
+      <strong>Current new-loan owner:</strong> {% if feature_state.enabled %}Loans{% else %}Girvi{% endif %}
+    </div>
+    <ul>
+      <li>Girvi continues servicing and reporting every Girvi-owned loan.</li>
+      <li>Loans continues servicing and reporting every Loans-owned PawnLoan.</li>
+      <li>Disabling the pilot changes navigation only; it does not delete or migrate records.</li>
+    </ul>
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <div class="form-check form-switch mb-2">
+        {{ form.enabled }}
+        <label class="form-check-label" for="{{ form.enabled.id_for_label }}">{{ form.enabled.label }}</label>
+      </div>
+      <div class="form-text mb-3">{{ form.enabled.help_text }}</div>
+      <button class="btn btn-primary" type="submit">Save cutover state</button>
+      <a class="btn btn-outline-secondary" href="{% url 'loans:license_list' %}">Back to setup</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -243,6 +243,14 @@ class LoanDefaultInterestCalculationMethod(ChoicePreference):
 
 
 @register_workspace_and_global
+class LoanNewModuleEnabled(BooleanPreference):
+    section = loan
+    name = "new_module_enabled"
+    default = False
+    required = False
+
+
+@register_workspace_and_global
 class LoanDefaultDate(StringPreference):
     section = loan
     name = "default_date"

@@ -165,6 +165,7 @@ TEMPLATES = [
                 "django_project.context_processors.workspace_context",
                 "django_project.context_processors.subscription_context",
                 "django_project.context_processors.google_oauth_context",
+                "apps.tenant_apps.loans.context_processors.loan_module_feature_context",
             ],
         },
     },

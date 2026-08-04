@@ -1,7 +1,7 @@
 ---
 status: active
 owner: girvi
-updated: 2026-07-05
+updated: 2026-08-04
 tags: [girvi, architecture, django]
 related: [README.md, models.md, workflows.md, userflows.md, refactor-plan.md, ../../adr/girvi-flow-boundaries-with-dea.md]
 ---
@@ -69,12 +69,19 @@ Lifecycle:
 Read boundary:
 
 - `selectors.py` is the main read/query layer for loan lists, unified loan rows, totals, analytics, and detail read models.
-- `facade.py` is the cross-app interface. Other apps should prefer it over importing Girvi models directly.
+- `facade.py` is the cross-app interface. Other apps should prefer it over importing Girvi models directly. Its E6.1 coexistence contract exposes read-only source-owned GivenLoan and TakenLoan rows, including lifecycle, settlement availability, custody summary, release state, DEA visibility, and owner-app URLs, without exposing Girvi models to Loans. E6.2 consumes this boundary for deterministic comparison without taking write ownership of legacy records.
 
 Background and signals:
 
 - `tasks.py` contains Celery tasks for exports, reminders, and scheduled interest accrual.
 - `signals.py` updates legacy aggregate values when items change and applies series guardrails after loan create/delete.
+
+Cutover boundary:
+
+- Girvi remains the permanent write owner and servicing UI for every Girvi-owned loan.
+- Central workspace preference `loan__new_module_enabled` decides only where new pawn loans originate; it never transfers record ownership.
+- When enabled, Girvi's independent create, customer-create, and preview routes enforce the boundary server-side for GET, POST, and HTMX requests and redirect to Loans. Existing Girvi detail, repayment, release, renewal, reporting, and other servicing routes remain available.
+- Disabling the flag restores Girvi origination without deleting or importing Loans records.
 
 ## Current Dependency Direction
 

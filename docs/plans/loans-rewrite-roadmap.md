@@ -1,9 +1,9 @@
 ---
 status: active
 owner: project
-updated: 2026-08-03
+updated: 2026-08-04
 tags: [loans, girvi, rewrite, roadmap, planning]
-related: [../STATUS.md, ../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, ../apps/girvi/README.md, ../domain/girvi.md, ../domain/accounting.md, girvi-release-accrual-hardening.md, girvi-number-sequence-migration-plan.md]
+related: [../STATUS.md, ../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, ../apps/loans/architecture-and-girvi-parity.md, ../apps/girvi/README.md, ../domain/girvi.md, ../domain/accounting.md, girvi-release-accrual-hardening.md, girvi-number-sequence-migration-plan.md]
 ---
 
 # Loans Rewrite Roadmap
@@ -505,7 +505,14 @@ but still hidden from production navigation.
 
 ### Phase 6: Girvi Coexistence And Controlled Cutover
 
-#### E6.1 Add Unified Read Contracts
+The durable architecture comparison and missing-work inventory is maintained in
+[Loans Architecture And Girvi Parity Review](../apps/loans/architecture-and-girvi-parity.md).
+Its P0 items are Phase 6 cutover requirements. Its P1 items are essential
+post-MVP vertical slices. Every P2 parity item must be implemented or explicitly
+rejected through a recorded product decision before Girvi retirement; it must
+not disappear merely because it was outside the PawnLoan MVP gate.
+
+#### E6.1 Add Unified Read Contracts — Completed 2026-08-04
 
 - Aggregate Girvi and Loans dashboards/reports without dual writes.
 - Label source system and provide owner-app action URLs.
@@ -513,7 +520,18 @@ but still hidden from production navigation.
 Acceptance: totals reconcile to each source and no Loans mutation is offered for
 a Girvi-owned loan or vice versa.
 
-#### E6.2 Add Read-Only Comparison Command
+Result: Girvi now exposes stable read-only GivenLoan and TakenLoan coexistence
+rows through its public facade. Loans adapts those rows beside tenant-scoped
+PawnLoans into one immutable source-labelled contract with explicit product
+kind, lifecycle bucket, financial availability, custody summary, source key,
+per-source totals, and owner-app action identity/URL. Contract validation rejects
+rows whose action namespace does not match their owner. A feature-hidden
+read-only portfolio renders both sources and links each record only to its
+owning app. Four focused contract/tenant/UI tests pass, and the complete
+140-test Loans suite passes with tenant-aware migrations and real DEA fixtures.
+No migration is required.
+
+#### E6.2 Add Read-Only Comparison Command — Completed 2026-08-04
 
 - Compare counts, active/closed totals, principal, interest, balances, custody,
   release, and DEA visibility.
@@ -522,7 +540,22 @@ a Girvi-owned loan or vice versa.
 Acceptance: deterministic zero-mismatch fixtures and categorized deliberate
 mismatches are covered.
 
-#### E6.3 Add Workspace Feature Gate And Pilot
+Result: the tenant-only `compare_loan_coexistence` command now compares the
+source-owned Girvi and Loans projections with the unified coexistence contract
+without writing either system. Its deterministic report covers row and
+active/closed/pending/cancelled counts, original and outstanding principal,
+interest and total due, collateral and custody summaries, release state, and
+DEA-reference visibility. Mismatches are categorized as count, lifecycle,
+money, custody, release, or DEA visibility and include the affected source key
+when record-level evidence exists. Text and machine-readable JSON output are
+available, and `--fail-on-mismatch` turns the same read-only check into a
+deployment/pilot gate. Matching and deliberately altered fixtures plus a real
+tenant Girvi/Loans command run are covered by seven focused tests. The complete
+143-test tenant-aware Loans suite passes; Django checks, migration drift, and
+whitespace checks are clean, and no migration is required.
+Historical validation snapshots remain optional and were not introduced.
+
+#### E6.3 Add Workspace Feature Gate And Pilot — Completed 2026-08-04
 
 - When disabled, preserve current Girvi behavior.
 - When enabled, route new-loan creation to Loans, prevent new Girvi loans, and
@@ -531,13 +564,46 @@ mismatches are covered.
 Acceptance: flag rollback restores navigation without losing new Loans records;
 ownership rules cannot be bypassed by direct URL.
 
-#### E6.4 Complete Production Hardening
+Result: the central audited workspace preference
+`loan__new_module_enabled` now controls new-pawn-loan ownership and defaults to
+Girvi. Owner/Admin users manage it through `/loans/setup/cutover/`. Enabling it
+routes the canonical workspace Loans entry and all known new-loan links to
+Loans, exposes Legacy Girvi for continued servicing, and guards Girvi create,
+customer-create, preview, GET, POST, and HTMX entrypoints with a server-side
+redirect to Loans. Customer-originated links preserve the shared Party when
+available. Disabling the flag restores Girvi navigation and origination without
+deleting, migrating, or changing ownership of any PawnLoan record. The setting
+is tenant-bound and audited; non-administrators cannot change it through the
+direct URL. Five focused tenant tests cover enable, disable, retained records,
+canonical routing, direct Girvi blocking, Party handoff, coexistence navigation,
+and administration denial. No migration is required.
+The complete 148-test tenant-aware Loans suite passes, together with central
+preference tests, route/navigation intent checks, Django checks, migration-drift,
+compile, and whitespace checks.
+
+#### E6.4 Complete Production Hardening — Engineering Gate Implemented 2026-08-04; Live Sign-Off Pending
 
 - Run tenant migration checks, reconciliation, support rehearsal, permissions,
   monitoring, backup/rollback checks, and pilot acceptance with a real workflow.
 
 Acceptance: explicit go/no-go checklist is signed off and no unexplained
 reconciliation mismatch remains.
+
+Result so far: tenant command `check_pawn_loan_cutover_readiness` combines six
+automated gates—Loans migrations, numbering, outbox/stale delivery, accounting
+setup, Loans-to-DEA reconciliation, and Girvi/Loans comparison—with six explicit
+manual acknowledgements for backup, rollback, support, monitoring, permissions,
+and real pilot acceptance. `--fail-on-blocker` makes NO-GO enforceable in
+deployment; JSON output is retainable evidence. Five pure/command tests prove
+all checks fail closed and that GO requires every acknowledgement. Local `jcl1`
+passes every automated check with zero unexplained reconciliation mismatch;
+`jsk` and `test` correctly block on missing numbering. A reconciliation
+hardening fix now excludes one-sided Party account attribution from balanced GL
+totals, matching DEA journal materialization semantics and removing three false
+findings on unchanged `jcl1` data. The engineering gate is implemented, but E6.4
+remains live NO-GO until a target workspace completes the six human sign-offs
+recorded in the production-readiness document.
+The expanded 153-test tenant-aware Loans suite passes with real DEA fixtures.
 
 #### E6.5 Make Loans Primary For New Loans
 
@@ -587,7 +653,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E5.5 and the Phase 5 gate are complete; E6.1 unified coexistence reads is the next executable slice.**
+Status: **E6.4 engineering hardening is implemented and automated checks pass for `jcl1`; live backup/support/monitoring/permissions/rollback/pilot sign-off remains before E6.5.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

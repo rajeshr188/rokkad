@@ -94,12 +94,18 @@
                      </a>
                      {% endif %}
 
-                <!-- Girvi (Loans) -->
+                <!-- Girvi / Loans coexistence -->
                 {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'girvi' or request.resolver_match.url_name == 'workspace_slug_loans' %}active{% endif %}"
                    href="{% url 'workspace_slug_loans' workspace_slug=effective_workspace.schema_name %}">
-                    <i class="bi bi-cash-coin"></i> Girvi
+                    <i class="bi bi-cash-coin"></i> {% if loans_new_module_enabled %}Loans{% else %}Girvi{% endif %}
                 </a>
+                {% if loans_new_module_enabled %}
+                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'girvi' %}active{% endif %}"
+                   href="{% url 'girvi:girvi_dashboard' %}">
+                    <i class="bi bi-archive"></i> Legacy Girvi
+                </a>
+                {% endif %}
                 {% endif %}
                 {% if role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'loans' %}active{% endif %}"

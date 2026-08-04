@@ -358,7 +358,13 @@ def workspace_slug_party_merge(request, workspace_slug, pk):
 
 @login_required
 def workspace_slug_loans(request, workspace_slug):
-    _get_workspace_from_slug(workspace_slug)
+    workspace = _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.loans.facade import is_new_loans_enabled
+
+    if is_new_loans_enabled(workspace):
+        from apps.tenant_apps.loans.views import pawn_loan_list
+
+        return pawn_loan_list(request)
     from apps.tenant_apps.girvi.views.dashboard import girvi_dashboard
 
     return girvi_dashboard(request)

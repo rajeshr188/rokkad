@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-03
+updated: 2026-08-04
 tags: [loans, pawn-loan, operations, runbook]
 related: [../plans/loans-rewrite-roadmap.md, ../constitution.md, ../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md]
 ---
@@ -10,8 +10,8 @@ related: [../plans/loans-rewrite-roadmap.md, ../constitution.md, ../adr/2026-07-
 
 This runbook covers deployment, diagnosis, recovery, rollback, reconciliation,
 and support for the side-by-side `loans.PawnLoan` MVP. It does not authorize
-production cutover. Girvi remains the production entry point until E6.3's
-workspace feature gate is implemented and a pilot is approved.
+production cutover. E6.3 provides the reversible workspace gate; enabling it
+still requires an approved E6.4 pilot and the checks in this runbook.
 
 ## Non-negotiable boundaries
 
@@ -52,16 +52,29 @@ workspace feature gate is implemented and a pilot is approved.
 
 ## Enablement
 
-There is no production enablement switch yet. Until E6.3:
+The workspace switch is `/loans/setup/cutover/` and is restricted to
+Owner/Admin. It writes audited central preference `loan__new_module_enabled`.
+Keep it disabled until the operations console, Loans reconciliation, E6.2
+coexistence comparison, migration check, backup, rollback plan, and pilot
+approval are green.
 
-- keep Loans absent from primary navigation;
-- access only feature-hidden `/loans/internal/` and `/loans/setup/` routes;
-- do not redirect Girvi creation or servicing;
-- use test/pilot fixtures only.
+Enable one approved workspace at a time. Enabling changes new-loan navigation
+and blocks Girvi origination, including direct GET/POST/HTMX entrypoints. It does
+not move existing Girvi records; staff continue servicing those through
+**Legacy Girvi**. Verify Party handoff from a customer link, create one Loans
+draft, and complete the approved pilot workflow before wider enablement.
 
-When E6.3 exists, enable one approved workspace at a time only after the
-operations console, reconciliation report, migration check, backup, and pilot
-acceptance are green.
+Run the E6.4 fail-closed gate before changing the feature flag:
+
+```powershell
+.\.venv314\Scripts\python.exe manage.py tenant_command check_pawn_loan_cutover_readiness --schema=TENANT_SCHEMA --as-of=2026-08-04 --fail-on-blocker
+```
+
+The command checks migrations, numbering, failed/stale outbox work, accounting
+setup, Loans-to-DEA reconciliation, and Girvi/Loans comparison. It remains
+NO-GO until backup, rollback, support, monitoring, permissions, and a real pilot
+workflow have each been performed and explicitly acknowledged with the matching
+`--ack-...` option. Retain `--format=json` output as release evidence.
 
 ## Failed outbox delivery
 
@@ -136,12 +149,27 @@ The report must have no unexplained:
 Document any deliberately accepted warning with workspace, loan, source event,
 owner, reason, and planned resolution. An unexplained error blocks enablement.
 
+## Coexistence comparison gate
+
+Run E6.2 for the target tenant after reconciliation and before pilot changes:
+
+```powershell
+.\.venv314\Scripts\python.exe manage.py tenant_command compare_loan_coexistence --schema=TENANT_SCHEMA --as-of=2026-08-04 --fail-on-mismatch
+```
+
+Use `--format=json` when a deployment job needs machine-readable evidence. The
+command is read-only. It compares Girvi and Loans source projections against the
+unified portfolio contract and categorizes count, lifecycle, money, custody,
+release, and DEA-visibility mismatches. Do not "fix" a mismatch by moving record
+ownership, editing immutable evidence, or creating a second operational copy.
+Investigate the named source key in its owning app and rerun the command.
+
 ## Rollback
 
 Application rollback must preserve data and record ownership:
 
-1. Disable future Loans navigation/creation through the future E6.3 feature
-   gate, or keep the current hidden routes hidden.
+1. Open `/loans/setup/cutover/` and disable **Create new pawn loans in Loans**.
+   Confirm the canonical Loans entry returns to Girvi.
 2. Redeploy the last schema-compatible application version.
 3. Do not reverse business events merely to roll back code.
 4. Do not delete Loans rows, reuse numbers, or move Loans records into Girvi.

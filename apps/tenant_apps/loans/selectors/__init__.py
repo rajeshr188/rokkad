@@ -29,6 +29,28 @@ from .operations import (
     SequenceHealthRow,
     get_pawn_loan_operations_snapshot,
 )
+from .coexistence import (
+    UnifiedLoanPortfolio,
+    UnifiedLoanReadRow,
+    UnifiedLoanSourceTotals,
+    build_unified_loan_portfolio,
+    get_loans_coexistence_rows,
+    get_unified_loan_portfolio,
+)
+from .comparison import (
+    LoanCoexistenceComparison,
+    LoanComparisonMismatch,
+    LoanComparisonSourceSummary,
+    build_loan_coexistence_comparison,
+    get_loan_coexistence_comparison,
+)
+from .cutover_readiness import (
+    MANUAL_ACKNOWLEDGEMENTS,
+    PawnLoanCutoverCheck,
+    PawnLoanCutoverReadiness,
+    build_pawn_loan_cutover_readiness,
+    get_pawn_loan_cutover_readiness,
+)
 
 __all__ = [
     "PawnLoanBalance",
@@ -52,4 +74,20 @@ __all__ = [
     "OperationsBlocker",
     "SequenceHealthRow",
     "get_pawn_loan_operations_snapshot",
+    "UnifiedLoanPortfolio",
+    "UnifiedLoanReadRow",
+    "UnifiedLoanSourceTotals",
+    "build_unified_loan_portfolio",
+    "get_loans_coexistence_rows",
+    "get_unified_loan_portfolio",
+    "LoanCoexistenceComparison",
+    "LoanComparisonMismatch",
+    "LoanComparisonSourceSummary",
+    "build_loan_coexistence_comparison",
+    "get_loan_coexistence_comparison",
+    "MANUAL_ACKNOWLEDGEMENTS",
+    "PawnLoanCutoverCheck",
+    "PawnLoanCutoverReadiness",
+    "build_pawn_loan_cutover_readiness",
+    "get_pawn_loan_cutover_readiness",
 ]
