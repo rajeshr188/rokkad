@@ -34,6 +34,11 @@ Workspace
                 └── PawnLoanReleaseReversal
 ```
 
+`PawnLoanNotice[]` also belongs to the PawnLoan aggregate as durable notice
+intent. It snapshots the recipient and loan amounts, then references a Notify
+v2 event/job. Delivery status, attempts, provider references, and failures are
+read from Notify rather than duplicated in Loans.
+
 ### Regulatory setup
 
 `LoanLicense` represents the legal lending licence for one workspace. It has issuance and expiry dates, activation state and tenant ownership.

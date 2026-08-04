@@ -26,12 +26,13 @@ audit, reversal, policy, custody, and tenant boundaries are explicit and tested.
 It is not yet a complete Girvi replacement.
 
 - The PawnLoan MVP lifecycle is implemented and passes the Phase 5 test gate.
-- Loans remains hidden from primary production navigation.
+- `jcl1` uses Loans as the development origination owner; production enablement
+  still requires the full E6.4 sign-off.
 - Girvi remains the write owner of existing Girvi loans.
-- E6.1 source-labelled coexistence reads and the E6.2 deterministic comparison
-  command are complete. Feature-gating and pilot work remain.
-- FundingLoan, repledging, renewals, notices, auction recovery, and portal
-  integration remain essential future workflows.
+- Phase 6 coexistence, comparison, gating, and development cutover are complete.
+- E7.1 repayment, interest-due, overdue, and release-confirmation notices are
+  implemented through Notify v2. FundingLoan, repledging, renewals, auction
+  recovery, and portal integration remain essential future workflows.
 - Several Girvi operational conveniences need explicit carry-forward or
   rejection decisions before Girvi can be retired.
 
@@ -131,6 +132,7 @@ These modules are database-free. They express rules before persistence or UI.
 - `PawnLoanReleaseItem`
 - `PawnCollateralCustodyEvent`
 - `PawnLoanReleaseReversal`
+- `PawnLoanNotice` (intent and immutable delivery inputs; not provider status)
 
 There is no runtime `FundingLoan` model.
 
@@ -168,8 +170,9 @@ amounts.
 
 ### Integrations
 
-`apps/tenant_apps/loans/integrations/` builds deterministic DEA payloads and
-delivers durable outbox events through the public DEA facade.
+`apps/tenant_apps/loans/integrations/` builds deterministic DEA payloads,
+delivers durable accounting outbox events through the public DEA facade, and
+adapts loan notice intent to Notify v2 jobs.
 
 Loans does not own vouchers, journal entries, period locks, or accounting
 reversal mechanics. DEA owns those responsibilities.
@@ -346,7 +349,7 @@ remaining business record depends on it.
 | Repledging | Select collateral, create lender loan, track lender custody and return | Deliberately blocked until FundingLoan exists |
 | Renewal | Pay-and-renew and successor loan behavior | No renewal aggregate or successor audit link |
 | Top-up renewal | Existing operational renewal path | No top-up workflow |
-| Notices | Reminder, overdue, interest, auction, and release notification paths | No loan notice aggregate or delivery workflow |
+| Notices | Reminder, overdue, interest, auction, and release notification paths | Repayment, interest-due, overdue, and release-confirmation vertical slice implemented; auction notices wait for E7.2 recovery ownership |
 | Auction/recovery | Auction lifecycle and accounting/recovery posting | No auction, sale recovery, custody, document, or reversal workflow |
 | Customer portal | Girvi/Party loan visibility can be exposed through existing portal work | New Loans statements, receipts, notices, and releases are not integrated |
 
@@ -443,7 +446,7 @@ immutable event history. Performance work should follow measurement.
 4. Execute E6.4 by piloting the implemented PawnLoan lifecycle in one workspace.
 5. Resolve usability and accounting-setup friction found during the pilot.
 6. Complete E6.4 and E6.5 production enablement gates.
-7. Implement notices, renewals, and auction/recovery as complete vertical slices.
+7. Keep E7.1 notices operational and implement renewals plus auction/recovery as complete vertical slices.
 8. Implement FundingLoan and repledging as one coherent lender workflow.
 9. Integrate Loans documents and statements with the customer portal.
 10. Review every P2 parity item with real users before Girvi retirement.

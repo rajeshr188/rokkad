@@ -33,6 +33,7 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "PawnLoanAccountingOutbox",
                 "PawnLoanApprovalSnapshot",
                 "PawnLoanInterestAccrual",
+                "PawnLoanNotice",
                 "PawnLoanRelease",
                 "PawnLoanReleaseItem",
                 "PawnLoanReleaseReversal",

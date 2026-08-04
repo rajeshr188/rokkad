@@ -631,16 +631,65 @@ feature flag without changing record ownership.
 
 Execute as separately planned vertical slices after MVP stability:
 
-1. Notices and scheduled notification delivery.
-2. Auction/recovery documents, custody, and DEA recovery posting.
-3. Pay-and-renew and top-up renewal with successor-loan audit links.
-4. FundingLoan model, workspace numbering, lender payable accounting, multi-loan
-   collateral pledge/return, servicing, settlement, reversals, reports, and UI.
-5. Customer portal integration for statements, receipts, notices, and releases.
-6. Backdated repayment/correction policy and staff allocation overrides.
-7. Staff-to-license or future branch-scoped authorization.
-8. Girvi retirement planning after its final active loan closes or a separate
-   active-loan migration ADR is accepted.
+#### E7.1 Add PawnLoan Notices And Scheduled Delivery — Completed 2026-08-04
+
+- Persist the Loans-owned customer-notice intent, recipient and financial
+  snapshots, request idempotency key, schedule, and Notify references.
+- Support repayment reminders, interest-due notices, overdue notices, and
+  release confirmations through Email, SMS, and WhatsApp.
+- Keep templates, provider dispatch, attempts, delivery status, external
+  references, and failures owned by Notify v2; Loans must derive this delivery
+  state rather than duplicate a `notice sent` flag.
+- Provide staff create/retry UI and a tenant-scoped scheduled dispatch command.
+- Reject auction notices until E7.2 owns the auction/recovery source workflow.
+
+Acceptance: eligibility and contact rules fail closed; request keys are
+idempotent; due jobs dispatch against an explicit clock; the loan detail reads
+delivery state from Notify; no provider concern or derivable sent status is
+stored in Loans.
+
+Result: tenant migration `loans.0009` adds `PawnLoanNotice` as the durable
+intent/snapshot record without copying Notify delivery state. Four supported
+notice types create deterministic Notify v2 events, recipients, templates,
+policies, and jobs through an adapter. Immediate dispatch runs after commit;
+future jobs run through tenant command `dispatch_pawn_loan_notices`. The
+PawnLoan detail exposes creation, status, provider reference, error, and failed
+job retry using a joined read model. Auction notice selection is absent and the
+service rejects direct attempts. Six focused domain/service/command tests and
+two UI regressions pass; the complete 160-test tenant-aware Loans suite passes,
+and the migration is applied to local tenant schemas.
+
+#### E7.2 Add Auction And Recovery
+
+- Add auction/recovery documents, custody, and DEA recovery posting.
+
+#### E7.3 Add Renewal Workflows
+
+- Add pay-and-renew and top-up renewal with successor-loan audit links.
+
+#### E7.4 Add FundingLoan And Repledging
+
+- Add the FundingLoan model, workspace numbering, lender payable accounting,
+  multi-loan collateral pledge/return, servicing, settlement, reversals,
+  reports, and UI.
+
+#### E7.5 Integrate The Customer Portal
+
+- Expose PawnLoan statements, receipts, notices, and releases to explicitly
+  linked portal Parties.
+
+#### E7.6 Add Deferred Repayment Controls
+
+- Define backdated repayment/correction policy and staff allocation overrides.
+
+#### E7.7 Add License-Scoped Authorization
+
+- Add staff-to-license or future branch-scoped authorization.
+
+#### E7.8 Plan Girvi Retirement
+
+- Plan retirement after Girvi's final active loan closes or after a separate
+  active-loan migration ADR is accepted.
 
 Post-MVP guardrail: none of these items may be represented by a partial model or
 UI stub that suggests an unsupported operational workflow.

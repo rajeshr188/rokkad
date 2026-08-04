@@ -17,79 +17,85 @@ from apps.tenant_apps.loans.domain import (
     PawnLoanState,
     TransactionKind,
 )
+from apps.tenant_apps.loans.feature_flags import (
+    get_loan_module_feature_state,
+    set_new_loans_enabled,
+)
 from apps.tenant_apps.loans.forms import (
-    LoanModuleFeatureGateForm,
     LoanLicenseForm,
+    LoanModuleFeatureGateForm,
     LoanSeriesSetupForm,
-    PawnCollateralDraftFormSet,
-    PawnDraftForm,
     PawnAccrualForm,
     PawnCapitalizationForm,
+    PawnCollateralDraftFormSet,
     PawnDisbursalForm,
+    PawnDraftForm,
     PawnFullReleaseForm,
+    PawnLoanNoticeForm,
     PawnPartialReleaseForm,
     PawnRepaymentForm,
     PawnReversalForm,
     PawnSetupTransferForm,
     PawnTransitionReasonForm,
 )
-from apps.tenant_apps.loans.feature_flags import (
-    get_loan_module_feature_state,
-    set_new_loans_enabled,
-)
 from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanSeries,
     PawnLoan,
-    PawnLoanAccountingOutbox,
     PawnLoanAccountingEvent,
+    PawnLoanAccountingOutbox,
+    PawnLoanNotice,
     PawnLoanRelease,
 )
 from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
-    get_pawn_loan_reports,
-    get_pawn_loan_release_readiness,
+    get_pawn_loan_notice_rows,
     get_pawn_loan_operations_snapshot,
+    get_pawn_loan_release_readiness,
+    get_pawn_loan_reports,
     get_unified_loan_portfolio,
 )
 from apps.tenant_apps.loans.services import (
-    PawnBorrowerAccountingSetupError,
-    LicenseSeriesError,
-    NumberAllocationError,
-    activate_license,
-    configure_sequence,
-    create_license,
-    create_series,
-    expire_license,
-    preview_number,
-    set_series_active,
-    update_license,
-    update_series,
     CollateralDraftInput,
     CreatePawnDraftCommand,
-    PawnDraftError,
-    UpdatePawnDraftCommand,
-    create_pawn_draft,
-    update_pawn_draft,
-    PawnLifecycleError,
-    approve_pawn_loan,
-    cancel_pawn_loan,
-    reopen_pawn_loan,
-    transfer_expired_draft_setup,
+    LicenseSeriesError,
     LoanAccountingOutboxError,
-    retry_failed_outbox_event,
+    NumberAllocationError,
+    PawnBorrowerAccountingSetupError,
+    PawnDraftError,
+    PawnLifecycleError,
+    PawnLoanDocumentError,
+    PawnLoanDocumentService,
+    PawnLoanNoticeError,
+    UpdatePawnDraftCommand,
+    activate_license,
+    approve_pawn_loan,
+    assess_pawn_loan_accounting_readiness,
+    cancel_pawn_loan,
     capitalize_pawn_loan_interest,
+    configure_sequence,
+    create_license,
+    create_pawn_draft,
+    create_pawn_loan_notice,
+    create_series,
     disburse_pawn_loan,
+    dispatch_pawn_loan_notice,
+    ensure_pawn_borrower_accounting,
+    expire_license,
     finalize_pawn_loan_accrual,
+    preview_number,
     preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
     release_pawn_loan_in_full,
     release_pawn_loan_partially,
+    reopen_pawn_loan,
+    retry_failed_outbox_event,
     reverse_pawn_loan_event,
-    PawnLoanDocumentService,
-    PawnLoanDocumentError,
-    assess_pawn_loan_accounting_readiness,
-    ensure_pawn_borrower_accounting,
+    set_series_active,
+    transfer_expired_draft_setup,
+    update_license,
+    update_pawn_draft,
+    update_series,
 )
 
 
@@ -270,6 +276,7 @@ def pawn_loan_detail(request, pk):
         "loan": loan,
         "today": timezone.localdate(),
         "can_administer": _can_administer(request),
+        "notice_rows": get_pawn_loan_notice_rows(loan),
     }
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value}:
         try:
@@ -592,6 +599,67 @@ def pawn_loan_reverse_event(request, pk, event_pk):
         "Administrator-only. Later dependent events must be reversed first.",
         {"accounting_event": event},
     )
+
+
+@loans_workspace_required
+def pawn_loan_notice_create(request, pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    form = PawnLoanNoticeForm(
+        request.POST or None,
+        initial={"request_key": uuid.uuid4().hex},
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            notice = create_pawn_loan_notice(
+                loan.pk,
+                notice_kind=form.cleaned_data["notice_kind"],
+                channel=form.cleaned_data["channel"],
+                scheduled_for=form.cleaned_data.get("scheduled_for"),
+                request_key=form.cleaned_data["request_key"],
+                actor=request.user,
+            )
+        except (PawnLoanNoticeError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(
+                request,
+                f"{notice.get_notice_kind_display()} queued through Notify.",
+            )
+            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+    return _render_action(
+        request,
+        loan,
+        form,
+        "Create loan notice",
+        "Loans records notice intent; Notify owns templates, provider delivery, and attempts.",
+    )
+
+
+@loans_workspace_required
+@require_POST
+def pawn_loan_notice_retry(request, pk, notice_pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    notice = get_object_or_404(
+        PawnLoanNotice,
+        pk=notice_pk,
+        loan=loan,
+        workspace=request.loans_workspace,
+    )
+    try:
+        result = dispatch_pawn_loan_notice(notice.pk)
+    except (PawnLoanNoticeError, ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        if result.delivery.status == "SENT":
+            messages.success(request, "PawnLoan notice sent.")
+        elif result.delivery.status == "FAILED":
+            messages.error(
+                request,
+                result.delivery.failure_reason or "Notice delivery failed.",
+            )
+        else:
+            messages.info(request, "PawnLoan notice remains queued.")
+    return redirect("loans:pawn_loan_detail", pk=loan.pk)
 
 
 @loans_workspace_required

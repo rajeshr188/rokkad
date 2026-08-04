@@ -10,6 +10,18 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans rewrite E7.1 is complete: `PawnLoanNotice` persists tenant-scoped,
+  idempotent notice intent plus recipient/financial snapshots and Notify IDs for
+  repayment reminders, interest due, overdue notices, and release confirmations.
+  Notify v2 remains the sole owner of templates, providers, attempts, sent/failed
+  state, external references, and errors; Loans derives those values for its
+  detail UI and scheduler instead of storing a duplicate `notice sent` flag.
+  Immediate delivery runs after commit, future work runs through tenant command
+  `dispatch_pawn_loan_notices`, and failed jobs can be retried from the loan.
+  Auction notices fail closed until E7.2. Tenant migration `loans.0009` is
+  applied locally; six focused notice tests, two UI regressions, and the full
+  160-test tenant-aware Loans suite pass.
+
 Rokkad is moving toward a layered architecture:
 
 - Domain apps own their business concepts.

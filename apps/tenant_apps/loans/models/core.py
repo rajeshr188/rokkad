@@ -15,6 +15,8 @@ from apps.tenant_apps.loans.domain import (
     LoanDocumentKind,
     LoanOutboxStatus,
     PartialMonthMethod,
+    PawnLoanNoticeChannel,
+    PawnLoanNoticeKind,
     PawnLoanEventKind,
     PawnLoanState,
     RoundingMethod,
@@ -975,3 +977,85 @@ class PawnLoanReleaseReversal(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("PawnLoan release reversals cannot be deleted.")
+
+
+class PawnLoanNotice(models.Model):
+    """Loan-owned notice intent; provider delivery remains owned by Notify v2."""
+
+    workspace = models.ForeignKey(
+        "orgs.Company",
+        on_delete=models.PROTECT,
+        related_name="pawn_loan_notices",
+    )
+    loan = models.ForeignKey(
+        PawnLoan,
+        on_delete=models.PROTECT,
+        related_name="notices",
+    )
+    notice_kind = models.CharField(
+        max_length=32,
+        choices=enum_choices(PawnLoanNoticeKind),
+    )
+    channel = models.CharField(
+        max_length=16,
+        choices=enum_choices(PawnLoanNoticeChannel),
+    )
+    request_key = models.CharField(max_length=120)
+    scheduled_for = models.DateTimeField(db_index=True)
+    recipient_name = models.CharField(max_length=255)
+    recipient_email = models.EmailField(blank=True)
+    recipient_phone = models.CharField(max_length=32, blank=True)
+    payload_snapshot = models.JSONField(default=dict)
+    notification_event_id = models.PositiveBigIntegerField(null=True, blank=True)
+    notification_job_id = models.PositiveBigIntegerField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_notices_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("loan", "request_key"),
+                name="loans_notice_loan_request_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("workspace", "scheduled_for"),
+                name="loans_notice_due_idx",
+            ),
+            models.Index(
+                fields=("loan", "notice_kind", "created_at"),
+                name="loans_notice_kind_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        tenant_workspace_id = current_tenant_workspace_id()
+        if tenant_workspace_id and self.workspace_id != tenant_workspace_id:
+            errors["workspace"] = "Notice workspace must match the active tenant."
+        if self.loan_id and self.workspace_id:
+            if self.loan.workspace_id != self.workspace_id:
+                errors["loan"] = "Notice loan must belong to its workspace."
+        if self.channel == PawnLoanNoticeChannel.EMAIL.value and not self.recipient_email:
+            errors["recipient_email"] = "Email delivery requires a recipient email."
+        if self.channel in {
+            PawnLoanNoticeChannel.SMS.value,
+            PawnLoanNoticeChannel.WHATSAPP.value,
+        } and not self.recipient_phone:
+            errors["recipient_phone"] = "SMS/WhatsApp delivery requires a recipient phone."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)

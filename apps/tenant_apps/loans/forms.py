@@ -1,6 +1,11 @@
 from django import forms
 
-from apps.tenant_apps.loans.domain import CollateralMetal
+from apps.tenant_apps.loans.domain import (
+    SUPPORTED_PAWN_LOAN_NOTICE_KINDS,
+    CollateralMetal,
+    PawnLoanNoticeChannel,
+    PawnLoanNoticeKind,
+)
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnCollateralItem
 from apps.tenant_apps.party.models import Party
 
@@ -230,3 +235,31 @@ class PawnReversalForm(forms.Form):
     reason = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"})
     )
+
+
+class PawnLoanNoticeForm(forms.Form):
+    notice_kind = forms.ChoiceField(
+        choices=[
+            (kind.value, kind.name.replace("_", " ").title())
+            for kind in PawnLoanNoticeKind
+            if kind in SUPPORTED_PAWN_LOAN_NOTICE_KINDS
+        ]
+    )
+    channel = forms.ChoiceField(
+        choices=[
+            (channel.value, channel.name.title())
+            for channel in PawnLoanNoticeChannel
+        ]
+    )
+    scheduled_for = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        help_text="Leave blank to send immediately after saving.",
+    )
+    request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["notice_kind"].widget.attrs["class"] = "form-select"
+        self.fields["channel"].widget.attrs["class"] = "form-select"
+        self.fields["scheduled_for"].widget.attrs["class"] = "form-control"

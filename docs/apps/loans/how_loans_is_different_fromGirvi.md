@@ -323,11 +323,12 @@ Approved facts     → PawnLoanApprovalSnapshot
 Active policy      → LoanPolicySnapshot
 Business history   → LoanChangeLog
 Financial intent   → PawnLoanAccountingEvent
-Delivery status    → PawnLoanAccountingOutbox
+Accounting delivery → PawnLoanAccountingOutbox
 Interest periods   → PawnLoanInterestAccrual
 Release evidence   → PawnLoanRelease
 Custody history    → PawnCollateralCustodyEvent
 Corrections        → Reversal records
+Notice intent      → PawnLoanNotice (delivery state stays in Notify v2)
 ```
 
 That gives the rewrite a more uniform audit model.
@@ -340,7 +341,8 @@ Girvi remains much broader. Loans currently lacks:
 - Repledging
 - Renewals
 - Auction and recovery
-- Notices
+- Auction notices (repayment, interest-due, overdue, and release-confirmation
+  notices are implemented in E7.1)
 - Customer portal integration
 - Bulk release and bulk operations
 - Loan split and merge

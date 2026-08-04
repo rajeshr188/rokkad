@@ -372,6 +372,10 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(detail, "Accrue interest")
         self.assertContains(detail, "Partial release")
         self.assertContains(detail, "Full release")
+        self.assertContains(
+            detail,
+            reverse("loans:pawn_loan_notice_create", args=[loan.pk]),
+        )
 
         result = SimpleNamespace(
             allocation=SimpleNamespace(amount_received=Decimal("500.00"))
@@ -390,6 +394,43 @@ class PawnDraftUiTests(TenantTestCase):
             loan.pk,
             amount=Decimal("500.00"),
             request_key="ui-repayment-1",
+            actor=self.owner,
+        )
+
+    def test_active_loan_notice_form_dispatches_service_owned_command(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+        notice = SimpleNamespace(
+            get_notice_kind_display=lambda: "Repayment Reminder",
+        )
+
+        with patch(
+            "apps.tenant_apps.loans.views.create_pawn_loan_notice",
+            return_value=notice,
+        ) as command:
+            response = self.client.post(
+                reverse("loans:pawn_loan_notice_create", args=[loan.pk]),
+                {
+                    "notice_kind": "REPAYMENT_REMINDER",
+                    "channel": "EMAIL",
+                    "scheduled_for": "",
+                    "request_key": "ui-notice-1",
+                },
+            )
+
+        self.assertRedirects(
+            response,
+            reverse("loans:pawn_loan_detail", args=[loan.pk]),
+            fetch_redirect_response=False,
+        )
+        command.assert_called_once_with(
+            loan.pk,
+            notice_kind="REPAYMENT_REMINDER",
+            channel="EMAIL",
+            scheduled_for=None,
+            request_key="ui-notice-1",
             actor=self.owner,
         )
 

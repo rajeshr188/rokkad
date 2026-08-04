@@ -2,6 +2,12 @@
 
 from .compatibility import LEGACY_AGGREGATE_NAME_MAP
 from .future_funding import FUNDING_LOAN_RUNTIME_SUPPORTED, FundingLoanState
+from .notices import (
+    PawnLoanNoticeChannel,
+    PawnLoanNoticeKind,
+    PawnLoanNoticeStatus,
+    SUPPORTED_PAWN_LOAN_NOTICE_KINDS,
+)
 from .policies import (
     AccountingRecognition,
     DisbursalPolicySnapshot,
@@ -47,6 +53,9 @@ __all__ = [
     "LoanDocumentKind",
     "LoanOutboxStatus",
     "PartialMonthMethod",
+    "PawnLoanNoticeChannel",
+    "PawnLoanNoticeKind",
+    "PawnLoanNoticeStatus",
     "PawnLoanDerivedState",
     "PawnLoanEventKind",
     "PawnLoanState",
@@ -57,6 +66,7 @@ __all__ = [
     "TransactionKind",
     "ValuationMethod",
     "WorkspacePolicyDefaults",
+    "SUPPORTED_PAWN_LOAN_NOTICE_KINDS",
     "can_transition",
     "resolve_policy",
 ]

@@ -51,6 +51,7 @@ from .cutover_readiness import (
     build_pawn_loan_cutover_readiness,
     get_pawn_loan_cutover_readiness,
 )
+from .notices import PawnLoanNoticeRow, get_pawn_loan_notice_rows
 
 __all__ = [
     "PawnLoanBalance",
@@ -90,4 +91,6 @@ __all__ = [
     "PawnLoanCutoverReadiness",
     "build_pawn_loan_cutover_readiness",
     "get_pawn_loan_cutover_readiness",
+    "PawnLoanNoticeRow",
+    "get_pawn_loan_notice_rows",
 ]
