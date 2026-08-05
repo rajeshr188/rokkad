@@ -3,6 +3,16 @@
 from .compatibility import LEGACY_AGGREGATE_NAME_MAP
 from .auctions import PawnLoanAuctionState
 from .renewals import PawnLoanRenewalMode
+from .collateral_economics import (
+    CollateralEconomicsError,
+    CollateralTrancheInput,
+    CollateralTrancheResult,
+    DisbursalFeeInput,
+    DisbursalFeeResult,
+    FeeCalculationType,
+    PawnDisbursalEconomics,
+    calculate_pawn_disbursal_economics,
+)
 from .future_funding import FUNDING_LOAN_RUNTIME_SUPPORTED, FundingLoanState
 from .notices import (
     PawnLoanNoticeChannel,
@@ -59,6 +69,14 @@ __all__ = [
     "PawnLoanNoticeChannel",
     "PawnLoanAuctionState",
     "PawnLoanRenewalMode",
+    "CollateralEconomicsError",
+    "CollateralTrancheInput",
+    "CollateralTrancheResult",
+    "DisbursalFeeInput",
+    "DisbursalFeeResult",
+    "FeeCalculationType",
+    "PawnDisbursalEconomics",
+    "calculate_pawn_disbursal_economics",
     "PawnLoanNoticeKind",
     "PawnLoanNoticeStatus",
     "PawnLoanDerivedState",

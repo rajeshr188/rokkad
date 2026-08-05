@@ -707,6 +707,32 @@ reversal. Reconciliation understands operational openings and renewal custody
 without weakening missing-voucher checks for economic events. The complete
 170-test tenant-aware Loans suite passes in three exhaustive groups.
 
+#### E7.3A Correct Collateral-Tranche Economics — Active 2026-08-05
+
+- Move principal allocation and monthly interest calculation to individual
+  collateral items using effective-dated metal-rate policies.
+- Enforce item valuation/LTV in draft preview, draft service, and approval.
+- Derive loan principal and effective display rate from item allocations.
+- Withhold a configurable number of advance-interest periods (default one) and
+  configured fees while preserving gross principal and net cash separately.
+- Persist immutable disbursal, accrual-line, repayment-allocation, release, and
+  renewal evidence and update DEA cash/accrual accounting accordingly.
+
+Acceptance: every aggregate total reconciles exactly to immutable item lines;
+no form or API can exceed item LTV; advance interest is never charged twice;
+cash paid plus deductions equals gross principal; existing posted history is
+not silently reinterpreted; all dependent lifecycle and reversal tests pass.
+
+E7.4 FundingLoan/repledging must wait for this corrective slice because it
+depends on trustworthy collateral-level principal and custody economics.
+
+Execution status: E7.3A.1 is complete. The accepted ADR and database-free
+domain calculator now define item valuation, LTV ceilings, metal-specific
+interest, configurable advance-interest periods, fixed/percentage fees,
+effective weighted display rate, and gross-to-net reconciliation. Runtime
+models remain unchanged until E7.3A.2 can introduce the complete configuration
+and collateral-allocation persistence boundary together.
+
 #### E7.4 Add FundingLoan And Repledging
 
 - Add the FundingLoan model, workspace numbering, lender payable accounting,

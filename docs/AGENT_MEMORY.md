@@ -72,6 +72,16 @@ borrower-surplus distribution require future explicit accounting documents.
 Auction collateral uses immutable snapshots and custody events, and correction
 uses administrator-only compensating reversal rather than mutation.
 
+PawnLoan collateral economics were clarified on 2026-08-05 in ADR
+`2026-08-05-pawn-loan-collateral-tranche-economics.md`: each collateral item
+owns allocated principal and a frozen metal-specific monthly rate; loan totals
+are sums, item allocation cannot exceed valuation times LTV, and gross
+principal is distinct from net cash after configurable advance interest and
+fees. E7.3A.1 provides the tested database-free calculation contract. Runtime
+schema and workflows still use the old single-rate shape until the complete
+E7.3A.2 persistence boundary is implemented; do not introduce isolated partial
+fields or reinterpret existing development history.
+
 Use a generic party model where possible:
 
 - Customer

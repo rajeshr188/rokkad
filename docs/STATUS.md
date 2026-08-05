@@ -10,6 +10,15 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans corrective slice E7.3A.1 is complete: the accepted collateral-tranche
+  ADR replaces the single-rate calculation assumption with item-allocated
+  principal and metal-specific interest. A database-free calculator now
+  enforces valuation-method inputs, per-item maximum LTV, one-to-twelve-or-zero
+  advance-interest periods, fixed/percentage deductions, positive net cash,
+  and exact gross/monthly-interest/effective-rate reconciliation. Sixteen
+  focused domain and existing policy/vocabulary tests pass; no runtime model or
+  migration changed. E7.3A.2 will add the complete effective-dated policy and
+  collateral-allocation persistence boundary.
 - Loans rewrite E7.3 is complete: immutable `PawnLoanRenewal` evidence links
   one closed source to one active, newly numbered successor for pay-and-renew
   and top-up workflows. Renewal settles interest/fees, validates current
