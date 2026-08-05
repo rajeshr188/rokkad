@@ -10,6 +10,20 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans corrective slice E7.3A.6 is complete: tenant migration `loans.0015`
+  adds immutable collateral-level repayment allocation lines. Original
+  principal is applied to outstanding item tranches in descending frozen
+  monthly-rate order, with collateral ID as the deterministic tie-breaker;
+  every line freezes its order, rate, balance before, amount applied, and
+  balance after. Capitalized-interest principal remains separately classified
+  and is never attributed to collateral. Later accruals reconstruct their item
+  bases from the disbursal snapshot plus active allocation lines, while a
+  repayment reversal restores the prior bases by excluding the reversed event
+  without mutating its evidence. Missing, discontinuous, misordered, or
+  unreconciled evidence fails closed. Repayment receipts expose the allocation
+  trail. Migration drift and Django checks are clean, `loans.0015` is applied
+  to all local tenant schemas, and the complete 192-test tenant-aware Loans
+  suite passes.
 - Loans corrective slice E7.3A.5 is complete: tenant migration `loans.0014`
   adds immutable collateral-level lines beneath each new itemized interest
   accrual. Every line freezes item principal base, metal rate, period fraction,
@@ -21,9 +35,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   the covered amount from Unearned Revenue to INTEREST_INCOME and creates a
   borrower receivable only for the uncovered amount. Release, auction, and
   renewal catch-up accruals use the same evidence path. Legacy aggregate loans
-  retain their prior calculation contract. Until E7.3A.6 persists item-level
-  repayment allocations, an itemized loan whose principal changed fails closed
-  before accrual rather than guessing tranche balances. The complete 192-test
+  retain their prior calculation contract. The complete 192-test
   tenant-aware Loans suite passes; Django checks and migration drift are clean,
   and `loans.0014` is applied to all local tenant schemas.
 - Loans corrective slice E7.3A.4 is complete: tenant migration `loans.0013`

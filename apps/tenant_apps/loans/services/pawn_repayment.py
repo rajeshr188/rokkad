@@ -18,6 +18,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
+    PawnLoanRepaymentAllocationLine,
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
@@ -30,6 +31,10 @@ from apps.tenant_apps.loans.services.accounting_readiness import (
 )
 from apps.tenant_apps.loans.services.pawn_disbursal import (
     assert_pawn_loan_financial_actions_allowed,
+)
+from apps.tenant_apps.loans.services.pawn_tranches import (
+    PawnTrancheBalanceError,
+    get_pawn_principal_tranche_balances,
 )
 
 
@@ -57,6 +62,17 @@ class PawnRepaymentResult:
     accounting_event: PawnLoanAccountingEvent
     outbox: PawnLoanAccountingOutbox
     already_recorded: bool = False
+    item_allocations: tuple["ItemPrincipalAllocation", ...] = ()
+
+
+@dataclass(frozen=True)
+class ItemPrincipalAllocation:
+    collateral_item_id: int
+    allocation_order: int
+    monthly_interest_rate: Decimal
+    balance_before: Decimal
+    principal_applied: Decimal
+    balance_after: Decimal
 
 
 @transaction.atomic
@@ -98,6 +114,16 @@ def record_pawn_loan_repayment(
     except Exception as exc:
         raise PawnRepaymentError(str(exc)) from exc
 
+    capitalized_principal = min(
+        allocation.principal,
+        balance.capitalized_interest_principal_outstanding,
+    )
+    original_principal = allocation.principal - capitalized_principal
+    item_allocations = allocate_repayment_principal_to_tranches(
+        loan,
+        original_principal,
+        expected_outstanding=balance.original_principal_outstanding,
+    )
     payload = repayment_payload(
         loan,
         effective_date=effective_date,
@@ -106,17 +132,8 @@ def record_pawn_loan_repayment(
         overdue_interest_amount=allocation.overdue_interest,
         current_interest_amount=allocation.current_interest,
         fee_amount=allocation.fees,
-        original_principal_amount=(
-            allocation.principal
-            - min(
-                allocation.principal,
-                balance.capitalized_interest_principal_outstanding,
-            )
-        ),
-        capitalized_interest_principal_amount=min(
-            allocation.principal,
-            balance.capitalized_interest_principal_outstanding,
-        ),
+        original_principal_amount=original_principal,
+        capitalized_interest_principal_amount=capitalized_principal,
     ).to_dict()
     payload["repayment"] = {
         "request_key": request_key,
@@ -128,6 +145,20 @@ def record_pawn_loan_repayment(
             "principal",
         ],
         "accounting_recognition": recognition,
+        "item_principal_allocation_order": "HIGHEST_MONTHLY_RATE_FIRST",
+        "item_principal_allocations": [
+            {
+                "collateral_item_id": item.collateral_item_id,
+                "allocation_order": item.allocation_order,
+                "monthly_interest_rate": _decimal_string(
+                    item.monthly_interest_rate
+                ),
+                "balance_before": _decimal_string(item.balance_before),
+                "principal_applied": _decimal_string(item.principal_applied),
+                "balance_after": _decimal_string(item.balance_after),
+            }
+            for item in item_allocations
+        ],
     }
     event, outbox = record_loan_accounting_event(
         loan.pk,
@@ -137,6 +168,16 @@ def record_pawn_loan_repayment(
         actor=actor,
         delivery_handler=delivery_handler,
     )
+    for item in item_allocations:
+        PawnLoanRepaymentAllocationLine.objects.create(
+            accounting_event=event,
+            collateral_item_id=item.collateral_item_id,
+            allocation_order=item.allocation_order,
+            monthly_interest_rate=item.monthly_interest_rate,
+            balance_before=item.balance_before,
+            principal_applied=item.principal_applied,
+            balance_after=item.balance_after,
+        )
     LoanChangeLog.objects.create(
         loan=loan,
         event_kind=PawnLoanEventKind.REPAYMENT_RECORDED.value,
@@ -156,7 +197,64 @@ def record_pawn_loan_repayment(
             "outbox_id": outbox.pk,
         },
     )
-    return PawnRepaymentResult(loan, allocation, event, outbox)
+    return PawnRepaymentResult(
+        loan,
+        allocation,
+        event,
+        outbox,
+        item_allocations=item_allocations,
+    )
+
+
+def allocate_repayment_principal_to_tranches(
+    loan,
+    principal_amount,
+    *,
+    expected_outstanding,
+) -> tuple[ItemPrincipalAllocation, ...]:
+    """Allocate original principal to highest-rate collateral first."""
+    amount = Decimal(str(principal_amount))
+    if amount < 0:
+        raise PawnRepaymentError("Item principal allocation cannot be negative.")
+    try:
+        balances = get_pawn_principal_tranche_balances(loan)
+    except PawnTrancheBalanceError as exc:
+        raise PawnRepaymentError(str(exc)) from exc
+    if not balances:
+        return ()
+    total_outstanding = sum(
+        (item.principal_outstanding for item in balances), Decimal("0")
+    )
+    if total_outstanding != Decimal(str(expected_outstanding)):
+        raise PawnRepaymentError(
+            "Item principal balances do not reconcile to original principal outstanding."
+        )
+    if amount == 0:
+        return ()
+    remaining = amount
+    results = []
+    ordered = sorted(
+        balances,
+        key=lambda item: (-item.monthly_interest_rate, item.collateral_item_id),
+    )
+    for order, item in enumerate(ordered, start=1):
+        applied = min(remaining, item.principal_outstanding)
+        results.append(
+            ItemPrincipalAllocation(
+                collateral_item_id=item.collateral_item_id,
+                allocation_order=order,
+                monthly_interest_rate=item.monthly_interest_rate,
+                balance_before=item.principal_outstanding,
+                principal_applied=applied,
+                balance_after=item.principal_outstanding - applied,
+            )
+        )
+        remaining -= applied
+    if remaining:
+        raise PawnRepaymentError(
+            "Repayment principal exceeds itemized original principal outstanding."
+        )
+    return tuple(results)
 
 
 def allocate_repayment(balance, amount: Decimal) -> RepaymentAllocation:
@@ -213,7 +311,25 @@ def _existing_result(loan, request_key, amount):
         current_interest=Decimal(values.get("current_interest", "0")),
         principal=Decimal(values.get("principal", "0")),
     )
-    return PawnRepaymentResult(loan, allocation, event, event.outbox, True)
+    item_allocations = tuple(
+        ItemPrincipalAllocation(
+            collateral_item_id=line.collateral_item_id,
+            allocation_order=line.allocation_order,
+            monthly_interest_rate=line.monthly_interest_rate,
+            balance_before=line.balance_before,
+            principal_applied=line.principal_applied,
+            balance_after=line.balance_after,
+        )
+        for line in event.repayment_allocation_lines.order_by("allocation_order")
+    )
+    return PawnRepaymentResult(
+        loan,
+        allocation,
+        event,
+        event.outbox,
+        already_recorded=True,
+        item_allocations=item_allocations,
+    )
 
 
 def _request_key(value):

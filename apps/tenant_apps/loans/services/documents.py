@@ -121,10 +121,34 @@ class PawnLoanDocumentService:
             ("Accounting delivery", event.outbox.get_status_display()),
             ("DEA voucher / journal", f"{event.outbox.dea_voucher_id or '—'} / {event.outbox.dea_journal_entry_id or '—'}"),
         ]
+        allocation_manager = cls._related_or_none(event, "repayment_allocation_lines")
+        allocation_rows = []
+        if allocation_manager is not None:
+            allocations = allocation_manager.select_related("collateral_item").order_by(
+                "allocation_order"
+            )
+            allocation_rows = [
+                ("Item", "Description", "Rate", "Before", "Principal", "After")
+            ] + [
+                (
+                    line.collateral_item_id,
+                    line.collateral_item.description,
+                    f"{line.monthly_interest_rate}%",
+                    cls._money(line.balance_before),
+                    cls._money(line.principal_applied),
+                    cls._money(line.balance_after),
+                )
+                for line in allocations
+            ]
         pdf = cls._build_pdf(
             title="Pawn Loan Repayment Receipt",
             details=details,
             verification_id=verification,
+            sections=(
+                (("Collateral principal allocation", allocation_rows),)
+                if allocation_rows
+                else ()
+            ),
         )
         return PawnLoanDocumentResult(
             "repayment_receipt",

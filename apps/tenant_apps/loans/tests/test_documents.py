@@ -18,7 +18,13 @@ class _Manager:
     def all(self):
         return self.values
 
+    def __iter__(self):
+        return iter(self.values)
+
     def order_by(self, *args):
+        return self
+
+    def select_related(self, *args):
         return self
 
     def first(self):
@@ -121,6 +127,16 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
                 "repayment": {"amount_received": "500"},
             },
             outbox=outbox,
+            repayment_allocation_lines=_Manager(
+                SimpleNamespace(
+                    collateral_item_id=17,
+                    collateral_item=self.loan.collateral_items.first(),
+                    monthly_interest_rate=Decimal("2"),
+                    balance_before=Decimal("10000"),
+                    principal_applied=Decimal("440"),
+                    balance_after=Decimal("9560"),
+                )
+            ),
         )
 
         result = PawnLoanDocumentService.render_repayment_receipt(event)
@@ -128,6 +144,8 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         self.assertTrue(result.pdf.startswith(b"%PDF"))
         self.assertEqual(result.file_name, "pawn_repayment_PL-A-00019_23.pdf")
         self.assertIn("repayment:23:repayment-fingerprint-23", result.verification_id)
+        self.assertIn(b"Collateral principal allocation", result.pdf)
+        self.assertIn(b"Gold chain", result.pdf)
 
     def test_release_memo_uses_immutable_release_and_item_snapshot(self):
         event = SimpleNamespace(pk=29, payload_fingerprint="release-fingerprint-29")

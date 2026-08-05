@@ -1167,6 +1167,80 @@ class PawnLoanInterestAccrualLine(models.Model):
         raise ValidationError("PawnLoan accrual lines cannot be deleted.")
 
 
+class PawnLoanRepaymentAllocationLine(models.Model):
+    """Immutable principal movement against one collateral tranche."""
+
+    accounting_event = models.ForeignKey(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="repayment_allocation_lines",
+    )
+    collateral_item = models.ForeignKey(
+        PawnCollateralItem,
+        on_delete=models.PROTECT,
+        related_name="repayment_allocation_lines",
+    )
+    allocation_order = models.PositiveSmallIntegerField()
+    monthly_interest_rate = models.DecimalField(max_digits=12, decimal_places=6)
+    balance_before = models.DecimalField(max_digits=18, decimal_places=4)
+    principal_applied = models.DecimalField(max_digits=18, decimal_places=4)
+    balance_after = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        ordering = ("accounting_event_id", "allocation_order")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("accounting_event", "collateral_item"),
+                name="loans_repayment_event_item_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("accounting_event", "allocation_order"),
+                name="loans_repayment_event_order_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(allocation_order__gt=0),
+                name="loans_repayment_order_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(monthly_interest_rate__gte=0)
+                & Q(balance_before__gte=0)
+                & Q(principal_applied__gte=0)
+                & Q(balance_after__gte=0),
+                name="loans_repayment_line_amounts_valid",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.accounting_event_id and self.collateral_item_id:
+            if self.accounting_event.loan_id != self.collateral_item.loan_id:
+                raise ValidationError(
+                    "Repayment allocation collateral must belong to the event PawnLoan."
+                )
+            if self.accounting_event.event_kind != TransactionKind.REPAYMENT.value:
+                raise ValidationError(
+                    "Repayment allocation requires a repayment accounting event."
+                )
+        if (
+            self.balance_before is not None
+            and self.principal_applied is not None
+            and self.balance_after is not None
+            and self.balance_before - self.principal_applied != self.balance_after
+        ):
+            raise ValidationError(
+                "Repayment allocation balance after must equal balance before minus principal applied."
+            )
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan repayment allocation lines are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan repayment allocation lines cannot be deleted.")
+
+
 class PawnLoanRelease(models.Model):
     """Immutable settlement document authorizing a physical collateral return."""
 

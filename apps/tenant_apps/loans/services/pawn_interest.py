@@ -38,6 +38,10 @@ from apps.tenant_apps.loans.services.accounting_readiness import (
 from apps.tenant_apps.loans.services.pawn_disbursal import (
     assert_pawn_loan_financial_actions_allowed,
 )
+from apps.tenant_apps.loans.services.pawn_tranches import (
+    PawnTrancheBalanceError,
+    get_pawn_principal_tranche_balances,
+)
 
 
 class PawnInterestError(ValueError):
@@ -142,8 +146,9 @@ def preview_pawn_loan_accruals(
         base = balance.principal_outstanding
         lines = _itemized_accrual_lines(
             loan,
+            as_of_date=period_start,
             period_fraction=fraction,
-            aggregate_base=base,
+            aggregate_balance=balance,
             currency_quantum=policy.currency_quantum,
             pending_advance_applied=pending_advance_applied,
         )
@@ -227,8 +232,9 @@ def calculate_accrual_interest(
 def _itemized_accrual_lines(
     loan,
     *,
+    as_of_date,
     period_fraction,
-    aggregate_base,
+    aggregate_balance,
     currency_quantum,
     pending_advance_applied,
 ):
@@ -241,7 +247,15 @@ def _itemized_accrual_lines(
         raise PawnInterestError(
             "Itemized PawnLoan disbursal is missing its frozen tranche evidence."
         )
-    item_ids = {item.pk for item in loan.collateral_items.all()}
+    try:
+        principal_balances = {
+            item.collateral_item_id: item
+            for item in get_pawn_principal_tranche_balances(
+                loan, as_of_date=as_of_date
+            )
+        }
+    except PawnTrancheBalanceError as exc:
+        raise PawnInterestError(str(exc)) from exc
     consumed = {
         row["collateral_item_id"]: row["total"] or Decimal("0")
         for row in (
@@ -257,17 +271,22 @@ def _itemized_accrual_lines(
     for tranche in tranches:
         try:
             item_id = int(tranche["collateral_item_id"])
-            principal_base = Decimal(str(tranche["allocated_principal"]))
             rate = Decimal(str(tranche["monthly_interest_rate"]))
             advance_total = Decimal(str(tranche["advance_interest"]))
         except (KeyError, TypeError, ValueError) as exc:
             raise PawnInterestError(
                 "Frozen disbursal tranche evidence is incomplete."
             ) from exc
-        if item_id not in item_ids:
+        if item_id not in principal_balances:
             raise PawnInterestError(
                 "Frozen disbursal tranche references collateral outside this PawnLoan."
             )
+        principal_balance = principal_balances[item_id]
+        if principal_balance.monthly_interest_rate != rate:
+            raise PawnInterestError(
+                "Reconstructed item rate differs from frozen disbursal evidence."
+            )
+        principal_base = principal_balance.principal_outstanding
         already_applied = consumed.get(item_id, Decimal("0")) + (
             pending_advance_applied.get(item_id, Decimal("0"))
         )
@@ -293,10 +312,16 @@ def _itemized_accrual_lines(
         )
     quantum = Decimal(str(currency_quantum))
     item_base = sum((line.principal_base for line in lines), Decimal("0"))
-    if item_base.quantize(quantum) != Decimal(str(aggregate_base)).quantize(quantum):
+    if aggregate_balance.capitalized_interest_principal_outstanding:
         raise PawnInterestError(
-            "Collateral principal changed without immutable item allocation evidence; "
-            "finalize the repayment-allocation slice before accruing this period."
+            "Capitalized principal lacks immutable item attribution; "
+            "itemized accrual cannot continue yet."
+        )
+    if item_base.quantize(quantum) != Decimal(
+        str(aggregate_balance.original_principal_outstanding)
+    ).quantize(quantum):
+        raise PawnInterestError(
+            "Collateral principal does not reconcile to immutable item allocations."
         )
     return tuple(lines)
 

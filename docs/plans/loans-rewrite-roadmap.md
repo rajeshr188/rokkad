@@ -726,7 +726,7 @@ not silently reinterpreted; all dependent lifecycle and reversal tests pass.
 E7.4 FundingLoan/repledging must wait for this corrective slice because it
 depends on trustworthy collateral-level principal and custody economics.
 
-Execution status: E7.3A.1 through E7.3A.5 are complete. The accepted ADR and
+Execution status: E7.3A.1 through E7.3A.6 are complete. The accepted ADR and
 database-free calculator define the economics. Tenant migration `loans.0012`
 adds effective-dated workspace policies with optional license overrides for
 valuation/LTV/advance interest, metal-specific interest rates, and fees. It
@@ -751,10 +751,14 @@ adds immutable item-level accrual lines and consumes frozen advance interest as
 a per-item monetary balance. Cash accounting does not charge the covered
 period again; accrual accounting reclassifies covered interest from Unearned
 Revenue to income and creates receivable only for any uncovered amount. Every
-catch-up accrual uses the same evidence. Itemized accrual temporarily fails
-closed after unexplained principal changes. E7.3A.6 must persist deterministic
-repayment allocation lines (highest-rate tranche first) so later accrual bases
-remain authoritative.
+catch-up accrual uses the same evidence. Tenant migration `loans.0015` adds
+immutable repayment allocation lines for original principal, applied by
+highest frozen item rate first with collateral ID as tie-breaker. Later accrual
+bases are reconstructed from the disbursal snapshot and active allocation
+lines; reversal excludes the reversed event without mutating evidence.
+Capitalized-interest principal remains separate. E7.3A.7 is next: add
+equivalent immutable item-principal evidence to release, auction, and renewal
+paths so every collateral-changing lifecycle can reconcile tranche balances.
 
 #### E7.4 Add FundingLoan And Repledging
 

@@ -23,6 +23,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanDisbursalSnapshot,
     PawnLoanInterestAccrualLine,
+    PawnLoanRepaymentAllocationLine,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -36,6 +37,8 @@ from apps.tenant_apps.loans.services import (
     disburse_pawn_loan,
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
+    record_pawn_loan_repayment,
+    reverse_pawn_loan_event,
     update_pawn_draft,
 )
 from apps.tenant_apps.party.models import Party
@@ -452,6 +455,95 @@ class PawnDraftServiceTests(TenantTestCase):
             lines[0].save()
 
         with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 18),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.require_pawn_loan_accounting_readiness"
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                repayment = record_pawn_loan_repayment(
+                    loan.pk,
+                    amount=Decimal("3000.00"),
+                    request_key="mixed-metal-principal-payment",
+                    actor=self.actor,
+                    delivery_handler=posted,
+                )
+        repayment_lines = list(
+            PawnLoanRepaymentAllocationLine.objects.filter(
+                accounting_event=repayment.accounting_event
+            ).order_by("allocation_order")
+        )
+        silver = loan.collateral_items.get(metal=CollateralMetal.SILVER.value)
+        gold = loan.collateral_items.get(metal=CollateralMetal.GOLD.value)
+        self.assertEqual(repayment_lines[0].collateral_item_id, silver.pk)
+        self.assertEqual(repayment_lines[0].principal_applied, Decimal("3000.0000"))
+        self.assertEqual(repayment_lines[0].balance_after, Decimal("37000.0000"))
+        self.assertEqual(repayment_lines[1].collateral_item_id, gold.pk)
+        self.assertEqual(repayment_lines[1].principal_applied, Decimal("0.0000"))
+        self.assertEqual(
+            sum(
+                (line.principal_applied for line in repayment_lines),
+                Decimal("0"),
+            ),
+            repayment.allocation.principal,
+        )
+        with self.assertRaisesRegex(ValidationError, "immutable"):
+            repayment_lines[0].save()
+        repeated = record_pawn_loan_repayment(
+            loan.pk,
+            amount=Decimal("3000.00"),
+            request_key="mixed-metal-principal-payment",
+            actor=self.actor,
+        )
+        self.assertTrue(repeated.already_recorded)
+        self.assertEqual(len(repeated.item_allocations), 2)
+        self.assertEqual(
+            PawnLoanRepaymentAllocationLine.objects.filter(
+                accounting_event=repayment.accounting_event
+            ).count(),
+            2,
+        )
+
+        second_preview = preview_pawn_loan_accruals(
+            loan.pk, as_of_date=date(2026, 9, 17), include_partial=False
+        )[0]
+        self.assertEqual(second_preview.period_number, 2)
+        self.assertEqual(second_preview.calculation_base, Decimal("97000.0000"))
+        self.assertEqual(second_preview.recognized_interest, Decimal("2680.00"))
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_reversal.timezone.localdate",
+            return_value=date(2026, 8, 18),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                reverse_pawn_loan_event(
+                    repayment.accounting_event.pk,
+                    reason="Correct repayment allocation",
+                    actor=self.tenant.owner,
+                    delivery_handler=posted,
+                )
+        restored_preview = preview_pawn_loan_accruals(
+            loan.pk, as_of_date=date(2026, 9, 17), include_partial=False
+        )[0]
+        self.assertEqual(restored_preview.calculation_base, Decimal("100000.0000"))
+        self.assertEqual(restored_preview.recognized_interest, Decimal("2800.00"))
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 18),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.require_pawn_loan_accounting_readiness"
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                record_pawn_loan_repayment(
+                    loan.pk,
+                    amount=Decimal("3000.00"),
+                    request_key="replacement-principal-payment",
+                    actor=self.actor,
+                    delivery_handler=posted,
+                )
+
+        with patch(
             "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
             return_value=date(2026, 9, 17),
         ):
@@ -462,7 +554,7 @@ class PawnDraftServiceTests(TenantTestCase):
                     actor=self.actor,
                     delivery_handler=posted,
                 )
-        self.assertEqual(second.accounting_event.payload["values"]["interest"], "2800")
+        self.assertEqual(second.accounting_event.payload["values"]["interest"], "2680")
         self.assertEqual(
             second.accounting_event.payload["values"]["advance_interest_applied"],
             "0",
