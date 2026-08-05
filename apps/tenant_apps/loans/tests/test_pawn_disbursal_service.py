@@ -1592,6 +1592,45 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )[0]
         self.assertEqual(successor_preview.calculation_base, Decimal("39000.0000"))
         self.assertEqual(successor_preview.recognized_interest, Decimal("960.00"))
+        reports = get_pawn_loan_reports(as_of_date=date(2026, 8, 3))
+        self.assertEqual(
+            [
+                (issue.code, issue.loan.loan_number)
+                for issue in reports.issues
+            ],
+            [],
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            reversed_result = reverse_pawn_loan_renewal(
+                result.renewal.pk,
+                reason="Collateral selection was recorded incorrectly",
+                actor=self.tenant.owner,
+            )
+        retained_item.refresh_from_db()
+        returned_item.refresh_from_db()
+        result.source_loan.refresh_from_db()
+        result.successor_loan.refresh_from_db()
+        self.assertEqual(result.source_loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(result.successor_loan.state, PawnLoanState.CANCELLED.value)
+        self.assertEqual(retained_item.custody_state, CollateralCustodyState.IN_VAULT.value)
+        self.assertEqual(returned_item.custody_state, CollateralCustodyState.IN_VAULT.value)
+        self.assertTrue(
+            result.opening_event.reversed_by_event.pk
+            == reversed_result.opening_reversal_event.pk
+        )
+        self.assertEqual(
+            sum(
+                (
+                    row.principal_outstanding
+                    for row in get_pawn_principal_tranche_balances(
+                        result.successor_loan
+                    )
+                ),
+                Decimal("0"),
+            ),
+            Decimal("0"),
+        )
 
     def test_renewal_is_idempotent(self):
         self._activate_loan()

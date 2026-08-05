@@ -50,6 +50,7 @@ class PawnLoanReportBundle:
     accruals: tuple[object, ...]
     repayments: tuple[object, ...]
     releases: tuple[object, ...]
+    renewals: tuple[object, ...]
     custody_items: tuple[object, ...]
     posting_events: tuple[object, ...]
     issues: tuple[PawnLoanReconciliationIssue, ...]
@@ -86,8 +87,11 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
             "collateral_items__release_items__release__reversal",
             "accounting_events__outbox",
             "accounting_events__reversed_by_event",
+            "accounting_events__principal_closing_lines__collateral_item",
+            "accounting_events__principal_opening_lines__collateral_item",
             "interest_accruals",
             "releases__items",
+            "renewal_as_source__successor_loan",
         )
         .order_by("loan_number")
     )
@@ -103,6 +107,7 @@ def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector):
     accruals = []
     repayments = []
     releases = []
+    renewals = []
     custody_items = []
     posting_events = []
     issues = []
@@ -135,6 +140,9 @@ def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector):
             event for event in events if event.event_kind == TransactionKind.REPAYMENT.value
         )
         releases.extend(loan.releases.all())
+        renewal = _optional_related(loan, "renewal_as_source")
+        if renewal is not None:
+            renewals.append(renewal)
         custody_items.extend(collateral)
         for event in events:
             try:
@@ -148,6 +156,7 @@ def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector):
         accruals=tuple(accruals),
         repayments=tuple(repayments),
         releases=tuple(releases),
+        renewals=tuple(renewals),
         custody_items=tuple(custody_items),
         posting_events=tuple(posting_events),
         issues=tuple(issues),
@@ -188,15 +197,20 @@ def _loan_issues(loan, events, collateral, balance, dea_inspector):
         seen_intents.add(intent)
         issues.extend(_event_issues(loan, event, dea_inspector))
     issues.extend(_custody_issues(loan, collateral))
-    renewal_transferred = bool(collateral) and all(
-        item.custody_state == CollateralCustodyState.RENEWAL_TRANSFERRED.value
+    issues.extend(_principal_evidence_issues(loan, events, collateral))
+    renewal_completed = bool(collateral) and all(
+        item.custody_state
+        in {
+            CollateralCustodyState.RENEWAL_TRANSFERRED.value,
+            CollateralCustodyState.WITH_CUSTOMER.value,
+        }
         for item in collateral
     )
     closed_reconciled = bool(
         balance
         and (
             balance.closure_ready
-            or (balance.financially_settled and renewal_transferred)
+            or (balance.financially_settled and renewal_completed)
         )
     )
     if loan.state == PawnLoanState.CLOSED.value and not closed_reconciled:
@@ -333,9 +347,129 @@ def _custody_issues(loan, collateral):
         history = tuple(item.custody_history.all())
         if history and history[-1].to_state != item.custody_state:
             issues.append(_custody_issue(loan, item, "Current custody does not match the latest immutable custody event."))
-        if item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value and not item.release_items.exists():
+        returned_by_renewal = any(
+            getattr(event, "renewal_id", None) is not None for event in history
+        )
+        if (
+            item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value
+            and not item.release_items.exists()
+            and not returned_by_renewal
+        ):
             issues.append(_custody_issue(loan, item, "Customer-held collateral has no release document item."))
     return issues
+
+
+def _principal_evidence_issues(loan, events, collateral):
+    itemized = tuple(
+        item for item in collateral if getattr(item, "allocated_principal", None) is not None
+    )
+    if not itemized:
+        return []
+    expected_ids = {item.pk for item in itemized}
+    issues = []
+    for event in events:
+        if event.event_kind in {
+            TransactionKind.RELEASE_RECEIPT.value,
+            TransactionKind.RENEWAL_SETTLEMENT.value,
+        }:
+            if (
+                event.event_kind == TransactionKind.RELEASE_RECEIPT.value
+                and (event.payload.get("release") or {}).get("is_full_release")
+                is False
+            ):
+                continue
+            lines = _related_rows(event, "principal_closing_lines")
+            expected = _original_principal(event)
+            if not lines:
+                issues.append(
+                    _principal_issue(
+                        loan,
+                        event,
+                        "MISSING_ITEM_PRINCIPAL_EVIDENCE",
+                        "Itemized settlement has no immutable principal-closing lines.",
+                    )
+                )
+            elif (
+                {line.collateral_item_id for line in lines} != expected_ids
+                or sum((line.principal_settled for line in lines), ZERO) != expected
+                or any(line.balance_after != ZERO for line in lines)
+            ):
+                issues.append(
+                    _principal_issue(
+                        loan,
+                        event,
+                        "ITEM_PRINCIPAL_EVIDENCE_MISMATCH",
+                        "Principal-closing lines do not reconcile to the itemized settlement.",
+                    )
+                )
+        elif event.event_kind == TransactionKind.RENEWAL_OPENING.value:
+            lines = _related_rows(event, "principal_opening_lines")
+            expected = _original_principal(event)
+            item_by_id = {item.pk: item for item in itemized}
+            if not lines:
+                issues.append(
+                    _principal_issue(
+                        loan,
+                        event,
+                        "MISSING_ITEM_PRINCIPAL_EVIDENCE",
+                        "Itemized renewal opening has no immutable principal-opening lines.",
+                    )
+                )
+            elif (
+                {line.collateral_item_id for line in lines} != expected_ids
+                or sum((line.principal_opened for line in lines), ZERO) != expected
+                or any(
+                    line.principal_opened
+                    != item_by_id[line.collateral_item_id].allocated_principal
+                    or line.monthly_interest_rate
+                    != item_by_id[line.collateral_item_id].monthly_interest_rate
+                    or line.predecessor_collateral_item_id
+                    != getattr(item_by_id[line.collateral_item_id], "renewed_from_id", None)
+                    for line in lines
+                )
+            ):
+                issues.append(
+                    _principal_issue(
+                        loan,
+                        event,
+                        "ITEM_PRINCIPAL_EVIDENCE_MISMATCH",
+                        "Principal-opening lines do not reconcile to successor collateral.",
+                    )
+                )
+    return issues
+
+
+def _original_principal(event):
+    values = event.payload.get("values") or {}
+    principal = Decimal(str(values.get("principal", "0")))
+    capitalized = Decimal(
+        str(values.get("capitalized_interest_principal", "0"))
+    )
+    return Decimal(
+        str(values.get("original_principal", principal - capitalized))
+    )
+
+
+def _principal_issue(loan, event, code, message):
+    return _issue(
+        code,
+        loan,
+        message,
+        event=event,
+        action="Escalate for immutable item-principal evidence review.",
+    )
+
+
+def _related_rows(instance, name):
+    relation = getattr(instance, name, None)
+    return tuple(relation.all()) if relation is not None else ()
+
+
+def _optional_related(instance, name):
+    try:
+        return getattr(instance, name)
+    except (AttributeError, ObjectDoesNotExist):
+        return None
 
 
 def _custody_issue(loan, item, message):

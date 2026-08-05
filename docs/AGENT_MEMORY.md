@@ -132,6 +132,17 @@ exists. Reversed opening events are excluded rather than mutated. Do not invent
 lines for legacy aggregate loans. Explicit renewal fails closed if capitalized
 interest would be carried because that amount has no successor-item attribution.
 
+E7.3A.7.3 completes the MVP read/correction boundary around that evidence.
+Composite renewal reversal must derive each source item's restore state from
+its immutable renewal custody event; it cannot assume every source item was
+retained. Reconciliation treats renewal-backed customer returns as valid and
+raises explicit missing/mismatch issues when itemized release or renewal
+opening/closing lines do not reconcile to their event and collateral. Reports
+list release-and-renew source/successor contracts, and verification PDFs expose
+item settlement plus retained, returned, additional, and successor-opening
+facts. Reversal never deletes or changes principal evidence; active balance
+folds exclude the reversed opening event.
+
 ADR `2026-08-05-pawn-loan-release-and-renew-only.md` supersedes support for new
 same-loan partial collateral release. The supported boundaries are partial
 repayment without custody change, full settlement/release/closure, and release

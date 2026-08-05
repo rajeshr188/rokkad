@@ -206,11 +206,32 @@ class PawnLoanDocumentService:
                     str(release_item.returned_at),
                 ]
             )
+        closing_manager = cls._related_or_none(event, "principal_closing_lines")
+        closing_rows = []
+        if closing_manager is not None:
+            closing_rows = [
+                ("Item", "Description", "Rate", "Before", "Settled", "After")
+            ] + [
+                (
+                    line.collateral_item_id,
+                    line.collateral_item.description,
+                    f"{line.monthly_interest_rate}%",
+                    cls._money(line.balance_before),
+                    cls._money(line.principal_settled),
+                    cls._money(line.balance_after),
+                )
+                for line in closing_manager.select_related(
+                    "collateral_item"
+                ).order_by("allocation_order")
+            ]
+        sections = [("Collateral returned", item_rows)]
+        if closing_rows:
+            sections.append(("Item principal settled", closing_rows))
         pdf = cls._build_pdf(
             title="Pawn Loan Release Memo",
             details=details,
             verification_id=verification,
-            sections=(("Collateral returned", item_rows),),
+            sections=tuple(sections),
         )
         return PawnLoanDocumentResult(
             "release_memo",
@@ -332,31 +353,87 @@ class PawnLoanDocumentService:
             ("Settlement accounting", renewal.settlement_event.outbox.get_status_display()),
             ("Successor opening", renewal.opening_event.outbox.get_status_display()),
         ]
-        rows = [["Source item", "Successor item", "Description", "Value"]]
+        successor_items = tuple(
+            successor.collateral_items.select_related("renewed_from").order_by("pk")
+        )
         successor_by_source = {
             item.renewed_from_id: item
-            for item in successor.collateral_items.select_related("renewed_from")
+            for item in successor_items
+            if item.renewed_from_id is not None
         }
         values = {
             item["source_item_id"]: item
             for item in (renewal.valuation_snapshot.get("items") or [])
         }
+        movement_rows = [
+            ["Movement", "Source item", "Successor item", "Description", "Value"]
+        ]
         for source_item in source.collateral_items.order_by("pk"):
             successor_item = successor_by_source.get(source_item.pk)
             value = values.get(source_item.pk) or {}
-            rows.append(
+            movement_rows.append(
                 [
+                    "Retained" if successor_item else "Returned",
                     str(source_item.pk),
-                    str(successor_item.pk) if successor_item else "Not linked",
+                    str(successor_item.pk) if successor_item else "—",
                     source_item.description,
                     cls._money(value.get("valuation_amount")),
                 ]
             )
+        for successor_item in successor_items:
+            if successor_item.renewed_from_id is None:
+                movement_rows.append(
+                    [
+                        "Additional",
+                        "—",
+                        str(successor_item.pk),
+                        successor_item.description,
+                        cls._money(successor_item.latest_appraised_value),
+                    ]
+                )
+        closing_manager = cls._related_or_none(
+            renewal.settlement_event, "principal_closing_lines"
+        )
+        closing_rows = []
+        if closing_manager is not None:
+            closing_rows = [
+                ("Source item", "Rate", "Before", "Settled", "After")
+            ] + [
+                (
+                    line.collateral_item_id,
+                    f"{line.monthly_interest_rate}%",
+                    cls._money(line.balance_before),
+                    cls._money(line.principal_settled),
+                    cls._money(line.balance_after),
+                )
+                for line in closing_manager.order_by("allocation_order")
+            ]
+        opening_manager = cls._related_or_none(
+            renewal.opening_event, "principal_opening_lines"
+        )
+        opening_rows = []
+        if opening_manager is not None:
+            opening_rows = [
+                ("Successor item", "Predecessor", "Rate", "Principal opened")
+            ] + [
+                (
+                    line.collateral_item_id,
+                    line.predecessor_collateral_item_id or "Additional",
+                    f"{line.monthly_interest_rate}%",
+                    cls._money(line.principal_opened),
+                )
+                for line in opening_manager.order_by("allocation_order")
+            ]
+        sections = [("Collateral movement", movement_rows)]
+        if closing_rows:
+            sections.append(("Source item principal settled", closing_rows))
+        if opening_rows:
+            sections.append(("Successor item principal opened", opening_rows))
         pdf = cls._build_pdf(
             title="Pawn Loan Renewal Memo",
             details=details,
             verification_id=verification,
-            sections=(("Collateral lineage", rows),),
+            sections=tuple(sections),
         )
         return PawnLoanDocumentResult(
             "renewal",

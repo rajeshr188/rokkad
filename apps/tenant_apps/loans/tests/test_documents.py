@@ -49,6 +49,7 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             net_weight=Decimal("9.0000"),
             purity_percentage=Decimal("91.6000"),
             latest_appraised_value=Decimal("50000"),
+            renewed_from_id=None,
             get_metal_display=lambda: "Gold",
             get_custody_state_display=lambda: "In Vault",
         )
@@ -155,6 +156,16 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             get_status_display=lambda: "Posted",
         )
         collateral = self.loan.collateral_items.first()
+        event.principal_closing_lines = _Manager(
+            SimpleNamespace(
+                collateral_item_id=collateral.pk,
+                collateral_item=collateral,
+                monthly_interest_rate=Decimal("2"),
+                balance_before=Decimal("10000"),
+                principal_settled=Decimal("10000"),
+                balance_after=Decimal("0"),
+            )
+        )
         release_item = SimpleNamespace(
             collateral_item_id=collateral.pk,
             collateral_item=collateral,
@@ -180,6 +191,96 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         self.assertTrue(result.pdf.startswith(b"%PDF"))
         self.assertEqual(result.file_name, "pawn_release_RL-A-00001.pdf")
         self.assertIn("release:27:RL-A-00001:release-fingerprint-29", result.verification_id)
+        self.assertIn(b"Item principal settled", result.pdf)
+        self.assertIn(b"Gold chain", result.pdf)
+
+    def test_renewal_memo_exposes_returned_retained_added_and_principal_evidence(self):
+        source_item = self.loan.collateral_items.first()
+        returned_item = SimpleNamespace(
+            pk=18,
+            description="Returned bracelet",
+            latest_appraised_value=Decimal("20000"),
+            renewed_from_id=None,
+        )
+        self.loan.collateral_items = _Manager(source_item, returned_item)
+        retained = SimpleNamespace(
+            pk=31,
+            description="Gold chain",
+            latest_appraised_value=Decimal("50000"),
+            renewed_from_id=source_item.pk,
+        )
+        additional = SimpleNamespace(
+            pk=32,
+            description="Added silver anklet",
+            latest_appraised_value=Decimal("15000"),
+            renewed_from_id=None,
+        )
+        successor = SimpleNamespace(
+            loan_number="PL-A-00020",
+            collateral_items=_Manager(retained, additional),
+        )
+        posted = SimpleNamespace(get_status_display=lambda: "Posted")
+        settlement_event = SimpleNamespace(
+            payload_fingerprint="renewal-settlement-41",
+            outbox=posted,
+            principal_closing_lines=_Manager(
+                SimpleNamespace(
+                    collateral_item_id=source_item.pk,
+                    monthly_interest_rate=Decimal("2"),
+                    balance_before=Decimal("10000"),
+                    principal_settled=Decimal("10000"),
+                    balance_after=Decimal("0"),
+                )
+            ),
+        )
+        opening_event = SimpleNamespace(
+            outbox=posted,
+            principal_opening_lines=_Manager(
+                SimpleNamespace(
+                    collateral_item_id=retained.pk,
+                    predecessor_collateral_item_id=source_item.pk,
+                    monthly_interest_rate=Decimal("2"),
+                    principal_opened=Decimal("7000"),
+                ),
+                SimpleNamespace(
+                    collateral_item_id=additional.pk,
+                    predecessor_collateral_item_id=None,
+                    monthly_interest_rate=Decimal("4"),
+                    principal_opened=Decimal("3000"),
+                ),
+            ),
+        )
+        renewal = SimpleNamespace(
+            pk=41,
+            source_loan=self.loan,
+            successor_loan=successor,
+            settlement_event=settlement_event,
+            opening_event=opening_event,
+            renewal_number="REN-PL-A-00019",
+            renewal_date=date(2026, 8, 3),
+            source_principal_amount=Decimal("10000"),
+            interest_settled=Decimal("0"),
+            fees_settled=Decimal("0"),
+            principal_paid=Decimal("0"),
+            top_up_amount=Decimal("0"),
+            successor_principal_amount=Decimal("10000"),
+            valuation_snapshot={
+                "items": [
+                    {"source_item_id": source_item.pk, "valuation_amount": "50000"},
+                    {"source_item_id": returned_item.pk, "valuation_amount": "20000"},
+                ]
+            },
+            get_mode_display=lambda: "Pay and renew",
+        )
+
+        result = PawnLoanDocumentService.render_renewal_memo(renewal)
+
+        self.assertTrue(result.pdf.startswith(b"%PDF"))
+        self.assertIn(b"Collateral movement", result.pdf)
+        self.assertIn(b"Source item principal settled", result.pdf)
+        self.assertIn(b"Successor item principal opened", result.pdf)
+        self.assertIn(b"Returned bracelet", result.pdf)
+        self.assertIn(b"Added silver anklet", result.pdf)
 
     def test_operational_release_memo_does_not_require_an_outbox(self):
         event = SimpleNamespace(pk=30, payload_fingerprint="operational-release-30")

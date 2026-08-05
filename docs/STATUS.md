@@ -10,6 +10,18 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans corrective slice E7.3A.7.3 is complete for the MVP boundary.
+  Release-and-renew composite reversal now restores each source item's actual
+  pre-renewal custody, so both retained and returned collateral reverse safely;
+  immutable opening/closing rows remain unchanged and reversed openings stop
+  contributing to successor balances. Reconciliation detects missing or
+  mismatched item-principal evidence and accepts customer returns backed by a
+  renewal custody event. Operational reports list release-and-renew source and
+  successor loans. Release and renewal PDFs expose item principal settlement,
+  retained/returned/additional movement, and successor opening allocations.
+  Focused selector/document and mixed tenant workflow tests pass. No migration
+  is required. Auction item-principal evidence remains deferred until auction
+  is included in the MVP pilot boundary.
 - Loans corrective slice E7.3A.7.2 is complete: tenant migration `loans.0016`
   adds immutable item-principal closing lines for itemized full-release and
   renewal-settlement events, plus immutable opening lines for explicit
@@ -21,8 +33,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   carried into an explicit successor until it has item attribution. Legacy
   aggregate loans remain on their compatibility path without fabricated
   lines. Focused full-release and release-and-renew coverage passes, and
-  `loans.0016` is applied to all local tenant schemas. Reversal, reporting,
-  document, and reconciliation exposure is next.
+  `loans.0016` is applied to all local tenant schemas.
 - Release-and-renew collateral selection is implemented. The staff form now
   separates existing collateral from optional additions: selected source items
   receive explicit successor allocations and predecessor lineage, omitted

@@ -150,6 +150,81 @@ class PawnLoanReportsSelectorTests(SimpleTestCase):
         self.assertNotIn("apps.tenant_apps.dea.models", source)
         self.assertNotIn("apps.tenant_apps.dea.services", source)
 
+    def test_itemized_renewal_opening_without_lines_is_reconciliation_error(self):
+        opening = self._event(
+            1,
+            TransactionKind.RENEWAL_OPENING,
+            voucher_id=None,
+            journal_id=None,
+            principal="800",
+            capitalized_interest_principal="0",
+        )
+        opening.principal_opening_lines = _Manager()
+        item = self._collateral(CollateralCustodyState.IN_VAULT)
+        item.allocated_principal = Decimal("800")
+        item.monthly_interest_rate = Decimal("2")
+        item.renewed_from_id = 400
+        loan = self._loan(events=(opening,), collateral=(item,))
+
+        report = build_pawn_loan_reports(
+            (loan,),
+            as_of_date=self.as_of,
+            dea_inspector=self._matching_evidence,
+        )
+
+        self.assertIn(
+            "MISSING_ITEM_PRINCIPAL_EVIDENCE",
+            {issue.code for issue in report.issues},
+        )
+
+    def test_report_exposes_release_and_renew_once_from_source_loan(self):
+        event = self._event(1, TransactionKind.DISBURSAL, principal="1000")
+        renewal = SimpleNamespace(pk=91, renewal_number="REN-PL-A-00001")
+        loan = self._loan(events=(event,))
+        loan.renewal_as_source = renewal
+
+        report = build_pawn_loan_reports(
+            (loan,),
+            as_of_date=self.as_of,
+            dea_inspector=self._matching_evidence,
+        )
+
+        self.assertEqual(report.renewals, (renewal,))
+
+    def test_itemized_opening_mismatch_is_reconciliation_error(self):
+        opening = self._event(
+            1,
+            TransactionKind.RENEWAL_OPENING,
+            voucher_id=None,
+            journal_id=None,
+            principal="800",
+            capitalized_interest_principal="0",
+        )
+        item = self._collateral(CollateralCustodyState.IN_VAULT)
+        item.allocated_principal = Decimal("800")
+        item.monthly_interest_rate = Decimal("2")
+        item.renewed_from_id = 400
+        opening.principal_opening_lines = _Manager(
+            SimpleNamespace(
+                collateral_item_id=item.pk,
+                principal_opened=Decimal("700"),
+                monthly_interest_rate=Decimal("2"),
+                predecessor_collateral_item_id=400,
+            )
+        )
+        loan = self._loan(events=(opening,), collateral=(item,))
+
+        report = build_pawn_loan_reports(
+            (loan,),
+            as_of_date=self.as_of,
+            dea_inspector=self._matching_evidence,
+        )
+
+        self.assertIn(
+            "ITEM_PRINCIPAL_EVIDENCE_MISMATCH",
+            {issue.code for issue in report.issues},
+        )
+
     def _loan(
         self,
         *,

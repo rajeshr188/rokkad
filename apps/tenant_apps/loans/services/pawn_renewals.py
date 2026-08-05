@@ -604,7 +604,27 @@ def reverse_pawn_loan_renewal(
         .filter(loan=renewal.successor_loan)
         .order_by("pk")
     )
-    if any(item.custody_state != CollateralCustodyState.RENEWAL_TRANSFERRED.value for item in source_items):
+    source_transition_rows = tuple(
+        PawnCollateralCustodyEvent.objects.select_for_update().filter(
+            renewal=renewal,
+            renewal_reversal__isnull=True,
+            collateral_item__loan=renewal.source_loan,
+        )
+    )
+    source_transitions = {
+        event.collateral_item_id: event for event in source_transition_rows
+    }
+    if (
+        len(source_transition_rows) != len(source_items)
+        or set(source_transitions) != {item.pk for item in source_items}
+    ):
+        raise PawnRenewalError(
+            "Renewal source custody evidence is missing or duplicated."
+        )
+    if any(
+        item.custody_state != source_transitions[item.pk].to_state
+        for item in source_items
+    ):
         raise PawnRenewalError("Source collateral custody changed after renewal.")
     if any(item.custody_state != CollateralCustodyState.IN_VAULT.value for item in successor_items):
         raise PawnRenewalError("Successor collateral custody changed after renewal.")
@@ -640,16 +660,17 @@ def reverse_pawn_loan_renewal(
     )
     effective_date = timezone.localdate()
     for item in source_items:
+        transition = source_transitions[item.pk]
         PawnCollateralCustodyEvent.objects.create(
             collateral_item=item,
             renewal=renewal,
             renewal_reversal=reversal,
-            from_state=CollateralCustodyState.RENEWAL_TRANSFERRED.value,
-            to_state=CollateralCustodyState.IN_VAULT.value,
+            from_state=transition.to_state,
+            to_state=transition.from_state,
             effective_date=effective_date,
             actor=actor,
         )
-        item.custody_state = CollateralCustodyState.IN_VAULT.value
+        item.custody_state = transition.from_state
         item.save(update_fields=["custody_state", "updated_at"])
     for item in successor_items:
         PawnCollateralCustodyEvent.objects.create(

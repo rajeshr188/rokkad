@@ -164,6 +164,7 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(response, "Finalized accruals")
         self.assertContains(response, "Repayments")
         self.assertContains(response, "Releases")
+        self.assertContains(response, "Release and renew")
         self.assertContains(response, "Collateral custody")
         self.assertContains(response, "Posting health")
 
