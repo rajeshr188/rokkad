@@ -904,6 +904,95 @@ class PawnLoanAccountingEvent(models.Model):
         ]
 
 
+class PawnLoanDisbursalSnapshot(models.Model):
+    """Immutable gross-to-net evidence for one PawnLoan disbursal."""
+
+    loan = models.OneToOneField(
+        PawnLoan,
+        on_delete=models.PROTECT,
+        related_name="disbursal_snapshot",
+    )
+    approval_snapshot = models.ForeignKey(
+        PawnLoanApprovalSnapshot,
+        on_delete=models.PROTECT,
+        related_name="disbursal_snapshots",
+    )
+    policy_snapshot = models.OneToOneField(
+        LoanPolicySnapshot,
+        on_delete=models.PROTECT,
+        related_name="disbursal_snapshot",
+    )
+    accounting_event = models.OneToOneField(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="disbursal_snapshot",
+    )
+    gross_principal = models.DecimalField(max_digits=18, decimal_places=4)
+    monthly_interest = models.DecimalField(max_digits=18, decimal_places=4)
+    advance_interest_periods = models.PositiveSmallIntegerField(default=0)
+    advance_interest = models.DecimalField(max_digits=18, decimal_places=4)
+    deducted_fees = models.DecimalField(max_digits=18, decimal_places=4)
+    net_disbursed = models.DecimalField(max_digits=18, decimal_places=4)
+    evidence = models.JSONField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_disbursal_snapshots",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("loan_id",)
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(gross_principal__gt=0),
+                name="loans_disbursal_gross_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(monthly_interest__gte=0)
+                & Q(advance_interest__gte=0)
+                & Q(deducted_fees__gte=0)
+                & Q(net_disbursed__gt=0),
+                name="loans_disbursal_amounts_valid",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.loan_id and self.approval_snapshot_id:
+            if self.approval_snapshot.loan_id != self.loan_id:
+                raise ValidationError("Approval snapshot must belong to this PawnLoan.")
+        if self.loan_id and self.policy_snapshot_id:
+            if self.policy_snapshot.loan_id != self.loan_id:
+                raise ValidationError("Policy snapshot must belong to this PawnLoan.")
+        if self.loan_id and self.accounting_event_id:
+            if self.accounting_event.loan_id != self.loan_id:
+                raise ValidationError("Accounting event must belong to this PawnLoan.")
+            if self.accounting_event.event_kind != TransactionKind.DISBURSAL.value:
+                raise ValidationError("Disbursal snapshot requires a disbursal event.")
+        if self.gross_principal is not None and (
+            self.net_disbursed is not None
+            and self.advance_interest is not None
+            and self.deducted_fees is not None
+            and self.gross_principal
+            != self.net_disbursed + self.advance_interest + self.deducted_fees
+        ):
+            raise ValidationError(
+                "Net cash plus advance interest and deducted fees must equal gross principal."
+            )
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("Disbursal snapshots are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Disbursal snapshots cannot be deleted.")
+
+
 class PawnLoanAccountingOutbox(models.Model):
     event = models.OneToOneField(
         PawnLoanAccountingEvent,

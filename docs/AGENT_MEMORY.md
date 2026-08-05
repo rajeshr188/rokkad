@@ -85,9 +85,16 @@ operable and switches browser draft/approval to required item allocations,
 resolved metal rates, current metal/appraisal valuation, per-item LTV, derived
 aggregate terms, no-write preview, and provenance-rich approval snapshots.
 Legacy internal commands with no allocations remain readable without invented
-facts until their later lifecycle slices are converted. Disbursal still posts
-the old aggregate and must not claim net-cash/deduction semantics until
-E7.3A.4 adds immutable evidence and the matching DEA contract.
+facts until their later lifecycle slices are converted. E7.3A.4 adds immutable
+disbursal evidence linked to approval, policy, and accounting source event.
+DEA now preserves gross borrower principal while crediting only net cash plus
+the exact advance-interest and deducted-fee destinations; cash accounting
+recognizes withheld interest immediately, while accrual accounting credits
+Unearned Revenue. Legacy allocation-null approvals retain the aggregate
+compatibility contract and receive no fabricated snapshot. A dedicated
+versioned appraisal aggregate (appraiser, time, method, notes, media/tests,
+approval, and reappraisal) is deferred explicitly to roadmap E7.6A; until then,
+staff appraisal values are frozen in approval and disbursal evidence.
 
 Use a generic party model where possible:
 

@@ -41,6 +41,7 @@ def assess_pawn_loan_accounting_readiness(
     effective_date: date,
     requires_fee_income: bool = False,
     requires_interest_receivable: bool = False,
+    requires_unearned_interest: bool = False,
 ) -> PawnLoanAccountingReadiness:
     """Return precise, actionable disbursal blockers without mutating setup."""
     prerequisites = dea_facade.get_loan_posting_prerequisites(
@@ -113,6 +114,15 @@ def assess_pawn_loan_accounting_readiness(
                 "dea_ledger_list",
             )
         )
+    if requires_unearned_interest and not prerequisites.unearned_interest_ledger:
+        blockers.append(
+            _blocker(
+                "UNEARNED_INTEREST_ACCOUNT_REQUIRED",
+                "An Unearned Revenue ledger is required for advance interest under accrual accounting.",
+                "Manage liability ledgers",
+                "dea_ledger_list",
+            )
+        )
     if requires_fee_income and not prerequisites.fee_income_ledger:
         blockers.append(
             _blocker(
@@ -131,6 +141,7 @@ def require_pawn_loan_accounting_readiness(
     effective_date: date,
     requires_fee_income: bool = False,
     requires_interest_receivable: bool = False,
+    requires_unearned_interest: bool = False,
 ) -> PawnLoanAccountingReadiness:
     """Fail closed for the E3.4 disbursal command and later financial actions."""
     readiness = assess_pawn_loan_accounting_readiness(
@@ -138,6 +149,7 @@ def require_pawn_loan_accounting_readiness(
         effective_date=effective_date,
         requires_fee_income=requires_fee_income,
         requires_interest_receivable=requires_interest_receivable,
+        requires_unearned_interest=requires_unearned_interest,
     )
     if not readiness.ready:
         raise PawnLoanAccountingNotReadyError(readiness)

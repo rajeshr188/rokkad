@@ -96,9 +96,27 @@ class PawnLoanDeaPayload:
         }
 
 
-def disbursal_payload(loan, *, effective_date, principal_amount, source_event_id=None):
+def disbursal_payload(
+    loan,
+    *,
+    effective_date,
+    principal_amount,
+    net_cash_amount=None,
+    advance_interest_amount=Decimal("0"),
+    deducted_fee_amount=Decimal("0"),
+    source_event_id=None,
+):
+    values = {"principal": principal_amount}
+    if net_cash_amount is not None:
+        values.update(
+            {
+                "net_cash": net_cash_amount,
+                "advance_interest": advance_interest_amount,
+                "fees": deducted_fee_amount,
+            }
+        )
     return _payload(
-        loan, TransactionKind.DISBURSAL, effective_date, {"principal": principal_amount}, source_event_id
+        loan, TransactionKind.DISBURSAL, effective_date, values, source_event_id
     )
 
 

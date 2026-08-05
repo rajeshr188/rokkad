@@ -32,6 +32,7 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "PawnLoanAccountingEvent",
                 "PawnLoanAccountingOutbox",
                 "PawnLoanApprovalSnapshot",
+                "PawnLoanDisbursalSnapshot",
                 "PawnLoanAuction",
                 "PawnLoanAuctionItem",
                 "PawnLoanAuctionReversal",

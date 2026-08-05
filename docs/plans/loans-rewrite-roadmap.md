@@ -726,7 +726,7 @@ not silently reinterpreted; all dependent lifecycle and reversal tests pass.
 E7.4 FundingLoan/repledging must wait for this corrective slice because it
 depends on trustworthy collateral-level principal and custody economics.
 
-Execution status: E7.3A.1 through E7.3A.3 are complete. The accepted ADR and
+Execution status: E7.3A.1 through E7.3A.4 are complete. The accepted ADR and
 database-free calculator define the economics. Tenant migration `loans.0012`
 adds effective-dated workspace policies with optional license overrides for
 valuation/LTV/advance interest, metal-specific interest rates, and fees. It
@@ -740,9 +740,14 @@ without consuming a number, derives aggregate principal/effective rate, and
 enforces current-rate/appraisal valuation plus item LTV in both draft and
 approval services. Approval snapshots preserve policy and item provenance.
 Legacy internal command inputs remain readable without fabricated allocation
-only until their owning renewal/test paths are converted. E7.3A.4 must persist
-immutable gross/net disbursal and deduction evidence and update DEA posting;
-current disbursal posting still uses the compatibility aggregate.
+only until their owning renewal/test paths are converted. Tenant migration
+`loans.0013` adds immutable gross/net disbursal evidence linked to the exact
+approval, policy snapshot, source event, item calculations, and fee deductions.
+DEA posts gross borrower principal against net cash plus exact deductions;
+advance interest goes to income under cash accounting and Unearned Revenue
+under accrual accounting. Aggregate-only legacy development approvals keep
+their old contract without invented evidence. E7.3A.5 must add immutable
+item-level accrual lines and consume advance-interest coverage exactly once.
 
 #### E7.4 Add FundingLoan And Repledging
 
@@ -758,6 +763,18 @@ current disbursal posting still uses the compatibility aggregate.
 #### E7.6 Add Deferred Repayment Controls
 
 - Define backdated repayment/correction policy and staff allocation overrides.
+
+#### E7.6A Add Auditable Collateral Appraisals
+
+- Replace the MVP's manually entered `latest_appraised_value` with a dedicated,
+  immutable appraisal history that records the appraiser, appraisal time,
+  method, notes, supporting media/tests, value, approval status, and any later
+  reappraisal. Add appraisal-specific permissions and keep every loan decision
+  linked to the exact appraisal version it used.
+
+The first-class appraisal workflow is intentionally deferred, not discarded.
+Until it is implemented, the MVP treats the value frozen on each collateral
+item and approval/disbursal snapshot as staff-supplied appraisal evidence.
 
 #### E7.7 Add License-Scoped Authorization
 

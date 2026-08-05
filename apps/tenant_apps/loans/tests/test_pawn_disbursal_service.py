@@ -363,6 +363,93 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(Voucher.objects.filter(pk=voucher.pk).count(), 1)
         self.assertEqual(voucher.journal_entries.count(), 1)
 
+    def test_collateral_economics_posts_gross_receivable_net_cash_and_deductions(self):
+        approval = self.loan.approval_snapshots.get()
+        payload = dict(approval.payload)
+        payload["collateral_economics"] = {
+            "advance_interest_periods": 1,
+            "monthly_interest": "1000.00",
+            "advance_interest": "1000.00",
+            "deducted_fees": "500.00",
+            "net_disbursed": "48500.00",
+            "tranches": [{"collateral_item_id": self.loan.collateral_items.get().pk}],
+            "fees": [{"code": "DOC", "amount": "500.00", "deducted_at_disbursal": True}],
+        }
+        self.loan.approval_snapshots.filter(pk=approval.pk).update(payload=payload)
+        self._seed_dea_disbursal_setup()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            result = disburse_pawn_loan(
+                self.loan.pk,
+                effective_date=date(2026, 8, 3),
+                actor=self.actor,
+            )
+        result.outbox.refresh_from_db()
+
+        journal = Voucher.objects.get(pk=result.outbox.dea_voucher_id).journal_entries.get(
+            pk=result.outbox.dea_journal_entry_id
+        )
+        postings = {
+            row.ledgerno.name: row.amount.amount
+            for row in LedgerTransaction.objects.filter(journal_entry=journal)
+        }
+        self.assertEqual(postings["CASH"], Decimal("48500.00"))
+        self.assertEqual(postings["INTEREST_INCOME"], Decimal("1000.00"))
+        self.assertEqual(postings["DOCUMENT_CHARGE_INCOME"], Decimal("500.00"))
+        account_txn = AccountTransaction.objects.get(journal_entry=journal)
+        self.assertEqual(account_txn.amount.amount, Decimal("50000.00"))
+        self.assertEqual(result.disbursal_snapshot.net_disbursed, Decimal("48500.0000"))
+        self.assertTrue(journal.validate_balanced()[0])
+
+    def test_accrual_disbursal_defers_advance_interest_as_unearned_revenue(self):
+        approval = self.loan.approval_snapshots.get()
+        payload = dict(approval.payload)
+        payload["collateral_economics"] = {
+            "advance_interest_periods": 1,
+            "monthly_interest": "1000.00",
+            "advance_interest": "1000.00",
+            "deducted_fees": "0.00",
+            "net_disbursed": "49000.00",
+            "tranches": [{"collateral_item_id": self.loan.collateral_items.get().pk}],
+            "fees": [],
+        }
+        self.loan.approval_snapshots.filter(pk=approval.pk).update(payload=payload)
+        self._seed_dea_disbursal_setup()
+        liability, _ = AccountType.objects.get_or_create(
+            AccountType="Liability",
+            defaults={"description": "Liability Account", "code_prefix": "2"},
+        )
+        Ledger.objects.get_or_create(
+            name="Unearned Revenue", defaults={"AccountType": liability}
+        )
+        policy = resolve_policy(
+            workspace_defaults=WorkspacePolicyDefaults(
+                accounting_recognition=AccountingRecognition.ACCRUAL
+            )
+        )
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_disbursal.resolve_policy",
+            return_value=policy,
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                result = disburse_pawn_loan(
+                    self.loan.pk,
+                    effective_date=date(2026, 8, 3),
+                    actor=self.actor,
+                )
+        result.outbox.refresh_from_db()
+
+        postings = {
+            row.ledgerno.name: row.amount.amount
+            for row in LedgerTransaction.objects.filter(
+                journal_entry_id=result.outbox.dea_journal_entry_id
+            )
+        }
+        self.assertEqual(postings["CASH"], Decimal("49000.00"))
+        self.assertEqual(postings["Unearned Revenue"], Decimal("1000.00"))
+        self.assertNotIn("INTEREST_INCOME", postings)
+
     def test_repayment_posts_to_dea_reconciles_balance_and_keeps_collateral(self):
         self._seed_dea_disbursal_setup()
         with self.captureOnCommitCallbacks(execute=True):

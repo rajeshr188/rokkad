@@ -23,6 +23,7 @@ class LoanPostingPrerequisites:
     principal_control_ledger: object | None
     borrower_control_ledger: object | None
     interest_receivable_ledger: object | None
+    unearned_interest_ledger: object | None = None
 
 
 def get_loan_posting_prerequisites(
@@ -66,4 +67,5 @@ def get_loan_posting_prerequisites(
         interest_receivable_ledger=Ledger.objects.filter(
             name="INTEREST_RECEIVABLE"
         ).first(),
+        unearned_interest_ledger=Ledger.objects.filter(name="Unearned Revenue").first(),
     )

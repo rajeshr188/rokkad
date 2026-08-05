@@ -273,5 +273,50 @@ def _approval_payload(loan, collateral, resolved_economics=None):
             "advance_interest": str(economics.advance_interest),
             "deducted_fees": str(economics.deducted_fees),
             "net_disbursed": str(economics.net_disbursed),
+            "tranches": [
+                {
+                    "collateral_item_id": item.pk,
+                    "interest_rate_policy_id": rate_policy.pk,
+                    "metal": tranche.metal.value,
+                    "allocated_principal": str(tranche.allocated_principal),
+                    "monthly_interest_rate": str(tranche.monthly_interest_rate),
+                    "calculated_metal_value": (
+                        str(tranche.calculated_metal_value)
+                        if tranche.calculated_metal_value is not None
+                        else None
+                    ),
+                    "latest_appraised_value": (
+                        str(tranche.latest_appraised_value)
+                        if tranche.latest_appraised_value is not None
+                        else None
+                    ),
+                    "selected_value": str(tranche.selected_value),
+                    "maximum_principal": str(tranche.maximum_principal),
+                    "monthly_interest": str(tranche.monthly_interest),
+                    "advance_interest": str(tranche.advance_interest),
+                }
+                for item, tranche, rate_policy in zip(
+                    collateral,
+                    economics.tranches,
+                    resolved_economics.rate_policies,
+                    strict=True,
+                )
+            ],
+            "fees": [
+                {
+                    "fee_policy_id": fee_policy.pk,
+                    "code": fee.code,
+                    "name": fee.name,
+                    "calculation_type": fee_policy.calculation_type,
+                    "policy_value": str(fee_policy.value),
+                    "amount": str(fee.amount),
+                    "deducted_at_disbursal": fee.deducted_at_disbursal,
+                }
+                for fee, fee_policy in zip(
+                    economics.fees,
+                    resolved_economics.fee_policies,
+                    strict=True,
+                )
+            ],
         }
     return payload

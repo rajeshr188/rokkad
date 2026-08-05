@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 
 from django.db import transaction
 
@@ -19,6 +20,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
+    PawnLoanDisbursalSnapshot,
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.loans.services.accounting_outbox import (
@@ -41,6 +43,7 @@ class PawnDisbursalResult:
     policy_snapshot: LoanPolicySnapshot
     accounting_event: PawnLoanAccountingEvent
     outbox: PawnLoanAccountingOutbox
+    disbursal_snapshot: PawnLoanDisbursalSnapshot | None = None
     already_disbursed: bool = False
 
 
@@ -65,20 +68,57 @@ def disburse_pawn_loan(
     if loan.state != PawnLoanState.APPROVED.value:
         raise PawnDisbursalError("Only an approved PawnLoan can be disbursed.")
 
+    approval_snapshot = loan.approval_snapshots.order_by("-version").first()
+    if approval_snapshot is None:
+        raise PawnDisbursalError("Approved PawnLoan is missing its approval snapshot.")
+    economics = _approved_economics(loan, approval_snapshot)
+    resolved_policy = resolve_policy()
+    recognition = resolved_policy.accounting_recognition.value
+
     try:
         assert_series_can_issue(loan.series, as_of_date=effective_date)
-        require_pawn_loan_accounting_readiness(loan, effective_date=effective_date)
+        require_pawn_loan_accounting_readiness(
+            loan,
+            effective_date=effective_date,
+            requires_fee_income=(
+                economics is not None and economics["deducted_fees"] > 0
+            ),
+            requires_unearned_interest=(
+                economics is not None
+                and economics["advance_interest"] > 0
+                and recognition == "ACCRUAL"
+            ),
+        )
     except Exception as exc:
         if isinstance(exc, PawnDisbursalError):
             raise
         raise PawnDisbursalError(str(exc)) from exc
 
-    policy_snapshot = _persist_policy_snapshot(loan)
-    payload = disbursal_payload(
-        loan,
-        effective_date=effective_date,
-        principal_amount=loan.principal_amount,
-    ).to_dict()
+    policy_snapshot = _persist_policy_snapshot(loan, resolved_policy)
+    if economics is None:
+        payload = disbursal_payload(
+            loan,
+            effective_date=effective_date,
+            principal_amount=loan.principal_amount,
+        ).to_dict()
+    else:
+        payload = disbursal_payload(
+            loan,
+            effective_date=effective_date,
+            principal_amount=economics["gross_principal"],
+            net_cash_amount=economics["net_disbursed"],
+            advance_interest_amount=economics["advance_interest"],
+            deducted_fee_amount=economics["deducted_fees"],
+        ).to_dict()
+        payload["disbursal"] = {
+            "approval_snapshot_id": approval_snapshot.pk,
+            "policy_snapshot_id": policy_snapshot.pk,
+            "accounting_recognition": policy_snapshot.accounting_recognition,
+            "advance_interest_periods": economics["advance_interest_periods"],
+            "monthly_interest": str(economics["monthly_interest"]),
+            "tranches": economics["evidence"].get("tranches", []),
+            "fees": economics["evidence"].get("fees", []),
+        }
     event, outbox = record_loan_accounting_event(
         loan.pk,
         event_kind=TransactionKind.DISBURSAL,
@@ -87,6 +127,22 @@ def disburse_pawn_loan(
         actor=actor,
         delivery_handler=delivery_handler,
     )
+    disbursal_snapshot = None
+    if economics is not None:
+        disbursal_snapshot = PawnLoanDisbursalSnapshot.objects.create(
+            loan=loan,
+            approval_snapshot=approval_snapshot,
+            policy_snapshot=policy_snapshot,
+            accounting_event=event,
+            gross_principal=economics["gross_principal"],
+            monthly_interest=economics["monthly_interest"],
+            advance_interest_periods=economics["advance_interest_periods"],
+            advance_interest=economics["advance_interest"],
+            deducted_fees=economics["deducted_fees"],
+            net_disbursed=economics["net_disbursed"],
+            evidence=economics["evidence"],
+            created_by=actor,
+        )
     previous_state = loan.state
     loan.state = PawnLoanState.ACTIVE.value
     loan.updated_by = actor
@@ -103,9 +159,14 @@ def disburse_pawn_loan(
             "accounting_event_id": event.pk,
             "outbox_id": outbox.pk,
             "idempotency_key": outbox.idempotency_key,
+            "disbursal_snapshot_id": (
+                disbursal_snapshot.pk if disbursal_snapshot is not None else None
+            ),
         },
     )
-    return PawnDisbursalResult(loan, policy_snapshot, event, outbox)
+    return PawnDisbursalResult(
+        loan, policy_snapshot, event, outbox, disbursal_snapshot
+    )
 
 
 def assert_pawn_loan_financial_actions_allowed(loan_id: int) -> PawnLoan:
@@ -138,8 +199,8 @@ def _locked_loan(loan_id: int) -> PawnLoan:
         raise PawnDisbursalError("PawnLoan was not found in the active workspace.") from exc
 
 
-def _persist_policy_snapshot(loan: PawnLoan) -> LoanPolicySnapshot:
-    policy = resolve_policy().to_disbursal_snapshot()
+def _persist_policy_snapshot(loan: PawnLoan, resolved_policy=None) -> LoanPolicySnapshot:
+    policy = (resolved_policy or resolve_policy()).to_disbursal_snapshot()
     values = {
         "policy_version": policy.policy_version,
         "interest_method": policy.interest_method.value,
@@ -162,15 +223,59 @@ def _persist_policy_snapshot(loan: PawnLoan) -> LoanPolicySnapshot:
     return snapshot
 
 
+def _approved_economics(loan, approval_snapshot):
+    """Parse and reconcile the exact collateral economics frozen at approval."""
+    evidence = approval_snapshot.payload.get("collateral_economics")
+    if evidence is None:
+        # Compatibility for internal legacy callers whose collateral allocations
+        # are all null. No economic facts are invented for those development rows.
+        return None
+    try:
+        values = {
+            "gross_principal": Decimal(
+                str(approval_snapshot.payload["principal_amount"])
+            ),
+            "monthly_interest": Decimal(str(evidence["monthly_interest"])),
+            "advance_interest_periods": int(evidence["advance_interest_periods"]),
+            "advance_interest": Decimal(str(evidence["advance_interest"])),
+            "deducted_fees": Decimal(str(evidence["deducted_fees"])),
+            "net_disbursed": Decimal(str(evidence["net_disbursed"])),
+            "evidence": evidence,
+        }
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PawnDisbursalError(
+            "Approval has incomplete collateral economics."
+        ) from exc
+    if not evidence.get("tranches"):
+        raise PawnDisbursalError(
+            "Approval predates immutable tranche evidence; reopen and approve the loan again."
+        )
+    if values["gross_principal"] != loan.principal_amount:
+        raise PawnDisbursalError("Approved gross principal no longer matches the loan.")
+    if (
+        values["net_disbursed"]
+        + values["advance_interest"]
+        + values["deducted_fees"]
+        != values["gross_principal"]
+    ):
+        raise PawnDisbursalError("Approved gross-to-net disbursal does not reconcile.")
+    return values
+
+
 def _existing_disbursal_result(loan: PawnLoan) -> PawnDisbursalResult:
     try:
         event = loan.accounting_events.get(event_kind=TransactionKind.DISBURSAL.value)
         snapshot = loan.policy_snapshot
+        try:
+            disbursal_snapshot = loan.disbursal_snapshot
+        except PawnLoanDisbursalSnapshot.DoesNotExist:
+            disbursal_snapshot = None
         return PawnDisbursalResult(
             loan=loan,
             policy_snapshot=snapshot,
             accounting_event=event,
             outbox=event.outbox,
+            disbursal_snapshot=disbursal_snapshot,
             already_disbursed=True,
         )
     except (

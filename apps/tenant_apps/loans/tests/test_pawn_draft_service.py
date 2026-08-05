@@ -21,6 +21,7 @@ from apps.tenant_apps.loans.models import (
     LoanSeries,
     PawnCollateralItem,
     PawnLoan,
+    PawnLoanDisbursalSnapshot,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -31,6 +32,7 @@ from apps.tenant_apps.loans.services import (
     create_pawn_draft,
     create_pawn_loan_economic_policy,
     create_pawn_metal_interest_rate_policy,
+    disburse_pawn_loan,
     update_pawn_draft,
 )
 from apps.tenant_apps.party.models import Party
@@ -342,6 +344,47 @@ class PawnDraftServiceTests(TenantTestCase):
             snapshot.payload["collateral_economics"]["net_disbursed"],
             "49000.00",
         )
+        self.assertEqual(
+            snapshot.payload["collateral_economics"]["tranches"][0][
+                "maximum_principal"
+            ],
+            "96000.00",
+        )
+
+    @patch(
+        "apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness"
+    )
+    def test_disbursal_freezes_approved_gross_net_and_tranche_evidence(self, readiness):
+        self._economic_setup()
+        loan = create_pawn_draft(
+            self.command(
+                collateral=(
+                    self.collateral(allocated_principal=Decimal("50000.00")),
+                )
+            ),
+            actor=self.actor,
+        )
+        approval = approve_pawn_loan(loan.pk, actor=self.actor)
+
+        result = disburse_pawn_loan(
+            loan.pk,
+            effective_date=date(2026, 7, 18),
+            actor=self.actor,
+        )
+
+        snapshot = PawnLoanDisbursalSnapshot.objects.get(loan=loan)
+        self.assertEqual(snapshot.approval_snapshot, approval)
+        self.assertEqual(snapshot.gross_principal, Decimal("50000.0000"))
+        self.assertEqual(snapshot.advance_interest, Decimal("1000.0000"))
+        self.assertEqual(snapshot.net_disbursed, Decimal("49000.0000"))
+        self.assertEqual(snapshot.evidence["tranches"][0]["collateral_item_id"], loan.collateral_items.get().pk)
+        self.assertEqual(result.accounting_event.payload["values"]["net_cash"], "49000")
+        self.assertEqual(result.accounting_event.payload["values"]["advance_interest"], "1000")
+        with self.assertRaisesRegex(ValidationError, "immutable"):
+            snapshot.save()
+        with self.assertRaisesRegex(ValidationError, "cannot be deleted"):
+            snapshot.delete()
+        readiness.assert_called_once()
 
     def _economic_setup(self):
         create_pawn_loan_economic_policy(

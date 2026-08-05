@@ -10,6 +10,23 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans corrective slice E7.3A.4 is complete: tenant migration `loans.0013`
+  adds an immutable one-to-one disbursal snapshot linked to the exact approval,
+  policy snapshot, source accounting event, and frozen item/fee evidence. New
+  itemized loans reconcile gross principal exactly to net cash, advance
+  interest, and deducted fees. DEA now debits gross principal, credits only net
+  cash to CASH, and credits deductions to interest/fee destinations; advance
+  interest uses INTEREST_INCOME for cash accounting and Unearned Revenue for
+  accrual accounting. Voucher reversal therefore compensates the complete
+  gross-to-net posting without mutation. Legacy allocation-null development
+  approvals retain their aggregate contract without fabricated snapshots.
+  Dedicated appraisal history is explicitly deferred to E7.6A; the MVP freezes
+  the staff-entered appraisal value in approval/disbursal evidence. Focused
+  source-to-DEA and compatibility tests pass, and `loans.0013` is applied to
+  local tenant schemas. The complete 190-test Loans suite passes, followed by
+  focused immutable-snapshot and accrual-basis advance-interest coverage after
+  the final assertions were added. E7.3A.5 is next: item-level accrual evidence
+  and advance-interest coverage without double charging.
 - Loans corrective slice E7.3A.3 is complete: Owner/Admin users can configure
   effective-dated workspace defaults or license overrides for valuation/LTV,
   advance-interest periods, gold/silver monthly rates, and fees. Browser draft
@@ -22,8 +39,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   allocations remain on an explicit compatibility path and are never
   backfilled. The complete 188-test tenant-aware Loans suite passes in three
   exhaustive groups (87 + 70 + 31); Django checks and migration drift are
-  clean, and no migration is required. E7.3A.4 is next: immutable gross/net
-  disbursal evidence and corrected DEA posting.
+  clean, and no migration is required.
 - Loans corrective slice E7.3A.2 is complete: tenant migration `loans.0012`
   adds effective-dated workspace configuration with optional license
   overrides for valuation/LTV/advance-interest policy, metal-specific monthly

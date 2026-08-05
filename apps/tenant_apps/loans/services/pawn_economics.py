@@ -14,6 +14,7 @@ from apps.tenant_apps.loans.domain import (
 )
 from apps.tenant_apps.loans.models import (
     PawnLoanEconomicPolicy,
+    PawnLoanFeePolicy,
     PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.loans.services.economic_policies import (
@@ -32,6 +33,7 @@ class ResolvedPawnDraftEconomics:
     economics: PawnDisbursalEconomics
     economic_policy: PawnLoanEconomicPolicy
     rate_policies: tuple[PawnMetalInterestRatePolicy, ...]
+    fee_policies: tuple[PawnLoanFeePolicy, ...]
 
 
 def resolve_pawn_draft_economics(
@@ -81,6 +83,13 @@ def resolve_pawn_draft_economics(
                 latest_appraised_value=item.latest_appraised_value,
             )
         )
+    fee_policies = tuple(
+        resolve_pawn_loan_fee_policies(
+            workspace_id=workspace_id,
+            license_id=license_id,
+            as_of_date=as_of_date,
+        )
+    )
     fee_inputs = tuple(
         DisbursalFeeInput(
             code=fee.code,
@@ -89,11 +98,7 @@ def resolve_pawn_draft_economics(
             value=fee.value,
             deducted_at_disbursal=fee.deducted_at_disbursal,
         )
-        for fee in resolve_pawn_loan_fee_policies(
-            workspace_id=workspace_id,
-            license_id=license_id,
-            as_of_date=as_of_date,
-        )
+        for fee in fee_policies
     )
     economics = calculate_pawn_disbursal_economics(
         tranches,
@@ -106,6 +111,7 @@ def resolve_pawn_draft_economics(
         economics=economics,
         economic_policy=policy,
         rate_policies=tuple(rate_policies),
+        fee_policies=fee_policies,
     )
 
 
