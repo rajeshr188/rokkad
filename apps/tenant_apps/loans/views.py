@@ -30,6 +30,7 @@ from apps.tenant_apps.loans.forms import (
     PawnEconomicConfigurationForm,
     PawnFeePolicyForm,
     PawnAccrualForm,
+    PawnAdditionalCollateralFormSet,
     PawnCapitalizationForm,
     PawnCollateralDraftFormSet,
     PawnDisbursalForm,
@@ -39,6 +40,7 @@ from apps.tenant_apps.loans.forms import (
     PawnAuctionInitiateForm,
     PawnAuctionCompletionForm,
     PawnRenewalForm,
+    PawnRenewalRetainedItemFormSet,
     PawnRepaymentForm,
     PawnReversalForm,
     PawnSetupTransferForm,
@@ -80,6 +82,7 @@ from apps.tenant_apps.loans.services import (
     PawnLoanNoticeError,
     PawnAuctionError,
     PawnRenewalError,
+    RetainedCollateralInput,
     UpdatePawnDraftCommand,
     activate_license,
     approve_pawn_loan,
@@ -121,6 +124,10 @@ from apps.tenant_apps.loans.services import (
     update_license,
     update_pawn_draft,
     update_series,
+)
+from apps.tenant_apps.loans.services.pawn_tranches import (
+    PawnTrancheBalanceError,
+    get_pawn_principal_tranche_balances,
 )
 
 
@@ -837,11 +844,30 @@ def pawn_loan_auction_recovery_pdf(request, auction_pk):
 @loans_workspace_required
 def pawn_loan_renew(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
+    source_items = tuple(
+        loan.collateral_items.filter(custody_state="IN_VAULT").order_by("pk")
+    )
+    try:
+        current_tranches = {
+            row.collateral_item_id: row.principal_outstanding
+            for row in get_pawn_principal_tranche_balances(loan)
+        }
+    except PawnTrancheBalanceError:
+        current_tranches = {}
+    retained_initial = [
+        {
+            "collateral_item_id": item.pk,
+            "retain": True,
+            "allocated_principal": current_tranches.get(
+                item.pk, item.allocated_principal
+            ),
+        }
+        for item in source_items
+    ]
     initial = {
         "request_key": uuid.uuid4().hex,
         "successor_license": loan.license_id,
         "successor_series": loan.series_id,
-        "monthly_interest_rate": loan.monthly_interest_rate,
         "tenure_months": loan.tenure_months,
     }
     form = PawnRenewalForm(
@@ -849,13 +875,35 @@ def pawn_loan_renew(request, pk):
         workspace=request.loans_workspace,
         initial=initial,
     )
+    retained_formset = PawnRenewalRetainedItemFormSet(
+        request.POST or None,
+        prefix="retained",
+        initial=retained_initial,
+    )
+    additional_formset = PawnAdditionalCollateralFormSet(
+        request.POST or None,
+        prefix="additional",
+    )
     balance = None
     if loan.state == PawnLoanState.ACTIVE.value:
         try:
             balance = get_pawn_loan_balance(loan.pk, as_of_date=timezone.localdate())
         except (ValidationError, ValueError):
             pass
-    if request.method == "POST" and form.is_valid():
+    if (
+        request.method == "POST"
+        and form.is_valid()
+        and retained_formset.is_valid()
+        and additional_formset.is_valid()
+    ):
+        retained = tuple(
+            RetainedCollateralInput(
+                collateral_item_id=row["collateral_item_id"],
+                allocated_principal=row["allocated_principal"],
+            )
+            for row in retained_formset.cleaned_data
+            if row and row.get("retain")
+        )
         try:
             result = renew_pawn_loan(
                 loan.pk,
@@ -865,9 +913,10 @@ def pawn_loan_renew(request, pk):
                 top_up_amount=form.cleaned_data["top_up_amount"],
                 successor_license_id=form.cleaned_data["successor_license"].pk,
                 successor_series_id=form.cleaned_data["successor_series"].pk,
-                monthly_interest_rate=form.cleaned_data["monthly_interest_rate"],
                 tenure_months=form.cleaned_data["tenure_months"],
                 request_key=form.cleaned_data["request_key"],
+                retained_collateral=retained,
+                additional_collateral=_collateral_inputs(additional_formset),
                 actor=request.user,
             )
         except (PawnRenewalError, ValidationError, ValueError) as exc:
@@ -878,13 +927,17 @@ def pawn_loan_renew(request, pk):
                 f"Renewal completed. Successor loan {result.successor_loan.loan_number} is active.",
             )
             return redirect("loans:pawn_loan_detail", pk=result.successor_loan.pk)
-    return _render_action(
+    return render(
         request,
-        loan,
-        form,
-        "Renew pawn loan",
-        "Interest and fees settle in full. Principal is either paid down or topped up, and vault custody transfers to a new numbered successor loan.",
-        {"balance": balance},
+        "loans/pawn/release_and_renew.html",
+        {
+            "loan": loan,
+            "form": form,
+            "retained_formset": retained_formset,
+            "retained_rows": tuple(zip(source_items, retained_formset.forms)),
+            "additional_formset": additional_formset,
+            "balance": balance,
+        },
     )
 
 

@@ -117,6 +117,7 @@ from .pawn_renewals import (
     PawnRenewalError,
     PawnRenewalResult,
     PawnRenewalReversalResult,
+    RetainedCollateralInput,
     renew_pawn_loan,
     reverse_pawn_loan_renewal,
 )
@@ -222,6 +223,7 @@ __all__ = (
     "PawnRenewalError",
     "PawnRenewalResult",
     "PawnRenewalReversalResult",
+    "RetainedCollateralInput",
     "renew_pawn_loan",
     "reverse_pawn_loan_renewal",
     "PawnEconomicPolicyError",

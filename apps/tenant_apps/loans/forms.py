@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 
 from apps.tenant_apps.loans.domain import (
@@ -126,6 +128,14 @@ PawnCollateralDraftFormSet = forms.formset_factory(
     can_delete=True,
     min_num=1,
     validate_min=True,
+)
+
+PawnAdditionalCollateralFormSet = forms.formset_factory(
+    PawnCollateralDraftForm,
+    extra=1,
+    can_delete=True,
+    min_num=0,
+    validate_min=False,
 )
 
 
@@ -372,9 +382,6 @@ class PawnRenewalForm(forms.Form):
     )
     successor_license = forms.ModelChoiceField(queryset=LoanLicense.objects.none())
     successor_series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
-    monthly_interest_rate = forms.DecimalField(
-        max_digits=9, decimal_places=6, min_value=0
-    )
     tenure_months = forms.IntegerField(min_value=1, max_value=600)
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
 
@@ -406,3 +413,34 @@ class PawnRenewalForm(forms.Form):
                 "Successor series must belong to the selected license.",
             )
         return cleaned
+
+
+class PawnRenewalRetainedItemForm(forms.Form):
+    collateral_item_id = forms.IntegerField(widget=forms.HiddenInput())
+    retain = forms.BooleanField(required=False, initial=True)
+    allocated_principal = forms.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["retain"].widget.attrs["class"] = "form-check-input"
+        self.fields["allocated_principal"].widget.attrs["class"] = "form-control"
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("retain") and cleaned.get("allocated_principal") is None:
+            self.add_error(
+                "allocated_principal",
+                "Retained collateral requires a successor principal allocation.",
+            )
+        return cleaned
+
+
+PawnRenewalRetainedItemFormSet = forms.formset_factory(
+    PawnRenewalRetainedItemForm,
+    extra=0,
+)

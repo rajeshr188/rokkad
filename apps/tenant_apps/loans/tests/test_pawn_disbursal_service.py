@@ -86,6 +86,9 @@ from apps.tenant_apps.loans.services import (
     complete_pawn_loan_auction,
     initiate_pawn_loan_auction,
     PawnRenewalError,
+    RetainedCollateralInput,
+    create_pawn_loan_economic_policy,
+    create_pawn_metal_interest_rate_policy,
     renew_pawn_loan,
     reverse_pawn_loan_renewal,
     reverse_pawn_loan_auction,
@@ -1468,6 +1471,96 @@ class PawnDisbursalServiceTests(TenantTestCase):
             Decimal("0.00"),
         )
         self.assertFalse(reversed_result.already_reversed)
+
+    def test_release_and_renew_returns_omitted_and_accepts_added_collateral(self):
+        returned_item = PawnCollateralItem.objects.create(
+            loan=self.loan,
+            description="Returned gold bracelet",
+            metal=CollateralMetal.GOLD.value,
+            gross_weight=Decimal("10"),
+            net_weight=Decimal("9"),
+            purity_percentage=Decimal("91.6"),
+            latest_appraised_value=Decimal("50000.00"),
+        )
+        self._activate_loan()
+        self._create_release_rate(
+            RateSource.objects.create(name="Release renew", location="Market")
+        )
+        create_pawn_loan_economic_policy(
+            workspace=self.tenant,
+            license=self.loan.license,
+            valuation_method=ValuationMethod.LATEST_APPRAISAL,
+            maximum_ltv_ratio=Decimal("0.80"),
+            advance_interest_periods=1,
+            effective_from=date(2026, 1, 1),
+        )
+        for metal, rate in (
+            (CollateralMetal.GOLD, Decimal("2")),
+            (CollateralMetal.SILVER, Decimal("4")),
+        ):
+            create_pawn_metal_interest_rate_policy(
+                workspace=self.tenant,
+                license=self.loan.license,
+                metal=metal,
+                monthly_interest_rate=rate,
+                effective_from=date(2026, 1, 1),
+            )
+        retained_item = self.loan.collateral_items.exclude(pk=returned_item.pk).get()
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
+            return_value=(),
+        ), self.captureOnCommitCallbacks(execute=True):
+            result = renew_pawn_loan(
+                self.loan.pk,
+                mode=PawnLoanRenewalMode.PAY_AND_RENEW,
+                renewal_date=date(2026, 8, 3),
+                principal_paid=Decimal("11000.00"),
+                top_up_amount=Decimal("0.00"),
+                successor_license_id=self.loan.license_id,
+                successor_series_id=self.loan.series_id,
+                tenure_months=3,
+                request_key="release-renew-collateral-plan",
+                retained_collateral=(
+                    RetainedCollateralInput(retained_item.pk, Decimal("30000.00")),
+                ),
+                additional_collateral=(
+                    CollateralDraftInput(
+                        description="Added silver anklet",
+                        metal=CollateralMetal.SILVER,
+                        gross_weight=Decimal("100"),
+                        net_weight=Decimal("95"),
+                        purity_percentage=Decimal("90"),
+                        latest_appraised_value=Decimal("50000.00"),
+                        allocated_principal=Decimal("9000.00"),
+                    ),
+                ),
+                actor=self.actor,
+            )
+
+        retained_item.refresh_from_db()
+        returned_item.refresh_from_db()
+        successor_items = tuple(
+            result.successor_loan.collateral_items.order_by("pk")
+        )
+        self.assertEqual(
+            retained_item.custody_state,
+            CollateralCustodyState.RENEWAL_TRANSFERRED.value,
+        )
+        self.assertEqual(
+            returned_item.custody_state,
+            CollateralCustodyState.WITH_CUSTOMER.value,
+        )
+        self.assertEqual(len(successor_items), 2)
+        self.assertEqual(successor_items[0].renewed_from_id, retained_item.pk)
+        self.assertIsNone(successor_items[1].renewed_from_id)
+        self.assertEqual(successor_items[0].allocated_principal, Decimal("30000.0000"))
+        self.assertEqual(successor_items[1].allocated_principal, Decimal("9000.0000"))
+        self.assertEqual(successor_items[0].monthly_interest_rate, Decimal("2.000000"))
+        self.assertEqual(successor_items[1].monthly_interest_rate, Decimal("4.000000"))
 
     def test_renewal_is_idempotent(self):
         self._activate_loan()

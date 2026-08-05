@@ -10,15 +10,24 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Release-and-renew collateral selection is implemented. The staff form now
+  separates existing collateral from optional additions: selected source items
+  receive explicit successor allocations and predecessor lineage, omitted
+  source items return to the customer, and newly captured items enter the
+  successor without fabricated lineage. Retained-plus-added allocations must
+  equal successor principal. Normal draft economics independently resolve
+  current metal rates and enforce per-item valuation/LTV before the atomic
+  renewal commits. Source settlement and successor opening identify retained,
+  returned, and additional items. Focused service/UI tests and all existing
+  renewal regression tests pass. No migration is required. Immutable
+  full-release and renewal item-principal evidence is next.
 - The accepted release-and-renew ADR now prohibits new same-loan partial
   collateral releases. The partial-release action is removed from the active
   loan UI; its historical URL returns an explicit Gone response and its service
   boundary rejects before mutation. Partial repayment still changes only dues,
   full release still returns all remaining collateral and closes the loan, and
   historical immutable partial-release evidence remains readable/reversible.
-  The next implementation slice upgrades renewal to return selected old items,
-  transfer retained items, accept additional collateral, and create a freshly
-  valued and numbered successor.
+  Renewal now provides the replacement collateral-selection workflow.
 - Loans corrective slice E7.3A.6 is complete: tenant migration `loans.0015`
   adds immutable collateral-level repayment allocation lines. Original
   principal is applied to outstanding item tranches in descending frozen

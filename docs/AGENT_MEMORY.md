@@ -130,6 +130,17 @@ and reversible. Renewal must create fresh item allocation, rate, valuation/LTV,
 fee, advance-interest, approval, lineage, custody, and opening evidence rather
 than mutating the source contract.
 
+The release-and-renew command/UI accepts an explicit collateral plan. Retained
+source items are copied first with fresh allocated principal and `renewed_from`
+lineage; omitted source items move to customer custody; optional additional
+collateral follows with no predecessor. Successor allocations must exactly
+equal calculated successor principal, and normal draft/approval economics
+resolve current metal rates and per-item valuation/LTV atomically. Payloads and
+snapshots identify retained, returned, and additional items. Legacy aggregate
+service calls retain the old all-item compatibility path only for existing
+development coverage; the browser never uses it. Composite reversal for mixed
+returned/retained/additional custody still requires its dedicated update.
+
 Use a generic party model where possible:
 
 - Customer

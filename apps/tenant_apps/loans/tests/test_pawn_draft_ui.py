@@ -466,6 +466,53 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertEqual(response.status_code, 410)
         self.assertContains(response, "release and renew", status_code=410)
 
+    def test_release_and_renew_form_submits_explicit_retained_plan(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+        collateral = loan.collateral_items.get()
+        result = SimpleNamespace(
+            successor_loan=SimpleNamespace(pk=99, loan_number="PL-A-00099")
+        )
+        payload = {
+            "mode": "PAY_AND_RENEW",
+            "principal_paid": "1000.00",
+            "top_up_amount": "0.00",
+            "successor_license": license.pk,
+            "successor_series": series.pk,
+            "tenure_months": "3",
+            "request_key": "release-renew-ui-1",
+            "retained-TOTAL_FORMS": "1",
+            "retained-INITIAL_FORMS": "1",
+            "retained-MIN_NUM_FORMS": "0",
+            "retained-MAX_NUM_FORMS": "1000",
+            "retained-0-collateral_item_id": collateral.pk,
+            "retained-0-retain": "on",
+            "retained-0-allocated_principal": "9000.00",
+            "additional-TOTAL_FORMS": "1",
+            "additional-INITIAL_FORMS": "0",
+            "additional-MIN_NUM_FORMS": "0",
+            "additional-MAX_NUM_FORMS": "1000",
+        }
+        with patch(
+            "apps.tenant_apps.loans.views.renew_pawn_loan",
+            return_value=result,
+        ) as command:
+            response = self.client.post(
+                reverse("loans:pawn_loan_renew", args=[loan.pk]),
+                payload,
+            )
+
+        self.assertEqual(response.status_code, 302)
+        call = command.call_args.kwargs
+        self.assertEqual(call["retained_collateral"][0].collateral_item_id, collateral.pk)
+        self.assertEqual(
+            call["retained_collateral"][0].allocated_principal,
+            Decimal("9000.00"),
+        )
+        self.assertEqual(call["additional_collateral"], ())
+
     def _configured_setup(self):
         license = LoanLicense.objects.create(
             workspace=self.tenant,

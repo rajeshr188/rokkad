@@ -765,9 +765,12 @@ highest frozen item rate first with collateral ID as tie-breaker. Later accrual
 bases are reconstructed from the disbursal snapshot and active allocation
 lines; reversal excludes the reversed event without mutating evidence.
 Capitalized-interest principal remains separate. The accepted release-and-renew
-ADR disables new same-loan partial collateral release. E7.3A.7 now upgrades
-renewal into release and renew, then adds immutable item-principal evidence to
-full release and renewal. Auction item allocation follows after that boundary.
+ADR disables new same-loan partial collateral release. E7.3A.7.1 is complete:
+release and renew selects retained source items, returns omitted items, accepts
+additional collateral, creates explicit lineage, and runs fresh successor item
+allocation/rate/valuation/LTV validation. E7.3A.7.2 is next: add immutable
+item-principal movement evidence to full release and renewal. Auction item
+allocation follows after that boundary.
 
 #### E7.4 Add FundingLoan And Repledging
 

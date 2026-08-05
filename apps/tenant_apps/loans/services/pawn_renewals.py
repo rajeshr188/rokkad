@@ -1,6 +1,8 @@
 """Atomic pay-and-renew and top-up renewal workflows for PawnLoan."""
 
-from dataclasses import dataclass
+import hashlib
+import json
+from dataclasses import asdict, dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_DOWN
 
@@ -68,6 +70,12 @@ class PawnRenewalError(ValueError):
 
 
 @dataclass(frozen=True)
+class RetainedCollateralInput:
+    collateral_item_id: int
+    allocated_principal: Decimal
+
+
+@dataclass(frozen=True)
 class PawnRenewalResult:
     renewal: PawnLoanRenewal
     source_loan: PawnLoan
@@ -99,14 +107,28 @@ def renew_pawn_loan(
     top_up_amount,
     successor_license_id: int,
     successor_series_id: int,
-    monthly_interest_rate,
+    monthly_interest_rate=None,
     tenure_months: int,
     request_key: str,
+    retained_collateral: tuple[RetainedCollateralInput, ...] | None = None,
+    additional_collateral: tuple[CollateralDraftInput, ...] = (),
     actor=None,
     delivery_handler: DeliveryHandler | None = None,
 ) -> PawnRenewalResult:
     source = _locked_loan(source_loan_id)
     request_key = _request_key(request_key)
+    request_fingerprint = _renewal_request_fingerprint(
+        mode=mode,
+        renewal_date=renewal_date,
+        principal_paid=principal_paid,
+        top_up_amount=top_up_amount,
+        successor_license_id=successor_license_id,
+        successor_series_id=successor_series_id,
+        monthly_interest_rate=monthly_interest_rate,
+        tenure_months=tenure_months,
+        retained_collateral=retained_collateral,
+        additional_collateral=additional_collateral,
+    )
     existing = PawnLoanRenewal.objects.filter(
         workspace_id=source.workspace_id,
         request_key=request_key,
@@ -114,6 +136,11 @@ def renew_pawn_loan(
     if existing:
         if existing.source_loan_id != source.pk:
             raise PawnRenewalError("Renewal request key belongs to another source loan.")
+        recorded_fingerprint = existing.valuation_snapshot.get("request_fingerprint")
+        if recorded_fingerprint and recorded_fingerprint != request_fingerprint:
+            raise PawnRenewalError(
+                "Renewal request key was already used with different instructions."
+            )
         return PawnRenewalResult(
             existing,
             existing.source_loan,
@@ -148,7 +175,8 @@ def renew_pawn_loan(
         )
     principal_paid = _money(principal_paid, source)
     top_up_amount = _money(top_up_amount, source)
-    monthly_interest_rate = _rate(monthly_interest_rate)
+    if retained_collateral is None:
+        monthly_interest_rate = _rate(monthly_interest_rate)
     if not 1 <= int(tenure_months) <= 600:
         raise PawnRenewalError("Renewal tenure must be between 1 and 600 months.")
     if renewal_mode == PawnLoanRenewalMode.PAY_AND_RENEW:
@@ -197,6 +225,12 @@ def renew_pawn_loan(
         successor_principal = (
             balance.principal_outstanding - principal_paid + top_up_amount
         ).quantize(currency_quantum)
+        successor_collateral, retained_item_ids = _successor_collateral_plan(
+            items,
+            retained_collateral=retained_collateral,
+            additional_collateral=additional_collateral,
+            successor_principal=successor_principal,
+        )
         readiness = get_pawn_loan_release_readiness(
             source.pk,
             selected_item_ids=tuple(item.pk for item in items),
@@ -244,30 +278,28 @@ def renew_pawn_loan(
             license_id=successor_license_id,
             series_id=successor_series_id,
             principal_amount=successor_principal,
-            monthly_interest_rate=monthly_interest_rate,
+            monthly_interest_rate=monthly_interest_rate or Decimal("0"),
             loan_date=renewal_date,
             tenure_months=int(tenure_months),
-            collateral=tuple(
-                CollateralDraftInput(
-                    description=item.description,
-                    metal=item.metal,
-                    gross_weight=item.gross_weight,
-                    net_weight=item.net_weight,
-                    purity_percentage=item.purity_percentage,
-                    latest_appraised_value=item.latest_appraised_value,
-                )
-                for item in items
-            ),
+            collateral=successor_collateral,
         ),
         actor=actor,
     )
-    approve_pawn_loan(successor.pk, actor=actor)
+    approval = approve_pawn_loan(successor.pk, actor=actor)
     successor_policy = _clone_policy(source, successor)
     successor_items = tuple(successor.collateral_items.order_by("pk"))
-    if len(successor_items) != len(items):
+    if len(successor_items) != len(successor_collateral):
         raise PawnRenewalError("Renewal collateral lineage could not be established.")
-    for old_item, new_item in zip(items, successor_items, strict=True):
-        new_item.renewed_from = old_item
+    source_by_id = {item.pk: item for item in items}
+    retained_ids_in_order = tuple(
+        value.collateral_item_id for value in retained_collateral or ()
+    ) if retained_collateral is not None else tuple(item.pk for item in items)
+    for source_item_id, new_item in zip(
+        retained_ids_in_order,
+        successor_items[: len(retained_ids_in_order)],
+        strict=True,
+    ):
+        new_item.renewed_from = source_by_id[source_item_id]
         new_item.save(update_fields=["renewed_from", "updated_at"])
 
     capitalized_paid = min(
@@ -319,6 +351,10 @@ def renew_pawn_loan(
         "catch_up_event_id": (
             catch_up.accounting_event_id if catch_up is not None else None
         ),
+        "retained_source_item_ids": list(retained_item_ids),
+        "returned_source_item_ids": [
+            item.pk for item in items if item.pk not in retained_item_ids
+        ],
     }
     settlement_event, settlement_outbox = record_loan_accounting_event(
         source.pk,
@@ -339,6 +375,10 @@ def renew_pawn_loan(
         "source_loan_id": source.pk,
         "settlement_event_id": settlement_event.pk,
         "operational_opening": True,
+        "retained_source_item_ids": list(retained_item_ids),
+        "additional_successor_item_ids": [
+            item.pk for item in successor_items if item.renewed_from_id is None
+        ],
     }
     opening_event, opening_outbox = record_loan_accounting_event(
         successor.pk,
@@ -349,6 +389,7 @@ def renew_pawn_loan(
         delivery_handler=delivery_handler,
     )
     valuation_snapshot = {
+        "request_fingerprint": request_fingerprint,
         "valuation_method": readiness.valuation_method,
         "maximum_ltv_ratio": str(readiness.maximum_ltv_ratio),
         "collateral_value": str(collateral_value),
@@ -371,6 +412,14 @@ def renew_pawn_loan(
                 ),
             }
             for value in readiness.item_valuations
+        ],
+        "successor_approval_snapshot_id": approval.pk,
+        "retained_source_item_ids": list(retained_item_ids),
+        "returned_source_item_ids": [
+            item.pk for item in items if item.pk not in retained_item_ids
+        ],
+        "additional_successor_item_ids": [
+            item.pk for item in successor_items if item.renewed_from_id is None
         ],
     }
     renewal = PawnLoanRenewal.objects.create(
@@ -399,15 +448,21 @@ def renew_pawn_loan(
     )
     effective_now = timezone.now()
     for old_item in items:
+        retained = old_item.pk in retained_item_ids
+        destination = (
+            CollateralCustodyState.RENEWAL_TRANSFERRED.value
+            if retained
+            else CollateralCustodyState.WITH_CUSTOMER.value
+        )
         PawnCollateralCustodyEvent.objects.create(
             collateral_item=old_item,
             renewal=renewal,
             from_state=CollateralCustodyState.IN_VAULT.value,
-            to_state=CollateralCustodyState.RENEWAL_TRANSFERRED.value,
+            to_state=destination,
             effective_date=renewal_date,
             actor=actor,
         )
-        old_item.custody_state = CollateralCustodyState.RENEWAL_TRANSFERRED.value
+        old_item.custody_state = destination
         old_item.save(update_fields=["custody_state", "updated_at"])
     source.state = PawnLoanState.CLOSED.value
     source.updated_by = actor
@@ -425,6 +480,10 @@ def renew_pawn_loan(
             "renewal_id": renewal.pk,
             "successor_loan_id": successor.pk,
             "settlement_event_id": settlement_event.pk,
+            "retained_source_item_ids": list(retained_item_ids),
+            "returned_source_item_ids": [
+                item.pk for item in items if item.pk not in retained_item_ids
+            ],
         },
     )
     LoanChangeLog.objects.create(
@@ -675,6 +734,106 @@ def _clone_policy(source, successor):
         loan=successor,
         **{field: getattr(source_policy, field) for field in fields},
     )
+
+
+def _successor_collateral_plan(
+    source_items,
+    *,
+    retained_collateral,
+    additional_collateral,
+    successor_principal,
+):
+    """Build successor inputs and return the retained source identities."""
+    if retained_collateral is None:
+        if additional_collateral:
+            raise PawnRenewalError(
+                "Additional collateral requires an explicit retained-collateral plan."
+            )
+        return (
+            tuple(
+                CollateralDraftInput(
+                    description=item.description,
+                    metal=item.metal,
+                    gross_weight=item.gross_weight,
+                    net_weight=item.net_weight,
+                    purity_percentage=item.purity_percentage,
+                    latest_appraised_value=item.latest_appraised_value,
+                )
+                for item in source_items
+            ),
+            frozenset(item.pk for item in source_items),
+        )
+
+    source_by_id = {item.pk: item for item in source_items}
+    retained = tuple(retained_collateral)
+    retained_ids = tuple(value.collateral_item_id for value in retained)
+    if len(set(retained_ids)) != len(retained_ids):
+        raise PawnRenewalError("A source collateral item can be retained only once.")
+    if any(item_id not in source_by_id for item_id in retained_ids):
+        raise PawnRenewalError(
+            "Retained collateral must belong to the source PawnLoan."
+        )
+    successor_inputs = []
+    for value in retained:
+        source = source_by_id[value.collateral_item_id]
+        try:
+            allocated = Decimal(str(value.allocated_principal))
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise PawnRenewalError(
+                "Every retained item requires a valid allocated principal."
+            ) from exc
+        if allocated <= 0:
+            raise PawnRenewalError(
+                "Every retained item requires a positive allocated principal."
+            )
+        successor_inputs.append(
+            CollateralDraftInput(
+                description=source.description,
+                metal=source.metal,
+                gross_weight=source.gross_weight,
+                net_weight=source.net_weight,
+                purity_percentage=source.purity_percentage,
+                latest_appraised_value=source.latest_appraised_value,
+                allocated_principal=allocated,
+            )
+        )
+    successor_inputs.extend(tuple(additional_collateral))
+    if not successor_inputs:
+        raise PawnRenewalError(
+            "Release and renew requires retained or additional collateral."
+        )
+    allocations = [item.allocated_principal for item in successor_inputs]
+    if any(value is None for value in allocations):
+        raise PawnRenewalError(
+            "Every successor collateral item requires an allocated principal."
+        )
+    allocated_total = sum((Decimal(str(value)) for value in allocations), Decimal("0"))
+    if allocated_total != successor_principal:
+        raise PawnRenewalError(
+            "Successor collateral allocations must equal successor principal "
+            f"{successor_principal}; received {allocated_total}."
+        )
+    return tuple(successor_inputs), frozenset(retained_ids)
+
+
+def _renewal_request_fingerprint(**values):
+    def normalize(value):
+        if isinstance(value, Decimal):
+            return str(value)
+        if isinstance(value, date):
+            return value.isoformat()
+        if hasattr(value, "value"):
+            return value.value
+        if hasattr(value, "__dataclass_fields__"):
+            return {key: normalize(item) for key, item in asdict(value).items()}
+        if isinstance(value, (tuple, list)):
+            return [normalize(item) for item in value]
+        if isinstance(value, dict):
+            return {key: normalize(item) for key, item in value.items()}
+        return value
+
+    serialized = json.dumps(normalize(values), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def _locked_loan(loan_id):
