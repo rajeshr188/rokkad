@@ -99,9 +99,11 @@ the defaults for later implementation steps.
 - MVP repayments use the current business date only. Backdating is deferred.
 - Default allocation order is fees and charges, overdue interest, current
   interest, then principal. Staff split override is deferred.
-- Partial release settles all outstanding fees and interest, then requires any
-  principal reduction needed to keep retained-collateral LTV within the
-  configured maximum, defaulting to 80 percent.
+- Partial repayment reduces dues without returning collateral. Full release
+  settles the complete loan, returns every remaining item, and closes it.
+- Release and renew closes the source loan, returns selected items, transfers
+  retained items, accepts optional additional collateral, and creates a newly
+  numbered successor with fresh item economics.
 - Net weight excludes stones/non-metal material and purity is stored per item.
   Workspace valuation policy may use calculated metal value (`current rate *
   net weight * purity`), latest staff appraisal, or the lower of both. Release
@@ -127,7 +129,8 @@ the defaults for later implementation steps.
 
 - Production MVP is the complete PawnLoan lifecycle: license/series setup,
   Party and collateral capture, approval/cancellation/disbursal, repayment,
-  accrual, full/partial release, reversals, reports, reconciliation, and PDFs.
+  accrual, full release, release and renew, reversals, reports,
+  reconciliation, and PDFs.
 - Notices, auctions, renewals, FundingLoans/repledging, and portal integration
   are essential post-MVP capabilities, not abandoned scope.
 - New PawnLoans may launch before FundingLoan servicing. New-app collateral
@@ -385,13 +388,17 @@ test-covered.
 Acceptance: release fails closed on settlement, accrual, custody, or posting
 preconditions; zero balance alone never closes a loan.
 
-#### E4.3 Implement Partial Release — Completed 2026-08-03
+#### E4.3 Implement Partial Release — Superseded 2026-08-05
 
 - Release selected items after the calculated minimum settlement succeeds.
 - Keep the loan active and derive partial-release state from custody.
 
 Acceptance: retained collateral remains within LTV policy and released items
 cannot be released twice.
+
+Superseded on 2026-08-05: this implemented path is historical only. ADR
+`2026-08-05-pawn-loan-release-and-renew-only.md` prohibits new same-loan partial
+collateral releases and replaces it with release and renew.
 
 #### E4.4 Implement Release Reversal — Completed 2026-08-03
 
@@ -403,15 +410,16 @@ cannot be released twice.
 Acceptance: original release remains immutable and custody/accounting/lifecycle
 return to a reconciled state.
 
-Phase 4 gate — **Passed 2026-08-03**: full and partial release, closure,
-catch-up accrual, custody, and all MVP reversal paths pass end-to-end tests.
+Phase 4's original gate passed on 2026-08-03. Its partial-release capability was
+later superseded; full release, closure, catch-up accrual, custody, and reversal
+infrastructure remain active.
 
 ### Phase 5: Complete Staff MVP And Operational Proof
 
 #### E5.1 Add Controlled Lifecycle UI — Completed 2026-08-03
 
-- Add approval/reopen/cancel, disbursal, repayment, accrual, full/partial
-  release, retry, and reversal screens with permissions and primary-next-action
+- Add approval/reopen/cancel, disbursal, repayment, accrual, full release,
+  release and renew, retry, and reversal screens with permissions and primary-next-action
   guidance.
 - Surface setup and pending-accounting blockers directly.
 
@@ -756,9 +764,10 @@ immutable repayment allocation lines for original principal, applied by
 highest frozen item rate first with collateral ID as tie-breaker. Later accrual
 bases are reconstructed from the disbursal snapshot and active allocation
 lines; reversal excludes the reversed event without mutating evidence.
-Capitalized-interest principal remains separate. E7.3A.7 is next: add
-equivalent immutable item-principal evidence to release, auction, and renewal
-paths so every collateral-changing lifecycle can reconcile tranche balances.
+Capitalized-interest principal remains separate. The accepted release-and-renew
+ADR disables new same-loan partial collateral release. E7.3A.7 now upgrades
+renewal into release and renew, then adds immutable item-principal evidence to
+full release and renewal. Auction item allocation follows after that boundary.
 
 #### E7.4 Add FundingLoan And Repledging
 
@@ -808,7 +817,8 @@ UI stub that suggests an unsupported operational workflow.
 | Disbursal | Policy snapshot, outbox, DEA adapter, accounting readiness |
 | Repayment | Successful disbursal posting, balances, outbox |
 | Accrual/capitalization | Policy snapshot, balances, outbox |
-| Full/partial release | Balances, accrual catch-up, valuation/LTV, custody, outbox |
+| Full release | Balances, accrual catch-up, custody, outbox |
+| Release and renew | Source balances, current valuation/LTV, item economics, custody, outbox |
 | Reversal | Original event, dependency graph, compensating DEA contract |
 | Staff lifecycle UI | Corresponding service, selector, permissions, failure states |
 | Cutover | E2-E5 gates, unified reads, comparison, runbook, feature flag |

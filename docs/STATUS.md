@@ -10,6 +10,15 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- The accepted release-and-renew ADR now prohibits new same-loan partial
+  collateral releases. The partial-release action is removed from the active
+  loan UI; its historical URL returns an explicit Gone response and its service
+  boundary rejects before mutation. Partial repayment still changes only dues,
+  full release still returns all remaining collateral and closes the loan, and
+  historical immutable partial-release evidence remains readable/reversible.
+  The next implementation slice upgrades renewal to return selected old items,
+  transfer retained items, accept additional collateral, and create a freshly
+  valued and numbered successor.
 - Loans corrective slice E7.3A.6 is complete: tenant migration `loans.0015`
   adds immutable collateral-level repayment allocation lines. Original
   principal is applied to outstanding item tranches in descending frozen

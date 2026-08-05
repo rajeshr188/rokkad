@@ -294,23 +294,6 @@ class PawnFullReleaseForm(forms.Form):
         self.fields["settlement_amount"].widget.attrs["class"] = "form-control"
 
 
-class PawnPartialReleaseForm(PawnFullReleaseForm):
-    selected_items = forms.ModelMultipleChoiceField(
-        queryset=PawnCollateralItem.objects.none(),
-        widget=forms.CheckboxSelectMultiple,
-    )
-
-    def __init__(self, *args, loan, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["settlement_amount"].required = False
-        self.fields["settlement_amount"].help_text = (
-            "Preview the selected collateral first, then enter the displayed minimum."
-        )
-        self.fields["selected_items"].queryset = loan.collateral_items.filter(
-            custody_state="IN_VAULT"
-        ).order_by("pk")
-
-
 class PawnReversalForm(forms.Form):
     reason = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"})

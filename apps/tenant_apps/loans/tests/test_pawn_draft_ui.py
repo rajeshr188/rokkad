@@ -389,7 +389,8 @@ class PawnDraftUiTests(TenantTestCase):
 
         self.assertContains(detail, "Record repayment")
         self.assertContains(detail, "Accrue interest")
-        self.assertContains(detail, "Partial release")
+        self.assertNotContains(detail, "Partial release")
+        self.assertContains(detail, "Release and renew")
         self.assertContains(detail, "Full release")
         self.assertContains(
             detail,
@@ -453,36 +454,17 @@ class PawnDraftUiTests(TenantTestCase):
             actor=self.owner,
         )
 
-    def test_partial_release_previews_minimum_before_dispatch(self):
+    def test_partial_release_route_is_gone_without_dispatch(self):
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
-        collateral = loan.collateral_items.get()
-        quote = SimpleNamespace(
-            minimum_settlement=Decimal("2200.00"),
-            fees_and_interest_settlement=Decimal("200.00"),
-            principal_reduction_required=Decimal("2000.00"),
-            blockers=(),
+        response = self.client.post(
+            reverse("loans:pawn_loan_release_partial", args=[loan.pk]),
         )
-        with (
-            patch("apps.tenant_apps.loans.views._release_quote", return_value=quote),
-            patch("apps.tenant_apps.loans.views.release_pawn_loan_partially") as command,
-        ):
-            response = self.client.post(
-                reverse("loans:pawn_loan_release_partial", args=[loan.pk]),
-                {
-                    "selected_items": [collateral.pk],
-                    "settlement_amount": "",
-                    "request_key": "partial-preview-1",
-                    "action": "preview",
-                },
-            )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "2200.00")
-        self.assertContains(response, "Preview minimum")
-        command.assert_not_called()
+        self.assertEqual(response.status_code, 410)
+        self.assertContains(response, "release and renew", status_code=410)
 
     def _configured_setup(self):
         license = LoanLicense.objects.create(

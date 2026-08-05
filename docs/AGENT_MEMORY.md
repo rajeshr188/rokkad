@@ -120,6 +120,16 @@ misordering, or aggregate mismatch fails closed. Receipts expose the immutable
 allocation trail. Release, auction, and renewal principal movement still needs
 equivalent item-level lifecycle evidence before it may alter these bases.
 
+ADR `2026-08-05-pawn-loan-release-and-renew-only.md` supersedes support for new
+same-loan partial collateral release. The supported boundaries are partial
+repayment without custody change, full settlement/release/closure, and release
+and renew into a newly numbered successor containing selected retained and
+optional additional collateral. The old partial-release HTTP and service
+boundaries fail closed; historical immutable partial releases remain readable
+and reversible. Renewal must create fresh item allocation, rate, valuation/LTV,
+fee, advance-interest, approval, lineage, custody, and opening evidence rather
+than mutating the source contract.
+
 Use a generic party model where possible:
 
 - Customer

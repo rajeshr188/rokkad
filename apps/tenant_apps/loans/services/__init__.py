@@ -81,7 +81,6 @@ from .pawn_reversal import (
 )
 from .pawn_release import (
     PawnFullReleaseResult,
-    PawnPartialReleaseResult,
     PawnReleaseError,
     release_pawn_loan_partially,
     release_pawn_loan_in_full,
@@ -197,7 +196,6 @@ __all__ = (
     "PawnReversalResult",
     "reverse_pawn_loan_event",
     "PawnFullReleaseResult",
-    "PawnPartialReleaseResult",
     "PawnReleaseError",
     "release_pawn_loan_partially",
     "release_pawn_loan_in_full",

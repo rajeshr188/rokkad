@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseGone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -39,7 +39,6 @@ from apps.tenant_apps.loans.forms import (
     PawnAuctionInitiateForm,
     PawnAuctionCompletionForm,
     PawnRenewalForm,
-    PawnPartialReleaseForm,
     PawnRepaymentForm,
     PawnReversalForm,
     PawnSetupTransferForm,
@@ -114,7 +113,6 @@ from apps.tenant_apps.loans.services import (
     resolve_pawn_loan_economic_policy,
     resolve_pawn_metal_interest_rate_policy,
     release_pawn_loan_in_full,
-    release_pawn_loan_partially,
     reopen_pawn_loan,
     retry_failed_outbox_event,
     reverse_pawn_loan_event,
@@ -596,48 +594,10 @@ def pawn_loan_release_full(request, pk):
 
 @loans_workspace_required
 def pawn_loan_release_partial(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    form = PawnPartialReleaseForm(
-        request.POST or None,
-        loan=loan,
-        initial={"request_key": uuid.uuid4().hex},
-    )
-    quote = None
-    if request.method == "POST" and form.is_valid():
-        selected_ids = tuple(
-            form.cleaned_data["selected_items"].values_list("pk", flat=True)
-        )
-        try:
-            quote = _release_quote(loan, selected_ids)
-            if request.POST.get("action") != "preview":
-                if form.cleaned_data["settlement_amount"] is None:
-                    form.add_error(
-                        "settlement_amount",
-                        "Enter the displayed minimum settlement to complete release.",
-                    )
-                elif quote.blockers:
-                    form.add_error(None, "Resolve the release-readiness blockers first.")
-                else:
-                    release_pawn_loan_partially(
-                        loan.pk,
-                        selected_item_ids=selected_ids,
-                        settlement_amount=form.cleaned_data["settlement_amount"],
-                        request_key=form.cleaned_data["request_key"],
-                        actor=request.user,
-                    )
-        except (ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            if request.POST.get("action") != "preview" and not form.errors:
-                messages.success(request, "Partial settlement and selected custody return recorded.")
-                return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return _render_action(
-        request,
-        loan,
-        form,
-        "Partial release",
-        "Select vault items and collect the calculated minimum shown after validation.",
-        {"quote": quote, "supports_preview": True},
+    _pawn_loan_for_workspace(request, pk)
+    return HttpResponseGone(
+        "Partial collateral release is no longer supported. "
+        "Use full release or release and renew into a newly numbered PawnLoan."
     )
 
 

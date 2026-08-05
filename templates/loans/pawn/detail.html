@@ -8,7 +8,7 @@
     {% if loan.state == 'ACTIVE' and can_administer %}<a class="btn btn-outline-dark" href="{% url 'loans:pawn_loan_auction_initiate' loan.pk %}">Initiate auction</a>{% endif %}
     {% if loan.state == 'DRAFT' %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_update' loan.pk %}">Correct draft</a><a class="btn btn-outline-danger" href="{% url 'loans:pawn_loan_cancel' loan.pk %}">Cancel</a>
     {% elif loan.state == 'APPROVED' %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reopen' loan.pk %}">Return to draft</a><a class="btn btn-outline-danger" href="{% url 'loans:pawn_loan_cancel' loan.pk %}">Cancel</a>
-    {% elif loan.state == 'ACTIVE' %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_accrue' loan.pk %}">Accrue interest</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_repay' loan.pk %}">Repayment</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_renew' loan.pk %}">Renew</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_release_partial' loan.pk %}">Partial release</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_release_full' loan.pk %}">Full release</a>{% endif %}
+    {% elif loan.state == 'ACTIVE' %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_accrue' loan.pk %}">Accrue interest</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_repay' loan.pk %}">Repayment</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_renew' loan.pk %}">Release and renew</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_release_full' loan.pk %}">Full release</a>{% endif %}
   </div>
 </div>
 
