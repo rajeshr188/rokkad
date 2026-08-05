@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-08-04
+updated: 2026-08-05
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -10,6 +10,19 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans corrective slice E7.3A.2 is complete: tenant migration `loans.0012`
+  adds effective-dated workspace configuration with optional license
+  overrides for valuation/LTV/advance-interest policy, metal-specific monthly
+  rates, and fixed/percentage fees. Deterministic tenant-checked resolvers use
+  license-over-workspace precedence, merge fee codes, honor date ranges, and
+  fail explicitly on missing required policy. Collateral rows now have
+  nullable allocated-principal, frozen-rate, and rate-policy provenance fields
+  so existing development history is not fabricated. Thirty-two focused
+  policy, economics, core-model, registration, and draft-compatibility tests
+  pass, and the migration is applied to all local tenant schemas. Runtime
+  draft/disbursal behavior remains on
+  the compatibility path until E7.3A.3 connects setup, valuation, LTV, draft,
+  and approval as one enforced boundary.
 - Loans corrective slice E7.3A.1 is complete: the accepted collateral-tranche
   ADR replaces the single-rate calculation assumption with item-allocated
   principal and metal-specific interest. A database-free calculator now

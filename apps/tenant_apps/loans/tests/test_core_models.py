@@ -27,6 +27,7 @@ from apps.tenant_apps.loans.models import (
     LoanSeries,
     PawnCollateralItem,
     PawnLoan,
+    PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.party.models import Party
 
@@ -271,3 +272,31 @@ class LoansCoreModelTests(TenantTestCase):
 
         with self.assertRaises(ValidationError):
             item.full_clean()
+
+    def test_collateral_rate_policy_must_match_metal_and_license(self):
+        loan = self.build_loan()
+        loan.save()
+        wrong_license_rate = PawnMetalInterestRatePolicy.objects.create(
+            workspace=self.workspace_a,
+            license=self.license_b,
+            metal=CollateralMetal.GOLD.value,
+            monthly_interest_rate=Decimal("2.000000"),
+            effective_from=date(2026, 1, 1),
+        )
+        item = PawnCollateralItem(
+            loan=loan,
+            description="Gold ring",
+            metal=CollateralMetal.GOLD.value,
+            gross_weight=Decimal("2.0000"),
+            net_weight=Decimal("1.9000"),
+            purity_percentage=Decimal("91.6000"),
+            latest_appraised_value=Decimal("7000.00"),
+            allocated_principal=Decimal("5000.00"),
+            monthly_interest_rate=Decimal("2.000000"),
+            interest_rate_policy=wrong_license_rate,
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            item.full_clean()
+
+        self.assertIn("interest_rate_policy", error.exception.message_dict)

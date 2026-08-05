@@ -11,6 +11,7 @@ from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
     CollateralMetal,
     DisbursalPolicySnapshot,
+    FeeCalculationType,
     InterestMethod,
     LoanDocumentKind,
     LoanOutboxStatus,
@@ -139,6 +140,249 @@ class LoanSeries(models.Model):
 
     def __str__(self):
         return f"{self.license.license_number}/{self.code}"
+
+
+class PawnLoanEconomicPolicy(models.Model):
+    workspace = models.ForeignKey(
+        "orgs.Company",
+        on_delete=models.PROTECT,
+        related_name="pawn_loan_economic_policies",
+    )
+    license = models.ForeignKey(
+        LoanLicense,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="economic_policies",
+    )
+    valuation_method = models.CharField(
+        max_length=40,
+        choices=enum_choices(ValuationMethod),
+        default=ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL.value,
+    )
+    maximum_ltv_ratio = models.DecimalField(
+        max_digits=7,
+        decimal_places=6,
+        default=Decimal("0.800000"),
+    )
+    advance_interest_periods = models.PositiveSmallIntegerField(default=1)
+    effective_from = models.DateField(default=timezone.localdate, db_index=True)
+    effective_until = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_economic_policies_created",
+    )
+
+    class Meta:
+        ordering = ("workspace_id", "license_id", "-effective_from", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "effective_from"),
+                condition=Q(license__isnull=True),
+                name="loans_econ_ws_date_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("license", "effective_from"),
+                condition=Q(license__isnull=False),
+                name="loans_econ_license_date_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(maximum_ltv_ratio__gt=0)
+                & Q(maximum_ltv_ratio__lte=1),
+                name="loans_econ_ltv_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(advance_interest_periods__lte=12),
+                name="loans_econ_advance_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(effective_until__isnull=True)
+                | Q(effective_until__gte=F("effective_from")),
+                name="loans_econ_dates_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("workspace", "license", "is_active", "effective_from"),
+                name="loans_econ_resolve_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        _validate_policy_scope(self, label="Economic policy")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+
+class PawnMetalInterestRatePolicy(models.Model):
+    workspace = models.ForeignKey(
+        "orgs.Company",
+        on_delete=models.PROTECT,
+        related_name="pawn_metal_interest_rate_policies",
+    )
+    license = models.ForeignKey(
+        LoanLicense,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="metal_interest_rate_policies",
+    )
+    metal = models.CharField(max_length=16, choices=enum_choices(CollateralMetal))
+    monthly_interest_rate = models.DecimalField(max_digits=9, decimal_places=6)
+    effective_from = models.DateField(default=timezone.localdate, db_index=True)
+    effective_until = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_metal_interest_rate_policies_created",
+    )
+
+    class Meta:
+        ordering = ("workspace_id", "license_id", "metal", "-effective_from", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "metal", "effective_from"),
+                condition=Q(license__isnull=True),
+                name="loans_rate_ws_metal_date_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("license", "metal", "effective_from"),
+                condition=Q(license__isnull=False),
+                name="loans_rate_license_date_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(monthly_interest_rate__gte=0)
+                & Q(monthly_interest_rate__lte=100),
+                name="loans_rate_percent_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(effective_until__isnull=True)
+                | Q(effective_until__gte=F("effective_from")),
+                name="loans_rate_dates_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("workspace", "license", "metal", "is_active", "effective_from"),
+                name="loans_rate_resolve_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        _validate_policy_scope(self, label="Metal interest-rate policy")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+
+class PawnLoanFeePolicy(models.Model):
+    workspace = models.ForeignKey(
+        "orgs.Company",
+        on_delete=models.PROTECT,
+        related_name="pawn_loan_fee_policies",
+    )
+    license = models.ForeignKey(
+        LoanLicense,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="fee_policies",
+    )
+    code = models.CharField(max_length=32)
+    name = models.CharField(max_length=100)
+    calculation_type = models.CharField(
+        max_length=16,
+        choices=enum_choices(FeeCalculationType),
+    )
+    value = models.DecimalField(max_digits=18, decimal_places=6)
+    deducted_at_disbursal = models.BooleanField(default=True)
+    effective_from = models.DateField(default=timezone.localdate, db_index=True)
+    effective_until = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pawn_loan_fee_policies_created",
+    )
+
+    class Meta:
+        ordering = ("workspace_id", "license_id", "code", "-effective_from", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "code", "effective_from"),
+                condition=Q(license__isnull=True),
+                name="loans_fee_ws_code_date_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("license", "code", "effective_from"),
+                condition=Q(license__isnull=False),
+                name="loans_fee_license_date_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(value__gte=0),
+                name="loans_fee_value_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(effective_until__isnull=True)
+                | Q(effective_until__gte=F("effective_from")),
+                name="loans_fee_dates_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("workspace", "license", "code", "is_active", "effective_from"),
+                name="loans_fee_resolve_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        _validate_policy_scope(self, label="Fee policy")
+        if (
+            self.calculation_type == FeeCalculationType.PERCENTAGE.value
+            and self.value is not None
+            and self.value > Decimal("100")
+        ):
+            raise ValidationError({"value": "Percentage fees cannot exceed 100%."})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+
+def _validate_policy_scope(policy, *, label):
+    errors = {}
+    tenant_workspace_id = current_tenant_workspace_id()
+    if tenant_workspace_id and policy.workspace_id != tenant_workspace_id:
+        errors["workspace"] = f"{label} workspace must match the active tenant."
+    if policy.license_id and policy.workspace_id:
+        if policy.license.workspace_id != policy.workspace_id:
+            errors["license"] = f"{label} license must belong to its workspace."
+    if (
+        policy.effective_until
+        and policy.effective_from
+        and policy.effective_until < policy.effective_from
+    ):
+        errors["effective_until"] = "Effective-until cannot precede effective-from."
+    if errors:
+        raise ValidationError(errors)
 
 
 class LoanNumberSequence(models.Model):
@@ -332,6 +576,25 @@ class PawnCollateralItem(models.Model):
         null=True,
         blank=True,
     )
+    allocated_principal = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    monthly_interest_rate = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+    )
+    interest_rate_policy = models.ForeignKey(
+        PawnMetalInterestRatePolicy,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="collateral_items",
+    )
     custody_state = models.CharField(
         max_length=32,
         choices=enum_choices(CollateralCustodyState),
@@ -373,6 +636,19 @@ class PawnCollateralItem(models.Model):
                 | Q(latest_appraised_value__gt=0),
                 name="loans_item_appraisal_positive",
             ),
+            models.CheckConstraint(
+                condition=Q(allocated_principal__isnull=True)
+                | Q(allocated_principal__gt=0),
+                name="loans_item_allocation_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(monthly_interest_rate__isnull=True)
+                | (
+                    Q(monthly_interest_rate__gte=0)
+                    & Q(monthly_interest_rate__lte=100)
+                ),
+                name="loans_item_rate_range",
+            ),
         ]
         indexes = [
             models.Index(
@@ -380,6 +656,31 @@ class PawnCollateralItem(models.Model):
                 name="loans_item_custody_idx",
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.interest_rate_policy_id and self.loan_id:
+            policy = self.interest_rate_policy
+            if policy.workspace_id != self.loan.workspace_id:
+                raise ValidationError(
+                    {"interest_rate_policy": "Rate policy must belong to the loan workspace."}
+                )
+            if policy.metal != self.metal:
+                raise ValidationError(
+                    {"interest_rate_policy": "Rate policy metal must match the collateral metal."}
+                )
+            if policy.license_id and policy.license_id != self.loan.license_id:
+                raise ValidationError(
+                    {
+                        "interest_rate_policy": (
+                            "A license-specific rate policy must match the loan license."
+                        )
+                    }
+                )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
 
 class LoanPolicySnapshot(models.Model):

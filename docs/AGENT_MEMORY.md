@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-08-04
+updated: 2026-08-05
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
@@ -77,10 +77,13 @@ PawnLoan collateral economics were clarified on 2026-08-05 in ADR
 owns allocated principal and a frozen metal-specific monthly rate; loan totals
 are sums, item allocation cannot exceed valuation times LTV, and gross
 principal is distinct from net cash after configurable advance interest and
-fees. E7.3A.1 provides the tested database-free calculation contract. Runtime
-schema and workflows still use the old single-rate shape until the complete
-E7.3A.2 persistence boundary is implemented; do not introduce isolated partial
-fields or reinterpret existing development history.
+fees. E7.3A.1 provides the tested database-free calculation contract, and
+E7.3A.2 adds effective-dated tenant configuration plus nullable collateral
+allocation/rate provenance in `loans.0012`. Policy resolution is explicitly
+license-over-workspace and date-aware. Runtime workflows still use the old
+single-rate compatibility path until E7.3A.3 connects setup, valuation/LTV,
+draft writes, and approval together; do not reinterpret existing development
+history or make the nullable fields look operational before that switch.
 
 Use a generic party model where possible:
 
