@@ -10,6 +10,19 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans corrective slice E7.3A.7.2 is complete: tenant migration `loans.0016`
+  adds immutable item-principal closing lines for itemized full-release and
+  renewal-settlement events, plus immutable opening lines for explicit
+  release-and-renew successors. Closing lines freeze the item, rate, order,
+  balance before, principal settled, and zero balance after. Successor opening
+  lines freeze fresh item principal/rate and optional predecessor lineage;
+  later repayments and accruals reconstruct their tranche bases from these
+  openings without inventing a disbursal. Capitalized interest cannot be
+  carried into an explicit successor until it has item attribution. Legacy
+  aggregate loans remain on their compatibility path without fabricated
+  lines. Focused full-release and release-and-renew coverage passes, and
+  `loans.0016` is applied to all local tenant schemas. Reversal, reporting,
+  document, and reconciliation exposure is next.
 - Release-and-renew collateral selection is implemented. The staff form now
   separates existing collateral from optional additions: selected source items
   receive explicit successor allocations and predecessor lineage, omitted
@@ -19,8 +32,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   current metal rates and enforce per-item valuation/LTV before the atomic
   renewal commits. Source settlement and successor opening identify retained,
   returned, and additional items. Focused service/UI tests and all existing
-  renewal regression tests pass. No migration is required. Immutable
-  full-release and renewal item-principal evidence is next.
+  renewal regression tests pass. No migration was required for that slice.
 - The accepted release-and-renew ADR now prohibits new same-loan partial
   collateral releases. The partial-release action is removed from the active
   loan UI; its historical URL returns an explicit Gone response and its service

@@ -241,11 +241,29 @@ def _itemized_accrual_lines(
     try:
         disbursal = loan.disbursal_snapshot
     except PawnLoanDisbursalSnapshot.DoesNotExist:
-        return ()
-    tranches = tuple(disbursal.evidence.get("tranches") or ())
+        opening_event = loan.accounting_events.filter(
+            event_kind=TransactionKind.RENEWAL_OPENING.value,
+            reversed_by_event__isnull=True,
+        ).first()
+        opening_lines = (
+            tuple(opening_event.principal_opening_lines.order_by("allocation_order"))
+            if opening_event
+            else ()
+        )
+        tranches = tuple(
+            {
+                "collateral_item_id": line.collateral_item_id,
+                "allocated_principal": line.principal_opened,
+                "monthly_interest_rate": line.monthly_interest_rate,
+                "advance_interest": Decimal("0"),
+            }
+            for line in opening_lines
+        )
+    else:
+        tranches = tuple(disbursal.evidence.get("tranches") or ())
     if not tranches:
         raise PawnInterestError(
-            "Itemized PawnLoan disbursal is missing its frozen tranche evidence."
+            "Itemized PawnLoan is missing frozen opening tranche evidence."
         )
     try:
         principal_balances = {

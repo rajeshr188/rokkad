@@ -33,6 +33,8 @@ from apps.tenant_apps.loans.models import (
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanInterestAccrual,
+    PawnLoanPrincipalClosingLine,
+    PawnLoanPrincipalOpeningLine,
     PawnLoanRenewal,
     PawnLoanRenewalReversal,
     current_tenant_workspace_id,
@@ -63,6 +65,10 @@ from apps.tenant_apps.loans.services.pawn_interest import (
     should_record_pawn_accrual_event,
 )
 from apps.tenant_apps.loans.services.pawn_lifecycle import approve_pawn_loan
+from apps.tenant_apps.loans.services.pawn_tranches import (
+    PawnTrancheBalanceError,
+    get_pawn_principal_tranche_balances,
+)
 
 
 class PawnRenewalError(ValueError):
@@ -215,6 +221,16 @@ def renew_pawn_loan(
             else None
         )
         balance = get_pawn_loan_balance(source.pk, as_of_date=renewal_date)
+        try:
+            source_tranches = get_pawn_principal_tranche_balances(source)
+        except PawnTrancheBalanceError as exc:
+            raise PawnRenewalError(str(exc)) from exc
+        if source_tranches and sum(
+            (row.principal_outstanding for row in source_tranches), Decimal("0")
+        ) != balance.original_principal_outstanding:
+            raise PawnRenewalError(
+                "Renewal source item principal does not reconcile to original principal."
+            )
         if principal_paid >= balance.principal_outstanding:
             raise PawnRenewalError(
                 "Renewal must carry a positive principal; use full release to settle the loan."
@@ -312,6 +328,11 @@ def renew_pawn_loan(
     successor_original = (successor_principal - successor_capitalized).quantize(
         currency_quantum
     )
+    if retained_collateral is not None and successor_capitalized:
+        raise PawnRenewalError(
+            "Release and renew cannot carry capitalized interest until it has "
+            "explicit successor-item attribution. Settle it before renewal."
+        )
     source_control = (
         balance.principal_outstanding
         if source.policy_snapshot.accounting_recognition
@@ -364,6 +385,22 @@ def renew_pawn_loan(
         actor=actor,
         delivery_handler=delivery_handler,
     )
+    for order, row in enumerate(
+        sorted(
+            source_tranches,
+            key=lambda value: (-value.monthly_interest_rate, value.collateral_item_id),
+        ),
+        start=1,
+    ):
+        PawnLoanPrincipalClosingLine.objects.create(
+            accounting_event=settlement_event,
+            collateral_item_id=row.collateral_item_id,
+            allocation_order=order,
+            monthly_interest_rate=row.monthly_interest_rate,
+            balance_before=row.principal_outstanding,
+            principal_settled=row.principal_outstanding,
+            balance_after=Decimal("0"),
+        )
     opening_payload = renewal_opening_payload(
         successor,
         effective_date=renewal_date,
@@ -388,6 +425,22 @@ def renew_pawn_loan(
         actor=actor,
         delivery_handler=delivery_handler,
     )
+    if retained_collateral is not None:
+        if sum(
+            (item.allocated_principal for item in successor_items), Decimal("0")
+        ) != successor_original:
+            raise PawnRenewalError(
+                "Successor item principal does not reconcile to original principal."
+            )
+        for order, item in enumerate(successor_items, start=1):
+            PawnLoanPrincipalOpeningLine.objects.create(
+                accounting_event=opening_event,
+                collateral_item=item,
+                predecessor_collateral_item=item.renewed_from,
+                allocation_order=order,
+                monthly_interest_rate=item.monthly_interest_rate,
+                principal_opened=item.allocated_principal,
+            )
     valuation_snapshot = {
         "request_fingerprint": request_fingerprint,
         "valuation_method": readiness.valuation_method,

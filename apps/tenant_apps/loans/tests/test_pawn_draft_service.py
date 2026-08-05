@@ -1,11 +1,12 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import connection
+from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import (
@@ -23,6 +24,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanDisbursalSnapshot,
     PawnLoanInterestAccrualLine,
+    PawnLoanPrincipalClosingLine,
     PawnLoanRepaymentAllocationLine,
 )
 from apps.tenant_apps.loans.services import (
@@ -38,10 +40,12 @@ from apps.tenant_apps.loans.services import (
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
+    release_pawn_loan_in_full,
     reverse_pawn_loan_event,
     update_pawn_draft,
 )
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.rates.models import Rate, RateSource
 
 
 class PawnDraftServiceTests(TenantTestCase):
@@ -581,3 +585,97 @@ class PawnDraftServiceTests(TenantTestCase):
                 monthly_interest_rate=rate,
                 effective_from=date(2026, 1, 1),
             )
+
+    @patch(
+        "apps.tenant_apps.loans.services.pawn_release.require_pawn_loan_accounting_readiness"
+    )
+    @patch(
+        "apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness"
+    )
+    def test_full_release_freezes_item_principal_closing_evidence(
+        self, _disbursal_readiness, _release_readiness
+    ):
+        self._economic_setup()
+        LoanNumberSequence.objects.create(
+            series=self.series,
+            document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE.value,
+            prefix="RL-A-",
+            width=5,
+            maximum_number=10000,
+        )
+        rate_source = RateSource.objects.create(name="Release", location="Market")
+        for metal in (Rate.Metal.GOLD, Rate.Metal.SILVER):
+            rate = Rate.objects.create(
+                metal=metal,
+                currency=Rate.Currency.INR,
+                purity=Rate.Purity.K24,
+                buying_rate=Decimal("10000.00"),
+                selling_rate=Decimal("10100.00"),
+                rate_source=rate_source,
+            )
+            Rate.objects.filter(pk=rate.pk).update(
+                timestamp=timezone.make_aware(datetime(2026, 7, 18, 12, 0))
+            )
+        loan = create_pawn_draft(
+            self.command(
+                principal_amount=Decimal("100000.00"),
+                collateral=(
+                    self.collateral(
+                        allocated_principal=Decimal("60000.00"),
+                    ),
+                    self.collateral(
+                        description="Silver anklet",
+                        metal=CollateralMetal.SILVER,
+                        latest_appraised_value=Decimal("80000.00"),
+                        allocated_principal=Decimal("40000.00"),
+                    ),
+                ),
+            ),
+            actor=self.actor,
+        )
+        approve_pawn_loan(loan.pk, actor=self.actor)
+        posted = lambda _event: type(
+            "Receipt", (), {"dea_voucher_id": None, "dea_journal_entry_id": None}
+        )()
+        with self.captureOnCommitCallbacks(execute=True):
+            disburse_pawn_loan(
+                loan.pk,
+                effective_date=date(2026, 7, 18),
+                actor=self.actor,
+                delivery_handler=posted,
+            )
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_release.timezone.localdate",
+            return_value=date(2026, 7, 18),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                result = release_pawn_loan_in_full(
+                    loan.pk,
+                    settlement_amount=Decimal("100000.00"),
+                    request_key="itemized-full-release",
+                    actor=self.actor,
+                    delivery_handler=posted,
+                )
+
+        lines = list(
+            PawnLoanPrincipalClosingLine.objects.filter(
+                accounting_event=result.accounting_event
+            ).order_by("allocation_order")
+        )
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(
+            [line.monthly_interest_rate for line in lines],
+            [Decimal("4.000000"), Decimal("2.000000")],
+        )
+        self.assertEqual(
+            [line.balance_before for line in lines],
+            [Decimal("40000.0000"), Decimal("60000.0000")],
+        )
+        self.assertEqual(
+            sum((line.principal_settled for line in lines), Decimal("0")),
+            Decimal("100000.0000"),
+        )
+        self.assertTrue(all(line.balance_after == 0 for line in lines))
+        with self.assertRaisesRegex(ValidationError, "immutable"):
+            lines[0].save()

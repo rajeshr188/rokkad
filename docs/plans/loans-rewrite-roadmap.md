@@ -734,7 +734,7 @@ not silently reinterpreted; all dependent lifecycle and reversal tests pass.
 E7.4 FundingLoan/repledging must wait for this corrective slice because it
 depends on trustworthy collateral-level principal and custody economics.
 
-Execution status: E7.3A.1 through E7.3A.6 are complete. The accepted ADR and
+Execution status: E7.3A.1 through E7.3A.7.2 are complete. The accepted ADR and
 database-free calculator define the economics. Tenant migration `loans.0012`
 adds effective-dated workspace policies with optional license overrides for
 valuation/LTV/advance interest, metal-specific interest rates, and fees. It
@@ -768,9 +768,15 @@ Capitalized-interest principal remains separate. The accepted release-and-renew
 ADR disables new same-loan partial collateral release. E7.3A.7.1 is complete:
 release and renew selects retained source items, returns omitted items, accepts
 additional collateral, creates explicit lineage, and runs fresh successor item
-allocation/rate/valuation/LTV validation. E7.3A.7.2 is next: add immutable
-item-principal movement evidence to full release and renewal. Auction item
-allocation follows after that boundary.
+allocation/rate/valuation/LTV validation. Tenant migration `loans.0016`
+completes E7.3A.7.2 with immutable source closing lines for itemized full
+release and renewal, and immutable successor opening lines carrying fresh item
+principal/rate plus optional predecessor lineage. Renewal successors reconstruct
+repayment and accrual tranche bases from active opening evidence. Legacy
+aggregate loans receive no fabricated lines, and explicit renewal rejects
+unattributed carried capitalized interest. Reversal, reports, PDFs, and
+reconciliation must now expose and verify this evidence before auction item
+allocation follows.
 
 #### E7.4 Add FundingLoan And Repledging
 

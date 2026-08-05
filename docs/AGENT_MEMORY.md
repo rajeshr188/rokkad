@@ -117,8 +117,20 @@ Item-level accrual bases are reconstructed from the disbursal snapshot and
 active repayment lines; reversing a repayment restores prior bases by excluding
 the reversed event, never by editing its lines. Any gap, discontinuity,
 misordering, or aggregate mismatch fails closed. Receipts expose the immutable
-allocation trail. Release, auction, and renewal principal movement still needs
-equivalent item-level lifecycle evidence before it may alter these bases.
+allocation trail. Release and renewal evidence is described below; auction
+still needs equivalent item-level lifecycle evidence before it may alter these
+bases.
+
+E7.3A.7.2 adds `PawnLoanPrincipalClosingLine` and
+`PawnLoanPrincipalOpeningLine` in tenant migration `loans.0016`. New itemized
+full releases and renewal settlements freeze each source item's remaining
+principal to zero in rate-descending deterministic order. Explicit
+release-and-renew successors freeze fresh item principal/rate and optional
+predecessor lineage on their operational opening event; tranche reconstruction
+and later accruals use those active opening lines when no disbursal snapshot
+exists. Reversed opening events are excluded rather than mutated. Do not invent
+lines for legacy aggregate loans. Explicit renewal fails closed if capitalized
+interest would be carried because that amount has no successor-item attribution.
 
 ADR `2026-08-05-pawn-loan-release-and-renew-only.md` supersedes support for new
 same-loan partial collateral release. The supported boundaries are partial

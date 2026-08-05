@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import connection
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
@@ -58,6 +59,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoanReleaseReversal,
     PawnLoanRenewal,
     PawnLoanRenewalReversal,
+    PawnLoanPrincipalOpeningLine,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -98,6 +100,9 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
     get_pawn_loan_release_readiness,
     get_pawn_loan_reports,
+)
+from apps.tenant_apps.loans.services.pawn_tranches import (
+    get_pawn_principal_tranche_balances,
 )
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.rates.models import Rate, RateSource
@@ -1561,6 +1566,32 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(successor_items[1].allocated_principal, Decimal("9000.0000"))
         self.assertEqual(successor_items[0].monthly_interest_rate, Decimal("2.000000"))
         self.assertEqual(successor_items[1].monthly_interest_rate, Decimal("4.000000"))
+        opening_lines = tuple(
+            PawnLoanPrincipalOpeningLine.objects.filter(
+                accounting_event=result.opening_event
+            ).order_by("allocation_order")
+        )
+        self.assertEqual(len(opening_lines), 2)
+        self.assertEqual(opening_lines[0].predecessor_collateral_item_id, retained_item.pk)
+        self.assertIsNone(opening_lines[1].predecessor_collateral_item_id)
+        self.assertEqual(
+            sum((line.principal_opened for line in opening_lines), Decimal("0")),
+            Decimal("39000.0000"),
+        )
+        with self.assertRaisesRegex(ValidationError, "immutable"):
+            opening_lines[0].save()
+        reconstructed = get_pawn_principal_tranche_balances(result.successor_loan)
+        self.assertEqual(
+            sum((row.principal_outstanding for row in reconstructed), Decimal("0")),
+            Decimal("39000.0000"),
+        )
+        successor_preview = preview_pawn_loan_accruals(
+            result.successor_loan.pk,
+            as_of_date=date(2026, 9, 2),
+            include_partial=False,
+        )[0]
+        self.assertEqual(successor_preview.calculation_base, Decimal("39000.0000"))
+        self.assertEqual(successor_preview.recognized_interest, Decimal("960.00"))
 
     def test_renewal_is_idempotent(self):
         self._activate_loan()

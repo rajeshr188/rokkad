@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-06-18
+updated: 2026-08-05
 tags: [domain, accounting, dea]
 related: [../flows/dea-posting-flow.md, ../implementation/dea-vouchers.md, ../implementation/dependency-policy.md, party.md, ../adr/2026-06-18-party-domain-model.md]
 ---
@@ -49,6 +49,7 @@ Implementation status:
 - PawnLoan monthly accrual headers retain high-precision calculations and store currency-rounded newly due amounts. New itemized loans also persist immutable collateral-level lines containing principal base, frozen metal rate, period fraction, calculated interest, advance interest consumed, and newly due interest. Under accrual accounting, uncovered interest debits interest receivable and credits interest income with borrower attribution, while prepaid coverage debits Unearned Revenue and credits interest income without creating a second receivable. Under cash accounting, accrual and capitalization remain operational-only, and a prepaid period creates no second charge. Explicit capitalization reclassifies interest receivable into principal control; repayment preserves the capitalized-interest component so collection credits interest income instead of principal control.
 - PawnLoan disbursal, repayment, accrual, and capitalization corrections are explicit reversal source events linked one-to-one to immutable originals. Loans enforces administrator authority, mandatory reason, posted-original readiness, and newest-first dependency order; DEA reverses the original voucher through its journal-reversal service. Cash-policy operational-only events receive compensating domain events without synthetic accounting vouchers.
 - New same-loan partial collateral releases are prohibited. Partial repayment returns no collateral; full release settles and closes the source; release and renew records an immutable source settlement plus newly numbered successor opening. DEA may post the net cash movement while retaining both gross business facts and their source links.
+- Itemized full release and renewal settlement freeze each collateral tranche's remaining original principal into immutable closing lines. An explicit release-and-renew successor freezes its newly allocated item principal, metal rate, and predecessor lineage in immutable opening lines. Successor repayment and interest calculations reconstruct from the active opening event; reversal excludes the reversed event instead of editing evidence. Legacy aggregate loans receive no invented item allocation, and capitalized interest cannot be carried into an explicit successor until an item-attribution rule exists.
 
 ## BusinessDoc Classification
 

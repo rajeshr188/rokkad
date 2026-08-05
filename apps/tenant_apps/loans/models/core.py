@@ -1241,6 +1241,156 @@ class PawnLoanRepaymentAllocationLine(models.Model):
         raise ValidationError("PawnLoan repayment allocation lines cannot be deleted.")
 
 
+class PawnLoanPrincipalClosingLine(models.Model):
+    """Immutable item-principal settlement for release or renewal closure."""
+
+    accounting_event = models.ForeignKey(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="principal_closing_lines",
+    )
+    collateral_item = models.ForeignKey(
+        PawnCollateralItem,
+        on_delete=models.PROTECT,
+        related_name="principal_closing_lines",
+    )
+    allocation_order = models.PositiveSmallIntegerField()
+    monthly_interest_rate = models.DecimalField(max_digits=12, decimal_places=6)
+    balance_before = models.DecimalField(max_digits=18, decimal_places=4)
+    principal_settled = models.DecimalField(max_digits=18, decimal_places=4)
+    balance_after = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        ordering = ("accounting_event_id", "allocation_order")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("accounting_event", "collateral_item"),
+                name="loans_close_event_item_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("accounting_event", "allocation_order"),
+                name="loans_close_event_order_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(allocation_order__gt=0),
+                name="loans_close_order_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(monthly_interest_rate__gte=0)
+                    & Q(balance_before__gte=0)
+                    & Q(principal_settled__gte=0)
+                    & Q(balance_after__gte=0)
+                ),
+                name="loans_close_line_amounts_valid",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.accounting_event_id and self.collateral_item_id:
+            if self.accounting_event.loan_id != self.collateral_item.loan_id:
+                raise ValidationError(
+                    "Closing-line collateral must belong to the event PawnLoan."
+                )
+            if self.accounting_event.event_kind not in {
+                TransactionKind.RELEASE_RECEIPT.value,
+                TransactionKind.RENEWAL_SETTLEMENT.value,
+            }:
+                raise ValidationError(
+                    "Closing lines require a release or renewal-settlement event."
+                )
+        if (
+            self.balance_before is not None
+            and self.principal_settled is not None
+            and self.balance_after is not None
+            and self.balance_before - self.principal_settled != self.balance_after
+        ):
+            raise ValidationError("Closing-line balances do not reconcile.")
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan principal closing lines are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan principal closing lines cannot be deleted.")
+
+
+class PawnLoanPrincipalOpeningLine(models.Model):
+    """Immutable initial item-principal evidence for a renewal successor."""
+
+    accounting_event = models.ForeignKey(
+        PawnLoanAccountingEvent,
+        on_delete=models.PROTECT,
+        related_name="principal_opening_lines",
+    )
+    collateral_item = models.OneToOneField(
+        PawnCollateralItem,
+        on_delete=models.PROTECT,
+        related_name="principal_opening_line",
+    )
+    predecessor_collateral_item = models.ForeignKey(
+        PawnCollateralItem,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="successor_principal_opening_lines",
+    )
+    allocation_order = models.PositiveSmallIntegerField()
+    monthly_interest_rate = models.DecimalField(max_digits=12, decimal_places=6)
+    principal_opened = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        ordering = ("accounting_event_id", "allocation_order")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("accounting_event", "allocation_order"),
+                name="loans_open_event_order_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(allocation_order__gt=0),
+                name="loans_open_order_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(monthly_interest_rate__gte=0)
+                & Q(principal_opened__gt=0),
+                name="loans_open_line_amounts_valid",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.accounting_event_id and self.collateral_item_id:
+            if self.accounting_event.loan_id != self.collateral_item.loan_id:
+                raise ValidationError(
+                    "Opening-line collateral must belong to the successor PawnLoan."
+                )
+            if self.accounting_event.event_kind != TransactionKind.RENEWAL_OPENING.value:
+                raise ValidationError("Opening lines require a renewal-opening event.")
+        if self.predecessor_collateral_item_id and self.collateral_item_id:
+            if self.predecessor_collateral_item_id == self.collateral_item_id:
+                raise ValidationError(
+                    "Renewal predecessor and successor collateral must differ."
+                )
+        if self.collateral_item_id:
+            expected_predecessor_id = self.collateral_item.renewed_from_id
+            if self.predecessor_collateral_item_id != expected_predecessor_id:
+                raise ValidationError(
+                    "Opening-line predecessor must match the collateral renewal lineage."
+                )
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan principal opening lines are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan principal opening lines cannot be deleted.")
+
+
 class PawnLoanRelease(models.Model):
     """Immutable settlement document authorizing a physical collateral return."""
 

@@ -7,6 +7,7 @@ from itertools import groupby
 
 from apps.tenant_apps.loans.models import (
     PawnLoanDisbursalSnapshot,
+    PawnLoanPrincipalOpeningLine,
     PawnLoanRepaymentAllocationLine,
 )
 
@@ -30,8 +31,26 @@ def get_pawn_principal_tranche_balances(
     try:
         disbursal = loan.disbursal_snapshot
     except PawnLoanDisbursalSnapshot.DoesNotExist:
-        return ()
-    tranches = tuple(disbursal.evidence.get("tranches") or ())
+        disbursal = None
+    if disbursal is not None:
+        tranches = tuple(disbursal.evidence.get("tranches") or ())
+    else:
+        opening_lines = tuple(
+            PawnLoanPrincipalOpeningLine.objects.filter(
+                accounting_event__loan=loan,
+                accounting_event__reversed_by_event__isnull=True,
+            ).order_by("allocation_order")
+        )
+        if not opening_lines:
+            return ()
+        tranches = tuple(
+            {
+                "collateral_item_id": line.collateral_item_id,
+                "allocated_principal": line.principal_opened,
+                "monthly_interest_rate": line.monthly_interest_rate,
+            }
+            for line in opening_lines
+        )
     if not tranches:
         raise PawnTrancheBalanceError(
             "Itemized PawnLoan disbursal is missing frozen tranche evidence."

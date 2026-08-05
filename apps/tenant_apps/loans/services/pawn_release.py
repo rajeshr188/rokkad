@@ -22,6 +22,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanInterestAccrual,
+    PawnLoanPrincipalClosingLine,
     PawnLoanRelease,
     PawnLoanReleaseItem,
     current_tenant_workspace_id,
@@ -46,6 +47,10 @@ from apps.tenant_apps.loans.services.pawn_interest import (
     persist_pawn_accrual_lines,
     preview_pawn_loan_accruals,
     should_record_pawn_accrual_event,
+)
+from apps.tenant_apps.loans.services.pawn_tranches import (
+    PawnTrancheBalanceError,
+    get_pawn_principal_tranche_balances,
 )
 
 
@@ -156,6 +161,17 @@ def release_pawn_loan_in_full(
             balance.capitalized_interest_principal_outstanding,
         )
         recognition = loan.policy_snapshot.accounting_recognition
+        try:
+            tranche_balances = get_pawn_principal_tranche_balances(loan)
+        except PawnTrancheBalanceError as exc:
+            raise PawnReleaseError(str(exc)) from exc
+        original_principal = principal_amount - capitalized_principal
+        if tranche_balances and sum(
+            (row.principal_outstanding for row in tranche_balances), Decimal("0")
+        ) != original_principal:
+            raise PawnReleaseError(
+                "Full-release item principal does not reconcile to original principal."
+            )
         require_pawn_loan_accounting_readiness(
             loan,
             effective_date=effective_date,
@@ -207,6 +223,22 @@ def release_pawn_loan_in_full(
         actor=actor,
         delivery_handler=delivery_handler,
     )
+    for order, row in enumerate(
+        sorted(
+            tranche_balances,
+            key=lambda value: (-value.monthly_interest_rate, value.collateral_item_id),
+        ),
+        start=1,
+    ):
+        PawnLoanPrincipalClosingLine.objects.create(
+            accounting_event=event,
+            collateral_item_id=row.collateral_item_id,
+            allocation_order=order,
+            monthly_interest_rate=row.monthly_interest_rate,
+            balance_before=row.principal_outstanding,
+            principal_settled=row.principal_outstanding,
+            balance_after=Decimal("0"),
+        )
     release = PawnLoanRelease.objects.create(
         workspace=loan.workspace,
         loan=loan,
