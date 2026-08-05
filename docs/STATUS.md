@@ -20,8 +20,10 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   successor loans. Release and renewal PDFs expose item principal settlement,
   retained/returned/additional movement, and successor opening allocations.
   Focused selector/document and mixed tenant workflow tests pass. No migration
-  is required. Auction item-principal evidence remains deferred until auction
-  is included in the MVP pilot boundary.
+  is required. Auction item-principal evidence is tracked explicitly as
+  deferred slice E7.3A.8, with scope and acceptance criteria in the roadmap.
+  Auction must remain outside the limited MVP pilot until that slice is
+  completed.
 - Loans corrective slice E7.3A.7.2 is complete: tenant migration `loans.0016`
   adds immutable item-principal closing lines for itemized full-release and
   renewal-settlement events, plus immutable opening lines for explicit

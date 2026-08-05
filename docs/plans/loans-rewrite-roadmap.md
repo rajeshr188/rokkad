@@ -782,6 +782,41 @@ release/renewal verification PDFs. Auction item allocation remains the final
 collateral-principal evidence gap and may stay deferred when auction is outside
 the limited MVP pilot.
 
+#### E7.3A.8 Add Auction Item-Principal Evidence — Deferred Post-MVP
+
+This slice is explicitly deferred from the initial limited MVP pilot, not
+cancelled. The existing auction workflow may not be enabled in that pilot.
+Before auction is enabled for itemized PawnLoans, implement all of the
+following:
+
+- Freeze immutable allocation lines linking every disposed collateral item to
+  its principal recovered, remaining item principal, frozen monthly rate, and
+  deterministic allocation order.
+- Define and document how auction proceeds are allocated among fees, interest,
+  capitalized-interest principal, and original item principal. Original
+  principal allocation must never be guessed or distributed proportionally
+  without an accepted domain rule.
+- Reconcile auction item lines exactly to the aggregate recovery event and to
+  the pre-auction tranche balances reconstructed from disbursal or renewal
+  opening plus active repayments.
+- Extend auction reversal so evidence remains immutable and the compensating
+  event restores balances and custody/disposal state in strict reverse order.
+- Expose item allocation in auction recovery PDFs, operational reports, and
+  reconciliation, while preserving legacy aggregate auction history without
+  fabricated rows.
+- Add focused service, DEA payload, reversal, report, PDF, reconciliation, and
+  tenant-isolation tests.
+
+Acceptance: an itemized auction cannot complete without exact immutable item
+allocation; aggregate recovered original principal equals the sum of item
+lines; no item is allocated more than its pre-auction outstanding principal;
+reversal changes active interpretation without mutating evidence; and all
+source-to-DEA and custody totals reconcile.
+
+Reactivation trigger: move E7.3A.8 back into active execution before enabling
+auction routes, permissions, or operational pilot use for the Loans app. It is
+not a blocker while auction remains outside the pilot boundary.
+
 #### E7.4 Add FundingLoan And Repledging
 
 - Add the FundingLoan model, workspace numbering, lender payable accounting,

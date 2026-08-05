@@ -143,6 +143,15 @@ item settlement plus retained, returned, additional, and successor-opening
 facts. Reversal never deletes or changes principal evidence; active balance
 folds exclude the reversed opening event.
 
+Auction item-principal evidence is deliberately deferred as roadmap slice
+E7.3A.8 because auction is outside the initial limited MVP pilot. Do not remove
+or silently absorb this work. Before enabling Loans auction operations,
+E7.3A.8 must define deterministic proceeds allocation, persist immutable item
+recovery lines, reconcile them to pre-auction tranches and the aggregate event,
+support compensating reversal, expose the evidence in reports/PDFs, and cover
+tenant/accounting/custody boundaries. Legacy aggregate auctions must remain
+readable without fabricated item rows.
+
 ADR `2026-08-05-pawn-loan-release-and-renew-only.md` supersedes support for new
 same-loan partial collateral release. The supported boundaries are partial
 repayment without custody change, full settlement/release/closure, and release
@@ -161,8 +170,9 @@ equal calculated successor principal, and normal draft/approval economics
 resolve current metal rates and per-item valuation/LTV atomically. Payloads and
 snapshots identify retained, returned, and additional items. Legacy aggregate
 service calls retain the old all-item compatibility path only for existing
-development coverage; the browser never uses it. Composite reversal for mixed
-returned/retained/additional custody still requires its dedicated update.
+development coverage; the browser never uses it. Composite reversal now
+restores mixed returned/retained/additional source custody from each immutable
+renewal custody event.
 
 Use a generic party model where possible:
 
