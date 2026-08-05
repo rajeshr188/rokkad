@@ -10,6 +10,20 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans corrective slice E7.3A.3 is complete: Owner/Admin users can configure
+  effective-dated workspace defaults or license overrides for valuation/LTV,
+  advance-interest periods, gold/silver monthly rates, and fees. Browser draft
+  creation and editing now require collateral-level allocations, resolve
+  metal-specific interest and current Rates-module valuation inputs, enforce
+  item LTV server-side, derive aggregate principal/effective rate, and offer a
+  no-write preview of gross principal, monthly interest, deductions, and net
+  cash. Approval independently revalidates the same calculation and freezes
+  item/policy provenance. Existing development/internal commands without item
+  allocations remain on an explicit compatibility path and are never
+  backfilled. The complete 188-test tenant-aware Loans suite passes in three
+  exhaustive groups (87 + 70 + 31); Django checks and migration drift are
+  clean, and no migration is required. E7.3A.4 is next: immutable gross/net
+  disbursal evidence and corrected DEA posting.
 - Loans corrective slice E7.3A.2 is complete: tenant migration `loans.0012`
   adds effective-dated workspace configuration with optional license
   overrides for valuation/LTV/advance-interest policy, metal-specific monthly
@@ -20,9 +34,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   so existing development history is not fabricated. Thirty-two focused
   policy, economics, core-model, registration, and draft-compatibility tests
   pass, and the migration is applied to all local tenant schemas. Runtime
-  draft/disbursal behavior remains on
-  the compatibility path until E7.3A.3 connects setup, valuation, LTV, draft,
-  and approval as one enforced boundary.
+  draft/disbursal behavior remained on the compatibility path until E7.3A.3.
 - Loans corrective slice E7.3A.1 is complete: the accepted collateral-tranche
   ADR replaces the single-rate calculation assumption with item-allocated
   principal and metal-specific interest. A database-free calculator now

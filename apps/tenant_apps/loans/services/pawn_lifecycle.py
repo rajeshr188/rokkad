@@ -18,6 +18,9 @@ from apps.tenant_apps.loans.models import (
 )
 from apps.tenant_apps.loans.services.license_series import assert_series_can_issue
 from apps.tenant_apps.loans.services.number_allocation import allocate_pawn_loan_number
+from apps.tenant_apps.loans.services.pawn_economics import (
+    resolve_pawn_draft_economics,
+)
 
 
 class PawnLifecycleError(ValueError):
@@ -35,8 +38,9 @@ def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
         raise PawnLifecycleError("A PawnLoan requires collateral before approval.")
     for item in collateral:
         item.full_clean()
+    resolved_economics = _validate_collateral_economics(loan, collateral)
 
-    payload = _approval_payload(loan, collateral)
+    payload = _approval_payload(loan, collateral, resolved_economics)
     fingerprint = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -180,8 +184,46 @@ def _set_state(loan, state, actor):
     loan.save(update_fields=["state", "updated_by", "updated_at"])
 
 
-def _approval_payload(loan, collateral):
-    return {
+def _validate_collateral_economics(loan, collateral):
+    allocations = [item.allocated_principal for item in collateral]
+    if not any(value is not None for value in allocations):
+        return None
+    if any(value is None for value in allocations):
+        raise PawnLifecycleError(
+            "Every collateral item requires an allocated principal before approval."
+        )
+    resolved = resolve_pawn_draft_economics(
+        workspace_id=loan.workspace_id,
+        license_id=loan.license_id,
+        as_of_date=loan.loan_date,
+        collateral=collateral,
+    )
+    if resolved.economics.gross_principal != loan.principal_amount:
+        raise PawnLifecycleError(
+            "Collateral allocations no longer reconcile to the loan principal; resave the draft."
+        )
+    if resolved.economics.effective_monthly_rate != loan.monthly_interest_rate:
+        raise PawnLifecycleError(
+            "Resolved collateral rates changed; resave the draft before approval."
+        )
+    for item, tranche, rate_policy in zip(
+        collateral,
+        resolved.economics.tranches,
+        resolved.rate_policies,
+        strict=True,
+    ):
+        if (
+            item.monthly_interest_rate != tranche.monthly_interest_rate
+            or item.interest_rate_policy_id != rate_policy.pk
+        ):
+            raise PawnLifecycleError(
+                "Resolved collateral rates changed; resave the draft before approval."
+            )
+    return resolved
+
+
+def _approval_payload(loan, collateral, resolved_economics=None):
+    payload = {
         "loan_id": loan.pk,
         "loan_number": loan.loan_number,
         "workspace_id": loan.workspace_id,
@@ -201,7 +243,35 @@ def _approval_payload(loan, collateral):
                 "net_weight": str(item.net_weight),
                 "purity_percentage": str(item.purity_percentage),
                 "latest_appraised_value": str(item.latest_appraised_value) if item.latest_appraised_value is not None else None,
+                "allocated_principal": (
+                    str(item.allocated_principal)
+                    if item.allocated_principal is not None
+                    else None
+                ),
+                "monthly_interest_rate": (
+                    str(item.monthly_interest_rate)
+                    if item.monthly_interest_rate is not None
+                    else None
+                ),
+                "interest_rate_policy_id": item.interest_rate_policy_id,
             }
             for item in collateral
         ],
     }
+    if resolved_economics is not None:
+        economics = resolved_economics.economics
+        payload["collateral_economics"] = {
+            "economic_policy_id": resolved_economics.economic_policy.pk,
+            "valuation_method": resolved_economics.economic_policy.valuation_method,
+            "maximum_ltv_ratio": str(
+                resolved_economics.economic_policy.maximum_ltv_ratio
+            ),
+            "advance_interest_periods": (
+                resolved_economics.economic_policy.advance_interest_periods
+            ),
+            "monthly_interest": str(economics.monthly_interest),
+            "advance_interest": str(economics.advance_interest),
+            "deducted_fees": str(economics.deducted_fees),
+            "net_disbursed": str(economics.net_disbursed),
+        }
+    return payload

@@ -27,7 +27,10 @@ from apps.tenant_apps.loans.services import (
     CreatePawnDraftCommand,
     PawnDraftError,
     UpdatePawnDraftCommand,
+    approve_pawn_loan,
     create_pawn_draft,
+    create_pawn_loan_economic_policy,
+    create_pawn_metal_interest_rate_policy,
     update_pawn_draft,
 )
 from apps.tenant_apps.party.models import Party
@@ -273,3 +276,90 @@ class PawnDraftServiceTests(TenantTestCase):
 
         with self.assertRaisesRegex(PawnDraftError, "Only a draft"):
             update_pawn_draft(loan.pk, command, actor=self.actor)
+
+    def test_item_allocations_derive_mixed_metal_principal_and_effective_rate(self):
+        self._economic_setup()
+        command = self.command(
+            principal_amount=Decimal("1.00"),
+            monthly_interest_rate=Decimal("0"),
+            collateral=(
+                self.collateral(allocated_principal=Decimal("60000.00")),
+                self.collateral(
+                    description="Silver anklet",
+                    metal=CollateralMetal.SILVER,
+                    latest_appraised_value=Decimal("80000.00"),
+                    allocated_principal=Decimal("40000.00"),
+                ),
+            ),
+        )
+
+        loan = create_pawn_draft(command, actor=self.actor)
+
+        self.assertEqual(loan.principal_amount, Decimal("100000.00"))
+        self.assertEqual(loan.monthly_interest_rate, Decimal("2.800000"))
+        items = list(loan.collateral_items.order_by("pk"))
+        self.assertEqual(items[0].monthly_interest_rate, Decimal("2.000000"))
+        self.assertEqual(items[1].monthly_interest_rate, Decimal("4.000000"))
+        self.assertTrue(all(item.interest_rate_policy_id for item in items))
+
+    def test_item_allocation_above_its_own_ltv_fails_before_number_allocation(self):
+        self._economic_setup()
+        command = self.command(
+            collateral=(
+                self.collateral(allocated_principal=Decimal("96000.01")),
+            )
+        )
+
+        with self.assertRaisesRegex(ValueError, "exceeds its maximum"):
+            create_pawn_draft(command, actor=self.actor)
+
+        self.sequence.refresh_from_db()
+        self.assertEqual(self.sequence.next_number, 1)
+        self.assertFalse(PawnLoan.objects.exists())
+
+    def test_approval_revalidates_and_snapshots_item_economics(self):
+        self._economic_setup()
+        loan = create_pawn_draft(
+            self.command(
+                collateral=(
+                    self.collateral(allocated_principal=Decimal("50000.00")),
+                )
+            ),
+            actor=self.actor,
+        )
+
+        snapshot = approve_pawn_loan(loan.pk, actor=self.actor)
+
+        self.assertEqual(
+            snapshot.payload["collateral"][0]["allocated_principal"],
+            "50000.00",
+        )
+        self.assertEqual(
+            snapshot.payload["collateral_economics"]["monthly_interest"],
+            "1000.00",
+        )
+        self.assertEqual(
+            snapshot.payload["collateral_economics"]["net_disbursed"],
+            "49000.00",
+        )
+
+    def _economic_setup(self):
+        create_pawn_loan_economic_policy(
+            workspace=self.tenant,
+            license=self.license,
+            valuation_method="LATEST_APPRAISAL",
+            maximum_ltv_ratio=Decimal("0.80"),
+            advance_interest_periods=1,
+            effective_from=date(2026, 1, 1),
+        )
+        for metal, rate in (
+            (CollateralMetal.GOLD, Decimal("2")),
+            (CollateralMetal.SILVER, Decimal("4")),
+        ):
+            create_pawn_metal_interest_rate_policy(
+                workspace=self.tenant,
+                license=self.license,
+                metal=metal,
+                monthly_interest_rate=rate,
+                effective_from=date(2026, 1, 1),
+            )

@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -26,6 +27,8 @@ from apps.tenant_apps.loans.forms import (
     LoanLicenseForm,
     LoanModuleFeatureGateForm,
     LoanSeriesSetupForm,
+    PawnEconomicConfigurationForm,
+    PawnFeePolicyForm,
     PawnAccrualForm,
     PawnCapitalizationForm,
     PawnCollateralDraftFormSet,
@@ -45,6 +48,9 @@ from apps.tenant_apps.loans.forms import (
 from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanSeries,
+    PawnLoanEconomicPolicy,
+    PawnLoanFeePolicy,
+    PawnMetalInterestRatePolicy,
     PawnLoan,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
@@ -84,6 +90,9 @@ from apps.tenant_apps.loans.services import (
     configure_sequence,
     create_license,
     create_pawn_draft,
+    create_pawn_loan_economic_policy,
+    create_pawn_loan_fee_policy,
+    create_pawn_metal_interest_rate_policy,
     create_pawn_loan_notice,
     create_series,
     disburse_pawn_loan,
@@ -101,6 +110,9 @@ from apps.tenant_apps.loans.services import (
     preview_number,
     preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
+    resolve_pawn_draft_economics,
+    resolve_pawn_loan_economic_policy,
+    resolve_pawn_metal_interest_rate_policy,
     release_pawn_loan_in_full,
     release_pawn_loan_partially,
     reopen_pawn_loan,
@@ -230,26 +242,40 @@ def pawn_loan_create(request):
     readiness = _draft_readiness(request.loans_workspace)
     if not readiness["ready"]:
         return render(request, "loans/pawn/blocked.html", {"readiness": readiness})
-    initial = None
+    initial = {"loan_date": timezone.localdate()}
     if request.method == "GET" and request.GET.get("party"):
-        initial = {"borrower": request.GET["party"]}
+        initial["borrower"] = request.GET["party"]
     form = PawnDraftForm(
         request.POST or None,
         workspace=request.loans_workspace,
         initial=initial,
     )
     formset = PawnCollateralDraftFormSet(request.POST or None, prefix="collateral")
+    economics_preview = None
     if request.method == "POST" and form.is_valid() and formset.is_valid():
+        command = _create_command(request.loans_workspace.pk, form, formset)
         try:
-            loan = create_pawn_draft(
-                _create_command(request.loans_workspace.pk, form, formset), actor=request.user
-            )
+            if request.POST.get("action") == "preview":
+                economics_preview = resolve_pawn_draft_economics(
+                    workspace_id=request.loans_workspace.pk,
+                    license_id=command.license_id,
+                    as_of_date=command.loan_date,
+                    collateral=command.collateral,
+                )
+                loan = None
+            else:
+                loan = create_pawn_draft(command, actor=request.user)
         except (PawnDraftError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, f"Draft {loan.loan_number} created.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return render(request, "loans/pawn/form.html", {"form": form, "formset": formset})
+            if loan is not None:
+                messages.success(request, f"Draft {loan.loan_number} created.")
+                return redirect("loans:pawn_loan_detail", pk=loan.pk)
+    return render(
+        request,
+        "loans/pawn/form.html",
+        {"form": form, "formset": formset, "economics_preview": economics_preview},
+    )
 
 
 @loans_workspace_required
@@ -267,21 +293,42 @@ def pawn_loan_update(request, pk):
             "net_weight": item.net_weight,
             "purity_percentage": item.purity_percentage,
             "latest_appraised_value": item.latest_appraised_value,
+            "allocated_principal": item.allocated_principal,
         }
         for item in loan.collateral_items.all()
     ]
     formset = PawnCollateralDraftFormSet(
         request.POST or None, prefix="collateral", initial=None if request.method == "POST" else initial
     )
+    economics_preview = None
     if request.method == "POST" and form.is_valid() and formset.is_valid():
+        command = _update_command(form, formset)
         try:
-            update_pawn_draft(loan.pk, _update_command(form, formset), actor=request.user)
+            if request.POST.get("action") == "preview":
+                economics_preview = resolve_pawn_draft_economics(
+                    workspace_id=request.loans_workspace.pk,
+                    license_id=loan.license_id,
+                    as_of_date=command.loan_date,
+                    collateral=command.collateral,
+                )
+            else:
+                update_pawn_draft(loan.pk, command, actor=request.user)
         except (PawnDraftError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, f"Draft {loan.loan_number} updated.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return render(request, "loans/pawn/form.html", {"form": form, "formset": formset, "loan": loan})
+            if request.POST.get("action") != "preview":
+                messages.success(request, f"Draft {loan.loan_number} updated.")
+                return redirect("loans:pawn_loan_detail", pk=loan.pk)
+    return render(
+        request,
+        "loans/pawn/form.html",
+        {
+            "form": form,
+            "formset": formset,
+            "loan": loan,
+            "economics_preview": economics_preview,
+        },
+    )
 
 
 @loans_workspace_required
@@ -977,6 +1024,79 @@ def license_list(request):
 
 
 @loans_setup_required
+def pawn_economics_setup(request):
+    action = request.POST.get("action") if request.method == "POST" else None
+    configuration_form = PawnEconomicConfigurationForm(
+        request.POST if action == "configuration" else None,
+        workspace=request.loans_workspace,
+        initial={"effective_from": timezone.localdate()},
+        prefix="configuration",
+    )
+    fee_form = PawnFeePolicyForm(
+        request.POST if action == "fee" else None,
+        workspace=request.loans_workspace,
+        initial={"effective_from": timezone.localdate()},
+        prefix="fee",
+    )
+    if action == "configuration" and configuration_form.is_valid():
+        data = configuration_form.cleaned_data
+        try:
+            with transaction.atomic():
+                create_pawn_loan_economic_policy(
+                    workspace=request.loans_workspace,
+                    license=data["license"],
+                    valuation_method=data["valuation_method"],
+                    maximum_ltv_ratio=data["maximum_ltv_ratio"],
+                    advance_interest_periods=data["advance_interest_periods"],
+                    effective_from=data["effective_from"],
+                    actor=request.user,
+                )
+                for metal, rate in (
+                    ("GOLD", data["gold_monthly_interest_rate"]),
+                    ("SILVER", data["silver_monthly_interest_rate"]),
+                ):
+                    create_pawn_metal_interest_rate_policy(
+                        workspace=request.loans_workspace,
+                        license=data["license"],
+                        metal=metal,
+                        monthly_interest_rate=rate,
+                        effective_from=data["effective_from"],
+                        actor=request.user,
+                    )
+        except (ValidationError, ValueError) as exc:
+            configuration_form.add_error(None, str(exc))
+        else:
+            messages.success(request, "PawnLoan economic configuration added.")
+            return redirect("loans:pawn_economics_setup")
+    if action == "fee" and fee_form.is_valid():
+        try:
+            create_pawn_loan_fee_policy(
+                workspace=request.loans_workspace,
+                actor=request.user,
+                **fee_form.cleaned_data,
+            )
+        except (ValidationError, ValueError) as exc:
+            fee_form.add_error(None, str(exc))
+        else:
+            messages.success(request, "PawnLoan fee policy added.")
+            return redirect("loans:pawn_economics_setup")
+    context = {
+        "configuration_form": configuration_form,
+        "fee_form": fee_form,
+        "economic_policies": PawnLoanEconomicPolicy.objects.filter(
+            workspace=request.loans_workspace
+        ).select_related("license"),
+        "rate_policies": PawnMetalInterestRatePolicy.objects.filter(
+            workspace=request.loans_workspace
+        ).select_related("license"),
+        "fee_policies": PawnLoanFeePolicy.objects.filter(
+            workspace=request.loans_workspace
+        ).select_related("license"),
+    }
+    return render(request, "loans/setup/economics.html", context)
+
+
+@loans_setup_required
 def license_detail(request, pk):
     license = _license_for_workspace(request, pk)
     series_rows = []
@@ -1212,15 +1332,29 @@ def _draft_readiness(workspace):
     for series in candidates:
         try:
             preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN)
-            if not series.license.is_expired():
-                return {"ready": True}
+            if series.license.is_expired():
+                continue
+            today = timezone.localdate()
+            resolve_pawn_loan_economic_policy(
+                workspace_id=workspace.pk,
+                license_id=series.license_id,
+                as_of_date=today,
+            )
+            for metal in ("GOLD", "SILVER"):
+                resolve_pawn_metal_interest_rate_policy(
+                    workspace_id=workspace.pk,
+                    license_id=series.license_id,
+                    metal=metal,
+                    as_of_date=today,
+                )
+            return {"ready": True}
         except (NumberAllocationError, ValueError):
             continue
     return {
         "ready": False,
-        "message": "Configure an active, unexpired license and available pawn-loan series.",
-        "action_label": "Open Loan Setup",
-        "action_url": reverse("loans:license_list"),
+        "message": "Configure numbering and current PawnLoan economics before drafting.",
+        "action_label": "Open Economic Setup",
+        "action_url": reverse("loans:pawn_economics_setup"),
     }
 
 
@@ -1233,6 +1367,7 @@ def _collateral_inputs(formset):
             net_weight=row["net_weight"],
             purity_percentage=row["purity_percentage"],
             latest_appraised_value=row.get("latest_appraised_value"),
+            allocated_principal=row["allocated_principal"],
         )
         for row in formset.cleaned_data
         if row and not row.get("DELETE")
@@ -1246,8 +1381,8 @@ def _create_command(workspace_id, form, formset):
         borrower_id=data["borrower"].pk,
         license_id=data["license"].pk,
         series_id=data["series"].pk,
-        principal_amount=data["principal_amount"],
-        monthly_interest_rate=data["monthly_interest_rate"],
+        principal_amount=Decimal("0.01"),
+        monthly_interest_rate=Decimal("0"),
         loan_date=data["loan_date"],
         tenure_months=data["tenure_months"],
         collateral=_collateral_inputs(formset),
@@ -1258,8 +1393,8 @@ def _update_command(form, formset):
     data = form.cleaned_data
     return UpdatePawnDraftCommand(
         borrower_id=data["borrower"].pk,
-        principal_amount=data["principal_amount"],
-        monthly_interest_rate=data["monthly_interest_rate"],
+        principal_amount=Decimal("0.01"),
+        monthly_interest_rate=Decimal("0"),
         loan_date=data["loan_date"],
         tenure_months=data["tenure_months"],
         collateral=_collateral_inputs(formset),

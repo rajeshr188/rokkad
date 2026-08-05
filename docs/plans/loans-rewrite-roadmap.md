@@ -726,17 +726,23 @@ not silently reinterpreted; all dependent lifecycle and reversal tests pass.
 E7.4 FundingLoan/repledging must wait for this corrective slice because it
 depends on trustworthy collateral-level principal and custody economics.
 
-Execution status: E7.3A.1 and E7.3A.2 are complete. The accepted ADR and
+Execution status: E7.3A.1 through E7.3A.3 are complete. The accepted ADR and
 database-free calculator define the economics. Tenant migration `loans.0012`
 adds effective-dated workspace policies with optional license overrides for
 valuation/LTV/advance interest, metal-specific interest rates, and fees. It
 also adds nullable item allocation, frozen rate, and source-policy fields so
 legacy development rows are not assigned invented facts. Tested resolvers use
 deterministic license-over-workspace precedence and fail closed when required
-policy is missing. E7.3A.3 must now connect shared valuation/LTV calculations
-to draft preview, draft writes, approval, and the operator setup UI; the old
-loan-level runtime calculation remains authoritative until that coherent
-boundary switches.
+policy is missing. The administrator setup UI now creates effective-dated
+economic, gold/silver rate, and fee policies. Browser draft creation/editing
+requires per-item allocations, previews gross/monthly/advance/fee/net totals
+without consuming a number, derives aggregate principal/effective rate, and
+enforces current-rate/appraisal valuation plus item LTV in both draft and
+approval services. Approval snapshots preserve policy and item provenance.
+Legacy internal command inputs remain readable without fabricated allocation
+only until their owning renewal/test paths are converted. E7.3A.4 must persist
+immutable gross/net disbursal and deduction evidence and update DEA posting;
+current disbursal posting still uses the compatibility aggregate.
 
 #### E7.4 Add FundingLoan And Repledging
 

@@ -22,6 +22,8 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
+    PawnLoanEconomicPolicy,
+    PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.loans.views import _license_for_workspace
 from apps.tenant_apps.party.models import Party
@@ -138,6 +140,33 @@ class LoansSetupUiTests(TenantTestCase):
 
         sequence.refresh_from_db()
         self.assertEqual(sequence.next_number, 1)
+
+    def test_owner_can_add_workspace_economic_configuration(self):
+        response = self.tenant_post(
+            reverse("loans:pawn_economics_setup"),
+            {
+                "action": "configuration",
+                "configuration-license": "",
+                "configuration-valuation_method": "LATEST_APPRAISAL",
+                "configuration-maximum_ltv_ratio": "0.80",
+                "configuration-advance_interest_periods": "1",
+                "configuration-gold_monthly_interest_rate": "2",
+                "configuration-silver_monthly_interest_rate": "4",
+                "configuration-effective_from": "2026-08-05",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("loans:pawn_economics_setup"),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(PawnLoanEconomicPolicy.objects.count(), 1)
+        self.assertEqual(PawnMetalInterestRatePolicy.objects.count(), 2)
+        page = self.tenant_get(reverse("loans:pawn_economics_setup"))
+        self.assertContains(page, "PawnLoan economic policies")
+        self.assertContains(page, "Gold")
+        self.assertContains(page, "Silver")
 
     def test_expiry_is_post_only_and_blocks_readiness_without_deleting_license(self):
         license, _ = self._configured_setup()

@@ -24,6 +24,9 @@ from apps.tenant_apps.loans.services.license_series import assert_series_can_iss
 from apps.tenant_apps.loans.services.number_allocation import (
     allocate_pawn_loan_number,
 )
+from apps.tenant_apps.loans.services.pawn_economics import (
+    resolve_pawn_draft_economics,
+)
 from apps.tenant_apps.party.models import Party
 
 
@@ -39,6 +42,7 @@ class CollateralDraftInput:
     net_weight: Decimal
     purity_percentage: Decimal
     latest_appraised_value: Decimal | None = None
+    allocated_principal: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +79,13 @@ def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None) -> PawnLoa
     )
     assert_series_can_issue(series)
 
+    resolved = _resolve_new_economics(
+        workspace_id=workspace_id,
+        license_id=license.pk,
+        as_of_date=command.loan_date,
+        collateral=command.collateral,
+    )
+    principal_amount, monthly_interest_rate = _aggregate_terms(command, resolved)
     loan = PawnLoan(
         workspace_id=workspace_id,
         license=license,
@@ -82,15 +93,15 @@ def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None) -> PawnLoa
         borrower=borrower,
         loan_number="PENDING-ALLOCATION",
         state=PawnLoanState.DRAFT.value,
-        principal_amount=command.principal_amount,
-        monthly_interest_rate=command.monthly_interest_rate,
+        principal_amount=principal_amount,
+        monthly_interest_rate=monthly_interest_rate,
         loan_date=command.loan_date,
         tenure_months=command.tenure_months,
         created_by=actor,
         updated_by=actor,
     )
     loan.full_clean(exclude={"loan_number"})
-    collateral = _validated_collateral(loan, command.collateral)
+    collateral = _validated_collateral(loan, command.collateral, resolved=resolved)
 
     allocation = allocate_pawn_loan_number(series=series, actor=actor)
     loan.loan_number = allocation.value
@@ -130,6 +141,13 @@ def update_pawn_draft(
         raise PawnDraftError("Only a draft PawnLoan can be edited.")
 
     borrower = _active_party(command.borrower_id)
+    resolved = _resolve_new_economics(
+        workspace_id=workspace_id,
+        license_id=loan.license_id,
+        as_of_date=command.loan_date,
+        collateral=command.collateral,
+    )
+    principal_amount, monthly_interest_rate = _aggregate_terms(command, resolved)
     candidate = PawnLoan(
         pk=loan.pk,
         workspace_id=workspace_id,
@@ -138,8 +156,8 @@ def update_pawn_draft(
         borrower=borrower,
         loan_number=loan.loan_number,
         state=loan.state,
-        principal_amount=command.principal_amount,
-        monthly_interest_rate=command.monthly_interest_rate,
+        principal_amount=principal_amount,
+        monthly_interest_rate=monthly_interest_rate,
         loan_date=command.loan_date,
         tenure_months=command.tenure_months,
         created_by=loan.created_by,
@@ -147,12 +165,12 @@ def update_pawn_draft(
     )
     candidate._state.adding = False
     candidate.full_clean()
-    collateral = _validated_collateral(candidate, command.collateral)
+    collateral = _validated_collateral(candidate, command.collateral, resolved=resolved)
     before = _draft_snapshot(loan, tuple(loan.collateral_items.all()))
 
     loan.borrower = borrower
-    loan.principal_amount = command.principal_amount
-    loan.monthly_interest_rate = command.monthly_interest_rate
+    loan.principal_amount = principal_amount
+    loan.monthly_interest_rate = monthly_interest_rate
     loan.loan_date = command.loan_date
     loan.tenure_months = command.tenure_months
     loan.updated_by = actor
@@ -214,13 +232,15 @@ def _setup_for_workspace(*, workspace_id, license_id, series_id):
     return license, series
 
 
-def _validated_collateral(loan, inputs):
+def _validated_collateral(loan, inputs, *, resolved=None):
     if not inputs:
         raise PawnDraftError("At least one collateral item is required.")
     items = []
     errors = []
     for index, item in enumerate(inputs):
         try:
+            tranche = resolved.economics.tranches[index] if resolved else None
+            rate_policy = resolved.rate_policies[index] if resolved else None
             model = PawnCollateralItem(
                 loan=loan,
                 description=item.description,
@@ -229,6 +249,13 @@ def _validated_collateral(loan, inputs):
                 net_weight=item.net_weight,
                 purity_percentage=item.purity_percentage,
                 latest_appraised_value=item.latest_appraised_value,
+                allocated_principal=(
+                    tranche.allocated_principal if tranche is not None else None
+                ),
+                monthly_interest_rate=(
+                    tranche.monthly_interest_rate if tranche is not None else None
+                ),
+                interest_rate_policy=rate_policy,
             )
             model.full_clean(exclude={"loan"})
             items.append(model)
@@ -237,6 +264,29 @@ def _validated_collateral(loan, inputs):
     if errors:
         raise ValidationError(errors)
     return items
+
+
+def _resolve_new_economics(*, workspace_id, license_id, as_of_date, collateral):
+    allocations = [item.allocated_principal for item in collateral]
+    if not any(value is not None for value in allocations):
+        return None
+    if any(value is None for value in allocations):
+        raise PawnDraftError("Every collateral item requires an allocated principal.")
+    return resolve_pawn_draft_economics(
+        workspace_id=workspace_id,
+        license_id=license_id,
+        as_of_date=as_of_date,
+        collateral=collateral,
+    )
+
+
+def _aggregate_terms(command, resolved):
+    if resolved is None:
+        return command.principal_amount, command.monthly_interest_rate
+    return (
+        resolved.economics.gross_principal,
+        resolved.economics.effective_monthly_rate,
+    )
 
 
 def _draft_snapshot(loan, collateral):
@@ -258,6 +308,17 @@ def _draft_snapshot(loan, collateral):
                     if item.latest_appraised_value is not None
                     else None
                 ),
+                "allocated_principal": (
+                    str(item.allocated_principal)
+                    if item.allocated_principal is not None
+                    else None
+                ),
+                "monthly_interest_rate": (
+                    str(item.monthly_interest_rate)
+                    if item.monthly_interest_rate is not None
+                    else None
+                ),
+                "interest_rate_policy_id": item.interest_rate_policy_id,
             }
             for item in collateral
         ],

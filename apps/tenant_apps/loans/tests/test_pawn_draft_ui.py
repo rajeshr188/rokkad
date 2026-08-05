@@ -20,8 +20,10 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
+    PawnLoanEconomicPolicy,
     PawnLoanRelease,
     PawnLoanReleaseItem,
+    PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.party.models import Party
 
@@ -78,8 +80,8 @@ class PawnDraftUiTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "PawnLoan setup required")
-        self.assertContains(response, "Open Loan Setup")
-        self.assertContains(response, reverse("loans:license_list"))
+        self.assertContains(response, "Open Economic Setup")
+        self.assertContains(response, reverse("loans:pawn_economics_setup"))
 
     def test_staff_can_create_view_and_correct_a_draft_only(self):
         license, series = self._configured_setup()
@@ -106,7 +108,7 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertEqual(ticket.status_code, 409)
 
         payload = self._payload(license, series)
-        payload["principal_amount"] = "12500.00"
+        payload["collateral-0-allocated_principal"] = "12500.00"
         payload["collateral-0-description"] = "Corrected gold chain"
         response = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
         self.assertEqual(response.status_code, 302)
@@ -123,6 +125,23 @@ class PawnDraftUiTests(TenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(PawnLoan.objects.count(), 0)
+        sequence = LoanNumberSequence.objects.get(
+            series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value
+        )
+        self.assertEqual(sequence.next_number, 1)
+
+    def test_economic_preview_does_not_create_or_consume_a_draft(self):
+        license, series = self._configured_setup()
+        payload = self._payload(license, series)
+        payload["action"] = "preview"
+
+        response = self.client.post(reverse("loans:pawn_loan_create"), payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Economic preview")
+        self.assertContains(response, "10000.00")
+        self.assertContains(response, "9800.00")
+        self.assertFalse(PawnLoan.objects.exists())
         sequence = LoanNumberSequence.objects.get(
             series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value
         )
@@ -486,6 +505,24 @@ class PawnDraftUiTests(TenantTestCase):
                 width=5,
                 maximum_number=10000,
             )
+        PawnLoanEconomicPolicy.objects.create(
+            workspace=self.tenant,
+            license=license,
+            valuation_method="LATEST_APPRAISAL",
+            maximum_ltv_ratio=Decimal("0.80"),
+            advance_interest_periods=1,
+            effective_from=date(2026, 1, 1),
+            created_by=self.owner,
+        )
+        for metal, rate in (("GOLD", "2"), ("SILVER", "4")):
+            PawnMetalInterestRatePolicy.objects.create(
+                workspace=self.tenant,
+                license=license,
+                metal=metal,
+                monthly_interest_rate=Decimal(rate),
+                effective_from=date(2026, 1, 1),
+                created_by=self.owner,
+            )
         return license, series
 
     def _payload(self, license, series):
@@ -493,8 +530,6 @@ class PawnDraftUiTests(TenantTestCase):
             "borrower": self.party.pk,
             "license": license.pk,
             "series": series.pk,
-            "principal_amount": "10000.00",
-            "monthly_interest_rate": "2.000000",
             "loan_date": "2026-07-18",
             "tenure_months": "3",
             "collateral-TOTAL_FORMS": "1",
@@ -507,4 +542,5 @@ class PawnDraftUiTests(TenantTestCase):
             "collateral-0-net_weight": "9.0000",
             "collateral-0-purity_percentage": "91.6000",
             "collateral-0-latest_appraised_value": "50000.00",
+            "collateral-0-allocated_principal": "10000.00",
         }

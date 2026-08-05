@@ -40,6 +40,7 @@ urlpatterns = [
     path("internal/<int:pk>/transfer-setup/", views.pawn_loan_transfer_setup, name="pawn_loan_transfer_setup"),
     path("internal/outbox/<int:pk>/retry/", views.pawn_outbox_retry, name="pawn_outbox_retry"),
     path("setup/", views.license_list, name="license_list"),
+    path("setup/economics/", views.pawn_economics_setup, name="pawn_economics_setup"),
     path("setup/cutover/", views.loan_module_feature_gate, name="loan_module_feature_gate"),
     path("setup/operations/", views.pawn_operations_console, name="pawn_operations_console"),
     path("setup/operations/runbook/", views.pawn_operations_runbook, name="pawn_operations_runbook"),

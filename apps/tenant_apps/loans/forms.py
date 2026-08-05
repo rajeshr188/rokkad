@@ -3,9 +3,11 @@ from django import forms
 from apps.tenant_apps.loans.domain import (
     STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS,
     CollateralMetal,
+    FeeCalculationType,
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
     PawnLoanRenewalMode,
+    ValuationMethod,
 )
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnCollateralItem
 from apps.tenant_apps.party.models import Party
@@ -55,8 +57,6 @@ class PawnDraftForm(forms.Form):
     borrower = forms.ModelChoiceField(queryset=Party.objects.none())
     license = forms.ModelChoiceField(queryset=LoanLicense.objects.none())
     series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
-    principal_amount = forms.DecimalField(max_digits=18, decimal_places=2, min_value=0.01)
-    monthly_interest_rate = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0)
     loan_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     tenure_months = forms.IntegerField(min_value=1, initial=3)
 
@@ -77,8 +77,6 @@ class PawnDraftForm(forms.Form):
                     "borrower": instance.borrower_id,
                     "license": instance.license_id,
                     "series": instance.series_id,
-                    "principal_amount": instance.principal_amount,
-                    "monthly_interest_rate": instance.monthly_interest_rate,
                     "loan_date": instance.loan_date,
                     "tenure_months": instance.tenure_months,
                 }
@@ -107,12 +105,16 @@ class PawnCollateralDraftForm(forms.ModelForm):
             "net_weight",
             "purity_percentage",
             "latest_appraised_value",
+            "allocated_principal",
         )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["allocated_principal"].required = True
         self.fields["metal"].choices = [
-            (item.value, item.name.title()) for item in CollateralMetal
+            (item.value, item.name.title())
+            for item in CollateralMetal
+            if item in {CollateralMetal.GOLD, CollateralMetal.SILVER}
         ]
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-select" if field is self.fields["metal"] else "form-control")
@@ -125,6 +127,83 @@ PawnCollateralDraftFormSet = forms.formset_factory(
     min_num=1,
     validate_min=True,
 )
+
+
+class PawnEconomicConfigurationForm(forms.Form):
+    license = forms.ModelChoiceField(
+        queryset=LoanLicense.objects.none(),
+        required=False,
+        help_text="Leave blank to create the workspace default.",
+    )
+    valuation_method = forms.ChoiceField(
+        choices=[(item.value, item.name.replace("_", " ").title()) for item in ValuationMethod],
+        initial=ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL.value,
+    )
+    maximum_ltv_ratio = forms.DecimalField(
+        max_digits=7,
+        decimal_places=6,
+        min_value=0.000001,
+        max_value=1,
+        initial="0.80",
+        help_text="Enter 0.80 for 80%.",
+    )
+    advance_interest_periods = forms.IntegerField(min_value=0, max_value=12, initial=1)
+    gold_monthly_interest_rate = forms.DecimalField(
+        max_digits=9, decimal_places=6, min_value=0, max_value=100
+    )
+    silver_monthly_interest_rate = forms.DecimalField(
+        max_digits=9, decimal_places=6, min_value=0, max_value=100
+    )
+    effective_from = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["license"].queryset = LoanLicense.objects.filter(
+            workspace=workspace
+        ).order_by("license_number")
+        for field in self.fields.values():
+            field.widget.attrs.setdefault(
+                "class",
+                "form-select"
+                if isinstance(field, (forms.ModelChoiceField, forms.ChoiceField))
+                else "form-control",
+            )
+
+
+class PawnFeePolicyForm(forms.Form):
+    license = forms.ModelChoiceField(
+        queryset=LoanLicense.objects.none(),
+        required=False,
+        help_text="Leave blank to create the workspace default.",
+    )
+    code = forms.CharField(max_length=32)
+    name = forms.CharField(max_length=100)
+    calculation_type = forms.ChoiceField(
+        choices=[
+            (item.value, item.name.replace("_", " ").title())
+            for item in FeeCalculationType
+        ]
+    )
+    value = forms.DecimalField(max_digits=18, decimal_places=6, min_value=0)
+    deducted_at_disbursal = forms.BooleanField(required=False, initial=True)
+    effective_from = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["license"].queryset = LoanLicense.objects.filter(
+            workspace=workspace
+        ).order_by("license_number")
+        for name, field in self.fields.items():
+            field.widget.attrs.setdefault(
+                "class",
+                "form-check-input"
+                if name == "deducted_at_disbursal"
+                else (
+                    "form-select"
+                    if isinstance(field, (forms.ModelChoiceField, forms.ChoiceField))
+                    else "form-control"
+                ),
+            )
 
 
 class PawnTransitionReasonForm(forms.Form):

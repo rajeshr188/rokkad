@@ -80,10 +80,14 @@ principal is distinct from net cash after configurable advance interest and
 fees. E7.3A.1 provides the tested database-free calculation contract, and
 E7.3A.2 adds effective-dated tenant configuration plus nullable collateral
 allocation/rate provenance in `loans.0012`. Policy resolution is explicitly
-license-over-workspace and date-aware. Runtime workflows still use the old
-single-rate compatibility path until E7.3A.3 connects setup, valuation/LTV,
-draft writes, and approval together; do not reinterpret existing development
-history or make the nullable fields look operational before that switch.
+license-over-workspace and date-aware. E7.3A.3 makes that configuration
+operable and switches browser draft/approval to required item allocations,
+resolved metal rates, current metal/appraisal valuation, per-item LTV, derived
+aggregate terms, no-write preview, and provenance-rich approval snapshots.
+Legacy internal commands with no allocations remain readable without invented
+facts until their later lifecycle slices are converted. Disbursal still posts
+the old aggregate and must not claim net-cash/deduction semantics until
+E7.3A.4 adds immutable evidence and the matching DEA contract.
 
 Use a generic party model where possible:
 
