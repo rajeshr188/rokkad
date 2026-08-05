@@ -22,6 +22,7 @@ from apps.tenant_apps.loans.models import (
     PawnCollateralItem,
     PawnLoan,
     PawnLoanDisbursalSnapshot,
+    PawnLoanInterestAccrualLine,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -33,6 +34,8 @@ from apps.tenant_apps.loans.services import (
     create_pawn_loan_economic_policy,
     create_pawn_metal_interest_rate_policy,
     disburse_pawn_loan,
+    finalize_pawn_loan_accrual,
+    preview_pawn_loan_accruals,
     update_pawn_draft,
 )
 from apps.tenant_apps.party.models import Party
@@ -385,6 +388,86 @@ class PawnDraftServiceTests(TenantTestCase):
         with self.assertRaisesRegex(ValidationError, "cannot be deleted"):
             snapshot.delete()
         readiness.assert_called_once()
+
+    @patch(
+        "apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness"
+    )
+    def test_item_accrual_consumes_advance_interest_once(self, _readiness):
+        self._economic_setup()
+        loan = create_pawn_draft(
+            self.command(
+                collateral=(
+                    self.collateral(allocated_principal=Decimal("60000.00")),
+                    self.collateral(
+                        description="Silver anklet",
+                        metal=CollateralMetal.SILVER,
+                        latest_appraised_value=Decimal("80000.00"),
+                        allocated_principal=Decimal("40000.00"),
+                    ),
+                )
+            ),
+            actor=self.actor,
+        )
+        approve_pawn_loan(loan.pk, actor=self.actor)
+        posted = lambda _event: type(
+            "Receipt", (), {"dea_voucher_id": None, "dea_journal_entry_id": None}
+        )()
+        with self.captureOnCommitCallbacks(execute=True):
+            disburse_pawn_loan(
+                loan.pk,
+                effective_date=date(2026, 7, 18),
+                actor=self.actor,
+                delivery_handler=posted,
+            )
+
+        previews = preview_pawn_loan_accruals(
+            loan.pk, as_of_date=date(2026, 9, 17), include_partial=False
+        )
+        self.assertEqual(len(previews), 2)
+        self.assertEqual(previews[0].calculated_interest, Decimal("2800.00"))
+        self.assertEqual(previews[0].advance_interest_applied, Decimal("2800.00"))
+        self.assertEqual(previews[0].recognized_interest, Decimal("0.00"))
+        self.assertEqual(previews[1].advance_interest_applied, Decimal("0.00"))
+        self.assertEqual(previews[1].recognized_interest, Decimal("2800.00"))
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+            return_value=date(2026, 8, 17),
+        ):
+            first = finalize_pawn_loan_accrual(
+                loan.pk, period_number=1, actor=self.actor
+            )
+        self.assertIsNone(first.accounting_event)
+        lines = list(first.accrual.lines.order_by("collateral_item_id"))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(
+            sum((line.calculated_interest for line in lines), Decimal("0")),
+            Decimal("2800.00"),
+        )
+        self.assertEqual(
+            sum((line.advance_interest_applied for line in lines), Decimal("0")),
+            Decimal("2800.00"),
+        )
+        with self.assertRaisesRegex(ValidationError, "immutable"):
+            lines[0].save()
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+            return_value=date(2026, 9, 17),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                second = finalize_pawn_loan_accrual(
+                    loan.pk,
+                    period_number=2,
+                    actor=self.actor,
+                    delivery_handler=posted,
+                )
+        self.assertEqual(second.accounting_event.payload["values"]["interest"], "2800")
+        self.assertEqual(
+            second.accounting_event.payload["values"]["advance_interest_applied"],
+            "0",
+        )
+        self.assertEqual(PawnLoanInterestAccrualLine.objects.filter(accrual=second.accrual).count(), 2)
 
     def _economic_setup(self):
         create_pawn_loan_economic_policy(

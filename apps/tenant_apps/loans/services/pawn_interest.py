@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
@@ -21,7 +22,9 @@ from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     PawnLoan,
     PawnLoanAccountingEvent,
+    PawnLoanDisbursalSnapshot,
     PawnLoanInterestAccrual,
+    PawnLoanInterestAccrualLine,
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
@@ -51,6 +54,21 @@ class AccrualPeriodPreview:
     unrounded_interest: Decimal
     recognized_interest: Decimal
     is_partial: bool
+    calculated_interest: Decimal = Decimal("0")
+    advance_interest_applied: Decimal = Decimal("0")
+    lines: tuple["AccrualLinePreview", ...] = ()
+
+
+@dataclass(frozen=True)
+class AccrualLinePreview:
+    collateral_item_id: int
+    principal_base: Decimal
+    monthly_interest_rate: Decimal
+    period_fraction: Decimal
+    unrounded_interest: Decimal
+    calculated_interest: Decimal
+    advance_interest_applied: Decimal
+    recognized_interest: Decimal
 
 
 @dataclass(frozen=True)
@@ -99,6 +117,7 @@ def preview_pawn_loan_accruals(
     ):
         return ()
     previews = []
+    pending_advance_applied = {}
     if last_finalized:
         period_number = last_finalized.period_number + 1
         period_start = last_finalized.period_end + timedelta(days=1)
@@ -121,12 +140,43 @@ def preview_pawn_loan_accruals(
 
         balance = get_pawn_loan_balance(loan.pk, as_of_date=period_start)
         base = balance.principal_outstanding
-        unrounded, recognized = calculate_accrual_interest(
-            calculation_base=base,
-            monthly_interest_rate=loan.monthly_interest_rate,
+        lines = _itemized_accrual_lines(
+            loan,
             period_fraction=fraction,
+            aggregate_base=base,
             currency_quantum=policy.currency_quantum,
+            pending_advance_applied=pending_advance_applied,
         )
+        if lines:
+            base = sum((line.principal_base for line in lines), Decimal("0"))
+            unrounded = sum(
+                (line.unrounded_interest for line in lines), Decimal("0")
+            )
+            calculated = sum(
+                (line.calculated_interest for line in lines), Decimal("0")
+            )
+            advance_applied = sum(
+                (line.advance_interest_applied for line in lines), Decimal("0")
+            )
+            recognized = sum(
+                (line.recognized_interest for line in lines), Decimal("0")
+            )
+            for line in lines:
+                pending_advance_applied[line.collateral_item_id] = (
+                    pending_advance_applied.get(
+                        line.collateral_item_id, Decimal("0")
+                    )
+                    + line.advance_interest_applied
+                )
+        else:
+            unrounded, recognized = calculate_accrual_interest(
+                calculation_base=base,
+                monthly_interest_rate=loan.monthly_interest_rate,
+                period_fraction=fraction,
+                currency_quantum=policy.currency_quantum,
+            )
+            calculated = recognized
+            advance_applied = Decimal("0")
         previews.append(
             AccrualPeriodPreview(
                 period_number=period_number,
@@ -137,6 +187,9 @@ def preview_pawn_loan_accruals(
                 unrounded_interest=unrounded,
                 recognized_interest=recognized,
                 is_partial=is_partial,
+                calculated_interest=calculated,
+                advance_interest_applied=advance_applied,
+                lines=lines,
             )
         )
 
@@ -169,6 +222,83 @@ def calculate_accrual_interest(
         raise PawnInterestError("Accrual calculation inputs are outside policy bounds.")
     unrounded = base * rate / Decimal("100") * fraction
     return unrounded, unrounded.quantize(quantum, rounding=ROUND_HALF_UP)
+
+
+def _itemized_accrual_lines(
+    loan,
+    *,
+    period_fraction,
+    aggregate_base,
+    currency_quantum,
+    pending_advance_applied,
+):
+    try:
+        disbursal = loan.disbursal_snapshot
+    except PawnLoanDisbursalSnapshot.DoesNotExist:
+        return ()
+    tranches = tuple(disbursal.evidence.get("tranches") or ())
+    if not tranches:
+        raise PawnInterestError(
+            "Itemized PawnLoan disbursal is missing its frozen tranche evidence."
+        )
+    item_ids = {item.pk for item in loan.collateral_items.all()}
+    consumed = {
+        row["collateral_item_id"]: row["total"] or Decimal("0")
+        for row in (
+            PawnLoanInterestAccrualLine.objects.filter(accrual__loan=loan)
+            .exclude(
+                accrual__accounting_event__reversed_by_event__isnull=False
+            )
+            .values("collateral_item_id")
+            .annotate(total=Sum("advance_interest_applied"))
+        )
+    }
+    lines = []
+    for tranche in tranches:
+        try:
+            item_id = int(tranche["collateral_item_id"])
+            principal_base = Decimal(str(tranche["allocated_principal"]))
+            rate = Decimal(str(tranche["monthly_interest_rate"]))
+            advance_total = Decimal(str(tranche["advance_interest"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PawnInterestError(
+                "Frozen disbursal tranche evidence is incomplete."
+            ) from exc
+        if item_id not in item_ids:
+            raise PawnInterestError(
+                "Frozen disbursal tranche references collateral outside this PawnLoan."
+            )
+        already_applied = consumed.get(item_id, Decimal("0")) + (
+            pending_advance_applied.get(item_id, Decimal("0"))
+        )
+        remaining_advance = max(advance_total - already_applied, Decimal("0"))
+        unrounded, calculated = calculate_accrual_interest(
+            calculation_base=principal_base,
+            monthly_interest_rate=rate,
+            period_fraction=period_fraction,
+            currency_quantum=currency_quantum,
+        )
+        advance_applied = min(remaining_advance, calculated)
+        lines.append(
+            AccrualLinePreview(
+                collateral_item_id=item_id,
+                principal_base=principal_base,
+                monthly_interest_rate=rate,
+                period_fraction=Decimal(str(period_fraction)),
+                unrounded_interest=unrounded,
+                calculated_interest=calculated,
+                advance_interest_applied=advance_applied,
+                recognized_interest=calculated - advance_applied,
+            )
+        )
+    quantum = Decimal(str(currency_quantum))
+    item_base = sum((line.principal_base for line in lines), Decimal("0"))
+    if item_base.quantize(quantum) != Decimal(str(aggregate_base)).quantize(quantum):
+        raise PawnInterestError(
+            "Collateral principal changed without immutable item allocation evidence; "
+            "finalize the repayment-allocation slice before accruing this period."
+        )
+    return tuple(lines)
 
 
 @transaction.atomic
@@ -208,13 +338,14 @@ def finalize_pawn_loan_accrual(
             )
         policy = loan.policy_snapshot
         if (
-            preview.recognized_interest > 0
+            preview.calculated_interest > 0
             and policy.accounting_recognition == AccountingRecognition.ACCRUAL.value
         ):
             require_pawn_loan_accounting_readiness(
                 loan,
                 effective_date=preview.period_end,
-                requires_interest_receivable=True,
+                requires_interest_receivable=preview.recognized_interest > 0,
+                requires_unearned_interest=preview.advance_interest_applied > 0,
             )
     except PawnInterestError:
         raise
@@ -223,13 +354,16 @@ def finalize_pawn_loan_accrual(
 
     event = None
     outbox = None
-    if preview.recognized_interest > 0:
+    if should_record_pawn_accrual_event(preview, loan.policy_snapshot):
         payload = accrual_payload(
             loan,
             effective_date=preview.period_end,
             interest_amount=preview.recognized_interest,
+            advance_interest_applied=preview.advance_interest_applied,
         ).to_dict()
-        payload["accrual"] = _preview_payload(preview, loan.policy_snapshot)
+        payload["accrual"] = build_pawn_accrual_detail(
+            preview, loan.policy_snapshot
+        )
         event, outbox = record_loan_accounting_event(
             loan.pk,
             event_kind=TransactionKind.INTEREST_ACCRUAL,
@@ -250,6 +384,7 @@ def finalize_pawn_loan_accrual(
         accounting_event=event,
         finalized_by=actor,
     )
+    persist_pawn_accrual_lines(accrual, preview)
     LoanChangeLog.objects.create(
         loan=loan,
         event_kind=PawnLoanEventKind.ACCRUAL_FINALIZED.value,
@@ -264,11 +399,38 @@ def finalize_pawn_loan_accrual(
             "calculation_base": _decimal_string(preview.calculation_base),
             "unrounded_interest": _decimal_string(preview.unrounded_interest),
             "recognized_interest": _decimal_string(preview.recognized_interest),
+            "calculated_interest": _decimal_string(preview.calculated_interest),
+            "advance_interest_applied": _decimal_string(
+                preview.advance_interest_applied
+            ),
             "accounting_event_id": event.pk if event else None,
             "outbox_id": outbox.pk if outbox else None,
         },
     )
     return AccrualFinalizationResult(accrual, event, outbox)
+
+
+def persist_pawn_accrual_lines(accrual, preview):
+    """Persist the immutable item calculations behind an accrual header."""
+    for line in preview.lines:
+        PawnLoanInterestAccrualLine.objects.create(
+            accrual=accrual,
+            collateral_item_id=line.collateral_item_id,
+            principal_base=line.principal_base,
+            monthly_interest_rate=line.monthly_interest_rate,
+            period_fraction=line.period_fraction,
+            unrounded_interest=line.unrounded_interest,
+            calculated_interest=line.calculated_interest,
+            advance_interest_applied=line.advance_interest_applied,
+            recognized_interest=line.recognized_interest,
+        )
+
+
+def should_record_pawn_accrual_event(preview, policy):
+    return preview.recognized_interest > 0 or (
+        preview.advance_interest_applied > 0
+        and policy.accounting_recognition == AccountingRecognition.ACCRUAL.value
+    )
 
 
 @transaction.atomic
@@ -397,7 +559,7 @@ def _capitalized_boundaries(loan):
     }
 
 
-def _preview_payload(preview, policy):
+def build_pawn_accrual_detail(preview, policy):
     return {
         "period_number": preview.period_number,
         "period_start": preview.period_start.isoformat(),
@@ -406,6 +568,33 @@ def _preview_payload(preview, policy):
         "calculation_base": _decimal_string(preview.calculation_base),
         "unrounded_interest": _decimal_string(preview.unrounded_interest),
         "recognized_interest": _decimal_string(preview.recognized_interest),
+        "calculated_interest": _decimal_string(preview.calculated_interest),
+        "advance_interest_applied": _decimal_string(
+            preview.advance_interest_applied
+        ),
+        "lines": [
+            {
+                "collateral_item_id": line.collateral_item_id,
+                "principal_base": _decimal_string(line.principal_base),
+                "monthly_interest_rate": _decimal_string(
+                    line.monthly_interest_rate
+                ),
+                "period_fraction": _decimal_string(line.period_fraction),
+                "unrounded_interest": _decimal_string(
+                    line.unrounded_interest
+                ),
+                "calculated_interest": _decimal_string(
+                    line.calculated_interest
+                ),
+                "advance_interest_applied": _decimal_string(
+                    line.advance_interest_applied
+                ),
+                "recognized_interest": _decimal_string(
+                    line.recognized_interest
+                ),
+            }
+            for line in preview.lines
+        ],
         "is_partial": preview.is_partial,
         "accounting_recognition": policy.accounting_recognition,
     }

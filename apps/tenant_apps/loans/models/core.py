@@ -1096,6 +1096,77 @@ class PawnLoanInterestAccrual(models.Model):
         raise ValidationError("Finalized PawnLoan interest accruals cannot be deleted.")
 
 
+class PawnLoanInterestAccrualLine(models.Model):
+    """Immutable collateral-tranche calculation behind one accrual header."""
+
+    accrual = models.ForeignKey(
+        PawnLoanInterestAccrual,
+        on_delete=models.PROTECT,
+        related_name="lines",
+    )
+    collateral_item = models.ForeignKey(
+        PawnCollateralItem,
+        on_delete=models.PROTECT,
+        related_name="interest_accrual_lines",
+    )
+    principal_base = models.DecimalField(max_digits=30, decimal_places=12)
+    monthly_interest_rate = models.DecimalField(max_digits=12, decimal_places=6)
+    period_fraction = models.DecimalField(max_digits=8, decimal_places=4)
+    unrounded_interest = models.DecimalField(max_digits=30, decimal_places=12)
+    calculated_interest = models.DecimalField(max_digits=18, decimal_places=4)
+    advance_interest_applied = models.DecimalField(max_digits=18, decimal_places=4)
+    recognized_interest = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        ordering = ("accrual_id", "collateral_item_id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("accrual", "collateral_item"),
+                name="loans_accrual_item_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(principal_base__gte=0)
+                & Q(monthly_interest_rate__gte=0)
+                & Q(unrounded_interest__gte=0)
+                & Q(calculated_interest__gte=0)
+                & Q(advance_interest_applied__gte=0)
+                & Q(recognized_interest__gte=0),
+                name="loans_accrual_line_amounts_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(period_fraction__gt=0) & Q(period_fraction__lte=1),
+                name="loans_accrual_line_fraction_valid",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.accrual_id and self.collateral_item_id:
+            if self.accrual.loan_id != self.collateral_item.loan_id:
+                raise ValidationError(
+                    "Accrual line collateral must belong to the accrual PawnLoan."
+                )
+        if (
+            self.calculated_interest is not None
+            and self.advance_interest_applied is not None
+            and self.recognized_interest is not None
+            and self.calculated_interest
+            != self.advance_interest_applied + self.recognized_interest
+        ):
+            raise ValidationError(
+                "Calculated interest must equal advance interest applied plus recognized interest."
+            )
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError("PawnLoan accrual lines are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("PawnLoan accrual lines cannot be deleted.")
+
+
 class PawnLoanRelease(models.Model):
     """Immutable settlement document authorizing a physical collateral return."""
 

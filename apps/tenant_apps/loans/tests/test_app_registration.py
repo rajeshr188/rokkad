@@ -37,6 +37,7 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "PawnLoanAuctionItem",
                 "PawnLoanAuctionReversal",
                 "PawnLoanInterestAccrual",
+                "PawnLoanInterestAccrualLine",
                 "PawnLoanEconomicPolicy",
                 "PawnLoanFeePolicy",
                 "PawnLoanNotice",

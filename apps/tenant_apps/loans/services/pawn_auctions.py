@@ -44,7 +44,12 @@ from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
 from apps.tenant_apps.loans.services.accounting_outbox import DeliveryHandler, record_loan_accounting_event
 from apps.tenant_apps.loans.services.accounting_readiness import require_pawn_loan_accounting_readiness
 from apps.tenant_apps.loans.services.pawn_disbursal import assert_pawn_loan_financial_actions_allowed
-from apps.tenant_apps.loans.services.pawn_interest import preview_pawn_loan_accruals
+from apps.tenant_apps.loans.services.pawn_interest import (
+    build_pawn_accrual_detail,
+    persist_pawn_accrual_lines,
+    preview_pawn_loan_accruals,
+    should_record_pawn_accrual_event,
+)
 from apps.tenant_apps.loans.services.pawn_notices import create_pawn_loan_notice
 
 
@@ -254,6 +259,12 @@ def complete_pawn_loan_auction(
                 loan.policy_snapshot.accounting_recognition == AccountingRecognition.ACCRUAL.value
                 and balance.interest_outstanding > 0
             ),
+            requires_unearned_interest=(
+                loan.policy_snapshot.accounting_recognition
+                == AccountingRecognition.ACCRUAL.value
+                and partial is not None
+                and partial.advance_interest_applied > 0
+            ),
         )
     except PawnAuctionError:
         raise
@@ -455,23 +466,15 @@ def _record_auction_accrual(loan, *, preview, actor, delivery_handler):
     policy = loan.policy_snapshot
     event = None
     outbox = None
-    if preview.recognized_interest > 0:
+    if should_record_pawn_accrual_event(preview, policy):
         payload = accrual_payload(
             loan,
             effective_date=preview.period_end,
             interest_amount=preview.recognized_interest,
+            advance_interest_applied=preview.advance_interest_applied,
         ).to_dict()
-        payload["accrual"] = {
-            "period_number": preview.period_number,
-            "period_start": preview.period_start.isoformat(),
-            "period_end": preview.period_end.isoformat(),
-            "period_fraction": str(preview.period_fraction),
-            "calculation_base": str(preview.calculation_base),
-            "unrounded_interest": str(preview.unrounded_interest),
-            "recognized_interest": str(preview.recognized_interest),
-            "accounting_recognition": policy.accounting_recognition,
-            "auction_catch_up": True,
-        }
+        payload["accrual"] = build_pawn_accrual_detail(preview, policy)
+        payload["accrual"]["auction_catch_up"] = True
         event, outbox = record_loan_accounting_event(
             loan.pk,
             event_kind=TransactionKind.INTEREST_ACCRUAL,
@@ -492,6 +495,7 @@ def _record_auction_accrual(loan, *, preview, actor, delivery_handler):
         accounting_event=event,
         finalized_by=actor,
     )
+    persist_pawn_accrual_lines(accrual, preview)
     LoanChangeLog.objects.create(
         loan=loan,
         event_kind=PawnLoanEventKind.ACCRUAL_FINALIZED.value,

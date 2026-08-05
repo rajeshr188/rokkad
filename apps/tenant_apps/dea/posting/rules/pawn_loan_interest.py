@@ -15,15 +15,25 @@ from .base import BasePostingRule
 @register_rule("PAWN_LOAN_INTEREST_ACCRUAL")
 class PawnLoanInterestAccrualRule(BasePostingRule):
     voucher_type = "PAWN_LOAN_INTEREST_ACCRUAL"
-    rule_version = "1"
+    rule_version = "2"
 
     def build_posting(self, ctx) -> PostingBundle:
         event = ctx.doc
-        interest = _interest(event, "INTEREST_ACCRUAL")
-        borrower_account = _borrower_account(event)
+        if getattr(event, "event_kind", None) != "INTEREST_ACCRUAL":
+            raise ValidationError("PawnLoan event must be INTEREST_ACCRUAL.")
+        values = event.payload.get("values") or {}
+        interest = Decimal(str(values.get("interest", "0")))
+        advance_applied = Decimal(
+            str(values.get("advance_interest_applied", "0"))
+        )
+        if min(interest, advance_applied) < 0 or interest + advance_applied <= 0:
+            raise ValidationError("PawnLoan accrual amounts must be non-negative and non-zero.")
         currency = event.payload.get("currency") or "INR"
-        return PostingBundle(
-            ledger_lines=[
+        ledger_lines = []
+        account_lines = []
+        if interest:
+            borrower_account = _borrower_account(event)
+            ledger_lines.append(
                 DualLedgerLine(
                     debit_ledger_id=_ledger_id("INTEREST_RECEIVABLE"),
                     credit_ledger_id=_ledger_id("INTEREST_INCOME"),
@@ -31,8 +41,8 @@ class PawnLoanInterestAccrualRule(BasePostingRule):
                     amount=interest,
                     amount_base=interest,
                 )
-            ],
-            account_lines=[
+            )
+            account_lines.append(
                 AccountLine(
                     ledger_id=_ledger_id("BORROWER_LOAN_CTRL"),
                     account_id=borrower_account.pk,
@@ -42,7 +52,20 @@ class PawnLoanInterestAccrualRule(BasePostingRule):
                     amount_base=interest,
                     xact_type_ext="IA",
                 )
-            ],
+            )
+        if advance_applied:
+            ledger_lines.append(
+                DualLedgerLine(
+                    debit_ledger_id=_ledger_id("Unearned Revenue"),
+                    credit_ledger_id=_ledger_id("INTEREST_INCOME"),
+                    currency=currency,
+                    amount=advance_applied,
+                    amount_base=advance_applied,
+                )
+            )
+        return PostingBundle(
+            ledger_lines=ledger_lines,
+            account_lines=account_lines,
         )
 
     def fingerprint_payload(self, ctx):

@@ -96,6 +96,18 @@ versioned appraisal aggregate (appraiser, time, method, notes, media/tests,
 approval, and reappraisal) is deferred explicitly to roadmap E7.6A; until then,
 staff appraisal values are frozen in approval and disbursal evidence.
 
+E7.3A.5 adds immutable `PawnLoanInterestAccrualLine` rows for every new
+itemized accrual, including release/auction/renewal catch-up periods. The line
+freezes principal base, item rate, period fraction, high-precision and rounded
+interest, advance interest applied, and newly due interest. Advance interest
+is a per-item monetary balance: cash-basis finalization does not charge a
+covered period again, while accrual-basis finalization debits Unearned Revenue
+and credits income without a borrower receivable for the covered portion.
+Legacy aggregate loans retain their earlier behavior. Itemized accrual fails
+closed after any unexplained aggregate principal change until E7.3A.6 adds
+immutable repayment-allocation evidence; never distribute that change by
+guessing.
+
 Use a generic party model where possible:
 
 - Customer

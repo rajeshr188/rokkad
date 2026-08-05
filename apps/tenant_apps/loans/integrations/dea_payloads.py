@@ -154,8 +154,24 @@ def repayment_payload(
     )
 
 
-def accrual_payload(loan, *, effective_date, interest_amount, source_event_id=None):
-    return _payload(loan, TransactionKind.INTEREST_ACCRUAL, effective_date, {"interest": interest_amount}, source_event_id)
+def accrual_payload(
+    loan,
+    *,
+    effective_date,
+    interest_amount,
+    advance_interest_applied=Decimal("0"),
+    source_event_id=None,
+):
+    return _payload(
+        loan,
+        TransactionKind.INTEREST_ACCRUAL,
+        effective_date,
+        {
+            "interest": interest_amount,
+            "advance_interest_applied": advance_interest_applied,
+        },
+        source_event_id,
+    )
 
 
 def capitalization_payload(loan, *, effective_date, interest_amount, source_event_id=None):

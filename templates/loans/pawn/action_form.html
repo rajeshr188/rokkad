@@ -30,7 +30,12 @@
 
     {% if previews %}
       <div class="card mb-3"><div class="card-header">Eligible periods</div><ul class="list-group list-group-flush">
-        {% for preview in previews %}<li class="list-group-item">Period {{ preview.period_number }}: {{ preview.period_start }} to {{ preview.period_end }} — {{ preview.recognized_interest }}</li>{% endfor %}
+        {% for preview in previews %}
+          <li class="list-group-item">
+            <strong>Period {{ preview.period_number }}</strong>: {{ preview.period_start }} to {{ preview.period_end }}<br>
+            <span class="small text-muted">Calculated {{ preview.calculated_interest }} &middot; Advance interest applied {{ preview.advance_interest_applied }} &middot; Newly due {{ preview.recognized_interest }}</span>
+          </li>
+        {% endfor %}
       </ul></div>
     {% endif %}
 

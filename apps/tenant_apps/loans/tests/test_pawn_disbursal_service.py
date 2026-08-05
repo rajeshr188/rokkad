@@ -372,7 +372,14 @@ class PawnDisbursalServiceTests(TenantTestCase):
             "advance_interest": "1000.00",
             "deducted_fees": "500.00",
             "net_disbursed": "48500.00",
-            "tranches": [{"collateral_item_id": self.loan.collateral_items.get().pk}],
+            "tranches": [
+                {
+                    "collateral_item_id": self.loan.collateral_items.get().pk,
+                    "allocated_principal": "50000.00",
+                    "monthly_interest_rate": "2.000000",
+                    "advance_interest": "1000.00",
+                }
+            ],
             "fees": [{"code": "DOC", "amount": "500.00", "deducted_at_disbursal": True}],
         }
         self.loan.approval_snapshots.filter(pk=approval.pk).update(payload=payload)
@@ -410,7 +417,14 @@ class PawnDisbursalServiceTests(TenantTestCase):
             "advance_interest": "1000.00",
             "deducted_fees": "0.00",
             "net_disbursed": "49000.00",
-            "tranches": [{"collateral_item_id": self.loan.collateral_items.get().pk}],
+            "tranches": [
+                {
+                    "collateral_item_id": self.loan.collateral_items.get().pk,
+                    "allocated_principal": "50000.00",
+                    "monthly_interest_rate": "2.000000",
+                    "advance_interest": "1000.00",
+                }
+            ],
             "fees": [],
         }
         self.loan.approval_snapshots.filter(pk=approval.pk).update(payload=payload)
@@ -449,6 +463,32 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(postings["CASH"], Decimal("49000.00"))
         self.assertEqual(postings["Unearned Revenue"], Decimal("1000.00"))
         self.assertNotIn("INTEREST_INCOME", postings)
+
+        self._open_period(date(2026, 9, 1), date(2026, 9, 30), "September 2026")
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+            return_value=date(2026, 9, 2),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                accrual = finalize_pawn_loan_accrual(
+                    self.loan.pk,
+                    period_number=1,
+                    actor=self.actor,
+                )
+        accrual.outbox.refresh_from_db()
+        self.assertEqual(accrual.accrual.recognized_interest, Decimal("0.0000"))
+        self.assertEqual(
+            accrual.accounting_event.payload["values"]["advance_interest_applied"],
+            "1000",
+        )
+        accrual_posting = LedgerTransaction.objects.get(
+            journal_entry_id=accrual.outbox.dea_journal_entry_id
+        )
+        self.assertEqual(accrual_posting.ledgerno_dr.name, "Unearned Revenue")
+        self.assertEqual(accrual_posting.ledgerno.name, "INTEREST_INCOME")
+        self.assertEqual(accrual_posting.amount.amount, Decimal("1000.00"))
+        balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 9, 2))
+        self.assertEqual(balance.interest_outstanding, Decimal("0.00"))
 
     def test_repayment_posts_to_dea_reconciles_balance_and_keeps_collateral(self):
         self._seed_dea_disbursal_setup()

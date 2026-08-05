@@ -10,6 +10,22 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Current Shape
 
+- Loans corrective slice E7.3A.5 is complete: tenant migration `loans.0014`
+  adds immutable collateral-level lines beneath each new itemized interest
+  accrual. Every line freezes item principal base, metal rate, period fraction,
+  high-precision calculation, rounded calculated interest, advance interest
+  consumed, and newly due interest; header and event totals are exact sums of
+  those lines. Advance interest is consumed as a per-item monetary balance, so
+  partial periods cannot lose or duplicate coverage. Cash accounting creates
+  no new receivable for a fully prepaid period. Accrual accounting reclassifies
+  the covered amount from Unearned Revenue to INTEREST_INCOME and creates a
+  borrower receivable only for the uncovered amount. Release, auction, and
+  renewal catch-up accruals use the same evidence path. Legacy aggregate loans
+  retain their prior calculation contract. Until E7.3A.6 persists item-level
+  repayment allocations, an itemized loan whose principal changed fails closed
+  before accrual rather than guessing tranche balances. The complete 192-test
+  tenant-aware Loans suite passes; Django checks and migration drift are clean,
+  and `loans.0014` is applied to all local tenant schemas.
 - Loans corrective slice E7.3A.4 is complete: tenant migration `loans.0013`
   adds an immutable one-to-one disbursal snapshot linked to the exact approval,
   policy snapshot, source accounting event, and frozen item/fee evidence. New
