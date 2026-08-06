@@ -53,13 +53,21 @@ class ConfigurableDocumentRenderer:
             raise DocumentAssetError("Payload has no valid workspace asset boundary.") from exc
         asset_map = validate_asset_set(assets, workspace_id=workspace_id)
         required_assets = {block.asset_key for block in layout.all_blocks() if block.asset_key}
-        if layout.background_asset_key:
-            required_assets.add(layout.background_asset_key)
+        required_assets.update(layout.background_asset_keys())
         missing_assets = required_assets - set(asset_map)
         if missing_assets:
             raise DocumentAssetError(f"Required document assets are missing: {', '.join(sorted(missing_assets))}.")
         cls._assert_bindings(layout, fields, sections)
         if layout.layout_mode == "ABSOLUTE_OVERLAY":
+            if layout.sheet:
+                pdf, output_page_size, output_copy_mode = cls._render_sheet_composition(
+                    payload, layout, fields, sections, asset_map, preview,
+                )
+                return LayoutRenderResult(
+                    pdf, layout.content_hash, cls._payload_hash(payload), "layout-reportlab-sheet-v1",
+                    output_page_size, output_copy_mode,
+                    tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())),
+                )
             pdf = cls._render_absolute_overlay(payload, layout, fields, sections, asset_map, preview)
             pdf = cls._apply_background(pdf, asset_map[layout.background_asset_key])
             return LayoutRenderResult(
@@ -118,7 +126,7 @@ class ConfigurableDocumentRenderer:
                      ("DUPLICATE", layout.blocks), ("DUPLICATE", layout.back_blocks))
         for copy_name, blocks in pages:
             for block in blocks:
-                if cls._is_visible(block, fields):
+                if block.copy_scope in {"BOTH", copy_name} and cls._is_visible(block, fields):
                     cls._draw_overlay_block(canvas, block, payload, fields, sections, assets, styles, layout, page_size)
             if preview:
                 canvas.saveState()
@@ -134,6 +142,92 @@ class ConfigurableDocumentRenderer:
         value = buffer.getvalue()
         buffer.close()
         return value
+
+    @classmethod
+    def _render_sheet_composition(cls, payload, layout, fields, sections, assets, preview):
+        sheet = layout.sheet
+
+        def surface(name, copy_scope, blocks):
+            content = cls._render_overlay_surface(
+                payload, layout, fields, sections, assets, preview,
+                blocks=blocks, copy_scope=copy_scope,
+            )
+            return cls._apply_background(content, assets[sheet.background(name)])
+
+        cache = {}
+        def get(name):
+            if name not in cache:
+                scope = "ORIGINAL" if name.startswith("original") else "DUPLICATE"
+                blocks = layout.blocks if name.endswith("front") else layout.back_blocks
+                cache[name] = surface(name, scope, blocks)
+            return cache[name]
+
+        composition = sheet.composition
+        sequences = {
+            "A5_ORIGINAL": ("original_front",),
+            "A5_ORIGINAL_TERMS_DUPLEX": ("original_front", "original_back"),
+            "A5_DUPLICATE": ("duplicate_front",),
+            "A5_DUPLICATE_D3_DUPLEX": ("duplicate_front", "duplicate_back"),
+            "A5_BOTH_SIMPLEX": ("original_front", "duplicate_front"),
+            "A5_BOTH_DUPLEX": ("original_front", "original_back", "duplicate_front", "duplicate_back"),
+        }
+        if composition in sequences:
+            return cls._merge_pdf_pages([get(name) for name in sequences[composition]]), "A5", composition
+        front = cls._impose_a5_side_by_side(get("original_front"), get("duplicate_front"))
+        if composition == "A4_SIDE_BY_SIDE":
+            return front, "A4_LANDSCAPE", composition
+        back = cls._impose_a5_side_by_side(get("original_back"), get("duplicate_back"))
+        return cls._merge_pdf_pages([front, back]), "A4_LANDSCAPE", composition
+
+    @classmethod
+    def _render_overlay_surface(cls, payload, layout, fields, sections, assets, preview, *, blocks, copy_scope):
+        buffer = io.BytesIO()
+        page_size = cls.PAGE_SIZES[layout.page_size]
+        canvas = pdf_canvas.Canvas(buffer, pagesize=page_size, pageCompression=0)
+        canvas.setTitle(payload.title)
+        styles = cls._styles(layout)
+        for block in blocks:
+            if block.copy_scope in {"BOTH", copy_scope} and cls._is_visible(block, fields):
+                cls._draw_overlay_block(canvas, block, payload, fields, sections, assets, styles, layout, page_size)
+        if preview:
+            canvas.saveState()
+            canvas.setFillColor(colors.Color(0.75, 0.1, 0.1, alpha=0.25))
+            canvas.setFont("Helvetica-Bold", 20)
+            canvas.translate(page_size[0] / 2, page_size[1] / 2)
+            canvas.rotate(35)
+            canvas.drawCentredString(0, 0, "PREVIEW / NOT AN OFFICIAL ISSUE")
+            canvas.restoreState()
+        canvas.showPage(); canvas.save()
+        value = buffer.getvalue(); buffer.close()
+        return value
+
+    @staticmethod
+    def _merge_pdf_pages(pages):
+        output = fitz.open()
+        try:
+            for value in pages:
+                source = fitz.open(stream=value, filetype="pdf")
+                try:
+                    output.insert_pdf(source)
+                finally:
+                    source.close()
+            return output.tobytes(garbage=4, deflate=True)
+        finally:
+            output.close()
+
+    @staticmethod
+    def _impose_a5_side_by_side(original, duplicate):
+        output = fitz.open()
+        left = fitz.open(stream=original, filetype="pdf")
+        right = fitz.open(stream=duplicate, filetype="pdf")
+        try:
+            width, height = A4[1], A4[0]
+            page = output.new_page(width=width, height=height)
+            page.show_pdf_page(fitz.Rect(0, 0, width / 2, height), left, 0)
+            page.show_pdf_page(fitz.Rect(width / 2, 0, width, height), right, 0)
+            return output.tobytes(garbage=4, deflate=True)
+        finally:
+            left.close(); right.close(); output.close()
 
     @classmethod
     def _draw_overlay_block(cls, canvas, block, payload, fields, sections, assets, styles, layout, page_size):

@@ -10,6 +10,15 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Loan-ticket-only overlay sheet composition is complete. A5 logical surfaces now separate
+  Original front, Original Terms, Duplicate front, and Duplicate D3 assets;
+  blocks are scoped to Both/Original/Duplicate. Eight deterministic presets
+  cover individual A5 output, A5 simplex/duplex sequences, and one- or two-page
+  A4-landscape side-by-side imposition. Each generated front copy independently
+  requires mandatory fields/tables/verification, and every required background
+  fails closed if absent. The visual overlay editor exposes presets, four
+  surface assets, and copy scope. Printer flip-edge selection remains a physical
+  acceptance responsibility.
 - The visual overlay editor is complete for Owner/Admin absolute-overlay
   drafts. An authenticated first-page background raster is shown behind scaled
   block rectangles; drag updates top-left X/Y inputs, while numeric forms own

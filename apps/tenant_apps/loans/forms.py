@@ -115,19 +115,48 @@ class LoanDocumentFlowBlockForm(forms.Form):
 
 class LoanDocumentOverlaySettingsForm(forms.Form):
     page_size = forms.ChoiceField(choices=(("A4", "A4"), ("A5", "A5"), ("LETTER", "Letter")))
-    copy_mode = forms.ChoiceField(choices=(
+    copy_mode = forms.ChoiceField(label="Legacy copy mode", choices=(
         ("SINGLE", "Single"), ("ORIGINAL_DUPLICATE", "Original + duplicate"),
         ("ORIGINAL_DUPLICATE_DUPLEX", "Original + duplicate duplex"),
     ))
-    background_asset_key = forms.ChoiceField()
+    background_asset_key = forms.ChoiceField(required=False, label="Legacy/shared background")
+    sheet_composition = forms.ChoiceField(required=False, choices=(
+        ("", "Legacy copy mode"),
+        ("A5_ORIGINAL", "A5 original"),
+        ("A5_ORIGINAL_TERMS_DUPLEX", "A5 original + terms duplex"),
+        ("A5_DUPLICATE", "A5 duplicate"),
+        ("A5_DUPLICATE_D3_DUPLEX", "A5 duplicate + D3 duplex"),
+        ("A5_BOTH_SIMPLEX", "A5 original + duplicate simplex"),
+        ("A5_BOTH_DUPLEX", "A5 original/terms + duplicate/D3 duplex"),
+        ("A4_SIDE_BY_SIDE", "A4 landscape side-by-side"),
+        ("A4_SIDE_BY_SIDE_DUPLEX", "A4 landscape side-by-side duplex"),
+    ))
+    original_front = forms.ChoiceField(required=False)
+    duplicate_front = forms.ChoiceField(required=False)
+    original_back = forms.ChoiceField(required=False, label="Original back / terms")
+    duplicate_back = forms.ChoiceField(required=False, label="Duplicate back / D3")
 
-    def __init__(self, *args, background_keys=(), **kwargs):
+    def __init__(self, *args, background_keys=(), sheet_composition_enabled=True, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["background_asset_key"].choices = [
             (key, key) for key in sorted(set(background_keys) | {"form.background"})
         ]
+        surface_choices = [("", "Not used")] + [(key, key) for key in sorted(set(background_keys))]
+        for name in ("original_front", "duplicate_front", "original_back", "duplicate_back"):
+            self.fields[name].choices = surface_choices
+        if not sheet_composition_enabled:
+            for name in ("sheet_composition", "original_front", "duplicate_front", "original_back", "duplicate_back"):
+                self.fields.pop(name)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-select"
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("sheet_composition") and cleaned.get("page_size") != "A5":
+            self.add_error("page_size", "Sheet composition uses A5 logical pages; A4 landscape is produced by imposition.")
+        if not cleaned.get("sheet_composition") and not cleaned.get("background_asset_key"):
+            self.add_error("background_asset_key", "Choose a shared background for legacy composition.")
+        return cleaned
 
 
 class LoanDocumentOverlayBlockForm(forms.Form):
@@ -145,6 +174,10 @@ class LoanDocumentOverlayBlockForm(forms.Form):
     height_mm = forms.IntegerField(min_value=1, max_value=100)
     font_size_pt = forms.IntegerField(min_value=6, max_value=24, initial=10)
     align = forms.ChoiceField(choices=(("LEFT", "Left"), ("CENTER", "Centre"), ("RIGHT", "Right")))
+    copy_scope = forms.ChoiceField(
+        required=False, initial="BOTH",
+        choices=(("BOTH", "Both copies"), ("ORIGINAL", "Original only"), ("DUPLICATE", "Duplicate only")),
+    )
 
     def __init__(self, *args, asset_keys=(), **kwargs):
         super().__init__(*args, **kwargs)
@@ -176,6 +209,7 @@ class LoanDocumentOverlayBlockForm(forms.Form):
             "type": value["block_type"], "x_mm": value["x_mm"], "y_mm": value["y_mm"],
             "width_mm": value["width_mm"], "height_mm": value["height_mm"],
             "font_size_pt": value["font_size_pt"], "align": value["align"],
+            "copy_scope": value.get("copy_scope") or "BOTH",
         }
         if value.get("binding"):
             block["binding"] = value["binding"]

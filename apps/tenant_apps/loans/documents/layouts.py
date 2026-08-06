@@ -22,6 +22,12 @@ ALLOWED_LAYOUT_MODES = frozenset({"FLOW", "ABSOLUTE_OVERLAY"})
 ALLOWED_FONT_FAMILIES = frozenset({"HELVETICA", "NOTO_SANS_TAMIL"})
 ALLOWED_VALUE_FORMATS = frozenset({"DEFAULT", "UPPER", "LOWER", "DATE_DMY", "DATE_MDY", "DECIMAL_2"})
 ALLOWED_OVERFLOW_POLICIES = frozenset({"WRAP", "SHRINK", "ERROR"})
+ALLOWED_COPY_SCOPES = frozenset({"BOTH", "ORIGINAL", "DUPLICATE"})
+ALLOWED_SHEET_COMPOSITIONS = frozenset({
+    "A5_ORIGINAL", "A5_ORIGINAL_TERMS_DUPLEX", "A5_DUPLICATE",
+    "A5_DUPLICATE_D3_DUPLEX", "A5_BOTH_SIMPLEX", "A5_BOTH_DUPLEX",
+    "A4_SIDE_BY_SIDE", "A4_SIDE_BY_SIDE_DUPLEX",
+})
 
 REQUIRED_BINDINGS = {
     "loan_ticket": frozenset({"workspace.name", "workspace.source_id", "license.display", "license.source_id", "loan.source_id", "loan.number", "loan.date", "loan.principal", "loan.monthly_interest_rate", "loan.tenure", "borrower.display", "borrower.source_id", "approval.source_id", "approval.fingerprint"}),
@@ -64,6 +70,7 @@ class LayoutBlock:
     y_mm: int = 0
     font_size_pt: int = 10
     align: str = "LEFT"
+    copy_scope: str = "BOTH"
 
 
 @dataclass(frozen=True)
@@ -97,6 +104,15 @@ class PageRegion:
 
 
 @dataclass(frozen=True)
+class SheetComposition:
+    composition: str
+    backgrounds: tuple[tuple[str, str], ...]
+
+    def background(self, surface):
+        return dict(self.backgrounds).get(surface, "")
+
+
+@dataclass(frozen=True)
 class DocumentLayout:
     schema_version: int
     document_type: str
@@ -115,6 +131,7 @@ class DocumentLayout:
     heading_font_size_pt: int = 14
     header: PageRegion | None = None
     footer: PageRegion | None = None
+    sheet: SheetComposition | None = None
 
     def canonical_dict(self):
         def block_dict(block):
@@ -156,6 +173,7 @@ class DocumentLayout:
                     "y_mm": block.y_mm,
                     "font_size_pt": block.font_size_pt,
                     "align": block.align,
+                    "copy_scope": block.copy_scope,
                 })
             return value
         value = {
@@ -178,6 +196,11 @@ class DocumentLayout:
                 },
                 "header": self._region_dict(self.header, block_dict),
                 "footer": self._region_dict(self.footer, block_dict),
+                "sheet": (
+                    {"composition": self.sheet.composition,
+                     "backgrounds": dict(self.sheet.backgrounds)}
+                    if self.sheet else None
+                ),
             })
         return value
 
@@ -196,6 +219,12 @@ class DocumentLayout:
                     yield from walk(column.blocks)
         region_blocks = tuple(self.header.blocks if self.header else ()) + tuple(self.footer.blocks if self.footer else ())
         return tuple(walk(self.blocks + self.back_blocks + region_blocks))
+
+    def background_asset_keys(self):
+        keys = {self.background_asset_key} if self.background_asset_key else set()
+        if self.sheet:
+            keys.update(key for _, key in self.sheet.backgrounds if key)
+        return frozenset(keys)
 
     @property
     def content_hash(self):
@@ -216,7 +245,7 @@ class DocumentLayoutValidator:
             raise LayoutValidationError("Unsupported layout schema version.")
         allowed_keys = {"schema_version", "document_type", "name", "page_size", "copy_mode", "blocks", "back_blocks", "background_asset_key"}
         if schema_version >= 2:
-            allowed_keys.update({"layout_mode", "page", "theme", "header", "footer"})
+            allowed_keys.update({"layout_mode", "page", "theme", "header", "footer", "sheet"})
         unknown = set(definition) - allowed_keys
         if unknown:
             raise LayoutValidationError(f"Unknown layout properties: {', '.join(sorted(unknown))}.")
@@ -234,9 +263,13 @@ class DocumentLayoutValidator:
         back_blocks = cls._blocks(definition.get("back_blocks", []), document_type, schema_version, layout_mode=layout_mode)
         header = cls._region(definition.get("header"), document_type, schema_version, "Header")
         footer = cls._region(definition.get("footer"), document_type, schema_version, "Footer")
+        sheet = cls._sheet(
+            definition.get("sheet"), schema_version, layout_mode, page_size,
+            document_type,
+        )
         if not blocks:
             raise LayoutValidationError("A layout requires at least one front-page block.")
-        if copy_mode == "ORIGINAL_DUPLICATE_DUPLEX" and not back_blocks:
+        if copy_mode == "ORIGINAL_DUPLICATE_DUPLEX" and not back_blocks and not definition.get("sheet"):
             raise LayoutValidationError("Duplex layouts require back-page blocks.")
         region_blocks = tuple(header.blocks if header else ()) + tuple(footer.blocks if footer else ())
         all_layout_blocks = blocks + back_blocks + region_blocks
@@ -260,18 +293,74 @@ class DocumentLayoutValidator:
         if background and not background.replace(".", "").replace("-", "").replace("_", "").isalnum():
             raise LayoutValidationError("Background asset key is invalid.")
         if layout_mode == "ABSOLUTE_OVERLAY":
-            if not background:
+            if not background and sheet is None:
                 raise LayoutValidationError("Absolute overlay layouts require a background asset key.")
             if header or footer:
                 raise LayoutValidationError("Absolute overlay layouts do not use Flow page regions.")
             cls._validate_overlay_geometry(blocks + back_blocks, page_size)
+            if sheet:
+                cls._validate_sheet_copy_evidence(sheet, blocks, document_type)
         return DocumentLayout(
             schema_version, document_type, name, page_size, copy_mode, blocks,
             back_blocks, background, layout_mode, margin_mm,
             theme["primary_color"], theme["border_color"], theme["font_family"],
             theme["body_font_size_pt"], theme["heading_font_size_pt"],
-            header, footer,
+            header, footer, sheet,
         )
+
+    @classmethod
+    def _sheet(cls, value, schema_version, layout_mode, page_size, document_type):
+        if value is None:
+            return None
+        if document_type != "loan_ticket":
+            raise LayoutValidationError("Sheet composition is available only for loan ticket documents.")
+        if schema_version < 2 or layout_mode != "ABSOLUTE_OVERLAY":
+            raise LayoutValidationError("Sheet composition is available only for schema-v2 absolute overlays.")
+        if page_size != "A5":
+            raise LayoutValidationError("Sheet composition requires A5 logical pages.")
+        if not isinstance(value, dict) or set(value) != {"composition", "backgrounds"}:
+            raise LayoutValidationError("Sheet composition requires composition and backgrounds.")
+        composition = value["composition"]
+        backgrounds = value["backgrounds"]
+        if composition not in ALLOWED_SHEET_COMPOSITIONS:
+            raise LayoutValidationError("Sheet composition mode is unsupported.")
+        allowed_surfaces = {"original_front", "duplicate_front", "original_back", "duplicate_back"}
+        if not isinstance(backgrounds, dict) or set(backgrounds) - allowed_surfaces:
+            raise LayoutValidationError("Sheet backgrounds contain unsupported surfaces.")
+        normalized = {surface: str(key or "") for surface, key in backgrounds.items()}
+        for key in normalized.values():
+            if key and not key.replace(".", "").replace("-", "").replace("_", "").isalnum():
+                raise LayoutValidationError("Sheet background asset key is invalid.")
+        required = {
+            "A5_ORIGINAL": {"original_front"},
+            "A5_ORIGINAL_TERMS_DUPLEX": {"original_front", "original_back"},
+            "A5_DUPLICATE": {"duplicate_front"},
+            "A5_DUPLICATE_D3_DUPLEX": {"duplicate_front", "duplicate_back"},
+            "A5_BOTH_SIMPLEX": {"original_front", "duplicate_front"},
+            "A5_BOTH_DUPLEX": {"original_front", "original_back", "duplicate_front", "duplicate_back"},
+            "A4_SIDE_BY_SIDE": {"original_front", "duplicate_front"},
+            "A4_SIDE_BY_SIDE_DUPLEX": {"original_front", "original_back", "duplicate_front", "duplicate_back"},
+        }[composition]
+        missing = sorted(surface for surface in required if not normalized.get(surface))
+        if missing:
+            raise LayoutValidationError(f"Sheet composition is missing background surfaces: {', '.join(missing)}.")
+        return SheetComposition(composition, tuple(sorted(normalized.items())))
+
+    @classmethod
+    def _validate_sheet_copy_evidence(cls, sheet, blocks, document_type):
+        copies = []
+        if sheet.composition in {"A5_ORIGINAL", "A5_ORIGINAL_TERMS_DUPLEX", "A5_BOTH_SIMPLEX", "A5_BOTH_DUPLEX", "A4_SIDE_BY_SIDE", "A4_SIDE_BY_SIDE_DUPLEX"}:
+            copies.append("ORIGINAL")
+        if sheet.composition in {"A5_DUPLICATE", "A5_DUPLICATE_D3_DUPLEX", "A5_BOTH_SIMPLEX", "A5_BOTH_DUPLEX", "A4_SIDE_BY_SIDE", "A4_SIDE_BY_SIDE_DUPLEX"}:
+            copies.append("DUPLICATE")
+        required = REQUIRED_BINDINGS[document_type] | REQUIRED_SECTIONS[document_type]
+        for copy_scope in copies:
+            present = cls._unconditional_bindings_for_scope(blocks, copy_scope)
+            missing = required - present
+            if missing:
+                raise LayoutValidationError(f"{copy_scope.title()} front is missing mandatory bindings: {', '.join(sorted(missing))}.")
+            if not cls._has_unconditional_type_for_scope(blocks, "verification", copy_scope):
+                raise LayoutValidationError(f"{copy_scope.title()} front requires an unconditional verification block.")
 
     @classmethod
     def _region(cls, value, document_type, schema_version, label):
@@ -336,7 +425,7 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError("Each block must be an object.")
             allowed = {"type", "binding", "bindings", "text", "height_mm", "asset_key", "width_mm"}
             if schema_version >= 2:
-                allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when", "x_mm", "y_mm", "font_size_pt", "align"})
+                allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when", "x_mm", "y_mm", "font_size_pt", "align", "copy_scope"})
             unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
@@ -393,12 +482,15 @@ class DocumentLayoutValidator:
             y_mm = value.get("y_mm", 0)
             font_size_pt = value.get("font_size_pt", 10)
             align = value.get("align", "LEFT")
+            copy_scope = value.get("copy_scope", "BOTH")
             if not isinstance(x_mm, int) or not isinstance(y_mm, int) or x_mm < 0 or y_mm < 0:
                 raise LayoutValidationError("Block X/Y coordinates must be non-negative whole millimetres.")
             if not isinstance(font_size_pt, int) or not 6 <= font_size_pt <= 24:
                 raise LayoutValidationError("Block font size must be between 6 and 24 points.")
             if align not in {"LEFT", "CENTER", "RIGHT"}:
                 raise LayoutValidationError("Block alignment is unsupported.")
+            if copy_scope not in ALLOWED_COPY_SCOPES:
+                raise LayoutValidationError("Block copy scope is unsupported.")
             if block_type == "section":
                 child_blocks = cls._blocks(value.get("blocks"), document_type, schema_version, depth=depth + 1, layout_mode=layout_mode)
                 if not child_blocks:
@@ -468,7 +560,7 @@ class DocumentLayoutValidator:
                 height, asset_key, width, child_blocks, columns, grid_columns,
                 style_variant, table_columns, repeat_header, value_format,
                 overflow_policy, max_characters, visible_when, x_mm, y_mm,
-                font_size_pt, align,
+                font_size_pt, align, copy_scope,
             ))
         return tuple(result)
 
@@ -543,6 +635,36 @@ class DocumentLayoutValidator:
             if DocumentLayoutValidator._has_unconditional_type(block.blocks, block_type, conditional):
                 return True
             if any(DocumentLayoutValidator._has_unconditional_type(column.blocks, block_type, conditional) for column in block.columns):
+                return True
+        return False
+
+    @staticmethod
+    def _unconditional_bindings_for_scope(blocks, copy_scope, inherited_conditional=False):
+        result = set()
+        for block in blocks:
+            if block.copy_scope not in {"BOTH", copy_scope}:
+                continue
+            conditional = inherited_conditional or block.visible_when is not None
+            if not conditional:
+                if block.binding:
+                    result.add(block.binding)
+                result.update(block.bindings)
+            result.update(DocumentLayoutValidator._unconditional_bindings_for_scope(block.blocks, copy_scope, conditional))
+            for column in block.columns:
+                result.update(DocumentLayoutValidator._unconditional_bindings_for_scope(column.blocks, copy_scope, conditional))
+        return frozenset(result)
+
+    @staticmethod
+    def _has_unconditional_type_for_scope(blocks, block_type, copy_scope, inherited_conditional=False):
+        for block in blocks:
+            if block.copy_scope not in {"BOTH", copy_scope}:
+                continue
+            conditional = inherited_conditional or block.visible_when is not None
+            if not conditional and block.type == block_type:
+                return True
+            if DocumentLayoutValidator._has_unconditional_type_for_scope(block.blocks, block_type, copy_scope, conditional):
+                return True
+            if any(DocumentLayoutValidator._has_unconditional_type_for_scope(column.blocks, block_type, copy_scope, conditional) for column in block.columns):
                 return True
         return False
 

@@ -59,13 +59,56 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         return buffer.getvalue()
 
     @staticmethod
-    def _pdf_bytes():
+    def _pdf_bytes(text="BACKGROUND"):
         document = fitz.open()
         page = document.new_page()
-        page.insert_text((30, 30), "BACKGROUND")
+        page.insert_text((30, 30), text)
         value = document.tobytes()
         document.close()
         return value
+
+    def _sheet_definition(self, composition):
+        definition = starter_layout(
+            "loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY"
+        ).canonical_dict()
+        definition["page_size"] = "A5"
+        definition["background_asset_key"] = ""
+        field_index = 0
+        for block in definition["blocks"]:
+            if block["type"] == "title":
+                block.update({"x_mm": 5, "y_mm": 4, "width_mm": 138, "height_mm": 10})
+            elif block["type"] == "field":
+                block.update({
+                    "x_mm": 5 if field_index % 2 == 0 else 75,
+                    "y_mm": 18 + (field_index // 2) * 9,
+                    "width_mm": 68, "height_mm": 7, "font_size_pt": 6,
+                })
+                field_index += 1
+            elif block["type"] == "table":
+                block.update({
+                    "x_mm": 5, "y_mm": 90, "width_mm": 138, "height_mm": 55, "font_size_pt": 7,
+                    "table_columns": [
+                        {"index": 0, "label": "Item", "width_percent": 20, "align": "LEFT"},
+                        {"index": 1, "label": "Description", "width_percent": 80, "align": "LEFT"},
+                    ],
+                })
+            elif block["type"] == "verification":
+                block.update({"x_mm": 5, "y_mm": 150, "width_mm": 138, "height_mm": 12, "font_size_pt": 7})
+            elif block["type"] == "signature":
+                block.update({"x_mm": 5, "y_mm": 170, "width_mm": 138, "height_mm": 25, "font_size_pt": 8})
+        definition["blocks"].extend([
+            {"type": "title", "text": "ORIGINAL MARK", "copy_scope": "ORIGINAL", "x_mm": 5, "y_mm": 198, "width_mm": 65, "height_mm": 8, "font_size_pt": 7},
+            {"type": "title", "text": "DUPLICATE MARK", "copy_scope": "DUPLICATE", "x_mm": 75, "y_mm": 198, "width_mm": 68, "height_mm": 8, "font_size_pt": 7},
+        ])
+        definition["back_blocks"] = []
+        definition["sheet"] = {
+            "composition": composition,
+            "backgrounds": {
+                "original_front": "original.front", "duplicate_front": "duplicate.front",
+                "original_back": "original.terms", "duplicate_back": "duplicate.d3",
+            },
+        }
+        return definition
 
     def test_starter_layout_renders_with_deterministic_evidence(self):
         layout = starter_layout("loan_ticket")
@@ -182,6 +225,75 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
         definition["blocks"].insert(1, {"type": "spacer", "x_mm": 1, "y_mm": 1, "width_mm": 10, "height_mm": 10})
         with self.assertRaisesMessage(LayoutValidationError, "not supported in absolute overlay"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_a5_both_duplex_sheet_composition_has_four_ordered_pages(self):
+        assets = tuple(
+            DocumentAssetValidator.validate(key=key, kind="BACKGROUND", content=self._pdf_bytes(text), workspace_id=7)
+            for key, text in (
+                ("original.front", "ORIGINAL BACKGROUND"), ("duplicate.front", "DUPLICATE BACKGROUND"),
+                ("original.terms", "ORIGINAL TERMS"), ("duplicate.d3", "FORM D3"),
+            )
+        )
+        layout = DocumentLayoutValidator.load(self._sheet_definition("A5_BOTH_DUPLEX"))
+
+        result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=assets)
+
+        self.assertEqual(result.renderer_version, "layout-reportlab-sheet-v1")
+        self.assertEqual(result.page_size, "A5")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 4)
+        self.assertIn("ORIGINAL BACKGROUND", pdf[0].get_text())
+        self.assertIn("ORIGINAL MARK", pdf[0].get_text())
+        self.assertNotIn("DUPLICATE MARK", pdf[0].get_text())
+        self.assertIn("ORIGINAL TERMS", pdf[1].get_text())
+        self.assertIn("DUPLICATE BACKGROUND", pdf[2].get_text())
+        self.assertIn("DUPLICATE MARK", pdf[2].get_text())
+        self.assertIn("FORM D3", pdf[3].get_text())
+        pdf.close()
+
+    def test_a4_side_by_side_duplex_imposes_fronts_and_backs(self):
+        assets = tuple(
+            DocumentAssetValidator.validate(key=key, kind="BACKGROUND", content=self._pdf_bytes(text), workspace_id=7)
+            for key, text in (
+                ("original.front", "ORIGINAL BACKGROUND"), ("duplicate.front", "DUPLICATE BACKGROUND"),
+                ("original.terms", "ORIGINAL TERMS"), ("duplicate.d3", "FORM D3"),
+            )
+        )
+        layout = DocumentLayoutValidator.load(self._sheet_definition("A4_SIDE_BY_SIDE_DUPLEX"))
+
+        result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=assets)
+
+        self.assertEqual(result.page_size, "A4_LANDSCAPE")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 2)
+        self.assertGreater(pdf[0].rect.width, pdf[0].rect.height)
+        front = pdf[0].get_text()
+        back = pdf[1].get_text()
+        self.assertIn("ORIGINAL BACKGROUND", front)
+        self.assertIn("DUPLICATE BACKGROUND", front)
+        self.assertIn("ORIGINAL MARK", front)
+        self.assertIn("DUPLICATE MARK", front)
+        self.assertIn("ORIGINAL TERMS", back)
+        self.assertIn("FORM D3", back)
+        pdf.close()
+
+    def test_sheet_composition_requires_assets_and_copy_complete_evidence(self):
+        definition = self._sheet_definition("A4_SIDE_BY_SIDE")
+        definition["sheet"]["backgrounds"]["duplicate_front"] = ""
+        with self.assertRaisesMessage(LayoutValidationError, "duplicate_front"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = self._sheet_definition("A4_SIDE_BY_SIDE")
+        required_field = next(block for block in definition["blocks"] if block.get("binding") == "loan.number")
+        required_field["copy_scope"] = "ORIGINAL"
+        with self.assertRaisesMessage(LayoutValidationError, "Duplicate front is missing mandatory bindings: loan.number"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_sheet_composition_is_restricted_to_loan_ticket_documents(self):
+        definition = self._sheet_definition("A5_ORIGINAL")
+        definition["document_type"] = "release_memo"
+        with self.assertRaisesMessage(LayoutValidationError, "only for loan ticket documents"):
             DocumentLayoutValidator.load(definition)
 
     def test_schema_v2_sections_columns_and_field_grids_render(self):

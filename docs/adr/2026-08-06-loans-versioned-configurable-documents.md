@@ -61,6 +61,15 @@ a second source of financial facts or making historical reprints mutable.
     top-left of an A4, A5, or Letter page. A validated background is mandatory;
     every block must fit the page and its rectangle. Overlay never silently
     paginates, clips, or imports Flow container semantics.
+13. For loan ticket documents only, logical overlay-page rendering is separate
+    from physical sheet composition. Sheet composition uses A5 logical surfaces named original
+    front, original back/terms, duplicate front, and duplicate back/D3. Blocks
+    have an allow-listed Original/Duplicate/Both scope. A deterministic preset
+    sequences A5 pages or imposes two A5 surfaces onto A4 landscape; no printer
+    driver instruction or implicit rotation is embedded in the PDF.
+14. Every required surface background and every copy's mandatory front
+    evidence must validate before publication. Missing Terms/D3 never silently
+    removes a duplex back page, unlike Girvi's warning-only behavior.
 
 ## Consequences
 

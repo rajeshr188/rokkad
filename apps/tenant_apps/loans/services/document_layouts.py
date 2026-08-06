@@ -130,8 +130,7 @@ class LoanDocumentLayoutService:
         parsed = DocumentLayoutValidator.load(revision.definition)
         available = set(revision.assets.values_list("key", flat=True))
         required = {block.asset_key for block in parsed.all_blocks() if block.asset_key}
-        if parsed.background_asset_key:
-            required.add(parsed.background_asset_key)
+        required.update(parsed.background_asset_keys())
         missing = required - available
         if missing:
             raise DocumentLayoutServiceError(f"Layout assets are missing: {', '.join(sorted(missing))}.")

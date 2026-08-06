@@ -357,7 +357,11 @@ def document_layout_overlay_background(request, revision_pk):
     layout = DocumentLayoutValidator.load(revision.definition)
     if layout.layout_mode != "ABSOLUTE_OVERLAY":
         return HttpResponseGone("This revision is not an absolute overlay layout.")
-    asset = get_object_or_404(revision.assets, key=layout.background_asset_key, kind="BACKGROUND")
+    background_key = (
+        layout.sheet.background("original_front") if layout.sheet
+        else layout.background_asset_key
+    )
+    asset = get_object_or_404(revision.assets, key=background_key, kind="BACKGROUND")
     asset.file.open("rb")
     content = asset.file.read()
     asset.file.close()
@@ -393,12 +397,27 @@ def document_layout_overlay_designer(request, revision_pk):
         operation = request.POST.get("operation")
         try:
             if operation == "save_settings":
-                form = LoanDocumentOverlaySettingsForm(request.POST, background_keys=background_keys)
+                form = LoanDocumentOverlaySettingsForm(
+                    request.POST, background_keys=background_keys,
+                    sheet_composition_enabled=layout.document_type == "loan_ticket",
+                )
                 if not form.is_valid():
                     raise ValueError("Overlay page settings are invalid.")
                 definition["page_size"] = form.cleaned_data["page_size"]
                 definition["copy_mode"] = form.cleaned_data["copy_mode"]
-                definition["background_asset_key"] = form.cleaned_data["background_asset_key"]
+                composition = form.cleaned_data.get("sheet_composition")
+                if composition:
+                    definition["background_asset_key"] = ""
+                    definition["sheet"] = {
+                        "composition": composition,
+                        "backgrounds": {
+                            surface: form.cleaned_data[surface]
+                            for surface in ("original_front", "duplicate_front", "original_back", "duplicate_back")
+                        },
+                    }
+                else:
+                    definition["sheet"] = None
+                    definition["background_asset_key"] = form.cleaned_data["background_asset_key"]
             elif operation in {"add_block", "save_block"}:
                 form = LoanDocumentOverlayBlockForm(request.POST, asset_keys=image_keys)
                 if not form.is_valid():
@@ -434,15 +453,28 @@ def document_layout_overlay_designer(request, revision_pk):
     page_width_mm, page_height_mm = dimensions[layout.page_size]
     settings_form = LoanDocumentOverlaySettingsForm(
         background_keys=background_keys,
+        sheet_composition_enabled=layout.document_type == "loan_ticket",
         initial={"page_size": layout.page_size, "copy_mode": layout.copy_mode,
-                 "background_asset_key": layout.background_asset_key},
+                 "background_asset_key": layout.background_asset_key,
+                 "sheet_composition": layout.sheet.composition if layout.sheet else "",
+                 **({surface: layout.sheet.background(surface) for surface in (
+                     "original_front", "duplicate_front", "original_back", "duplicate_back",
+                 )} if layout.sheet else {})},
     )
     return render(request, "loans/setup/documents/overlay_designer.html", {
         "revision": revision, "layout": layout, "settings_form": settings_form,
         "add_form": LoanDocumentOverlayBlockForm(asset_keys=image_keys),
         "image_keys": image_keys, "page_width_mm": page_width_mm,
         "page_height_mm": page_height_mm,
-        "has_background": layout.background_asset_key in background_keys,
+        "sheet_composition_enabled": layout.document_type == "loan_ticket",
+        "preview_background_key": (
+            layout.sheet.background("original_front") if layout.sheet
+            else layout.background_asset_key
+        ),
+        "has_background": (
+            layout.sheet.background("original_front") if layout.sheet
+            else layout.background_asset_key
+        ) in background_keys,
         "sample_loan": PawnLoan.objects.filter(
             workspace=request.loans_workspace, approval_snapshots__isnull=False,
         ).order_by("-pk").first(),

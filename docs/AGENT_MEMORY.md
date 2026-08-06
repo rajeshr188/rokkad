@@ -46,6 +46,12 @@ first-page background raster, proportional rectangles, drag-to-update X/Y,
 exact numeric/property forms, supported block add/remove, settings, preview,
 and test print. It persists only through the same validated JSON revision
 service; advanced JSON still owns specialized and back-page properties.
+Loan-ticket-only overlay sheet composition treats A5 Original front, Original Terms, Duplicate
+front, and Duplicate D3 as logical surfaces before output imposition. Eight
+presets sequence A5 pages or impose left/right pairs on A4 landscape. Blocks
+have Both/Original/Duplicate scope; each front copy independently requires all
+mandatory evidence, and every required surface asset fails closed. Printer
+duplex flip-edge behavior is deliberately outside the PDF contract.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 

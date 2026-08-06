@@ -5,7 +5,7 @@
   <div><h1 class="h3 mb-1">Visual overlay editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · {{ layout.page_size }} · coordinates from top-left</p></div>
   <div class="d-flex gap-2">{% if sample_loan and has_background %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_detail' revision.pk %}">Assets, JSON, and publishing</a></div>
 </div>
-{% if not has_background %}<div class="alert alert-warning">Upload a Page background using asset key <code>{{ layout.background_asset_key }}</code> on the revision page. Geometry can be edited now, but preview and publication require that asset.</div>{% endif %}
+{% if not has_background %}<div class="alert alert-warning">Upload a Page background using asset key <code>{{ preview_background_key }}</code> on the revision page. Geometry can be edited now, but preview and publication require that asset.</div>{% endif %}
 <div class="alert alert-info">Drag a rectangle to update its X/Y inputs, then select <strong>Save block</strong>. Use the numeric fields for exact size and typography. Always confirm with a PDF test print at 100% scale.</div>
 
 <div class="row g-4">
@@ -34,6 +34,7 @@
             <div class="col-4 col-md-2"><label class="form-label">Height</label><input class="form-control" type="number" name="height_mm" value="{{ block.height_mm }}" min="1"></div>
             <div class="col-4 col-md-2"><label class="form-label">Font pt</label><input class="form-control" type="number" name="font_size_pt" value="{{ block.font_size_pt }}" min="6" max="24"></div>
             <div class="col-4 col-md-2"><label class="form-label">Align</label><select class="form-select" name="align"><option value="LEFT"{% if block.align == 'LEFT' %} selected{% endif %}>Left</option><option value="CENTER"{% if block.align == 'CENTER' %} selected{% endif %}>Centre</option><option value="RIGHT"{% if block.align == 'RIGHT' %} selected{% endif %}>Right</option></select></div>
+            <div class="col-md-3"><label class="form-label">Copy scope</label><select class="form-select" name="copy_scope"><option value="BOTH"{% if block.copy_scope == 'BOTH' %} selected{% endif %}>Both copies</option><option value="ORIGINAL"{% if block.copy_scope == 'ORIGINAL' %} selected{% endif %}>Original only</option><option value="DUPLICATE"{% if block.copy_scope == 'DUPLICATE' %} selected{% endif %}>Duplicate only</option></select></div>
             <div class="col-12 d-flex gap-2 mt-3"><button class="btn btn-primary">Save block</button></form><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="remove"><input type="hidden" name="index" value="{{ forloop.counter0 }}"><button class="btn btn-outline-danger">Remove</button></form></div>
         </div></div>
       </div>
@@ -41,7 +42,7 @@
     </div>
   </div>
   <div class="col-xl-4">
-    <div class="card mb-3"><div class="card-header"><strong>Page and background</strong></div><div class="card-body"><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_settings">{{ settings_form.as_p }}<button class="btn btn-primary">Save settings</button></form></div></div>
+    <div class="card mb-3"><div class="card-header"><strong>Page and background</strong></div><div class="card-body">{% if sheet_composition_enabled %}<p class="small text-muted">Loan tickets can combine Original, Terms, Duplicate, and D3 logical A5 surfaces into printable sheets.</p>{% endif %}<form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_settings">{{ settings_form.as_p }}<button class="btn btn-primary">Save settings</button></form></div></div>
     <div class="card"><div class="card-header"><strong>Add overlay block</strong></div><div class="card-body"><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="add_block">{{ add_form.as_p }}<button class="btn btn-primary">Add block</button></form></div></div>
   </div>
 </div>

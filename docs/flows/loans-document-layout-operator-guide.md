@@ -192,6 +192,40 @@ formatting, overflow, and duplex back-page blocks. PDF viewers may apply print
 scaling, so production acceptance must use **Actual size / 100%** on the real
 printer.
 
+### Original, duplicate, Terms, D3, and A4 imposition
+
+Sheet composition is available only for the **Loan ticket** document type. In
+**Page and background**, choose a sheet-composition preset and assign the
+appropriate background assets:
+
+- Original front
+- Duplicate front
+- Original back / Terms
+- Duplicate back / Form D3
+
+Sheet compositions use A5 as the logical page size:
+
+| Preset | Output sequence |
+|---|---|
+| `A5_ORIGINAL` | Original front |
+| `A5_ORIGINAL_TERMS_DUPLEX` | Original front, Terms |
+| `A5_DUPLICATE` | Duplicate front |
+| `A5_DUPLICATE_D3_DUPLEX` | Duplicate front, D3 |
+| `A5_BOTH_SIMPLEX` | Original front, Duplicate front |
+| `A5_BOTH_DUPLEX` | Original front, Terms, Duplicate front, D3 |
+| `A4_SIDE_BY_SIDE` | One A4 landscape page: Original left, Duplicate right |
+| `A4_SIDE_BY_SIDE_DUPLEX` | A4 front as above; A4 back: Terms left, D3 right |
+
+Set each front block's copy scope to **Both copies**, **Original only**, or
+**Duplicate only**. Every generated front copy must still contain all mandatory
+fields, tables, and verification; copy-specific decoration cannot remove legal
+evidence.
+
+For A4 landscape duplex, Rokkad preserves left/right positions but does not
+control the printer driver's flip-edge behavior. Test both sides using the real
+printer and select the driver option that keeps Terms behind Original and D3
+behind Duplicate.
+
 ## Add A QR Code
 
 For the official verification ID, add this block:

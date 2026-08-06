@@ -43,6 +43,12 @@ custody logic.
    validated JSON contract.
 8. Physical printer acceptance for both composition modes.
 
+Before physical acceptance, sheet-composition parity was added as an explicit
+architecture slice: four logical A5 surfaces, copy-scoped blocks, six A5
+sequence presets, and two A4-landscape side-by-side presets. This replaces
+Girvi's hardcoded composition branches and warning-only missing-page behavior
+with validated data and fail-closed publication.
+
 Flow and overlay remain separate renderers over the same typed payload,
 immutable revision, deterministic assignment, and exact-issue infrastructure.
 
