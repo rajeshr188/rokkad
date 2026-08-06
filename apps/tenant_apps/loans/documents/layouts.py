@@ -20,6 +20,8 @@ ALLOWED_PAGE_SIZES = frozenset({"A4", "A5", "LETTER"})
 ALLOWED_COPY_MODES = frozenset({"SINGLE", "ORIGINAL_DUPLICATE", "ORIGINAL_DUPLICATE_DUPLEX"})
 ALLOWED_LAYOUT_MODES = frozenset({"FLOW"})
 ALLOWED_FONT_FAMILIES = frozenset({"HELVETICA", "NOTO_SANS_TAMIL"})
+ALLOWED_VALUE_FORMATS = frozenset({"DEFAULT", "UPPER", "LOWER", "DATE_DMY", "DATE_MDY", "DECIMAL_2"})
+ALLOWED_OVERFLOW_POLICIES = frozenset({"WRAP", "SHRINK", "ERROR"})
 
 REQUIRED_BINDINGS = {
     "loan_ticket": frozenset({"workspace.name", "workspace.source_id", "license.display", "license.source_id", "loan.source_id", "loan.number", "loan.date", "loan.principal", "loan.monthly_interest_rate", "loan.tenure", "borrower.display", "borrower.source_id", "approval.source_id", "approval.fingerprint"}),
@@ -54,6 +56,10 @@ class LayoutBlock:
     style_variant: str = "PLAIN"
     table_columns: tuple[TableColumn, ...] = ()
     repeat_header: bool = True
+    value_format: str = "DEFAULT"
+    overflow_policy: str = "WRAP"
+    max_characters: int = 120
+    visible_when: VisibilityCondition | None = None
 
 
 @dataclass(frozen=True)
@@ -68,6 +74,16 @@ class TableColumn:
     label: str
     width_percent: int
     align: str = "LEFT"
+    value_format: str = "DEFAULT"
+    overflow_policy: str = "WRAP"
+    max_characters: int = 120
+
+
+@dataclass(frozen=True)
+class VisibilityCondition:
+    binding: str
+    operator: str
+    value: str = ""
 
 
 @dataclass(frozen=True)
@@ -116,10 +132,22 @@ class DocumentLayout:
                     "style_variant": block.style_variant,
                     "table_columns": [
                         {"index": column.index, "label": column.label,
-                         "width_percent": column.width_percent, "align": column.align}
+                         "width_percent": column.width_percent, "align": column.align,
+                         "value_format": column.value_format,
+                         "overflow_policy": column.overflow_policy,
+                         "max_characters": column.max_characters}
                         for column in block.table_columns
                     ],
                     "repeat_header": block.repeat_header,
+                    "value_format": block.value_format,
+                    "overflow_policy": block.overflow_policy,
+                    "max_characters": block.max_characters,
+                    "visible_when": (
+                        {"binding": block.visible_when.binding,
+                         "operator": block.visible_when.operator,
+                         "value": block.visible_when.value}
+                        if block.visible_when else None
+                    ),
                 })
             return value
         value = {
@@ -202,14 +230,19 @@ class DocumentLayoutValidator:
         if copy_mode == "ORIGINAL_DUPLICATE_DUPLEX" and not back_blocks:
             raise LayoutValidationError("Duplex layouts require back-page blocks.")
         region_blocks = tuple(header.blocks if header else ()) + tuple(footer.blocks if footer else ())
-        bound = cls._bindings(blocks + back_blocks + region_blocks)
+        all_layout_blocks = blocks + back_blocks + region_blocks
+        bound = cls._bindings(all_layout_blocks)
         missing = REQUIRED_BINDINGS[document_type] - bound
         if missing:
             raise LayoutValidationError(f"Required bindings are missing: {', '.join(sorted(missing))}.")
         missing_sections = REQUIRED_SECTIONS[document_type] - bound
         if missing_sections:
             raise LayoutValidationError(f"Required tables are missing: {', '.join(sorted(missing_sections))}.")
-        if not cls._has_block_type(blocks + back_blocks + region_blocks, "verification"):
+        unconditional = cls._unconditional_bindings(all_layout_blocks)
+        conditionally_hidden = (REQUIRED_BINDINGS[document_type] | REQUIRED_SECTIONS[document_type]) - unconditional
+        if conditionally_hidden:
+            raise LayoutValidationError(f"Mandatory bindings must have an unconditional occurrence: {', '.join(sorted(conditionally_hidden))}.")
+        if not cls._has_unconditional_type(all_layout_blocks, "verification"):
             raise LayoutValidationError("Every official layout requires a verification block.")
         name = str(definition.get("name") or "").strip()
         if not name or len(name) > 100:
@@ -289,7 +322,7 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError("Each block must be an object.")
             allowed = {"type", "binding", "bindings", "text", "height_mm", "asset_key", "width_mm"}
             if schema_version >= 2:
-                allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header"})
+                allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when"})
             unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
@@ -329,6 +362,16 @@ class DocumentLayoutValidator:
             style_variant = str(value.get("style_variant") or "PLAIN")
             table_columns = ()
             repeat_header = value.get("repeat_header", True)
+            value_format = value.get("value_format", "DEFAULT")
+            overflow_policy = value.get("overflow_policy", "WRAP")
+            max_characters = value.get("max_characters", 120)
+            if value_format not in ALLOWED_VALUE_FORMATS:
+                raise LayoutValidationError("Value format is unsupported.")
+            if overflow_policy not in ALLOWED_OVERFLOW_POLICIES:
+                raise LayoutValidationError("Overflow policy is unsupported.")
+            if not isinstance(max_characters, int) or not 10 <= max_characters <= 500:
+                raise LayoutValidationError("Maximum characters must be between 10 and 500.")
+            visible_when = cls._visibility_condition(value.get("visible_when"), field_keys)
             if block_type == "section":
                 child_blocks = cls._blocks(value.get("blocks"), document_type, schema_version, depth=depth + 1)
                 if not child_blocks:
@@ -368,14 +411,23 @@ class DocumentLayoutValidator:
                     raise LayoutValidationError("Table columns must be a list of at most 12 entries.")
                 parsed_table_columns = []
                 for raw_column in raw_table_columns:
-                    if not isinstance(raw_column, dict) or set(raw_column) != {"index", "label", "width_percent", "align"}:
+                    required_column_keys = {"index", "label", "width_percent", "align"}
+                    allowed_column_keys = required_column_keys | {"value_format", "overflow_policy", "max_characters"}
+                    if not isinstance(raw_column, dict) or not required_column_keys <= set(raw_column) or set(raw_column) - allowed_column_keys:
                         raise LayoutValidationError("Each table column requires index, label, width_percent, and align.")
                     index, label, percent, align = raw_column["index"], str(raw_column["label"]).strip(), raw_column["width_percent"], raw_column["align"]
                     if not isinstance(index, int) or not 0 <= index <= 11 or not label or len(label) > 40:
                         raise LayoutValidationError("Table column index or label is invalid.")
                     if not isinstance(percent, int) or not 5 <= percent <= 90 or align not in {"LEFT", "CENTER", "RIGHT"}:
                         raise LayoutValidationError("Table column width or alignment is invalid.")
-                    parsed_table_columns.append(TableColumn(index, label, percent, align))
+                    column_format = raw_column.get("value_format", "DEFAULT")
+                    column_overflow = raw_column.get("overflow_policy", "WRAP")
+                    column_maximum = raw_column.get("max_characters", 120)
+                    if column_format not in ALLOWED_VALUE_FORMATS or column_overflow not in ALLOWED_OVERFLOW_POLICIES:
+                        raise LayoutValidationError("Table column format or overflow policy is unsupported.")
+                    if not isinstance(column_maximum, int) or not 10 <= column_maximum <= 500:
+                        raise LayoutValidationError("Table column maximum characters must be between 10 and 500.")
+                    parsed_table_columns.append(TableColumn(index, label, percent, align, column_format, column_overflow, column_maximum))
                 if parsed_table_columns:
                     if len({column.index for column in parsed_table_columns}) != len(parsed_table_columns):
                         raise LayoutValidationError("Table column indexes must be unique.")
@@ -387,9 +439,25 @@ class DocumentLayoutValidator:
             result.append(LayoutBlock(
                 block_type, binding, bindings, str(value.get("text") or ""),
                 height, asset_key, width, child_blocks, columns, grid_columns,
-                style_variant, table_columns, repeat_header,
+                style_variant, table_columns, repeat_header, value_format,
+                overflow_policy, max_characters, visible_when,
             ))
         return tuple(result)
+
+    @staticmethod
+    def _visibility_condition(value, field_keys):
+        if value is None:
+            return None
+        if not isinstance(value, dict) or set(value) != {"binding", "operator", "value"}:
+            raise LayoutValidationError("Visibility condition requires binding, operator, and value.")
+        binding, operator, expected = value["binding"], value["operator"], str(value["value"])
+        if binding not in field_keys:
+            raise LayoutValidationError("Visibility condition binding is not registered.")
+        if operator not in {"PRESENT", "EMPTY", "EQUALS", "NOT_EQUALS"}:
+            raise LayoutValidationError("Visibility condition operator is unsupported.")
+        if operator in {"PRESENT", "EMPTY"} and expected:
+            raise LayoutValidationError("Present/empty visibility conditions require an empty value.")
+        return VisibilityCondition(binding, operator, expected)
 
     @staticmethod
     def _bindings(blocks):
@@ -411,6 +479,32 @@ class DocumentLayoutValidator:
             if DocumentLayoutValidator._has_block_type(block.blocks, block_type):
                 return True
             if any(DocumentLayoutValidator._has_block_type(column.blocks, block_type) for column in block.columns):
+                return True
+        return False
+
+    @staticmethod
+    def _unconditional_bindings(blocks, inherited_conditional=False):
+        result = set()
+        for block in blocks:
+            conditional = inherited_conditional or block.visible_when is not None
+            if not conditional:
+                if block.binding:
+                    result.add(block.binding)
+                result.update(block.bindings)
+            result.update(DocumentLayoutValidator._unconditional_bindings(block.blocks, conditional))
+            for column in block.columns:
+                result.update(DocumentLayoutValidator._unconditional_bindings(column.blocks, conditional))
+        return frozenset(result)
+
+    @staticmethod
+    def _has_unconditional_type(blocks, block_type, inherited_conditional=False):
+        for block in blocks:
+            conditional = inherited_conditional or block.visible_when is not None
+            if not conditional and block.type == block_type:
+                return True
+            if DocumentLayoutValidator._has_unconditional_type(block.blocks, block_type, conditional):
+                return True
+            if any(DocumentLayoutValidator._has_unconditional_type(column.blocks, block_type, conditional) for column in block.columns):
                 return True
         return False
 

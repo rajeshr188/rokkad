@@ -10,6 +10,12 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Flow v2 safe formatting, conditional presentation, and overflow policies are
+  complete. Allow-listed case/date/decimal formats fail on incompatible input;
+  visibility uses only registered scalar bindings and four declarative
+  operators; required regulatory fields, tables, and verification must retain
+  an unconditional occurrence. Wrap, bounded shrink, and explicit error
+  policies replace silent clipping.
 - Flow v2 configurable tables and repeating page regions are complete. Tables
   support selected payload indexes, custom labels, percentage widths,
   alignment, repeatable headings, and grid/minimal/striped variants. Bounded

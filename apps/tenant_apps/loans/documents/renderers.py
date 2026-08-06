@@ -3,6 +3,8 @@
 import hashlib
 import io
 import json
+from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from dataclasses import dataclass
 from xml.sax.saxutils import escape
@@ -97,13 +99,19 @@ class ConfigurableDocumentRenderer:
                 story.extend([Paragraph("PREVIEW / NOT AN OFFICIAL ISSUE", styles["Heading2"]), Spacer(1, 4)])
             story.extend([Paragraph(copy_name, styles["Heading3"]), Spacer(1, 3)])
         for block in blocks:
+            if not cls._is_visible(block, fields):
+                continue
             if block.type == "title":
                 story.extend([Paragraph(escape(block.text or payload.title), styles["Title"]), Spacer(1, 6)])
             elif block.type == "field":
                 field = fields[block.binding]
-                story.append(Paragraph(f"<b>{escape(field.label)}</b>: {escape(str(field.value))}", styles["BodyText"]))
+                value, style = cls._display_value(field.value, block, styles["BodyText"])
+                story.append(Paragraph(f"<b>{escape(field.label)}</b>: {escape(value)}", style))
             elif block.type == "field_group":
-                rows = [[Paragraph(f"<b>{escape(fields[key].label)}</b>", styles["BodyText"]), Paragraph(escape(str(fields[key].value)), styles["BodyText"])] for key in block.bindings]
+                rows = []
+                for key in block.bindings:
+                    value, style = cls._display_value(fields[key].value, block, styles["BodyText"])
+                    rows.append([Paragraph(f"<b>{escape(fields[key].label)}</b>", styles["BodyText"]), Paragraph(escape(value), style)])
                 table = Table(rows, colWidths=[52 * mm, 120 * mm])
                 table.setStyle(cls._table_style(False)); story.extend([table, Spacer(1, 6)])
             elif block.type == "table":
@@ -118,7 +126,15 @@ class ConfigurableDocumentRenderer:
                 else:
                     rows = section.rows
                     widths = None
-                table = Table([[Paragraph(escape(str(cell)), styles["BodyText"]) for cell in row] for row in rows],
+                rendered_rows = []
+                for row_index, row in enumerate(rows):
+                    rendered_row = []
+                    for column_index, cell in enumerate(row):
+                        config = block.table_columns[column_index] if block.table_columns and row_index else block
+                        value, style = cls._display_value(cell, config, styles["BodyText"])
+                        rendered_row.append(Paragraph(escape(value), style))
+                    rendered_rows.append(rendered_row)
+                table = Table(rendered_rows,
                               colWidths=widths, repeatRows=1 if block.repeat_header else 0)
                 commands = list(cls._table_style(True).getCommands())
                 if block.style_variant == "MINIMAL":
@@ -152,7 +168,10 @@ class ConfigurableDocumentRenderer:
             elif block.type == "page_break":
                 story.append(PageBreak())
             elif block.type == "field_grid":
-                cells = [Paragraph(f"<b>{escape(fields[key].label)}</b><br/>{escape(str(fields[key].value))}", styles["BodyText"]) for key in block.bindings]
+                cells = []
+                for key in block.bindings:
+                    value, style = cls._display_value(fields[key].value, block, styles["BodyText"])
+                    cells.append(Paragraph(f"<b>{escape(fields[key].label)}</b><br/>{escape(value)}", style))
                 while len(cells) % block.grid_columns:
                     cells.append("")
                 rows = [cells[index:index + block.grid_columns] for index in range(0, len(cells), block.grid_columns)]
@@ -181,6 +200,49 @@ class ConfigurableDocumentRenderer:
                 columns = Table([cells], colWidths=widths)
                 columns.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4)]))
                 story.extend([columns, Spacer(1, 6)])
+
+    @staticmethod
+    def _is_visible(block, fields):
+        condition = block.visible_when
+        if condition is None:
+            return True
+        value = str(fields[condition.binding].value or "")
+        if condition.operator == "PRESENT":
+            return bool(value.strip())
+        if condition.operator == "EMPTY":
+            return not value.strip()
+        if condition.operator == "EQUALS":
+            return value == condition.value
+        return value != condition.value
+
+    @staticmethod
+    def _display_value(raw_value, config, base_style):
+        value = str(raw_value)
+        value_format = config.value_format
+        if value_format == "UPPER":
+            value = value.upper()
+        elif value_format == "LOWER":
+            value = value.lower()
+        elif value_format in {"DATE_DMY", "DATE_MDY"}:
+            try:
+                parsed = date.fromisoformat(value)
+            except ValueError as exc:
+                raise ValueError(f"Value {value!r} is not a valid ISO date for {value_format}.") from exc
+            value = parsed.strftime("%d/%m/%Y" if value_format == "DATE_DMY" else "%m/%d/%Y")
+        elif value_format == "DECIMAL_2":
+            try:
+                value = f"{Decimal(value):,.2f}"
+            except InvalidOperation as exc:
+                raise ValueError(f"Value {value!r} is not a valid decimal.") from exc
+        maximum = config.max_characters
+        if config.overflow_policy == "ERROR" and len(value) > maximum:
+            raise ValueError(f"Formatted value exceeds the {maximum}-character overflow limit.")
+        style = base_style
+        if config.overflow_policy == "SHRINK" and len(value) > maximum:
+            style = base_style.clone(f"{base_style.name}-shrink-{maximum}")
+            style.fontSize = max(6, base_style.fontSize * maximum / len(value))
+            style.leading = style.fontSize + 2
+        return value, style
 
     @classmethod
     def _draw_page_region(cls, canvas, region, *, top, payload, fields, sections, styles, assets, layout, available_width):

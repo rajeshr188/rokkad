@@ -208,6 +208,71 @@ Headers and footers reserve body space and repeat on every generated page.
 They accept only compact blocks; tables, signatures, containers, and page
 breaks are rejected there.
 
+### Safe formatting
+
+Field, field-group, field-grid, and configured table-column values may use an
+allow-listed `value_format`:
+
+- `DEFAULT`
+- `UPPER` or `LOWER`
+- `DATE_DMY` or `DATE_MDY` for ISO dates
+- `DECIMAL_2` for a plain numeric value
+
+```json
+{
+  "type": "field",
+  "binding": "loan.date",
+  "value_format": "DATE_DMY"
+}
+```
+
+Formatting fails closed when the source value is incompatible. For example,
+`DECIMAL_2` does not attempt to guess or strip a currency prefix.
+
+### Conditional presentation
+
+Use a registered scalar binding with `PRESENT`, `EMPTY`, `EQUALS`, or
+`NOT_EQUALS`:
+
+```json
+{
+  "type": "section",
+  "text": "Reversed document",
+  "visible_when": {
+    "binding": "document.status",
+    "operator": "EQUALS",
+    "value": "REVERSED"
+  },
+  "blocks": [{"type": "field", "binding": "document.status"}]
+}
+```
+
+Required regulatory fields, required tables, and verification must also occur
+outside conditional blocks. Conditions cannot make mandatory evidence
+disappear from an official document.
+
+### Overflow policy
+
+Long values use one of:
+
+- `WRAP`: normal multi-line flow;
+- `SHRINK`: reduce the font after `max_characters` is exceeded, down to the
+  renderer's readable minimum;
+- `ERROR`: reject rendering after the limit is exceeded.
+
+```json
+{
+  "type": "field",
+  "binding": "borrower.display",
+  "overflow_policy": "ERROR",
+  "max_characters": 120
+}
+```
+
+Use `ERROR` for identifiers or regulated boxes that must never wrap. Use
+`WRAP` for addresses and descriptions. Use `SHRINK` only for bounded display
+areas that have been physically test-printed.
+
 ```json
 {"type": "title"}
 ```

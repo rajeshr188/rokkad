@@ -271,6 +271,74 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         with self.assertRaisesMessage(ValueError, "does not contain every configured column index"):
             ConfigurableDocumentRenderer.render(self.payload, layout)
 
+    def test_safe_value_formats_and_visibility_conditions_render(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "field", "binding": "loan.date", "value_format": "DATE_DMY",
+        })
+        definition["blocks"].insert(2, {
+            "type": "section", "text": "MATCHED CONDITION", "style_variant": "TINTED",
+            "visible_when": {"binding": "loan.number", "operator": "EQUALS", "value": "PL-A-00019"},
+            "blocks": [{"type": "field", "binding": "loan.number", "value_format": "UPPER"}],
+        })
+        definition["blocks"].insert(3, {
+            "type": "title", "text": "HIDDEN CONDITION",
+            "visible_when": {"binding": "loan.number", "operator": "EQUALS", "value": "OTHER"},
+        })
+
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, DocumentLayoutValidator.load(definition)
+        )
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        self.assertIn("18/07/2026", text)
+        self.assertIn("MATCHED CONDITION", text)
+        self.assertNotIn("HIDDEN CONDITION", text)
+
+    def test_mandatory_bindings_cannot_exist_only_in_conditional_blocks(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        required_group = next(block for block in definition["blocks"] if block["type"] == "field_group")
+        required_group["visible_when"] = {
+            "binding": "loan.number", "operator": "PRESENT", "value": "",
+        }
+
+        with self.assertRaisesMessage(LayoutValidationError, "must have an unconditional occurrence"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_overflow_error_and_shrink_policies_are_explicit(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "field", "binding": "borrower.display",
+            "overflow_policy": "ERROR", "max_characters": 10,
+        })
+        layout = DocumentLayoutValidator.load(definition)
+        with self.assertRaisesMessage(ValueError, "10-character overflow limit"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        definition["blocks"][1]["overflow_policy"] = "SHRINK"
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, DocumentLayoutValidator.load(definition)
+        )
+        self.assertTrue(result.pdf.startswith(b"%PDF"))
+
+    def test_invalid_format_condition_and_overflow_configuration_fail_closed(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "field", "binding": "loan.date", "value_format": "PYTHON_FORMAT",
+        })
+        with self.assertRaisesMessage(LayoutValidationError, "Value format is unsupported"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "title", "text": "Unsafe",
+            "visible_when": {"binding": "loan.__class__", "operator": "EQUALS", "value": "x"},
+        })
+        with self.assertRaisesMessage(LayoutValidationError, "binding is not registered"):
+            DocumentLayoutValidator.load(definition)
+
     def test_every_document_kind_has_a_valid_mandatory_starter(self):
         for kind in (
             "loan_ticket", "repayment_receipt", "release_memo",

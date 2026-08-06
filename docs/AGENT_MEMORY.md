@@ -26,6 +26,11 @@ percentage widths, alignment, repeated headings, and constrained variants.
 Bounded header/footer regions repeat compact blocks on every page and reserve
 body space; invalid indexes, unsupported region blocks, and overflow fail
 closed.
+Flow v2 values support allow-listed case, ISO-date, and decimal formatting;
+declarative PRESENT/EMPTY/EQUALS/NOT_EQUALS conditions over registered scalar
+bindings; and WRAP/SHRINK/ERROR character-overflow policies. Mandatory fields,
+tables, and verification require an unconditional occurrence, preventing
+conditional removal of regulatory evidence.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 
