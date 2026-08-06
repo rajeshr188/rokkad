@@ -17,6 +17,10 @@ Rich composition is sequenced as Flow schema v2, flow containers, page/table
 regions, safe formatting, visual flow editing, then a separately validated
 absolute-overlay renderer and editor. Schema v1 remains supported unchanged;
 schema v2 currently permits only `FLOW` with bounded margins and theme tokens.
+Flow v2 also supports recursively validated `section`, `columns`, and
+`field_grid` containers. Column widths must total 100%, nesting is limited to
+three levels, nested assets participate in revision validation/hashing, and
+page breaks cannot be nested.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 

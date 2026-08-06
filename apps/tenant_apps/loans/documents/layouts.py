@@ -1,5 +1,7 @@
 """Constrained, database-free layout contracts for PawnLoan documents."""
 
+from __future__ import annotations
+
 import hashlib
 import json
 from dataclasses import dataclass
@@ -12,7 +14,7 @@ class LayoutValidationError(ValueError):
 
 
 ALLOWED_BLOCK_TYPES = frozenset(
-    {"title", "field", "field_group", "table", "image", "qr", "verification", "signature", "spacer", "page_break"}
+    {"title", "field", "field_group", "table", "image", "qr", "verification", "signature", "spacer", "page_break", "section", "columns", "field_grid"}
 )
 ALLOWED_PAGE_SIZES = frozenset({"A4", "A5", "LETTER"})
 ALLOWED_COPY_MODES = frozenset({"SINGLE", "ORIGINAL_DUPLICATE", "ORIGINAL_DUPLICATE_DUPLEX"})
@@ -46,6 +48,16 @@ class LayoutBlock:
     height_mm: int = 4
     asset_key: str = ""
     width_mm: int = 30
+    blocks: tuple[LayoutBlock, ...] = ()
+    columns: tuple[LayoutColumn, ...] = ()
+    grid_columns: int = 2
+    style_variant: str = "PLAIN"
+
+
+@dataclass(frozen=True)
+class LayoutColumn:
+    width_percent: int
+    blocks: tuple[LayoutBlock, ...]
 
 
 @dataclass(frozen=True)
@@ -68,12 +80,24 @@ class DocumentLayout:
 
     def canonical_dict(self):
         def block_dict(block):
-            return {
+            value = {
                 "type": block.type, "binding": block.binding,
                 "bindings": list(block.bindings), "text": block.text,
                 "height_mm": block.height_mm,
                 "asset_key": block.asset_key, "width_mm": block.width_mm,
             }
+            if self.schema_version >= 2:
+                value.update({
+                    "blocks": [block_dict(child) for child in block.blocks],
+                    "columns": [
+                        {"width_percent": column.width_percent,
+                         "blocks": [block_dict(child) for child in column.blocks]}
+                        for column in block.columns
+                    ],
+                    "grid_columns": block.grid_columns,
+                    "style_variant": block.style_variant,
+                })
+            return value
         value = {
             "schema_version": self.schema_version, "document_type": self.document_type,
             "name": self.name, "page_size": self.page_size, "copy_mode": self.copy_mode,
@@ -94,6 +118,15 @@ class DocumentLayout:
                 },
             })
         return value
+
+    def all_blocks(self):
+        def walk(blocks):
+            for block in blocks:
+                yield block
+                yield from walk(block.blocks)
+                for column in block.columns:
+                    yield from walk(column.blocks)
+        return tuple(walk(self.blocks + self.back_blocks))
 
     @property
     def content_hash(self):
@@ -127,8 +160,8 @@ class DocumentLayoutValidator:
             raise LayoutValidationError("Unsupported page size.")
         if copy_mode not in ALLOWED_COPY_MODES:
             raise LayoutValidationError("Unsupported copy mode.")
-        blocks = cls._blocks(definition.get("blocks"), document_type)
-        back_blocks = cls._blocks(definition.get("back_blocks", []), document_type)
+        blocks = cls._blocks(definition.get("blocks"), document_type, schema_version)
+        back_blocks = cls._blocks(definition.get("back_blocks", []), document_type, schema_version)
         if not blocks:
             raise LayoutValidationError("A layout requires at least one front-page block.")
         if copy_mode == "ORIGINAL_DUPLICATE_DUPLEX" and not back_blocks:
@@ -140,7 +173,7 @@ class DocumentLayoutValidator:
         missing_sections = REQUIRED_SECTIONS[document_type] - bound
         if missing_sections:
             raise LayoutValidationError(f"Required tables are missing: {', '.join(sorted(missing_sections))}.")
-        if not any(block.type == "verification" for block in blocks + back_blocks):
+        if not cls._has_block_type(blocks + back_blocks, "verification"):
             raise LayoutValidationError("Every official layout requires a verification block.")
         name = str(definition.get("name") or "").strip()
         if not name or len(name) > 100:
@@ -190,21 +223,30 @@ class DocumentLayoutValidator:
         return layout_mode, margin_mm, theme
 
     @classmethod
-    def _blocks(cls, values, document_type):
+    def _blocks(cls, values, document_type, schema_version, *, depth=0):
         if not isinstance(values, list) or len(values) > 100:
             raise LayoutValidationError("Blocks must be a list containing at most 100 entries.")
+        if depth > 3:
+            raise LayoutValidationError("Flow containers may be nested at most three levels.")
         field_keys = frozenset(PawnLoanDocumentProjectionBuilder.FIELD_KEYS.values())
         section_keys = frozenset(PawnLoanDocumentProjectionBuilder.SECTION_KEYS.values())
         result = []
         for value in values:
             if not isinstance(value, dict):
                 raise LayoutValidationError("Each block must be an object.")
-            unknown = set(value) - {"type", "binding", "bindings", "text", "height_mm", "asset_key", "width_mm"}
+            allowed = {"type", "binding", "bindings", "text", "height_mm", "asset_key", "width_mm"}
+            if schema_version >= 2:
+                allowed.update({"blocks", "columns", "grid_columns", "style_variant"})
+            unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
             block_type = value.get("type")
             if block_type not in ALLOWED_BLOCK_TYPES:
                 raise LayoutValidationError(f"Unsupported block type: {block_type}.")
+            if schema_version == 1 and block_type in {"section", "columns", "field_grid"}:
+                raise LayoutValidationError("Flow containers require layout schema version 2.")
+            if depth and block_type == "page_break":
+                raise LayoutValidationError("Page breaks cannot be nested inside flow containers.")
             binding = str(value.get("binding") or "")
             bindings = tuple(value.get("bindings") or ())
             if block_type == "field" and binding not in field_keys:
@@ -218,7 +260,7 @@ class DocumentLayoutValidator:
             asset_key = str(value.get("asset_key") or "")
             if block_type == "image" and not asset_key:
                 raise LayoutValidationError("Image blocks require an asset key.")
-            if block_type not in {"title", "signature"} and value.get("text"):
+            if block_type not in {"title", "signature", "section"} and value.get("text"):
                 raise LayoutValidationError(f"Block type {block_type} does not accept free text.")
             height = value.get("height_mm", 4)
             if not isinstance(height, int) or not 1 <= height <= 100:
@@ -226,7 +268,46 @@ class DocumentLayoutValidator:
             width = value.get("width_mm", 30)
             if not isinstance(width, int) or not 5 <= width <= 180:
                 raise LayoutValidationError("Image/QR width must be between 5 and 180 mm.")
-            result.append(LayoutBlock(block_type, binding, bindings, str(value.get("text") or ""), height, asset_key, width))
+            child_blocks = ()
+            columns = ()
+            grid_columns = value.get("grid_columns", 2)
+            style_variant = str(value.get("style_variant") or "PLAIN")
+            if block_type == "section":
+                child_blocks = cls._blocks(value.get("blocks"), document_type, schema_version, depth=depth + 1)
+                if not child_blocks:
+                    raise LayoutValidationError("Sections require at least one child block.")
+                if style_variant not in {"PLAIN", "OUTLINED", "TINTED"}:
+                    raise LayoutValidationError("Section style variant is unsupported.")
+            elif block_type == "columns":
+                raw_columns = value.get("columns")
+                if not isinstance(raw_columns, list) or not 2 <= len(raw_columns) <= 4:
+                    raise LayoutValidationError("Column containers require two to four columns.")
+                parsed_columns = []
+                for raw_column in raw_columns:
+                    if not isinstance(raw_column, dict) or set(raw_column) != {"width_percent", "blocks"}:
+                        raise LayoutValidationError("Each column requires width_percent and blocks.")
+                    percent = raw_column["width_percent"]
+                    if not isinstance(percent, int) or not 10 <= percent <= 90:
+                        raise LayoutValidationError("Column width must be between 10 and 90 percent.")
+                    children = cls._blocks(raw_column["blocks"], document_type, schema_version, depth=depth + 1)
+                    if not children:
+                        raise LayoutValidationError("Each column requires at least one child block.")
+                    parsed_columns.append(LayoutColumn(percent, children))
+                if sum(column.width_percent for column in parsed_columns) != 100:
+                    raise LayoutValidationError("Column widths must total 100 percent.")
+                columns = tuple(parsed_columns)
+            elif block_type == "field_grid":
+                if not bindings or any(item not in field_keys for item in bindings):
+                    raise LayoutValidationError("Field grids require only registered field bindings.")
+                if not isinstance(grid_columns, int) or not 1 <= grid_columns <= 4:
+                    raise LayoutValidationError("Field grids support one to four columns.")
+            elif value.get("blocks") or value.get("columns"):
+                raise LayoutValidationError(f"Block type {block_type} cannot contain child blocks.")
+            result.append(LayoutBlock(
+                block_type, binding, bindings, str(value.get("text") or ""),
+                height, asset_key, width, child_blocks, columns, grid_columns,
+                style_variant,
+            ))
         return tuple(result)
 
     @staticmethod
@@ -236,7 +317,21 @@ class DocumentLayoutValidator:
             if block.binding:
                 result.add(block.binding)
             result.update(block.bindings)
+            result.update(DocumentLayoutValidator._bindings(block.blocks))
+            for column in block.columns:
+                result.update(DocumentLayoutValidator._bindings(column.blocks))
         return frozenset(result)
+
+    @staticmethod
+    def _has_block_type(blocks, block_type):
+        for block in blocks:
+            if block.type == block_type:
+                return True
+            if DocumentLayoutValidator._has_block_type(block.blocks, block_type):
+                return True
+            if any(DocumentLayoutValidator._has_block_type(column.blocks, block_type) for column in block.columns):
+                return True
+        return False
 
 
 def starter_layout(document_type, *, schema_version=1):

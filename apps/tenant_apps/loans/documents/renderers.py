@@ -48,7 +48,7 @@ class ConfigurableDocumentRenderer:
         except (AttributeError, IndexError, TypeError, ValueError) as exc:
             raise DocumentAssetError("Payload has no valid workspace asset boundary.") from exc
         asset_map = validate_asset_set(assets, workspace_id=workspace_id)
-        required_assets = {block.asset_key for block in layout.blocks + layout.back_blocks if block.asset_key}
+        required_assets = {block.asset_key for block in layout.all_blocks() if block.asset_key}
         if layout.background_asset_key:
             required_assets.add(layout.background_asset_key)
         missing_assets = required_assets - set(asset_map)
@@ -62,14 +62,15 @@ class ConfigurableDocumentRenderer:
                                      pageCompression=0, title=payload.title)
         styles = cls._styles(layout)
         story = []
+        available_width = cls.PAGE_SIZES[layout.page_size][0] - (2 * layout.margin_mm * mm)
         copies = ("ORIGINAL", "DUPLICATE") if layout.copy_mode != "SINGLE" else ("ORIGINAL",)
         for copy_index, copy_name in enumerate(copies):
             if copy_index:
                 story.append(PageBreak())
-            cls._append_blocks(story, layout.blocks, payload, fields, sections, styles, copy_name, preview, asset_map)
+            cls._append_blocks(story, layout.blocks, payload, fields, sections, styles, copy_name, preview, asset_map, layout, available_width)
             if layout.copy_mode == "ORIGINAL_DUPLICATE_DUPLEX":
                 story.append(PageBreak())
-                cls._append_blocks(story, layout.back_blocks, payload, fields, sections, styles, copy_name, preview, asset_map)
+                cls._append_blocks(story, layout.back_blocks, payload, fields, sections, styles, copy_name, preview, asset_map, layout, available_width)
         document.build(story)
         pdf = buffer.getvalue()
         buffer.close()
@@ -80,7 +81,7 @@ class ConfigurableDocumentRenderer:
                                   tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())))
 
     @classmethod
-    def _append_blocks(cls, story, blocks, payload, fields, sections, styles, copy_name, preview, assets):
+    def _append_blocks(cls, story, blocks, payload, fields, sections, styles, copy_name, preview, assets, layout, available_width, *, nested=False):
         if preview:
             story.extend([Paragraph("PREVIEW / NOT AN OFFICIAL ISSUE", styles["Heading2"]), Spacer(1, 4)])
         story.extend([Paragraph(copy_name, styles["Heading3"]), Spacer(1, 3)])
@@ -121,10 +122,40 @@ class ConfigurableDocumentRenderer:
                 story.append(Spacer(1, block.height_mm * mm))
             elif block.type == "page_break":
                 story.append(PageBreak())
+            elif block.type == "field_grid":
+                cells = [Paragraph(f"<b>{escape(fields[key].label)}</b><br/>{escape(str(fields[key].value))}", styles["BodyText"]) for key in block.bindings]
+                while len(cells) % block.grid_columns:
+                    cells.append("")
+                rows = [cells[index:index + block.grid_columns] for index in range(0, len(cells), block.grid_columns)]
+                table = Table(rows, colWidths=[available_width / block.grid_columns] * block.grid_columns)
+                table.setStyle(cls._table_style(False)); story.extend([table, Spacer(1, 6)])
+            elif block.type == "section":
+                inner = []
+                if block.text:
+                    inner.extend([Paragraph(escape(block.text), styles["Heading2"]), Spacer(1, 3)])
+                cls._append_blocks(inner, block.blocks, payload, fields, sections, styles, copy_name, False, assets, layout, available_width - 12, nested=True)
+                section = Table([[inner]], colWidths=[available_width])
+                commands = [("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]
+                if block.style_variant in {"OUTLINED", "TINTED"}:
+                    commands.append(("BOX", (0, 0), (-1, -1), .6, colors.HexColor(layout.border_color)))
+                if block.style_variant == "TINTED":
+                    commands.append(("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")))
+                section.setStyle(TableStyle(commands)); story.extend([section, Spacer(1, 6)])
+            elif block.type == "columns":
+                cells = []
+                widths = []
+                for column in block.columns:
+                    column_width = available_width * column.width_percent / 100
+                    inner = []
+                    cls._append_blocks(inner, column.blocks, payload, fields, sections, styles, copy_name, False, assets, layout, column_width - 8, nested=True)
+                    cells.append(inner); widths.append(column_width)
+                columns = Table([cells], colWidths=widths)
+                columns.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4)]))
+                story.extend([columns, Spacer(1, 6)])
 
     @staticmethod
     def _assert_bindings(layout, fields, sections):
-        for block in layout.blocks + layout.back_blocks:
+        for block in layout.all_blocks():
             if block.type == "field" and block.binding not in fields:
                 raise ValueError(f"Payload does not contain field {block.binding}.")
             if block.type == "field_group":

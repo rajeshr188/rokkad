@@ -133,6 +133,44 @@ verification ID shown on the document.
 
 ## Common Layout Blocks
 
+Schema-v2 Flow layouts can group content into outlined or tinted sections,
+proportional columns, and compact field grids. These containers remain in the
+normal document flow and move together based on available page space.
+
+```json
+{
+  "type": "section",
+  "text": "Ticket summary",
+  "style_variant": "OUTLINED",
+  "blocks": [
+    {
+      "type": "field_grid",
+      "grid_columns": 2,
+      "bindings": ["loan.number", "loan.date", "loan.principal", "borrower.display"]
+    }
+  ]
+}
+```
+
+```json
+{
+  "type": "columns",
+  "columns": [
+    {
+      "width_percent": 70,
+      "blocks": [{"type": "field", "binding": "license.display"}]
+    },
+    {
+      "width_percent": 30,
+      "blocks": [{"type": "qr", "binding": "document.verification_id", "width_mm": 20}]
+    }
+  ]
+}
+```
+
+Column widths must total 100 percent. Containers may be nested only to the
+validated depth limit, and page breaks cannot appear inside them.
+
 ```json
 {"type": "title"}
 ```

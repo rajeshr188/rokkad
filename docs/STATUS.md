@@ -10,6 +10,12 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Flow schema-v2 containers are complete. Validated sections support plain,
+  outlined, and tinted variants; proportional two-to-four-column containers
+  require widths totaling 100%; field grids support one to four columns.
+  Bindings and assets are discovered recursively, nesting is bounded, and page
+  breaks inside containers fail closed. These are responsive flow constructs,
+  not absolute PDF coordinates.
 - Rich document composition has started with the Flow schema-v2 foundation.
   Existing schema-v1 layouts retain their canonical form and v1 renderer;
   schema v2 adds explicit `FLOW` mode, bounded uniform page margins, and

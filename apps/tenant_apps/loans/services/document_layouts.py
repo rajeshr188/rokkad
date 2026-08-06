@@ -129,7 +129,7 @@ class LoanDocumentLayoutService:
             raise DocumentLayoutServiceError("Only draft revisions can be published.")
         parsed = DocumentLayoutValidator.load(revision.definition)
         available = set(revision.assets.values_list("key", flat=True))
-        required = {block.asset_key for block in parsed.blocks + parsed.back_blocks if block.asset_key}
+        required = {block.asset_key for block in parsed.all_blocks() if block.asset_key}
         if parsed.background_asset_key:
             required.add(parsed.background_asset_key)
         missing = required - available

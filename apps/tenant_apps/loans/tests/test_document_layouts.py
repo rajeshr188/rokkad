@@ -132,6 +132,74 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         with self.assertRaisesMessage(LayoutValidationError, "not approved"):
             DocumentLayoutValidator.load(definition)
 
+    def test_schema_v2_sections_columns_and_field_grids_render(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "section",
+            "text": "Ticket summary",
+            "style_variant": "OUTLINED",
+            "blocks": [{
+                "type": "field_grid", "grid_columns": 2,
+                "bindings": ["loan.number", "loan.date", "loan.principal", "borrower.display"],
+            }],
+        })
+        definition["blocks"].insert(2, {
+            "type": "columns",
+            "columns": [
+                {"width_percent": 65, "blocks": [{"type": "field", "binding": "license.display"}]},
+                {"width_percent": 35, "blocks": [{"type": "qr", "binding": "document.verification_id", "width_mm": 18}]},
+            ],
+        })
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        self.assertIn("Ticket summary", text)
+        self.assertIn("PL-A-00019", text)
+        self.assertEqual(layout.canonical_dict()["blocks"][1]["type"], "section")
+
+    def test_schema_v2_container_geometry_and_v1_use_fail_closed(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "columns",
+            "columns": [
+                {"width_percent": 60, "blocks": [{"type": "field", "binding": "loan.number"}]},
+                {"width_percent": 30, "blocks": [{"type": "field", "binding": "loan.date"}]},
+            ],
+        })
+        with self.assertRaisesMessage(LayoutValidationError, "must total 100"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "field_grid",
+            "bindings": ["loan.number", "loan.date"],
+        })
+        with self.assertRaisesMessage(LayoutValidationError, "require layout schema version 2"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_nested_assets_are_discovered_and_rendered(self):
+        logo = DocumentAssetValidator.validate(
+            key="business.logo", kind="IMAGE", content=self._png_bytes("blue"), workspace_id=7
+        )
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "columns",
+            "columns": [
+                {"width_percent": 50, "blocks": [{"type": "image", "asset_key": logo.key, "width_mm": 20}]},
+                {"width_percent": 50, "blocks": [{"type": "field", "binding": "loan.number"}]},
+            ],
+        })
+        layout = DocumentLayoutValidator.load(definition)
+
+        with self.assertRaisesMessage(DocumentAssetError, "assets are missing"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=(logo,))
+        self.assertEqual(dict(result.asset_hashes)[logo.key], logo.sha256)
+
     def test_every_document_kind_has_a_valid_mandatory_starter(self):
         for kind in (
             "loan_ticket", "repayment_receipt", "release_memo",
