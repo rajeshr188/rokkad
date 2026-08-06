@@ -41,6 +41,11 @@ requires a background key and uses whole-mm rectangles from the page top-left.
 It supports bounded title/field/image/QR/verification/signature/table blocks,
 formatting, conditions, copies, and duplex; Flow containers/page regions and
 automatic pagination are invalid. Geometry or content overflow fails closed.
+Owner/Admin absolute-overlay drafts expose a visual editor with an authenticated
+first-page background raster, proportional rectangles, drag-to-update X/Y,
+exact numeric/property forms, supported block add/remove, settings, preview,
+and test print. It persists only through the same validated JSON revision
+service; advanced JSON still owns specialized and back-page properties.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 

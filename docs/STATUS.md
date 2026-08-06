@@ -10,6 +10,14 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- The visual overlay editor is complete for Owner/Admin absolute-overlay
+  drafts. An authenticated first-page background raster is shown behind scaled
+  block rectangles; drag updates top-left X/Y inputs, while numeric forms own
+  exact geometry, type, binding, image asset, text, font size, and alignment.
+  Operators can add/remove supported blocks, choose page/background/copy
+  settings, and preview/test-print. Every mutation uses `update_draft` and the
+  full overlay validator; advanced JSON remains for detailed table/condition/
+  overflow and duplex back-page properties.
 - Absolute-overlay schema and renderer are complete. Owner/Admin users can
   create an Exact PDF overlay starter that requires `form.background` and uses
   bounded whole-millimetre rectangles measured from the page's top-left.
@@ -17,8 +25,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   blocks render over validated PDF/image backgrounds with safe formatting,
   conditions, overflow, copies, duplex, preview marking, and exact-issue
   infrastructure. Flow-only containers/page regions are rejected; out-of-page
-  geometry and rectangle overflow fail closed. Visual coordinate editing is
-  the next slice.
+  geometry and rectangle overflow fail closed.
 - The first visual Flow editor is complete for Owner/Admin schema-v2 drafts.
   It edits the existing validated JSON contract through the atomic revision
   service: page/theme settings, top-level ordering/removal, and common field,

@@ -37,7 +37,10 @@ custody logic.
    exact top-left millimetre rectangles over mandatory validated backgrounds,
    constrained block vocabulary, copy/duplex composition, and fail-closed
    bounds/overflow.
-7. Visual overlay editor over the uploaded PDF background.
+7. Visual overlay editor over the uploaded PDF background. Complete: secured
+   first-page raster, scaled/draggable rectangles, exact geometry/property
+   forms, block/settings operations, preview, and test print over the same
+   validated JSON contract.
 8. Physical printer acceptance for both composition modes.
 
 Flow and overlay remain separate renderers over the same typed payload,

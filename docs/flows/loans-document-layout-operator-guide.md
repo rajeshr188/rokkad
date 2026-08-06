@@ -180,10 +180,17 @@ Flow containers, automatic page breaks, headers, and footers are deliberately
 unavailable in overlay mode. An overlay table that cannot fit its rectangle
 fails rendering instead of silently clipping or creating another page.
 
-Until the visual overlay editor is complete, adjust rectangles through
-**Advanced JSON**, then Preview and Test print after each change. PDF viewers
-may apply print scaling, so production acceptance must use **Actual size / 100%**
-on the real printer.
+Open the draft and select **Visual overlay editor**. Its authenticated canvas
+shows a raster preview of the first background page with scaled block
+rectangles. Drag a rectangle to update X/Y, then select **Save block**. Use the
+numeric fields for exact width, height, font size, alignment, binding, asset,
+and text. The editor can also add or remove supported overlay blocks and change
+page/background/copy settings. Every save revalidates the complete JSON draft.
+
+Advanced JSON remains available for table-column configuration, conditions,
+formatting, overflow, and duplex back-page blocks. PDF viewers may apply print
+scaling, so production acceptance must use **Actual size / 100%** on the real
+printer.
 
 ## Add A QR Code
 

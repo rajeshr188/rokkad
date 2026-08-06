@@ -113,6 +113,79 @@ class LoanDocumentFlowBlockForm(forms.Form):
         return {"type": "signature", "text": value.get("text") or "Borrower | Authorized pawnbroker", "height_mm": value.get("height_mm") or 18}
 
 
+class LoanDocumentOverlaySettingsForm(forms.Form):
+    page_size = forms.ChoiceField(choices=(("A4", "A4"), ("A5", "A5"), ("LETTER", "Letter")))
+    copy_mode = forms.ChoiceField(choices=(
+        ("SINGLE", "Single"), ("ORIGINAL_DUPLICATE", "Original + duplicate"),
+        ("ORIGINAL_DUPLICATE_DUPLEX", "Original + duplicate duplex"),
+    ))
+    background_asset_key = forms.ChoiceField()
+
+    def __init__(self, *args, background_keys=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["background_asset_key"].choices = [
+            (key, key) for key in sorted(set(background_keys) | {"form.background"})
+        ]
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-select"
+
+
+class LoanDocumentOverlayBlockForm(forms.Form):
+    block_type = forms.ChoiceField(choices=(
+        ("field", "Field"), ("title", "Title"), ("image", "Image"),
+        ("qr", "QR code"), ("verification", "Verification"),
+        ("signature", "Signature"), ("table", "Table"),
+    ))
+    binding = forms.ChoiceField(required=False)
+    asset_key = forms.ChoiceField(required=False)
+    text = forms.CharField(required=False, max_length=100)
+    x_mm = forms.IntegerField(min_value=0, max_value=300)
+    y_mm = forms.IntegerField(min_value=0, max_value=400)
+    width_mm = forms.IntegerField(min_value=5, max_value=216)
+    height_mm = forms.IntegerField(min_value=1, max_value=100)
+    font_size_pt = forms.IntegerField(min_value=6, max_value=24, initial=10)
+    align = forms.ChoiceField(choices=(("LEFT", "Left"), ("CENTER", "Centre"), ("RIGHT", "Right")))
+
+    def __init__(self, *args, asset_keys=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        field_choices = sorted((value, label) for label, value in PawnLoanDocumentProjectionBuilder.FIELD_KEYS.items())
+        section_choices = sorted((value, f"Table: {label}") for label, value in PawnLoanDocumentProjectionBuilder.SECTION_KEYS.items())
+        self.fields["binding"].choices = [("", "Verification ID / none")] + field_choices + section_choices
+        self.fields["asset_key"].choices = [("", "Select an image asset")] + [(key, key) for key in sorted(asset_keys)]
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-select" if isinstance(field, forms.ChoiceField) else "form-control"
+
+    def clean(self):
+        cleaned = super().clean()
+        block_type, binding = cleaned.get("block_type"), cleaned.get("binding")
+        field_keys = set(PawnLoanDocumentProjectionBuilder.FIELD_KEYS.values())
+        section_keys = set(PawnLoanDocumentProjectionBuilder.SECTION_KEYS.values())
+        if block_type == "field" and binding not in field_keys:
+            self.add_error("binding", "Select a registered scalar field.")
+        if block_type == "table" and binding not in section_keys:
+            self.add_error("binding", "Select a registered table.")
+        if block_type == "qr" and binding and binding not in field_keys:
+            self.add_error("binding", "Select a registered scalar field or leave blank for verification ID.")
+        if block_type == "image" and not cleaned.get("asset_key"):
+            self.add_error("asset_key", "Select an uploaded image asset.")
+        return cleaned
+
+    def block_definition(self):
+        value = self.cleaned_data
+        block = {
+            "type": value["block_type"], "x_mm": value["x_mm"], "y_mm": value["y_mm"],
+            "width_mm": value["width_mm"], "height_mm": value["height_mm"],
+            "font_size_pt": value["font_size_pt"], "align": value["align"],
+        }
+        if value.get("binding"):
+            block["binding"] = value["binding"]
+        if value.get("asset_key"):
+            block["asset_key"] = value["asset_key"]
+        if value.get("text"):
+            block["text"] = value["text"]
+        return block
+
+
 class LoanDocumentAssetUploadForm(forms.Form):
     key = forms.RegexField(regex=r"^[a-z][a-z0-9_.-]{0,63}$", max_length=64)
     kind = forms.ChoiceField(choices=(("IMAGE", "Image / logo"), ("BACKGROUND", "Page background")))

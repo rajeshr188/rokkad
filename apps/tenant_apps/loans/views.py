@@ -1,6 +1,7 @@
 import uuid
 import hashlib
 from copy import deepcopy
+import fitz
 from decimal import Decimal
 
 from django.contrib import messages
@@ -33,6 +34,8 @@ from apps.tenant_apps.loans.forms import (
     LoanDocumentLayoutDefinitionForm,
     LoanDocumentFlowBlockForm,
     LoanDocumentFlowSettingsForm,
+    LoanDocumentOverlayBlockForm,
+    LoanDocumentOverlaySettingsForm,
     LoanDocumentLayoutPackImportForm,
     LoanModuleFeatureGateForm,
     LoanSeriesSetupForm,
@@ -342,6 +345,104 @@ def document_layout_designer(request, revision_pk):
     return render(request, "loans/setup/documents/designer.html", {
         "revision": revision, "layout": layout, "settings_form": settings_form,
         "block_form": LoanDocumentFlowBlockForm(),
+        "sample_loan": PawnLoan.objects.filter(
+            workspace=request.loans_workspace, approval_snapshots__isnull=False,
+        ).order_by("-pk").first(),
+    })
+
+
+@loans_setup_required
+def document_layout_overlay_background(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    layout = DocumentLayoutValidator.load(revision.definition)
+    if layout.layout_mode != "ABSOLUTE_OVERLAY":
+        return HttpResponseGone("This revision is not an absolute overlay layout.")
+    asset = get_object_or_404(revision.assets, key=layout.background_asset_key, kind="BACKGROUND")
+    asset.file.open("rb")
+    content = asset.file.read()
+    asset.file.close()
+    if asset.mime_type != "application/pdf":
+        return HttpResponse(content, content_type=asset.mime_type)
+    document = fitz.open(stream=content, filetype="pdf")
+    try:
+        pixmap = document[0].get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
+        preview = pixmap.tobytes("png")
+    finally:
+        document.close()
+    return HttpResponse(preview, content_type="image/png")
+
+
+@loans_setup_required
+def document_layout_overlay_designer(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    try:
+        layout = DocumentLayoutValidator.load(revision.definition)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    if layout.schema_version != 2 or layout.layout_mode != "ABSOLUTE_OVERLAY":
+        messages.error(request, "The overlay editor supports absolute-overlay schema-v2 drafts only.")
+        return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    background_keys = tuple(revision.assets.filter(kind="BACKGROUND").values_list("key", flat=True))
+    image_keys = tuple(revision.assets.filter(kind="IMAGE").values_list("key", flat=True))
+    if request.method == "POST":
+        if revision.state != revision.State.DRAFT:
+            messages.error(request, "Published revisions are immutable. Clone this revision before editing.")
+            return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+        definition = deepcopy(revision.definition)
+        operation = request.POST.get("operation")
+        try:
+            if operation == "save_settings":
+                form = LoanDocumentOverlaySettingsForm(request.POST, background_keys=background_keys)
+                if not form.is_valid():
+                    raise ValueError("Overlay page settings are invalid.")
+                definition["page_size"] = form.cleaned_data["page_size"]
+                definition["copy_mode"] = form.cleaned_data["copy_mode"]
+                definition["background_asset_key"] = form.cleaned_data["background_asset_key"]
+            elif operation in {"add_block", "save_block"}:
+                form = LoanDocumentOverlayBlockForm(request.POST, asset_keys=image_keys)
+                if not form.is_valid():
+                    raise ValueError("Overlay block settings are invalid.")
+                block = form.block_definition()
+                if operation == "add_block":
+                    definition["blocks"].append(block)
+                else:
+                    index = int(request.POST.get("index", "-1"))
+                    if not 0 <= index < len(definition["blocks"]):
+                        raise ValueError("Selected overlay block no longer exists.")
+                    existing = definition["blocks"][index]
+                    for key in ("value_format", "overflow_policy", "max_characters", "visible_when", "table_columns", "repeat_header", "style_variant"):
+                        if key in existing and key not in block:
+                            block[key] = existing[key]
+                    definition["blocks"][index] = block
+            elif operation == "remove":
+                index = int(request.POST.get("index", "-1"))
+                if not 0 <= index < len(definition["blocks"]):
+                    raise ValueError("Selected overlay block no longer exists.")
+                definition["blocks"].pop(index)
+            else:
+                raise ValueError("Unknown overlay editor operation.")
+            revision = LoanDocumentLayoutService.update_draft(
+                revision=revision, definition=definition, actor=request.user, request=request,
+            )
+        except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Overlay draft updated and validated.")
+        return redirect("loans:document_layout_overlay_designer", revision_pk=revision.pk)
+    dimensions = {"A4": (210, 297), "A5": (148, 210), "LETTER": (216, 279)}
+    page_width_mm, page_height_mm = dimensions[layout.page_size]
+    settings_form = LoanDocumentOverlaySettingsForm(
+        background_keys=background_keys,
+        initial={"page_size": layout.page_size, "copy_mode": layout.copy_mode,
+                 "background_asset_key": layout.background_asset_key},
+    )
+    return render(request, "loans/setup/documents/overlay_designer.html", {
+        "revision": revision, "layout": layout, "settings_form": settings_form,
+        "add_form": LoanDocumentOverlayBlockForm(asset_keys=image_keys),
+        "image_keys": image_keys, "page_width_mm": page_width_mm,
+        "page_height_mm": page_height_mm,
+        "has_background": layout.background_asset_key in background_keys,
         "sample_loan": PawnLoan.objects.filter(
             workspace=request.loans_workspace, approval_snapshots__isnull=False,
         ).order_by("-pk").first(),

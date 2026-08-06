@@ -1,6 +1,7 @@
 import uuid
 import io
 import json
+import fitz
 from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
@@ -357,6 +358,10 @@ class LoansSetupUiTests(TenantTestCase):
             self.tenant_get(reverse("loans:document_layout_designer", args=[1])).status_code,
             403,
         )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:document_layout_overlay_designer", args=[1])).status_code,
+            403,
+        )
 
     def test_owner_can_open_document_layout_starter_guide(self):
         response = self.tenant_get(reverse("loans:document_layout_guide"))
@@ -472,6 +477,42 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(revision.definition["background_asset_key"], "form.background")
         detail = self.tenant_get(reverse("loans:document_layout_detail", args=[revision.pk]))
         self.assertNotContains(detail, "Visual Flow editor")
+        self.assertContains(detail, "Visual overlay editor")
+
+        pdf = fitz.open()
+        page = pdf.new_page()
+        page.insert_text((30, 30), "FORM BACKGROUND")
+        background_bytes = pdf.tobytes()
+        pdf.close()
+        upload = self.client.post(
+            reverse("loans:document_layout_asset_add", args=[revision.pk]),
+            {
+                "key": "form.background", "kind": "BACKGROUND",
+                "file": SimpleUploadedFile("form.pdf", background_bytes, content_type="application/pdf"),
+            },
+        )
+        self.assertEqual(upload.status_code, 302)
+        editor_url = reverse("loans:document_layout_overlay_designer", args=[revision.pk])
+        editor = self.tenant_get(editor_url)
+        self.assertEqual(editor.status_code, 200)
+        self.assertContains(editor, "Drag a rectangle")
+        background = self.tenant_get(
+            reverse("loans:document_layout_overlay_background", args=[revision.pk])
+        )
+        self.assertEqual(background.status_code, 200)
+        self.assertEqual(background["Content-Type"], "image/png")
+
+        title = revision.definition["blocks"][0]
+        move = self.tenant_post(editor_url, {
+            "operation": "save_block", "index": 0, "block_type": "title",
+            "binding": "", "asset_key": "", "text": title.get("text", ""),
+            "x_mm": 20, "y_mm": title["y_mm"], "width_mm": title["width_mm"],
+            "height_mm": title["height_mm"], "font_size_pt": title["font_size_pt"],
+            "align": title["align"],
+        })
+        self.assertEqual(move.status_code, 302)
+        revision.refresh_from_db()
+        self.assertEqual(revision.definition["blocks"][0]["x_mm"], 20)
 
     def test_published_ticket_layout_drives_official_issue_and_reprint(self):
         license, series = self._configured_setup()

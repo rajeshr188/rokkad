@@ -1,0 +1,76 @@
+{% extends "base_tenant.html" %}
+{% block title %}Visual overlay editor · {{ revision.layout.name }}{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div><h1 class="h3 mb-1">Visual overlay editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · {{ layout.page_size }} · coordinates from top-left</p></div>
+  <div class="d-flex gap-2">{% if sample_loan and has_background %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_detail' revision.pk %}">Assets, JSON, and publishing</a></div>
+</div>
+{% if not has_background %}<div class="alert alert-warning">Upload a Page background using asset key <code>{{ layout.background_asset_key }}</code> on the revision page. Geometry can be edited now, but preview and publication require that asset.</div>{% endif %}
+<div class="alert alert-info">Drag a rectangle to update its X/Y inputs, then select <strong>Save block</strong>. Use the numeric fields for exact size and typography. Always confirm with a PDF test print at 100% scale.</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div id="overlay-page" class="position-relative bg-white shadow-sm mx-auto overflow-hidden" data-page-width="{{ page_width_mm }}" data-page-height="{{ page_height_mm }}" style="aspect-ratio: {{ page_width_mm }} / {{ page_height_mm }}; max-width: 760px; border: 1px solid #94a3b8; touch-action: none;">
+      {% if has_background %}<img src="{% url 'loans:document_layout_overlay_background' revision.pk %}" alt="PDF background preview" class="position-absolute top-0 start-0 w-100 h-100" style="object-fit: fill; pointer-events:none;">{% endif %}
+      {% for block in layout.blocks %}
+      <div class="overlay-block position-absolute border border-primary bg-primary bg-opacity-10 small overflow-hidden" data-index="{{ forloop.counter0 }}" data-width="{{ block.width_mm }}" data-height="{{ block.height_mm }}" style="left: {% widthratio block.x_mm page_width_mm 100 %}%; top: {% widthratio block.y_mm page_height_mm 100 %}%; width: {% widthratio block.width_mm page_width_mm 100 %}%; height: {% widthratio block.height_mm page_height_mm 100 %}%; cursor: move; z-index:2;">
+        <span class="badge text-bg-primary">{{ forloop.counter }} {{ block.type }}</span>{% if block.binding %} {{ block.binding }}{% elif block.text %} {{ block.text }}{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="accordion mt-4" id="overlay-blocks">
+      {% for block in layout.blocks %}
+      <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#block-{{ forloop.counter0 }}">{{ forloop.counter }}. {{ block.type|title }}{% if block.binding %} · {{ block.binding }}{% endif %}</button></h2>
+        <div id="block-{{ forloop.counter0 }}" class="accordion-collapse collapse" data-bs-parent="#overlay-blocks"><div class="accordion-body">
+          <form method="post" id="block-form-{{ forloop.counter0 }}" class="row g-2">{% csrf_token %}<input type="hidden" name="operation" value="save_block"><input type="hidden" name="index" value="{{ forloop.counter0 }}">
+            <div class="col-md-3"><label class="form-label">Type</label><select name="block_type" class="form-select"><option value="field"{% if block.type == 'field' %} selected{% endif %}>Field</option><option value="title"{% if block.type == 'title' %} selected{% endif %}>Title</option><option value="image"{% if block.type == 'image' %} selected{% endif %}>Image</option><option value="qr"{% if block.type == 'qr' %} selected{% endif %}>QR</option><option value="verification"{% if block.type == 'verification' %} selected{% endif %}>Verification</option><option value="signature"{% if block.type == 'signature' %} selected{% endif %}>Signature</option><option value="table"{% if block.type == 'table' %} selected{% endif %}>Table</option></select></div>
+            <div class="col-md-5"><label class="form-label">Binding</label><input class="form-control" name="binding" value="{{ block.binding }}"></div>
+            <div class="col-md-4"><label class="form-label">Image asset key</label><input class="form-control" name="asset_key" value="{{ block.asset_key }}"></div>
+            <div class="col-12"><label class="form-label">Text</label><input class="form-control" name="text" value="{{ block.text }}"></div>
+            <div class="col-4 col-md-2"><label class="form-label">X mm</label><input class="form-control geometry-x" type="number" name="x_mm" value="{{ block.x_mm }}" min="0"></div>
+            <div class="col-4 col-md-2"><label class="form-label">Y mm</label><input class="form-control geometry-y" type="number" name="y_mm" value="{{ block.y_mm }}" min="0"></div>
+            <div class="col-4 col-md-2"><label class="form-label">Width</label><input class="form-control" type="number" name="width_mm" value="{{ block.width_mm }}" min="5"></div>
+            <div class="col-4 col-md-2"><label class="form-label">Height</label><input class="form-control" type="number" name="height_mm" value="{{ block.height_mm }}" min="1"></div>
+            <div class="col-4 col-md-2"><label class="form-label">Font pt</label><input class="form-control" type="number" name="font_size_pt" value="{{ block.font_size_pt }}" min="6" max="24"></div>
+            <div class="col-4 col-md-2"><label class="form-label">Align</label><select class="form-select" name="align"><option value="LEFT"{% if block.align == 'LEFT' %} selected{% endif %}>Left</option><option value="CENTER"{% if block.align == 'CENTER' %} selected{% endif %}>Centre</option><option value="RIGHT"{% if block.align == 'RIGHT' %} selected{% endif %}>Right</option></select></div>
+            <div class="col-12 d-flex gap-2 mt-3"><button class="btn btn-primary">Save block</button></form><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="remove"><input type="hidden" name="index" value="{{ forloop.counter0 }}"><button class="btn btn-outline-danger">Remove</button></form></div>
+        </div></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="card mb-3"><div class="card-header"><strong>Page and background</strong></div><div class="card-body"><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_settings">{{ settings_form.as_p }}<button class="btn btn-primary">Save settings</button></form></div></div>
+    <div class="card"><div class="card-header"><strong>Add overlay block</strong></div><div class="card-body"><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="add_block">{{ add_form.as_p }}<button class="btn btn-primary">Add block</button></form></div></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const page = document.getElementById('overlay-page');
+  const pageWidth = Number(page.dataset.pageWidth);
+  const pageHeight = Number(page.dataset.pageHeight);
+  page.querySelectorAll('.overlay-block').forEach((box) => {
+    box.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      box.setPointerCapture(event.pointerId);
+      const startX = event.clientX, startY = event.clientY;
+      const initialLeft = parseFloat(box.style.left), initialTop = parseFloat(box.style.top);
+      const move = (current) => {
+        const rect = page.getBoundingClientRect();
+        const widthPercent = parseFloat(box.style.width), heightPercent = parseFloat(box.style.height);
+        const left = Math.max(0, Math.min(100 - widthPercent, initialLeft + (current.clientX - startX) / rect.width * 100));
+        const top = Math.max(0, Math.min(100 - heightPercent, initialTop + (current.clientY - startY) / rect.height * 100));
+        box.style.left = `${left}%`; box.style.top = `${top}%`;
+        const form = document.getElementById(`block-form-${box.dataset.index}`);
+        form.querySelector('.geometry-x').value = Math.round(left * pageWidth / 100);
+        form.querySelector('.geometry-y').value = Math.round(top * pageHeight / 100);
+      };
+      box.addEventListener('pointermove', move);
+      box.addEventListener('pointerup', () => box.removeEventListener('pointermove', move), {once: true});
+    });
+  });
+})();
+</script>
+{% endblock %}
