@@ -239,7 +239,9 @@ class DocumentLayoutValidator:
         return frozenset(result)
 
 
-def starter_layout(document_type):
+def starter_layout(document_type, *, schema_version=1):
+    if schema_version not in DocumentLayoutValidator.SUPPORTED_SCHEMA_VERSIONS:
+        raise LayoutValidationError("Unsupported starter layout schema version.")
     required = sorted(REQUIRED_BINDINGS[document_type])
     names = {
         "loan_ticket": "Starter loan ticket",
@@ -266,11 +268,21 @@ def starter_layout(document_type):
         {"type": "signature", "text": "Borrower / customer | Authorized pawnbroker", "height_mm": 18},
     ])
     definition = {
-        "schema_version": 1, "document_type": document_type,
+        "schema_version": schema_version, "document_type": document_type,
         "name": names[document_type],
         "page_size": "A4", "copy_mode": "SINGLE",
         "blocks": blocks,
     }
+    if schema_version >= 2:
+        definition.update({
+            "layout_mode": "FLOW",
+            "page": {"margin_mm": 14},
+            "theme": {
+                "primary_color": "#000000", "border_color": "#cbd5e1",
+                "font_family": "NOTO_SANS_TAMIL", "body_font_size_pt": 10,
+                "heading_font_size_pt": 14,
+            },
+        })
     return DocumentLayoutValidator.load(definition)
 
 

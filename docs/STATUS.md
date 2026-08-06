@@ -14,7 +14,9 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   Existing schema-v1 layouts retain their canonical form and v1 renderer;
   schema v2 adds explicit `FLOW` mode, bounded uniform page margins, and
   allow-listed theme colors, fonts, and type sizes. `ABSOLUTE_OVERLAY` remains
-  deliberately rejected until its dedicated later slice.
+  deliberately rejected until its dedicated later slice. Newly created
+  starter drafts use v2; existing and imported schema-v1 revisions remain
+  unchanged and supported.
 - Loans document layouts now include an Owner/Admin starter guide at
   `/loans/setup/documents/guide/`, linked directly from the layout list. It
   explains the draft-to-assignment workflow, deterministic scope precedence,

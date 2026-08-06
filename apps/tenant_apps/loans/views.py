@@ -242,7 +242,7 @@ def document_layout_create(request):
             document_type = form.cleaned_data["document_type"]
             revision = LoanDocumentLayoutService.create_layout(
                 workspace=request.loans_workspace, document_type=document_type,
-                name=form.cleaned_data["name"], definition=starter_layout(document_type).canonical_dict(),
+                name=form.cleaned_data["name"], definition=starter_layout(document_type, schema_version=2).canonical_dict(),
                 actor=request.user, request=request,
             )
         except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:

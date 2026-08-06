@@ -112,6 +112,15 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         self.assertEqual(layout.primary_color, "#7c2d12")
         self.assertEqual(result.renderer_version, "layout-reportlab-v2")
 
+    def test_schema_v2_starter_is_available_without_changing_v1_default(self):
+        legacy = starter_layout("loan_ticket")
+        current = starter_layout("loan_ticket", schema_version=2)
+
+        self.assertEqual(legacy.schema_version, 1)
+        self.assertEqual(current.schema_version, 2)
+        self.assertEqual(current.layout_mode, "FLOW")
+        self.assertIn("theme", current.canonical_dict())
+
     def test_schema_v2_rejects_overlay_mode_and_unsafe_theme_values(self):
         definition = starter_layout("loan_ticket").canonical_dict()
         definition.update({"schema_version": 2, "layout_mode": "ABSOLUTE_OVERLAY"})

@@ -370,6 +370,8 @@ class LoansSetupUiTests(TenantTestCase):
         revision = LoanDocumentLayoutRevision.objects.select_related("layout").get(
             layout__name="Counter ticket"
         )
+        self.assertEqual(revision.definition["schema_version"], 2)
+        self.assertEqual(revision.definition["layout_mode"], "FLOW")
         self.assertRedirects(
             response,
             reverse("loans:document_layout_detail", args=[revision.pk]),
