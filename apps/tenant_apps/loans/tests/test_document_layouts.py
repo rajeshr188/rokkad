@@ -79,6 +79,50 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         self.assertEqual(first.renderer_version, "layout-reportlab-v1")
         self.assertIn(b"Gold chain", first.pdf)
 
+    def test_schema_v1_remains_canonical_and_uses_v1_renderer(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        self.assertEqual(layout.schema_version, 1)
+        self.assertNotIn("layout_mode", layout.canonical_dict())
+        self.assertEqual(result.renderer_version, "layout-reportlab-v1")
+
+    def test_schema_v2_flow_theme_and_margin_are_validated_and_rendered(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition.update({
+            "schema_version": 2,
+            "layout_mode": "FLOW",
+            "page": {"margin_mm": 10},
+            "theme": {
+                "primary_color": "#7c2d12",
+                "border_color": "#d6d3d1",
+                "font_family": "HELVETICA",
+                "body_font_size_pt": 9,
+                "heading_font_size_pt": 16,
+            },
+        })
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        self.assertEqual(layout.layout_mode, "FLOW")
+        self.assertEqual(layout.margin_mm, 10)
+        self.assertEqual(layout.primary_color, "#7c2d12")
+        self.assertEqual(result.renderer_version, "layout-reportlab-v2")
+
+    def test_schema_v2_rejects_overlay_mode_and_unsafe_theme_values(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition.update({"schema_version": 2, "layout_mode": "ABSOLUTE_OVERLAY"})
+        with self.assertRaisesMessage(LayoutValidationError, "only FLOW"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition.update({"schema_version": 2, "theme": {"font_family": "../../evil.ttf"}})
+        with self.assertRaisesMessage(LayoutValidationError, "not approved"):
+            DocumentLayoutValidator.load(definition)
+
     def test_every_document_kind_has_a_valid_mandatory_starter(self):
         for kind in (
             "loan_ticket", "repayment_receipt", "release_memo",

@@ -49,6 +49,14 @@ a second source of financial facts or making historical reprints mutable.
 9. Layout, revision, assignment, and issue models will be tenant-owned with
    explicit workspace validation. Their future migrations use
    `migrate_schemas`.
+10. Composition has two explicit modes. `FLOW` owns responsive business
+    documents and pagination; a future `ABSOLUTE_OVERLAY` mode will own exact
+    rectangles over uploaded PDF forms. They share payloads, bindings, assets,
+    revision lifecycle, resolution, and issuing, but not positioning rules.
+11. Flow schema v2 is backward compatible with published schema-v1 layouts and
+    begins with bounded page margins and allow-listed theme tokens. Containers,
+    page regions, and formatting extend v2 incrementally. Overlay mode cannot
+    be selected until its separate validator and renderer are implemented.
 
 ## Consequences
 

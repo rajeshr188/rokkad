@@ -13,6 +13,10 @@ Loans configurable documents have an in-app Owner/Admin starter guide at
 operator guide at `docs/flows/loans-document-layout-operator-guide.md`. Normal
 staff do not configure layouts: they keep using the existing loan/event PDF
 actions, which resolve Series -> License -> Workspace -> fixed renderer.
+Rich composition is sequenced as Flow schema v2, flow containers, page/table
+regions, safe formatting, visual flow editing, then a separately validated
+absolute-overlay renderer and editor. Schema v1 remains supported unchanged;
+schema v2 currently permits only `FLOW` with bounded margins and theme tokens.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 

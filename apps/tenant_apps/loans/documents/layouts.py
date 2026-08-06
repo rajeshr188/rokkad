@@ -16,6 +16,8 @@ ALLOWED_BLOCK_TYPES = frozenset(
 )
 ALLOWED_PAGE_SIZES = frozenset({"A4", "A5", "LETTER"})
 ALLOWED_COPY_MODES = frozenset({"SINGLE", "ORIGINAL_DUPLICATE", "ORIGINAL_DUPLICATE_DUPLEX"})
+ALLOWED_LAYOUT_MODES = frozenset({"FLOW"})
+ALLOWED_FONT_FAMILIES = frozenset({"HELVETICA", "NOTO_SANS_TAMIL"})
 
 REQUIRED_BINDINGS = {
     "loan_ticket": frozenset({"workspace.name", "workspace.source_id", "license.display", "license.source_id", "loan.source_id", "loan.number", "loan.date", "loan.principal", "loan.monthly_interest_rate", "loan.tenure", "borrower.display", "borrower.source_id", "approval.source_id", "approval.fingerprint"}),
@@ -56,6 +58,13 @@ class DocumentLayout:
     blocks: tuple[LayoutBlock, ...]
     back_blocks: tuple[LayoutBlock, ...] = ()
     background_asset_key: str = ""
+    layout_mode: str = "FLOW"
+    margin_mm: int = 14
+    primary_color: str = "#000000"
+    border_color: str = "#cbd5e1"
+    font_family: str = "NOTO_SANS_TAMIL"
+    body_font_size_pt: int = 10
+    heading_font_size_pt: int = 14
 
     def canonical_dict(self):
         def block_dict(block):
@@ -65,13 +74,26 @@ class DocumentLayout:
                 "height_mm": block.height_mm,
                 "asset_key": block.asset_key, "width_mm": block.width_mm,
             }
-        return {
+        value = {
             "schema_version": self.schema_version, "document_type": self.document_type,
             "name": self.name, "page_size": self.page_size, "copy_mode": self.copy_mode,
             "blocks": [block_dict(block) for block in self.blocks],
             "back_blocks": [block_dict(block) for block in self.back_blocks],
             "background_asset_key": self.background_asset_key,
         }
+        if self.schema_version >= 2:
+            value.update({
+                "layout_mode": self.layout_mode,
+                "page": {"margin_mm": self.margin_mm},
+                "theme": {
+                    "primary_color": self.primary_color,
+                    "border_color": self.border_color,
+                    "font_family": self.font_family,
+                    "body_font_size_pt": self.body_font_size_pt,
+                    "heading_font_size_pt": self.heading_font_size_pt,
+                },
+            })
+        return value
 
     @property
     def content_hash(self):
@@ -80,18 +102,22 @@ class DocumentLayout:
 
 
 class DocumentLayoutValidator:
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
+    SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2})
 
     @classmethod
     def load(cls, definition):
         if not isinstance(definition, dict):
             raise LayoutValidationError("Layout must be a JSON object.")
+        schema_version = definition.get("schema_version")
+        if schema_version not in cls.SUPPORTED_SCHEMA_VERSIONS:
+            raise LayoutValidationError("Unsupported layout schema version.")
         allowed_keys = {"schema_version", "document_type", "name", "page_size", "copy_mode", "blocks", "back_blocks", "background_asset_key"}
+        if schema_version >= 2:
+            allowed_keys.update({"layout_mode", "page", "theme"})
         unknown = set(definition) - allowed_keys
         if unknown:
             raise LayoutValidationError(f"Unknown layout properties: {', '.join(sorted(unknown))}.")
-        if definition.get("schema_version") != cls.SCHEMA_VERSION:
-            raise LayoutValidationError("Unsupported layout schema version.")
         document_type = definition.get("document_type")
         if document_type not in REQUIRED_BINDINGS:
             raise LayoutValidationError("Unsupported document type.")
@@ -122,7 +148,46 @@ class DocumentLayoutValidator:
         background = str(definition.get("background_asset_key") or "")
         if background and not background.replace(".", "").replace("-", "").replace("_", "").isalnum():
             raise LayoutValidationError("Background asset key is invalid.")
-        return DocumentLayout(cls.SCHEMA_VERSION, document_type, name, page_size, copy_mode, blocks, back_blocks, background)
+        layout_mode, margin_mm, theme = cls._composition_settings(definition, schema_version)
+        return DocumentLayout(
+            schema_version, document_type, name, page_size, copy_mode, blocks,
+            back_blocks, background, layout_mode, margin_mm,
+            theme["primary_color"], theme["border_color"], theme["font_family"],
+            theme["body_font_size_pt"], theme["heading_font_size_pt"],
+        )
+
+    @classmethod
+    def _composition_settings(cls, definition, schema_version):
+        defaults = {
+            "primary_color": "#000000", "border_color": "#cbd5e1",
+            "font_family": "NOTO_SANS_TAMIL", "body_font_size_pt": 10,
+            "heading_font_size_pt": 14,
+        }
+        if schema_version == 1:
+            return "FLOW", 14, defaults
+        layout_mode = definition.get("layout_mode", "FLOW")
+        if layout_mode not in ALLOWED_LAYOUT_MODES:
+            raise LayoutValidationError("Schema v2 currently supports only FLOW layout mode.")
+        page = definition.get("page", {})
+        if not isinstance(page, dict) or set(page) - {"margin_mm"}:
+            raise LayoutValidationError("Page settings may contain only margin_mm.")
+        margin_mm = page.get("margin_mm", 14)
+        if not isinstance(margin_mm, int) or not 5 <= margin_mm <= 30:
+            raise LayoutValidationError("Page margin must be between 5 and 30 mm.")
+        supplied_theme = definition.get("theme", {})
+        if not isinstance(supplied_theme, dict) or set(supplied_theme) - set(defaults):
+            raise LayoutValidationError("Theme contains unsupported properties.")
+        theme = {**defaults, **supplied_theme}
+        for key in ("primary_color", "border_color"):
+            value = theme[key]
+            if not isinstance(value, str) or len(value) != 7 or value[0] != "#" or any(character not in "0123456789abcdefABCDEF" for character in value[1:]):
+                raise LayoutValidationError(f"Theme {key} must be a six-digit hexadecimal color.")
+        if theme["font_family"] not in ALLOWED_FONT_FAMILIES:
+            raise LayoutValidationError("Theme font family is not approved.")
+        for key, minimum, maximum in (("body_font_size_pt", 7, 14), ("heading_font_size_pt", 10, 24)):
+            if not isinstance(theme[key], int) or not minimum <= theme[key] <= maximum:
+                raise LayoutValidationError(f"Theme {key} is outside the supported range.")
+        return layout_mode, margin_mm, theme
 
     @classmethod
     def _blocks(cls, values, document_type):

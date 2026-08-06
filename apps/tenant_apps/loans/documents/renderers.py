@@ -57,10 +57,10 @@ class ConfigurableDocumentRenderer:
         cls._assert_bindings(layout, fields, sections)
         buffer = io.BytesIO()
         document = SimpleDocTemplate(buffer, pagesize=cls.PAGE_SIZES[layout.page_size],
-                                     leftMargin=14 * mm, rightMargin=14 * mm,
-                                     topMargin=14 * mm, bottomMargin=14 * mm,
+                                     leftMargin=layout.margin_mm * mm, rightMargin=layout.margin_mm * mm,
+                                     topMargin=layout.margin_mm * mm, bottomMargin=layout.margin_mm * mm,
                                      pageCompression=0, title=payload.title)
-        styles = cls._styles()
+        styles = cls._styles(layout)
         story = []
         copies = ("ORIGINAL", "DUPLICATE") if layout.copy_mode != "SINGLE" else ("ORIGINAL",)
         for copy_index, copy_name in enumerate(copies):
@@ -75,7 +75,8 @@ class ConfigurableDocumentRenderer:
         buffer.close()
         if layout.background_asset_key:
             pdf = cls._apply_background(pdf, asset_map[layout.background_asset_key])
-        return LayoutRenderResult(pdf, layout.content_hash, cls._payload_hash(payload), cls.VERSION, layout.page_size, layout.copy_mode,
+        renderer_version = cls.VERSION if layout.schema_version == 1 else "layout-reportlab-v2"
+        return LayoutRenderResult(pdf, layout.content_hash, cls._payload_hash(payload), renderer_version, layout.page_size, layout.copy_mode,
                                   tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())))
 
     @classmethod
@@ -141,10 +142,15 @@ class ConfigurableDocumentRenderer:
         return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     @staticmethod
-    def _styles():
+    def _styles(layout):
         styles = getSampleStyleSheet()
+        styles["BodyText"].fontSize = layout.body_font_size_pt
+        styles["BodyText"].leading = layout.body_font_size_pt + 2
+        styles["Title"].fontSize = layout.heading_font_size_pt
+        styles["Title"].textColor = colors.HexColor(layout.primary_color)
+        styles["Heading2"].textColor = colors.HexColor(layout.primary_color)
         font_path = Path(__file__).resolve().parents[4] / "static" / "fonts" / "NotoSansTamil-Regular.ttf"
-        if font_path.exists():
+        if layout.font_family == "NOTO_SANS_TAMIL" and font_path.exists():
             name = "RokkadUnicodeTamil"
             if name not in pdfmetrics.getRegisteredFontNames():
                 pdfmetrics.registerFont(TTFont(name, str(font_path)))

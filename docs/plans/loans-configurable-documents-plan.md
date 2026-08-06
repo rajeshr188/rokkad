@@ -22,6 +22,21 @@ printing is an additional rendering path over the same immutable document
 facts; it never becomes a second source of loan, accounting, settlement, or
 custody logic.
 
+## Post-LPD6 Rich Composition Order
+
+1. Flow schema v2 foundation: explicit mode, bounded page margins, themes, and
+   schema-v1 compatibility.
+2. Flow containers: sections, rows, columns, and field grids.
+3. Configurable tables plus repeating headers and footers.
+4. Safe formatting, conditional visibility, and overflow policies.
+5. Visual flow editor emitting the same validated JSON.
+6. Absolute-overlay schema and renderer with bounded page geometry.
+7. Visual overlay editor over the uploaded PDF background.
+8. Physical printer acceptance for both composition modes.
+
+Flow and overlay remain separate renderers over the same typed payload,
+immutable revision, deterministic assignment, and exact-issue infrastructure.
+
 ## What To Learn From Girvi
 
 Carry forward the useful operator capabilities:
