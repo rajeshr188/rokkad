@@ -56,9 +56,12 @@ class ConfigurableDocumentRenderer:
             raise DocumentAssetError(f"Required document assets are missing: {', '.join(sorted(missing_assets))}.")
         cls._assert_bindings(layout, fields, sections)
         buffer = io.BytesIO()
+        header_height = layout.header.height_mm if layout.header else 0
+        footer_height = layout.footer.height_mm if layout.footer else 0
         document = SimpleDocTemplate(buffer, pagesize=cls.PAGE_SIZES[layout.page_size],
                                      leftMargin=layout.margin_mm * mm, rightMargin=layout.margin_mm * mm,
-                                     topMargin=layout.margin_mm * mm, bottomMargin=layout.margin_mm * mm,
+                                     topMargin=(layout.margin_mm + header_height) * mm,
+                                     bottomMargin=(layout.margin_mm + footer_height) * mm,
                                      pageCompression=0, title=payload.title)
         styles = cls._styles(layout)
         story = []
@@ -71,7 +74,14 @@ class ConfigurableDocumentRenderer:
             if layout.copy_mode == "ORIGINAL_DUPLICATE_DUPLEX":
                 story.append(PageBreak())
                 cls._append_blocks(story, layout.back_blocks, payload, fields, sections, styles, copy_name, preview, asset_map, layout, available_width)
-        document.build(story)
+        def draw_regions(canvas, _document):
+            cls._draw_page_region(canvas, layout.header, top=True, payload=payload, fields=fields,
+                                  sections=sections, styles=styles, assets=asset_map,
+                                  layout=layout, available_width=available_width)
+            cls._draw_page_region(canvas, layout.footer, top=False, payload=payload, fields=fields,
+                                  sections=sections, styles=styles, assets=asset_map,
+                                  layout=layout, available_width=available_width)
+        document.build(story, onFirstPage=draw_regions, onLaterPages=draw_regions)
         pdf = buffer.getvalue()
         buffer.close()
         if layout.background_asset_key:
@@ -82,9 +92,10 @@ class ConfigurableDocumentRenderer:
 
     @classmethod
     def _append_blocks(cls, story, blocks, payload, fields, sections, styles, copy_name, preview, assets, layout, available_width, *, nested=False):
-        if preview:
-            story.extend([Paragraph("PREVIEW / NOT AN OFFICIAL ISSUE", styles["Heading2"]), Spacer(1, 4)])
-        story.extend([Paragraph(copy_name, styles["Heading3"]), Spacer(1, 3)])
+        if not nested:
+            if preview:
+                story.extend([Paragraph("PREVIEW / NOT AN OFFICIAL ISSUE", styles["Heading2"]), Spacer(1, 4)])
+            story.extend([Paragraph(copy_name, styles["Heading3"]), Spacer(1, 3)])
         for block in blocks:
             if block.type == "title":
                 story.extend([Paragraph(escape(block.text or payload.title), styles["Title"]), Spacer(1, 6)])
@@ -98,8 +109,26 @@ class ConfigurableDocumentRenderer:
             elif block.type == "table":
                 section = sections[block.binding]
                 story.append(Paragraph(escape(section.heading), styles["Heading2"]))
-                table = Table([[Paragraph(escape(str(cell)), styles["BodyText"]) for cell in row] for row in section.rows], repeatRows=1)
-                table.setStyle(cls._table_style(True)); story.extend([table, Spacer(1, 6)])
+                if block.table_columns:
+                    if any(column.index >= len(row) for column in block.table_columns for row in section.rows):
+                        raise ValueError(f"Table {block.binding} does not contain every configured column index.")
+                    rows = [[column.label for column in block.table_columns]]
+                    rows.extend([[row[column.index] for column in block.table_columns] for row in section.rows[1:]])
+                    widths = [available_width * column.width_percent / 100 for column in block.table_columns]
+                else:
+                    rows = section.rows
+                    widths = None
+                table = Table([[Paragraph(escape(str(cell)), styles["BodyText"]) for cell in row] for row in rows],
+                              colWidths=widths, repeatRows=1 if block.repeat_header else 0)
+                commands = list(cls._table_style(True).getCommands())
+                if block.style_variant == "MINIMAL":
+                    commands = [("LINEBELOW", (0, 0), (-1, 0), .6, colors.HexColor(layout.border_color)), ("VALIGN", (0, 0), (-1, -1), "TOP")]
+                elif block.style_variant == "STRIPED":
+                    for row_index in range(2, len(rows), 2):
+                        commands.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#f8fafc")))
+                for column_index, column in enumerate(block.table_columns):
+                    commands.append(("ALIGN", (column_index, 0), (column_index, -1), column.align))
+                table.setStyle(TableStyle(commands)); story.extend([table, Spacer(1, 6)])
             elif block.type == "image":
                 asset = assets[block.asset_key]
                 if asset.mime_type == "application/pdf":
@@ -153,6 +182,23 @@ class ConfigurableDocumentRenderer:
                 columns.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4)]))
                 story.extend([columns, Spacer(1, 6)])
 
+    @classmethod
+    def _draw_page_region(cls, canvas, region, *, top, payload, fields, sections, styles, assets, layout, available_width):
+        if region is None:
+            return
+        flowables = []
+        cls._append_blocks(flowables, region.blocks, payload, fields, sections, styles, "", False,
+                           assets, layout, available_width, nested=True)
+        page_height = cls.PAGE_SIZES[layout.page_size][1]
+        y = page_height - (layout.margin_mm * mm) if top else (layout.margin_mm + region.height_mm) * mm
+        minimum_y = y - region.height_mm * mm
+        for flowable in flowables:
+            width, height = flowable.wrap(available_width, region.height_mm * mm)
+            y -= height
+            if y < minimum_y:
+                raise ValueError("Page region content exceeds its configured height.")
+            flowable.drawOn(canvas, layout.margin_mm * mm, y)
+
     @staticmethod
     def _assert_bindings(layout, fields, sections):
         for block in layout.all_blocks():
@@ -161,6 +207,11 @@ class ConfigurableDocumentRenderer:
             if block.type == "field_group":
                 missing = set(block.bindings) - set(fields)
                 if missing: raise ValueError(f"Payload does not contain fields: {', '.join(sorted(missing))}.")
+            if block.type == "field_grid":
+                missing = set(block.bindings) - set(fields)
+                if missing: raise ValueError(f"Payload does not contain fields: {', '.join(sorted(missing))}.")
+            if block.type == "qr" and block.binding not in {"", "document.verification_id"} and block.binding not in fields:
+                raise ValueError(f"Payload does not contain field {block.binding}.")
             if block.type == "table" and block.binding not in sections:
                 raise ValueError(f"Payload does not contain table {block.binding}.")
 

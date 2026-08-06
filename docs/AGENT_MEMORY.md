@@ -21,6 +21,11 @@ Flow v2 also supports recursively validated `section`, `columns`, and
 `field_grid` containers. Column widths must total 100%, nesting is limited to
 three levels, nested assets participate in revision validation/hashing, and
 page breaks cannot be nested.
+Flow v2 tables may select payload column indexes with custom labels,
+percentage widths, alignment, repeated headings, and constrained variants.
+Bounded header/footer regions repeat compact blocks on every page and reserve
+body space; invalid indexes, unsupported region blocks, and overflow fail
+closed.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 

@@ -10,6 +10,11 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Flow v2 configurable tables and repeating page regions are complete. Tables
+  support selected payload indexes, custom labels, percentage widths,
+  alignment, repeatable headings, and grid/minimal/striped variants. Bounded
+  headers and footers reserve body space and repeat compact validated blocks
+  on every page. Unknown indexes and region overflow fail closed.
 - Flow schema-v2 containers are complete. Validated sections support plain,
   outlined, and tinted variants; proportional two-to-four-column containers
   require widths totaling 100%; field grids support one to four columns.

@@ -200,6 +200,77 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=(logo,))
         self.assertEqual(dict(result.asset_hashes)[logo.key], logo.sha256)
 
+    def test_configurable_table_columns_render_selected_labels_and_widths(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        table = next(block for block in definition["blocks"] if block["type"] == "table")
+        table.update({
+            "style_variant": "STRIPED",
+            "repeat_header": True,
+            "table_columns": [
+                {"index": 0, "label": "Line", "width_percent": 25, "align": "CENTER"},
+                {"index": 1, "label": "Pledged article", "width_percent": 75, "align": "LEFT"},
+            ],
+        })
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        self.assertIn("Pledged article", text)
+        self.assertIn("Gold chain", text)
+        self.assertEqual(layout.canonical_dict()["blocks"][2]["table_columns"][1]["width_percent"], 75)
+
+    def test_header_and_footer_repeat_on_every_flow_page(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["header"] = {"height_mm": 15, "blocks": [{"type": "title", "text": "REPEATING HEADER"}]}
+        definition["footer"] = {"height_mm": 12, "blocks": [{"type": "field", "binding": "loan.number"}]}
+        rows = (("Item", "Description"),) + tuple(
+            (str(index), f"Long collateral row {index}") for index in range(1, 90)
+        )
+        payload = DocumentPayload(
+            self.payload.schema_version, self.payload.document_type, self.payload.title,
+            self.payload.file_name, self.payload.verification_id, self.payload.fields,
+            (DocumentSection("collateral.items", "Collateral", rows),),
+        )
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(payload, layout)
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertGreater(len(pdf), 1)
+        for page in pdf:
+            text = page.get_text()
+            self.assertIn("REPEATING HEADER", text)
+            self.assertIn("PL-A-00019", text)
+        pdf.close()
+
+    def test_table_and_page_region_constraints_fail_closed(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        table = next(block for block in definition["blocks"] if block["type"] == "table")
+        table["table_columns"] = [
+            {"index": 0, "label": "A", "width_percent": 40, "align": "LEFT"},
+            {"index": 1, "label": "B", "width_percent": 40, "align": "LEFT"},
+        ]
+        with self.assertRaisesMessage(LayoutValidationError, "must total 100"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["header"] = {"height_mm": 20, "blocks": [{"type": "table", "binding": "collateral.items"}]}
+        with self.assertRaisesMessage(LayoutValidationError, "compact, non-repeating"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        table = next(block for block in definition["blocks"] if block["type"] == "table")
+        table["table_columns"] = [
+            {"index": 0, "label": "A", "width_percent": 50, "align": "LEFT"},
+            {"index": 2, "label": "Missing", "width_percent": 50, "align": "LEFT"},
+        ]
+        layout = DocumentLayoutValidator.load(definition)
+        with self.assertRaisesMessage(ValueError, "does not contain every configured column index"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+
     def test_every_document_kind_has_a_valid_mandatory_starter(self):
         for kind in (
             "loan_ticket", "repayment_receipt", "release_memo",

@@ -171,6 +171,43 @@ normal document flow and move together based on available page space.
 Column widths must total 100 percent. Containers may be nested only to the
 validated depth limit, and page breaks cannot appear inside them.
 
+For a configured table, select payload column indexes, labels, widths, and
+alignment explicitly:
+
+```json
+{
+  "type": "table",
+  "binding": "collateral.items",
+  "style_variant": "STRIPED",
+  "repeat_header": true,
+  "table_columns": [
+    {"index": 0, "label": "Line", "width_percent": 25, "align": "CENTER"},
+    {"index": 1, "label": "Pledged article", "width_percent": 75, "align": "LEFT"}
+  ]
+}
+```
+
+Table widths must total 100 percent. Invalid or missing payload indexes fail
+the render instead of silently printing an incomplete table.
+
+Use bounded page regions for compact information that must repeat on every
+page:
+
+```json
+"header": {
+  "height_mm": 15,
+  "blocks": [{"type": "title", "text": "REGISTERED PAWNBROKER"}]
+},
+"footer": {
+  "height_mm": 12,
+  "blocks": [{"type": "field", "binding": "loan.number"}]
+}
+```
+
+Headers and footers reserve body space and repeat on every generated page.
+They accept only compact blocks; tables, signatures, containers, and page
+breaks are rejected there.
+
 ```json
 {"type": "title"}
 ```

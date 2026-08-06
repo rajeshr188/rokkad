@@ -52,11 +52,27 @@ class LayoutBlock:
     columns: tuple[LayoutColumn, ...] = ()
     grid_columns: int = 2
     style_variant: str = "PLAIN"
+    table_columns: tuple[TableColumn, ...] = ()
+    repeat_header: bool = True
 
 
 @dataclass(frozen=True)
 class LayoutColumn:
     width_percent: int
+    blocks: tuple[LayoutBlock, ...]
+
+
+@dataclass(frozen=True)
+class TableColumn:
+    index: int
+    label: str
+    width_percent: int
+    align: str = "LEFT"
+
+
+@dataclass(frozen=True)
+class PageRegion:
+    height_mm: int
     blocks: tuple[LayoutBlock, ...]
 
 
@@ -77,6 +93,8 @@ class DocumentLayout:
     font_family: str = "NOTO_SANS_TAMIL"
     body_font_size_pt: int = 10
     heading_font_size_pt: int = 14
+    header: PageRegion | None = None
+    footer: PageRegion | None = None
 
     def canonical_dict(self):
         def block_dict(block):
@@ -96,6 +114,12 @@ class DocumentLayout:
                     ],
                     "grid_columns": block.grid_columns,
                     "style_variant": block.style_variant,
+                    "table_columns": [
+                        {"index": column.index, "label": column.label,
+                         "width_percent": column.width_percent, "align": column.align}
+                        for column in block.table_columns
+                    ],
+                    "repeat_header": block.repeat_header,
                 })
             return value
         value = {
@@ -116,8 +140,16 @@ class DocumentLayout:
                     "body_font_size_pt": self.body_font_size_pt,
                     "heading_font_size_pt": self.heading_font_size_pt,
                 },
+                "header": self._region_dict(self.header, block_dict),
+                "footer": self._region_dict(self.footer, block_dict),
             })
         return value
+
+    @staticmethod
+    def _region_dict(region, block_dict):
+        if region is None:
+            return None
+        return {"height_mm": region.height_mm, "blocks": [block_dict(block) for block in region.blocks]}
 
     def all_blocks(self):
         def walk(blocks):
@@ -126,7 +158,8 @@ class DocumentLayout:
                 yield from walk(block.blocks)
                 for column in block.columns:
                     yield from walk(column.blocks)
-        return tuple(walk(self.blocks + self.back_blocks))
+        region_blocks = tuple(self.header.blocks if self.header else ()) + tuple(self.footer.blocks if self.footer else ())
+        return tuple(walk(self.blocks + self.back_blocks + region_blocks))
 
     @property
     def content_hash(self):
@@ -147,7 +180,7 @@ class DocumentLayoutValidator:
             raise LayoutValidationError("Unsupported layout schema version.")
         allowed_keys = {"schema_version", "document_type", "name", "page_size", "copy_mode", "blocks", "back_blocks", "background_asset_key"}
         if schema_version >= 2:
-            allowed_keys.update({"layout_mode", "page", "theme"})
+            allowed_keys.update({"layout_mode", "page", "theme", "header", "footer"})
         unknown = set(definition) - allowed_keys
         if unknown:
             raise LayoutValidationError(f"Unknown layout properties: {', '.join(sorted(unknown))}.")
@@ -162,18 +195,21 @@ class DocumentLayoutValidator:
             raise LayoutValidationError("Unsupported copy mode.")
         blocks = cls._blocks(definition.get("blocks"), document_type, schema_version)
         back_blocks = cls._blocks(definition.get("back_blocks", []), document_type, schema_version)
+        header = cls._region(definition.get("header"), document_type, schema_version, "Header")
+        footer = cls._region(definition.get("footer"), document_type, schema_version, "Footer")
         if not blocks:
             raise LayoutValidationError("A layout requires at least one front-page block.")
         if copy_mode == "ORIGINAL_DUPLICATE_DUPLEX" and not back_blocks:
             raise LayoutValidationError("Duplex layouts require back-page blocks.")
-        bound = cls._bindings(blocks + back_blocks)
+        region_blocks = tuple(header.blocks if header else ()) + tuple(footer.blocks if footer else ())
+        bound = cls._bindings(blocks + back_blocks + region_blocks)
         missing = REQUIRED_BINDINGS[document_type] - bound
         if missing:
             raise LayoutValidationError(f"Required bindings are missing: {', '.join(sorted(missing))}.")
         missing_sections = REQUIRED_SECTIONS[document_type] - bound
         if missing_sections:
             raise LayoutValidationError(f"Required tables are missing: {', '.join(sorted(missing_sections))}.")
-        if not cls._has_block_type(blocks + back_blocks, "verification"):
+        if not cls._has_block_type(blocks + back_blocks + region_blocks, "verification"):
             raise LayoutValidationError("Every official layout requires a verification block.")
         name = str(definition.get("name") or "").strip()
         if not name or len(name) > 100:
@@ -187,7 +223,24 @@ class DocumentLayoutValidator:
             back_blocks, background, layout_mode, margin_mm,
             theme["primary_color"], theme["border_color"], theme["font_family"],
             theme["body_font_size_pt"], theme["heading_font_size_pt"],
+            header, footer,
         )
+
+    @classmethod
+    def _region(cls, value, document_type, schema_version, label):
+        if value is None:
+            return None
+        if schema_version == 1:
+            raise LayoutValidationError(f"{label} regions require layout schema version 2.")
+        if not isinstance(value, dict) or set(value) != {"height_mm", "blocks"}:
+            raise LayoutValidationError(f"{label} region requires height_mm and blocks.")
+        height = value["height_mm"]
+        if not isinstance(height, int) or not 8 <= height <= 40:
+            raise LayoutValidationError(f"{label} height must be between 8 and 40 mm.")
+        blocks = cls._blocks(value["blocks"], document_type, schema_version, depth=1, region=True)
+        if not blocks:
+            raise LayoutValidationError(f"{label} region requires at least one block.")
+        return PageRegion(height, blocks)
 
     @classmethod
     def _composition_settings(cls, definition, schema_version):
@@ -223,7 +276,7 @@ class DocumentLayoutValidator:
         return layout_mode, margin_mm, theme
 
     @classmethod
-    def _blocks(cls, values, document_type, schema_version, *, depth=0):
+    def _blocks(cls, values, document_type, schema_version, *, depth=0, region=False):
         if not isinstance(values, list) or len(values) > 100:
             raise LayoutValidationError("Blocks must be a list containing at most 100 entries.")
         if depth > 3:
@@ -236,7 +289,7 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError("Each block must be an object.")
             allowed = {"type", "binding", "bindings", "text", "height_mm", "asset_key", "width_mm"}
             if schema_version >= 2:
-                allowed.update({"blocks", "columns", "grid_columns", "style_variant"})
+                allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header"})
             unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
@@ -247,6 +300,8 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError("Flow containers require layout schema version 2.")
             if depth and block_type == "page_break":
                 raise LayoutValidationError("Page breaks cannot be nested inside flow containers.")
+            if region and block_type not in {"title", "field", "field_grid", "image", "qr", "verification", "spacer"}:
+                raise LayoutValidationError("Page regions contain only compact, non-repeating blocks.")
             binding = str(value.get("binding") or "")
             bindings = tuple(value.get("bindings") or ())
             if block_type == "field" and binding not in field_keys:
@@ -272,6 +327,8 @@ class DocumentLayoutValidator:
             columns = ()
             grid_columns = value.get("grid_columns", 2)
             style_variant = str(value.get("style_variant") or "PLAIN")
+            table_columns = ()
+            repeat_header = value.get("repeat_header", True)
             if block_type == "section":
                 child_blocks = cls._blocks(value.get("blocks"), document_type, schema_version, depth=depth + 1)
                 if not child_blocks:
@@ -301,12 +358,36 @@ class DocumentLayoutValidator:
                     raise LayoutValidationError("Field grids require only registered field bindings.")
                 if not isinstance(grid_columns, int) or not 1 <= grid_columns <= 4:
                     raise LayoutValidationError("Field grids support one to four columns.")
+            elif block_type == "table":
+                if not isinstance(repeat_header, bool):
+                    raise LayoutValidationError("Table repeat_header must be true or false.")
+                if style_variant not in {"GRID", "MINIMAL", "STRIPED", "PLAIN"}:
+                    raise LayoutValidationError("Table style variant is unsupported.")
+                raw_table_columns = value.get("table_columns", [])
+                if not isinstance(raw_table_columns, list) or len(raw_table_columns) > 12:
+                    raise LayoutValidationError("Table columns must be a list of at most 12 entries.")
+                parsed_table_columns = []
+                for raw_column in raw_table_columns:
+                    if not isinstance(raw_column, dict) or set(raw_column) != {"index", "label", "width_percent", "align"}:
+                        raise LayoutValidationError("Each table column requires index, label, width_percent, and align.")
+                    index, label, percent, align = raw_column["index"], str(raw_column["label"]).strip(), raw_column["width_percent"], raw_column["align"]
+                    if not isinstance(index, int) or not 0 <= index <= 11 or not label or len(label) > 40:
+                        raise LayoutValidationError("Table column index or label is invalid.")
+                    if not isinstance(percent, int) or not 5 <= percent <= 90 or align not in {"LEFT", "CENTER", "RIGHT"}:
+                        raise LayoutValidationError("Table column width or alignment is invalid.")
+                    parsed_table_columns.append(TableColumn(index, label, percent, align))
+                if parsed_table_columns:
+                    if len({column.index for column in parsed_table_columns}) != len(parsed_table_columns):
+                        raise LayoutValidationError("Table column indexes must be unique.")
+                    if sum(column.width_percent for column in parsed_table_columns) != 100:
+                        raise LayoutValidationError("Table column widths must total 100 percent.")
+                table_columns = tuple(parsed_table_columns)
             elif value.get("blocks") or value.get("columns"):
                 raise LayoutValidationError(f"Block type {block_type} cannot contain child blocks.")
             result.append(LayoutBlock(
                 block_type, binding, bindings, str(value.get("text") or ""),
                 height, asset_key, width, child_blocks, columns, grid_columns,
-                style_variant,
+                style_variant, table_columns, repeat_header,
             ))
         return tuple(result)
 
