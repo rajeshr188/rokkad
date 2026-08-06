@@ -1,4 +1,5 @@
 import uuid
+import hashlib
 from decimal import Decimal
 
 from django.contrib import messages
@@ -25,6 +26,11 @@ from apps.tenant_apps.loans.feature_flags import (
 )
 from apps.tenant_apps.loans.forms import (
     LoanLicenseForm,
+    LoanDocumentAssetUploadForm,
+    LoanDocumentAssignmentForm,
+    LoanDocumentLayoutCreateForm,
+    LoanDocumentLayoutDefinitionForm,
+    LoanDocumentLayoutPackImportForm,
     LoanModuleFeatureGateForm,
     LoanSeriesSetupForm,
     PawnEconomicConfigurationForm,
@@ -48,6 +54,8 @@ from apps.tenant_apps.loans.forms import (
 )
 from apps.tenant_apps.loans.models import (
     LoanLicense,
+    LoanDocumentLayout,
+    LoanDocumentLayoutRevision,
     LoanSeries,
     PawnLoanEconomicPolicy,
     PawnLoanFeePolicy,
@@ -79,6 +87,8 @@ from apps.tenant_apps.loans.services import (
     PawnLifecycleError,
     PawnLoanDocumentError,
     PawnLoanDocumentService,
+    DocumentLayoutServiceError,
+    LoanDocumentLayoutService,
     PawnLoanNoticeError,
     PawnAuctionError,
     PawnRenewalError,
@@ -124,6 +134,19 @@ from apps.tenant_apps.loans.services import (
     update_license,
     update_pawn_draft,
     update_series,
+)
+from apps.tenant_apps.loans.documents import (
+    ConfigurableDocumentRenderer,
+    DocumentAsset,
+    DocumentLayoutValidator,
+    PawnLoanDocumentProjectionBuilder,
+    starter_layout,
+)
+from apps.tenant_apps.loans.documents.integrity import get_document_integrity_findings
+from apps.tenant_apps.loans.documents.packs import (
+    LayoutPackError,
+    export_layout_pack,
+    import_layout_pack,
 )
 from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
@@ -191,12 +214,294 @@ def loan_module_feature_gate(request):
     )
 
 
+@loans_setup_required
+def document_layout_list(request):
+    layouts = LoanDocumentLayout.objects.filter(workspace=request.loans_workspace).prefetch_related("revisions")
+    assignments = {
+        assignment.revision_id: assignment
+        for layout in layouts
+        for revision in layout.revisions.all()
+        for assignment in revision.assignments.filter(is_active=True).select_related("license", "series")
+    }
+    return render(request, "loans/setup/documents/list.html", {
+        "layouts": layouts, "assignments": assignments,
+        "pack_form": LoanDocumentLayoutPackImportForm(),
+    })
+
+
+@loans_setup_required
+def document_layout_guide(request):
+    return render(request, "loans/setup/documents/guide.html")
+
+
+@loans_setup_required
+def document_layout_create(request):
+    form = LoanDocumentLayoutCreateForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            document_type = form.cleaned_data["document_type"]
+            revision = LoanDocumentLayoutService.create_layout(
+                workspace=request.loans_workspace, document_type=document_type,
+                name=form.cleaned_data["name"], definition=starter_layout(document_type).canonical_dict(),
+                actor=request.user, request=request,
+            )
+        except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Starter document layout created as a draft.")
+            return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    return render(request, "loans/setup/documents/create.html", {"form": form})
+
+
+def _document_revision(request, revision_pk):
+    return get_object_or_404(
+        LoanDocumentLayoutRevision.objects.select_related("layout", "layout__workspace").prefetch_related("assets", "assignments__license", "assignments__series"),
+        pk=revision_pk, layout__workspace=request.loans_workspace,
+    )
+
+
+@loans_setup_required
+def document_layout_detail(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    return render(request, "loans/setup/documents/detail.html", {
+        "revision": revision,
+        "definition_form": LoanDocumentLayoutDefinitionForm(initial={"definition": revision.definition}),
+        "asset_form": LoanDocumentAssetUploadForm(),
+        "assignment_form": LoanDocumentAssignmentForm(workspace=request.loans_workspace),
+        "sample_loan": PawnLoan.objects.filter(workspace=request.loans_workspace, approval_snapshots__isnull=False).order_by("-pk").first(),
+    })
+
+
+@loans_setup_required
+@require_POST
+def document_layout_update(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    form = LoanDocumentLayoutDefinitionForm(request.POST)
+    if form.is_valid():
+        try:
+            LoanDocumentLayoutService.update_draft(revision=revision, definition=form.cleaned_data["definition"], actor=request.user, request=request)
+        except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Draft layout validated and saved.")
+    else:
+        messages.error(request, "Layout JSON is invalid.")
+    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+
+
+@loans_setup_required
+@require_POST
+def document_layout_asset_add(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    form = LoanDocumentAssetUploadForm(request.POST, request.FILES)
+    if form.is_valid():
+        upload = form.cleaned_data["file"]
+        try:
+            LoanDocumentLayoutService.add_asset(
+                revision=revision, key=form.cleaned_data["key"], kind=form.cleaned_data["kind"],
+                content=upload.read(), filename=upload.name, actor=request.user,
+            )
+        except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Validated document asset added.")
+    else:
+        messages.error(request, "Asset upload is invalid.")
+    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+
+
+@loans_setup_required
+@require_POST
+def document_layout_clone(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    clone = LoanDocumentLayoutService.clone_revision(revision=revision, actor=request.user, request=request)
+    messages.success(request, f"Created draft revision {clone.version}.")
+    return redirect("loans:document_layout_detail", revision_pk=clone.pk)
+
+
+@loans_setup_required
+@require_POST
+def document_layout_publish(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    try:
+        LoanDocumentLayoutService.publish(revision=revision, actor=request.user, request=request)
+    except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Layout revision published and frozen.")
+    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+
+
+@loans_setup_required
+@require_POST
+def document_layout_assign(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    form = LoanDocumentAssignmentForm(request.POST, workspace=request.loans_workspace)
+    if form.is_valid():
+        try:
+            LoanDocumentLayoutService.assign(
+                revision=revision, workspace=request.loans_workspace,
+                license=form.cleaned_data["license"], series=form.cleaned_data["series"],
+                actor=request.user, request=request,
+            )
+        except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Published layout assigned.")
+    else:
+        messages.error(request, "Assignment scope is invalid.")
+    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+
+
+@loans_setup_required
+@require_POST
+def document_layout_retire(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    try:
+        LoanDocumentLayoutService.retire(revision=revision, actor=request.user, request=request)
+    except (DocumentLayoutServiceError, ValidationError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Published revision retired; its active assignments were disabled.")
+    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+
+
+def _revision_assets(revision):
+    values = []
+    for asset in revision.assets.all():
+        asset.file.open("rb")
+        content = asset.file.read()
+        asset.file.close()
+        values.append(DocumentAsset(asset.key, asset.kind, asset.mime_type, content, asset.workspace_id, asset.sha256, asset.width, asset.height, asset.page_count))
+    return tuple(values)
+
+
+@loans_setup_required
+def document_layout_preview(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    try:
+        payload = _preview_document_payload(request, revision)
+        if payload is None:
+            return HttpResponse("Create an eligible source document before previewing this layout.", status=409, content_type="text/plain")
+        layout = DocumentLayoutValidator.load(revision.definition)
+        result = ConfigurableDocumentRenderer.render(payload, layout, preview=True, assets=_revision_assets(revision))
+    except (ValueError, ValidationError) as exc:
+        return HttpResponse(str(exc), status=409, content_type="text/plain")
+    response = HttpResponse(result.pdf, content_type="application/pdf")
+    disposition = "attachment" if request.GET.get("download") == "1" else "inline"
+    response["Content-Disposition"] = f'{disposition}; filename="preview-{payload.file_name}"'
+    response["X-Rokkad-Preview"] = "true"
+    return response
+
+
+@loans_setup_required
+def document_layout_export(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    try:
+        content = export_layout_pack(revision)
+    except (LayoutPackError, OSError, ValueError) as exc:
+        return HttpResponse(str(exc), status=409, content_type="text/plain")
+    response = HttpResponse(content, content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="loan-layout-{revision.layout_id}-v{revision.version}.zip"'
+    return response
+
+
+@loans_setup_required
+@require_POST
+def document_layout_import(request):
+    form = LoanDocumentLayoutPackImportForm(request.POST, request.FILES)
+    if not form.is_valid():
+        messages.error(request, "Layout pack upload is invalid.")
+        return redirect("loans:document_layout_list")
+    upload = form.cleaned_data["pack"]
+    try:
+        revision = import_layout_pack(
+            workspace=request.loans_workspace, content=upload.read(),
+            actor=request.user, request=request, name=form.cleaned_data["name"] or None,
+        )
+    except (LayoutPackError, DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+        return redirect("loans:document_layout_list")
+    messages.success(request, "Layout pack imported as an unpublished draft for review.")
+    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+
+
+@loans_setup_required
+def document_layout_diagnostics(request):
+    findings = get_document_integrity_findings()
+    return render(request, "loans/setup/documents/diagnostics.html", {"findings": findings})
+
+
+def _preview_document_payload(request, revision):
+    workspace = request.loans_workspace
+    kind = revision.layout.document_type
+    if kind == "loan_ticket":
+        source = get_object_or_404(PawnLoan, pk=request.GET.get("loan"), workspace=workspace) if request.GET.get("loan") else PawnLoan.objects.filter(workspace=workspace, approval_snapshots__isnull=False).order_by("-pk").first()
+        return PawnLoanDocumentProjectionBuilder.loan_ticket(source) if source else None
+    if kind == "repayment_receipt":
+        source = PawnLoanAccountingEvent.objects.filter(loan__workspace=workspace, event_kind=TransactionKind.REPAYMENT.value).select_related("loan__workspace", "loan__license", "loan__borrower", "outbox").order_by("-pk").first()
+        return PawnLoanDocumentProjectionBuilder.repayment_receipt(source) if source else None
+    if kind == "release_memo":
+        source = PawnLoanRelease.objects.filter(workspace=workspace).select_related("loan__workspace", "loan__license", "loan__borrower", "accounting_event", "accounting_event__outbox").prefetch_related("items__collateral_item").order_by("-pk").first()
+        return PawnLoanDocumentProjectionBuilder.release_memo(source) if source else None
+    if kind in {"auction_notice", "auction_recovery"}:
+        source = PawnLoanAuction.objects.filter(workspace=workspace).select_related("loan__workspace", "loan__license", "loan__borrower", "accounting_event", "accounting_event__outbox", "notice").prefetch_related("items__collateral_item").order_by("-pk").first()
+        if not source: return None
+        return PawnLoanDocumentProjectionBuilder.auction_notice(source) if kind == "auction_notice" else PawnLoanDocumentProjectionBuilder.auction_recovery_memo(source)
+    source = PawnLoanRenewal.objects.filter(workspace=workspace).select_related("source_loan__workspace", "source_loan__license", "source_loan__borrower", "successor_loan", "settlement_event__outbox", "opening_event__outbox").order_by("-pk").first()
+    return PawnLoanDocumentProjectionBuilder.renewal_memo(source) if source else None
+
+
+def _configurable_document_response(request, *, payload, loan, source_type, source_id, source_fingerprint):
+    use_fixed = request.GET.get("renderer") == "fixed"
+    if use_fixed and not _can_administer(request):
+        return HttpResponse("Fixed-renderer recovery requires workspace administration access.", status=403, content_type="text/plain")
+    if use_fixed:
+        LoanDocumentLayoutService.audit_fixed_recovery(
+            workspace=request.loans_workspace, source_type=source_type,
+            source_id=source_id, actor=request.user, request=request,
+        )
+        return None
+    revision = LoanDocumentLayoutService.resolve(
+        workspace=request.loans_workspace, document_type=payload.document_type,
+        license=loan.license, series=loan.series,
+    )
+    if revision is None:
+        return None
+    try:
+        rendered = ConfigurableDocumentRenderer.render(
+            payload, DocumentLayoutValidator.load(revision.definition), assets=_revision_assets(revision)
+        )
+        issue = LoanDocumentLayoutService.issue(
+            workspace=request.loans_workspace, document_type=payload.document_type,
+            source_type=source_type, source_id=source_id,
+            source_fingerprint=source_fingerprint,
+            payload_schema_version=payload.schema_version, render_result=rendered,
+            filename=payload.file_name, actor=request.user, revision=revision,
+        )
+        issue.artifact.open("rb"); pdf = issue.artifact.read(); issue.artifact.close()
+    except (ValueError, ValidationError, DocumentLayoutServiceError) as exc:
+        return HttpResponse(str(exc), status=409, content_type="text/plain")
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{payload.file_name}"'
+    response["X-Rokkad-Verification-ID"] = payload.verification_id
+    response["X-Rokkad-Document-Issue"] = str(issue.pk)
+    return response
+
+
 @loans_workspace_required
 def pawn_loan_ticket_pdf(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     try:
+        payload = PawnLoanDocumentProjectionBuilder.loan_ticket(loan)
+        approval = loan.approval_snapshots.order_by("-version").first()
+        response = _configurable_document_response(
+            request, payload=payload, loan=loan, source_type="PawnLoan",
+            source_id=loan.pk, source_fingerprint=approval.fingerprint,
+        )
+        if response is not None: return response
         result = PawnLoanDocumentService.render_loan_ticket(loan)
-    except PawnLoanDocumentError as exc:
+    except (PawnLoanDocumentError, ValueError) as exc:
         return HttpResponse(str(exc), status=409, content_type="text/plain")
     return PawnLoanDocumentService.build_pdf_response(result)
 
@@ -217,9 +522,15 @@ def pawn_repayment_receipt_pdf(request, pk, event_pk):
         loan__workspace=request.loans_workspace,
         event_kind=TransactionKind.REPAYMENT.value,
     )
-    return PawnLoanDocumentService.build_pdf_response(
-        PawnLoanDocumentService.render_repayment_receipt(event)
+    payload = PawnLoanDocumentProjectionBuilder.repayment_receipt(event)
+    response = _configurable_document_response(
+        request, payload=payload, loan=event.loan,
+        source_type="PawnLoanAccountingEvent", source_id=event.pk,
+        source_fingerprint=event.payload_fingerprint,
     )
+    if response is not None:
+        return response
+    return PawnLoanDocumentService.build_pdf_response(PawnLoanDocumentService.render_repayment_receipt(event))
 
 
 @loans_workspace_required
@@ -237,9 +548,15 @@ def pawn_release_memo_pdf(request, release_pk):
         pk=release_pk,
         workspace=request.loans_workspace,
     )
-    return PawnLoanDocumentService.build_pdf_response(
-        PawnLoanDocumentService.render_release_memo(release)
+    payload = PawnLoanDocumentProjectionBuilder.release_memo(release)
+    response = _configurable_document_response(
+        request, payload=payload, loan=release.loan,
+        source_type="PawnLoanRelease", source_id=release.pk,
+        source_fingerprint=release.accounting_event.payload_fingerprint,
     )
+    if response is not None:
+        return response
+    return PawnLoanDocumentService.build_pdf_response(PawnLoanDocumentService.render_release_memo(release))
 
 
 @loans_workspace_required
@@ -826,17 +1143,29 @@ def pawn_loan_auction_reverse(request, auction_pk):
 @loans_workspace_required
 def pawn_loan_auction_notice_pdf(request, auction_pk):
     auction = _pawn_auction_for_workspace(request, auction_pk)
-    return PawnLoanDocumentService.build_pdf_response(
-        PawnLoanDocumentService.render_auction_notice(auction)
+    payload = PawnLoanDocumentProjectionBuilder.auction_notice(auction)
+    response = _configurable_document_response(
+        request, payload=payload, loan=auction.loan,
+        source_type="PawnLoanAuctionNotice", source_id=auction.pk,
+        source_fingerprint=hashlib.sha256(payload.verification_id.encode()).hexdigest(),
     )
+    if response is not None: return response
+    return PawnLoanDocumentService.build_pdf_response(PawnLoanDocumentService.render_auction_notice(auction))
 
 
 @loans_workspace_required
 def pawn_loan_auction_recovery_pdf(request, auction_pk):
     auction = _pawn_auction_for_workspace(request, auction_pk)
     try:
+        payload = PawnLoanDocumentProjectionBuilder.auction_recovery_memo(auction)
+        response = _configurable_document_response(
+            request, payload=payload, loan=auction.loan,
+            source_type="PawnLoanAuction", source_id=auction.pk,
+            source_fingerprint=auction.accounting_event.payload_fingerprint,
+        )
+        if response is not None: return response
         result = PawnLoanDocumentService.render_auction_recovery_memo(auction)
-    except PawnLoanDocumentError as exc:
+    except (PawnLoanDocumentError, ValueError) as exc:
         return HttpResponse(str(exc), status=409)
     return PawnLoanDocumentService.build_pdf_response(result)
 
@@ -970,9 +1299,14 @@ def pawn_loan_renewal_reverse(request, renewal_pk):
 @loans_workspace_required
 def pawn_loan_renewal_pdf(request, renewal_pk):
     renewal = _pawn_renewal_for_workspace(request, renewal_pk)
-    return PawnLoanDocumentService.build_pdf_response(
-        PawnLoanDocumentService.render_renewal_memo(renewal)
+    payload = PawnLoanDocumentProjectionBuilder.renewal_memo(renewal)
+    response = _configurable_document_response(
+        request, payload=payload, loan=renewal.source_loan,
+        source_type="PawnLoanRenewal", source_id=renewal.pk,
+        source_fingerprint=renewal.settlement_event.payload_fingerprint,
     )
+    if response is not None: return response
+    return PawnLoanDocumentService.build_pdf_response(PawnLoanDocumentService.render_renewal_memo(renewal))
 
 
 @loans_workspace_required

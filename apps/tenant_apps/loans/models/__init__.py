@@ -32,6 +32,13 @@ from .core import (
     PawnLoanReleaseReversal,
     current_tenant_workspace_id,
 )
+from .documents import (
+    LoanDocumentAsset,
+    LoanDocumentIssue,
+    LoanDocumentLayout,
+    LoanDocumentLayoutAssignment,
+    LoanDocumentLayoutRevision,
+)
 
 __all__ = [
     "LoanChangeLog",
@@ -64,4 +71,9 @@ __all__ = [
     "PawnLoanReleaseItem",
     "PawnLoanReleaseReversal",
     "current_tenant_workspace_id",
+    "LoanDocumentAsset",
+    "LoanDocumentIssue",
+    "LoanDocumentLayout",
+    "LoanDocumentLayoutAssignment",
+    "LoanDocumentLayoutRevision",
 ]

@@ -1,12 +1,18 @@
 ---
 status: active
 owner: project
-updated: 2026-08-05
+updated: 2026-08-06
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
 
 # Agent Memory
+
+Loans configurable documents have an in-app Owner/Admin starter guide at
+`/loans/setup/documents/guide/`, linked from the layout list, plus the canonical
+operator guide at `docs/flows/loans-document-layout-operator-guide.md`. Normal
+staff do not configure layouts: they keep using the existing loan/event PDF
+actions, which resolve Series -> License -> Workspace -> fixed renderer.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 
@@ -638,6 +644,65 @@ Backend:
 Prefer server-rendered UI with HTMX partial updates. Avoid heavy SPA complexity unless clearly necessary.
 
 ## Current Active Work
+
+Loans configurable printing follows
+`docs/plans/loans-configurable-documents-plan.md`. LPD0/LPD1 are complete:
+accepted ADR `2026-08-06-loans-versioned-configurable-documents.md` requires
+exact artifact retention for official issues, and all six document paths now
+project source facts into immutable schema-versioned `DocumentPayload` fields
+and sections with allow-listed binding keys before fixed rendering. Keep fixed
+PDFs as the safe fallback; future layouts are Loans-owned immutable published
+revisions with workspace/license/series assignment. Do not import Girvi's
+`LoanTemplate`, `TemplateFrame`, or model-aware renderer. LPD2, the
+database-free constrained layout schema/renderer, is next; schema/editor work
+comes later.
+
+LPD2 is complete in `loans.documents.layouts`, `assets`, and
+`loans.documents.renderers`: strict schema-v1 validation, mandatory per-kind
+bindings, starter ticket/release layouts, canonical hashes, non-official
+preview marking, pagination, and copy/duplex rendering are implemented without
+models. Tenant-bound validated PNG/JPEG/PDF inputs, image/logo and QR blocks,
+PDF/image backgrounds, asset hash evidence, and bundled Tamil Unicode font
+coverage complete LPD2A. Missing/corrupt/duplicate/cross-workspace assets fail
+closed. LPD3 tenant revision/assignment/issue models and atomic publication
+services are next.
+
+LPD3 is complete in tenant migrations `loans.0017` and `loans.0018`.
+`LoanDocumentLayout`, immutable `LoanDocumentLayoutRevision`, revision-bound
+`LoanDocumentAsset`, scoped `LoanDocumentLayoutAssignment`, and immutable
+exact-byte `LoanDocumentIssue` evidence are live in all local schemas. Atomic
+services own revision allocation/publication, assets, assignment replacement,
+specificity resolution, retirement, idempotent official issue, and linked
+regeneration with public workspace audits. Database partial uniqueness guards
+active scoped assignments and official source issues. LPD4 loan-ticket pilot
+UI is next.
+
+LPD4 loan-ticket pilot is complete. Owner/Admin routes under
+`/loans/setup/documents/` own starter creation, schema-v1 draft editing,
+validated assets, preview/test print, clone, publish, scoped assignment, and
+retirement. The existing ticket URL resolves published layouts and returns an
+immutable exact-byte official issue; reprints retain the original issue even
+after defaults change. `?renderer=fixed` is the explicit administrator-only,
+audited recovery path. LPD5 subsequently extended this facade to repayment,
+release, renewal, and auction documents without weakening each kind's
+mandatory field registry.
+
+LPD5 is complete. All six current Loans PDFs—ticket, repayment receipt,
+release, auction notice, auction recovery, and renewal—support versioned
+starter/custom layouts, specificity resolution, immutable official issues,
+and audited fixed recovery through their existing URLs. Each document keeps
+its own mandatory registry and immutable projection/eligibility boundary.
+LPD6 then took on operational diagnostics, artifact/asset integrity checks,
+sanitized layout-pack portability, and representative printer acceptance.
+
+LPD6 engineering is complete: setup diagnostics and tenant command
+`check_loan_document_integrity --fail-on-findings` verify layout, asset, issue,
+scope, and lineage integrity; `jcl1` currently has zero findings. Sanitized
+layout ZIP export/import contains only schema-v1 JSON and hashed validated
+assets and imports only as an unassigned draft. The physical printer matrix in
+`docs/implementation/loans-configurable-document-operations.md` is the sole
+remaining LPD6 acceptance gate and requires a real operator; do not infer it
+from automated or on-screen PDF checks.
 
 The active design track is Girvi event-driven DEA posting. See [plans/active](plans/active.md) and the archived full spec at [GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC](archive/girvi/GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC.md).
 

@@ -1,15 +1,95 @@
 ---
 status: active
 owner: project
-updated: 2026-08-05
+updated: 2026-08-06
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
 
 # Status
 
+## Latest Update
+
+- Loans document layouts now include an Owner/Admin starter guide at
+  `/loans/setup/documents/guide/`, linked directly from the layout list. It
+  explains the draft-to-assignment workflow, deterministic scope precedence,
+  normal staff printing, immutable reprints, assets/copies, correction,
+  import/export, recovery, and the remaining physical-printer acceptance gate.
+  The canonical operator version lives in
+  [docs/flows/loans-document-layout-operator-guide.md](flows/loans-document-layout-operator-guide.md).
+
 ## Current Shape
 
+- Loans configurable document printing LPD0/LPD1 is complete under
+  [docs/plans/loans-configurable-documents-plan.md](plans/loans-configurable-documents-plan.md).
+  Accepted ADR `2026-08-06-loans-versioned-configurable-documents.md` requires
+  typed projections, immutable published layout revisions, exact artifact
+  retention for official issues, and fixed-renderer fallback. All six fixed
+  PDF paths now read schema-versioned, allow-listed `DocumentPayload` fields
+  and sections; renderers no longer read loan/event models. Existing routes,
+  filenames, verification headers, eligibility, and visible content remain
+  stable. Nine focused document tests pass. The full 201-test Loans command
+  timed out during secondary test-database construction after 240 seconds with
+  no reported assertion failure. No migration is required. LPD2, the
+  database-free constrained layout schema and renderer, is now active.
+- Loans configurable documents LPD2 is complete without database models.
+  Schema-v1 layouts reject unknown properties, executable/model-path
+  bindings, missing mandatory regulatory fields, unsupported page/copy modes,
+  and absent payload fields/tables. Starter ticket/release layouts and the
+  configurable ReportLab renderer support preview marking, deterministic
+  payload/layout evidence hashes, long-table pagination, and single,
+  original/duplicate, and duplex output. LPD2A adds tenant-bound validated
+  PNG/JPEG/PDF assets, file signature/size/dimension/page checks, image/logo
+  and QR blocks, PDF/image backgrounds on every duplex page, asset hashes in
+  render evidence, and bundled Tamil Unicode font rendering. Missing, corrupt,
+  duplicate, unsupported, and cross-workspace assets fail closed. Nineteen
+  focused document tests pass. LPD3 tenant revision/assignment/issue models
+  and publication services are next.
+- Loans configurable documents LPD3 is complete. Tenant migrations
+  `loans.0017` and `loans.0018` add workspace-owned layout identities,
+  immutable draft/published/retired revisions, revision assets, deterministic
+  workspace/license/series assignments, and immutable exact-byte official or
+  regenerated issues. Atomic services own create, draft update, asset add,
+  clone, publish, assign, resolve, retire, and issue workflows, with public
+  workspace auditing. Database constraints prevent duplicate active scoped
+  assignments and duplicate official issues; issue reprints are idempotent and
+  regeneration links to the prior issue. Both migrations are applied across
+  local schemas using `migrate_schemas`. The combined 24-test document gate
+  passes. LPD4 loan-ticket pilot setup UI is next.
+- Loans configurable documents LPD4 loan-ticket pilot is complete. Owner/Admin
+  setup pages expose starter creation, validated schema-v1 editing, asset
+  upload, preview, test print, clone, publish, scoped assignment, and
+  retirement. Normal loan-ticket printing resolves
+  `series -> license -> workspace -> fixed`, stores or retrieves immutable
+  exact-byte official issues, and returns the issue ID. Preview output is
+  non-official; the explicit fixed recovery query is administrator-only and
+  audited. Tenant UI tests cover create/edit/asset/publish/assign,
+  preview/download, issue/reprint, clone/retire, fixed recovery, and member
+  denial. No migration is required. This pilot became the base for the now
+  completed LPD5 rollout.
+- Loans configurable documents LPD5 is complete. Starter creation and scoped
+  rendering now cover loan tickets, repayment receipts, release memos, auction
+  notices, auction recovery memos, and renewal memos. Every existing PDF route
+  resolves configured layouts, creates/retrieves immutable official issues,
+  exposes verification/issue headers, and preserves fixed output when no
+  assignment exists. Administrator `?renderer=fixed` recovery is consistent
+  and audited across document kinds. Mandatory per-kind fields remain enforced;
+  release now explicitly projects its official loan number. Twenty focused
+  renderer/projection tests, existing tenant-scoped essential-PDF route
+  coverage, and pilot UI tests pass. No migration is required. This established
+  the input to the now engineering-complete LPD6 hardening slice.
+- Loans configurable documents LPD6 engineering is complete. Owner/Admin
+  integrity diagnostics and tenant command `check_loan_document_integrity`
+  verify canonical layout hashes, assets, exact issue bytes, scope, and issue
+  lineage; `jcl1` passes the fail-on-findings gate with zero findings.
+  Sanitized layout packs export only schema-v1 definitions plus validated
+  hashed assets, reject unsafe or inconsistent imports, and always land as
+  unassigned drafts. Automated pack round-trip and hash-drift detection tests
+  pass. The operations guide is in
+  [docs/implementation/loans-configurable-document-operations.md](implementation/loans-configurable-document-operations.md).
+  LPD6 remains operationally open only for the real-printer A4/A5,
+  simplex/duplex, regional/long content, background, QR, margin, and historical
+  reprint acceptance matrix.
 - Loans corrective slice E7.3A.7.3 is complete for the MVP boundary.
   Release-and-renew composite reversal now restores each source item's actual
   pre-renewal custody, so both retained and returned collateral reverse safely;

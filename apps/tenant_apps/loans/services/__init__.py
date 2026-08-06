@@ -90,6 +90,7 @@ from .documents import (
     PawnLoanDocumentResult,
     PawnLoanDocumentService,
 )
+from .document_layouts import DocumentLayoutServiceError, LoanDocumentLayoutService
 from .borrower_accounting import (
     PawnBorrowerAccountingSetupError,
     PawnBorrowerAccountingSetupResult,
@@ -203,6 +204,8 @@ __all__ = (
     "PawnLoanDocumentError",
     "PawnLoanDocumentResult",
     "PawnLoanDocumentService",
+    "DocumentLayoutServiceError",
+    "LoanDocumentLayoutService",
     "PawnBorrowerAccountingSetupError",
     "PawnBorrowerAccountingSetupResult",
     "ensure_pawn_borrower_accounting",

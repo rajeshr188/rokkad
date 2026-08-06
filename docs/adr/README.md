@@ -21,5 +21,9 @@ Accepted and historical architecture decisions live here.
 - [Girvi flow boundaries with DEA](girvi-flow-boundaries-with-dea.md)
 - [Girvi release and interest accrual lifecycle boundary](2026-06-27-girvi-release-accrual-lifecycle-boundary.md)
 - [Tenant-billed subscription architecture](2026-07-02-tenant-billed-subscription-architecture.md)
+- [Loans rewrite domain and cutover architecture](2026-07-15-loans-rewrite-domain-and-cutover-architecture.md)
+- [Pawn-loan collateral tranche economics](2026-08-05-pawn-loan-collateral-tranche-economics.md)
+- [Pawn-loan release-and-renew-only boundary](2026-08-05-pawn-loan-release-and-renew-only.md)
+- [Loans versioned configurable documents](2026-08-06-loans-versioned-configurable-documents.md)
 
 Older decision index files were preserved as [old decisions README](old-decisions-readme.md) and [decision log](decision-log.md).

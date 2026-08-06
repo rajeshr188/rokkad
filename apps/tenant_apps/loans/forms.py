@@ -12,6 +12,73 @@ from apps.tenant_apps.loans.domain import (
     ValuationMethod,
 )
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnCollateralItem
+
+
+class LoanDocumentLayoutCreateForm(forms.Form):
+    name = forms.CharField(max_length=100)
+    document_type = forms.ChoiceField(
+        choices=(
+            ("loan_ticket", "Loan ticket"),
+            ("repayment_receipt", "Repayment receipt"),
+            ("release_memo", "Release memo"),
+            ("auction_notice", "Auction notice"),
+            ("auction_recovery", "Auction recovery memo"),
+            ("renewal", "Renewal memo"),
+        )
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].widget.attrs["class"] = "form-control"
+        self.fields["document_type"].widget.attrs["class"] = "form-select"
+
+
+class LoanDocumentLayoutDefinitionForm(forms.Form):
+    definition = forms.JSONField(
+        widget=forms.Textarea(attrs={"rows": 24, "class": "form-control font-monospace"}),
+        help_text="Schema-v1 structured layout JSON. Unknown or executable bindings are rejected.",
+    )
+
+
+class LoanDocumentAssetUploadForm(forms.Form):
+    key = forms.RegexField(regex=r"^[a-z][a-z0-9_.-]{0,63}$", max_length=64)
+    kind = forms.ChoiceField(choices=(("IMAGE", "Image / logo"), ("BACKGROUND", "Page background")))
+    file = forms.FileField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-select" if isinstance(field, forms.ChoiceField) else "form-control")
+
+
+class LoanDocumentAssignmentForm(forms.Form):
+    license = forms.ModelChoiceField(queryset=LoanLicense.objects.none(), required=False)
+    series = forms.ModelChoiceField(queryset=LoanSeries.objects.none(), required=False)
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["license"].queryset = LoanLicense.objects.filter(workspace=workspace).order_by("license_number")
+        self.fields["series"].queryset = LoanSeries.objects.filter(license__workspace=workspace).select_related("license").order_by("license__license_number", "code")
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-select"
+
+    def clean(self):
+        cleaned = super().clean()
+        license = cleaned.get("license")
+        series = cleaned.get("series")
+        if license and series and series.license_id != license.pk:
+            self.add_error("series", "Series must belong to the selected license.")
+        return cleaned
+
+
+class LoanDocumentLayoutPackImportForm(forms.Form):
+    name = forms.CharField(max_length=100, required=False, help_text="Optional local name override.")
+    pack = forms.FileField(help_text="Sanitized ZIP exported by Rokkad; imports always remain draft.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
 from apps.tenant_apps.party.models import Party
 
 

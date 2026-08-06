@@ -1,10 +1,13 @@
 import uuid
+import io
+import json
 from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
@@ -17,9 +20,13 @@ from apps.tenant_apps.loans.domain import LoanDocumentKind
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     LoanLicense,
+    LoanDocumentIssue,
+    LoanDocumentLayout,
+    LoanDocumentLayoutRevision,
     LoanNumberSequence,
     LoanSeries,
     PawnLoan,
+    PawnLoanApprovalSnapshot,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanEconomicPolicy,
@@ -28,6 +35,9 @@ from apps.tenant_apps.loans.models import (
 from apps.tenant_apps.loans.views import _license_for_workspace
 from apps.tenant_apps.party.models import Party
 from apps.orgs.models import Membership, Role
+from PIL import Image as PillowImage
+from apps.tenant_apps.loans.documents import starter_layout
+from apps.tenant_apps.loans.services import LoanDocumentLayoutService
 
 
 @override_settings(
@@ -335,6 +345,150 @@ class LoansSetupUiTests(TenantTestCase):
             self.tenant_get(reverse("loans:pawn_operations_runbook")).status_code,
             403,
         )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:document_layout_list")).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:document_layout_guide")).status_code,
+            403,
+        )
+
+    def test_owner_can_open_document_layout_starter_guide(self):
+        response = self.tenant_get(reverse("loans:document_layout_guide"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Create draft")
+        self.assertContains(response, "Resolution order:")
+        self.assertContains(response, "Series &rarr; License &rarr; Workspace")
+
+    def test_owner_can_create_publish_and_assign_starter_ticket_layout(self):
+        response = self.tenant_post(
+            reverse("loans:document_layout_create"),
+            {"name": "Counter ticket", "document_type": "loan_ticket"},
+        )
+        revision = LoanDocumentLayoutRevision.objects.select_related("layout").get(
+            layout__name="Counter ticket"
+        )
+        self.assertRedirects(
+            response,
+            reverse("loans:document_layout_detail", args=[revision.pk]),
+            fetch_redirect_response=False,
+        )
+        detail = self.tenant_get(
+            reverse("loans:document_layout_detail", args=[revision.pk])
+        )
+        self.assertContains(detail, "Structured layout definition")
+        self.assertContains(detail, "Publish and freeze")
+
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["name"] = "Updated counter ticket"
+        update = self.tenant_post(
+            reverse("loans:document_layout_update", args=[revision.pk]),
+            {"definition": json.dumps(definition)},
+        )
+        self.assertEqual(update.status_code, 302)
+        revision.refresh_from_db()
+        self.assertEqual(revision.definition["name"], "Updated counter ticket")
+
+        image_buffer = io.BytesIO()
+        PillowImage.new("RGB", (20, 20), color="blue").save(image_buffer, format="PNG")
+        upload = self.client.post(
+            reverse("loans:document_layout_asset_add", args=[revision.pk]),
+            {
+                "key": "business.logo",
+                "kind": "IMAGE",
+                "file": SimpleUploadedFile("logo.png", image_buffer.getvalue(), content_type="image/png"),
+            },
+        )
+        self.assertEqual(upload.status_code, 302)
+        self.assertTrue(revision.assets.filter(key="business.logo").exists())
+
+        response = self.tenant_post(
+            reverse("loans:document_layout_publish", args=[revision.pk])
+        )
+        self.assertEqual(response.status_code, 302)
+        revision.refresh_from_db()
+        self.assertEqual(revision.state, "PUBLISHED")
+
+        response = self.tenant_post(
+            reverse("loans:document_layout_assign", args=[revision.pk]),
+            {"license": "", "series": ""},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(revision.assignments.filter(is_active=True).exists())
+
+    def test_published_ticket_layout_drives_official_issue_and_reprint(self):
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-DOC-00001", state="APPROVED")
+        PawnLoanApprovalSnapshot.objects.create(
+            loan=loan,
+            version=1,
+            payload={
+                "loan_number": loan.loan_number,
+                "loan_date": str(loan.loan_date),
+                "principal_amount": str(loan.principal_amount),
+                "monthly_interest_rate": str(loan.monthly_interest_rate),
+                "tenure_months": loan.tenure_months,
+                "borrower_id": loan.borrower_id,
+                "collateral": [],
+            },
+            fingerprint="ui-approval-fingerprint",
+            approved_by=self.owner,
+        )
+        revision = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name=f"Issued ticket {uuid.uuid4().hex[:6]}",
+            definition=starter_layout("loan_ticket").canonical_dict(),
+            actor=self.owner,
+        )
+        revision = LoanDocumentLayoutService.publish(
+            revision=revision, actor=self.owner
+        )
+        LoanDocumentLayoutService.assign(
+            revision=revision,
+            workspace=self.tenant,
+            license=license,
+            series=series,
+            actor=self.owner,
+        )
+
+        preview = self.tenant_get(
+            f"{reverse('loans:document_layout_preview', args=[revision.pk])}?loan={loan.pk}"
+        )
+        test_print = self.tenant_get(
+            f"{reverse('loans:document_layout_preview', args=[revision.pk])}?loan={loan.pk}&download=1"
+        )
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview["X-Rokkad-Preview"], "true")
+        self.assertIn(b"PREVIEW / NOT AN OFFICIAL ISSUE", preview.content)
+        self.assertTrue(test_print["Content-Disposition"].startswith("attachment"))
+
+        url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
+        first = self.tenant_get(url)
+        second = self.tenant_get(url)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertTrue(first.content.startswith(b"%PDF"))
+        self.assertEqual(first["X-Rokkad-Document-Issue"], second["X-Rokkad-Document-Issue"])
+        self.assertEqual(LoanDocumentIssue.objects.filter(source_id=str(loan.pk)).count(), 1)
+
+        fixed = self.tenant_get(f"{url}?renderer=fixed")
+        self.assertEqual(fixed.status_code, 200)
+        self.assertNotIn("X-Rokkad-Document-Issue", fixed)
+
+        clone_response = self.tenant_post(
+            reverse("loans:document_layout_clone", args=[revision.pk])
+        )
+        self.assertEqual(clone_response.status_code, 302)
+        self.assertTrue(revision.layout.revisions.filter(version=2, state="DRAFT").exists())
+        retire_response = self.tenant_post(
+            reverse("loans:document_layout_retire", args=[revision.pk])
+        )
+        self.assertEqual(retire_response.status_code, 302)
+        revision.refresh_from_db()
+        self.assertEqual(revision.state, "RETIRED")
 
     def _configured_setup(self):
         license = LoanLicense.objects.create(

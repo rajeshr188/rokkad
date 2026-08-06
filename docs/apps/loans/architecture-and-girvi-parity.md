@@ -387,7 +387,7 @@ users before Girvi retirement.
 | Collateral labels | Label and loan printing | Missing beyond fixed loan documents |
 | License documents | Upload and delete regulatory documents | Missing |
 | License renewal | Renewal dates, notes, and expiry reporting | Missing |
-| Configurable printing | Templates, frames, clone/default/test print/download pack | Loans has fixed PDFs only |
+| Configurable printing | Templates, frames, clone/default/test print/download pack | Implemented with Loans-owned versioned layouts, validated assets, preview/test print, scoped assignment, immutable official issues, and fixed fallback across all six current PDF kinds |
 | Historical archives | Year/month/week/day archive browsing | Missing |
 | Detailed exports | Girvi Excel, PDF, ledger, inventory audit, series/license reports | Loans has MVP operational reports only |
 | Verification and custody reports | Repledge and physical inventory reports | Only PawnLoan custody/reconciliation reports exist |
@@ -400,7 +400,7 @@ users before Girvi retirement.
 | Staff allocation override | MVP uses fixed fees/interest/principal order |
 | Staff-to-license restriction | Desired future behavior; not enforced in MVP |
 | Branch-scoped licenses | Requires a later authorization and tenancy decision |
-| Configurable regulatory document variants | Fixed MVP PDFs only |
+| Configurable regulatory document variants | Versioned constrained layouts are implemented; arbitrary executable templates remain prohibited |
 | Configurable disbursal deductions | Girvi has broader deduction behavior; no equivalent first-class PawnLoan workflow is confirmed |
 
 ## Current Architecture Risks And Debt

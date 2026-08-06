@@ -5,6 +5,12 @@ from types import SimpleNamespace
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.loans.domain import TransactionKind
+from apps.tenant_apps.loans.documents import (
+    ConfigurableDocumentRenderer,
+    DocumentPayload,
+    PawnLoanDocumentProjectionBuilder,
+    starter_layout,
+)
 from apps.tenant_apps.loans.services import (
     PawnLoanDocumentError,
     PawnLoanDocumentService,
@@ -105,6 +111,21 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             "ROKKAD|workspace:7|loan:19|approval:21:v1:approval-fingerprint-1",
         )
 
+    def test_loan_ticket_projection_is_typed_versioned_and_renderer_independent(self):
+        payload = PawnLoanDocumentProjectionBuilder.loan_ticket(self.loan)
+
+        self.assertIsInstance(payload, DocumentPayload)
+        self.assertEqual(payload.schema_version, 1)
+        self.assertEqual(payload.document_type, "loan_ticket")
+        self.assertEqual(payload.title, "Pawn Loan Ticket")
+        self.assertEqual(payload.fields[0].key, "workspace.name")
+        self.assertEqual(payload.sections[0].key, "collateral.items")
+        self.assertEqual(payload.sections[0].heading, "Collateral")
+        self.assertIn(("Approval fingerprint", "approval-fingerprint-1"), payload.details)
+
+        with self.assertRaises(AttributeError):
+            payload.title = "Changed"
+
     def test_repayment_receipt_uses_immutable_event_amount_split(self):
         outbox = SimpleNamespace(
             dea_voucher_id=31,
@@ -147,6 +168,11 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         self.assertIn("repayment:23:repayment-fingerprint-23", result.verification_id)
         self.assertIn(b"Collateral principal allocation", result.pdf)
         self.assertIn(b"Gold chain", result.pdf)
+        custom = ConfigurableDocumentRenderer.render(
+            PawnLoanDocumentProjectionBuilder.repayment_receipt(event),
+            starter_layout("repayment_receipt"),
+        )
+        self.assertTrue(custom.pdf.startswith(b"%PDF"))
 
     def test_release_memo_uses_immutable_release_and_item_snapshot(self):
         event = SimpleNamespace(pk=29, payload_fingerprint="release-fingerprint-29")
@@ -193,6 +219,11 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         self.assertIn("release:27:RL-A-00001:release-fingerprint-29", result.verification_id)
         self.assertIn(b"Item principal settled", result.pdf)
         self.assertIn(b"Gold chain", result.pdf)
+        custom = ConfigurableDocumentRenderer.render(
+            PawnLoanDocumentProjectionBuilder.release_memo(release),
+            starter_layout("release_memo"),
+        )
+        self.assertIn(b"Gold chain", custom.pdf)
 
     def test_renewal_memo_exposes_returned_retained_added_and_principal_evidence(self):
         source_item = self.loan.collateral_items.first()
@@ -281,6 +312,11 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         self.assertIn(b"Successor item principal opened", result.pdf)
         self.assertIn(b"Returned bracelet", result.pdf)
         self.assertIn(b"Added silver anklet", result.pdf)
+        custom = ConfigurableDocumentRenderer.render(
+            PawnLoanDocumentProjectionBuilder.renewal_memo(renewal),
+            starter_layout("renewal"),
+        )
+        self.assertIn(b"Added silver anklet", custom.pdf)
 
     def test_operational_release_memo_does_not_require_an_outbox(self):
         event = SimpleNamespace(pk=30, payload_fingerprint="operational-release-30")
@@ -302,6 +338,70 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
 
         self.assertTrue(result.pdf.startswith(b"%PDF"))
         self.assertEqual(result.file_name, "pawn_release_RL-A-00002.pdf")
+
+    def test_auction_notice_and_recovery_use_typed_projection_path(self):
+        collateral = self.loan.collateral_items.first()
+        notice = SimpleNamespace(notification_job_id=73)
+        outbox = SimpleNamespace(
+            dea_voucher_id=74,
+            dea_journal_entry_id=75,
+            get_status_display=lambda: "Posted",
+        )
+        event = SimpleNamespace(
+            effective_date=date(2026, 8, 5),
+            payload_fingerprint="auction-recovery-71",
+            outbox=outbox,
+        )
+        auction_item = SimpleNamespace(
+            collateral_item_id=collateral.pk,
+            collateral_item=collateral,
+            snapshot={
+                "description": "Gold chain at auction",
+                "metal": "GOLD",
+                "net_weight": "9.0000",
+                "purity_percentage": "91.6000",
+            },
+        )
+        auction = SimpleNamespace(
+            pk=71,
+            loan=self.loan,
+            auction_number="AUC-00071",
+            notice_date=date(2026, 8, 4),
+            scheduled_date=date(2026, 8, 5),
+            notice=notice,
+            accounting_event_id=72,
+            accounting_event=event,
+            buyer_name="Test Buyer",
+            buyer_reference="BUY-1",
+            principal_amount=Decimal("10000"),
+            interest_amount=Decimal("500"),
+            fee_amount=Decimal("0"),
+            recovery_amount=Decimal("10500"),
+            items=_Manager(auction_item),
+            get_state_display=lambda: "Completed",
+        )
+
+        notice_result = PawnLoanDocumentService.render_auction_notice(auction)
+        recovery_result = PawnLoanDocumentService.render_auction_recovery_memo(auction)
+
+        self.assertEqual(notice_result.file_name, "pawn_auction_notice_AUC-00071.pdf")
+        self.assertIn(b"Notice delivery job", notice_result.pdf)
+        self.assertEqual(
+            recovery_result.file_name,
+            "pawn_auction_recovery_AUC-00071.pdf",
+        )
+        self.assertIn(b"Gold chain at", recovery_result.pdf)
+        self.assertIn(b"(auction)", recovery_result.pdf)
+        custom_notice = ConfigurableDocumentRenderer.render(
+            PawnLoanDocumentProjectionBuilder.auction_notice(auction),
+            starter_layout("auction_notice"),
+        )
+        custom_recovery = ConfigurableDocumentRenderer.render(
+            PawnLoanDocumentProjectionBuilder.auction_recovery_memo(auction),
+            starter_layout("auction_recovery"),
+        )
+        self.assertTrue(custom_notice.pdf.startswith(b"%PDF"))
+        self.assertIn(b"Gold chain at", custom_recovery.pdf)
 
     def test_receipt_rejects_non_repayment_source(self):
         event = SimpleNamespace(event_kind=TransactionKind.DISBURSAL.value)
