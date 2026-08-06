@@ -210,6 +210,8 @@ still produces A4 landscape output by placing two logical A5 surfaces side by
 side. When an existing A4 or Letter overlay first changes to a sheet preset,
 the editor proportionally fits its existing block rectangles onto A5. Review
 and fine-tune their positions against the uploaded A5 backgrounds afterward.
+Sheet-mode text blocks use shrink-to-fit overflow so realistic values that wrap
+on the narrower A5 surface reduce their font before preview is rejected.
 
 | Preset | Output sequence |
 |---|---|

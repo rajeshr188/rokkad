@@ -323,6 +323,8 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         for block in definition["blocks"]:
             self.assertLessEqual(block["x_mm"] + block["width_mm"], 148)
             self.assertLessEqual(block["y_mm"] + block["height_mm"], 210)
+        field = next(block for block in definition["blocks"] if block["type"] == "field")
+        self.assertEqual(field["height_mm"], 8)
 
     def test_schema_v2_sections_columns_and_field_grids_render(self):
         definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()

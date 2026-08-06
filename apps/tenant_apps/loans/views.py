@@ -77,7 +77,10 @@ def _fit_overlay_geometry(definition, target_page_size):
     for page_blocks in (definition.get("blocks", []), definition.get("back_blocks", [])):
         for block in page_blocks:
             width = max(5, round(float(block["width_mm"]) * width_ratio))
-            height = max(1, round(float(block["height_mm"]) * height_ratio))
+            # Preserve useful text/table height while fitting its top-left
+            # position. Narrower A5 blocks wrap more often and therefore need
+            # at least their original vertical allowance.
+            height = max(1, round(float(block["height_mm"])))
             block["width_mm"] = min(width, target_width)
             block["height_mm"] = min(height, target_height)
             block["x_mm"] = min(
@@ -444,6 +447,12 @@ def document_layout_overlay_designer(request, revision_pk):
                     _fit_overlay_geometry(definition, "A5")
                 else:
                     definition["page_size"] = form.cleaned_data["page_size"]
+                if composition:
+                    # Compact A5 ticket fields should reduce type before
+                    # rejecting realistic values that wrap by one line.
+                    for block in definition.get("blocks", []):
+                        if block.get("type") in {"title", "field", "verification", "signature"}:
+                            block["overflow_policy"] = "SHRINK"
                 definition["copy_mode"] = form.cleaned_data["copy_mode"]
                 if composition:
                     definition["background_asset_key"] = ""

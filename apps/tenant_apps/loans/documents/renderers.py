@@ -267,7 +267,14 @@ class ConfigurableDocumentRenderer:
             text = f"<b>Verification ID</b>: {escape(payload.verification_id)}"
         else:
             text = escape(block.text or "Signature")
-        cls._draw_overlay_paragraph(canvas, text, style, x, y, width, height, block.overflow_policy)
+        try:
+            cls._draw_overlay_paragraph(canvas, text, style, x, y, width, height, block.overflow_policy)
+        except ValueError as exc:
+            identity = block.binding or block.text or block.type
+            raise ValueError(
+                f"Overlay block '{identity}' exceeds its configured rectangle "
+                f"at ({block.x_mm}, {block.y_mm}) mm."
+            ) from exc
 
     @staticmethod
     def _draw_overlay_paragraph(canvas, text, style, x, y, width, height, overflow_policy):
