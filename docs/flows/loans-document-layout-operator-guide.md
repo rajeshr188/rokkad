@@ -205,6 +205,10 @@ appropriate background assets:
 
 Sheet compositions use A5 as the logical page size:
 
+The editor sets this logical A5 size automatically. An A4 landscape preset
+still produces A4 landscape output by placing two logical A5 surfaces side by
+side.
+
 | Preset | Output sequence |
 |---|---|
 | `A5_ORIGINAL` | Original front |

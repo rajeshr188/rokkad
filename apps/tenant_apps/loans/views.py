@@ -402,7 +402,12 @@ def document_layout_overlay_designer(request, revision_pk):
                     sheet_composition_enabled=layout.document_type == "loan_ticket",
                 )
                 if not form.is_valid():
-                    raise ValueError("Overlay page settings are invalid.")
+                    errors = "; ".join(
+                        f"{form.fields.get(field).label if field in form.fields else 'Settings'}: {message}"
+                        for field, field_errors in form.errors.get_json_data().items()
+                        for message in (error["message"] for error in field_errors)
+                    )
+                    raise ValueError(errors or "Overlay page settings are invalid.")
                 definition["page_size"] = form.cleaned_data["page_size"]
                 definition["copy_mode"] = form.cleaned_data["copy_mode"]
                 composition = form.cleaned_data.get("sheet_composition")

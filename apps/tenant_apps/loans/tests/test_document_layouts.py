@@ -16,6 +16,7 @@ from apps.tenant_apps.loans.documents.payloads import (
     DocumentPayload,
     DocumentSection,
 )
+from apps.tenant_apps.loans.forms import LoanDocumentOverlaySettingsForm
 
 
 class ConfigurableDocumentLayoutTests(SimpleTestCase):
@@ -295,6 +296,22 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         definition["document_type"] = "release_memo"
         with self.assertRaisesMessage(LayoutValidationError, "only for loan ticket documents"):
             DocumentLayoutValidator.load(definition)
+
+    def test_sheet_settings_automatically_use_a5_logical_pages(self):
+        form = LoanDocumentOverlaySettingsForm(
+            {
+                "page_size": "A4",
+                "copy_mode": "SINGLE",
+                "sheet_composition": "A4_SIDE_BY_SIDE",
+                "original_front": "original",
+                "duplicate_front": "duplicate",
+                "original_back": "",
+                "duplicate_back": "",
+            },
+            background_keys=("original", "duplicate"),
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["page_size"], "A5")
 
     def test_schema_v2_sections_columns_and_field_grids_render(self):
         definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()

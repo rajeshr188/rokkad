@@ -152,8 +152,11 @@ class LoanDocumentOverlaySettingsForm(forms.Form):
 
     def clean(self):
         cleaned = super().clean()
-        if cleaned.get("sheet_composition") and cleaned.get("page_size") != "A5":
-            self.add_error("page_size", "Sheet composition uses A5 logical pages; A4 landscape is produced by imposition.")
+        if cleaned.get("sheet_composition"):
+            # Every preset is built from A5 logical surfaces. A4 landscape is
+            # an output imposition detail, not a page-size choice operators
+            # should have to coordinate manually.
+            cleaned["page_size"] = "A5"
         if not cleaned.get("sheet_composition") and not cleaned.get("background_asset_key"):
             self.add_error("background_asset_key", "Choose a shared background for legacy composition.")
         return cleaned
