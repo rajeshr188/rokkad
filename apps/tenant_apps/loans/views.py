@@ -1,5 +1,6 @@
 import uuid
 import hashlib
+from copy import deepcopy
 from decimal import Decimal
 
 from django.contrib import messages
@@ -30,6 +31,8 @@ from apps.tenant_apps.loans.forms import (
     LoanDocumentAssignmentForm,
     LoanDocumentLayoutCreateForm,
     LoanDocumentLayoutDefinitionForm,
+    LoanDocumentFlowBlockForm,
+    LoanDocumentFlowSettingsForm,
     LoanDocumentLayoutPackImportForm,
     LoanModuleFeatureGateForm,
     LoanSeriesSetupForm,
@@ -269,6 +272,76 @@ def document_layout_detail(request, revision_pk):
         "asset_form": LoanDocumentAssetUploadForm(),
         "assignment_form": LoanDocumentAssignmentForm(workspace=request.loans_workspace),
         "sample_loan": PawnLoan.objects.filter(workspace=request.loans_workspace, approval_snapshots__isnull=False).order_by("-pk").first(),
+    })
+
+
+@loans_setup_required
+def document_layout_designer(request, revision_pk):
+    revision = _document_revision(request, revision_pk)
+    try:
+        layout = DocumentLayoutValidator.load(revision.definition)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    if layout.schema_version != 2 or layout.layout_mode != "FLOW":
+        messages.error(request, "The visual editor supports Flow schema-v2 drafts only.")
+        return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    if request.method == "POST":
+        if revision.state != revision.State.DRAFT:
+            messages.error(request, "Published revisions are immutable. Clone this revision before editing.")
+            return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+        definition = deepcopy(revision.definition)
+        operation = request.POST.get("operation")
+        try:
+            if operation == "save_settings":
+                form = LoanDocumentFlowSettingsForm(request.POST)
+                if not form.is_valid():
+                    raise ValueError("Page or theme settings are invalid.")
+                definition["page_size"] = form.cleaned_data["page_size"]
+                definition["page"] = {"margin_mm": form.cleaned_data["margin_mm"]}
+                definition["theme"] = {
+                    key: form.cleaned_data[key] for key in (
+                        "primary_color", "border_color", "font_family",
+                        "body_font_size_pt", "heading_font_size_pt",
+                    )
+                }
+            elif operation == "add_block":
+                form = LoanDocumentFlowBlockForm(request.POST)
+                if not form.is_valid():
+                    raise ValueError("New block settings are invalid.")
+                definition["blocks"].append(form.block_definition())
+            elif operation in {"move_up", "move_down", "remove"}:
+                index = int(request.POST.get("index", "-1"))
+                if not 0 <= index < len(definition["blocks"]):
+                    raise ValueError("Selected block no longer exists.")
+                if operation == "remove":
+                    definition["blocks"].pop(index)
+                else:
+                    target = index - 1 if operation == "move_up" else index + 1
+                    if 0 <= target < len(definition["blocks"]):
+                        definition["blocks"][index], definition["blocks"][target] = definition["blocks"][target], definition["blocks"][index]
+            else:
+                raise ValueError("Unknown visual editor operation.")
+            revision = LoanDocumentLayoutService.update_draft(
+                revision=revision, definition=definition, actor=request.user, request=request,
+            )
+        except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Flow draft updated and validated.")
+        return redirect("loans:document_layout_designer", revision_pk=revision.pk)
+    settings_form = LoanDocumentFlowSettingsForm(initial={
+        "page_size": layout.page_size, "margin_mm": layout.margin_mm,
+        "primary_color": layout.primary_color, "border_color": layout.border_color,
+        "font_family": layout.font_family, "body_font_size_pt": layout.body_font_size_pt,
+        "heading_font_size_pt": layout.heading_font_size_pt,
+    })
+    return render(request, "loans/setup/documents/designer.html", {
+        "revision": revision, "layout": layout, "settings_form": settings_form,
+        "block_form": LoanDocumentFlowBlockForm(),
+        "sample_loan": PawnLoan.objects.filter(
+            workspace=request.loans_workspace, approval_snapshots__isnull=False,
+        ).order_by("-pk").first(),
     })
 
 

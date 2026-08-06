@@ -353,6 +353,10 @@ class LoansSetupUiTests(TenantTestCase):
             self.tenant_get(reverse("loans:document_layout_guide")).status_code,
             403,
         )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:document_layout_designer", args=[1])).status_code,
+            403,
+        )
 
     def test_owner_can_open_document_layout_starter_guide(self):
         response = self.tenant_get(reverse("loans:document_layout_guide"))
@@ -382,6 +386,36 @@ class LoansSetupUiTests(TenantTestCase):
         )
         self.assertContains(detail, "Structured layout definition")
         self.assertContains(detail, "Publish and freeze")
+        self.assertContains(detail, "Visual Flow editor")
+
+        designer = self.tenant_get(
+            reverse("loans:document_layout_designer", args=[revision.pk])
+        )
+        self.assertEqual(designer.status_code, 200)
+        self.assertContains(designer, "Body blocks")
+        add_block = self.tenant_post(
+            reverse("loans:document_layout_designer", args=[revision.pk]),
+            {
+                "operation": "add_block", "block_type": "SPACER",
+                "binding": "", "bindings": [], "text": "", "height_mm": 9,
+            },
+        )
+        self.assertEqual(add_block.status_code, 302)
+        revision.refresh_from_db()
+        self.assertEqual(revision.definition["blocks"][-1]["type"], "spacer")
+        save_settings = self.tenant_post(
+            reverse("loans:document_layout_designer", args=[revision.pk]),
+            {
+                "operation": "save_settings", "page_size": "A5", "margin_mm": 10,
+                "primary_color": "#7c2d12", "border_color": "#d6d3d1",
+                "font_family": "HELVETICA", "body_font_size_pt": 9,
+                "heading_font_size_pt": 16,
+            },
+        )
+        self.assertEqual(save_settings.status_code, 302)
+        revision.refresh_from_db()
+        self.assertEqual(revision.definition["page_size"], "A5")
+        self.assertEqual(revision.definition["page"]["margin_mm"], 10)
 
         definition = starter_layout("loan_ticket").canonical_dict()
         definition["name"] = "Updated counter ticket"

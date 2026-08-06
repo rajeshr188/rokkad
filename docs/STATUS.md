@@ -10,6 +10,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- The first visual Flow editor is complete for Owner/Admin schema-v2 drafts.
+  It edits the existing validated JSON contract through the atomic revision
+  service: page/theme settings, top-level ordering/removal, and common field,
+  grid, section, field-plus-QR, spacer, page-break, and signature insertion.
+  Preview/test-print links support iteration; advanced JSON remains the honest
+  surface for page regions, detailed tables, conditions, overflow, and deep
+  nested properties. Published revisions remain immutable.
 - Flow v2 safe formatting, conditional presentation, and overflow policies are
   complete. Allow-listed case/date/decimal formats fail on incompatible input;
   visibility uses only registered scalar bindings and four declarative

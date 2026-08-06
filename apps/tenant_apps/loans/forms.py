@@ -12,6 +12,7 @@ from apps.tenant_apps.loans.domain import (
     ValuationMethod,
 )
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnCollateralItem
+from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
 
 
 class LoanDocumentLayoutCreateForm(forms.Form):
@@ -36,8 +37,73 @@ class LoanDocumentLayoutCreateForm(forms.Form):
 class LoanDocumentLayoutDefinitionForm(forms.Form):
     definition = forms.JSONField(
         widget=forms.Textarea(attrs={"rows": 24, "class": "form-control font-monospace"}),
-        help_text="Schema-v1 structured layout JSON. Unknown or executable bindings are rejected.",
+        help_text="Versioned structured layout JSON. Unknown or executable bindings are rejected.",
     )
+
+
+class LoanDocumentFlowSettingsForm(forms.Form):
+    page_size = forms.ChoiceField(choices=(("A4", "A4"), ("A5", "A5"), ("LETTER", "Letter")))
+    margin_mm = forms.IntegerField(min_value=5, max_value=30)
+    primary_color = forms.RegexField(regex=r"^#[0-9a-fA-F]{6}$", max_length=7)
+    border_color = forms.RegexField(regex=r"^#[0-9a-fA-F]{6}$", max_length=7)
+    font_family = forms.ChoiceField(choices=(("NOTO_SANS_TAMIL", "Noto Sans Tamil"), ("HELVETICA", "Helvetica")))
+    body_font_size_pt = forms.IntegerField(min_value=7, max_value=14)
+    heading_font_size_pt = forms.IntegerField(min_value=10, max_value=24)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-select" if isinstance(field, forms.ChoiceField) else "form-control"
+
+
+class LoanDocumentFlowBlockForm(forms.Form):
+    block_type = forms.ChoiceField(choices=(
+        ("FIELD", "Single field"), ("FIELD_GRID", "Field grid"),
+        ("SECTION", "Outlined field section"), ("FIELD_QR_COLUMNS", "Field + QR columns"),
+        ("SPACER", "Spacer"), ("PAGE_BREAK", "Page break"),
+        ("SIGNATURE", "Signature row"),
+    ))
+    binding = forms.ChoiceField(required=False)
+    bindings = forms.MultipleChoiceField(required=False, widget=forms.SelectMultiple(attrs={"size": 8}))
+    text = forms.CharField(required=False, max_length=100, help_text="Section title or signature labels separated by |.")
+    height_mm = forms.IntegerField(required=False, min_value=1, max_value=100, initial=8)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = sorted((value, label) for label, value in PawnLoanDocumentProjectionBuilder.FIELD_KEYS.items())
+        self.fields["binding"].choices = [("", "Select a field")] + choices
+        self.fields["bindings"].choices = choices
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-select" if isinstance(field, (forms.ChoiceField, forms.MultipleChoiceField)) else "form-control")
+
+    def clean(self):
+        cleaned = super().clean()
+        block_type = cleaned.get("block_type")
+        if block_type in {"FIELD", "FIELD_QR_COLUMNS"} and not cleaned.get("binding"):
+            self.add_error("binding", "Select a registered field.")
+        if block_type in {"FIELD_GRID", "SECTION"} and not cleaned.get("bindings"):
+            self.add_error("bindings", "Select at least one registered field.")
+        return cleaned
+
+    def block_definition(self):
+        value = self.cleaned_data
+        block_type = value["block_type"]
+        if block_type == "FIELD":
+            return {"type": "field", "binding": value["binding"]}
+        if block_type == "FIELD_GRID":
+            return {"type": "field_grid", "bindings": value["bindings"], "grid_columns": min(2, len(value["bindings"]))}
+        if block_type == "SECTION":
+            return {"type": "section", "text": value.get("text") or "Details", "style_variant": "OUTLINED", "blocks": [{"type": "field_grid", "bindings": value["bindings"], "grid_columns": min(2, len(value["bindings"]))}]}
+        if block_type == "FIELD_QR_COLUMNS":
+            return {"type": "columns", "columns": [
+                {"width_percent": 70, "blocks": [{"type": "field", "binding": value["binding"]}]},
+                {"width_percent": 30, "blocks": [{"type": "qr", "binding": "document.verification_id", "width_mm": 20}]},
+            ]}
+        if block_type == "SPACER":
+            return {"type": "spacer", "height_mm": value.get("height_mm") or 8}
+        if block_type == "PAGE_BREAK":
+            return {"type": "page_break"}
+        return {"type": "signature", "text": value.get("text") or "Borrower | Authorized pawnbroker", "height_mm": value.get("height_mm") or 18}
 
 
 class LoanDocumentAssetUploadForm(forms.Form):

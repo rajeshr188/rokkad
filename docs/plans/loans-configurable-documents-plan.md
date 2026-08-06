@@ -29,7 +29,10 @@ custody logic.
 2. Flow containers: sections, rows, columns, and field grids.
 3. Configurable tables plus repeating headers and footers.
 4. Safe formatting, conditional visibility, and overflow policies.
-5. Visual flow editor emitting the same validated JSON.
+5. Visual flow editor emitting the same validated JSON. Initial Owner/Admin
+   editor complete for page/theme settings, top-level composition, common
+   block presets, preview, and test print; deeper property panels remain an
+   incremental usability enhancement rather than a second schema.
 6. Absolute-overlay schema and renderer with bounded page geometry.
 7. Visual overlay editor over the uploaded PDF background.
 8. Physical printer acceptance for both composition modes.

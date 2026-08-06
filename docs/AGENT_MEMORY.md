@@ -31,6 +31,11 @@ declarative PRESENT/EMPTY/EQUALS/NOT_EQUALS conditions over registered scalar
 bindings; and WRAP/SHRINK/ERROR character-overflow policies. Mandatory fields,
 tables, and verification require an unconditional occurrence, preventing
 conditional removal of regulatory evidence.
+Owner/Admin users can visually edit Flow schema-v2 drafts at the revision's
+`designer/` route. It changes the same JSON via `update_draft`, supports
+page/theme settings and common top-level block operations, and links directly
+to preview/test print. Advanced JSON remains required for deep nested and
+specialized properties; published revisions cannot enter the editor.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 

@@ -50,6 +50,7 @@ urlpatterns = [
     path("setup/documents/import/", views.document_layout_import, name="document_layout_import"),
     path("setup/documents/diagnostics/", views.document_layout_diagnostics, name="document_layout_diagnostics"),
     path("setup/documents/revisions/<int:revision_pk>/", views.document_layout_detail, name="document_layout_detail"),
+    path("setup/documents/revisions/<int:revision_pk>/designer/", views.document_layout_designer, name="document_layout_designer"),
     path("setup/documents/revisions/<int:revision_pk>/update/", views.document_layout_update, name="document_layout_update"),
     path("setup/documents/revisions/<int:revision_pk>/assets/add/", views.document_layout_asset_add, name="document_layout_asset_add"),
     path("setup/documents/revisions/<int:revision_pk>/clone/", views.document_layout_clone, name="document_layout_clone"),

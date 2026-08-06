@@ -66,6 +66,28 @@ it, publish it, and change the assignment.
 Do not publish merely to see what a layout looks like. Preview and test print
 work while it is still a draft.
 
+## Use The Visual Flow Editor
+
+Open a schema-v2 draft and select **Visual Flow editor**. The editor changes
+the same validated JSON used by Advanced JSON; it is not a second template
+format.
+
+The first editor surface supports:
+
+- A4, A5, or Letter page size and bounded margins;
+- primary/border colors, approved font, and type sizes;
+- top-level block movement and removal;
+- adding a registered field, field grid, outlined section, field-plus-QR
+  columns, spacer, page break, or signature row;
+- direct Preview PDF and Test print actions when an approved sample loan is
+  available.
+
+Removing or moving a block cannot bypass schema rules. If an edit would remove
+mandatory evidence, create an invalid structure, or use an unknown binding,
+the draft is not saved. Use **Advanced JSON and publishing** for headers,
+footers, table-column details, conditions, overflow, or deeper nested edits
+until those property panels are added to the visual surface.
+
 ## Choose The Correct Assignment Scope
 
 Resolution uses the most specific applicable assignment:
