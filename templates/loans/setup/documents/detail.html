@@ -6,7 +6,7 @@
   <a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">All layouts</a>
 </div>
 <div class="d-flex flex-wrap gap-2 mb-4">
-  {% if revision.state == 'DRAFT' and revision.definition.schema_version == 2 %}<a class="btn btn-primary" href="{% url 'loans:document_layout_designer' revision.pk %}">Visual Flow editor</a>{% endif %}
+  {% if revision.state == 'DRAFT' and revision.definition.schema_version == 2 and revision.definition.layout_mode == 'FLOW' %}<a class="btn btn-primary" href="{% url 'loans:document_layout_designer' revision.pk %}">Visual Flow editor</a>{% endif %}
   {% if sample_loan %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_export' revision.pk %}">Export sanitized pack</a>
   <form method="post" action="{% url 'loans:document_layout_clone' revision.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary">Clone to new draft</button></form>
   {% if revision.state == 'DRAFT' %}<form method="post" action="{% url 'loans:document_layout_publish' revision.pk %}">{% csrf_token %}<button class="btn btn-success">Publish and freeze</button></form>{% endif %}

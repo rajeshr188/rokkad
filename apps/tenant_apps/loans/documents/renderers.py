@@ -17,7 +17,9 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics.shapes import Drawing
+from reportlab.graphics import renderPDF
 from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.pdfgen import canvas as pdf_canvas
 import fitz
 
 from .assets import DocumentAssetError, validate_asset_set
@@ -57,6 +59,14 @@ class ConfigurableDocumentRenderer:
         if missing_assets:
             raise DocumentAssetError(f"Required document assets are missing: {', '.join(sorted(missing_assets))}.")
         cls._assert_bindings(layout, fields, sections)
+        if layout.layout_mode == "ABSOLUTE_OVERLAY":
+            pdf = cls._render_absolute_overlay(payload, layout, fields, sections, asset_map, preview)
+            pdf = cls._apply_background(pdf, asset_map[layout.background_asset_key])
+            return LayoutRenderResult(
+                pdf, layout.content_hash, cls._payload_hash(payload), "layout-reportlab-overlay-v1",
+                layout.page_size, layout.copy_mode,
+                tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())),
+            )
         buffer = io.BytesIO()
         header_height = layout.header.height_mm if layout.header else 0
         footer_height = layout.footer.height_mm if layout.footer else 0
@@ -91,6 +101,123 @@ class ConfigurableDocumentRenderer:
         renderer_version = cls.VERSION if layout.schema_version == 1 else "layout-reportlab-v2"
         return LayoutRenderResult(pdf, layout.content_hash, cls._payload_hash(payload), renderer_version, layout.page_size, layout.copy_mode,
                                   tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())))
+
+    @classmethod
+    def _render_absolute_overlay(cls, payload, layout, fields, sections, assets, preview):
+        buffer = io.BytesIO()
+        page_size = cls.PAGE_SIZES[layout.page_size]
+        canvas = pdf_canvas.Canvas(buffer, pagesize=page_size, pageCompression=0)
+        canvas.setTitle(payload.title)
+        styles = cls._styles(layout)
+        if layout.copy_mode == "SINGLE":
+            pages = (("ORIGINAL", layout.blocks),)
+        elif layout.copy_mode == "ORIGINAL_DUPLICATE":
+            pages = (("ORIGINAL", layout.blocks), ("DUPLICATE", layout.blocks))
+        else:
+            pages = (("ORIGINAL", layout.blocks), ("ORIGINAL", layout.back_blocks),
+                     ("DUPLICATE", layout.blocks), ("DUPLICATE", layout.back_blocks))
+        for copy_name, blocks in pages:
+            for block in blocks:
+                if cls._is_visible(block, fields):
+                    cls._draw_overlay_block(canvas, block, payload, fields, sections, assets, styles, layout, page_size)
+            if preview:
+                canvas.saveState()
+                canvas.setFillColor(colors.Color(0.75, 0.1, 0.1, alpha=0.25))
+                canvas.setFont("Helvetica-Bold", 24)
+                canvas.translate(page_size[0] / 2, page_size[1] / 2)
+                canvas.rotate(35)
+                canvas.drawCentredString(0, 0, "PREVIEW / NOT AN OFFICIAL ISSUE")
+                canvas.restoreState()
+            canvas.setAuthor(f"Rokkad {copy_name}")
+            canvas.showPage()
+        canvas.save()
+        value = buffer.getvalue()
+        buffer.close()
+        return value
+
+    @classmethod
+    def _draw_overlay_block(cls, canvas, block, payload, fields, sections, assets, styles, layout, page_size):
+        x = block.x_mm * mm
+        height = block.height_mm * mm
+        width = block.width_mm * mm
+        y = page_size[1] - (block.y_mm * mm) - height
+        style = styles["BodyText"].clone(f"overlay-{block.type}-{block.x_mm}-{block.y_mm}")
+        style.fontSize = block.font_size_pt
+        style.leading = block.font_size_pt + 2
+        style.alignment = {"LEFT": 0, "CENTER": 1, "RIGHT": 2}[block.align]
+        if block.type == "image":
+            asset = assets[block.asset_key]
+            if asset.mime_type == "application/pdf":
+                raise DocumentAssetError("PDF assets cannot be used in image blocks.")
+            image = Image(io.BytesIO(asset.content))
+            image._restrictSize(width, height)
+            image.drawOn(canvas, x + (width - image.drawWidth) / 2, y + (height - image.drawHeight) / 2)
+            return
+        if block.type == "qr":
+            raw = payload.verification_id if block.binding in {"", "document.verification_id"} else fields[block.binding].value
+            widget = QrCodeWidget(str(raw)); bounds = widget.getBounds()
+            size = min(width, height)
+            drawing = Drawing(size, size, transform=[size / (bounds[2] - bounds[0]), 0, 0, size / (bounds[3] - bounds[1]), 0, 0])
+            drawing.add(widget); renderPDF.draw(drawing, canvas, x + (width - size) / 2, y + (height - size) / 2)
+            return
+        if block.type == "table":
+            cls._draw_overlay_table(canvas, block, sections[block.binding], styles, layout, x, y, width, height)
+            return
+        if block.type == "title":
+            text = escape(block.text or payload.title)
+        elif block.type == "field":
+            field = fields[block.binding]
+            value, style = cls._display_value(field.value, block, style)
+            text = f"<b>{escape(field.label)}</b>: {escape(value)}"
+        elif block.type == "verification":
+            text = f"<b>Verification ID</b>: {escape(payload.verification_id)}"
+        else:
+            text = escape(block.text or "Signature")
+        cls._draw_overlay_paragraph(canvas, text, style, x, y, width, height, block.overflow_policy)
+
+    @staticmethod
+    def _draw_overlay_paragraph(canvas, text, style, x, y, width, height, overflow_policy):
+        paragraph = Paragraph(text, style)
+        _, required_height = paragraph.wrap(width, height)
+        if required_height > height and overflow_policy == "SHRINK":
+            while required_height > height and style.fontSize > 6:
+                style.fontSize -= 1
+                style.leading = style.fontSize + 2
+                paragraph = Paragraph(text, style)
+                _, required_height = paragraph.wrap(width, height)
+        if required_height > height:
+            raise ValueError("Absolute overlay content exceeds its configured rectangle.")
+        paragraph.drawOn(canvas, x, y + height - required_height)
+
+    @classmethod
+    def _draw_overlay_table(cls, canvas, block, section, styles, layout, x, y, width, height):
+        if block.table_columns:
+            if any(column.index >= len(row) for column in block.table_columns for row in section.rows):
+                raise ValueError(f"Table {block.binding} does not contain every configured column index.")
+            rows = [[column.label for column in block.table_columns]]
+            rows.extend([[row[column.index] for column in block.table_columns] for row in section.rows[1:]])
+            widths = [width * column.width_percent / 100 for column in block.table_columns]
+        else:
+            rows, widths = section.rows, None
+        base_style = styles["BodyText"].clone(f"overlay-table-{block.x_mm}-{block.y_mm}")
+        base_style.fontSize = block.font_size_pt; base_style.leading = block.font_size_pt + 2
+        rendered = []
+        for row_index, row in enumerate(rows):
+            rendered_row = []
+            for column_index, cell in enumerate(row):
+                config = block.table_columns[column_index] if block.table_columns and row_index else block
+                value, cell_style = cls._display_value(cell, config, base_style)
+                rendered_row.append(Paragraph(escape(value), cell_style))
+            rendered.append(rendered_row)
+        table = Table(rendered, colWidths=widths, repeatRows=1 if block.repeat_header else 0)
+        commands = list(cls._table_style(True).getCommands())
+        for column_index, column in enumerate(block.table_columns):
+            commands.append(("ALIGN", (column_index, 0), (column_index, -1), column.align))
+        table.setStyle(TableStyle(commands))
+        required_width, required_height = table.wrap(width, height)
+        if required_width > width or required_height > height:
+            raise ValueError("Absolute overlay table exceeds its configured rectangle.")
+        table.drawOn(canvas, x, y + height - required_height)
 
     @classmethod
     def _append_blocks(cls, story, blocks, payload, fields, sections, styles, copy_name, preview, assets, layout, available_width, *, nested=False):

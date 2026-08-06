@@ -18,7 +18,7 @@ ALLOWED_BLOCK_TYPES = frozenset(
 )
 ALLOWED_PAGE_SIZES = frozenset({"A4", "A5", "LETTER"})
 ALLOWED_COPY_MODES = frozenset({"SINGLE", "ORIGINAL_DUPLICATE", "ORIGINAL_DUPLICATE_DUPLEX"})
-ALLOWED_LAYOUT_MODES = frozenset({"FLOW"})
+ALLOWED_LAYOUT_MODES = frozenset({"FLOW", "ABSOLUTE_OVERLAY"})
 ALLOWED_FONT_FAMILIES = frozenset({"HELVETICA", "NOTO_SANS_TAMIL"})
 ALLOWED_VALUE_FORMATS = frozenset({"DEFAULT", "UPPER", "LOWER", "DATE_DMY", "DATE_MDY", "DECIMAL_2"})
 ALLOWED_OVERFLOW_POLICIES = frozenset({"WRAP", "SHRINK", "ERROR"})
@@ -60,6 +60,10 @@ class LayoutBlock:
     overflow_policy: str = "WRAP"
     max_characters: int = 120
     visible_when: VisibilityCondition | None = None
+    x_mm: int = 0
+    y_mm: int = 0
+    font_size_pt: int = 10
+    align: str = "LEFT"
 
 
 @dataclass(frozen=True)
@@ -148,6 +152,10 @@ class DocumentLayout:
                          "value": block.visible_when.value}
                         if block.visible_when else None
                     ),
+                    "x_mm": block.x_mm,
+                    "y_mm": block.y_mm,
+                    "font_size_pt": block.font_size_pt,
+                    "align": block.align,
                 })
             return value
         value = {
@@ -221,8 +229,9 @@ class DocumentLayoutValidator:
             raise LayoutValidationError("Unsupported page size.")
         if copy_mode not in ALLOWED_COPY_MODES:
             raise LayoutValidationError("Unsupported copy mode.")
-        blocks = cls._blocks(definition.get("blocks"), document_type, schema_version)
-        back_blocks = cls._blocks(definition.get("back_blocks", []), document_type, schema_version)
+        layout_mode, margin_mm, theme = cls._composition_settings(definition, schema_version)
+        blocks = cls._blocks(definition.get("blocks"), document_type, schema_version, layout_mode=layout_mode)
+        back_blocks = cls._blocks(definition.get("back_blocks", []), document_type, schema_version, layout_mode=layout_mode)
         header = cls._region(definition.get("header"), document_type, schema_version, "Header")
         footer = cls._region(definition.get("footer"), document_type, schema_version, "Footer")
         if not blocks:
@@ -250,7 +259,12 @@ class DocumentLayoutValidator:
         background = str(definition.get("background_asset_key") or "")
         if background and not background.replace(".", "").replace("-", "").replace("_", "").isalnum():
             raise LayoutValidationError("Background asset key is invalid.")
-        layout_mode, margin_mm, theme = cls._composition_settings(definition, schema_version)
+        if layout_mode == "ABSOLUTE_OVERLAY":
+            if not background:
+                raise LayoutValidationError("Absolute overlay layouts require a background asset key.")
+            if header or footer:
+                raise LayoutValidationError("Absolute overlay layouts do not use Flow page regions.")
+            cls._validate_overlay_geometry(blocks + back_blocks, page_size)
         return DocumentLayout(
             schema_version, document_type, name, page_size, copy_mode, blocks,
             back_blocks, background, layout_mode, margin_mm,
@@ -270,7 +284,7 @@ class DocumentLayoutValidator:
         height = value["height_mm"]
         if not isinstance(height, int) or not 8 <= height <= 40:
             raise LayoutValidationError(f"{label} height must be between 8 and 40 mm.")
-        blocks = cls._blocks(value["blocks"], document_type, schema_version, depth=1, region=True)
+        blocks = cls._blocks(value["blocks"], document_type, schema_version, depth=1, region=True, layout_mode="FLOW")
         if not blocks:
             raise LayoutValidationError(f"{label} region requires at least one block.")
         return PageRegion(height, blocks)
@@ -286,7 +300,7 @@ class DocumentLayoutValidator:
             return "FLOW", 14, defaults
         layout_mode = definition.get("layout_mode", "FLOW")
         if layout_mode not in ALLOWED_LAYOUT_MODES:
-            raise LayoutValidationError("Schema v2 currently supports only FLOW layout mode.")
+            raise LayoutValidationError("Layout mode is unsupported.")
         page = definition.get("page", {})
         if not isinstance(page, dict) or set(page) - {"margin_mm"}:
             raise LayoutValidationError("Page settings may contain only margin_mm.")
@@ -309,7 +323,7 @@ class DocumentLayoutValidator:
         return layout_mode, margin_mm, theme
 
     @classmethod
-    def _blocks(cls, values, document_type, schema_version, *, depth=0, region=False):
+    def _blocks(cls, values, document_type, schema_version, *, depth=0, region=False, layout_mode="FLOW"):
         if not isinstance(values, list) or len(values) > 100:
             raise LayoutValidationError("Blocks must be a list containing at most 100 entries.")
         if depth > 3:
@@ -322,7 +336,7 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError("Each block must be an object.")
             allowed = {"type", "binding", "bindings", "text", "height_mm", "asset_key", "width_mm"}
             if schema_version >= 2:
-                allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when"})
+                allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when", "x_mm", "y_mm", "font_size_pt", "align"})
             unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
@@ -331,6 +345,8 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError(f"Unsupported block type: {block_type}.")
             if schema_version == 1 and block_type in {"section", "columns", "field_grid"}:
                 raise LayoutValidationError("Flow containers require layout schema version 2.")
+            if layout_mode == "ABSOLUTE_OVERLAY" and block_type not in {"title", "field", "table", "image", "qr", "verification", "signature"}:
+                raise LayoutValidationError(f"Block type {block_type} is not supported in absolute overlay mode.")
             if depth and block_type == "page_break":
                 raise LayoutValidationError("Page breaks cannot be nested inside flow containers.")
             if region and block_type not in {"title", "field", "field_grid", "image", "qr", "verification", "spacer"}:
@@ -354,8 +370,9 @@ class DocumentLayoutValidator:
             if not isinstance(height, int) or not 1 <= height <= 100:
                 raise LayoutValidationError("Spacer/signature height must be between 1 and 100 mm.")
             width = value.get("width_mm", 30)
-            if not isinstance(width, int) or not 5 <= width <= 180:
-                raise LayoutValidationError("Image/QR width must be between 5 and 180 mm.")
+            maximum_width = 216 if layout_mode == "ABSOLUTE_OVERLAY" else 180
+            if not isinstance(width, int) or not 5 <= width <= maximum_width:
+                raise LayoutValidationError(f"Block width must be between 5 and {maximum_width} mm.")
             child_blocks = ()
             columns = ()
             grid_columns = value.get("grid_columns", 2)
@@ -372,8 +389,18 @@ class DocumentLayoutValidator:
             if not isinstance(max_characters, int) or not 10 <= max_characters <= 500:
                 raise LayoutValidationError("Maximum characters must be between 10 and 500.")
             visible_when = cls._visibility_condition(value.get("visible_when"), field_keys)
+            x_mm = value.get("x_mm", 0)
+            y_mm = value.get("y_mm", 0)
+            font_size_pt = value.get("font_size_pt", 10)
+            align = value.get("align", "LEFT")
+            if not isinstance(x_mm, int) or not isinstance(y_mm, int) or x_mm < 0 or y_mm < 0:
+                raise LayoutValidationError("Block X/Y coordinates must be non-negative whole millimetres.")
+            if not isinstance(font_size_pt, int) or not 6 <= font_size_pt <= 24:
+                raise LayoutValidationError("Block font size must be between 6 and 24 points.")
+            if align not in {"LEFT", "CENTER", "RIGHT"}:
+                raise LayoutValidationError("Block alignment is unsupported.")
             if block_type == "section":
-                child_blocks = cls._blocks(value.get("blocks"), document_type, schema_version, depth=depth + 1)
+                child_blocks = cls._blocks(value.get("blocks"), document_type, schema_version, depth=depth + 1, layout_mode=layout_mode)
                 if not child_blocks:
                     raise LayoutValidationError("Sections require at least one child block.")
                 if style_variant not in {"PLAIN", "OUTLINED", "TINTED"}:
@@ -389,7 +416,7 @@ class DocumentLayoutValidator:
                     percent = raw_column["width_percent"]
                     if not isinstance(percent, int) or not 10 <= percent <= 90:
                         raise LayoutValidationError("Column width must be between 10 and 90 percent.")
-                    children = cls._blocks(raw_column["blocks"], document_type, schema_version, depth=depth + 1)
+                    children = cls._blocks(raw_column["blocks"], document_type, schema_version, depth=depth + 1, layout_mode=layout_mode)
                     if not children:
                         raise LayoutValidationError("Each column requires at least one child block.")
                     parsed_columns.append(LayoutColumn(percent, children))
@@ -440,9 +467,20 @@ class DocumentLayoutValidator:
                 block_type, binding, bindings, str(value.get("text") or ""),
                 height, asset_key, width, child_blocks, columns, grid_columns,
                 style_variant, table_columns, repeat_header, value_format,
-                overflow_policy, max_characters, visible_when,
+                overflow_policy, max_characters, visible_when, x_mm, y_mm,
+                font_size_pt, align,
             ))
         return tuple(result)
+
+    @staticmethod
+    def _validate_overlay_geometry(blocks, page_size):
+        page_dimensions = {"A4": (210, 297), "A5": (148, 210), "LETTER": (216, 279)}
+        page_width, page_height = page_dimensions[page_size]
+        for block in blocks:
+            if block.x_mm + block.width_mm > page_width or block.y_mm + block.height_mm > page_height:
+                raise LayoutValidationError(
+                    f"Overlay block {block.type} extends beyond the {page_size} page boundary."
+                )
 
     @staticmethod
     def _visibility_condition(value, field_keys):
@@ -509,9 +547,11 @@ class DocumentLayoutValidator:
         return False
 
 
-def starter_layout(document_type, *, schema_version=1):
+def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
     if schema_version not in DocumentLayoutValidator.SUPPORTED_SCHEMA_VERSIONS:
         raise LayoutValidationError("Unsupported starter layout schema version.")
+    if schema_version == 1 and layout_mode != "FLOW":
+        raise LayoutValidationError("Absolute overlay starters require schema version 2.")
     required = sorted(REQUIRED_BINDINGS[document_type])
     names = {
         "loan_ticket": "Starter loan ticket",
@@ -527,16 +567,32 @@ def starter_layout(document_type, *, schema_version=1):
         "auction_recovery": "auction.collateral_disposed",
         "renewal": "renewal.collateral_movement",
     }
-    blocks = [
-        {"type": "title"},
-        {"type": "field_group", "bindings": required},
-    ]
-    if document_type in tables:
-        blocks.append({"type": "table", "binding": tables[document_type]})
-    blocks.extend([
-        {"type": "verification"},
-        {"type": "signature", "text": "Borrower / customer | Authorized pawnbroker", "height_mm": 18},
-    ])
+    if layout_mode == "ABSOLUTE_OVERLAY":
+        blocks = [{"type": "title", "x_mm": 10, "y_mm": 8, "width_mm": 190, "height_mm": 12, "font_size_pt": 16, "align": "CENTER"}]
+        for index, binding in enumerate(required):
+            blocks.append({
+                "type": "field", "binding": binding,
+                "x_mm": 10 if index % 2 == 0 else 110,
+                "y_mm": 25 + (index // 2) * 10,
+                "width_mm": 90, "height_mm": 8, "font_size_pt": 8,
+            })
+        if document_type in tables:
+            blocks.append({"type": "table", "binding": tables[document_type], "x_mm": 10, "y_mm": 105, "width_mm": 190, "height_mm": 90, "font_size_pt": 8})
+        blocks.extend([
+            {"type": "verification", "x_mm": 10, "y_mm": 205, "width_mm": 190, "height_mm": 12, "font_size_pt": 8},
+            {"type": "signature", "text": "Borrower / customer | Authorized pawnbroker", "x_mm": 10, "y_mm": 230, "width_mm": 190, "height_mm": 25, "font_size_pt": 9},
+        ])
+    else:
+        blocks = [
+            {"type": "title"},
+            {"type": "field_group", "bindings": required},
+        ]
+        if document_type in tables:
+            blocks.append({"type": "table", "binding": tables[document_type]})
+        blocks.extend([
+            {"type": "verification"},
+            {"type": "signature", "text": "Borrower / customer | Authorized pawnbroker", "height_mm": 18},
+        ])
     definition = {
         "schema_version": schema_version, "document_type": document_type,
         "name": names[document_type],
@@ -545,7 +601,7 @@ def starter_layout(document_type, *, schema_version=1):
     }
     if schema_version >= 2:
         definition.update({
-            "layout_mode": "FLOW",
+            "layout_mode": layout_mode,
             "page": {"margin_mm": 14},
             "theme": {
                 "primary_color": "#000000", "border_color": "#cbd5e1",
@@ -553,6 +609,8 @@ def starter_layout(document_type, *, schema_version=1):
                 "heading_font_size_pt": 14,
             },
         })
+    if layout_mode == "ABSOLUTE_OVERLAY":
+        definition["background_asset_key"] = "form.background"
     return DocumentLayoutValidator.load(definition)
 
 

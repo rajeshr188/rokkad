@@ -138,6 +138,53 @@ Page background property:
 Supported assets are PNG/JPEG images and bounded PDF backgrounds. Invalid,
 oversized, corrupt, duplicate, or cross-workspace assets are rejected.
 
+## Fill An Existing PDF Form With Absolute Overlay
+
+When creating a layout, choose **Exact PDF overlay** instead of Flow document.
+The starter draft expects a background asset with the key
+`form.background`. Upload the business/regulatory PDF as a **Page background**
+using that exact key.
+
+Overlay coordinates use whole millimetres from the **top-left corner** of the
+selected page:
+
+```json
+{
+  "type": "field",
+  "binding": "borrower.display",
+  "x_mm": 28,
+  "y_mm": 42,
+  "width_mm": 100,
+  "height_mm": 8,
+  "font_size_pt": 10,
+  "align": "LEFT",
+  "overflow_policy": "SHRINK",
+  "max_characters": 80
+}
+```
+
+This places the top-left of the borrower rectangle 28 mm from the page's left
+edge and 42 mm from its top edge. Width and height define the complete bounded
+rectangle. Blocks extending beyond A4, A5, or Letter fail validation.
+
+Absolute overlay currently supports:
+
+- title and registered field rectangles;
+- images and QR codes fitted inside rectangles;
+- verification and signature rectangles;
+- bounded tables with configured columns;
+- conditional visibility and safe formatting;
+- single, original/duplicate, and original/duplicate duplex output.
+
+Flow containers, automatic page breaks, headers, and footers are deliberately
+unavailable in overlay mode. An overlay table that cannot fit its rectangle
+fails rendering instead of silently clipping or creating another page.
+
+Until the visual overlay editor is complete, adjust rectangles through
+**Advanced JSON**, then Preview and Test print after each change. PDF viewers
+may apply print scaling, so production acceptance must use **Actual size / 100%**
+on the real printer.
+
 ## Add A QR Code
 
 For the official verification ID, add this block:

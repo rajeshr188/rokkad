@@ -33,7 +33,10 @@ custody logic.
    editor complete for page/theme settings, top-level composition, common
    block presets, preview, and test print; deeper property panels remain an
    incremental usability enhancement rather than a second schema.
-6. Absolute-overlay schema and renderer with bounded page geometry.
+6. Absolute-overlay schema and renderer with bounded page geometry. Complete:
+   exact top-left millimetre rectangles over mandatory validated backgrounds,
+   constrained block vocabulary, copy/duplex composition, and fail-closed
+   bounds/overflow.
 7. Visual overlay editor over the uploaded PDF background.
 8. Physical printer acceptance for both composition modes.
 

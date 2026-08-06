@@ -454,6 +454,25 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(revision.assignments.filter(is_active=True).exists())
 
+    def test_owner_can_create_absolute_overlay_starter_draft(self):
+        response = self.tenant_post(
+            reverse("loans:document_layout_create"),
+            {
+                "name": "Existing form ticket", "document_type": "loan_ticket",
+                "layout_mode": "ABSOLUTE_OVERLAY",
+            },
+        )
+
+        revision = LoanDocumentLayoutRevision.objects.get(layout__name="Existing form ticket")
+        self.assertRedirects(
+            response, reverse("loans:document_layout_detail", args=[revision.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(revision.definition["layout_mode"], "ABSOLUTE_OVERLAY")
+        self.assertEqual(revision.definition["background_asset_key"], "form.background")
+        detail = self.tenant_get(reverse("loans:document_layout_detail", args=[revision.pk]))
+        self.assertNotContains(detail, "Visual Flow editor")
+
     def test_published_ticket_layout_drives_official_issue_and_reprint(self):
         license, series = self._configured_setup()
         loan = self._loan(license, series, "PL-DOC-00001", state="APPROVED")

@@ -27,11 +27,18 @@ class LoanDocumentLayoutCreateForm(forms.Form):
             ("renewal", "Renewal memo"),
         )
     )
+    layout_mode = forms.ChoiceField(
+        choices=(("FLOW", "Flow document"), ("ABSOLUTE_OVERLAY", "Exact PDF overlay")),
+        initial="FLOW",
+        required=False,
+        help_text="Flow paginates automatically; overlay places data at exact millimetre coordinates over a PDF background.",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["name"].widget.attrs["class"] = "form-control"
         self.fields["document_type"].widget.attrs["class"] = "form-select"
+        self.fields["layout_mode"].widget.attrs["class"] = "form-select"
 
 
 class LoanDocumentLayoutDefinitionForm(forms.Form):

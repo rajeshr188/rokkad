@@ -121,15 +121,67 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         self.assertEqual(current.layout_mode, "FLOW")
         self.assertIn("theme", current.canonical_dict())
 
-    def test_schema_v2_rejects_overlay_mode_and_unsafe_theme_values(self):
-        definition = starter_layout("loan_ticket").canonical_dict()
-        definition.update({"schema_version": 2, "layout_mode": "ABSOLUTE_OVERLAY"})
-        with self.assertRaisesMessage(LayoutValidationError, "only FLOW"):
-            DocumentLayoutValidator.load(definition)
-
+    def test_schema_v2_rejects_unsafe_theme_values(self):
         definition = starter_layout("loan_ticket").canonical_dict()
         definition.update({"schema_version": 2, "theme": {"font_family": "../../evil.ttf"}})
         with self.assertRaisesMessage(LayoutValidationError, "not approved"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_absolute_overlay_renders_bounded_content_over_pdf_background(self):
+        background = DocumentAssetValidator.validate(
+            key="form.background", kind="BACKGROUND", content=self._pdf_bytes(), workspace_id=7,
+        )
+        layout = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY")
+
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, layout, assets=(background,), preview=True,
+        )
+
+        self.assertEqual(result.renderer_version, "layout-reportlab-overlay-v1")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = pdf[0].get_text()
+        self.assertIn("BACKGROUND", text)
+        self.assertIn("PL-A-00019", text)
+        self.assertIn("PREVIEW / NOT AN OFFICIAL ISSUE", text)
+        loan_rect = pdf[0].search_for("PL-A-00019")[0]
+        self.assertGreater(loan_rect.x0, 25)
+        self.assertGreater(loan_rect.y0, 150)
+        self.assertLess(loan_rect.y0, 220)
+        pdf.close()
+
+    def test_absolute_overlay_duplicate_and_duplex_page_counts(self):
+        background = DocumentAssetValidator.validate(
+            key="form.background", kind="BACKGROUND", content=self._pdf_bytes(), workspace_id=7,
+        )
+        definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["copy_mode"] = "ORIGINAL_DUPLICATE_DUPLEX"
+        definition["back_blocks"] = [
+            {"type": "verification", "x_mm": 10, "y_mm": 20, "width_mm": 190, "height_mm": 12},
+        ]
+        layout = DocumentLayoutValidator.load(definition)
+
+        result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=(background,))
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 4)
+        for page in pdf:
+            self.assertIn("BACKGROUND", page.get_text())
+        pdf.close()
+
+    def test_absolute_overlay_geometry_and_background_requirements_fail_closed(self):
+        definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["background_asset_key"] = ""
+        with self.assertRaisesMessage(LayoutValidationError, "require a background asset key"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["blocks"][0].update({"x_mm": 200, "width_mm": 20})
+        with self.assertRaisesMessage(LayoutValidationError, "beyond the A4 page boundary"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["blocks"].insert(1, {"type": "spacer", "x_mm": 1, "y_mm": 1, "width_mm": 10, "height_mm": 10})
+        with self.assertRaisesMessage(LayoutValidationError, "not supported in absolute overlay"):
             DocumentLayoutValidator.load(definition)
 
     def test_schema_v2_sections_columns_and_field_grids_render(self):

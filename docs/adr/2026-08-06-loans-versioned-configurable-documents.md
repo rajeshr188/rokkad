@@ -55,8 +55,12 @@ a second source of financial facts or making historical reprints mutable.
     revision lifecycle, resolution, and issuing, but not positioning rules.
 11. Flow schema v2 is backward compatible with published schema-v1 layouts and
     begins with bounded page margins and allow-listed theme tokens. Containers,
-    page regions, and formatting extend v2 incrementally. Overlay mode cannot
-    be selected until its separate validator and renderer are implemented.
+    page regions, and formatting extend v2 incrementally. Overlay mode is
+    enabled only through its separate validator and renderer.
+12. `ABSOLUTE_OVERLAY` uses whole-millimetre rectangles measured from the
+    top-left of an A4, A5, or Letter page. A validated background is mandatory;
+    every block must fit the page and its rectangle. Overlay never silently
+    paginates, clips, or imports Flow container semantics.
 
 ## Consequences
 
