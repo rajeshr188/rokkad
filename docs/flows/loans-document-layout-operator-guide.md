@@ -207,7 +207,9 @@ Sheet compositions use A5 as the logical page size:
 
 The editor sets this logical A5 size automatically. An A4 landscape preset
 still produces A4 landscape output by placing two logical A5 surfaces side by
-side.
+side. When an existing A4 or Letter overlay first changes to a sheet preset,
+the editor proportionally fits its existing block rectangles onto A5. Review
+and fine-tune their positions against the uploaded A5 backgrounds afterward.
 
 | Preset | Output sequence |
 |---|---|

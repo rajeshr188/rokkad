@@ -17,6 +17,7 @@ from apps.tenant_apps.loans.documents.payloads import (
     DocumentSection,
 )
 from apps.tenant_apps.loans.forms import LoanDocumentOverlaySettingsForm
+from apps.tenant_apps.loans.views import _fit_overlay_geometry
 
 
 class ConfigurableDocumentLayoutTests(SimpleTestCase):
@@ -312,6 +313,16 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         )
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["page_size"], "A5")
+
+    def test_existing_a4_overlay_geometry_is_fitted_to_a5_for_sheet_mode(self):
+        definition = starter_layout(
+            "loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY"
+        ).canonical_dict()
+        _fit_overlay_geometry(definition, "A5")
+        self.assertEqual(definition["page_size"], "A5")
+        for block in definition["blocks"]:
+            self.assertLessEqual(block["x_mm"] + block["width_mm"], 148)
+            self.assertLessEqual(block["y_mm"] + block["height_mm"], 210)
 
     def test_schema_v2_sections_columns_and_field_grids_render(self):
         definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()

@@ -58,6 +58,37 @@ from apps.tenant_apps.loans.forms import (
     PawnSetupTransferForm,
     PawnTransitionReasonForm,
 )
+
+
+_OVERLAY_PAGE_DIMENSIONS_MM = {
+    "A4": (210, 297), "A5": (148, 210), "LETTER": (216, 279),
+}
+
+
+def _fit_overlay_geometry(definition, target_page_size):
+    """Proportionally fit flat absolute-overlay blocks to another page size."""
+    source_page_size = definition.get("page_size", "A4")
+    if source_page_size == target_page_size:
+        return
+    source_width, source_height = _OVERLAY_PAGE_DIMENSIONS_MM[source_page_size]
+    target_width, target_height = _OVERLAY_PAGE_DIMENSIONS_MM[target_page_size]
+    width_ratio = target_width / source_width
+    height_ratio = target_height / source_height
+    for page_blocks in (definition.get("blocks", []), definition.get("back_blocks", [])):
+        for block in page_blocks:
+            width = max(5, round(float(block["width_mm"]) * width_ratio))
+            height = max(1, round(float(block["height_mm"]) * height_ratio))
+            block["width_mm"] = min(width, target_width)
+            block["height_mm"] = min(height, target_height)
+            block["x_mm"] = min(
+                max(0, round(float(block["x_mm"]) * width_ratio)),
+                target_width - block["width_mm"],
+            )
+            block["y_mm"] = min(
+                max(0, round(float(block["y_mm"]) * height_ratio)),
+                target_height - block["height_mm"],
+            )
+    definition["page_size"] = target_page_size
 from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanDocumentLayout,
@@ -408,9 +439,12 @@ def document_layout_overlay_designer(request, revision_pk):
                         for message in (error["message"] for error in field_errors)
                     )
                     raise ValueError(errors or "Overlay page settings are invalid.")
-                definition["page_size"] = form.cleaned_data["page_size"]
-                definition["copy_mode"] = form.cleaned_data["copy_mode"]
                 composition = form.cleaned_data.get("sheet_composition")
+                if composition and definition.get("page_size", "A4") != "A5":
+                    _fit_overlay_geometry(definition, "A5")
+                else:
+                    definition["page_size"] = form.cleaned_data["page_size"]
+                definition["copy_mode"] = form.cleaned_data["copy_mode"]
                 if composition:
                     definition["background_asset_key"] = ""
                     definition["sheet"] = {
@@ -454,8 +488,7 @@ def document_layout_overlay_designer(request, revision_pk):
         else:
             messages.success(request, "Overlay draft updated and validated.")
         return redirect("loans:document_layout_overlay_designer", revision_pk=revision.pk)
-    dimensions = {"A4": (210, 297), "A5": (148, 210), "LETTER": (216, 279)}
-    page_width_mm, page_height_mm = dimensions[layout.page_size]
+    page_width_mm, page_height_mm = _OVERLAY_PAGE_DIMENSIONS_MM[layout.page_size]
     settings_form = LoanDocumentOverlaySettingsForm(
         background_keys=background_keys,
         sheet_composition_enabled=layout.document_type == "loan_ticket",
