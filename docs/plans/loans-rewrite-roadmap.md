@@ -712,7 +712,7 @@ reversal. Reconciliation understands operational openings and renewal custody
 without weakening missing-voucher checks for economic events. The complete
 170-test tenant-aware Loans suite passes in three exhaustive groups.
 
-#### E7.3A Correct Collateral-Tranche Economics — Active 2026-08-05
+#### E7.3A Correct Collateral-Tranche Economics — MVP Scope Completed 2026-08-05
 
 - Move principal allocation and monthly interest calculation to individual
   collateral items using effective-dated metal-rate policies.
@@ -814,11 +814,19 @@ Reactivation trigger: move E7.3A.8 back into active execution before enabling
 auction routes, permissions, or operational pilot use for the Loans app. It is
 not a blocker while auction remains outside the pilot boundary.
 
-#### E7.4 Add FundingLoan And Repledging
+#### E7.4 Add FundingLoan And Repledging — Gates A-C Completed; Runtime Deferred
 
 - Add the FundingLoan model, workspace numbering, lender payable accounting,
   multi-loan collateral pledge/return, servicing, settlement, reversals,
   reports, and UI.
+
+Current result: the independent FundingLoan domain, tenant persistence,
+immutable financial/custody evidence, create-to-close services, selectors,
+integrity findings, corrections, fixed preview documents, and hidden
+Owner/Admin evaluation UI are complete through consolidation Gates A-C.
+Normal staff navigation, configurable official documents, accounting delivery,
+and runtime enablement remain Gate D/E work and must not be presented as ready
+before the operational parity pilot passes.
 
 #### E7.5 Integrate The Customer Portal
 
@@ -873,7 +881,12 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **The 2026-08-08 permanent-coexistence ADR supersedes the replacement/cutover objective. `jcl1` currently defaults its canonical loan landing page to Loans, while Girvi and Loans may both originate and service independently owned records. The next implementation slice replaces the transitional cutover flag with independent module availability and default-navigation settings.**
+Status: **Temporary coexistence is active while Loans completes operational
+parity. PawnLoan MVP and FundingLoan Gates A-C are implemented. The immediate
+execution slice is OP1 regulatory license operations, followed by collateral
+photos/labels/QR, hierarchical storage, physical verification, and the
+confirmed notice/report/document gaps. FundingLoan remains an Owner/Admin
+evaluation surface until those pilot blockers pass.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

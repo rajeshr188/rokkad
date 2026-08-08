@@ -1,0 +1,24 @@
+{% extends "base_tenant.html" %}
+{% block title %}Create FundingLoan draft{% endblock %}
+{% block workspace_content %}
+<div class="mb-4">
+  <a class="small text-decoration-none" href="{% url 'loans:funding_loan_read_console' %}">&larr; FundingLoan read console</a>
+  <h1 class="h3 mt-2 mb-1">Create FundingLoan draft</h1>
+  <p class="text-muted mb-0">Choose the lender now. Terms and collateral are captured during a separate activation step.</p>
+</div>
+
+<div class="alert alert-secondary" role="status">Saving allocates a FundingLoan number and creates an editable draft only. It does not activate funding, move collateral, or post accounting.</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="mb-4">
+    <label class="form-label" for="{{ form.lender.id_for_label }}">{{ form.lender.label }}</label>
+    {{ form.lender }}
+    {% if form.lender.help_text %}<div class="form-text">{{ form.lender.help_text }}</div>{% endif %}
+    {% for error in form.lender.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+  </div>
+  <button class="btn btn-primary" type="submit">Save draft</button>
+  <a class="btn btn-outline-secondary" href="{% url 'loans:funding_loan_read_console' %}">Cancel</a>
+</form>
+{% endblock %}

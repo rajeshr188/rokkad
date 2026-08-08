@@ -1,0 +1,161 @@
+{% extends "base_tenant.html" %}
+{% block title %}{{ detail.summary.funding_number }}{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <a class="small text-decoration-none" href="{% url 'loans:funding_loan_read_console' %}">&larr; FundingLoan read console</a>
+    <h1 class="h3 mt-2 mb-1">{{ detail.summary.funding_number }}</h1>
+    <p class="text-muted mb-0">{{ detail.summary.lender_name }} &middot; {{ detail.summary.state }}</p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <span class="badge text-bg-warning">Controlled MVP preview</span>
+    {% if detail.activated_on %}<a class="btn btn-outline-secondary" href="{% url 'loans:funding_loan_agreement_pdf' detail.summary.funding_loan_id %}">Agreement PDF</a><a class="btn btn-outline-secondary" href="{% url 'loans:funding_loan_statement_pdf' detail.summary.funding_loan_id %}">Statement PDF</a>{% endif %}
+    {% if draft %}<a class="btn btn-primary" href="{% url 'loans:funding_loan_draft_inputs' detail.summary.funding_loan_id %}">Complete draft</a>{% endif %}
+  </div>
+</div>
+
+<div class="alert alert-secondary" role="status">FundingLoan runtime remains disabled. Values shown here derive from operational evidence and do not represent accounting postings.</div>
+
+{% if draft %}
+<h2 class="h5">Activation readiness</h2>
+{% if draft.ready %}
+<div class="alert alert-success">Draft terms and collateral pass the current activation policy. Servicing and accounting remain unavailable.</div>
+{% else %}
+<div class="alert alert-warning"><ul class="mb-0">{% for blocker in draft.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>
+{% endif %}
+<div class="table-responsive mb-4"><table class="table"><tbody><tr><th scope="row">Selected value</th><td>{{ draft.total_collateral_value }}</td><th scope="row">Maximum funded amount</th><td>{{ draft.maximum_funded_amount }}</td></tr></tbody></table></div>
+{% if draft.ready %}
+<form method="post" action="{% url 'loans:funding_loan_draft_activate' detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
+  {% csrf_token %}
+  <div class="col-md-6">
+    <label class="form-label" for="{{ activation_form.confirmation.id_for_label }}">Activation confirmation</label>
+    {{ activation_form.confirmation }}
+    <div class="form-text">{{ activation_form.confirmation.help_text }}</div>
+  </div>
+  <div class="col-md-auto"><button class="btn btn-danger" type="submit">Activate and hand off collateral</button></div>
+</form>
+{% endif %}
+{% endif %}
+
+<h2 class="h5">Operational balance</h2>
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Principal</div><div class="h5 mb-0">{{ detail.summary.principal_outstanding }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Interest</div><div class="h5 mb-0">{{ detail.summary.interest_outstanding }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Fees</div><div class="h5 mb-0">{{ detail.summary.fees_outstanding }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Total due</div><div class="h5 mb-0">{{ detail.summary.total_due }}</div></div></div>
+</div>
+
+{% if detail.summary.state == "ACTIVE" or detail.summary.state == "SETTLEMENT_PENDING" %}
+<h2 class="h5">Record repayment</h2>
+<form method="post" action="{% url 'loans:funding_loan_repayment' detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
+  {% csrf_token %}
+  {{ repayment_form.request_key }}
+  <div class="col-md-4"><label class="form-label" for="{{ repayment_form.amount.id_for_label }}">Amount</label>{{ repayment_form.amount }}</div>
+  <div class="col-md-4"><label class="form-label" for="{{ repayment_form.effective_date.id_for_label }}">Effective date</label>{{ repayment_form.effective_date }}</div>
+  <div class="col-md-auto"><button class="btn btn-primary" type="submit">Record repayment</button></div>
+</form>
+{% endif %}
+
+{% if settlement %}
+<h2 class="h5">Settlement readiness</h2>
+<div class="alert {% if settlement.closure_ready %}alert-success{% elif settlement.financially_settled %}alert-info{% else %}alert-warning{% endif %}">
+  <div>Financially settled: <strong>{{ settlement.financially_settled|yesno:"Yes,No" }}</strong> &middot; Collateral returned: <strong>{{ settlement.collateral_returned|yesno:"Yes,No" }}</strong></div>
+  {% if settlement.blockers %}<ul class="mb-0 mt-2">{% for blocker in settlement.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% if detail.summary.state == "ACTIVE" and settlement.financially_settled %}
+<form method="post" action="{% url 'loans:funding_loan_begin_settlement' detail.summary.funding_loan_id %}" class="mb-4">
+  {% csrf_token %}
+  <button class="btn btn-outline-primary" type="submit">Begin settlement review</button>
+</form>
+{% endif %}
+{% if detail.summary.state == "SETTLEMENT_PENDING" and settlement.active_collateral_ids %}
+<form method="post" action="{% url 'loans:funding_loan_return_collateral' detail.summary.funding_loan_id %}" class="mb-4">
+  {% csrf_token %}
+  {{ return_form.request_key }}
+  <fieldset class="mb-3"><legend class="form-label">Collateral to return</legend>{{ return_form.collateral }}</fieldset>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4"><label class="form-label" for="{{ return_form.effective_date.id_for_label }}">Effective date</label>{{ return_form.effective_date }}</div>
+    <div class="col-md-auto"><button class="btn btn-primary" type="submit">Return selected collateral</button></div>
+  </div>
+</form>
+{% endif %}
+{% if detail.summary.state == "SETTLEMENT_PENDING" and settlement.closure_ready %}
+<form method="post" action="{% url 'loans:funding_loan_close' detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
+  {% csrf_token %}
+  <div class="col-md-6">
+    <label class="form-label" for="{{ closure_form.confirmation.id_for_label }}">Closure confirmation</label>
+    {{ closure_form.confirmation }}
+    <div class="form-text">{{ closure_form.confirmation.help_text }}</div>
+  </div>
+  <div class="col-md-auto"><button class="btn btn-danger" type="submit">Close FundingLoan</button></div>
+</form>
+{% endif %}
+{% endif %}
+
+{% if detail.summary.state == "ACTIVE" or detail.summary.state == "SETTLEMENT_PENDING" %}
+{% if detail.financial_correction or detail.return_corrections or detail.pledge_correction_available %}
+<h2 class="h5">Corrections</h2>
+<div class="alert alert-warning">Corrections append compensating evidence; they do not edit or delete the original record.</div>
+{% if detail.financial_correction %}
+<form method="post" action="{% url 'loans:funding_loan_reverse_event' detail.summary.funding_loan_id detail.financial_correction.source_id %}" class="row g-2 align-items-end mb-3">
+  {% csrf_token %}{{ correction_form.request_key }}
+  <div class="col-md-3"><label class="form-label" for="{{ correction_form.effective_date.id_for_label }}">Correction date</label>{{ correction_form.effective_date }}</div>
+  <div class="col-md-6"><label class="form-label" for="{{ correction_form.reason.id_for_label }}">Reason for reversing {{ detail.financial_correction.operation }}</label>{{ correction_form.reason }}</div>
+  <div class="col-md-auto"><button class="btn btn-outline-danger" type="submit">Reverse financial event</button></div>
+</form>
+{% endif %}
+{% for target in detail.return_corrections %}
+<form method="post" action="{% url 'loans:funding_loan_reverse_return' detail.summary.funding_loan_id target.source_id %}" class="row g-2 align-items-end mb-3">
+  {% csrf_token %}<input type="hidden" name="request_key" value="{{ correction_form.request_key.value }}">
+  <div class="col-md-3"><label class="form-label">Correction date</label><input class="form-control" type="date" name="effective_date" value="{{ correction_form.effective_date.value|date:'Y-m-d' }}"></div>
+  <div class="col-md-6"><label class="form-label">Reason for reversing return #{{ target.source_id }}</label><textarea class="form-control" rows="2" name="reason" required></textarea></div>
+  <div class="col-md-auto"><button class="btn btn-outline-danger" type="submit">Reverse collateral return</button></div>
+</form>
+{% endfor %}
+{% if detail.pledge_correction_available %}
+<form method="post" action="{% url 'loans:funding_loan_reverse_pledge' detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
+  {% csrf_token %}<input type="hidden" name="request_key" value="{{ correction_form.request_key.value }}">
+  <div class="col-md-3"><label class="form-label">Correction date</label><input class="form-control" type="date" name="effective_date" value="{{ correction_form.effective_date.value|date:'Y-m-d' }}"></div>
+  <div class="col-md-6"><label class="form-label">Reason for reversing pledge handoff</label><textarea class="form-control" rows="2" name="reason" required></textarea></div>
+  <div class="col-md-auto"><button class="btn btn-outline-danger" type="submit">Reverse pledge handoff</button></div>
+</form>
+{% endif %}
+{% endif %}
+{% endif %}
+
+<h2 class="h5">Terms</h2>
+<div class="table-responsive mb-4"><table class="table"><tbody><tr><th scope="row">Activated</th><td>{{ detail.activated_on|default:"Not activated" }}</td><th scope="row">Maturity</th><td>{{ detail.maturity_on|default:"Not activated" }}</td></tr><tr><th scope="row">Monthly rate</th><td>{{ detail.monthly_interest_rate|default:"Not activated" }}</td><th scope="row">Maximum LTV</th><td>{{ detail.maximum_funding_ltv_ratio|default:"Not activated" }}</td></tr></tbody></table></div>
+
+<h2 class="h5">Pledged collateral</h2>
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead><tr><th>Collateral</th><th>Source PawnLoan</th><th>Description</th><th>Custody</th><th>Membership</th><th class="text-end">Selected value</th></tr></thead>
+    <tbody>{% for item in detail.collateral %}<tr><td>#{{ item.collateral_item_id }}</td><td>{{ item.source_loan_number }}</td><td>{{ item.description }}</td><td>{{ item.custody_state }}</td><td>{% if item.active %}Active{% else %}Released{% endif %}</td><td class="text-end">{{ item.selected_collateral_value }}</td></tr>{% empty %}<tr><td colspan="6" class="text-center py-4 text-muted">No pledge evidence exists.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+
+<h2 class="h5">Funding statement</h2>
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead><tr><th>Seq.</th><th>Effective</th><th>Operation</th><th class="text-end">Principal effect</th><th class="text-end">Interest effect</th><th class="text-end">Fee effect</th><th class="text-end">Balance</th><th>Actor</th></tr></thead>
+    <tbody>{% for row in detail.statement %}<tr><td>{{ row.sequence }}</td><td>{{ row.effective_date }}</td><td>{{ row.operation }}{% if row.operation == "RECORD_REPAYMENT" %} <a class="small" href="{% url 'loans:funding_loan_repayment_receipt_pdf' detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td class="text-end">{{ row.principal_effect }}</td><td class="text-end">{{ row.interest_effect }}</td><td class="text-end">{{ row.fee_effect }}</td><td class="text-end fw-semibold">{{ row.total_balance }}</td><td>{{ row.actor_name }}</td></tr>{% empty %}<tr><td colspan="8" class="text-center py-4 text-muted">No financial events exist.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+
+<h2 class="h5">Evidence timeline</h2>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Recorded</th><th>Effective</th><th>Type</th><th>Operation</th><th>Evidence</th></tr></thead>
+    <tbody>{% for row in detail.timeline %}<tr><td>{{ row.occurred_at }}</td><td>{{ row.effective_date }}</td><td>{{ row.entry_type }}</td><td>{{ row.operation }}{% if row.reversal %} <span class="badge text-bg-warning">Reversal</span>{% endif %}{% if row.operation == "RETURN_COLLATERAL" %} <a class="small" href="{% url 'loans:funding_loan_return_receipt_pdf' detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td>{{ row.summary }}</td></tr>{% empty %}<tr><td colspan="5" class="text-center py-4 text-muted">No operational evidence exists.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% if draft %}
+<hr class="my-4">
+<h2 class="h5">Cancel draft</h2>
+<form method="post" action="{% url 'loans:funding_loan_draft_cancel' detail.summary.funding_loan_id %}" class="row g-2 align-items-end">
+  {% csrf_token %}
+  <div class="col-md-8"><label class="form-label" for="{{ cancellation_form.reason.id_for_label }}">Reason</label>{{ cancellation_form.reason }}</div>
+  <div class="col-md-auto"><button class="btn btn-outline-danger" type="submit">Cancel draft</button></div>
+</form>
+{% endif %}
+{% endblock %}

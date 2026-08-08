@@ -39,6 +39,21 @@ from .documents import (
     LoanDocumentLayoutAssignment,
     LoanDocumentLayoutRevision,
 )
+from .funding import (
+    FundingLoan,
+    FundingLoanCancellation,
+    FundingLoanDraftCollateral,
+    FundingLoanDraftTerms,
+    FundingLoanEvent,
+    FundingLoanSequence,
+    FundingLoanTermsSnapshot,
+    FundingPledge,
+    FundingPledgeItem,
+    FundingPledgeReversal,
+    FundingReturn,
+    FundingReturnItem,
+    FundingReturnReversal,
+)
 
 __all__ = [
     "LoanChangeLog",
@@ -76,4 +91,17 @@ __all__ = [
     "LoanDocumentLayout",
     "LoanDocumentLayoutAssignment",
     "LoanDocumentLayoutRevision",
+    "FundingLoan",
+    "FundingLoanCancellation",
+    "FundingLoanDraftCollateral",
+    "FundingLoanDraftTerms",
+    "FundingLoanEvent",
+    "FundingLoanSequence",
+    "FundingLoanTermsSnapshot",
+    "FundingPledge",
+    "FundingPledgeItem",
+    "FundingPledgeReversal",
+    "FundingReturn",
+    "FundingReturnItem",
+    "FundingReturnReversal",
 ]

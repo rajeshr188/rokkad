@@ -1520,6 +1520,20 @@ class PawnLoanReleaseItem(models.Model):
 
     def clean(self):
         super().clean()
+        source_count = sum(
+            source_id is not None
+            for source_id in (
+                self.release_id,
+                self.auction_id,
+                self.renewal_id,
+                self.funding_pledge_id,
+                self.funding_return_id,
+            )
+        )
+        if source_count != 1:
+            raise ValidationError(
+                "A custody event requires exactly one base workflow source."
+            )
         if (
             self.release_id
             and self.collateral_item_id
@@ -1555,6 +1569,34 @@ class PawnCollateralCustodyEvent(models.Model):
     )
     renewal = models.ForeignKey(
         "PawnLoanRenewal",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
+    funding_pledge = models.ForeignKey(
+        "FundingPledge",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
+    funding_return = models.ForeignKey(
+        "FundingReturn",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
+    funding_pledge_reversal = models.ForeignKey(
+        "FundingPledgeReversal",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="custody_events",
+    )
+    funding_return_reversal = models.ForeignKey(
+        "FundingReturnReversal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -1606,22 +1648,50 @@ class PawnCollateralCustodyEvent(models.Model):
                 condition=~Q(from_state=F("to_state")),
                 name="loans_custody_state_changes",
             ),
+            models.UniqueConstraint(
+                fields=("funding_pledge_reversal", "collateral_item"),
+                name="loans_funding_pledge_custody_reversal_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("funding_return_reversal", "collateral_item"),
+                name="loans_funding_return_custody_reversal_uniq",
+            ),
             models.CheckConstraint(
                 condition=(
                     (
                         Q(release__isnull=False)
                         & Q(auction__isnull=True)
                         & Q(renewal__isnull=True)
+                        & Q(funding_pledge__isnull=True)
+                        & Q(funding_return__isnull=True)
                     )
                     | (
                         Q(release__isnull=True)
                         & Q(auction__isnull=False)
                         & Q(renewal__isnull=True)
+                        & Q(funding_pledge__isnull=True)
+                        & Q(funding_return__isnull=True)
                     )
                     | (
                         Q(release__isnull=True)
                         & Q(auction__isnull=True)
                         & Q(renewal__isnull=False)
+                        & Q(funding_pledge__isnull=True)
+                        & Q(funding_return__isnull=True)
+                    )
+                    | (
+                        Q(release__isnull=True)
+                        & Q(auction__isnull=True)
+                        & Q(renewal__isnull=True)
+                        & Q(funding_pledge__isnull=False)
+                        & Q(funding_return__isnull=True)
+                    )
+                    | (
+                        Q(release__isnull=True)
+                        & Q(auction__isnull=True)
+                        & Q(renewal__isnull=True)
+                        & Q(funding_pledge__isnull=True)
+                        & Q(funding_return__isnull=False)
                     )
                 ),
                 name="loans_custody_one_source",
@@ -1657,6 +1727,22 @@ class PawnCollateralCustodyEvent(models.Model):
                 raise ValidationError(
                     {"collateral_item": "Custody item must belong to the renewal chain."}
                 )
+        if self.funding_pledge_id and self.collateral_item_id:
+            pledge_item_exists = self.funding_pledge.items.filter(
+                collateral_item_id=self.collateral_item_id
+            ).exists()
+            if not pledge_item_exists:
+                raise ValidationError(
+                    {"collateral_item": "Custody item must belong to the funding pledge."}
+                )
+        if self.funding_return_id and self.collateral_item_id:
+            return_item_exists = self.funding_return.items.filter(
+                pledge_item__collateral_item_id=self.collateral_item_id
+            ).exists()
+            if not return_item_exists:
+                raise ValidationError(
+                    {"collateral_item": "Custody item must belong to the funding return."}
+                )
         if self.auction_reversal_id and self.auction_id:
             if self.auction_reversal.auction_id != self.auction_id:
                 raise ValidationError(
@@ -1683,6 +1769,30 @@ class PawnCollateralCustodyEvent(models.Model):
         elif self.release_reversal_id:
             raise ValidationError(
                 {"release_reversal": "Release reversal custody requires its release."}
+            )
+        if self.funding_pledge_reversal_id and self.funding_pledge_id:
+            if (
+                self.funding_pledge_reversal.funding_pledge_id
+                != self.funding_pledge_id
+            ):
+                raise ValidationError(
+                    {"funding_pledge_reversal": "Custody reversal must match the funding pledge."}
+                )
+        elif self.funding_pledge_reversal_id:
+            raise ValidationError(
+                {"funding_pledge_reversal": "Funding pledge reversal custody requires its pledge."}
+            )
+        if self.funding_return_reversal_id and self.funding_return_id:
+            if (
+                self.funding_return_reversal.funding_return_id
+                != self.funding_return_id
+            ):
+                raise ValidationError(
+                    {"funding_return_reversal": "Custody reversal must match the funding return."}
+                )
+        elif self.funding_return_reversal_id:
+            raise ValidationError(
+                {"funding_return_reversal": "Funding return reversal custody requires its return."}
             )
 
     def delete(self, *args, **kwargs):

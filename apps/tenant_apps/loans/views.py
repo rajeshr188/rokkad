@@ -1,14 +1,15 @@
-import uuid
 import hashlib
+import uuid
 from copy import deepcopy
-import fitz
 from decimal import Decimal
+
+import fitz
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse, HttpResponseGone
+from django.http import Http404, HttpResponse, HttpResponseGone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -39,6 +40,14 @@ from apps.tenant_apps.loans.forms import (
     LoanDocumentLayoutPackImportForm,
     LoanModuleFeatureGateForm,
     LoanSeriesSetupForm,
+    FundingLoanActivationForm,
+    FundingLoanCancellationForm,
+    FundingCollateralReturnForm,
+    FundingCorrectionForm,
+    FundingLoanClosureForm,
+    FundingLoanDraftForm,
+    FundingLoanDraftInputsForm,
+    FundingLoanRepaymentForm,
     PawnEconomicConfigurationForm,
     PawnFeePolicyForm,
     PawnAccrualForm,
@@ -93,22 +102,31 @@ def _fit_overlay_geometry(definition, target_page_size):
             )
     definition["page_size"] = target_page_size
 from apps.tenant_apps.loans.models import (
-    LoanLicense,
+    FundingLoan,
+    FundingLoanEvent,
+    FundingReturn,
     LoanDocumentLayout,
     LoanDocumentLayoutRevision,
+    LoanLicense,
     LoanSeries,
-    PawnLoanEconomicPolicy,
-    PawnLoanFeePolicy,
-    PawnMetalInterestRatePolicy,
     PawnLoan,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
-    PawnLoanNotice,
     PawnLoanAuction,
-    PawnLoanRenewal,
+    PawnLoanEconomicPolicy,
+    PawnLoanFeePolicy,
+    PawnLoanNotice,
     PawnLoanRelease,
+    PawnLoanRenewal,
+    PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.loans.selectors import (
+    FundingLoanSelectorError,
+    get_funding_loan_detail,
+    get_funding_loan_draft_inputs,
+    get_funding_loan_integrity_findings,
+    get_funding_settlement_readiness,
+    get_funding_loan_summaries,
     get_pawn_loan_balance,
     get_pawn_loan_notice_rows,
     get_pawn_loan_operations_snapshot,
@@ -117,7 +135,20 @@ from apps.tenant_apps.loans.selectors import (
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
+    ActivateSavedFundingLoanDraft,
+    BeginFundingSettlement,
+    CloseFundingLoan,
+    CancelFundingLoanDraft,
+    CreateFundingLoanDraft,
     CreatePawnDraftCommand,
+    FundingLoanServiceError,
+    FundingLoanDocumentService,
+    FundingCollateralInput,
+    RecordFundingRepayment,
+    ReverseFundingEvent,
+    ReverseFundingPledge,
+    ReverseFundingReturn,
+    ReturnFundingCollateral,
     LicenseSeriesError,
     LoanAccountingOutboxError,
     NumberAllocationError,
@@ -132,20 +163,32 @@ from apps.tenant_apps.loans.services import (
     PawnAuctionError,
     PawnRenewalError,
     RetainedCollateralInput,
+    SaveFundingLoanDraftInputs,
     UpdatePawnDraftCommand,
     activate_license,
+    activate_saved_funding_loan_draft,
+    begin_funding_settlement,
+    close_funding_loan,
     approve_pawn_loan,
     assess_pawn_loan_accounting_readiness,
     cancel_pawn_loan,
+    cancel_funding_loan_draft,
     capitalize_pawn_loan_interest,
     configure_sequence,
     create_license,
+    create_funding_loan_draft,
     create_pawn_draft,
     create_pawn_loan_economic_policy,
     create_pawn_loan_fee_policy,
     create_pawn_metal_interest_rate_policy,
     create_pawn_loan_notice,
     create_series,
+    record_funding_repayment,
+    reverse_funding_event,
+    reverse_funding_pledge,
+    reverse_funding_return,
+    return_funding_collateral,
+    save_funding_loan_draft_inputs,
     disburse_pawn_loan,
     dispatch_pawn_loan_notice,
     ensure_pawn_borrower_accounting,
@@ -1605,6 +1648,442 @@ def pawn_operations_console(request):
 @loans_setup_required
 def pawn_operations_runbook(request):
     return render(request, "loans/setup/operations_runbook.html")
+
+
+@loans_setup_required
+def funding_loan_read_console(request):
+    return render(
+        request,
+        "loans/setup/funding/list.html",
+        {
+            "funding_loans": get_funding_loan_summaries(),
+            "findings": get_funding_loan_integrity_findings(),
+        },
+    )
+
+
+@loans_setup_required
+def funding_loan_draft_create(request):
+    form = FundingLoanDraftForm(request.POST if request.method == "POST" else None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            funding_loan = create_funding_loan_draft(
+                CreateFundingLoanDraft(
+                    workspace_id=request.loans_workspace.pk,
+                    lender_id=form.cleaned_data["lender"].pk,
+                ),
+                actor=request.user,
+            )
+        except FundingLoanServiceError as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(
+                request,
+                f"FundingLoan draft {funding_loan.funding_number} created.",
+            )
+            return redirect("loans:funding_loan_read_detail", pk=funding_loan.pk)
+    return render(
+        request,
+        "loans/setup/funding/form.html",
+        {"form": form},
+    )
+
+
+@loans_setup_required
+def funding_loan_draft_inputs(request, pk):
+    try:
+        draft = get_funding_loan_draft_inputs(pk)
+    except FundingLoanSelectorError as exc:
+        raise Http404(str(exc)) from exc
+    initial = {
+        "principal_amount": draft.principal_amount,
+        "monthly_interest_rate": draft.monthly_interest_rate,
+        "activated_on": draft.activated_on,
+        "maturity_on": draft.maturity_on,
+        "maximum_funding_ltv_ratio": draft.maximum_funding_ltv_ratio,
+        "currency_quantum": draft.currency_quantum,
+        "collateral": draft.collateral_item_ids,
+    }
+    form = FundingLoanDraftInputsForm(
+        request.POST if request.method == "POST" else None,
+        workspace=request.loans_workspace,
+        initial=initial,
+    )
+    if request.method == "POST" and form.is_valid():
+        collateral = tuple(
+            FundingCollateralInput(item.pk, item.latest_appraised_value)
+            for item in form.cleaned_data["collateral"]
+        )
+        try:
+            save_funding_loan_draft_inputs(
+                SaveFundingLoanDraftInputs(
+                    workspace_id=request.loans_workspace.pk,
+                    funding_loan_id=pk,
+                    principal_amount=form.cleaned_data["principal_amount"],
+                    monthly_interest_rate=form.cleaned_data["monthly_interest_rate"],
+                    activated_on=form.cleaned_data["activated_on"],
+                    maturity_on=form.cleaned_data["maturity_on"],
+                    maximum_funding_ltv_ratio=form.cleaned_data["maximum_funding_ltv_ratio"],
+                    currency_quantum=form.cleaned_data["currency_quantum"],
+                    collateral=collateral,
+                ),
+                actor=request.user,
+            )
+        except FundingLoanServiceError as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "FundingLoan draft inputs saved and ready for review.")
+            return redirect("loans:funding_loan_read_detail", pk=pk)
+    return render(
+        request,
+        "loans/setup/funding/draft_inputs.html",
+        {"form": form, "funding_loan_id": pk, "draft": draft},
+    )
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_draft_cancel(request, pk):
+    form = FundingLoanCancellationForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "A cancellation reason is required.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    try:
+        funding_loan = cancel_funding_loan_draft(
+            CancelFundingLoanDraft(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+                reason=form.cleaned_data["reason"],
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f"FundingLoan draft {funding_loan.funding_number} cancelled.")
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_draft_activate(request, pk):
+    form = FundingLoanActivationForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Enter ACTIVATE exactly to confirm activation.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    try:
+        result = activate_saved_funding_loan_draft(
+            ActivateSavedFundingLoanDraft(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"FundingLoan {result.funding_loan.funding_number} activated; "
+            f"{result.pledge.items.count()} collateral item(s) handed to the lender.",
+        )
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_repayment(request, pk):
+    form = FundingLoanRepaymentForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Enter a valid repayment amount and effective date.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    try:
+        event = record_funding_repayment(
+            RecordFundingRepayment(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+                amount=form.cleaned_data["amount"],
+                effective_date=form.cleaned_data["effective_date"],
+                request_key=str(form.cleaned_data["request_key"]),
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            "Funding repayment recorded: "
+            f"fees {event.fee_amount}, interest {event.interest_amount}, "
+            f"principal {event.principal_amount}.",
+        )
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_begin_settlement(request, pk):
+    try:
+        funding_loan = begin_funding_settlement(
+            BeginFundingSettlement(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"FundingLoan {funding_loan.funding_number} entered settlement review.",
+        )
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_return_collateral(request, pk):
+    try:
+        detail = get_funding_loan_detail(pk)
+    except FundingLoanSelectorError as exc:
+        raise Http404(str(exc)) from exc
+    if detail.summary.state != "SETTLEMENT_PENDING":
+        messages.error(request, "Begin settlement review before returning collateral.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    form = FundingCollateralReturnForm(
+        request.POST,
+        collateral_rows=detail.collateral,
+        include_inactive=True,
+    )
+    if not form.is_valid():
+        messages.error(request, "Select valid active collateral and an effective date.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    try:
+        funding_return = return_funding_collateral(
+            ReturnFundingCollateral(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+                collateral_item_ids=tuple(
+                    int(item_id) for item_id in form.cleaned_data["collateral"]
+                ),
+                effective_date=form.cleaned_data["effective_date"],
+                request_key=str(form.cleaned_data["request_key"]),
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"Returned {funding_return.items.count()} collateral item(s) to the branch vault.",
+        )
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_close(request, pk):
+    form = FundingLoanClosureForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Enter CLOSE exactly to confirm closure.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    try:
+        funding_loan = close_funding_loan(
+            CloseFundingLoan(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"FundingLoan {funding_loan.funding_number} closed.",
+        )
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_reverse_event(request, pk, event_pk):
+    form = FundingCorrectionForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Enter a correction date and reason.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    try:
+        reverse_funding_event(
+            ReverseFundingEvent(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+                original_event_id=event_pk,
+                effective_date=form.cleaned_data["effective_date"],
+                reason=form.cleaned_data["reason"],
+                request_key=str(form.cleaned_data["request_key"]),
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Funding financial event corrected.")
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_reverse_return(request, pk, return_pk):
+    form = FundingCorrectionForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Enter a correction date and reason.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    try:
+        reverse_funding_return(
+            ReverseFundingReturn(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+                funding_return_id=return_pk,
+                effective_date=form.cleaned_data["effective_date"],
+                reason=form.cleaned_data["reason"],
+                request_key=str(form.cleaned_data["request_key"]),
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Funding collateral return corrected.")
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+@require_POST
+@loans_setup_required
+def funding_loan_reverse_pledge(request, pk):
+    form = FundingCorrectionForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Enter a correction date and reason.")
+        return redirect("loans:funding_loan_read_detail", pk=pk)
+    try:
+        reverse_funding_pledge(
+            ReverseFundingPledge(
+                workspace_id=request.loans_workspace.pk,
+                funding_loan_id=pk,
+                effective_date=form.cleaned_data["effective_date"],
+                reason=form.cleaned_data["reason"],
+                request_key=str(form.cleaned_data["request_key"]),
+            ),
+            actor=request.user,
+        )
+    except FundingLoanServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Funding pledge handoff corrected.")
+    return redirect("loans:funding_loan_read_detail", pk=pk)
+
+
+def _funding_document_loan(request, pk):
+    try:
+        return FundingLoan.objects.select_related(
+            "workspace", "lender", "terms_snapshot", "pledge"
+        ).get(pk=pk, workspace=request.loans_workspace)
+    except FundingLoan.DoesNotExist as exc:
+        raise Http404("FundingLoan was not found in the active workspace.") from exc
+
+
+@loans_setup_required
+def funding_loan_agreement_pdf(request, pk):
+    loan = _funding_document_loan(request, pk)
+    if not hasattr(loan, "terms_snapshot") or not hasattr(loan, "pledge"):
+        raise Http404("Funding agreement is available only after activation.")
+    detail = get_funding_loan_detail(pk)
+    return PawnLoanDocumentService.build_pdf_response(
+        FundingLoanDocumentService.render_agreement(loan, detail)
+    )
+
+
+@loans_setup_required
+def funding_loan_repayment_receipt_pdf(request, pk, event_pk):
+    loan = _funding_document_loan(request, pk)
+    try:
+        event = loan.events.get(pk=event_pk, event_kind="REPAYMENT")
+    except FundingLoanEvent.DoesNotExist as exc:
+        raise Http404("Funding repayment evidence was not found.") from exc
+    return PawnLoanDocumentService.build_pdf_response(
+        FundingLoanDocumentService.render_repayment_receipt(event)
+    )
+
+
+@loans_setup_required
+def funding_loan_return_receipt_pdf(request, pk, return_pk):
+    loan = _funding_document_loan(request, pk)
+    try:
+        funding_return = loan.returns.prefetch_related(
+            "items__pledge_item__collateral_item__loan"
+        ).get(pk=return_pk)
+    except FundingReturn.DoesNotExist as exc:
+        raise Http404("Funding return evidence was not found.") from exc
+    return PawnLoanDocumentService.build_pdf_response(
+        FundingLoanDocumentService.render_return_receipt(funding_return)
+    )
+
+
+@loans_setup_required
+def funding_loan_statement_pdf(request, pk):
+    loan = _funding_document_loan(request, pk)
+    if not hasattr(loan, "terms_snapshot"):
+        raise Http404("Funding statement is available only after activation.")
+    detail = get_funding_loan_detail(pk)
+    return PawnLoanDocumentService.build_pdf_response(
+        FundingLoanDocumentService.render_statement(loan, detail)
+    )
+
+
+@loans_setup_required
+def funding_loan_read_detail(request, pk):
+    try:
+        detail = get_funding_loan_detail(pk)
+    except FundingLoanSelectorError as exc:
+        raise Http404(str(exc)) from exc
+    draft = None
+    if detail.summary.state == "DRAFT":
+        draft = get_funding_loan_draft_inputs(pk)
+    settlement = None
+    if detail.summary.state in {"ACTIVE", "SETTLEMENT_PENDING"}:
+        settlement = get_funding_settlement_readiness(pk, detail=detail)
+    return render(
+        request,
+        "loans/setup/funding/detail.html",
+        {
+            "detail": detail,
+            "draft": draft,
+            "settlement": settlement,
+            "activation_form": FundingLoanActivationForm(),
+            "cancellation_form": FundingLoanCancellationForm(),
+            "closure_form": FundingLoanClosureForm(),
+            "correction_form": FundingCorrectionForm(
+                initial={
+                    "effective_date": timezone.localdate(),
+                    "request_key": uuid.uuid4(),
+                }
+            ),
+            "repayment_form": FundingLoanRepaymentForm(
+                initial={
+                    "effective_date": timezone.localdate(),
+                    "request_key": uuid.uuid4(),
+                }
+            ),
+            "return_form": FundingCollateralReturnForm(
+                collateral_rows=detail.collateral,
+                initial={
+                    "effective_date": timezone.localdate(),
+                    "request_key": uuid.uuid4(),
+                },
+            ),
+        },
+    )
 
 
 @loans_setup_required

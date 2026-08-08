@@ -17,8 +17,14 @@ from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.tenant_apps.loans.access import assert_loans_setup_access
-from apps.tenant_apps.loans.domain import LoanDocumentKind
+from apps.tenant_apps.loans.domain import CollateralCustodyState, CollateralMetal, LoanDocumentKind
+from apps.tenant_apps.loans.domain.future_funding import FUNDING_LOAN_RUNTIME_SUPPORTED, FundingLoanState
 from apps.tenant_apps.loans.models import (
+    FundingLoan,
+    FundingLoanCancellation,
+    FundingLoanDraftCollateral,
+    FundingLoanDraftTerms,
+    FundingLoanSequence,
     LoanChangeLog,
     LoanLicense,
     LoanDocumentIssue,
@@ -27,6 +33,7 @@ from apps.tenant_apps.loans.models import (
     LoanNumberSequence,
     LoanSeries,
     PawnLoan,
+    PawnCollateralItem,
     PawnLoanApprovalSnapshot,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
@@ -362,6 +369,528 @@ class LoansSetupUiTests(TenantTestCase):
             self.tenant_get(reverse("loans:document_layout_overlay_designer", args=[1])).status_code,
             403,
         )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:funding_loan_read_console")).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:funding_loan_read_detail", args=[1])).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:funding_loan_draft_create")).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:funding_loan_draft_inputs", args=[1])).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_post(reverse("loans:funding_loan_draft_activate", args=[1]), {"confirmation": "ACTIVATE"}).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_post(
+                reverse("loans:funding_loan_repayment", args=[1]),
+                {
+                    "amount": "1.00",
+                    "effective_date": "2026-08-08",
+                    "request_key": str(uuid.uuid4()),
+                },
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_post(
+                reverse("loans:funding_loan_begin_settlement", args=[1]), {}
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_post(
+                reverse("loans:funding_loan_return_collateral", args=[1]),
+                {
+                    "collateral": ["1"],
+                    "effective_date": "2026-08-08",
+                    "request_key": str(uuid.uuid4()),
+                },
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_post(
+                reverse("loans:funding_loan_close", args=[1]),
+                {"confirmation": "CLOSE"},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_post(
+                reverse("loans:funding_loan_reverse_event", args=[1, 1]),
+                {
+                    "effective_date": "2026-08-08",
+                    "reason": "Correction",
+                    "request_key": str(uuid.uuid4()),
+                },
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:funding_loan_statement_pdf", args=[1])).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_post(reverse("loans:funding_loan_draft_cancel", args=[1]), {"reason": "No"}).status_code,
+            403,
+        )
+
+    def test_owner_can_create_funding_draft_with_active_lender_only(self):
+        active_lender = Party.objects.create(
+            display_name="Active funding lender",
+            status=Party.PartyStatus.ACTIVE,
+        )
+        inactive_lender = Party.objects.create(
+            display_name="Inactive funding lender",
+            status=Party.PartyStatus.INACTIVE,
+        )
+        create_url = reverse("loans:funding_loan_draft_create")
+
+        page = self.tenant_get(create_url)
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Active funding lender")
+        self.assertNotContains(page, "Inactive funding lender")
+
+        rejected = self.tenant_post(create_url, {"lender": inactive_lender.pk})
+        self.assertEqual(rejected.status_code, 200)
+        self.assertContains(rejected, "Select a valid choice")
+        self.assertEqual(FundingLoan.objects.count(), 0)
+        self.assertFalse(FundingLoanSequence.objects.exists())
+
+        response = self.tenant_post(create_url, {"lender": active_lender.pk})
+        funding_loan = FundingLoan.objects.get()
+
+        self.assertRedirects(
+            response,
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(funding_loan.funding_number, "FL-000001")
+        self.assertEqual(funding_loan.lender, active_lender)
+        self.assertEqual(funding_loan.workspace, self.tenant)
+        self.assertEqual(funding_loan.created_by, self.owner)
+        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
+
+    def test_owner_can_complete_and_cancel_funding_draft_without_activation(self):
+        lender = Party.objects.create(
+            display_name="Draft completion lender",
+            status=Party.PartyStatus.ACTIVE,
+        )
+        license, series = self._configured_setup()
+        eligible_loan = self._loan(license, series, "PL-FUND-1", state="ACTIVE")
+        ineligible_loan = self._loan(license, series, "PL-FUND-2", state="DRAFT")
+        eligible_item = PawnCollateralItem.objects.create(
+            loan=eligible_loan,
+            description="Eligible gold chain",
+            metal=CollateralMetal.GOLD.value,
+            gross_weight=Decimal("10.0000"),
+            net_weight=Decimal("9.0000"),
+            purity_percentage=Decimal("91.6000"),
+            latest_appraised_value=Decimal("10000.00"),
+            custody_state=CollateralCustodyState.IN_VAULT.value,
+        )
+        PawnCollateralItem.objects.create(
+            loan=ineligible_loan,
+            description="Draft-loan gold ring",
+            metal=CollateralMetal.GOLD.value,
+            gross_weight=Decimal("5.0000"),
+            net_weight=Decimal("4.5000"),
+            purity_percentage=Decimal("91.6000"),
+            latest_appraised_value=Decimal("5000.00"),
+            custody_state=CollateralCustodyState.IN_VAULT.value,
+        )
+        self.tenant_post(reverse("loans:funding_loan_draft_create"), {"lender": lender.pk})
+        funding_loan = FundingLoan.objects.get()
+        inputs_url = reverse("loans:funding_loan_draft_inputs", args=[funding_loan.pk])
+
+        page = self.tenant_get(inputs_url)
+        self.assertContains(page, "Eligible gold chain")
+        self.assertNotContains(page, "Draft-loan gold ring")
+
+        response = self.tenant_post(
+            inputs_url,
+            {
+                "principal_amount": "7000.00",
+                "monthly_interest_rate": "1.500000",
+                "activated_on": "2026-08-08",
+                "maturity_on": "2026-11-08",
+                "maximum_funding_ltv_ratio": "0.800000",
+                "currency_quantum": "0.0100",
+                "collateral": [eligible_item.pk],
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk]),
+            fetch_redirect_response=False,
+        )
+        funding_loan.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.DRAFT.value)
+        self.assertTrue(FundingLoanDraftTerms.objects.filter(funding_loan=funding_loan).exists())
+        self.assertTrue(FundingLoanDraftCollateral.objects.filter(funding_loan=funding_loan, collateral_item=eligible_item).exists())
+        self.assertFalse(hasattr(funding_loan, "terms_snapshot"))
+        eligible_item.refresh_from_db()
+        self.assertEqual(eligible_item.custody_state, CollateralCustodyState.IN_VAULT.value)
+
+        detail = self.tenant_get(reverse("loans:funding_loan_read_detail", args=[funding_loan.pk]))
+        self.assertContains(detail, "pass the current activation policy")
+        self.assertContains(detail, "Servicing and accounting remain unavailable")
+
+        rejected = self.tenant_post(
+            reverse("loans:funding_loan_draft_cancel", args=[funding_loan.pk]),
+            {"reason": ""},
+        )
+        self.assertEqual(rejected.status_code, 302)
+        funding_loan.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.DRAFT.value)
+
+        self.tenant_post(
+            reverse("loans:funding_loan_draft_cancel", args=[funding_loan.pk]),
+            {"reason": "Lender withdrew the proposal"},
+        )
+        funding_loan.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.CANCELLED.value)
+        cancellation = FundingLoanCancellation.objects.get(funding_loan=funding_loan)
+        self.assertEqual(cancellation.reason, "Lender withdrew the proposal")
+        self.assertEqual(cancellation.actor, self.owner)
+        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
+
+    def test_owner_can_activate_saved_funding_draft_with_exact_confirmation(self):
+        lender = Party.objects.create(
+            display_name="Activation lender",
+            status=Party.PartyStatus.ACTIVE,
+        )
+        license, series = self._configured_setup()
+        pawn_loan = self._loan(license, series, "PL-ACTIVATE", state="ACTIVE")
+        collateral = PawnCollateralItem.objects.create(
+            loan=pawn_loan,
+            description="Activation gold chain",
+            metal=CollateralMetal.GOLD.value,
+            gross_weight=Decimal("10.0000"),
+            net_weight=Decimal("9.0000"),
+            purity_percentage=Decimal("91.6000"),
+            latest_appraised_value=Decimal("10000.00"),
+            custody_state=CollateralCustodyState.IN_VAULT.value,
+        )
+        self.tenant_post(reverse("loans:funding_loan_draft_create"), {"lender": lender.pk})
+        funding_loan = FundingLoan.objects.get()
+        self.tenant_post(
+            reverse("loans:funding_loan_draft_inputs", args=[funding_loan.pk]),
+            {
+                "principal_amount": "7000.00",
+                "monthly_interest_rate": "1.500000",
+                "activated_on": "2026-08-08",
+                "maturity_on": "2026-11-08",
+                "maximum_funding_ltv_ratio": "0.800000",
+                "currency_quantum": "0.0100",
+                "collateral": [collateral.pk],
+            },
+        )
+        activate_url = reverse("loans:funding_loan_draft_activate", args=[funding_loan.pk])
+
+        rejected = self.tenant_post(activate_url, {"confirmation": "activate"})
+        self.assertEqual(rejected.status_code, 302)
+        funding_loan.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.DRAFT.value)
+        self.assertEqual(funding_loan.events.count(), 0)
+
+        response = self.tenant_post(activate_url, {"confirmation": "ACTIVATE"})
+        self.assertRedirects(
+            response,
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk]),
+            fetch_redirect_response=False,
+        )
+        funding_loan.refresh_from_db()
+        collateral.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.ACTIVE.value)
+        self.assertEqual(funding_loan.events.count(), 1)
+        self.assertTrue(hasattr(funding_loan, "terms_snapshot"))
+        self.assertTrue(hasattr(funding_loan, "pledge"))
+        self.assertEqual(funding_loan.pledge.items.count(), 1)
+        self.assertEqual(collateral.custody_state, CollateralCustodyState.WITH_FUNDING_LENDER.value)
+        self.assertFalse(FundingLoanDraftTerms.objects.filter(funding_loan=funding_loan).exists())
+        self.assertFalse(FundingLoanDraftCollateral.objects.filter(funding_loan=funding_loan).exists())
+        detail = self.tenant_get(reverse("loans:funding_loan_read_detail", args=[funding_loan.pk]))
+        self.assertContains(detail, "WITH_FUNDING_LENDER")
+        self.assertNotContains(detail, "Activate and hand off collateral")
+
+        repayment_url = reverse("loans:funding_loan_repayment", args=[funding_loan.pk])
+        rejected = self.tenant_post(
+            repayment_url,
+            {
+                "amount": "7000.01",
+                "effective_date": "2026-09-08",
+                "request_key": str(uuid.uuid4()),
+            },
+        )
+        self.assertEqual(rejected.status_code, 302)
+        self.assertEqual(funding_loan.events.count(), 1)
+
+        request_key = str(uuid.uuid4())
+        repayment = {
+            "amount": "1000.00",
+            "effective_date": "2026-09-08",
+            "request_key": request_key,
+        }
+        self.tenant_post(repayment_url, repayment)
+        self.tenant_post(repayment_url, repayment)
+        self.assertEqual(funding_loan.events.count(), 2)
+        repayment_event = funding_loan.events.get(operation="RECORD_REPAYMENT")
+        self.assertEqual(repayment_event.principal_amount, Decimal("1000.0000"))
+        self.assertEqual(repayment_event.interest_amount, Decimal("0.0000"))
+        self.assertEqual(repayment_event.fee_amount, Decimal("0.0000"))
+        self.assertEqual(repayment_event.actor, self.owner)
+
+        for document_url in (
+            reverse("loans:funding_loan_agreement_pdf", args=[funding_loan.pk]),
+            reverse("loans:funding_loan_statement_pdf", args=[funding_loan.pk]),
+            reverse(
+                "loans:funding_loan_repayment_receipt_pdf",
+                args=[funding_loan.pk, repayment_event.pk],
+            ),
+        ):
+            document = self.tenant_get(document_url)
+            self.assertEqual(document.status_code, 200)
+            self.assertEqual(document["Content-Type"], "application/pdf")
+            self.assertTrue(document.content.startswith(b"%PDF"))
+            self.assertTrue(document["X-Rokkad-Verification-ID"])
+
+        statement = self.tenant_get(
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk])
+        )
+        self.assertContains(statement, "Funding statement")
+        self.assertContains(statement, "RECORD_REPAYMENT")
+        self.assertContains(statement, "-1000.0000")
+        self.assertContains(statement, "6000.0000")
+        self.assertContains(statement, self.owner.username)
+
+        correction_key = str(uuid.uuid4())
+        correction_payload = {
+            "effective_date": "2026-09-09",
+            "reason": "Repayment was entered against the wrong source receipt",
+            "request_key": correction_key,
+        }
+        correction_url = reverse(
+            "loans:funding_loan_reverse_event",
+            args=[funding_loan.pk, repayment_event.pk],
+        )
+        self.tenant_post(correction_url, correction_payload)
+        self.tenant_post(correction_url, correction_payload)
+        reversal = funding_loan.events.get(reversal_of=repayment_event)
+        self.assertEqual(reversal.reason, correction_payload["reason"])
+        self.assertEqual(reversal.actor, self.owner)
+        self.assertEqual(funding_loan.events.filter(reversal_of=repayment_event).count(), 1)
+        corrected_detail = self.tenant_get(
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk])
+        )
+        self.assertContains(corrected_detail, "Reversal")
+        self.assertContains(corrected_detail, "7000.0000")
+
+        self.tenant_post(
+            repayment_url,
+            {
+                "amount": "1000.00",
+                "effective_date": "2026-09-10",
+                "request_key": str(uuid.uuid4()),
+            },
+        )
+
+        active_detail = self.tenant_get(
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk])
+        )
+        self.assertContains(active_detail, "Settlement readiness")
+        self.assertNotContains(active_detail, "Begin settlement review")
+        self.assertNotContains(active_detail, "Return selected collateral")
+        blocked_return = self.tenant_post(
+            reverse("loans:funding_loan_return_collateral", args=[funding_loan.pk]),
+            {
+                "collateral": [str(collateral.pk)],
+                "effective_date": "2026-09-08",
+                "request_key": str(uuid.uuid4()),
+            },
+        )
+        self.assertEqual(blocked_return.status_code, 302)
+        self.assertEqual(funding_loan.returns.count(), 0)
+        collateral.refresh_from_db()
+        self.assertEqual(
+            collateral.custody_state,
+            CollateralCustodyState.WITH_FUNDING_LENDER.value,
+        )
+
+        self.tenant_post(
+            repayment_url,
+            {
+                "amount": "6000.00",
+                "effective_date": "2026-10-08",
+                "request_key": str(uuid.uuid4()),
+            },
+        )
+        settled_detail = self.tenant_get(
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk])
+        )
+        self.assertContains(settled_detail, "Begin settlement review")
+
+        settlement_url = reverse(
+            "loans:funding_loan_begin_settlement", args=[funding_loan.pk]
+        )
+        self.tenant_post(settlement_url, {})
+        self.tenant_post(settlement_url, {})
+        funding_loan.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.SETTLEMENT_PENDING.value)
+        self.assertEqual(funding_loan.updated_by, self.owner)
+
+        pending_detail = self.tenant_get(
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk])
+        )
+        self.assertContains(pending_detail, "Return selected collateral")
+        self.assertNotContains(pending_detail, "Close FundingLoan")
+        close_url = reverse("loans:funding_loan_close", args=[funding_loan.pk])
+        self.tenant_post(close_url, {"confirmation": "CLOSE"})
+        funding_loan.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.SETTLEMENT_PENDING.value)
+        return_url = reverse(
+            "loans:funding_loan_return_collateral", args=[funding_loan.pk]
+        )
+        return_key = str(uuid.uuid4())
+        return_payload = {
+            "collateral": [str(collateral.pk)],
+            "effective_date": "2026-10-08",
+            "request_key": return_key,
+        }
+        self.tenant_post(return_url, return_payload)
+        self.tenant_post(return_url, return_payload)
+        collateral.refresh_from_db()
+        self.assertEqual(collateral.custody_state, CollateralCustodyState.IN_VAULT.value)
+        self.assertEqual(funding_loan.returns.count(), 1)
+        funding_return = funding_loan.returns.get()
+        self.assertEqual(funding_return.actor, self.owner)
+        self.assertEqual(funding_return.items.count(), 1)
+        return_receipt = self.tenant_get(
+            reverse(
+                "loans:funding_loan_return_receipt_pdf",
+                args=[funding_loan.pk, funding_return.pk],
+            )
+        )
+        self.assertEqual(return_receipt.status_code, 200)
+        self.assertEqual(return_receipt["Content-Type"], "application/pdf")
+        self.assertTrue(return_receipt.content.startswith(b"%PDF"))
+        self.assertIn(f"FundingReturn:{funding_return.pk}", return_receipt["X-Rokkad-Verification-ID"])
+
+        ready_detail = self.tenant_get(
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk])
+        )
+        self.assertTrue(ready_detail.context["settlement"].financially_settled)
+        self.assertTrue(ready_detail.context["settlement"].collateral_returned)
+        self.assertTrue(ready_detail.context["settlement"].closure_ready)
+        self.assertContains(ready_detail, "Financially settled:")
+        self.assertContains(ready_detail, "Collateral returned:")
+        self.assertContains(ready_detail, "RETURN_COLLATERAL")
+        self.assertNotContains(ready_detail, "Return selected collateral")
+        self.assertContains(ready_detail, "Close FundingLoan")
+
+        self.tenant_post(close_url, {"confirmation": "close"})
+        funding_loan.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.SETTLEMENT_PENDING.value)
+        self.tenant_post(close_url, {"confirmation": "CLOSE"})
+        self.tenant_post(close_url, {"confirmation": "CLOSE"})
+        funding_loan.refresh_from_db()
+        self.assertEqual(funding_loan.state, FundingLoanState.CLOSED.value)
+        self.assertEqual(funding_loan.updated_by, self.owner)
+
+        closed_detail = self.tenant_get(
+            reverse("loans:funding_loan_read_detail", args=[funding_loan.pk])
+        )
+        self.assertContains(closed_detail, "CLOSED")
+        self.assertNotContains(closed_detail, "Record repayment")
+        self.assertNotContains(closed_detail, "Begin settlement review")
+        self.assertNotContains(closed_detail, "Return selected collateral")
+        self.assertNotContains(closed_detail, "Close FundingLoan")
+        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
+
+    def test_owner_can_open_read_only_funding_console_and_detail(self):
+        summary = type(
+            "Summary",
+            (),
+            {
+                "funding_loan_id": 41,
+                "funding_number": "FL-000041",
+                "lender_name": "Funding lender",
+                "state": "ACTIVE",
+                "principal_outstanding": Decimal("7000.0000"),
+                "interest_outstanding": Decimal("90.0000"),
+                "fees_outstanding": Decimal("10.0000"),
+                "total_due": Decimal("7100.0000"),
+                "active_collateral_count": 2,
+            },
+        )()
+        finding = type(
+            "Finding",
+            (),
+            {
+                "code": "CUSTODY_TIMELINE",
+                "funding_loan_id": 41,
+                "object_type": "collateral_item",
+                "object_id": 9,
+                "message": "Latest custody evidence does not match the projection.",
+            },
+        )()
+        detail = type(
+            "Detail",
+            (),
+            {
+                "summary": summary,
+                "activated_on": date(2026, 8, 8),
+                "maturity_on": date(2026, 11, 8),
+                "monthly_interest_rate": Decimal("1.500000"),
+                "maximum_funding_ltv_ratio": Decimal("0.800000"),
+                "collateral": (),
+                "timeline": (),
+            },
+        )()
+
+        with patch(
+            "apps.tenant_apps.loans.views.get_funding_loan_summaries",
+            return_value=(summary,),
+        ), patch(
+            "apps.tenant_apps.loans.views.get_funding_loan_integrity_findings",
+            return_value=(finding,),
+        ):
+            response = self.tenant_get(reverse("loans:funding_loan_read_console"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "FundingLoan read console")
+        self.assertContains(response, "FL-000041")
+        self.assertContains(response, "CUSTODY_TIMELINE")
+        self.assertContains(response, "Controlled MVP preview")
+
+        with patch(
+            "apps.tenant_apps.loans.views.get_funding_loan_detail",
+            return_value=detail,
+        ):
+            response = self.tenant_get(
+                reverse("loans:funding_loan_read_detail", args=[41])
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Funding lender")
+        self.assertContains(response, "Operational balance")
+        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
+
+    def test_funding_read_detail_returns_404_for_unknown_workspace_loan(self):
+        response = self.tenant_get(
+            reverse("loans:funding_loan_read_detail", args=[999999])
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_owner_can_open_document_layout_starter_guide(self):
         response = self.tenant_get(reverse("loans:document_layout_guide"))
