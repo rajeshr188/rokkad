@@ -565,6 +565,9 @@ Historical validation snapshots remain optional and were not introduced.
 
 #### E6.3 Add Workspace Feature Gate And Pilot — Completed 2026-08-04
 
+Historical implementation record: its single-origination-owner behavior is
+superseded by the 2026-08-08 permanent-independent-coexistence ADR.
+
 - When disabled, preserve current Girvi behavior.
 - When enabled, route new-loan creation to Loans, prevent new Girvi loans, and
   retain Girvi servicing for its existing active loans.
@@ -572,19 +575,13 @@ Historical validation snapshots remain optional and were not introduced.
 Acceptance: flag rollback restores navigation without losing new Loans records;
 ownership rules cannot be bypassed by direct URL.
 
-Result: the central audited workspace preference
-`loan__new_module_enabled` now controls new-pawn-loan ownership and defaults to
-Girvi. Owner/Admin users manage it through `/loans/setup/cutover/`. Enabling it
-routes the canonical workspace Loans entry and all known new-loan links to
-Loans, exposes Legacy Girvi for continued servicing, and guards Girvi create,
-customer-create, preview, GET, POST, and HTMX entrypoints with a server-side
-redirect to Loans. Customer-originated links preserve the shared Party when
-available. Disabling the flag restores Girvi navigation and origination without
-deleting, migrating, or changing ownership of any PawnLoan record. The setting
-is tenant-bound and audited; non-administrators cannot change it through the
-direct URL. Five focused tenant tests cover enable, disable, retained records,
-canonical routing, direct Girvi blocking, Party handoff, coexistence navigation,
-and administration denial. No migration is required.
+Historical result: the central audited workspace preference
+`loan__new_module_enabled` controlled new-pawn-loan routing and defaulted to
+Girvi. Owner/Admin users managed it through `/loans/setup/cutover/`. At that
+checkpoint, enabling it routed known new-loan links to Loans and guarded Girvi
+creation entrypoints. Current code no longer blocks Girvi creation; the setting
+is transitional default-route behavior only until independent module
+availability and default-module preferences replace it.
 The complete 148-test tenant-aware Loans suite passes, together with central
 preference tests, route/navigation intent checks, Django checks, migration-drift,
 compile, and whitespace checks.
