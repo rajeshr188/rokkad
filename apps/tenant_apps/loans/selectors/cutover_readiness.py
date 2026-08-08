@@ -9,9 +9,6 @@ from django.db.migrations.recorder import MigrationRecorder
 
 from apps.tenant_apps.loans.feature_flags import is_new_loans_enabled
 from apps.tenant_apps.loans.models import current_tenant_workspace_id
-from apps.tenant_apps.loans.selectors.comparison import (
-    get_loan_coexistence_comparison,
-)
 from apps.tenant_apps.loans.selectors.operations import (
     get_pawn_loan_operations_snapshot,
 )
@@ -70,7 +67,6 @@ def get_pawn_loan_cutover_readiness(*, as_of_date, acknowledgements=None):
     workspace = getattr(connection, "tenant", None)
     operations = get_pawn_loan_operations_snapshot()
     reports = get_pawn_loan_reports(as_of_date=as_of_date)
-    comparison = get_loan_coexistence_comparison(as_of_date=as_of_date)
     return build_pawn_loan_cutover_readiness(
         workspace_id=workspace_id,
         as_of_date=as_of_date,
@@ -78,7 +74,6 @@ def get_pawn_loan_cutover_readiness(*, as_of_date, acknowledgements=None):
         pending_migrations=_pending_loans_migrations(),
         operations=operations,
         reports=reports,
-        comparison=comparison,
         acknowledgements=acknowledgements,
     )
 
@@ -91,7 +86,6 @@ def build_pawn_loan_cutover_readiness(
     pending_migrations,
     operations,
     reports,
-    comparison,
     acknowledgements=None,
 ):
     acknowledgements = acknowledgements or {}
@@ -147,15 +141,6 @@ def build_pawn_loan_cutover_readiness(
                 "Loans source-to-DEA reconciliation has no findings."
                 if not reports.issues
                 else f"Loans reconciliation has {len(reports.issues)} finding(s)."
-            ),
-        ),
-        PawnLoanCutoverCheck(
-            "COEXISTENCE_COMPARISON",
-            comparison.is_match,
-            (
-                "Girvi/Loans coexistence comparison has zero mismatches."
-                if comparison.is_match
-                else f"Coexistence comparison has {comparison.mismatch_count} mismatch(es)."
             ),
         ),
     ]

@@ -2,7 +2,7 @@ from django.apps import apps
 from django.db import transaction
 from django.utils import timezone
 
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
+from apps.tenant_apps.girvi.models import GivenLoan
 
 from .release_lifecycle import ReleaseCreateCommand, ReleaseLifecycleService
 

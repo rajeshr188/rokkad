@@ -20,8 +20,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce, ExtractYear, Round
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
-from .models import Series
+from .models import GivenLoan, Series
 from .service_modules.accrual import (
     InterestAccrualCommand,
     InterestAccrualPreview,

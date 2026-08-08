@@ -11,7 +11,7 @@ from apps.tenant_apps.girvi.integrations.dea_adapter import (
     resolve_customer_account,
     reverse_payment_by_marker,
 )
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, TakenLoan
+from apps.tenant_apps.girvi.models import GivenLoan, TakenLoan
 from apps.tenant_apps.girvi.service_modules.loan_posting import GivenLoanPostingService
 
 PaymentVoucher = None  # Compatibility alias for older tests; posting uses DEA facade.

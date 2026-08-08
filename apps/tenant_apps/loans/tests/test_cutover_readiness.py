@@ -38,7 +38,6 @@ class PawnLoanCutoverReadinessTests(SimpleTestCase):
                 accounting_blocker_count=2,
             ),
             reports=SimpleNamespace(issues=(object(),)),
-            comparison=SimpleNamespace(is_match=False, mismatch_count=3),
             acknowledgements={},
         )
 
@@ -52,7 +51,6 @@ class PawnLoanCutoverReadinessTests(SimpleTestCase):
                 "OUTBOX_HEALTH",
                 "ACCOUNTING_READY",
                 "LOANS_RECONCILIATION",
-                "COEXISTENCE_COMPARISON",
                 *(code for code, _ in MANUAL_ACKNOWLEDGEMENTS),
             },
         )
@@ -111,7 +109,6 @@ class PawnLoanCutoverReadinessTests(SimpleTestCase):
             "pending_migrations": (),
             "operations": self._operations(),
             "reports": SimpleNamespace(issues=()),
-            "comparison": SimpleNamespace(is_match=True, mismatch_count=0),
             "acknowledgements": {
                 code: True for code, _ in MANUAL_ACKNOWLEDGEMENTS
             },

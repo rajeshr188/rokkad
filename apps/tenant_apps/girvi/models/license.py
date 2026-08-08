@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from django.apps import apps
 from django.db import models
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
@@ -212,8 +213,7 @@ class License(models.Model):
         total_loan_amount = 0
 
         for series in self.series_set.all():
-            # Use GivenLoan for refactored model
-            from .loan_refactored import GivenLoan
+            GivenLoan = apps.get_model("girvi", "GivenLoan")
 
             unreleased_loans = GivenLoan.objects.filter(series=series).unreleased()
             loan_count = unreleased_loans.count()
@@ -477,8 +477,8 @@ class Series(models.Model):
             return self.given_loans.all()
         if hasattr(self, "loan_set"):
             return self.loan_set.all()
-        from .loan_refactored import GivenLoan
 
+        GivenLoan = apps.get_model("girvi", "GivenLoan")
         return GivenLoan.objects.filter(series=self)
 
     def _active_loans_queryset(self):

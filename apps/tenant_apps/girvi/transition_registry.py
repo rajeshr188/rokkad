@@ -50,24 +50,6 @@ class TransitionFormUISpec:
     badge_class: str
 
 
-TRANSITION_ALIAS_MAP = {
-    "approve": "approve_loan",
-    "reject": "reject_loan",
-    "cancel": "cancel_loan",
-    "disburse": "disburse_loan",
-    "undo_disburse": "undo_disbursal",
-    "mark_defaulted": "mark_npa",
-    "mark_auctioned": "complete_auction",
-    "mark sold": "mark_sold",
-    "release": "request_closure",
-    "release_to_customer": "request_closure",
-    "deliver": "request_closure",
-    "close": "request_closure",
-    "renew": "request_renewal",
-    "writeoff": "write_off_loan",
-}
-
-
 TRANSITION_REGISTRY: dict[str, TransitionSpec] = {
     "undo_release": TransitionSpec("undo_release", "apps.tenant_apps.girvi.forms.UndoReleaseLoanForm", "apps.tenant_apps.girvi.transitions.payloads.UndoReleasePayload", get_transition_command_class("undo_release")),
     "undo_repledge": TransitionSpec("undo_repledge", "apps.tenant_apps.girvi.forms.UndoRepledgeLoanForm", "apps.tenant_apps.girvi.transitions.payloads.UndoRepledgePayload", get_transition_command_class("undo_repledge")),
@@ -407,23 +389,10 @@ TRANSITION_FORM_UI_REGISTRY: dict[str, TransitionFormUISpec] = {
 }
 
 
-LEGACY_TRANSITION_FORM_UI_COMPAT_REGISTRY: dict[str, TransitionFormUISpec] = {
-    "mark_sold": TransitionFormUISpec("mark_sold", "Record Sale", "💰", "bg-secondary"),
-    "repledge": TransitionFormUISpec("repledge", "Repledge Loan", "🔁", "bg-info"),
-    "undo_release": TransitionFormUISpec(
-        "undo_release", "Undo Release", "↩", "bg-secondary"
-    ),
-    "undo_repledge": TransitionFormUISpec(
-        "undo_repledge", "Undo Repledge", "↩", "bg-secondary"
-    ),
-}
-
-
 def normalize_transition_name(raw_name: str | None) -> str:
     if not raw_name:
         return ""
-    cleaned = str(raw_name).strip()
-    return TRANSITION_ALIAS_MAP.get(cleaned, cleaned)
+    return str(raw_name).strip()
 
 
 def get_transition_form_class(transition_name: str):
@@ -522,7 +491,6 @@ def get_transition_form_ui(transition_name: str) -> TransitionFormUISpec:
     key = normalize_transition_name(transition_name)
     return (
         TRANSITION_FORM_UI_REGISTRY.get(key)
-        or LEGACY_TRANSITION_FORM_UI_COMPAT_REGISTRY.get(key)
         or
         TransitionFormUISpec(
             key=key,

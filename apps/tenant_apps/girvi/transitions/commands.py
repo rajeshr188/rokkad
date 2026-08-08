@@ -6,6 +6,11 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
+from apps.tenant_apps.girvi.integrations.notification_adapter import (
+    create_girvi_reminder_batch,
+    get_default_notice_channel,
+)
+from apps.tenant_apps.girvi.models import LoanChangeLog
 from apps.tenant_apps.girvi.service_modules.transition_posting import (
     post_auction_recovery_for_transition,
     post_sale_recovery_for_transition,
@@ -15,11 +20,7 @@ from apps.tenant_apps.girvi.service_modules.transition_side_effects import (
     execute_recovery_transition,
     parse_recovery_amount,
 )
-from apps.tenant_apps.girvi.integrations.notification_adapter import (
-    create_girvi_reminder_batch,
-    get_default_notice_channel,
-)
-from apps.tenant_apps.girvi.models import LoanChangeLog
+
 from .types import TransitionResult
 
 logger = logging.getLogger(__name__)
@@ -81,7 +82,7 @@ class DisburseTransitionCommand(BaseLoanTransitionCommand):
     transition_name = "disburse_loan"
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
-        from apps.tenant_apps.girvi.models.loan_refactored import (
+        from apps.tenant_apps.girvi.models import (
             LoanLifecycleState,
             TakenLoanLifecycleState,
         )
@@ -191,7 +192,7 @@ class MarkAuctionedTransitionCommand(AuctionNoticeMixin, BaseLoanTransitionComma
     transition_name = "complete_auction"
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
-        from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+        from apps.tenant_apps.girvi.models import LoanLifecycleState
 
         payload_kwargs = self._payload_to_kwargs(payload)
         parsed_amount = parse_recovery_amount(
@@ -241,7 +242,7 @@ class MarkSoldTransitionCommand(BaseLoanTransitionCommand):
     transition_name = "mark_sold"
 
     def execute(self, transition_method, payload=None) -> TransitionResult:
-        from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+        from apps.tenant_apps.girvi.models import LoanLifecycleState
 
         payload_kwargs = self._payload_to_kwargs(payload)
         parsed_amount = parse_recovery_amount(
@@ -379,7 +380,7 @@ class UndoRepledgeTransitionCommand(BaseLoanTransitionCommand):
     def execute(self, transition_method, payload=None) -> TransitionResult:
         from django.core.exceptions import ValidationError
 
-        from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+        from apps.tenant_apps.girvi.models import LoanLifecycleState
         from apps.tenant_apps.girvi.models.renewal import LoanRenewal
 
         try:

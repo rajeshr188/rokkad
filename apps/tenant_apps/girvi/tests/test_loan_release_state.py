@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
+from apps.tenant_apps.girvi.models import GivenLoan
 from apps.tenant_apps.girvi.models.release import Release
 
 

@@ -24,7 +24,7 @@ from .payment import (
 )
 from .printing import LoanPrintService
 from .loan_posting import GivenLoanPostingService
-from .posting_adapter import create_and_post_voucher_for_doc
+from apps.tenant_apps.girvi.integrations.dea_adapter import create_and_post_voucher_for_doc
 from .release_lifecycle import (
     ReleaseCreateCommand,
     ReleaseCreatePreview,

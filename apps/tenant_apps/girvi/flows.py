@@ -9,63 +9,14 @@ from viewflow import fsm
 from apps.orgs.models import Membership
 from apps.tenant_apps.girvi.service_modules.overdue_policy import evaluate_overdue_policy
 
-from .models import LoanChangeLog
-from .models.loan_refactored import (
+from .models import (
     BaseLoan,
     GivenLoan,
+    LoanChangeLog,
     LoanLifecycleState,
-    LoanStatus,
     TakenLoan,
     TakenLoanLifecycleState,
 )
-
-
-GIVEN_LOAN_LEGACY_STATUS_MAP = {
-    LoanStatus.CREATED: LoanLifecycleState.DRAFT,
-    LoanStatus.APPROVED: LoanLifecycleState.APPROVED,
-    LoanStatus.DISBURSED: LoanLifecycleState.ACTIVE_CURRENT,
-    LoanStatus.DEFAULTED: LoanLifecycleState.ACTIVE_NPA,
-    LoanStatus.AUCTIONED: LoanLifecycleState.AUCTION_COMPLETE,
-    LoanStatus.RELEASED: LoanLifecycleState.CLOSED,
-    LoanStatus.CLOSED: LoanLifecycleState.CLOSED,
-    LoanStatus.REPLEDGED: LoanLifecycleState.RENEWED,
-    LoanStatus.REJECTED: LoanLifecycleState.REJECTED,
-    LoanStatus.CANCELLED: LoanLifecycleState.CANCELLED,
-    LoanStatus.SOLD: LoanLifecycleState.AUCTION_COMPLETE,
-}
-
-TAKEN_LOAN_LEGACY_STATUS_MAP = {
-    LoanStatus.CREATED: TakenLoanLifecycleState.DRAFT,
-    LoanStatus.APPROVED: TakenLoanLifecycleState.DRAFT,
-    LoanStatus.DISBURSED: TakenLoanLifecycleState.ACTIVE,
-    LoanStatus.RELEASED: TakenLoanLifecycleState.CLOSED,
-    LoanStatus.CLOSED: TakenLoanLifecycleState.CLOSED,
-    LoanStatus.CANCELLED: TakenLoanLifecycleState.CANCELLED,
-    LoanStatus.REJECTED: TakenLoanLifecycleState.CANCELLED,
-    LoanStatus.DEFAULTED: TakenLoanLifecycleState.ACTIVE,
-    LoanStatus.AUCTIONED: TakenLoanLifecycleState.ACTIVE,
-    LoanStatus.SOLD: TakenLoanLifecycleState.ACTIVE,
-    LoanStatus.REPLEDGED: TakenLoanLifecycleState.ACTIVE,
-}
-
-GIVEN_TRANSITION_ALIAS_MAP = {
-    "approve": "approve_loan",
-    "reject": "reject_loan",
-    "cancel": "cancel_loan",
-    "disburse": "disburse_loan",
-    "undo_disburse": "undo_disbursal",
-    "mark_defaulted": "mark_npa",
-    "release": "request_closure",
-    "deliver": "request_closure",
-}
-
-TAKEN_TRANSITION_ALIAS_MAP = {
-    "approve": "activate",
-    "disburse": "activate",
-    "disburse_loan": "activate",
-    "cancel": "cancel_loan",
-    "close": "request_settlement",
-}
 
 TRANSITION_ACCOUNTING_IMPACT = {
     "approve_loan": False,
@@ -101,23 +52,6 @@ def has_permission(user, permission_codename):
     if not membership:
         return False
     return membership.role.permissions.filter(codename=permission_codename).exists()
-
-
-def normalize_legacy_given_loan_status(status_value):
-    if status_value in (None, ""):
-        return status_value
-    return GIVEN_LOAN_LEGACY_STATUS_MAP.get(str(status_value), str(status_value))
-
-
-def normalize_legacy_taken_loan_status(status_value):
-    if status_value in (None, ""):
-        return status_value
-    return TAKEN_LOAN_LEGACY_STATUS_MAP.get(str(status_value), str(status_value))
-
-
-def map_loan_status_to_lifecycle_state(status_value):
-    """Compatibility alias for older imports."""
-    return normalize_legacy_given_loan_status(status_value)
 
 
 def _save_transition(loan, user, ip_address, source="", target="", metadata=None):
@@ -184,7 +118,7 @@ class GivenLoanFlow(BaseLifecycleFlow):
 
     @status.getter()
     def _get_loan_status(self):
-        return normalize_legacy_given_loan_status(getattr(self.loan, "status", None))
+        return getattr(self.loan, "status", None)
 
     @status.on_success()
     def _on_success_transition(self, descriptor, source, target, **kwargs):
@@ -198,7 +132,7 @@ class GivenLoanFlow(BaseLifecycleFlow):
         )
 
     def _current_state(self):
-        return normalize_legacy_given_loan_status(getattr(self.loan, "status", None))
+        return getattr(self.loan, "status", None)
 
     def _collateral_exists(self) -> bool:
         manager = getattr(self.loan, "loanitems", None) or getattr(self.loan, "items", None)
@@ -486,7 +420,7 @@ class TakenLoanFlow(BaseLifecycleFlow):
 
     @status.getter()
     def _get_loan_status(self):
-        return normalize_legacy_taken_loan_status(getattr(self.loan, "status", None))
+        return getattr(self.loan, "status", None)
 
     @status.on_success()
     def _on_success_transition(self, descriptor, source, target, **kwargs):
@@ -557,14 +491,7 @@ def _is_taken_loan_instance(loan):
 
 
 def resolve_runtime_transition_name(loan, transition_name):
-    normalized_transition = str(transition_name or "").strip()
-    if not normalized_transition:
-        return normalized_transition
-
-    if _is_taken_loan_instance(loan):
-        return TAKEN_TRANSITION_ALIAS_MAP.get(normalized_transition, normalized_transition)
-
-    return GIVEN_TRANSITION_ALIAS_MAP.get(normalized_transition, normalized_transition)
+    return str(transition_name or "").strip()
 
 
 def build_runtime_loan_flow(loan, user, tenant, transition_name=None, ip_address=None):

@@ -11,7 +11,7 @@ from apps.tenant_apps.girvi.transitions.commands import (
     MarkSoldTransitionCommand,
     UndoReleaseTransitionCommand,
 )
-from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+from apps.tenant_apps.girvi.models import LoanLifecycleState
 from apps.tenant_apps.girvi.transitions.payloads import CancelPayload
 from apps.tenant_apps.girvi.transitions.payloads import MarkAuctionedPayload
 from apps.tenant_apps.girvi.transitions.payloads import MarkSoldPayload

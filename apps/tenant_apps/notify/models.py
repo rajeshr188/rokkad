@@ -134,7 +134,6 @@ class NoticeGroup(models.Model):
             "notice_type_config"
         ).prefetch_related(
             "items",
-            "loans",
         )
         for notification in notifications:
             if notification.get_renderer_type() != NotificationTemplate.RendererType.PDF:
@@ -242,10 +241,7 @@ class Notification(models.Model):
     Tracks the lifecycle of a notification from creation to delivery.
     Supports multiple channels (Email, SMS, WhatsApp, Post, Letter).
 
-    MIGRATION PATH: This model is being refactored to support generic relationships.
-    - Old fields (loans, notice_type) are kept temporarily for backward compatibility
-    - New fields (notice_type_config) should be used in new code
-    - Future migration will remove old fields after data migration
+    Business objects are linked through generic NotificationItem records.
 
     TODO: Add sent_at, delivered_at, read_at timestamps
     TODO: Add scheduled_for field for delayed sending
@@ -273,14 +269,6 @@ class Notification(models.Model):
         blank=True,
         related_name="notifications",
         help_text="Shadow Party link for the notification recipient during Customer migration.",
-    )
-
-    # OLD FIELD - Keep for backward compatibility during migration
-    loans = models.ManyToManyField(
-        "girvi.GivenLoan",
-        blank=True,
-        related_name="notifications",
-        help_text="DEPRECATED: Use NotificationItem model instead for generic relationships",
     )
 
     # Notification Configuration
@@ -504,15 +492,9 @@ class Notification(models.Model):
         return NotificationTemplate.RendererType.DJANGO
 
     def get_printable_items(self):
-        related_objects = [
+        return [
             obj for obj in self.get_related_objects() if hasattr(obj, "loan_id")
         ]
-        if related_objects:
-            return related_objects
-        try:
-            return list(self.loans.all())
-        except Exception:
-            return []
 
     def get_subject_text(self):
         default_subject = self.effective_notice_type or "Notification"
@@ -654,11 +636,6 @@ class Notification(models.Model):
         if not template_text:
             # Fallback to basic message
             item_rows = self.items.all() if self.pk else []
-            loan_rows = []
-            try:
-                loan_rows = list(self.loans.all())
-            except Exception:
-                loan_rows = []
 
             if item_rows:
                 # New pattern: use NotificationItem

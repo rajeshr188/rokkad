@@ -114,7 +114,6 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_operations_snapshot,
     get_pawn_loan_release_readiness,
     get_pawn_loan_reports,
-    get_unified_loan_portfolio,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -210,16 +209,6 @@ def pawn_loan_reports(request):
         request,
         "loans/pawn/reports.html",
         {"report": report, "can_administer": _can_administer(request)},
-    )
-
-
-@loans_workspace_required
-def unified_loan_portfolio(request):
-    portfolio = get_unified_loan_portfolio(as_of_date=timezone.localdate())
-    return render(
-        request,
-        "loans/pawn/coexistence.html",
-        {"portfolio": portfolio},
     )
 
 

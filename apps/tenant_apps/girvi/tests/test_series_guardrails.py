@@ -8,10 +8,12 @@ Or run specific tests:
     python manage.py test tests.test_series_guardrails.SeriesGuardrailsTestCase.test_loan_count_threshold
 """
 
+import uuid
 from decimal import Decimal
-from django.test import TestCase
-from django.utils import timezone
+
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.girvi.models import Series, License, GivenLoan
 from apps.tenant_apps.contact.models import Customer
@@ -19,16 +21,35 @@ from apps.tenant_apps.contact.models import Customer
 User = get_user_model()
 
 
-class SeriesGuardrailsTestCase(TestCase):
+class SeriesGuardrailsTestCase(TenantTestCase):
     """Test Series guardrails functionality"""
+
+    test_schema_name = f"series_guardrails_{uuid.uuid4().hex[:8]}"
+    test_domain = f"{test_schema_name}.test.com"
+
+    @classmethod
+    def get_test_schema_name(cls):
+        return cls.test_schema_name
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return cls.test_domain
+
+    @classmethod
+    def setup_tenant(cls, tenant):
+        user, _ = User.objects.get_or_create(
+            username="series-guardrails-owner",
+            defaults={"email": "series-guardrails-owner@example.com"},
+        )
+        tenant.name = f"series-guardrails-{uuid.uuid4().hex[:8]}"
+        tenant.owner = user
+        tenant.creator = user
 
     def setUp(self):
         """Create test data"""
-        # Create user and workspace
-        self.user = User.objects.create_user(
-            username="testuser",
-            password="testpass123"
-        )
+        super().setUp()
+        connection.set_tenant(self.tenant)
+        self.user = self.tenant.owner
 
         # Create license
         self.license = License.objects.create(
@@ -52,9 +73,7 @@ class SeriesGuardrailsTestCase(TestCase):
 
         # Create customer
         self.customer = Customer.objects.create(
-            name="Test Customer",
-            phone="9999999999",
-            workspace=self.user.profile.workspace,
+            firstname="Test Customer",
         )
 
     def test_series_creation(self):
@@ -202,15 +221,35 @@ class SeriesGuardrailsTestCase(TestCase):
         self.assertEqual(str(self.series), expected)
 
 
-class SeriesGuardrailsIntegrationTestCase(TestCase):
+class SeriesGuardrailsIntegrationTestCase(TenantTestCase):
     """Integration tests for guardrails with actual loan creation"""
+
+    test_schema_name = f"series_integration_{uuid.uuid4().hex[:8]}"
+    test_domain = f"{test_schema_name}.test.com"
+
+    @classmethod
+    def get_test_schema_name(cls):
+        return cls.test_schema_name
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return cls.test_domain
+
+    @classmethod
+    def setup_tenant(cls, tenant):
+        user, _ = User.objects.get_or_create(
+            username="series-integration-owner",
+            defaults={"email": "series-integration-owner@example.com"},
+        )
+        tenant.name = f"series-integration-{uuid.uuid4().hex[:8]}"
+        tenant.owner = user
+        tenant.creator = user
 
     def setUp(self):
         """Create test data"""
-        self.user = User.objects.create_user(
-            username="testuser2",
-            password="testpass123"
-        )
+        super().setUp()
+        connection.set_tenant(self.tenant)
+        self.user = self.tenant.owner
 
         self.license = License.objects.create(
             name="Integration Test License",
@@ -229,9 +268,7 @@ class SeriesGuardrailsIntegrationTestCase(TestCase):
         )
 
         self.customer = Customer.objects.create(
-            name="Integration Test Customer",
-            phone="8888888888",
-            workspace=self.user.profile.workspace,
+            firstname="Integration Test Customer",
         )
 
     def test_series_with_configuration(self):

@@ -16,7 +16,7 @@ from apps.tenant_apps.girvi.views.loan import (
     loan_update,
 )
 from apps.tenant_apps.girvi.forms import build_initial_loan_item_formset
-from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+from apps.tenant_apps.girvi.models import LoanLifecycleState
 from apps.tenant_apps.girvi.services import (
     LoanCreateCommand,
     LoanCreationService,

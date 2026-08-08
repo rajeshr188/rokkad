@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404, render, reverse
 from django.template.response import TemplateResponse
 from django.views.decorators.http import require_http_methods
@@ -40,10 +41,7 @@ def noticegroup_detail(request, pk):
     # )
     items = (
         ng.notifications.all()
-        .prefetch_related(
-            "loans",
-            "loans__borrower",
-        )
+        .prefetch_related("items__content_type")
         .select_related("group", "customer")
     )
     printable_items = items.filter(
@@ -52,19 +50,16 @@ def noticegroup_detail(request, pk):
             Notification.MediumType.Letter,
         )
     )
-    loans = (
-        GivenLoan.objects.filter(release__isnull=True)
-        .filter(notifications__in=printable_items)
-        .distinct()
-        .count()
-    )
-    uniquie_customers = (
-        GivenLoan.objects.filter(release__isnull=True)
-        .filter(notifications__in=printable_items)
-        .values("borrower")
-        .distinct()
-        .count()
-    )
+    given_loan_content_type = ContentType.objects.get_for_model(GivenLoan)
+    loan_ids = printable_items.filter(
+        items__content_type=given_loan_content_type,
+    ).values_list("items__object_id", flat=True)
+    loans_queryset = GivenLoan.objects.filter(
+        pk__in=loan_ids,
+        release__isnull=True,
+    ).distinct()
+    loans = loans_queryset.count()
+    uniquie_customers = loans_queryset.values("borrower").distinct().count()
 
     return TemplateResponse(
         request,
@@ -106,7 +101,7 @@ def notification_list(request):
         Notification.objects.all()
         .select_related("group", "customer")
         .select_related("party")
-        .prefetch_related("loans", "customer__address", "customer__contactno")
+        .prefetch_related("items__content_type", "customer__address", "customer__contactno")
     )
     return render(request, "notify/notification_list.html", context={"objects": ng})
 
@@ -128,7 +123,7 @@ def notification_detail(request, pk):
     ng = get_object_or_404(
         Notification.objects.select_related(
             "group", "customer", "party", "notice_type_config"
-        ).prefetch_related("items__content_type", "loans"),
+        ).prefetch_related("items__content_type"),
         pk=pk,
     )
     return render(request, "notify/notification_detail.html", context={"object": ng})

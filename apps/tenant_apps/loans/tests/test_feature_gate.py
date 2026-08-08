@@ -129,28 +129,22 @@ class LoansFeatureGateTests(TenantTestCase):
         self.assertFalse(is_new_loans_enabled(self.tenant))
         self.assertTrue(PawnLoan.objects.filter(pk=self.pawn_loan.pk).exists())
 
-    def test_enabled_gate_blocks_direct_girvi_get_post_and_preserves_customer_party(self):
+    def test_enabled_gate_does_not_force_girvi_create_redirects(self):
         self._enable()
         create_url = reverse("girvi:girvi_loan_create")
 
         with patch(
-            "apps.tenant_apps.girvi.views.loan._handle_loan_create_post"
+            "apps.tenant_apps.girvi.views.loan._handle_loan_create_post",
+            return_value=HttpResponse("legacy-create"),
         ) as legacy_create:
             get_response = self.client.get(create_url)
             post_response = self.client.post(create_url, {"loan_id": "BLOCKED"})
 
-        self.assertRedirects(
-            get_response,
-            reverse("loans:pawn_loan_create"),
-            fetch_redirect_response=False,
-        )
-        self.assertRedirects(
-            post_response,
-            reverse("loans:pawn_loan_create"),
-            fetch_redirect_response=False,
-        )
-        legacy_create.assert_not_called()
-        self.assertFalse(GivenLoan.objects.filter(loan_id="BLOCKED").exists())
+        self.assertEqual(get_response.status_code, 200)
+        self.assertContains(get_response, "New Loan")
+        self.assertEqual(post_response.status_code, 200)
+        self.assertContains(post_response, "legacy-create")
+        legacy_create.assert_called_once()
 
         customer_response = self.client.get(
             reverse(
@@ -158,9 +152,10 @@ class LoansFeatureGateTests(TenantTestCase):
                 args=[self.customer.pk],
             )
         )
-        self.assertEqual(
-            customer_response.url,
-            f"{reverse('loans:pawn_loan_create')}?party={self.party.pk}",
+        self.assertRedirects(
+            customer_response,
+            reverse("girvi:girvi_license_list"),
+            fetch_redirect_response=False,
         )
 
     def test_canonical_route_switches_and_legacy_girvi_remains_reachable(self):

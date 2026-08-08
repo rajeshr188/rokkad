@@ -9,7 +9,6 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.girvi.services import ReleaseIDGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +111,10 @@ class Release(models.Model):
         is_create = self._state.adding
 
         if is_create and not self.release_id:
+            from apps.tenant_apps.girvi.service_modules.id_generation import (
+                ReleaseIDGenerator,
+            )
+
             self.release_id = ReleaseIDGenerator.generate(self.loan.series)
 
         if is_create and not self.created_by:

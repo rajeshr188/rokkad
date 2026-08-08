@@ -80,7 +80,6 @@ def _build_notification_record(
         notice_type_config=notice_type_config,
         status=Notification.StatusType.Draft,
     )
-    notification.loans.set(loan_list)
 
     for loan in loan_list:
         notification.add_item(

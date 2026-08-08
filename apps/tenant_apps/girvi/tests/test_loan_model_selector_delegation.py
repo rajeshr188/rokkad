@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, TakenLoan
+from apps.tenant_apps.girvi.models import GivenLoan, TakenLoan
 
 
 class LoanModelSelectorDelegationTests(SimpleTestCase):

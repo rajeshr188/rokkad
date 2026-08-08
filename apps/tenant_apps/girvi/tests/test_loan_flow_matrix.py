@@ -5,16 +5,13 @@ from django.test import SimpleTestCase
 from apps.tenant_apps.girvi.flows import (
     GivenLoanFlow,
     TakenLoanFlow,
-    normalize_legacy_given_loan_status,
-    normalize_legacy_taken_loan_status,
 )
 from apps.tenant_apps.girvi.lifecycle import (
     lifecycle_status_badge_class,
     lifecycle_status_label,
 )
-from apps.tenant_apps.girvi.models.loan_refactored import (
+from apps.tenant_apps.girvi.models import (
     LoanLifecycleState,
-    LoanStatus,
     TakenLoanLifecycleState,
 )
 from apps.tenant_apps.girvi.selectors import build_unified_loan_rows
@@ -50,12 +47,6 @@ class GivenLoanFlowMatrixTests(SimpleTestCase):
     def test_draft_outgoing_transitions(self):
         self.assertEqual(
             self._outgoing_keys(LoanLifecycleState.DRAFT),
-            {"submit_for_approval", "cancel_loan"},
-        )
-
-    def test_legacy_created_status_maps_to_canonical_draft_transitions(self):
-        self.assertEqual(
-            self._outgoing_keys(LoanStatus.CREATED),
             {"submit_for_approval", "cancel_loan"},
         )
 
@@ -152,13 +143,6 @@ class TakenLoanFlowMatrixTests(SimpleTestCase):
             {"complete_settlement"},
         )
 
-    def test_legacy_status_maps_to_minimal_taken_lifecycle(self):
-        self.assertEqual(
-            normalize_legacy_taken_loan_status(LoanStatus.DISBURSED),
-            TakenLoanLifecycleState.ACTIVE,
-        )
-
-
 def _status_value(status):
     return getattr(status, "value", str(status))
 
@@ -206,31 +190,19 @@ class FlowTransitionRegistryContractTests(SimpleTestCase):
 
 
 class LifecycleMappingTests(SimpleTestCase):
-    def test_given_legacy_mapping(self):
-        self.assertEqual(
-            normalize_legacy_given_loan_status(LoanStatus.RELEASED),
-            LoanLifecycleState.CLOSED,
-        )
-
-    def test_taken_legacy_mapping(self):
-        self.assertEqual(
-            normalize_legacy_taken_loan_status(LoanStatus.AUCTIONED),
-            TakenLoanLifecycleState.ACTIVE,
-        )
-
     def test_given_lifecycle_display_uses_canonical_labels(self):
         self.assertEqual(
-            lifecycle_status_label(LoanStatus.DISBURSED),
+            lifecycle_status_label(LoanLifecycleState.ACTIVE_CURRENT),
             "Active Current",
         )
         self.assertEqual(
-            lifecycle_status_badge_class(LoanStatus.DISBURSED),
+            lifecycle_status_badge_class(LoanLifecycleState.ACTIVE_CURRENT),
             "bg-primary",
         )
 
     def test_taken_lifecycle_display_uses_taken_mapping(self):
         self.assertEqual(
-            lifecycle_status_label(LoanStatus.DISBURSED, loan_kind="taken"),
+            lifecycle_status_label(TakenLoanLifecycleState.ACTIVE, loan_kind="taken"),
             "Active",
         )
         self.assertEqual(
@@ -249,7 +221,7 @@ class LifecycleMappingTests(SimpleTestCase):
             loan_id="G-1",
             loan_date=1,
             borrower=borrower,
-            status=LoanStatus.DISBURSED,
+            status=LoanLifecycleState.ACTIVE_CURRENT,
             get_loan_amount=100,
         )
         taken = SimpleNamespace(
@@ -257,7 +229,7 @@ class LifecycleMappingTests(SimpleTestCase):
             loan_id="T-1",
             loan_date=2,
             lender=lender,
-            status=LoanStatus.DISBURSED,
+            status=TakenLoanLifecycleState.ACTIVE,
             get_loan_amount=80,
         )
 

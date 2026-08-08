@@ -10,14 +10,14 @@ from django.db import transaction
 from django.utils import timezone
 from moneyed import Money
 
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan
-from apps.tenant_apps.girvi.service_modules.repayment_idempotency import (
-    build_repayment_idempotency_marker,
-)
-from .posting_adapter import (
+from apps.tenant_apps.girvi.models import GivenLoan
+from apps.tenant_apps.girvi.integrations.dea_adapter import (
     create_and_post_voucher_for_doc,
     find_payment_by_marker,
     post_payment_voucher,
+)
+from apps.tenant_apps.girvi.service_modules.repayment_idempotency import (
+    build_repayment_idempotency_marker,
 )
 
 

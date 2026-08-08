@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.tenant_apps.girvi.models.loan_item import LoanItem
-from apps.tenant_apps.girvi.models.loan_refactored import GivenLoan, LoanLifecycleState
+from apps.tenant_apps.girvi.models import GivenLoan, LoanLifecycleState
 from .id_generation import LoanIDGenerator, validate_loan_id_unique_across_loan_tables
 
 logger = logging.getLogger(__name__)

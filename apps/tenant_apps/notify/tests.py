@@ -23,6 +23,7 @@ from apps.tenant_apps.notify.services import (
     create_bulk_loan_reminder_group,
     create_loan_reminder_notification,
 )
+from apps.tenant_apps.notify_v2.models import NotificationChannel
 from apps.tenant_apps.notify.views import (
     noticegroup_detail,
     noticegroup_print,
@@ -82,7 +83,6 @@ class LoanReminderIntegrationTests(SimpleTestCase):
             notice_type_config=notice_type_config,
             status=Notification.StatusType.Draft,
         )
-        notification.loans.set.assert_called_once_with([loan])
         notification.add_item.assert_called_once()
         self.assertEqual(notification.add_item.call_args.kwargs["reference_number"], "GL-001")
         self.assertEqual(notification.add_item.call_args.kwargs["amount"], Decimal("1000.00"))
@@ -224,17 +224,17 @@ class LoanReminderIntegrationTests(SimpleTestCase):
         )
         mock_update_status.assert_called_once_with(Notification.StatusType.Sent)
 
-    @patch("apps.tenant_apps.girvi.views.notice.create_loan_reminder_notification")
+    @patch("apps.tenant_apps.girvi.views.notice.create_girvi_reminder_batch")
     @patch("apps.tenant_apps.girvi.views.notice.get_object_or_404")
     def test_create_loan_notification_view_uses_real_reminder_service(
         self,
         mock_get_object_or_404,
-        mock_create_reminder,
+        mock_create_batch,
     ):
         loan = self._build_loan()
         mock_get_object_or_404.return_value = loan
-        mock_create_reminder.return_value = SimpleNamespace(
-            get_absolute_url=lambda: "/notify/notification/1/"
+        mock_create_batch.return_value = SimpleNamespace(
+            batch=SimpleNamespace(get_absolute_url=lambda: "/notify/notification/1/")
         )
 
         request = self.factory.get(
@@ -246,11 +246,12 @@ class LoanReminderIntegrationTests(SimpleTestCase):
 
         self.assertIsInstance(response, HttpResponseRedirect)
         self.assertEqual(response.url, "/notify/notification/1/")
-        mock_create_reminder.assert_called_once_with(
-            customer=loan.borrower,
+        mock_create_batch.assert_called_once_with(
             loans=[loan],
-            notice_code="LOAN_FINAL_NOTICE",
-            medium_type=Notification.MediumType.SMS,
+            created_by=self.user,
+            event_key="loan.final_notice_due",
+            channel=NotificationChannel.SMS,
+            notes="Created from single-loan notice entrypoint.",
         )
 
     @patch("apps.tenant_apps.notify.models.NotificationTemplate.resolve_for")
@@ -316,12 +317,14 @@ class LoanReminderIntegrationTests(SimpleTestCase):
             template_key="loan_notice_v1",
         )
 
+    @patch("apps.tenant_apps.notify.views.ContentType.objects.get_for_model")
     @patch("apps.tenant_apps.notify.views.get_object_or_404")
     @patch("apps.tenant_apps.notify.views.GivenLoan")
-    def test_noticegroup_detail_prefetches_loan_borrower_relation(
+    def test_noticegroup_detail_counts_given_loan_items(
         self,
         mock_given_loan,
         mock_get_object_or_404,
+        mock_get_content_type,
     ):
         request = self.factory.get("/notify/noticegroup/3/")
         request.user = self.user
@@ -336,22 +339,24 @@ class LoanReminderIntegrationTests(SimpleTestCase):
         mock_get_object_or_404.return_value = ng
         notifications_qs.prefetch_related.return_value = items_qs
         items_qs.select_related.return_value = items_qs
+        printable_items = MagicMock(name="printable_items")
+        items_qs.filter.return_value = printable_items
+        printable_items.values_list.return_value = [1, 2]
+        mock_get_content_type.return_value = SimpleNamespace(pk=7)
 
         released_filter = MagicMock(name="released_filter")
         borrower_values = MagicMock(name="borrower_values")
         borrower_distinct = MagicMock(name="borrower_distinct")
         mock_given_loan.objects.filter.return_value = released_filter
-        released_filter.filter.return_value.count.return_value = 2
-        released_filter.filter.return_value.values.return_value = borrower_values
+        released_filter.distinct.return_value = released_filter
+        released_filter.count.return_value = 2
+        released_filter.values.return_value = borrower_values
         borrower_values.distinct.return_value = borrower_distinct
         borrower_distinct.count.return_value = 1
 
         response = noticegroup_detail.__wrapped__(request, pk=3)
 
-        notifications_qs.prefetch_related.assert_called_once_with(
-            "loans",
-            "loans__borrower",
-        )
+        notifications_qs.prefetch_related.assert_called_once_with("items__content_type")
         self.assertEqual(response.context_data["loans"], 2)
         self.assertEqual(response.context_data["customers"], 1)
 
@@ -389,14 +394,15 @@ class LoanReminderIntegrationTests(SimpleTestCase):
         email_notification.get_renderer_type.return_value = NotificationTemplate.RendererType.DJANGO
 
         notifications = [printable_notification, duplicate_printable_notification, email_notification]
-        group = NoticeGroup(name="Loan reminders")
-        group.notifications = SimpleNamespace(
+        group = SimpleNamespace(
+            notifications=SimpleNamespace(
             select_related=MagicMock(
                 return_value=SimpleNamespace(prefetch_related=MagicMock(return_value=notifications))
             )
+            )
         )
 
-        pdf = group.print_notice()
+        pdf = NoticeGroup.print_notice(group)
 
         self.assertEqual(pdf, b"%PDF-1.4 notice")
         mock_get_notice_pdf.assert_called_once()

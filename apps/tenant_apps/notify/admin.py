@@ -202,7 +202,6 @@ class NotificationAdmin(admin.ModelAdmin):
         "effective_notice_type_display",
         "medium_type",
         "status",
-        "loan_count",
         "item_count",
         "is_printed",
         "created",
@@ -218,7 +217,6 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ["customer__name", "message", "id"]
     readonly_fields = ["created", "last_updated"]
     date_hierarchy = "created"
-    filter_horizontal = ["loans"]  # Old M2M field
     inlines = [NotificationItemInline]  # New generic items
 
     fieldsets = (
@@ -236,14 +234,6 @@ class NotificationAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Related Items (OLD - Deprecated)",
-            {
-                "fields": ("loans",),
-                "classes": ("collapse",),
-                "description": "This field is deprecated. Use NotificationItem model for generic relationships.",
-            },
-        ),
-        (
             "Status & Tracking",
             {"fields": ("status", "is_printed", "created", "last_updated")},
         ),
@@ -254,11 +244,6 @@ class NotificationAdmin(admin.ModelAdmin):
         return obj.effective_notice_type
 
     effective_notice_type_display.short_description = "Notice Type"
-
-    def loan_count(self, obj):
-        return obj.loans.count()
-
-    loan_count.short_description = "Loans (Old)"
 
     def item_count(self, obj):
         return obj.items.count()

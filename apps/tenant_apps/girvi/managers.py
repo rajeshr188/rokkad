@@ -1,27 +1,22 @@
 """
-⚠️  DEPRECATED: This module is archived. Use managers_refactored.py instead.
+Refactored Manager and QuerySet for new loan structure.
 
-Historical reference only. Kept for backward compatibility during transition.
-Remove by: September 30, 2026
-
-Old QuerySet and Manager classes for efficient database queries.
-Provides chainable methods for:
-- Table display: per-row metrics (weights, amounts, interest, value, overdue status)
-- Dashboard: aggregated metrics for non-performing and long-dead loans
-- Flexibility: compose only the annotations you need
-
-❌ DO NOT USE for new code. Use GivenLoanManager/TakenLoanManager instead.
+Key Changes from Original Managers:
+1. Separate QuerySets for GivenLoan and TakenLoan (no more loan_type filtering)
+2. Removed loan_type conditional logic
+3. Cleaner, more focused query methods
+4. Maintained all performance optimizations from improved managers
 """
 
 import datetime
 import logging
-from functools import lru_cache
-from typing import TYPE_CHECKING
 
 from django.core.cache import cache
 from django.db import models
 from django.db.models import (
+    BooleanField,
     Case,
+    Count,
     DecimalField,
     ExpressionWrapper,
     F,
@@ -35,329 +30,367 @@ from django.db.models import (
 from django.db.models.functions import Ceil, Coalesce, ExtractDay, Round
 from django.utils import timezone
 
-from apps.tenant_apps.rates.models import Rate
-
-if TYPE_CHECKING:  # pragma: no cover
-    from .services import (
-        InterestCalculationService as _InterestCalculationService,
-        LoanMetalWeightService as _LoanMetalWeightService,
-        DashboardMetricsService as _DashboardMetricsService,
-    )
 
 logger = logging.getLogger(__name__)
 
 
-@lru_cache()
-def _get_interest_service():
-    from .services import InterestCalculationService
-
-    return InterestCalculationService
+# ============================================================================
+# Base QuerySet - Shared by Both Loan Types
+# ============================================================================
 
 
-@lru_cache()
-def _get_weight_service():
-    from .services import LoanMetalWeightService
+class BaseLoanQuerySet(models.QuerySet):
+    """
+    Shared QuerySet methods for all loan types.
+    Contains annotation chains that work identically for GivenLoan and TakenLoan.
+    """
 
-    return LoanMetalWeightService
+    def _supports_release_relation(self):
+        """Return True when the model exposes a release relation usable in filters."""
+        return any(
+            field.name == "release" for field in self.model._meta.get_fields()
+        )
 
-
-@lru_cache()
-def _get_dashboard_service():
-    from .services import DashboardMetricsService
-
-    return DashboardMetricsService
-
-
-class LoanQuerySet(models.QuerySet):
     def released(self):
-        return self.filter(release__isnull=False)
+        """Filter to loans that have been released."""
+        from .lifecycle import RELEASED_COMPAT_STATUSES
+
+        if self._supports_release_relation():
+            return self.filter(release__isnull=False)
+        return self.filter(status__in=RELEASED_COMPAT_STATUSES)
 
     def unreleased(self):
-        return self.filter(release__isnull=True)
+        """Filter to loans that have NOT been released."""
+        from .lifecycle import UNRELEASED_EXCLUDED_STATUSES
 
-    def with_cumsum(self):
-        return (
-            self.annotate(
-                cumsum=Window(Sum("loan_amount"), order_by=F("loan_date").asc())
-            )
-            .values("loan_date", "cumsum")
-            .order_by("loan_date")
-        )
+        if self._supports_release_relation():
+            return self.filter(release__isnull=True)
+        return self.exclude(status__in=UNRELEASED_EXCLUDED_STATUSES)
 
-    def with_total_interest(self):
-        today = datetime.date.today()
+    def active(self):
+        """Filter to loans in active or pre-closure lifecycle status."""
+        from .lifecycle import ACTIVE_LOAN_STATUSES
 
-        return self.annotate(
-            no_of_months=ExpressionWrapper(
-                today.month
-                - F("loan_date__month")
-                + 12 * (today.year - F("loan_date__year")),
-                output_field=DecimalField(decimal_places=2),
-            ),
-            loan_interest=F("interest") * F("no_of_months"),
-        ).annotate(Sum("loan_interest"))
+        return self.filter(status__in=ACTIVE_LOAN_STATUSES).unreleased()
 
-    def _get_rates(self):
-        grate = cache.get("gold_rate")
-        srate = cache.get("silver_rate")
-        brate = cache.get("bronze_rate")
+    def overdue(self):
+        """Loans in non-performing states."""
+        return self.with_overdue_status().filter(is_overdue=True)
 
-        if not (grate and srate and brate):
-            latest_rate = Rate.objects.filter(
-                metal__in=[Rate.Metal.GOLD, Rate.Metal.SILVER, Rate.Metal.BRONZE]
-            ).order_by("-timestamp")
-            grate = grate or latest_rate.filter(metal=Rate.Metal.GOLD).first()
-            srate = srate or latest_rate.filter(metal=Rate.Metal.SILVER).first()
-            brate = brate or latest_rate.filter(metal=Rate.Metal.BRONZE).first()
-            cache.set("gold_rate", grate, 300)
-            cache.set("silver_rate", srate, 300)
-            cache.set("bronze_rate", brate, 300)
-
-        return grate, srate, brate
-
-    def months_since_or_to_release(self):
-        now = timezone.now()
-        return self.annotate(
-            months_since=ExpressionWrapper(
-                Case(
-                    When(
-                        release__release_date__isnull=False,
-                        then=Func(
-                            F("release__release_date") - F("loan_date"),
-                            function="EXTRACT",
-                            template="EXTRACT(MONTH FROM %(expressions)s)",
-                            output_field=DecimalField(),
-                        ),
-                    ),
-                    default=Func(
-                        now - F("loan_date"),
-                        function="EXTRACT",
-                        template="EXTRACT(MONTH FROM %(expressions)s)",
-                        output_field=DecimalField(),
-                    ),
-                ),
-                output_field=DecimalField(),
-            )
-        )
-
-    def with_details(self, grate=None, srate=None, brate=None):
-        """DEPRECATED: Use for_table_display() instead."""
-        return self.for_table_display()
-
-    def with_itemwise_loanamount(self):
-        return self.with_itemwise_amounts()
-
-    def total_itemwise_loanamount(self):
-        return self.with_itemwise_amounts().aggregate(
-            gold_loanamount=Sum("gold_loanamount"),
-            silver_loanamount=Sum("silver_loanamount"),
-            bronze_loanamount=Sum("bronze_loanamount"),
-        )
-
-    def total_current_value(self):
-        return self.with_current_value().aggregate(total=Sum("total_current_value"))
-
-    def total_weight(self):
-        return self.with_metal_weights().aggregate(
-            gold=Sum("gold_weight"),
-            silver=Sum("silver_weight"),
-            bronze=Sum("bronze_weight"),
-        )
-
-    def total_pure_weight(self):
-        return self.with_metal_weights().aggregate(
-            gold=Round(Sum("pure_gold_weight"), 2),
-            silver=Round(Sum("pure_silver_weight"), 2),
-            bronze=Round(Sum("pure_bronze_weight")),
-        )
-
-    def itemwise_value(self):
-        return self.with_current_value().aggregate(
-            gold=Round(Sum("gold_value"), 2),
-            silver=Round(Sum("silver_value"), 2),
-            bronze=Round(Sum("bronze_value"), 2),
-        )
-
-    def total_loanamount(self):
-        return self.aggregate(total=Sum("loan_amount"))
+    def by_status(self, status):
+        """Filter by specific status."""
+        return self.filter(status=status)
 
     # ========================================================================
-    # NEW: Modular, Chainable Annotation Methods
+    # Time-based queries
     # ========================================================================
-    # These methods replace the massive with_details() method
-    # Use them to build exactly the annotations you need by chaining methods
+
+    def created_in_range(self, start_date, end_date=None):
+        """Loans created within date range."""
+        end_date = end_date or timezone.now()
+        return self.filter(loan_date__gte=start_date, loan_date__lte=end_date)
+
+    def older_than_months(self, months):
+        """Loans older than N months."""
+        cutoff = timezone.now() - datetime.timedelta(days=months * 30)
+        return self.filter(loan_date__lt=cutoff)
+
+    # ========================================================================
+    # Annotation Chains (same as improved managers)
+    # ========================================================================
 
     def with_duration_metrics(self):
         """
-        Add time-based metrics for measuring loan age.
+        Add time-based metrics.
 
         Annotations:
-        - days_since_created: number of days since loan creation (or release)
-        - months_since_created: number of months (more accurate than days/30)
-
-        Example:
-            loans = Loan.objects.with_duration_metrics().filter(months_since_created__gt=12)
+        - days_since_created
+        - months_since_created
         """
-        service = _get_interest_service()
-        annotations = service.get_duration_annotations()
+        from .services import InterestCalculationService
+
+        loan_kind = {
+            "GivenLoan": "given",
+            "TakenLoan": "taken",
+        }.get(self.model.__name__, "legacy")
+        annotations = InterestCalculationService.get_duration_annotations(loan_kind)
         return self.annotate(**annotations)
 
     def with_interest_metrics(self):
         """
-        Add interest and payment-related metrics.
-        REQUIRES: with_duration_metrics() to be called first!
+        Add interest calculations.
+        REQUIRES: with_duration_metrics() first!
 
         Annotations:
-        - total_interest: interest * months_since_created
-        - total_due: loan_amount + total_interest
-
-        Example:
-            loans = Loan.objects.with_duration_metrics().with_interest_metrics()
+        - calculated_loan_amount
+        - calculated_interest_amount
+        - calculated_total_interest
+        - calculated_total_due
         """
-        service = _get_interest_service()
-        return self.annotate(**service.get_interest_annotations())
+        from .services import InterestCalculationService
 
-    def with_metal_weights(self):
+        loan_kind = {
+            "GivenLoan": "given",
+            "TakenLoan": "taken",
+        }.get(self.model.__name__)
+
+        if loan_kind is None:
+            raise TypeError("Interest metrics require GivenLoan or TakenLoan querysets.")
+
+        return self.annotate(
+            **InterestCalculationService.get_interest_base_annotations(loan_kind)
+        ).annotate(
+            **InterestCalculationService.get_interest_total_annotations(loan_kind)
+        )
+
+    def with_payment_metrics(self):
         """
-        Add itemwise weight metrics (gross and pure by metal type).
+        Add payment-related metrics.
 
         Annotations:
-        - gold_weight, silver_weight, bronze_weight: gross weights
-        - pure_gold_weight, pure_silver_weight, pure_bronze_weight: purity-adjusted
-
-        Example:
-            loans = Loan.objects.with_metal_weights().filter(gold_weight__gt=100)
+        - total_payments
+        - principal_paid
+        - interest_paid
+        - outstanding_balance
         """
-        service = _get_weight_service()
-        annotations = service.get_itemwise_weight_annotations()
-        return self.annotate(**annotations)
-
-    def with_itemwise_amounts(self):
-        """
-        Add itemwise loan amount by metal type.
-
-        Annotations:
-        - gold_loanamount, silver_loanamount, bronze_loanamount
-
-        Example:
-            loans = Loan.objects.with_itemwise_amounts()
-        """
-        service = _get_weight_service()
-        annotations = service.get_itemwise_amount_annotations()
-        return self.annotate(**annotations)
-
-    def with_current_value(self):
-        """
-        Calculate current collateral value based on live market rates.
-        REQUIRES: with_metal_weights() to be called first!
-
-        Annotations:
-        - gold_value, silver_value, bronze_value: value by metal type
-        - total_current_value: sum of all metal values
-
-        Uses RateCacheService which caches rates for 5 minutes.
-
-        Example:
-            loans = Loan.objects.with_metal_weights().with_current_value()
-        """
-        service = _get_weight_service()
-        annotations = service.get_itemwise_value_annotations()
-        return self.annotate(**annotations)
-
-    def with_overdue_status(self):
-        """
-        Determine if loan is overdue (current_value < total_due).
-        REQUIRES: with_interest_metrics() and with_current_value() !
-
-        Annotations:
-        - is_overdue: boolean True if collateral value insufficient
-
-        Example:
-            loans = (
-                Loan.objects
-                .with_duration_metrics()
-                .with_interest_metrics()
-                .with_metal_weights()
-                .with_current_value()
-                .with_overdue_status()
-                .filter(is_overdue=True)
-            )
-        """
-        service = _get_weight_service()
-        annotations = service.get_overdue_annotation()
-        return self.annotate(**annotations)
+        return self.annotate(
+            total_payments=Coalesce(
+                Sum("payments__total_amount"),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+            principal_paid=Coalesce(
+                Sum("payments__principal_amount"),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+            interest_paid=Coalesce(
+                Sum("payments__interest_amount"),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+        )
 
     def for_table_display(self):
         """
-        Convenience method: Get all annotations needed for loan table display.
+        Complete annotation chain for table views.
 
-        Returns:
-        - duration: days_since_created, months_since_created
-        - interest: total_interest, total_due
-        - weights: gold_weight, pure_gold_weight, ... (all metals)
-        - amounts: gold_loanamount, ... (all metals)
-        - values: gold_value, ..., total_current_value
-        - status: is_overdue
+        Includes:
+        - Duration metrics
+        - Metal weights (gross & pure)
+        - Loan amounts by metal type
+        - Current values
+        - Payment info
 
-        This is the kitchen sink—use individual methods if you don't need everything.
-
-        Example (table view):
-            loans = Loan.objects.unreleased().for_table_display().select_related(...)
-            for loan in loans:
-                context['rows'].append({
-                    'id': loan.id,
-                    'gold_weight': loan.gold_weight,
-                    'pure_gold_weight': loan.pure_gold_weight,
-                    'gold_loanamount': loan.gold_loanamount,
-                    'months': loan.months_since_created,
-                    'total_interest': loan.total_interest,
-                    'total_due': loan.total_due,
-                    'current_value': loan.total_current_value,
-                    'is_overdue': loan.is_overdue,
-                })
+        Note: For GivenLoan/TakenLoan, skips interest_metrics which requires
+        fields not available on these models (interest, loan_amount exist on
+        LoanItems, not the Loan itself).
         """
         return (
             self.with_duration_metrics()
             .with_metal_weights()
             .with_itemwise_amounts()
-            .with_interest_metrics()
             .with_current_value()
-            .with_overdue_status()
+            .with_payment_metrics()
         )
 
     def for_dashboard_metrics(self):
         """
-        Get annotations optimized for dashboard summary cards.
-
-        More lightweight than for_table_display() - use for aggregations.
-
-        Example (dashboard):
-            non_perf_metrics = (
-                Loan.objects
-                .unreleased()
-                .for_dashboard_metrics()
-                .filter(is_overdue=True)
-                .aggregate(
-                    count=Count('id'),
-                    total_due=Sum('total_due'),
-                    total_value=Sum('total_current_value'),
-                )
-            )
+        Lightweight annotations for dashboard aggregations.
         """
         return (
             self.with_duration_metrics()
-            .with_metal_weights()
             .with_interest_metrics()
             .with_current_value()
             .with_overdue_status()
         )
 
+    # ========================================================================
+    # Aggregation methods
+    # ========================================================================
 
-class LoanManager(models.Manager):
-    def get_queryset(self):
-        return LoanQuerySet(self.model, using=self._db).select_related(
-            "series", "release", "customer"
+    def total_loan_amount(self):
+        """Total principal across all loans in queryset."""
+        # Use database aggregation on related items
+        # For GivenLoan: sum loanitems.loanamount
+        # For TakenLoan: sum repledge_history_items.repledged_amount
+        # This is handled by subclass-specific implementations
+        raise NotImplementedError("Subclass must implement")
+
+    def total_weight_by_metal(self):
+        """Aggregate weight by metal type."""
+        return self.with_metal_weights().aggregate(
+            gold=Round(Sum("gold_weight"), 3),
+            silver=Round(Sum("silver_weight"), 3),
+            bronze=Round(Sum("bronze_weight"), 3),
         )
+
+    def total_pure_weight_by_metal(self):
+        """Aggregate pure weight by metal type."""
+        return self.with_metal_weights().aggregate(
+            gold=Round(Sum("pure_gold_weight"), 3),
+            silver=Round(Sum("pure_silver_weight"), 3),
+            bronze=Round(Sum("pure_bronze_weight"), 3),
+        )
+
+    def total_current_value(self):
+        """Total market value of collateral."""
+        return self.with_current_value().aggregate(total=Sum("total_current_value"))[
+            "total"
+        ]
+
+
+# ============================================================================
+# GivenLoan QuerySet
+# ============================================================================
+
+
+class GivenLoanQuerySet(BaseLoanQuerySet):
+    """
+    QuerySet specific to loans given TO customers (pawns).
+    """
+
+    def by_borrower(self, customer):
+        """Filter by borrower."""
+        return self.filter(borrower=customer)
+
+    def with_metal_weights(self):
+        """
+        Add weight metrics from LoanItem.
+
+        Annotations:
+        - gold_weight, silver_weight, bronze_weight
+        - pure_gold_weight, pure_silver_weight, pure_bronze_weight
+        """
+        from .services import LoanMetalWeightService
+
+        annotations = LoanMetalWeightService.get_given_loan_weight_annotations()
+        return self.annotate(**annotations)
+
+    def with_itemwise_amounts(self):
+        """
+        Add loan amounts by metal type from LoanItem.
+
+        Annotations:
+        - gold_loanamount, silver_loanamount, bronze_loanamount
+        """
+        from .services import LoanMetalWeightService
+
+        annotations = LoanMetalWeightService.get_given_loan_amount_annotations()
+        return self.annotate(**annotations)
+
+    def with_current_value(self):
+        """
+        Calculate current collateral value based on market rates.
+        REQUIRES: with_metal_weights() first!
+
+        Annotations:
+        - gold_value, silver_value, bronze_value
+        - total_current_value
+        """
+        from .services import LoanMetalWeightService
+
+        annotations = LoanMetalWeightService.get_given_loan_value_annotations()
+        return self.annotate(**annotations)
+
+    def with_overdue_status(self):
+        """
+        Determine if loan is overdue using lifecycle status.
+
+        In the refactored models, overdue/non-performing state is represented
+        by status rather than collateral-vs-due annotations.
+        """
+        from .lifecycle import OVERDUE_LOAN_STATUSES
+
+        return self.annotate(
+            is_overdue=Case(
+                When(status__in=OVERDUE_LOAN_STATUSES, then=True),
+                default=False,
+                output_field=BooleanField(),
+            )
+        )
+
+    def total_loan_amount(self):
+        """Total principal from all LoanItems."""
+        return self.aggregate(
+            total=Coalesce(
+                Sum("loanitems__loanamount"),
+                Value(0),
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            )
+        )["total"]
+
+    def total_weight(self):
+        """Total gross weight from all LoanItems."""
+        return (
+            self.with_metal_weights().aggregate(
+                total=Round(
+                    Sum("gold_weight") + Sum("silver_weight") + Sum("bronze_weight"), 3
+                )
+            )["total"]
+            or 0
+        )
+
+    def total_pure_weight(self):
+        """Total pure weight from all LoanItems."""
+        return (
+            self.with_metal_weights().aggregate(
+                total=Round(
+                    Sum("pure_gold_weight")
+                    + Sum("pure_silver_weight")
+                    + Sum("pure_bronze_weight"),
+                    3,
+                )
+            )["total"]
+            or 0
+        )
+
+    def total_current_value(self):
+        """Total current collateral value from all LoanItems."""
+        return (
+            self.with_metal_weights()
+            .with_current_value()
+            .aggregate(total=Round(Sum("total_current_value"), 2))
+        )
+
+    def total_loanamount(self):
+        """Alias for total_loan_amount for backward compatibility."""
+        return self.total_loan_amount()
+
+    def itemwise_value(self):
+        """Itemwise value breakdown by metal type."""
+        return (
+            self.with_itemwise_amounts()
+            .with_current_value()
+            .aggregate(
+                gold=Round(Sum("gold_value"), 2),
+                silver=Round(Sum("silver_value"), 2),
+                bronze=Round(Sum("bronze_value"), 2),
+            )
+        )
+
+    def total_itemwise_loanamount(self):
+        """Total itemwise loan amounts by metal type."""
+        return self.with_itemwise_amounts().aggregate(
+            gold=Round(Sum("gold_loanamount"), 2),
+            silver=Round(Sum("silver_loanamount"), 2),
+            bronze=Round(Sum("bronze_loanamount"), 2),
+        )
+
+    def splittable(self):
+        """Loans with more than one item (can be split)."""
+        return self.annotate(item_count=Count("loanitems")).filter(item_count__gt=1)
+
+    def available_for_repledge(self):
+        """Loans with items that can be repledged."""
+        return self.unreleased().filter(loanitems__custody_status="in_vault").distinct()
+
+
+class GivenLoanManager(models.Manager):
+    """Manager for GivenLoan with efficient query defaults."""
+
+    def get_queryset(self):
+        return GivenLoanQuerySet(self.model, using=self._db)
 
     def released(self):
         return self.get_queryset().released()
@@ -365,120 +398,236 @@ class LoanManager(models.Manager):
     def unreleased(self):
         return self.get_queryset().unreleased()
 
-    def with_duration_metrics(self):
-        return self.get_queryset().with_duration_metrics()
-
-    def with_interest_metrics(self):
-        return self.get_queryset().with_interest_metrics()
-
-    def with_metal_weights(self):
-        return self.get_queryset().with_metal_weights()
-
-    def with_itemwise_amounts(self):
-        return self.get_queryset().with_itemwise_amounts()
-
-    def with_current_value(self):
-        return self.get_queryset().with_current_value()
-
-    def with_overdue_status(self):
-        return self.get_queryset().with_overdue_status()
-
-    def for_table_display(self):
-        return self.get_queryset().for_table_display()
-
-    def for_dashboard_metrics(self):
-        return self.get_queryset().for_dashboard_metrics()
+    def active(self):
+        return self.get_queryset().active()
 
     def overdue(self):
         return self.get_queryset().overdue()
 
-    def good_standing(self):
-        return self.get_queryset().good_standing()
-
-    def long_dead(self, months=12):
-        return self.get_queryset().long_dead(months)
-
-    def with_details(self, grate, srate, brate):
-        return self.get_queryset().with_details(grate, srate, brate)
-
-    def with_itemwise_loanamount(self):
-        return self.get_queryset().with_itemwise_loanamount()
-
-    def total_itemwise_loanamount(self):
-        return self.get_queryset().total_itemwise_loanamount()
-
-    def with_total_value(self):
-        return self.get_queryset().aggregate(total_value=Sum("total_current_value"))
-
-    def total_loanamount(self):
-        return self.get_queryset().aggregate(total=Sum("loan_amount"))
-
-    def total_interest(self):
-        return self.get_queryset().aggregate(total=Sum("total_interest"))
-
-    def total_due(self):
-        return self.get_queryset().aggregate(total=Sum("total_due"))
-
-    def total_weight(self):
-        return self.get_queryset().total_weight()
-
-    def total_pure_weight(self):
-        return self.get_queryset().total_pure_weight()
-
-    # ========================================================================
-    # Dashboard Metrics Methods
-    # ========================================================================
+    def for_table_display(self):
+        """
+        Return queryset optimized for table display.
+        For GivenLoan (with LoanItems), returns base queryset.
+        """
+        return self.get_queryset()
 
     def non_performing_loans_stats(self):
         """
-        Get aggregated stats for non-performing loans.
+        Get statistics for non-performing loans (is_overdue=True).
 
-        Returns dict:
-        {
-            'count': number of loans,
-            'total_due': sum of amounts due,
-            'metals': {
-                'Gold': {'weight': X, 'pure_weight': Y, 'value': Z, 'rate': R},
-                'Silver': {...},
-                'Bronze': {...},
-            },
-            'total_collateral_value': sum of all values,
-            'current_rates': {'Gold': X, 'Silver': Y, 'Bronze': Z},
-            'rates_timestamp': datetime,
-        }
+        Returns QuerySet with overdue status annotation.
 
-        Example:
-            stats = Loan.objects.non_performing_loans_stats()
-            context['non_perf'] = stats
-            # Use in template: {{ non_perf.count }}, {{ non_perf.total_due }}, etc.
+        Usage:
+            stats = GivenLoan.objects.non_performing_loans_stats()
+            count = stats.count()
         """
-        service = _get_dashboard_service()
-        return service.get_non_performing_loans_stats(queryset=self.get_queryset())
+        return self.get_queryset().with_overdue_status().filter(is_overdue=True)
 
-    def long_dead_loans_stats(self, threshold_months=None):
+    def long_dead_loans_stats(self, threshold_months=12):
         """
-        Get aggregated stats for long-dead loans (unreleased for 12+ months).
+        Get statistics for long-dead loans (unreleased for N+ months).
 
         Args:
-            threshold_months: override default 12 month threshold
+            threshold_months: Minimum months unreleased (default: 12)
 
-        Returns: Same structure as non_performing_loans_stats()
+        Returns QuerySet of old unreleased loans.
 
-        Example:
-            stats = Loan.objects.long_dead_loans_stats()
-            context['long_dead'] = stats
+        Usage:
+            stats = GivenLoan.objects.long_dead_loans_stats(threshold_months=12)
+            count = stats.count()
         """
-        service = _get_dashboard_service()
-        return service.get_long_dead_loans_stats(
-            queryset=self.get_queryset(), threshold_months=threshold_months
+        from datetime import timedelta
+        from django.utils import timezone
+
+        cutoff_date = timezone.now() - timedelta(days=threshold_months * 30)
+        return self.get_queryset().unreleased().filter(loan_date__lt=cutoff_date)
+
+
+# ============================================================================
+# TakenLoan QuerySet
+# ============================================================================
+
+
+class TakenLoanQuerySet(BaseLoanQuerySet):
+    """
+    QuerySet specific to loans taken FROM customers (repledges).
+    """
+
+    def by_lender(self, customer):
+        """Filter by lender."""
+        return self.filter(lender=customer)
+
+    def from_original_loan(self, given_loan):
+        """Filter by original GivenLoan."""
+        return self.filter(original_loan=given_loan)
+
+    def with_metal_weights(self):
+        """
+        Add weight metrics from custody repledge history items.
+
+        Annotations:
+        - gold_weight, silver_weight, bronze_weight
+        - pure_gold_weight, pure_silver_weight, pure_bronze_weight
+        """
+        from .services import LoanMetalWeightService
+
+        annotations = LoanMetalWeightService.get_taken_loan_weight_annotations()
+        return self.annotate(**annotations)
+
+    def with_itemwise_amounts(self):
+        """
+        Add loan amounts by metal type from custody repledge history.
+
+        Annotations:
+        - gold_loanamount, silver_loanamount, bronze_loanamount
+        """
+        from .services import LoanMetalWeightService
+
+        annotations = LoanMetalWeightService.get_taken_loan_amount_annotations()
+        return self.annotate(**annotations)
+
+    def with_current_value(self):
+        """
+        Calculate current value from original items.
+        REQUIRES: with_metal_weights() first!
+        """
+        from .services import LoanMetalWeightService
+
+        annotations = LoanMetalWeightService.get_taken_loan_value_annotations()
+        return self.annotate(**annotations)
+
+    def with_overdue_status(self):
+        """Determine if loan is overdue using lifecycle status."""
+        from .lifecycle import OVERDUE_LOAN_STATUSES
+
+        return self.annotate(
+            is_overdue=Case(
+                When(status__in=OVERDUE_LOAN_STATUSES, then=True),
+                default=False,
+                output_field=BooleanField(),
+            )
+        )
+
+    def total_loan_amount(self):
+        """Total principal from custody repledge history."""
+        return self.aggregate(
+            total=Coalesce(
+                Sum("repledge_history_items__repledged_amount"),
+                Value(0),
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            )
+        )["total"]
+
+    def total_weight(self):
+        """Total gross weight from custody repledge history."""
+        return (
+            self.with_metal_weights().aggregate(
+                total=Round(
+                    Sum("gold_weight") + Sum("silver_weight") + Sum("bronze_weight"), 3
+                )
+            )["total"]
+            or 0
+        )
+
+    def total_pure_weight(self):
+        """Total pure weight from custody repledge history."""
+        return (
+            self.with_metal_weights().aggregate(
+                total=Round(
+                    Sum("pure_gold_weight")
+                    + Sum("pure_silver_weight")
+                    + Sum("pure_bronze_weight"),
+                    3,
+                )
+            )["total"]
+            or 0
+        )
+
+    def total_current_value(self):
+        """Total current collateral value from custody repledge history."""
+        return (
+            self.with_metal_weights()
+            .with_current_value()
+            .aggregate(total=Round(Sum("total_current_value"), 2))
+        )
+
+    def total_loanamount(self):
+        """Alias for total_loan_amount for backward compatibility."""
+        return self.total_loan_amount()
+
+    def itemwise_value(self):
+        """Itemwise value breakdown by metal type."""
+        return (
+            self.with_itemwise_amounts()
+            .with_current_value()
+            .aggregate(
+                gold=Round(Sum("gold_value"), 2),
+                silver=Round(Sum("silver_value"), 2),
+                bronze=Round(Sum("bronze_value"), 2),
+            )
+        )
+
+    def total_itemwise_loanamount(self):
+        """Total itemwise loan amounts by metal type."""
+        return self.with_itemwise_amounts().aggregate(
+            gold=Round(Sum("gold_loanamount"), 2),
+            silver=Round(Sum("silver_loanamount"), 2),
+            bronze=Round(Sum("bronze_loanamount"), 2),
         )
 
 
-class ReleasedManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(release__isnull=False)
+class TakenLoanManager(models.Manager):
+    """Manager for TakenLoan with efficient query defaults."""
 
-
-class UnReleasedManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(release__isnull=True)
+        return TakenLoanQuerySet(self.model, using=self._db)
+
+    def released(self):
+        return self.get_queryset().released()
+
+    def unreleased(self):
+        return self.get_queryset().unreleased()
+
+    def active(self):
+        return self.get_queryset().active()
+
+    def overdue(self):
+        return self.get_queryset().overdue()
+
+    def for_table_display(self):
+        """
+        Return queryset optimized for table display.
+        For TakenLoan, returns base queryset.
+        """
+        return self.get_queryset()
+
+    def non_performing_loans_stats(self):
+        """
+        Get statistics for non-performing repledge loans (is_overdue=True).
+
+        Returns QuerySet with overdue status annotation.
+
+        Usage:
+            stats = TakenLoan.objects.non_performing_loans_stats()
+            count = stats.count()
+        """
+        return self.get_queryset().with_overdue_status().filter(is_overdue=True)
+
+    def long_dead_loans_stats(self, threshold_months=12):
+        """
+        Get statistics for long-dead repledge loans (unreleased for N+ months).
+
+        Args:
+            threshold_months: Minimum months unreleased (default: 12)
+
+        Returns QuerySet of old unreleased repledge loans.
+
+        Usage:
+            stats = TakenLoan.objects.long_dead_loans_stats(threshold_months=12)
+            count = stats.count()
+        """
+        from datetime import timedelta
+        from django.utils import timezone
+
+        cutoff_date = timezone.now() - timedelta(days=threshold_months * 30)
+        return self.get_queryset().unreleased().filter(loan_date__lt=cutoff_date)

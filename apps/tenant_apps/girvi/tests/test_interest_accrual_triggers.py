@@ -87,7 +87,7 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         mock_post_repayment.assert_called_once()
 
     def test_release_lifecycle_triggers_interest_catchup_before_release_posting(self):
-        loan = SimpleNamespace(loan_id="GL-002", status="Disbursed")
+        loan = SimpleNamespace(loan_id="GL-002", status="ActiveCurrent")
         command = ReleaseCreateCommand(
             loan=loan,
             created_by=self.user,
@@ -98,7 +98,7 @@ class InterestAccrualTriggerTests(SimpleTestCase):
             is_valid=True,
             loan=loan,
             loan_id="GL-002",
-            current_status="Disbursed",
+            current_status="ActiveCurrent",
             warnings=[],
             errors=[],
         )
@@ -174,7 +174,7 @@ class InterestAccrualTriggerTests(SimpleTestCase):
         source_loan = MagicMock()
         source_loan.pk = 7
         source_loan.loan_id = "GL-007"
-        source_loan.status = "Disbursed"
+        source_loan.status = "ActiveCurrent"
         source_loan.get_loan_amount = Decimal("500.00")
         source_loan.loanitems.all.return_value = []
 

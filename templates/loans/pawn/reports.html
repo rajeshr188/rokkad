@@ -1,7 +1,6 @@
 {% extends "base_tenant.html" %}
 {% block title %}PawnLoan reports{% endblock %}
 {% block workspace_content %}
-<div class="mb-3"><a class="btn btn-outline-secondary" href="{% url 'loans:unified_loan_portfolio' %}">Open Girvi + Loans portfolio</a></div>
 <div class="d-flex justify-content-between align-items-start gap-3 mb-4"><div><a class="small text-decoration-none" href="{% url 'loans:pawn_loan_list' %}">&larr; Pawn loans</a><h1 class="h3 mt-2 mb-1">Reports &amp; reconciliation</h1><p class="text-muted mb-0">Operational position and source-to-DEA health as of {{ report.as_of_date }}.</p></div></div>
 
 <div class="row g-3 mb-4">

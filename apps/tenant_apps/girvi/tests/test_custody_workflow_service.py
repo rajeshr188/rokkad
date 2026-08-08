@@ -72,7 +72,7 @@ class CustodyWorkflowServiceTests(SimpleTestCase):
 
         self.assertFalse(gate.can_proceed)
         self.assertTrue(gate.redirect_to_checklist)
-        self.assertIn("settlement dues", gate.block_message)
+        self.assertIn("settlement can be calculated", gate.block_message)
 
     def test_gate_redirects_to_release_create_when_no_return_needed(self):
         gate = CustodyWorkflowService.evaluate_release_with_return_gate(

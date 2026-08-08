@@ -4,12 +4,9 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.tenant_apps.girvi.flows import (
-    build_runtime_loan_flow,
-    normalize_legacy_given_loan_status,
-)
+from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
 from apps.tenant_apps.girvi.lifecycle import V2_CLOSURE_STATUSES
-from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+from apps.tenant_apps.girvi.models import LoanLifecycleState
 from apps.tenant_apps.girvi.models.custody_tracking import ItemCustodyStatus
 
 from .accrual import InterestAccrualCommand, InterestAccrualService
@@ -167,9 +164,7 @@ class ReleaseLifecycleService:
             )
 
         if loan and created_by and existing_release is None:
-            current_status = normalize_legacy_given_loan_status(
-                getattr(loan, "status", "")
-            )
+            current_status = getattr(loan, "status", "")
             can_release = current_status in ReleaseLifecycleService.RELEASE_SETTLEMENT_STATUSES
 
             if not can_release:
@@ -316,9 +311,7 @@ class ReleaseLifecycleService:
                     payment_created = bool(release_posting)
                 stage_outcomes[current_stage] = "completed"
 
-                current_status = normalize_legacy_given_loan_status(
-                    getattr(command.loan, "status", "")
-                )
+                current_status = getattr(command.loan, "status", "")
                 use_v2_closure = current_status in V2_CLOSURE_STATUSES
                 deliver = getattr(flow, "deliver", None)
                 complete_closure = getattr(flow, "complete_closure", None)

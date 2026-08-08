@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
     dependencies = [
         ("contact", "0003_alter_customer_options_and_more"),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("girvi", "add_custody_tracking"),
         ("notify", "0001_initial"),
     ]
 
@@ -109,16 +108,6 @@ class Migration(migrations.Migration):
             name="is_printed",
             field=models.BooleanField(
                 default=False, help_text="Set to True when notification is printed"
-            ),
-        ),
-        migrations.AlterField(
-            model_name="notification",
-            name="loans",
-            field=models.ManyToManyField(
-                blank=True,
-                help_text="DEPRECATED: Use NotificationItem model instead for generic relationships",
-                related_name="notifications",
-                to="girvi.givenloan",
             ),
         ),
         migrations.AlterField(

@@ -7,9 +7,8 @@ from unittest.mock import patch
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.girvi.flows import GivenLoanFlow, TakenLoanFlow, build_runtime_loan_flow
-from apps.tenant_apps.girvi.models.loan_refactored import (
+from apps.tenant_apps.girvi.models import (
     LoanLifecycleState,
-    LoanStatus,
     TakenLoanLifecycleState,
 )
 from apps.tenant_apps.girvi.service_modules.transitions import LoanTransitionService
@@ -95,32 +94,6 @@ class TransitionCommandRegistryTests(SimpleTestCase):
         self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_CURRENT)
         self.assertTrue(disburse_result.created)
         self.assertIn("DIS-001", disburse_result.message)
-        mock_record_disbursal.assert_called_once_with(loan, service.user)
-
-    @patch(
-        "apps.tenant_apps.girvi.transitions.commands.transaction.atomic",
-        side_effect=lambda: nullcontext(),
-    )
-    @patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal")
-    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
-    def test_transition_service_accepts_legacy_approval_aliases_for_v2_states(
-        self,
-        _mock_has_permission,
-        mock_record_disbursal,
-        _mock_atomic,
-    ):
-        payment = type("Payment", (), {"payment_id": "DIS-LEGACY"})()
-        mock_record_disbursal.return_value = (payment, True)
-        loan = _DummyLoan(LoanLifecycleState.PENDING_APPROVAL)
-        service = LoanTransitionService(loan, _DummyUser(), tenant=None)
-
-        approve_result = service.execute("approve", approved_by="checker")
-        self.assertTrue(approve_result.success)
-        self.assertEqual(loan.status, LoanLifecycleState.APPROVED)
-
-        disburse_result = service.execute("disburse", disbursed_by="cashier")
-        self.assertTrue(disburse_result.success)
-        self.assertEqual(loan.status, LoanLifecycleState.ACTIVE_CURRENT)
         mock_record_disbursal.assert_called_once_with(loan, service.user)
 
     @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
@@ -285,7 +258,7 @@ class TransitionCommandRegistryTests(SimpleTestCase):
 
     def test_build_runtime_flow_routes_approved_status_to_v2(self):
         flow = build_runtime_loan_flow(
-            _DummyLoan(LoanStatus.APPROVED),
+            _DummyLoan(LoanLifecycleState.APPROVED),
             _DummyUser(),
             tenant=None,
         )
@@ -299,27 +272,3 @@ class TransitionCommandRegistryTests(SimpleTestCase):
         )
         self.assertIsInstance(flow, TakenLoanFlow)
 
-    @patch(
-        "apps.tenant_apps.girvi.transitions.commands.transaction.atomic",
-        side_effect=lambda: nullcontext(),
-    )
-    @patch("apps.tenant_apps.girvi.service_modules.payment.record_loan_disbursal")
-    @patch("apps.tenant_apps.girvi.flows.has_permission", return_value=True)
-    def test_taken_loan_disburse_alias_activates_taken_lifecycle(
-        self,
-        _mock_has_permission,
-        mock_record_disbursal,
-        _mock_atomic,
-    ):
-        payment = type("Payment", (), {"payment_id": "TL-001"})()
-        mock_record_disbursal.return_value = (payment, True)
-        loan = _DummyLoan(TakenLoanLifecycleState.DRAFT, loan_type="Taken")
-
-        result = LoanTransitionService(loan, _DummyUser(), tenant=None).execute(
-            "disburse",
-            disbursed_by="cashier",
-        )
-
-        self.assertTrue(result.success)
-        self.assertEqual(loan.status, TakenLoanLifecycleState.ACTIVE)
-        mock_record_disbursal.assert_called_once()

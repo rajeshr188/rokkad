@@ -5,12 +5,9 @@ from typing import Optional
 
 from django.db import transaction
 
-from apps.tenant_apps.girvi.flows import (
-    build_runtime_loan_flow,
-    normalize_legacy_given_loan_status,
-)
+from apps.tenant_apps.girvi.flows import build_runtime_loan_flow
 from apps.tenant_apps.girvi.models.loan_item import LoanItem
-from apps.tenant_apps.girvi.models.loan_refactored import (
+from apps.tenant_apps.girvi.models import (
     GivenLoan,
     LoanLifecycleState,
 )
@@ -181,7 +178,7 @@ class LoanRenewalService:
                     LoanLifecycleState.ACTIVE_OVERDUE,
                     LoanLifecycleState.ACTIVE_NPA,
                 }
-                if normalize_legacy_given_loan_status(loan.status) not in allowed_statuses:
+                if loan.status not in allowed_statuses:
                     return LoanRenewalResult(
                         success=False,
                         message=(

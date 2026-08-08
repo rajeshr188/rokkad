@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 
-from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+from apps.tenant_apps.girvi.models import LoanLifecycleState
 from apps.tenant_apps.girvi.policies import (
     assert_can_create_release,
     assert_can_record_repayment,

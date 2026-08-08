@@ -15,7 +15,7 @@ from apps.tenant_apps.dea.models import AccountingPeriod, PaymentVoucher, Vouche
 from apps.tenant_apps.girvi.models import GivenLoan, License, LoanItem, Series
 from apps.tenant_apps.girvi.models.accrual import AccrualStatus, AccrualTriggerSource
 from apps.tenant_apps.girvi.models.custody_tracking import ItemCustodyStatus
-from apps.tenant_apps.girvi.models.loan_refactored import LoanLifecycleState
+from apps.tenant_apps.girvi.models import LoanLifecycleState
 from apps.tenant_apps.girvi.service_modules.creation import (
     LoanCreateCommand,
     LoanCreationService,

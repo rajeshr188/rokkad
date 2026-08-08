@@ -10,6 +10,7 @@ from apps.tenant_apps.girvi.services import (
     ReleaseLifecycleService,
 )
 from apps.tenant_apps.girvi.models.custody_tracking import ItemCustodyStatus
+from apps.tenant_apps.girvi.models.loan import LoanLifecycleState
 
 
 class ReleaseLifecycleServiceTests(TestCase):
@@ -17,7 +18,10 @@ class ReleaseLifecycleServiceTests(TestCase):
         return SimpleNamespace(profile=SimpleNamespace(workspace="tenant-1"))
 
     def _fake_loan(self):
-        return SimpleNamespace(loan_id="L-001", status="Disbursed")
+        return SimpleNamespace(
+            loan_id="L-001",
+            status=LoanLifecycleState.ACTIVE_CURRENT,
+        )
 
     def _fake_release_model(self):
         class FakeRelease:

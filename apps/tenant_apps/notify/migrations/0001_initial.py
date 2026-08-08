@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contact", "0001_initial"),
-        ("girvi", "0001_initial"),
     ]
 
     operations = [
@@ -100,12 +99,6 @@ class Migration(migrations.Migration):
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="notifications",
                         to="notify.noticegroup",
-                    ),
-                ),
-                (
-                    "loans",
-                    models.ManyToManyField(
-                        related_name="notifications", to="girvi.loan"
                     ),
                 ),
             ],

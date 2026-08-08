@@ -1,5 +1,4 @@
 import logging
-from urllib.parse import urlencode
 
 import pytz
 from django.contrib import messages
@@ -77,36 +76,6 @@ from ..service_modules.preferences import (
 from ..service_modules.transition_workflow import TransitionWorkflowService
 from .access import girvi_permission_required, girvi_workspace_required
 logger = logging.getLogger(__name__)
-
-
-def _new_loan_cutover_response(request, *, customer_pk=None):
-    """Route independent new-loan origination to Loans after workspace cutover."""
-    from apps.tenant_apps.loans.facade import is_new_loans_enabled
-
-    workspace = getattr(request, "tenant", None)
-    if not is_new_loans_enabled(workspace):
-        return None
-
-    party_id = None
-    customer_id = customer_pk or request.GET.get("customer")
-    if customer_id:
-        party_id = (
-            customer_queryset()
-            .filter(pk=customer_id)
-            .values_list("party_id", flat=True)
-            .first()
-        )
-    target = reverse("loans:pawn_loan_create")
-    if party_id:
-        target = f"{target}?{urlencode({'party': party_id})}"
-    messages.info(
-        request,
-        "New pawn loans are created in Loans for this workspace. Existing Girvi loans remain serviceable here.",
-    )
-    response = redirect(target)
-    if getattr(request, "htmx", False):
-        response["HX-Redirect"] = target
-    return response
 
 
 def _transition_form_kwargs(*, transition_name, request_user, loan, workspace, post_data=None):
@@ -433,9 +402,6 @@ def loan_save(request, id=None, pk=None):
 @girvi_permission_required("girvi_loan_create")
 @require_http_methods(["GET"])
 def loan_create_preview(request):
-    cutover = _new_loan_cutover_response(request)
-    if cutover is not None:
-        return cutover
     preview = _build_create_preview_from_data(request.GET, request.user)
     return render(
         request,
@@ -447,9 +413,6 @@ def loan_create_preview(request):
 @girvi_permission_required("girvi_loan_create")
 def loan_create(request):
     """Dedicated create endpoint using LoanCreationService for POST writes."""
-    cutover = _new_loan_cutover_response(request)
-    if cutover is not None:
-        return cutover
     try:
         if request.method == "POST":
             return _handle_loan_create_post(request)
@@ -463,9 +426,6 @@ def loan_create(request):
 @girvi_permission_required("girvi_loan_create")
 def loan_create_for_customer(request, customer_pk):
     """Dedicated create endpoint with borrower preselection."""
-    cutover = _new_loan_cutover_response(request, customer_pk=customer_pk)
-    if cutover is not None:
-        return cutover
     try:
         if request.method == "POST":
             return _handle_loan_create_post(request)

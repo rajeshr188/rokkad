@@ -66,7 +66,7 @@ class InterestAccrualReadModelTests(SimpleTestCase):
         loan.loanitems.all.return_value = []
         loan.renewals_as_source.all.return_value = []
         loan.renewal_record.first.return_value = None
-        loan.status = "Disbursed"
+        loan.status = "ActiveCurrent"
         loan.current_value = Decimal("1500.00")
         loan.get_loan_amount = Decimal("1000.00")
         loan.get_weight_summary = []
@@ -131,7 +131,7 @@ class InterestAccrualReadModelTests(SimpleTestCase):
         self.assertEqual(display["position"], "A-02")
         self.assertEqual(display["interest_reporting"]["outstanding"], Decimal("90.00"))
 
-    def test_build_given_loan_release_action_blocks_when_settlement_is_due(self):
+    def test_build_given_loan_release_action_collects_when_settlement_is_due(self):
         loan = SimpleNamespace(
             id=1,
             status="ActiveCurrent",
@@ -140,12 +140,21 @@ class InterestAccrualReadModelTests(SimpleTestCase):
             get_total_payments=lambda: Decimal("1000.00"),
             closure_exception_approved=False,
         )
+        settlement = SimpleNamespace(
+            total_due=Decimal("1250.00"),
+            total_outstanding=Decimal("250.00"),
+        )
 
-        action = build_given_loan_release_action(loan)
+        with patch(
+            "apps.tenant_apps.girvi.selectors.build_loan_settlement_balance",
+            return_value=settlement,
+        ):
+            action = build_given_loan_release_action(loan)
 
-        self.assertTrue(action["disabled"])
+        self.assertFalse(action["disabled"])
         self.assertEqual(action["outstanding_amount"], Decimal("250.00"))
-        self.assertEqual(action["button_class"], "btn-outline-secondary")
+        self.assertTrue(action["needs_final_settlement"])
+        self.assertEqual(action["button_class"], "btn-success")
 
     def test_build_given_loan_release_action_allows_zero_balance(self):
         loan = SimpleNamespace(
@@ -156,8 +165,16 @@ class InterestAccrualReadModelTests(SimpleTestCase):
             get_total_payments=lambda: Decimal("1000.00"),
             closure_exception_approved=False,
         )
+        settlement = SimpleNamespace(
+            total_due=Decimal("1000.00"),
+            total_outstanding=Decimal("0.00"),
+        )
 
-        action = build_given_loan_release_action(loan)
+        with patch(
+            "apps.tenant_apps.girvi.selectors.build_loan_settlement_balance",
+            return_value=settlement,
+        ):
+            action = build_given_loan_release_action(loan)
 
         self.assertFalse(action["disabled"])
         self.assertEqual(action["outstanding_amount"], Decimal("0.00"))
@@ -192,7 +209,7 @@ class InterestAccrualReadModelTests(SimpleTestCase):
         self.assertEqual(readiness["accounting"]["label"], "Posted")
         self.assertEqual(readiness["timeline"]["event_count"], 1)
 
-    def test_build_given_loan_action_readiness_explains_blocked_release(self):
+    def test_build_given_loan_action_readiness_explains_collectable_settlement(self):
         loan = SimpleNamespace(
             id=1,
             status="ActiveCurrent",
@@ -202,11 +219,18 @@ class InterestAccrualReadModelTests(SimpleTestCase):
             get_total_payments=lambda: Decimal("1000.00"),
             closure_exception_approved=False,
         )
-        release_action = build_given_loan_release_action(loan)
+        settlement = SimpleNamespace(
+            total_due=Decimal("1250.00"),
+            total_outstanding=Decimal("250.00"),
+        )
 
         with patch(
+            "apps.tenant_apps.girvi.selectors.build_loan_settlement_balance",
+            return_value=settlement,
+        ), patch(
             "apps.tenant_apps.girvi.selectors.get_given_loan_journal_entries"
         ) as journal_entries:
+            release_action = build_given_loan_release_action(loan)
             journal_entries.return_value.count.return_value = 0
             readiness = build_given_loan_action_readiness(
                 loan,
@@ -215,7 +239,8 @@ class InterestAccrualReadModelTests(SimpleTestCase):
                 changelog=[],
             )
 
-        self.assertTrue(readiness["primary_action"]["disabled"])
+        self.assertFalse(readiness["primary_action"]["disabled"])
+        self.assertTrue(readiness["primary_action"]["needs_final_settlement"])
         self.assertEqual(readiness["settlement"]["label"], "Outstanding")
         self.assertEqual(readiness["accounting"]["label"], "No posted journal")
 
@@ -276,7 +301,7 @@ class InterestAccrualReportingViewTests(SimpleTestCase):
     ):
         mock_changelog_filter.return_value.select_related.return_value.order_by.return_value = []
         mock_build_runtime_flow.return_value = SimpleNamespace(
-            status="Disbursed",
+            status="ActiveCurrent",
             get_outgoing_transitions=lambda: [],
         )
         mock_action_readiness.return_value = {

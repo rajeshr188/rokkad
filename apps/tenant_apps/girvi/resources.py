@@ -8,7 +8,6 @@ from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.product.models import ProductVariant
 
 from .models import GivenLoan, License, LoanItem, Release, Series
-from .models.legacy import Loan, LoanPayment
 
 
 class LicenseResource(resources.ModelResource):
@@ -105,7 +104,7 @@ class LoanResource(resources.ModelResource):
             super()
             .get_queryset()
             .select_related("borrower", "series")
-            .prefetch_related("loanitems", "loan_payments", "release")
+            .prefetch_related("loanitems", "payments", "release")
         )
         return queryset
 
@@ -171,30 +170,6 @@ class LoanItemResource(resources.ModelResource):
 
     class Meta:
         model = LoanItem
-
-
-class LegacyLoanPaymentResource(resources.ModelResource):
-    """Historical import/export resource for deprecated LoanPayment rows."""
-
-    created_at = Field(
-        attribute="created_at",
-        column_name="created_at",
-        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
-    )
-    updated_at = Field(
-        attribute="updated_at",
-        column_name="updated_at",
-        widget=DateTimeWidget("%d/%m/%Y, %H:%M:%S"),
-    )
-    loan = fields.Field(
-        column_name="loan", attribute="loan", widget=ForeignKeyWidget(Loan, "pk")
-    )
-
-    class Meta:
-        model = LoanPayment
-
-
-LoanPaymentResource = LegacyLoanPaymentResource
 
 
 class ReleaseResource(resources.ModelResource):

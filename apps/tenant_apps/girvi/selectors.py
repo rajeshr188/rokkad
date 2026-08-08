@@ -17,7 +17,7 @@ Layer boundary:
         → applies django-filter / django-tables2 / RequestConfig
         → renders template
 
-  Selector → calls QuerySet/Manager methods from managers_refactored
+    Selector → calls QuerySet/Manager methods from managers
            → applies cross-model filters and aggregations
 """
 
