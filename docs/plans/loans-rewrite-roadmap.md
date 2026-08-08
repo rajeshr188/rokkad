@@ -876,7 +876,7 @@ integration, repayment backdating, or staff allocation overrides.
 
 ## Execution Readiness
 
-Status: **E6.5 development cutover is active for `jcl1`; Loans is primary for new loans and Girvi remains legacy-servicing only. The Phase 6 production gate remains pending until the complete E6.4 manual readiness register is satisfied for a production workspace.**
+Status: **The 2026-08-08 permanent-coexistence ADR supersedes the replacement/cutover objective. `jcl1` currently defaults its canonical loan landing page to Loans, while Girvi and Loans may both originate and service independently owned records. The next implementation slice replaces the transitional cutover flag with independent module availability and default-navigation settings.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

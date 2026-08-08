@@ -3,7 +3,7 @@ status: active
 owner: loans
 updated: 2026-08-04
 tags: [loans, girvi, architecture, parity, mvp, cutover]
-related: [../../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, ../../plans/loans-rewrite-roadmap.md, ../girvi/architecture.md, ../girvi/workflows.md, ../../implementation/pawn-loan-mvp-operations-runbook.md]
+related: [../../adr/2026-08-08-girvi-loans-permanent-independent-coexistence.md, ../../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, ../../plans/loans-rewrite-roadmap.md, ../girvi/architecture.md, ../girvi/workflows.md, ../../implementation/pawn-loan-mvp-operations-runbook.md]
 ---
 
 # Loans Architecture And Girvi Parity Review
@@ -20,22 +20,23 @@ roadmap.
 
 ## Current Verdict
 
-The Loans rewrite is a stronger foundation for new pawn loans. Its accounting,
-audit, reversal, policy, custody, and tenant boundaries are explicit and tested.
-
-It is not yet a complete Girvi replacement.
+The Loans rewrite is a strong independent foundation for pawn loans. Its
+accounting, audit, reversal, policy, custody, and tenant boundaries are explicit
+and tested. It is not a Girvi replacement; both applications are permanent
+independent products under the 2026-08-08 coexistence ADR.
 
 - The PawnLoan MVP lifecycle is implemented and passes the Phase 5 test gate.
-- `jcl1` uses Loans as the development origination owner; production enablement
-  still requires the full E6.4 sign-off.
-- Girvi remains the write owner of existing Girvi loans.
-- Phase 6 coexistence, comparison, gating, and development cutover are complete.
+- `jcl1` currently uses Loans as its default loan landing page; that route
+  preference does not prevent Girvi origination or servicing.
+- Girvi owns every record created in Girvi, and Loans owns every record created
+  in Loans.
+- The temporary Phase 6 unified-read and comparison implementation is retired.
 - E7.1 repayment, interest-due, overdue, and release-confirmation notices are
   implemented through Notify v2. E7.2 auction/recovery and E7.3 renewals are
   implemented. FundingLoan, repledging, and portal integration remain
   essential future workflows.
-- Several Girvi operational conveniences need explicit carry-forward or
-  rejection decisions before Girvi can be retired.
+- Feature-parity work is product improvement, not a prerequisite for Girvi
+  retirement.
 
 Girvi is not treated as wholly obsolete or poorly designed. It has been
 stabilized with command services, lifecycle controls, custody history, DEA
@@ -53,14 +54,14 @@ An in-place Girvi rewrite would combine three risky jobs:
 
 That would make rollback and record ownership ambiguous. The accepted model is:
 
-- Girvi owns and services every loan created in Girvi.
-- Loans owns every PawnLoan created in Loans.
+- Girvi owns and services every loan created in Girvi, including new records.
+- Loans owns and services every PawnLoan created in Loans, including new records.
 - A record is never writable in both apps.
 - Active Girvi loans are not copied into Loans as second writable records.
-- Unified reads will combine both systems and label the owner.
-- Mutating actions always return to the owning app.
+- Optional combined reads must label the owner and remain read-only.
+- Mutating actions always stay in the owning app.
 
-Coexistence is therefore a supported product state, not a temporary data error.
+Coexistence is the intended permanent product state.
 
 ## Why PawnLoan And FundingLoan Are Separate
 
