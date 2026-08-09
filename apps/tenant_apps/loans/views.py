@@ -21,6 +21,7 @@ from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.access import loans_setup_required, loans_workspace_required
 from apps.tenant_apps.loans.domain import (
+    CollateralEconomicsError,
     LoanDocumentKind,
     LoanOutboxStatus,
     PawnLoanState,
@@ -978,7 +979,7 @@ def pawn_loan_create(request):
                         loan, formset, actor=request.user, workflow_source="DRAFT"
                     )
         except (PawnDraftError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
+            _add_pawn_draft_error(form, formset, exc)
         else:
             if loan is not None:
                 messages.success(request, f"Draft {loan.loan_number} created.")
@@ -1034,7 +1035,7 @@ def pawn_loan_update(request, pk):
                         loan, formset, actor=request.user, workflow_source="DRAFT"
                     )
         except (PawnDraftError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
+            _add_pawn_draft_error(form, formset, exc)
         else:
             if request.POST.get("action") != "preview":
                 messages.success(request, f"Draft {loan.loan_number} updated.")
@@ -3065,6 +3066,21 @@ def _collateral_inputs(formset):
         for row in formset.cleaned_data
         if row and not row.get("DELETE")
     )
+
+
+def _add_pawn_draft_error(form, formset, exc):
+    """Attach item-specific economic failures to the field an operator can fix."""
+
+    if isinstance(exc, CollateralEconomicsError) and exc.reference and exc.field:
+        try:
+            item_form = formset.forms[int(exc.reference) - 1]
+        except (IndexError, TypeError, ValueError):
+            pass
+        else:
+            if exc.field in item_form.fields:
+                item_form.add_error(exc.field, str(exc))
+                return
+    form.add_error(None, str(exc))
 
 
 def _persist_formset_photos(loan, formset, *, actor, workflow_source):

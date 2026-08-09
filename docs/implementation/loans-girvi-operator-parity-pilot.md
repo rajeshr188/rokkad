@@ -119,8 +119,8 @@ Do not use database/admin shortcuts.
 
 | ID | Operator outcome | Required Loans evidence | Decision | Status |
 | --- | --- | --- | --- | --- |
-| P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior, full effective-dated calculation policy | PORT/REPLACE | Software pass; Owner walkthrough pending |
-| P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | REPLACE | Pending |
+| P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior, full effective-dated calculation policy | PORT/REPLACE | **Accepted 2026-08-09 by Owner** |
+| P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | REPLACE | Software pass; Owner walkthrough pending |
 | P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | Pending |
 | P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | Pending |
 | P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | Pending |
@@ -152,6 +152,25 @@ physical output are complete.
 No acceptance can override a critical failure. Money, custody, tenant
 isolation, required documents, backup/restore, or unexplained reconciliation
 must be corrected before the scenario passes.
+
+### P1 Acceptance
+
+The workspace Owner accepted P1 on 2026-08-09 after the software gate. This
+accepts the license, independent bounded numbering, expiry behavior, and full
+effective-dated calculation-policy setup as the operating boundary for the
+following scenarios. P2 is the active gate.
+
+### P2 Software Evidence
+
+The P2 implementation gate passed on 2026-08-09. The draft UI presents each
+gold/silver tranche's resolved rate, allocated principal, selected value, LTV
+maximum, and interest alongside total deductions and net cash. An LTV failure
+is attached to the offending allocated-principal input and does not consume a
+number. Mandatory photographs, approval snapshots, and disbursal snapshots
+retain the immutable item and policy evidence. The 18-test draft UI suite and
+11 focused economics, draft, approval, and disbursal tests pass. Owner
+execution of the mixed-metal browser workflow is still required for final P2
+acceptance.
 
 ## Physical Document Matrix
 

@@ -62,5 +62,5 @@ change the meaning of an existing loan.
   policy and disbursal uses the policy frozen at approval.
 - 16 adjacent approval-lifecycle and core-model tests pass.
 - Tenant rollout through `migrate_schemas --tenant` succeeds locally.
-- Manual Owner browser walkthrough remains required before P1 is finally marked
-  accepted.
+- The workspace Owner accepted P1 on 2026-08-09. P2 mixed-metal origination and
+  disbursal is the next capability gate.

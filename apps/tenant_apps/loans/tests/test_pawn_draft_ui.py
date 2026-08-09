@@ -159,6 +159,41 @@ class PawnDraftUiTests(TenantTestCase):
         )
         self.assertEqual(sequence.next_number, 1)
 
+    def test_mixed_metal_preview_shows_item_rates_limits_and_net_cash(self):
+        license, series = self._configured_setup()
+        payload = self._mixed_metal_payload(license, series)
+        payload["action"] = "preview"
+
+        response = self.client.post(reverse("loans:pawn_loan_create"), payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Gold")
+        self.assertContains(response, "Silver")
+        self.assertContains(response, "2.000000%")
+        self.assertContains(response, "4.000000%")
+        self.assertContains(response, "Maximum at LTV")
+        self.assertContains(response, "260.00")
+        self.assertContains(response, "8740.00")
+        self.assertFalse(PawnLoan.objects.exists())
+
+    def test_ltv_failure_is_attached_to_offending_item_principal(self):
+        license, series = self._configured_setup()
+        payload = self._payload(license, series)
+        payload["collateral-0-allocated_principal"] = "41000.00"
+
+        response = self.client.post(reverse("loans:pawn_loan_create"), payload)
+
+        self.assertEqual(response.status_code, 200)
+        item_errors = response.context["formset"].forms[0].errors
+        self.assertIn("allocated_principal", item_errors)
+        self.assertIn("exceeds its maximum 40000.00", item_errors["allocated_principal"][0])
+        self.assertFalse(response.context["form"].non_field_errors())
+        self.assertFalse(PawnLoan.objects.exists())
+        sequence = LoanNumberSequence.objects.get(
+            series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value
+        )
+        self.assertEqual(sequence.next_number, 1)
+
     def test_internal_routes_are_not_added_to_primary_navigation(self):
         response = self.client.get(reverse("loans:license_list"))
         self.assertNotContains(response, reverse("loans:pawn_loan_list"))
@@ -591,3 +626,26 @@ class PawnDraftUiTests(TenantTestCase):
                 content_type="image/jpeg",
             ),
         }
+
+    def _mixed_metal_payload(self, license, series):
+        payload = self._payload(license, series)
+        payload.update(
+            {
+                "collateral-TOTAL_FORMS": "2",
+                "collateral-0-latest_appraised_value": "10000.00",
+                "collateral-0-allocated_principal": "5000.00",
+                "collateral-1-description": "Silver anklet",
+                "collateral-1-metal": "SILVER",
+                "collateral-1-gross_weight": "30.0000",
+                "collateral-1-net_weight": "25.0000",
+                "collateral-1-purity_percentage": "80.0000",
+                "collateral-1-latest_appraised_value": "10000.00",
+                "collateral-1-allocated_principal": "4000.00",
+                "collateral-1-photograph": SimpleUploadedFile(
+                    "silver-anklet.png",
+                    b"\x89PNG\r\n\x1aevidence",
+                    content_type="image/png",
+                ),
+            }
+        )
+        return payload

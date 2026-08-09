@@ -16,7 +16,12 @@ class FeeCalculationType(StringEnum):
 
 
 class CollateralEconomicsError(ValueError):
-    pass
+    """Economic validation failure with optional form-addressable context."""
+
+    def __init__(self, message, *, reference=None, field=None):
+        super().__init__(message)
+        self.reference = str(reference) if reference is not None else None
+        self.field = field
 
 
 @dataclass(frozen=True)
@@ -199,7 +204,9 @@ def _calculate_tranche(item, *, method, maximum_ltv_ratio, advance_interest_peri
     )
     if principal > maximum:
         raise CollateralEconomicsError(
-            f"Collateral {item.reference} allocation {principal} exceeds its maximum {maximum} at the configured LTV."
+            f"Collateral {item.reference} allocation {principal} exceeds its maximum {maximum} at the configured LTV.",
+            reference=item.reference,
+            field="allocated_principal",
         )
     monthly = (principal * rate / Decimal("100")).quantize(
         quantum, rounding=ROUND_HALF_UP

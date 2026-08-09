@@ -10,7 +10,18 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
-- P1 regulatory setup has passed its software gate. Migration `loans.0034`
+- P1 regulatory setup was accepted by the workspace Owner on 2026-08-09 after
+  passing its complete software gate. P2 mixed-metal origination and disbursal
+  has now passed its software gate and awaits the Owner browser walkthrough.
+  Its audit confirms that Loans owns per-item principal,
+  effective-dated metal rates, mandatory draft photographs, item LTV,
+  immutable approval evidence, and net-disbursal snapshots. The remaining
+  operator gap was closed by attaching LTV failures to the offending
+  allocated-principal field and exposing each tranche's rate, value, LTV limit,
+  and interest in the draft economics preview. The complete 18-test draft UI
+  suite and 11 focused domain/service tests pass.
+
+- P1 regulatory setup passed its software gate. Migration `loans.0034`
   extends effective-dated workspace/license economic policy to own interest
   method, part-month slab, capitalization interval, cash/accrual recognition,
   and rounding alongside valuation/LTV/advance-interest. Approval freezes the
@@ -19,9 +30,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   gates are 12 license/policy, 5 numbering/concurrency, and 3 focused
   setup/disbursal tests and 16 adjacent lifecycle/model tests, plus system
   check, migration drift, fresh tenant replay, and successful local tenant
-  rollout through `migrate_schemas --tenant`. P1 still needs the Owner browser walkthrough before final
-  acceptance; P2 must not start by silently treating that manual evidence as
-  complete.
+  rollout through `migrate_schemas --tenant`.
 
 - Loans is now the selected operational destination under accepted ADR
   `2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi remains the
@@ -31,8 +40,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   acceptance gates. Each Girvi capability must be classified `PORT`, `REPLACE`,
   `RETIRE`, or `DEFER`, implemented without weakening Loans' aggregate,
   immutable-evidence, custody, tenant, correction, or accounting boundaries,
-  and proven by operator evidence. The next action is P1: extract and verify
-  regulatory license, numbering, and workspace-policy setup in Loans.
+  and proven by operator evidence. P1 is accepted and P2 is active.
 
 - The outstanding accounting/Girvi/Loans runtime checkpoint is consolidated
   into four dependency-ordered commits: `0e847b2` adds the guarded standalone

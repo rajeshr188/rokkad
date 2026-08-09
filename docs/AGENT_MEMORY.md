@@ -1,14 +1,14 @@
 ---
 status: active
 owner: project
-updated: 2026-08-08
+updated: 2026-08-09
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
 
 # Agent Memory
 
-P1 regulatory setup software acceptance is complete under ADR
+P1 regulatory setup is accepted by the workspace Owner as of 2026-08-09 under ADR
 `2026-08-09-loans-effective-dated-calculation-policy.md` and domain reference
 `loans-regulatory-setup-and-policy.md`. Effective-dated workspace/license
 economic policy now owns calculation method, part-month slab, capitalization,
@@ -18,8 +18,14 @@ Approval freezes those values and disbursal rehydrates its immutable
 classified: license/series and independent numbering are `PORT`; immutable
 license revisions and bounded sequence exhaustion are `REPLACE`; loan-count and
 loan-amount auto-deactivation thresholds are `RETIRE for MVP`. Focused gates
-pass, but P1 remains Owner-walkthrough pending; do not mark it finally accepted
-or begin P2 on that assumption without recording the manual result.
+pass. P2 mixed-metal origination and disbursal has passed its software gate and
+is Owner-walkthrough pending. Loans models each collateral item as a principal/rate tranche,
+requires draft photographs, enforces item LTV, freezes approval evidence, and
+snapshots gross principal, advance-interest/fee deductions, net cash, and
+tranches at disbursal. The draft preview exposes per-item rate, value, LTV
+limit, and interest, and LTV failures attach to the offending item without
+consuming a number. Do not restore a mutable loan-level interest rate as
+authority or mark P2 finally accepted before recording the Owner workflow.
 
 Loans is the selected target loan platform under accepted ADR
 `2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi is now a temporary
@@ -31,7 +37,7 @@ custody, tenant, correction, and outbound-accounting boundaries, then prove it
 with the corresponding P1-P12 Loans acceptance scenario. Girvi still owns and
 services all Girvi-created records; no transfer, synchronization, dual write,
 origination shutdown, or deletion is authorized before a separate retirement
-ADR. The next acceptance gate is P1 license, numbering, and workspace policy.
+ADR. The next acceptance gate is P2 mixed-metal origination and disbursal.
 
 The previously dirty accounting/Girvi/Loans work is now organized into four
 dependency-ordered runtime commits: `0e847b2` (guarded standalone accounting
