@@ -9,6 +9,7 @@ import fitz
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.staticfiles.storage import StaticFilesStorage, staticfiles_storage
 from django.db import DatabaseError, connection, transaction
 from django.test import override_settings
 from django.urls import reverse
@@ -53,6 +54,7 @@ TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="rokkad-collateral-media-")
 
 @override_settings(
     ROOT_URLCONF="django_project.tenant_urls",
+    DEBUG=True,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -88,6 +90,9 @@ class PawnCollateralMediaTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
+        # The process-level lazy storage may have been initialized by the
+        # production manifest backend before this class override took effect.
+        staticfiles_storage._wrapped = StaticFilesStorage()
         connection.set_tenant(self.tenant)
         self.owner = self.tenant.owner
         role, _ = Role.objects.get_or_create(name="Owner")
@@ -289,6 +294,43 @@ class PawnCollateralMediaTests(TenantTestCase):
             f"{reverse('loans:pawn_collateral_storage_transfer', args=[self.loan.pk, self.item.pk])}?destination={box.pk}",
             fetch_redirect_response=False,
         )
+
+        item_scan = self.client.get(
+            reverse("loans:pawn_collateral_scan", args=[self.item.public_id])
+        )
+        self.assertEqual(item_scan.status_code, 302)
+        destination_scan = self.client.get(
+            reverse("loans:pawn_storage_location_scan", args=[box.public_id])
+        )
+        self.assertRedirects(
+            destination_scan,
+            f"{reverse('loans:pawn_collateral_storage_transfer', args=[self.loan.pk, self.item.pk])}?destination={box.pk}",
+            fetch_redirect_response=False,
+        )
+
+        transfer_form = self.client.get(destination_scan.url)
+        self.assertContains(transfer_form, "This item is selected for storage")
+        self.assertEqual(
+            transfer_form.context["form"]["destination"].value(),
+            str(box.pk),
+        )
+
+    def test_storage_movement_history_is_visible_on_loan_detail(self):
+        branch = self._location("BRANCH", "BR-H", None)
+        vault = self._location("VAULT", "V-H", branch)
+        cabinet = self._location("CABINET", "C-H", vault)
+        box = self._location("BOX", "B-H", cabinet)
+        place_or_transfer_collateral(
+            self.item.pk, destination_id=box.pk, reason="", actor=self.owner
+        )
+
+        response = self.client.get(
+            reverse("loans:pawn_loan_detail", args=[self.loan.pk])
+        )
+
+        self.assertContains(response, "Storage movement history")
+        self.assertContains(response, "Initial placement")
+        self.assertContains(response, "BR-H / V-H / C-H / B-H")
 
     def test_verification_freezes_scope_blocks_operations_and_requires_loss_compensation(self):
         branch = self._location("BRANCH", "BR-V1", None)

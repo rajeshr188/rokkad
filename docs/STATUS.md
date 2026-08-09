@@ -10,6 +10,14 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P4 software execution is complete. The Owner's item scan or Place/Transfer
+  action now selects the in-vault item in a workspace-scoped browser session;
+  the next Box/Slot QR scan opens the transfer form with the destination
+  selected. Successful movement clears the selection. Loan detail exposes the
+  immutable storage movement ledger alongside current location. The complete
+  8-test collateral media/storage/verification gate passes; Owner execution of
+  initial placement and a reasoned transfer remains the P4 acceptance step.
+
 - P3 physical identity was accepted by the workspace Owner on 2026-08-09 after
   the complete software gate and physical ticket, label, signature-area, and QR
   checks. P4 hierarchical storage is now active: prove the required Branch →

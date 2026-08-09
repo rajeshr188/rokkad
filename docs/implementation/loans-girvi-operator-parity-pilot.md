@@ -203,6 +203,21 @@ physical ticket/label/scan checks. This accepts the Original/Duplicate identity,
 signature areas, collateral label content, and QR navigation outcome. P4
 hierarchical storage placement and transfer is the active gate.
 
+### P4 Software Evidence
+
+Loans already enforces the complete Branch → Vault → Cabinet → Box → optional
+Slot hierarchy, tenant scope, Box/Slot-only placement, capacity, Owner-only
+manual mutation, immutable movement rows, and a guarded current-location
+projection. The P4 operator gap is now closed: scanning an in-vault item label
+or opening its Place/Transfer action selects that item in the Owner's current
+browser session; scanning a Box/Slot label then opens the same transfer form
+with the destination selected. The selection is workspace-scoped, revalidated
+against custody, and cleared after a successful movement. Loan detail now shows
+the immutable placement, transfer, and workflow-removal history alongside the
+current path. The complete 8-test collateral media, QR, storage, capacity,
+movement immutability, lifecycle-removal, and physical-verification suite
+passes. Owner browser execution remains the P4 acceptance gate.
+
 ## Physical Document Matrix
 
 Use the detailed matrix in

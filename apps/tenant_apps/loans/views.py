@@ -84,6 +84,8 @@ _OVERLAY_PAGE_DIMENSIONS_MM = {
     "A4": (210, 297), "A5": (148, 210), "LETTER": (216, 279),
 }
 
+_PENDING_STORAGE_ITEM_SESSION_KEY = "loans_pending_storage_item"
+
 
 def _fit_overlay_geometry(definition, target_page_size):
     """Proportionally fit flat absolute-overlay blocks to another page size."""
@@ -1183,6 +1185,14 @@ def pawn_collateral_scan(request, public_id):
         return redirect(
             f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}?item={item.pk}"
         )
+    if (
+        request.loans_workspace.owner_id == request.user.pk
+        and item.custody_state == "IN_VAULT"
+    ):
+        request.session[_PENDING_STORAGE_ITEM_SESSION_KEY] = {
+            "workspace_id": request.loans_workspace.pk,
+            "item_public_id": str(item.public_id),
+        }
     return redirect(
         f"{reverse('loans:pawn_loan_detail', args=[item.loan_id])}#collateral-{item.public_id}"
     )
@@ -1274,6 +1284,12 @@ def pawn_storage_location_scan(request, public_id):
         return redirect(
             f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}{query}"
         )
+    if location.level not in {
+        PawnStorageLocation.Level.BOX,
+        PawnStorageLocation.Level.SLOT,
+    }:
+        messages.info(request, "Collateral can only be placed in a Box or Slot.")
+        return redirect("loans:pawn_storage_location_list")
     if item_public_id:
         item = get_object_or_404(
             PawnCollateralItem,
@@ -1283,6 +1299,23 @@ def pawn_storage_location_scan(request, public_id):
         return redirect(
             f"{reverse('loans:pawn_collateral_storage_transfer', args=[item.loan_id, item.pk])}?destination={location.pk}"
         )
+    pending = request.session.get(_PENDING_STORAGE_ITEM_SESSION_KEY, {})
+    if (
+        request.loans_workspace.owner_id == request.user.pk
+        and pending.get("workspace_id") == request.loans_workspace.pk
+        and pending.get("item_public_id")
+    ):
+        item = PawnCollateralItem.objects.filter(
+            public_id=pending["item_public_id"],
+            loan__workspace=request.loans_workspace,
+            custody_state="IN_VAULT",
+        ).first()
+        if item is not None:
+            return redirect(
+                f"{reverse('loans:pawn_collateral_storage_transfer', args=[item.loan_id, item.pk])}?destination={location.pk}"
+            )
+        request.session.pop(_PENDING_STORAGE_ITEM_SESSION_KEY, None)
+    messages.info(request, "Scan an in-vault collateral item before scanning its destination.")
     return redirect("loans:pawn_storage_location_list")
 
 
@@ -1293,6 +1326,15 @@ def pawn_collateral_storage_transfer(request, pk, item_pk):
     initial = {}
     if request.method == "GET" and request.GET.get("destination"):
         initial["destination"] = request.GET["destination"]
+    if (
+        request.method == "GET"
+        and request.loans_workspace.owner_id == request.user.pk
+        and item.custody_state == "IN_VAULT"
+    ):
+        request.session[_PENDING_STORAGE_ITEM_SESSION_KEY] = {
+            "workspace_id": request.loans_workspace.pk,
+            "item_public_id": str(item.public_id),
+        }
     form = PawnStorageTransferForm(
         request.POST or None,
         workspace=request.loans_workspace,
@@ -1309,6 +1351,7 @@ def pawn_collateral_storage_transfer(request, pk, item_pk):
         except (PawnStorageError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
+            request.session.pop(_PENDING_STORAGE_ITEM_SESSION_KEY, None)
             messages.success(
                 request,
                 f"{item.description} {movement.get_kind_display().lower()} recorded.",
@@ -2972,6 +3015,9 @@ def _pawn_loan_for_workspace(request, pk):
         PawnLoan.objects.select_related("borrower", "license", "series").prefetch_related(
             "collateral_items",
             "collateral_items__photos",
+            "collateral_items__storage_movements__from_location",
+            "collateral_items__storage_movements__to_location",
+            "collateral_items__storage_movements__moved_by",
             "change_log__actor",
             "accounting_events__outbox",
             "accounting_events__reversed_by_event",
