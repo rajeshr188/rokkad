@@ -141,6 +141,16 @@ stored in Loans.
 
 ### OP6 Reports, Statements, And Regulatory Documents
 
+Status: **Completed 2026-08-09.** The tenant report surface now projects all
+eight required views from the canonical PawnLoan report/balance fold and offers
+CSV, XLSX, and PDF formatting without recalculation. The canonical Loans Party
+statement includes current positions and immutable transaction history. The
+existing six required document families remain source-linked; fixed loan-ticket
+recovery now emits signed `Original` and `Duplicate` pages with one verification
+identity. Configurable pilot ticket layouts use their existing
+Original/Duplicate composition mode. See
+[ADR 2026-08-09](../adr/2026-08-09-loans-pilot-report-and-document-boundary.md).
+
 - Broad Girvi report-count parity is not required. The pilot requires these
   reports: active loans, daily disbursals and repayments, interest due, overdue
   loans, releases and renewals, storage inventory, license expiry, and one
@@ -172,8 +182,8 @@ delete or mutable financial-history editing.
 3. Deliver OP2 identity/media/labels. Completed 2026-08-09.
 4. Deliver OP3 hierarchical storage. Completed 2026-08-09.
 5. Deliver OP4 physical verification. Completed 2026-08-09.
-6. Close OP5 notice gaps. Completed 2026-08-09. Close OP6 report/document gaps. Next.
-7. Run the parity pilot.
+6. Close OP5 notice gaps. Completed 2026-08-09. Close OP6 report/document gaps. Completed 2026-08-09.
+7. Run the parity pilot. Next.
 8. Add selected bulk actions after their single commands prove stable.
 
 ## Parity Comparison

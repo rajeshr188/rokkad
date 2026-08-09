@@ -2,6 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 
+import fitz
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.loans.domain import TransactionKind
@@ -110,6 +111,15 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             result.verification_id,
             "ROKKAD|workspace:7|loan:19|approval:21:v1:approval-fingerprint-1",
         )
+        document = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(document.page_count, 2)
+        self.assertIn("Original copy", document[0].get_text())
+        self.assertIn("Duplicate copy", document[1].get_text())
+        for page in document:
+            text = page.get_text()
+            self.assertIn(result.verification_id, text)
+            self.assertIn("Borrower / customer signature", text)
+            self.assertIn("Authorized pawnbroker signature", text)
 
     def test_loan_ticket_projection_is_typed_versioned_and_renderer_independent(self):
         payload = PawnLoanDocumentProjectionBuilder.loan_ticket(self.loan)

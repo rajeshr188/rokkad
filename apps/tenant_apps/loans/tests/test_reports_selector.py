@@ -51,6 +51,27 @@ class PawnLoanReportsSelectorTests(SimpleTestCase):
         self.assertEqual(report.portfolio[0].status, "OVERDUE")
         self.assertEqual(report.issues, ())
 
+    def test_pilot_views_are_derived_from_the_same_report_bundle(self):
+        disbursal = self._event(1, TransactionKind.DISBURSAL, principal="1000")
+        repayment = self._event(2, TransactionKind.REPAYMENT, principal="200")
+        disbursal.effective_date = self.as_of
+        repayment.effective_date = self.as_of
+        loan = self._loan(events=(disbursal, repayment))
+        license_row = SimpleNamespace(status="EXPIRING")
+
+        report = build_pawn_loan_reports(
+            (loan,),
+            as_of_date=self.as_of,
+            dea_inspector=self._matching_evidence,
+            license_expiry=(license_row,),
+        )
+
+        self.assertEqual(report.active_loans[0].loan, loan)
+        self.assertEqual(report.daily_disbursals, (disbursal,))
+        self.assertEqual(report.daily_repayments, (repayment,))
+        self.assertEqual(report.storage_inventory, tuple(loan.collateral_items.all()))
+        self.assertEqual(report.license_expiry, (license_row,))
+
     def test_missing_and_failed_accounting_are_categorized(self):
         failed = self._event(
             2,
@@ -234,17 +255,23 @@ class PawnLoanReportsSelectorTests(SimpleTestCase):
     ):
         if collateral is None:
             collateral = (self._collateral(CollateralCustodyState.IN_VAULT),)
-        return SimpleNamespace(
+        loan = SimpleNamespace(
             pk=71,
             loan_number="PL-A-00001",
             state=state.value,
             loan_date=date(2026, 1, 1),
             tenure_months=3,
+            borrower=SimpleNamespace(display_name="Asha Devi"),
             accounting_events=_Manager(*events),
             collateral_items=_Manager(*collateral),
             interest_accruals=_Manager(),
             releases=_Manager(),
         )
+        for event in events:
+            event.loan = loan
+        for item in collateral:
+            item.loan = loan
+        return loan
 
     def _event(
         self,

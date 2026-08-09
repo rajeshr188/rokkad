@@ -10,7 +10,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from apps.tenant_apps.loans.documents import PawnLoanDocumentProjectionBuilder
 from apps.tenant_apps.loans.documents.payloads import DocumentProjectionError
@@ -37,7 +37,11 @@ class PawnLoanDocumentService:
 
     @classmethod
     def render_loan_ticket(cls, loan):
-        return cls._project_and_render(PawnLoanDocumentProjectionBuilder.loan_ticket, loan)
+        return cls._project_and_render(
+            PawnLoanDocumentProjectionBuilder.loan_ticket,
+            loan,
+            copy_labels=("Original", "Duplicate"),
+        )
 
     @classmethod
     def render_repayment_receipt(cls, event):
@@ -64,7 +68,7 @@ class PawnLoanDocumentService:
         return cls._project_and_render(PawnLoanDocumentProjectionBuilder.renewal_memo, renewal)
 
     @classmethod
-    def _project_and_render(cls, builder, source):
+    def _project_and_render(cls, builder, source, *, copy_labels=()):
         try:
             payload = builder(source)
         except DocumentProjectionError as exc:
@@ -74,6 +78,7 @@ class PawnLoanDocumentService:
             details=payload.details,
             verification_id=payload.verification_id,
             sections=tuple((section.heading, section.rows) for section in payload.sections),
+            copy_labels=copy_labels,
         )
         return PawnLoanDocumentResult(
             payload.document_type,
@@ -101,6 +106,7 @@ class PawnLoanDocumentService:
         verification_id,
         sections=(),
         signature_labels=("Borrower / customer signature", "Authorized pawnbroker signature"),
+        copy_labels=(),
     ):
         buffer = io.BytesIO()
         document = SimpleDocTemplate(
@@ -114,50 +120,51 @@ class PawnLoanDocumentService:
             title=title,
         )
         styles = getSampleStyleSheet()
-        story = [Paragraph(escape(title), styles["Title"]), Spacer(1, 8)]
-        details_table = Table(
-            [
-                [
+        story = []
+        for copy_index, copy_label in enumerate(copy_labels or (None,)):
+            if copy_index:
+                story.append(PageBreak())
+            story.extend([Paragraph(escape(title), styles["Title"]), Spacer(1, 4)])
+            if copy_label:
+                story.extend([
+                    Paragraph(f"<b>{escape(copy_label)} copy</b>", styles["Heading3"]),
+                    Spacer(1, 6),
+                ])
+            details_table = Table(
+                [[
                     Paragraph(f"<b>{escape(str(label))}</b>", styles["BodyText"]),
                     Paragraph(escape(str(value)), styles["BodyText"]),
-                ]
-                for label, value in details
-            ],
-            colWidths=[52 * mm, 125 * mm],
-            repeatRows=0,
-        )
-        details_table.setStyle(cls._table_style(header=False))
-        story.extend([details_table, Spacer(1, 12)])
-        for heading, rows in sections:
-            story.extend(
-                [
-                    Paragraph(escape(heading), styles["Heading2"]),
-                    Table(
-                        [
-                            [Paragraph(escape(str(cell)), styles["BodyText"]) for cell in row]
-                            for row in rows
-                        ],
-                        repeatRows=1,
-                        hAlign="LEFT",
-                    ),
-                    Spacer(1, 12),
-                ]
+                ] for label, value in details],
+                colWidths=[52 * mm, 125 * mm],
+                repeatRows=0,
             )
-            story[-2].setStyle(cls._table_style(header=True))
-        story.extend(
-            [
+            details_table.setStyle(cls._table_style(header=False))
+            story.extend([details_table, Spacer(1, 12)])
+            for heading, rows in sections:
+                section_table = Table(
+                    [[Paragraph(escape(str(cell)), styles["BodyText"]) for cell in row] for row in rows],
+                    repeatRows=1,
+                    hAlign="LEFT",
+                )
+                section_table.setStyle(cls._table_style(header=True))
+                story.extend([
+                    Paragraph(escape(heading), styles["Heading2"]),
+                    section_table,
+                    Spacer(1, 12),
+                ])
+            signature_table = Table(
+                [[signature_labels[0], signature_labels[1]]],
+                colWidths=[88 * mm, 88 * mm],
+                rowHeights=[18 * mm],
+            )
+            signature_table.setStyle(cls._table_style(header=False))
+            story.extend([
                 Spacer(1, 8),
                 Paragraph("Verification ID", styles["Heading3"]),
                 Paragraph(escape(verification_id), styles["Code"]),
                 Spacer(1, 18),
-                Table(
-                    [[signature_labels[0], signature_labels[1]]],
-                    colWidths=[88 * mm, 88 * mm],
-                    rowHeights=[18 * mm],
-                ),
-            ]
-        )
-        story[-1].setStyle(cls._table_style(header=False))
+                signature_table,
+            ])
         document.build(story)
         pdf = buffer.getvalue()
         buffer.close()

@@ -885,9 +885,10 @@ Status: **Temporary coexistence is active while Loans completes operational
 parity. PawnLoan MVP and FundingLoan Gates A-C are implemented. The immediate
 OP1 regulatory license operations are complete. The immediate execution slice
 has completed OP2 collateral photos/labels/QR, OP3 hierarchical storage, and
-OP4 physical verification and OP5 notice coverage. The next blocker is the
-OP6 essential report/document gap. FundingLoan remains an Owner/Admin
-evaluation surface until those pilot blockers pass.**
+OP4 physical verification, OP5 notice coverage, and OP6 essential reports and
+regulatory documents. The next step is the operator parity pilot across the
+accepted workflows. FundingLoan remains an Owner/Admin evaluation surface
+during the pilot.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant
 schema slice must use `migrate_schemas`, each accounting path must preserve DEA

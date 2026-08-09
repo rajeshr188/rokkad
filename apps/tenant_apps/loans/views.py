@@ -13,10 +13,12 @@ from django.http import Http404, HttpResponse, HttpResponseGone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 
 from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
+from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.access import loans_setup_required, loans_workspace_required
 from apps.tenant_apps.loans.domain import (
     LoanDocumentKind,
@@ -148,6 +150,7 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_operations_snapshot,
     get_pawn_loan_release_readiness,
     get_pawn_loan_reports,
+    get_pawn_party_statement,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -209,6 +212,10 @@ from apps.tenant_apps.loans.services import (
     disburse_pawn_loan,
     dispatch_pawn_loan_notice,
     dispatch_operational_notice,
+    PawnLoanReportExportError,
+    build_party_statement_dataset,
+    build_pawn_loan_report_dataset,
+    render_report_dataset,
     ensure_pawn_borrower_accounting,
     initiate_pawn_loan_auction,
     start_pawn_loan_auction,
@@ -281,12 +288,67 @@ def pawn_loan_list(request):
 
 @loans_workspace_required
 def pawn_loan_reports(request):
-    report = get_pawn_loan_reports(as_of_date=timezone.localdate())
+    as_of_date = _report_as_of_date(request)
+    report = get_pawn_loan_reports(as_of_date=as_of_date)
+    parties = Party.objects.filter(pawn_loans__workspace=request.loans_workspace).distinct().order_by("display_name")
     return render(
         request,
         "loans/pawn/reports.html",
-        {"report": report, "can_administer": _can_administer(request)},
+        {"report": report, "parties": parties, "can_administer": _can_administer(request)},
     )
+
+
+@loans_workspace_required
+def pawn_loan_report_export(request, section, export_format):
+    as_of_date = _report_as_of_date(request)
+    try:
+        dataset = build_pawn_loan_report_dataset(
+            get_pawn_loan_reports(as_of_date=as_of_date), section
+        )
+        content, content_type = render_report_dataset(dataset, export_format)
+    except PawnLoanReportExportError as exc:
+        return HttpResponse(str(exc), status=400)
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = content_disposition_header(
+        True, f"pawn-loans-{section}-{as_of_date}.{export_format}"
+    )
+    return response
+
+
+@loans_workspace_required
+def pawn_party_statement(request, party_pk, export_format=None):
+    party = get_object_or_404(
+        Party.objects.filter(pawn_loans__workspace=request.loans_workspace).distinct(),
+        pk=party_pk,
+    )
+    statement = get_pawn_party_statement(
+        party_id=party.pk, as_of_date=_report_as_of_date(request)
+    )
+    if export_format:
+        try:
+            content, content_type = render_report_dataset(
+                build_party_statement_dataset(statement), export_format
+            )
+        except PawnLoanReportExportError as exc:
+            return HttpResponse(str(exc), status=400)
+        response = HttpResponse(content, content_type=content_type)
+        response["Content-Disposition"] = content_disposition_header(
+            True, f"party-statement-{party.pk}-{statement.as_of_date}.{export_format}"
+        )
+        return response
+    return render(
+        request, "loans/pawn/party_statement.html", {"statement": statement}
+    )
+
+
+def _report_as_of_date(request):
+    raw = (request.GET.get("as_of") or "").strip()
+    if not raw:
+        return timezone.localdate()
+    value = parse_date(raw)
+    if value is None:
+        raise Http404("Report date must use YYYY-MM-DD.")
+    return value
 
 
 @loans_setup_required

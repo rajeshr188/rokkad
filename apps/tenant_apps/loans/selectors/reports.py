@@ -13,7 +13,8 @@ from apps.tenant_apps.loans.domain import (
     PawnLoanState,
     TransactionKind,
 )
-from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
+from apps.tenant_apps.loans.models import LoanLicense, PawnLoan, current_tenant_workspace_id
+from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.selectors.balances import (
     PawnLoanBalanceSelectorError,
     calculate_pawn_loan_balance,
@@ -54,6 +55,7 @@ class PawnLoanReportBundle:
     custody_items: tuple[object, ...]
     posting_events: tuple[object, ...]
     issues: tuple[PawnLoanReconciliationIssue, ...]
+    license_expiry: tuple[object, ...] = ()
 
     @property
     def active_count(self):
@@ -74,6 +76,78 @@ class PawnLoanReportBundle:
     def total_due(self):
         return sum((row.balance.total_due for row in self.portfolio if row.balance), ZERO)
 
+    @property
+    def active_loans(self):
+        return tuple(row for row in self.portfolio if row.loan.state == PawnLoanState.ACTIVE.value)
+
+    @property
+    def interest_due(self):
+        return tuple(
+            row for row in self.portfolio
+            if row.balance and row.balance.interest_outstanding > ZERO
+        )
+
+    @property
+    def overdue_loans(self):
+        return tuple(row for row in self.portfolio if row.balance and row.balance.is_overdue)
+
+    @property
+    def daily_disbursals(self):
+        return tuple(
+            event for event in self._events(TransactionKind.DISBURSAL.value)
+            if event.effective_date == self.as_of_date
+        )
+
+    @property
+    def daily_repayments(self):
+        return tuple(event for event in self.repayments if event.effective_date == self.as_of_date)
+
+    @property
+    def daily_releases(self):
+        return tuple(row for row in self.releases if row.effective_date == self.as_of_date)
+
+    @property
+    def daily_renewals(self):
+        return tuple(row for row in self.renewals if row.renewal_date == self.as_of_date)
+
+    @property
+    def storage_inventory(self):
+        return tuple(
+            item for item in self.custody_items
+            if item.custody_state == CollateralCustodyState.IN_VAULT.value
+        )
+
+    def _events(self, event_kind):
+        return tuple(
+            event
+            for row in self.portfolio
+            for event in row.loan.accounting_events.all()
+            if event.event_kind == event_kind
+        )
+
+
+@dataclass(frozen=True)
+class LoanLicenseExpiryRow:
+    license: object
+    days_remaining: int
+    status: str
+
+
+@dataclass(frozen=True)
+class PawnPartyStatement:
+    party: object
+    as_of_date: date
+    loans: tuple[PawnLoanPortfolioRow, ...]
+    transactions: tuple[object, ...]
+
+    @property
+    def total_principal_outstanding(self):
+        return sum((row.balance.principal_outstanding for row in self.loans if row.balance), ZERO)
+
+    @property
+    def total_due(self):
+        return sum((row.balance.total_due for row in self.loans if row.balance), ZERO)
+
 
 def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
     workspace_id = current_tenant_workspace_id()
@@ -84,6 +158,7 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
         .select_related("borrower", "license", "series", "policy_snapshot")
         .prefetch_related(
             "collateral_items__custody_history",
+            "collateral_items__current_storage_location",
             "collateral_items__release_items__release__reversal",
             "accounting_events__outbox",
             "accounting_events__reversed_by_event",
@@ -95,14 +170,27 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
         )
         .order_by("loan_number")
     )
+    license_rows = tuple(
+        LoanLicenseExpiryRow(
+            license=license,
+            days_remaining=(license.expires_on - as_of_date).days,
+            status=(
+                "EXPIRED" if license.expires_on < as_of_date
+                else "EXPIRING" if (license.expires_on - as_of_date).days <= 30
+                else "CURRENT"
+            ),
+        )
+        for license in LoanLicense.objects.filter(workspace_id=workspace_id).order_by("expires_on", "license_number")
+    )
     return build_pawn_loan_reports(
         loans,
         as_of_date=as_of_date,
         dea_inspector=dea_facade.inspect_pawn_loan_accounting_reference,
+        license_expiry=license_rows,
     )
 
 
-def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector):
+def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector, license_expiry=()):
     portfolio = []
     accruals = []
     repayments = []
@@ -160,7 +248,40 @@ def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector):
         custody_items=tuple(custody_items),
         posting_events=tuple(posting_events),
         issues=tuple(issues),
+        license_expiry=tuple(license_expiry),
     )
+
+
+def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartyStatement:
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise ValueError("Party statements require an active tenant schema.")
+    party = Party.objects.get(pk=party_id)
+    loans = tuple(
+        PawnLoan.objects.filter(workspace_id=workspace_id, borrower=party)
+        .select_related("borrower", "license", "series", "policy_snapshot")
+        .prefetch_related(
+            "collateral_items__custody_history",
+            "collateral_items__current_storage_location",
+            "collateral_items__release_items__release__reversal",
+            "accounting_events__outbox",
+            "accounting_events__reversed_by_event",
+            "accounting_events__principal_closing_lines__collateral_item",
+            "accounting_events__principal_opening_lines__collateral_item",
+            "interest_accruals", "releases__items", "renewal_as_source__successor_loan",
+        )
+        .order_by("loan_number")
+    )
+    report = build_pawn_loan_reports(
+        loans,
+        as_of_date=as_of_date,
+        dea_inspector=dea_facade.inspect_pawn_loan_accounting_reference,
+    )
+    transactions = tuple(sorted(
+        (event for row in report.portfolio for event in row.loan.accounting_events.all()),
+        key=lambda event: (event.effective_date, event.pk),
+    ))
+    return PawnPartyStatement(party, as_of_date, report.portfolio, transactions)
 
 
 def _loan_issues(loan, events, collateral, balance, dea_inspector):
@@ -582,6 +703,9 @@ __all__ = [
     "PawnLoanPortfolioRow",
     "PawnLoanReconciliationIssue",
     "PawnLoanReportBundle",
+    "LoanLicenseExpiryRow",
+    "PawnPartyStatement",
     "build_pawn_loan_reports",
     "get_pawn_loan_reports",
+    "get_pawn_party_statement",
 ]

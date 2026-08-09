@@ -142,6 +142,13 @@ from .operational_notices import (
     dispatch_due_operational_notices,
     dispatch_operational_notice,
 )
+from .report_exports import (
+    PawnLoanReportDataset,
+    PawnLoanReportExportError,
+    build_party_statement_dataset,
+    build_pawn_loan_report_dataset,
+    render_report_dataset,
+)
 from .economic_policies import (
     PawnEconomicPolicyError,
     create_pawn_loan_economic_policy,
@@ -260,6 +267,11 @@ __all__ = (
     "create_verification_discrepancy_notice",
     "dispatch_due_operational_notices",
     "dispatch_operational_notice",
+    "PawnLoanReportDataset",
+    "PawnLoanReportExportError",
+    "build_party_statement_dataset",
+    "build_pawn_loan_report_dataset",
+    "render_report_dataset",
     "PawnLifecycleError",
     "approve_pawn_loan",
     "cancel_pawn_loan",
