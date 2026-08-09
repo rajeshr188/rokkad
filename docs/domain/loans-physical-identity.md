@@ -45,3 +45,6 @@ Software cannot certify a physical printer. The Owner must print intended A4
 and A5 paths, confirm margins and both signature boxes are usable, record
 simplex/duplex driver behavior, and scan the QR from paper. Printer model,
 driver, paper, scaling, operator, and date belong in the physical matrix.
+
+The workspace Owner accepted P3 on 2026-08-09 after the software gate and
+physical ticket, label, signature-area, and QR scan checks.

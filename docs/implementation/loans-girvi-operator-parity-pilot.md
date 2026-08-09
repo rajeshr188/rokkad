@@ -121,8 +121,8 @@ Do not use database/admin shortcuts.
 | --- | --- | --- | --- | --- |
 | P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior, full effective-dated calculation policy | PORT/REPLACE | **Accepted 2026-08-09 by Owner** |
 | P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | REPLACE | **Accepted 2026-08-09 by Owner** |
-| P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | Software pass; physical matrix pending |
-| P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | Pending |
+| P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | **Accepted 2026-08-09 by Owner** |
+| P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | **Active** |
 | P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | Pending |
 | P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | Pending |
 | P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | Pending |
@@ -158,7 +158,7 @@ must be corrected before the scenario passes.
 The workspace Owner accepted P1 on 2026-08-09 after the software gate. This
 accepts the license, independent bounded numbering, expiry behavior, and full
 effective-dated calculation-policy setup as the operating boundary for the
-following scenarios. P1 and P2 are accepted; P3 is the active gate.
+following scenarios. P1 through P3 are accepted; P4 is the active gate.
 
 ### P2 Software Evidence
 
@@ -173,7 +173,7 @@ number. Mandatory photographs, approval snapshots, and disbursal snapshots
 retain the immutable item and policy evidence. The 18-test draft UI suite and
 11 focused economics, draft, approval, and disbursal tests pass. Owner
 execution of the mixed-metal browser workflow was accepted on 2026-08-09. P2
-is complete and P3 physical identity is the active gate.
+is complete.
 
 ### P2 Acceptance
 
@@ -195,6 +195,13 @@ without both signature roles on both copy fronts. Final P3 acceptance still
 requires the physical printer matrix and a QR scan from paper. The complete
 59-test document layout, rendering, persistence, media, label, and scan gate
 passes.
+
+### P3 Acceptance
+
+The workspace Owner accepted P3 on 2026-08-09 after the software gate and
+physical ticket/label/scan checks. This accepts the Original/Duplicate identity,
+signature areas, collateral label content, and QR navigation outcome. P4
+hierarchical storage placement and transfer is the active gate.
 
 ## Physical Document Matrix
 

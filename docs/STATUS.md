@@ -10,6 +10,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P3 physical identity was accepted by the workspace Owner on 2026-08-09 after
+  the complete software gate and physical ticket, label, signature-area, and QR
+  checks. P4 hierarchical storage is now active: prove the required Branch →
+  Vault → Cabinet → Box/optional Slot path, initial placement, item and
+  destination scan-assisted transfer, immutable movement evidence, capacity,
+  and the current-location projection.
+
 - P3 physical-identity audit found one configurable-document loophole: an
   active pilot ticket could include Original and Duplicate but omit required
   borrower/staff signature areas. Integrity diagnostics now reject that layout.
@@ -17,15 +24,11 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   Party, net weight, exact tenant QR target, and PDF hash. Fixed tickets already
   render both signed copies with one verification identity. The complete
   59-test document layout, rendering, persistence, media, label, and scan gate
-  passes. P3 is software-complete; physical A4/A5, duplex, margins, signatures,
-  and scan-from-paper evidence remain Owner checks.
+  passes. The subsequent physical checks were accepted by the Owner.
 
 - P2 mixed-metal origination and disbursal was accepted by the workspace Owner
   on 2026-08-09 after the number-visibility and deferred-accounting release
-  corrections. P3 physical identity is now active: prove the signed
-  Original/Duplicate loan ticket, collateral label output, and tenant-scoped QR
-  scan to the correct loan. Physical printer behavior remains operator evidence
-  and cannot be certified by software tests alone.
+  corrections.
 
 - Future Loans activation from `DEFERRED` back to DEA is now documented in
   proposed ADR `2026-08-09-loans-deferred-to-dea-activation.md`. The recommended

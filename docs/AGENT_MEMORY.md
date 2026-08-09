@@ -53,15 +53,15 @@ custody, tenant, correction, and outbound-accounting boundaries, then prove it
 with the corresponding P1-P12 Loans acceptance scenario. Girvi still owns and
 services all Girvi-created records; no transfer, synchronization, dual write,
 origination shutdown, or deletion is authorized before a separate retirement
-ADR. The next acceptance gate is P3 physical identity: Original/Duplicate loan
-ticket, signature fields, collateral labels, and tenant-scoped QR scans.
+ADR. P3 physical identity was accepted by the workspace Owner on 2026-08-09
+after its software and physical print/scan gates. The next acceptance gate is
+P4 hierarchical storage placement and transfer.
 P3 must reject active configurable ticket assignments that omit either copy or
 the borrower/customer plus authorized staff signature roles on each front.
 Fixed tickets already satisfy those rules. Collateral labels use immutable item
 UUID identity and must retain their exact tenant scan target and PDF hash.
-The complete 59-test P3 software gate passes. Physical printer and
-scan-from-paper evidence remains an Owner responsibility; do not mark P3
-accepted from software output alone.
+The complete 59-test P3 software gate passes and the Owner accepted the physical
+ticket, label, signature-area, and scan outcome.
 
 The previously dirty accounting/Girvi/Loans work is now organized into four
 dependency-ordered runtime commits: `0e847b2` (guarded standalone accounting
