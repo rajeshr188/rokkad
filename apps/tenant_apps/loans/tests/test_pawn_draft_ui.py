@@ -116,6 +116,10 @@ class PawnDraftUiTests(TenantTestCase):
         ticket = self.client.get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]))
         self.assertEqual(ticket.status_code, 409)
 
+        edit = self.client.get(reverse("loans:pawn_loan_update", args=[loan.pk]))
+        self.assertContains(edit, "Official loan number")
+        self.assertContains(edit, loan.loan_number)
+
         payload = self._payload(license, series)
         payload["collateral-0-allocated_principal"] = "12500.00"
         payload["collateral-0-description"] = "Corrected gold chain"
@@ -147,12 +151,17 @@ class PawnDraftUiTests(TenantTestCase):
         payload = self._payload(license, series)
         payload["action"] = "preview"
 
+        initial = self.client.get(reverse("loans:pawn_loan_create"))
+        self.assertContains(initial, "Next expected PawnLoan number")
+        self.assertContains(initial, "PL-A-00001")
+
         response = self.client.post(reverse("loans:pawn_loan_create"), payload)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Economic preview")
         self.assertContains(response, "10000.00")
         self.assertContains(response, "9800.00")
+        self.assertContains(response, "PL-A-00001")
         self.assertFalse(PawnLoan.objects.exists())
         sequence = LoanNumberSequence.objects.get(
             series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value

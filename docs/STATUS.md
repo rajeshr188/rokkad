@@ -10,6 +10,12 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P2 Owner walkthrough feedback found that the draft form did not expose the
+  number represented by the selected series. The create page now shows the
+  non-consuming next expected PawnLoan number for every selectable series both
+  before and after economics preview, explains its concurrency boundary, and
+  the saved-draft edit page shows the permanently allocated official number.
+
 - P1 regulatory setup was accepted by the workspace Owner on 2026-08-09 after
   passing its complete software gate. P2 mixed-metal origination and disbursal
   has now passed its software gate and awaits the Owner browser walkthrough.

@@ -987,7 +987,12 @@ def pawn_loan_create(request):
     return render(
         request,
         "loans/pawn/form.html",
-        {"form": form, "formset": formset, "economics_preview": economics_preview},
+        {
+            "form": form,
+            "formset": formset,
+            "economics_preview": economics_preview,
+            "number_preview_rows": _pawn_number_preview_rows(form),
+        },
     )
 
 
@@ -1048,6 +1053,7 @@ def pawn_loan_update(request, pk):
             "formset": formset,
             "loan": loan,
             "economics_preview": economics_preview,
+            "number_preview_rows": _pawn_number_preview_rows(form),
         },
     )
 
@@ -3081,6 +3087,18 @@ def _add_pawn_draft_error(form, formset, exc):
                 item_form.add_error(exc.field, str(exc))
                 return
     form.add_error(None, str(exc))
+
+
+def _pawn_number_preview_rows(form):
+    """Expose non-consuming official-number previews for selectable series."""
+
+    return tuple(
+        {
+            "series": series,
+            "preview": _safe_preview(series, LoanDocumentKind.PAWN_LOAN),
+        }
+        for series in form.fields["series"].queryset
+    )
 
 
 def _persist_formset_photos(loan, formset, *, actor, workflow_source):

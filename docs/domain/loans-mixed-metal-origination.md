@@ -27,7 +27,10 @@ related:
 
 ## Operator Flow
 
-1. Select Party, license, series, loan date, and tenure.
+1. Select Party, license, series, loan date, and tenure. Before saving, the
+   page shows the non-consuming next expected PawnLoan number for every
+   available series. After saving, the edit page shows the permanently
+   allocated official number.
 2. Add every collateral item with metal, net weight, purity, appraisal value,
    allocated principal, and at least one photograph.
 3. Preview economics. The page shows each item's rate, selected value, maximum

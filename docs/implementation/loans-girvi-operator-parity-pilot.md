@@ -166,6 +166,9 @@ The P2 implementation gate passed on 2026-08-09. The draft UI presents each
 gold/silver tranche's resolved rate, allocated principal, selected value, LTV
 maximum, and interest alongside total deductions and net cash. An LTV failure
 is attached to the offending allocated-principal input and does not consume a
+number. Owner feedback then added the missing numbering context: create shows
+the non-consuming next expected number for each selectable series before and
+after economics preview, while a saved draft shows its allocated official
 number. Mandatory photographs, approval snapshots, and disbursal snapshots
 retain the immutable item and policy evidence. The 18-test draft UI suite and
 11 focused economics, draft, approval, and disbursal tests pass. Owner

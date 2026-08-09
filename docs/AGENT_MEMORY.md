@@ -26,6 +26,9 @@ tranches at disbursal. The draft preview exposes per-item rate, value, LTV
 limit, and interest, and LTV failures attach to the offending item without
 consuming a number. Do not restore a mutable loan-level interest rate as
 authority or mark P2 finally accepted before recording the Owner workflow.
+P2 walkthrough feedback requires number clarity on the draft itself: create
+shows non-consuming next-number previews for selectable series, while a saved
+draft shows its permanently allocated official number.
 
 Loans is the selected target loan platform under accepted ADR
 `2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi is now a temporary
