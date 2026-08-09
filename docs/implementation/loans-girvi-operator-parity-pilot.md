@@ -121,7 +121,7 @@ Do not use database/admin shortcuts.
 | --- | --- | --- | --- | --- |
 | P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior, full effective-dated calculation policy | PORT/REPLACE | **Accepted 2026-08-09 by Owner** |
 | P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | REPLACE | **Accepted 2026-08-09 by Owner** |
-| P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | **Active** |
+| P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | Software pass; physical matrix pending |
 | P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | Pending |
 | P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | Pending |
 | P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | Pending |
@@ -183,6 +183,18 @@ deferred-accounting corrections found during the walkthrough. This accepts
 Party selection, two-item gold/silver economics, photographs, item LTV
 recovery, immutable approval/disbursal evidence, and truthful `PENDING`
 accounting disposition in `DEFERRED` mode.
+
+### P3 Software Evidence
+
+The existing fixed ticket renders Original and Duplicate pages from the same
+approval identity and includes borrower/customer and authorized staff signature
+areas. The label carries loan number, immutable item identity, description,
+Party, net weight, and a tenant-scoped QR target. P3 additionally closes the
+custom-layout loophole: document integrity now rejects an active pilot ticket
+without both signature roles on both copy fronts. Final P3 acceptance still
+requires the physical printer matrix and a QR scan from paper. The complete
+59-test document layout, rendering, persistence, media, label, and scan gate
+passes.
 
 ## Physical Document Matrix
 

@@ -78,6 +78,13 @@ def get_document_integrity_findings():
                 assignment.pk,
                 "The active pilot loan-ticket layout must issue both Original and Duplicate copies. Choose a BOTH or A4 side-by-side sheet preset, or Original/Duplicate copy mode.",
             ))
+        if not _includes_required_ticket_signatures(layout):
+            findings.append(DocumentIntegrityFinding(
+                "PILOT_TICKET_SIGNATURES",
+                "assignment",
+                assignment.pk,
+                "The active pilot loan-ticket layout must provide borrower/customer and authorized staff signature labels on both Original and Duplicate fronts.",
+            ))
     return tuple(findings)
 
 
@@ -93,6 +100,43 @@ def _includes_original_and_duplicate(layout):
         "ORIGINAL_DUPLICATE",
         "ORIGINAL_DUPLICATE_DUPLEX",
     }
+
+
+def _includes_required_ticket_signatures(layout):
+    def walk(blocks):
+        for block in blocks:
+            yield block
+            yield from walk(block.blocks)
+            for column in block.columns:
+                yield from walk(column.blocks)
+
+    def has_required_roles(block):
+        labels = tuple(
+            label.strip().lower()
+            for label in block.text.split("|")
+            if label.strip()
+        )
+        return (
+            any("borrower" in label or "customer" in label for label in labels)
+            and any(
+                "staff" in label
+                or "pawnbroker" in label
+                or "authorized" in label
+                for label in labels
+            )
+        )
+
+    signature_blocks = tuple(
+        block
+        for block in walk(layout.blocks)
+        if block.type == "signature"
+        and block.visible_when is None
+        and has_required_roles(block)
+    )
+    return all(
+        any(block.copy_scope in {"BOTH", copy_scope} for block in signature_blocks)
+        for copy_scope in ("ORIGINAL", "DUPLICATE")
+    )
 
 
 __all__ = ["DocumentIntegrityFinding", "get_document_integrity_findings"]

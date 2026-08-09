@@ -1,3 +1,4 @@
+import hashlib
 import shutil
 import tempfile
 import uuid
@@ -182,9 +183,21 @@ class PawnCollateralMediaTests(TenantTestCase):
         self.assertEqual(response.status_code, 200)
         text = "".join(page.get_text() for page in fitz.open(stream=response.content, filetype="pdf"))
         self.assertIn(self.loan.loan_number, text)
+        self.assertIn(f"CI-{str(self.item.public_id).replace('-', '')[:12].upper()}", text)
         self.assertIn("Gold ring", text)
         self.assertIn("Media Borrower", text)
-        self.assertEqual(PawnCollateralLabelIssue.objects.get().action, "PRINT")
+        self.assertIn("Weight: 2.0000 g", text)
+        issue = PawnCollateralLabelIssue.objects.get()
+        self.assertEqual(issue.action, "PRINT")
+        self.assertTrue(
+            issue.qr_target.endswith(
+                reverse("loans:pawn_collateral_scan", args=[self.item.public_id])
+            )
+        )
+        self.assertEqual(
+            issue.payload_sha256,
+            hashlib.sha256(response.content).hexdigest(),
+        )
 
         scan = self.client.get(
             reverse("loans:pawn_collateral_scan", args=[self.item.public_id])

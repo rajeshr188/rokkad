@@ -10,6 +10,16 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P3 physical-identity audit found one configurable-document loophole: an
+  active pilot ticket could include Original and Duplicate but omit required
+  borrower/staff signature areas. Integrity diagnostics now reject that layout.
+  Label evidence tests now prove loan number, immutable item code, description,
+  Party, net weight, exact tenant QR target, and PDF hash. Fixed tickets already
+  render both signed copies with one verification identity. The complete
+  59-test document layout, rendering, persistence, media, label, and scan gate
+  passes. P3 is software-complete; physical A4/A5, duplex, margins, signatures,
+  and scan-from-paper evidence remain Owner checks.
+
 - P2 mixed-metal origination and disbursal was accepted by the workspace Owner
   on 2026-08-09 after the number-visibility and deferred-accounting release
   corrections. P3 physical identity is now active: prove the signed

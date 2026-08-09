@@ -270,3 +270,33 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
         )
 
         self.assertEqual(get_document_integrity_findings(), ())
+
+    def test_integrity_selector_requires_both_signature_roles_on_each_ticket_copy(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["copy_mode"] = "ORIGINAL_DUPLICATE"
+        definition["blocks"] = [
+            block for block in definition["blocks"] if block["type"] != "signature"
+        ]
+        unsigned = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name=f"Unsigned ticket {uuid.uuid4().hex[:6]}",
+            definition=definition,
+            actor=self.actor,
+        )
+        unsigned = LoanDocumentLayoutService.publish(
+            revision=unsigned,
+            actor=self.actor,
+        )
+        LoanDocumentLayoutService.assign(
+            revision=unsigned,
+            workspace=self.tenant,
+            actor=self.actor,
+        )
+
+        findings = get_document_integrity_findings()
+
+        self.assertEqual(
+            [finding.category for finding in findings],
+            ["PILOT_TICKET_SIGNATURES"],
+        )
