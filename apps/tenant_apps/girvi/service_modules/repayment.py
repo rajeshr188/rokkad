@@ -3,9 +3,15 @@
 import logging
 from dataclasses import dataclass, field as dc_field
 
-from django.db import transaction
+from django.db import connection, transaction
 
-from apps.tenant_apps.girvi.integrations.dea_adapter import post_payment_voucher
+from apps.configuration.accounting_integration import is_dea_integration_enabled
+from apps.tenant_apps.girvi.integrations.dea_adapter import (
+    build_posting_idempotency_key,
+    post_payment_voucher,
+    record_posting_event,
+)
+from apps.tenant_apps.girvi.models import LoanRepayment, LoanRepaymentDirection
 from apps.tenant_apps.girvi.selectors import build_loan_settlement_balance
 from apps.tenant_apps.girvi.service_modules.accrual import (
     InterestAccrualCommand,
@@ -32,6 +38,8 @@ class RepaymentCommand:
 
 @dataclass
 class RepaymentResult:
+    repayment: object | None = None
+    repayment_created: bool = False
     payment: object | None = None
     payment_created: bool = False
     accounting_posted: bool = False
@@ -88,6 +96,38 @@ def _repayment_success_message(payment, payload, settlement, *, created=True):
         f"Payment {payment_id} {action}. "
         f"Total {payload['total_amount']}; principal {principal}; "
         f"interest {interest}; remaining outstanding {remaining}."
+    )
+
+
+def _taken_repayment_success_message(result, payload, settlement):
+    repayment_id = getattr(result.repayment, "pk", "repayment")
+    remaining = max(settlement.total_outstanding - payload["total_amount"], 0)
+    if result.accounting_posted:
+        delivery = "and posted to accounting"
+    else:
+        delivery = "for deferred accounting delivery"
+    action = "recorded" if result.repayment_created else "already recorded"
+    return (
+        f"Repayment {repayment_id} {action} {delivery}. "
+        f"Total {payload['total_amount']}; principal {payload['principal_amount'] or 0}; "
+        f"interest {payload['interest_amount'] or 0}; remaining outstanding {remaining}."
+    )
+
+
+def _taken_repayment_conflicts(existing, payload):
+    expected = {
+        "total_amount": payload["total_amount"],
+        "principal_amount": payload["principal_amount"],
+        "interest_amount": payload["interest_amount"],
+        "payment_date": payload["payment_date"],
+        "payment_method": payload["payment_method"],
+        "description": payload["description"],
+        "is_final_payment": payload["is_final_payment"],
+    }
+    return tuple(
+        field_name
+        for field_name, expected_value in expected.items()
+        if getattr(existing, field_name) != expected_value
     )
 
 
@@ -192,30 +232,7 @@ class TakenLoanRepaymentService:
 
         try:
             with transaction.atomic():
-                existing = None
                 reference_number = payload["reference_number"]
-                payments = getattr(command.loan, "payments", None)
-                if reference_number and payments is not None:
-                    existing = (
-                        payments.filter(
-                            direction="PAYMENT",
-                            reference_number=reference_number,
-                        )
-                        .order_by("pk")
-                        .first()
-                    )
-                if existing:
-                    result.payment = existing
-                    result.payment_created = False
-                    result.accounting_posted = True
-                    result.success_message = _repayment_success_message(
-                        existing,
-                        payload,
-                        settlement,
-                        created=False,
-                    )
-                    return result
-
                 if not reference_number:
                     reference_number = build_repayment_idempotency_marker(
                         command.loan,
@@ -223,48 +240,106 @@ class TakenLoanRepaymentService:
                         loan_kind="taken",
                     )
                     payload["reference_number"] = reference_number
-                    if payments is not None:
-                        existing = (
-                            payments.filter(
-                                direction="PAYMENT",
-                                reference_number=reference_number,
-                            )
-                            .order_by("pk")
-                            .first()
-                        )
-                    if existing:
-                        result.payment = existing
-                        result.payment_created = False
-                        result.accounting_posted = True
-                        result.success_message = _repayment_success_message(
-                            existing,
-                            payload,
-                            settlement,
-                            created=False,
+
+                existing_repayment = (
+                    LoanRepayment.objects.filter(
+                        taken_loan=command.loan,
+                        reference_number=reference_number,
+                    )
+                    .order_by("pk")
+                    .first()
+                )
+                if existing_repayment:
+                    conflicts = _taken_repayment_conflicts(
+                        existing_repayment,
+                        payload,
+                    )
+                    if conflicts:
+                        result.errors.append(
+                            "Repayment reference was already used with different "
+                            f"details: {', '.join(conflicts)}."
                         )
                         return result
+                    result.repayment = existing_repayment
+                    if existing_repayment.accounting_voucher_pk:
+                        result.payment = command.loan.payments.filter(
+                            pk=existing_repayment.accounting_voucher_pk
+                        ).first()
+                        result.accounting_posted = result.payment is not None
+                    result.success_message = _taken_repayment_success_message(
+                        result, payload, settlement
+                    )
+                    return result
 
-                payment = command.loan.create_payment(
-                    amount=payload["total_amount"],
+                payments = getattr(command.loan, "payments", None)
+                legacy_payment = None
+                if payments is not None:
+                    legacy_payment = (
+                        payments.filter(
+                            direction="PAYMENT",
+                            reference_number=reference_number,
+                        )
+                        .order_by("pk")
+                        .first()
+                    )
+                if legacy_payment:
+                    result.payment = legacy_payment
+                    result.accounting_posted = True
+                    result.success_message = _repayment_success_message(
+                        legacy_payment, payload, settlement, created=False
+                    )
+                    return result
+
+                workspace = command.workspace or getattr(connection, "tenant", None)
+                payment = None
+                if is_dea_integration_enabled(workspace):
+                    payment = command.loan.create_payment(
+                        amount=payload["total_amount"],
+                        payment_date=payload["payment_date"],
+                        payment_method=payload["payment_method"],
+                        reference_number=reference_number,
+                        interest=payload["interest_amount"],
+                        principal=payload["principal_amount"],
+                        description=payload["description"],
+                        is_final=payload["is_final_payment"],
+                        created_by=command.created_by,
+                    )
+                    post_payment_voucher(payment, command.created_by)
+
+                repayment = LoanRepayment.objects.create(
+                    taken_loan=command.loan,
+                    direction=LoanRepaymentDirection.PAYMENT,
+                    total_amount=payload["total_amount"],
+                    principal_amount=payload["principal_amount"],
+                    interest_amount=payload["interest_amount"],
                     payment_date=payload["payment_date"],
                     payment_method=payload["payment_method"],
-                    reference_number=payload["reference_number"],
-                    interest=payload["interest_amount"],
-                    principal=payload["principal_amount"],
+                    reference_number=reference_number,
                     description=payload["description"],
-                    is_final=payload["is_final_payment"],
+                    is_final_payment=payload["is_final_payment"],
                     created_by=command.created_by,
+                    accounting_voucher_pk=getattr(payment, "pk", None),
                 )
-                post_payment_voucher(payment, command.created_by)
 
+                if payment is None:
+                    dedupe_key = build_posting_idempotency_key(
+                        event_key="taken_loan_repayment",
+                        source_document=repayment,
+                    )
+                    record_posting_event(
+                        event_key="taken_loan_repayment",
+                        source_document=repayment,
+                        dedupe_key=dedupe_key,
+                        payload=None,
+                    )
+
+            result.repayment = repayment
+            result.repayment_created = True
             result.payment = payment
-            result.payment_created = True
-            result.accounting_posted = True
-            result.success_message = _repayment_success_message(
-                payment,
-                payload,
-                settlement,
-                created=True,
+            result.payment_created = payment is not None
+            result.accounting_posted = payment is not None
+            result.success_message = _taken_repayment_success_message(
+                result, payload, settlement
             )
         except Exception as exc:
             logger.exception(

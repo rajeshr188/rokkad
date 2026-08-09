@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
+from apps.tenant_apps.girvi.models import GirviPostingOutboxEvent
 from apps.tenant_apps.girvi.transitions.types import TransitionResult
 
 
@@ -98,7 +99,14 @@ def execute_disbursal_transition(
 
         payment, created = post_disbursal(loan, user)
 
-    if created:
+    if isinstance(payment, GirviPostingOutboxEvent):
+        message = str(
+            _(
+                f"Loan status updated successfully. "
+                f"Accounting event {payment.pk} recorded for deferred delivery."
+            )
+        )
+    elif created:
         message = str(
             _(
                 f"Loan status updated successfully. "

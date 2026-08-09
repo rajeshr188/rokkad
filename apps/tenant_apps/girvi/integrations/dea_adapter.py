@@ -51,7 +51,7 @@ GIRVI_POSTING_EVENT_CONTRACTS = {
         "economic_fields": ("total_amount", "principal_amount", "interest_amount", "payment_date"),
     },
     "taken_loan_repayment": {
-        "source_model": "PaymentVoucher",
+        "source_model": "LoanRepayment",
         "expected_dea_rule": "taken_loan_payment",
         "economic_fields": ("total_amount", "principal_amount", "interest_amount", "payment_date"),
     },
@@ -197,9 +197,13 @@ def build_source_document_economic_payload(*, event_key, source_document):
         return payload
 
     if event_key in {"repayment", "taken_loan_repayment", "reversal"}:
+        loan = getattr(source_document, "given_loan", None) or getattr(
+            source_document, "taken_loan", None
+        )
         payload.update(
             {
-                "payment_id": getattr(source_document, "payment_id", ""),
+                "payment_id": getattr(source_document, "payment_id", "")
+                or f"GIRVI-REPAYMENT-{getattr(source_document, 'pk', '')}",
                 "direction": getattr(source_document, "direction", ""),
                 "total_amount": _serialize_economic_value(
                     getattr(source_document, "amount_in_base_currency", None)
@@ -215,7 +219,7 @@ def build_source_document_economic_payload(*, event_key, source_document):
                     getattr(source_document, "payment_date", None)
                 ),
                 "source_document_ref": _source_ref(
-                    getattr(source_document, "source_document", None)
+                    getattr(source_document, "source_document", None) or loan
                 ),
             }
         )
@@ -399,6 +403,27 @@ def enqueue_posting_event(*, event_key, source_document, dedupe_key, payload):
     )
 
 
+def record_posting_event(*, event_key, source_document, dedupe_key, payload):
+    """Persist one canonical Girvi posting event and return creation state."""
+
+    from .outbox import record_posting_event as record
+
+    event_payload = build_posting_event_payload(
+        event_key=event_key,
+        source_document=source_document,
+        payload=payload,
+        idempotency_key=dedupe_key,
+    )
+    return record(
+        event_type=event_payload["event_type"],
+        dedupe_key=dedupe_key,
+        payload=event_payload,
+        source_model=event_payload["source"]["model"],
+        source_pk=event_payload["source"]["pk"],
+        contract_version=EVENT_CONTRACT_VERSION,
+    )
+
+
 def get_payment_voucher_counts():
     PaymentVoucher = get_payment_voucher_model()
     return {
@@ -531,6 +556,7 @@ __all__ = [
     "get_payment_voucher_posting_counts",
     "get_source_posting_status",
     "enqueue_posting_event",
+    "record_posting_event",
     "find_payment_by_marker",
     "GIRVI_POSTING_EVENT_TYPES",
     "GIRVI_POSTING_EVENT_CONTRACTS",

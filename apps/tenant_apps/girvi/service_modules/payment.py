@@ -3,11 +3,15 @@
 from decimal import Decimal
 
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
 from moneyed import Money
 
+from apps.configuration.accounting_integration import is_dea_integration_enabled
 from apps.tenant_apps.girvi.integrations.dea_adapter import (
+    build_posting_idempotency_key,
     create_and_post_voucher_for_doc,
     has_other_posted_payments,
+    record_posting_event,
     resolve_customer_account,
     reverse_payment_by_marker,
 )
@@ -46,6 +50,22 @@ def record_loan_disbursal(loan, user):
     """
     if not isinstance(loan, (GivenLoan, TakenLoan)):
         raise ValueError("record_loan_disbursal supports GivenLoan and TakenLoan only")
+
+    workspace = getattr(connection, "tenant", None)
+    if not is_dea_integration_enabled(workspace):
+        event_key = (
+            "disbursal" if isinstance(loan, GivenLoan) else "taken_loan_activation"
+        )
+        dedupe_key = build_posting_idempotency_key(
+            event_key=event_key,
+            source_document=loan,
+        )
+        return record_posting_event(
+            event_key=event_key,
+            source_document=loan,
+            dedupe_key=dedupe_key,
+            payload=None,
+        )
 
     _ensure_disbursal_party_account(loan)
 

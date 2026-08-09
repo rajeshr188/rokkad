@@ -87,6 +87,7 @@ def taken_loan_payment_create_view(request, pk):
                     loan=loan,
                     cleaned_data=form.cleaned_data,
                     created_by=request.user,
+                    workspace=getattr(request, "tenant", None),
                 )
             )
             RepaymentWorkflowService.emit_result_messages(request, result)

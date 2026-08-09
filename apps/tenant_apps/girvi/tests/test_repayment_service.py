@@ -157,7 +157,8 @@ class GivenLoanRepaymentServiceTests(SimpleTestCase):
 
 class TakenLoanRepaymentServiceTests(SimpleTestCase):
     def test_execute_creates_payment_and_posts_voucher(self):
-        payment = SimpleNamespace(payment_id="TPAY-1")
+        payment = SimpleNamespace(pk=21, payment_id="TPAY-1")
+        repayment = SimpleNamespace(pk=11, accounting_voucher_pk=None)
         loan = MagicMock()
         loan.create_payment.return_value = payment
         loan.pk = None
@@ -182,7 +183,16 @@ class TakenLoanRepaymentServiceTests(SimpleTestCase):
         ) as mock_post, patch(
             "apps.tenant_apps.girvi.service_modules.repayment.transaction.atomic",
             return_value=nullcontext(),
-        ):
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.repayment.is_dea_integration_enabled",
+            return_value=True,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.repayment.LoanRepayment.objects.filter"
+        ) as mock_evidence_filter, patch(
+            "apps.tenant_apps.girvi.service_modules.repayment.LoanRepayment.objects.create",
+            return_value=repayment,
+        ) as mock_evidence_create:
+            mock_evidence_filter.return_value.order_by.return_value.first.return_value = None
             result = TakenLoanRepaymentService.execute(
                 RepaymentCommand(
                     loan=loan,
@@ -192,10 +202,12 @@ class TakenLoanRepaymentServiceTests(SimpleTestCase):
             )
 
         self.assertTrue(result.accounting_posted)
+        self.assertTrue(result.repayment_created)
+        self.assertEqual(result.repayment, repayment)
         self.assertEqual(result.payment, payment)
         self.assertEqual(
             result.success_message,
-            "Payment TPAY-1 recorded and posted to accounting. "
+            "Repayment 11 recorded and posted to accounting. "
             "Total 800.00; principal 720.00; interest 80.00; "
             "remaining outstanding 80.00.",
         )
@@ -211,6 +223,10 @@ class TakenLoanRepaymentServiceTests(SimpleTestCase):
             created_by=user,
         )
         mock_post.assert_called_once_with(payment, user)
+        self.assertEqual(
+            mock_evidence_create.call_args.kwargs["accounting_voucher_pk"],
+            payment.pk,
+        )
 
     @patch("apps.tenant_apps.girvi.service_modules.repayment.logger.exception")
     def test_execute_returns_error_when_taken_loan_posting_fails(
@@ -243,7 +259,13 @@ class TakenLoanRepaymentServiceTests(SimpleTestCase):
         ) as mock_post, patch(
             "apps.tenant_apps.girvi.service_modules.repayment.transaction.atomic",
             return_value=nullcontext(),
-        ):
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.repayment.is_dea_integration_enabled",
+            return_value=True,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.repayment.LoanRepayment.objects.filter"
+        ) as mock_evidence_filter:
+            mock_evidence_filter.return_value.order_by.return_value.first.return_value = None
             result = TakenLoanRepaymentService.execute(
                 RepaymentCommand(
                     loan=loan,
@@ -321,7 +343,10 @@ class TakenLoanRepaymentServiceTests(SimpleTestCase):
         with patch(
             "apps.tenant_apps.girvi.service_modules.repayment.transaction.atomic",
             return_value=nullcontext(),
-        ):
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.repayment.LoanRepayment.objects.filter"
+        ) as mock_evidence_filter:
+            mock_evidence_filter.return_value.order_by.return_value.first.return_value = None
             result = TakenLoanRepaymentService.execute(
                 RepaymentCommand(
                     loan=loan,
@@ -359,7 +384,10 @@ class TakenLoanRepaymentServiceTests(SimpleTestCase):
         with patch(
             "apps.tenant_apps.girvi.service_modules.repayment.transaction.atomic",
             return_value=nullcontext(),
-        ):
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.repayment.LoanRepayment.objects.filter"
+        ) as mock_evidence_filter:
+            mock_evidence_filter.return_value.order_by.return_value.first.return_value = None
             result = TakenLoanRepaymentService.execute(
                 RepaymentCommand(
                     loan=loan,

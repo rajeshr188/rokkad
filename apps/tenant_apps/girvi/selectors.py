@@ -1487,6 +1487,29 @@ def _sum_payment_component(loan, *, direction, field_name):
         ) from exc
 
 
+def _sum_taken_repayment_component(loan, *, evidence_field, voucher_field):
+    evidence = getattr(loan, "repayment_evidence", None)
+    if evidence is None or not getattr(loan, "pk", None):
+        return _sum_payment_component(
+            loan, direction="PAYMENT", field_name=voucher_field
+        )
+
+    originals = evidence.filter(reversal_of__isnull=True)
+    reversals = evidence.filter(reversal_of__isnull=False)
+    evidence_total = _decimal_round(
+        originals.aggregate(total=Sum(evidence_field))["total"]
+    ) - _decimal_round(reversals.aggregate(total=Sum(evidence_field))["total"])
+    linked_voucher_ids = evidence.exclude(accounting_voucher_pk__isnull=True).values_list(
+        "accounting_voucher_pk", flat=True
+    )
+    historical_total = _decimal_round(
+        loan.payments.filter(direction="PAYMENT")
+        .exclude(pk__in=linked_voucher_ids)
+        .aggregate(total=Sum(voucher_field))["total"]
+    )
+    return _decimal_round(evidence_total + historical_total)
+
+
 def _build_data_unavailable_row(*, loan, section, reason):
     return {
         "loan": loan,
@@ -1532,15 +1555,32 @@ def build_loan_settlement_balance(loan, *, loan_kind="given", as_of_date=None):
                         interest_due = _decimal_round(interest_due_attr)
 
         payment_direction = "PAYMENT" if loan_kind == "taken" else "RECEIPT"
-        principal_paid = _sum_payment_component(
-            loan, direction=payment_direction, field_name="principal_amount"
-        )
-        interest_paid = _sum_payment_component(
-            loan, direction=payment_direction, field_name="interest_amount"
-        )
-        total_paid = _sum_payment_component(
-            loan, direction=payment_direction, field_name="amount_in_base_currency"
-        )
+        if loan_kind == "taken":
+            principal_paid = _sum_taken_repayment_component(
+                loan,
+                evidence_field="principal_amount",
+                voucher_field="principal_amount",
+            )
+            interest_paid = _sum_taken_repayment_component(
+                loan,
+                evidence_field="interest_amount",
+                voucher_field="interest_amount",
+            )
+            total_paid = _sum_taken_repayment_component(
+                loan,
+                evidence_field="total_amount",
+                voucher_field="amount_in_base_currency",
+            )
+        else:
+            principal_paid = _sum_payment_component(
+                loan, direction=payment_direction, field_name="principal_amount"
+            )
+            interest_paid = _sum_payment_component(
+                loan, direction=payment_direction, field_name="interest_amount"
+            )
+            total_paid = _sum_payment_component(
+                loan, direction=payment_direction, field_name="amount_in_base_currency"
+            )
 
         if principal_paid == Decimal("0.00"):
             principal_getter = getattr(loan, "get_total_principal_payments", None)

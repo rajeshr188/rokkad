@@ -2,11 +2,13 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from decimal import Decimal
 from datetime import datetime
+from contextlib import nullcontext
 
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.girvi.integrations import dea_adapter
+from apps.tenant_apps.girvi.integrations import outbox as girvi_outbox
 
 
 class GirviDeaAdapterTests(SimpleTestCase):
@@ -329,3 +331,54 @@ class GirviDeaAdapterTests(SimpleTestCase):
         self.assertEqual(kwargs["payload"]["expected_dea_rule"], "given_loan_release")
         self.assertEqual(kwargs["source_model"], "release")
         self.assertEqual(kwargs["source_pk"], "7")
+
+    @patch("apps.tenant_apps.girvi.integrations.outbox.record_posting_event")
+    def test_record_posting_event_preserves_created_state(self, mock_record):
+        event = SimpleNamespace(pk=99)
+        mock_record.return_value = (event, False)
+        source_document = self._source_document(model="givenloan", pk=42)
+
+        result = dea_adapter.record_posting_event(
+            event_key="disbursal",
+            source_document=source_document,
+            dedupe_key="girvi:2:DISBURSAL:girvi:givenloan:42",
+            payload={"principal_amount": "1000.00"},
+        )
+
+        self.assertEqual(result, (event, False))
+        self.assertEqual(mock_record.call_args.kwargs["event_type"], "DISBURSAL")
+        self.assertEqual(mock_record.call_args.kwargs["contract_version"], 2)
+
+    @patch(
+        "apps.tenant_apps.girvi.integrations.outbox.transaction.atomic",
+        return_value=nullcontext(),
+    )
+    @patch(
+        "apps.tenant_apps.girvi.integrations.outbox."
+        "GirviPostingOutboxEvent.objects.get_or_create"
+    )
+    def test_outbox_rejects_changed_payload_for_existing_dedupe_key(
+        self,
+        get_or_create,
+        _atomic,
+    ):
+        get_or_create.return_value = (
+            SimpleNamespace(
+                event_type="DISBURSAL",
+                payload={"principal_amount": "100.00"},
+                source_model="givenloan",
+                source_pk="42",
+                contract_version=2,
+            ),
+            False,
+        )
+
+        with self.assertRaises(girvi_outbox.GirviPostingConflictError):
+            girvi_outbox.record_posting_event(
+                event_type="DISBURSAL",
+                dedupe_key="girvi:2:DISBURSAL:girvi:givenloan:42",
+                payload={"principal_amount": "101.00"},
+                source_model="givenloan",
+                source_pk=42,
+                contract_version=2,
+            )

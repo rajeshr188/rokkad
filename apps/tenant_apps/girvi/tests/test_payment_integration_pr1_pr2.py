@@ -369,6 +369,102 @@ class PR3TakenLoanRepaymentViewTests(SimpleTestCase):
 
 
 class PR2DisbursalServiceTests(SimpleTestCase):
+    def setUp(self):
+        self.dea_mode = patch(
+            "apps.tenant_apps.girvi.service_modules.payment.is_dea_integration_enabled",
+            return_value=True,
+        )
+        self.dea_mode.start()
+        self.addCleanup(self.dea_mode.stop)
+
+    def test_givenloan_disbursal_is_captured_without_dea_when_deferred(self):
+        FakeGivenLoan = type("FakeGivenLoan", (), {})
+        FakeTakenLoan = type("FakeTakenLoan", (), {})
+        loan = FakeGivenLoan()
+        loan.pk = 14
+        loan.loan_id = "GL-14"
+        loan.loan_date = "2026-03-23"
+        loan.get_loan_amount_with_currency = "1000 INR"
+        loan._meta = SimpleNamespace(app_label="girvi", model_name="givenloan")
+        event = SimpleNamespace(pk=91, status="PENDING")
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.payment.GivenLoan",
+            new=FakeGivenLoan,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.payment.TakenLoan",
+            new=FakeTakenLoan,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.payment.is_dea_integration_enabled",
+            return_value=False,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.payment.record_posting_event",
+            return_value=(event, True),
+        ) as record_event, patch(
+            "apps.tenant_apps.girvi.service_modules.payment.resolve_customer_account"
+        ) as resolve_account, patch(
+            "apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc"
+        ) as post_to_dea:
+            result, created = record_loan_disbursal(
+                loan,
+                user=SimpleNamespace(id=1),
+            )
+
+        self.assertIs(result, event)
+        self.assertTrue(created)
+        record_event.assert_called_once_with(
+            event_key="disbursal",
+            source_document=loan,
+            dedupe_key="girvi:2:DISBURSAL:girvi:givenloan:14",
+            payload=None,
+        )
+        resolve_account.assert_not_called()
+        post_to_dea.assert_not_called()
+
+    def test_takenloan_activation_is_captured_without_dea_when_deferred(self):
+        FakeGivenLoan = type("FakeGivenLoan", (), {})
+        FakeTakenLoan = type("FakeTakenLoan", (), {})
+        loan = FakeTakenLoan()
+        loan.pk = 15
+        loan.loan_id = "TL-15"
+        loan.loan_date = "2026-03-23"
+        loan.get_loan_amount_with_currency = "800 INR"
+        loan._meta = SimpleNamespace(app_label="girvi", model_name="takenloan")
+        event = SimpleNamespace(pk=92, status="PENDING")
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.payment.GivenLoan",
+            new=FakeGivenLoan,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.payment.TakenLoan",
+            new=FakeTakenLoan,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.payment.is_dea_integration_enabled",
+            return_value=False,
+        ), patch(
+            "apps.tenant_apps.girvi.service_modules.payment.record_posting_event",
+            return_value=(event, True),
+        ) as record_event, patch(
+            "apps.tenant_apps.girvi.service_modules.payment.resolve_customer_account"
+        ) as resolve_account, patch(
+            "apps.tenant_apps.girvi.service_modules.payment.create_and_post_voucher_for_doc"
+        ) as post_to_dea:
+            result, created = record_loan_disbursal(
+                loan,
+                user=SimpleNamespace(id=1),
+            )
+
+        self.assertIs(result, event)
+        self.assertTrue(created)
+        record_event.assert_called_once_with(
+            event_key="taken_loan_activation",
+            source_document=loan,
+            dedupe_key="girvi:2:TAKEN_LOAN_ACTIVATION:girvi:takenloan:15",
+            payload=None,
+        )
+        resolve_account.assert_not_called()
+        post_to_dea.assert_not_called()
+
     @patch("apps.tenant_apps.girvi.service_modules.payment.PaymentVoucher")
     @patch("apps.tenant_apps.girvi.service_modules.payment.ContentType")
     def test_disbursal_service_returns_existing_without_posting(

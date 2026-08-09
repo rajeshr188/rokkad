@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 
-from apps.tenant_apps.girvi.models import LoanLifecycleState
+from apps.tenant_apps.girvi.models import GirviPostingOutboxEvent, LoanLifecycleState
 from apps.tenant_apps.girvi.service_modules.transition_side_effects import (
     execute_disbursal_transition,
     execute_recovery_transition,
@@ -63,6 +63,31 @@ class TransitionSideEffectsTests(SimpleTestCase):
         self.assertTrue(result.success)
         self.assertIn("posted", result.message)
         post_disbursal.assert_called_once()
+
+    def test_execute_disbursal_transition_reports_deferred_event_truthfully(self):
+        loan = SimpleNamespace(status=LoanLifecycleState.APPROVED)
+
+        def transition_method(**_kwargs):
+            loan.status = LoanLifecycleState.ACTIVE_CURRENT
+
+        event = GirviPostingOutboxEvent(pk=91)
+
+        with patch(
+            "apps.tenant_apps.girvi.service_modules.transition_side_effects.transaction.atomic",
+            return_value=nullcontext(),
+        ):
+            result = execute_disbursal_transition(
+                loan=loan,
+                user=SimpleNamespace(),
+                transition_method=transition_method,
+                payload_kwargs={},
+                active_statuses={LoanLifecycleState.ACTIVE_CURRENT},
+                post_disbursal=MagicMock(return_value=(event, True)),
+            )
+
+        self.assertTrue(result.success)
+        self.assertIn("recorded for deferred delivery", result.message)
+        self.assertNotIn("posted", result.message)
 
     def test_execute_disbursal_transition_persists_givenloan_deduction_fields(self):
         loan = SimpleNamespace(

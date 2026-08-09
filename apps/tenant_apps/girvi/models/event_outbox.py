@@ -4,7 +4,9 @@ from django.utils import timezone
 
 class GirviPostingEventType(models.TextChoices):
     DISBURSAL = "DISBURSAL", "Disbursal"
+    TAKEN_LOAN_ACTIVATION = "TAKEN_LOAN_ACTIVATION", "Taken Loan Activation"
     REPAYMENT = "REPAYMENT", "Repayment"
+    TAKEN_LOAN_REPAYMENT = "TAKEN_LOAN_REPAYMENT", "Taken Loan Repayment"
     RELEASE = "RELEASE", "Release"
     ACCRUAL = "ACCRUAL", "Accrual"
     AUCTION_RECOVERY = "AUCTION_RECOVERY", "Auction Recovery"
