@@ -89,6 +89,51 @@ class AccountingOutboxServiceTests(TenantTestCase):
         self.assertEqual(event.idempotency_key, outbox.idempotency_key)
         self.assertEqual(event.payload_fingerprint, outbox.payload_fingerprint)
 
+    @patch(
+        "apps.tenant_apps.loans.services.accounting_outbox.is_dea_integration_enabled",
+        return_value=False,
+    )
+    @patch("apps.tenant_apps.loans.services.accounting_outbox.deliver_outbox_event")
+    def test_deferred_mode_retains_pending_event_without_delivery_attempt(
+        self,
+        deliver,
+        _integration_enabled,
+    ):
+        _event, outbox = record_loan_accounting_event(
+            self.loan.pk,
+            event_kind=TransactionKind.DISBURSAL,
+            effective_date=date(2026, 7, 30),
+            payload=self.payload,
+            actor=self.actor,
+        )
+
+        outbox.refresh_from_db()
+        self.assertEqual(outbox.status, LoanOutboxStatus.PENDING.value)
+        self.assertEqual(outbox.attempt_count, 0)
+        self.assertIsNone(outbox.dea_voucher_id)
+        self.assertIsNone(outbox.dea_journal_entry_id)
+        deliver.assert_not_called()
+
+    @patch(
+        "apps.tenant_apps.loans.services.accounting_outbox.is_dea_integration_enabled",
+        return_value=False,
+    )
+    @patch("apps.tenant_apps.loans.services.accounting_outbox._default_delivery")
+    def test_deferred_mode_blocks_direct_default_delivery(self, default_delivery, _enabled):
+        _event, outbox = record_loan_accounting_event(
+            self.loan.pk,
+            event_kind=TransactionKind.DISBURSAL,
+            effective_date=date(2026, 7, 30),
+            payload=self.payload,
+            actor=self.actor,
+        )
+
+        delivered = deliver_outbox_event(outbox.pk)
+
+        self.assertEqual(delivered.status, LoanOutboxStatus.PENDING.value)
+        self.assertEqual(delivered.attempt_count, 0)
+        default_delivery.assert_not_called()
+
     def test_failed_delivery_is_observable_and_admin_retry_can_post_once(self):
         _event, outbox = record_loan_accounting_event(
             self.loan.pk, event_kind=TransactionKind.DISBURSAL,

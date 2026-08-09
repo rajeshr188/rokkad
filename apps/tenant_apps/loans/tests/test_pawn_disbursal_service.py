@@ -12,6 +12,7 @@ from django.db import connection
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
+from apps.configuration.services import PreferenceService
 from apps.tenant_apps.loans.domain import (
     AccountingRecognition,
     CollateralMetal,
@@ -136,6 +137,11 @@ class PawnDisbursalServiceTests(TenantTestCase):
     def setUp(self):
         super().setUp()
         connection.set_tenant(self.tenant)
+        PreferenceService.set_workspace(
+            self.tenant,
+            "accounting__integration_mode",
+            "DEA",
+        )
         release_date = patch(
             "apps.tenant_apps.loans.services.pawn_release.timezone.localdate",
             return_value=date(2026, 8, 3),
@@ -169,6 +175,21 @@ class PawnDisbursalServiceTests(TenantTestCase):
             width=5,
             maximum_number=10000,
         )
+        create_pawn_loan_economic_policy(
+            workspace=self.tenant,
+            license=license,
+            valuation_method=ValuationMethod.LATEST_APPRAISAL,
+            maximum_ltv_ratio=Decimal("1.00"),
+            advance_interest_periods=0,
+            effective_from=date(2026, 1, 1),
+        )
+        create_pawn_metal_interest_rate_policy(
+            workspace=self.tenant,
+            license=license,
+            metal=CollateralMetal.GOLD,
+            monthly_interest_rate=Decimal("2.00"),
+            effective_from=date(2026, 1, 1),
+        )
         self.loan = create_pawn_draft(
             CreatePawnDraftCommand(
                 workspace_id=self.tenant.pk,
@@ -187,6 +208,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
                         net_weight=Decimal("9"),
                         purity_percentage=Decimal("91.6"),
                         latest_appraised_value=Decimal("50000"),
+                        allocated_principal=Decimal("50000"),
                     ),
                 ),
             ),
@@ -201,8 +223,16 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )
         approve_pawn_loan(self.loan.pk, actor=self.actor)
 
+    @patch(
+        "apps.tenant_apps.loans.services.accounting_outbox.is_dea_integration_enabled",
+        return_value=False,
+    )
     @patch("apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness")
-    def test_disbursal_is_atomic_and_creates_immutable_policy_and_outbox(self, readiness):
+    def test_disbursal_is_atomic_and_creates_immutable_policy_and_outbox(
+        self,
+        readiness,
+        _integration_enabled,
+    ):
         result = disburse_pawn_loan(
             self.loan.pk,
             effective_date=date(2026, 8, 3),
@@ -791,7 +821,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertTrue(repeated.already_recorded)
         self.assertEqual(repeated.accounting_event.pk, capitalized.accounting_event.pk)
 
-    def test_compound_preview_uses_capitalized_principal_for_next_cycle(self):
+    def test_itemized_compound_accrual_blocks_after_unattributed_capitalization(self):
         policy = resolve_policy(
             workspace_defaults=WorkspacePolicyDefaults(
                 interest_method=InterestMethod.COMPOUND,
@@ -843,15 +873,15 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(capitalized.outbox.status, LoanOutboxStatus.POSTED.value)
         self.assertIsNone(capitalized.outbox.dea_voucher_id)
 
-        previews = preview_pawn_loan_accruals(
-            self.loan.pk,
-            as_of_date=date(2026, 11, 2),
-            include_partial=False,
-        )
-        self.assertEqual(len(previews), 1)
-        self.assertEqual(previews[0].period_number, 3)
-        self.assertEqual(previews[0].calculation_base, Decimal("52000.00"))
-        self.assertEqual(previews[0].recognized_interest, Decimal("1040.00"))
+        with self.assertRaisesMessage(
+            PawnInterestError,
+            "Capitalized principal lacks immutable item attribution",
+        ):
+            preview_pawn_loan_accruals(
+                self.loan.pk,
+                as_of_date=date(2026, 11, 2),
+                include_partial=False,
+            )
 
         self._open_period(date(2026, 11, 1), date(2026, 11, 30), "November 2026")
         with patch(
@@ -1500,25 +1530,13 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self._create_release_rate(
             RateSource.objects.create(name="Release renew", location="Market")
         )
-        create_pawn_loan_economic_policy(
+        create_pawn_metal_interest_rate_policy(
             workspace=self.tenant,
             license=self.loan.license,
-            valuation_method=ValuationMethod.LATEST_APPRAISAL,
-            maximum_ltv_ratio=Decimal("0.80"),
-            advance_interest_periods=1,
+            metal=CollateralMetal.SILVER,
+            monthly_interest_rate=Decimal("4"),
             effective_from=date(2026, 1, 1),
         )
-        for metal, rate in (
-            (CollateralMetal.GOLD, Decimal("2")),
-            (CollateralMetal.SILVER, Decimal("4")),
-        ):
-            create_pawn_metal_interest_rate_policy(
-                workspace=self.tenant,
-                license=self.loan.license,
-                metal=metal,
-                monthly_interest_rate=rate,
-                effective_from=date(2026, 1, 1),
-            )
         retained_item = self.loan.collateral_items.exclude(pk=returned_item.pk).get()
 
         with patch(

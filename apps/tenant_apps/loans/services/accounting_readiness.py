@@ -6,6 +6,9 @@ from datetime import date
 from django.urls import NoReverseMatch, reverse
 
 from apps.tenant_apps.dea import facade as dea_facade
+from apps.tenant_apps.loans.integrations.accounting_policy import (
+    is_dea_integration_enabled,
+)
 
 
 @dataclass(frozen=True)
@@ -44,6 +47,9 @@ def assess_pawn_loan_accounting_readiness(
     requires_unearned_interest: bool = False,
 ) -> PawnLoanAccountingReadiness:
     """Return precise, actionable disbursal blockers without mutating setup."""
+    if not is_dea_integration_enabled(getattr(loan, "workspace", None)):
+        return PawnLoanAccountingReadiness(effective_date=effective_date, blockers=())
+
     prerequisites = dea_facade.get_loan_posting_prerequisites(
         party=loan.borrower,
         effective_date=effective_date,

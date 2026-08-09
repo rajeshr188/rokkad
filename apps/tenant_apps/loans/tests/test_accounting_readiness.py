@@ -18,11 +18,35 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
         self.loan = SimpleNamespace(pk=29, borrower=SimpleNamespace(pk=31))
         self.effective_date = date(2026, 8, 3)
 
+    @patch(
+        "apps.tenant_apps.loans.services.accounting_readiness.is_dea_integration_enabled",
+        return_value=False,
+    )
+    @patch(
+        "apps.tenant_apps.loans.services.accounting_readiness.dea_facade.get_loan_posting_prerequisites"
+    )
+    def test_deferred_mode_does_not_require_dea_setup(self, prerequisites, _enabled):
+        readiness = require_pawn_loan_accounting_readiness(
+            self.loan,
+            effective_date=self.effective_date,
+            requires_fee_income=True,
+        )
+
+        self.assertTrue(readiness.ready)
+        self.assertEqual(readiness.blockers, ())
+        prerequisites.assert_not_called()
+
+    @patch(
+        "apps.tenant_apps.loans.services.accounting_readiness.is_dea_integration_enabled",
+        return_value=True,
+    )
     @patch("apps.tenant_apps.loans.services.accounting_readiness.reverse")
     @patch(
         "apps.tenant_apps.loans.services.accounting_readiness.dea_facade.get_loan_posting_prerequisites"
     )
-    def test_returns_precise_actionable_blockers_for_missing_setup(self, prerequisites, reverse):
+    def test_returns_precise_actionable_blockers_for_missing_setup(
+        self, prerequisites, reverse, _enabled
+    ):
         reverse.side_effect = lambda route, args=(): f"/{route}/{'/'.join(map(str, args))}"
         prerequisites.return_value = LoanPostingPrerequisites(
             None, None, None, None, None, None, None, None
@@ -58,9 +82,13 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
         )
 
     @patch(
+        "apps.tenant_apps.loans.services.accounting_readiness.is_dea_integration_enabled",
+        return_value=True,
+    )
+    @patch(
         "apps.tenant_apps.loans.services.accounting_readiness.dea_facade.get_loan_posting_prerequisites"
     )
-    def test_ready_when_required_prerequisites_exist(self, prerequisites):
+    def test_ready_when_required_prerequisites_exist(self, prerequisites, _enabled):
         prerequisites.return_value = LoanPostingPrerequisites(
             object(), object(), object(), object(), True, object(), object(), object()
         )
@@ -74,9 +102,13 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
         self.assertEqual(readiness.blockers, ())
 
     @patch(
+        "apps.tenant_apps.loans.services.accounting_readiness.is_dea_integration_enabled",
+        return_value=True,
+    )
+    @patch(
         "apps.tenant_apps.loans.services.accounting_readiness.dea_facade.get_loan_posting_prerequisites"
     )
-    def test_fee_mapping_is_not_required_until_a_fee_applies(self, prerequisites):
+    def test_fee_mapping_is_not_required_until_a_fee_applies(self, prerequisites, _enabled):
         prerequisites.return_value = LoanPostingPrerequisites(
             object(), object(), object(), object(), None, object(), object(), object()
         )
@@ -90,9 +122,13 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
         self.assertTrue(readiness.ready)
 
     @patch(
+        "apps.tenant_apps.loans.services.accounting_readiness.is_dea_integration_enabled",
+        return_value=True,
+    )
+    @patch(
         "apps.tenant_apps.loans.services.accounting_readiness.dea_facade.get_loan_posting_prerequisites"
     )
-    def test_accrual_repayment_requires_interest_receivable(self, prerequisites):
+    def test_accrual_repayment_requires_interest_receivable(self, prerequisites, _enabled):
         prerequisites.return_value = LoanPostingPrerequisites(
             object(), object(), object(), object(), None, object(), object(), None
         )
@@ -109,9 +145,15 @@ class PawnLoanAccountingReadinessTests(SimpleTestCase):
         )
 
     @patch(
+        "apps.tenant_apps.loans.services.accounting_readiness.is_dea_integration_enabled",
+        return_value=True,
+    )
+    @patch(
         "apps.tenant_apps.loans.services.accounting_readiness.dea_facade.get_loan_posting_prerequisites"
     )
-    def test_require_fails_closed_with_the_full_readiness_result(self, prerequisites):
+    def test_require_fails_closed_with_the_full_readiness_result(
+        self, prerequisites, _enabled
+    ):
         prerequisites.return_value = LoanPostingPrerequisites(
             None, object(), object(), object(), True, object(), object(), object()
         )

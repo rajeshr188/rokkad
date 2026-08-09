@@ -10,6 +10,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import LoanOutboxStatus, TransactionKind
+from apps.tenant_apps.loans.integrations.accounting_policy import (
+    is_dea_integration_enabled,
+)
 from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanAccountingEvent,
@@ -70,12 +73,13 @@ def record_loan_accounting_event(
         )
         if not created and not outbox_created:
             return event, outbox
-        transaction.on_commit(
-            lambda: deliver_outbox_event(
-                outbox.pk,
-                delivery_handler=delivery_handler,
+        if delivery_handler is not None or is_dea_integration_enabled(loan.workspace):
+            transaction.on_commit(
+                lambda: deliver_outbox_event(
+                    outbox.pk,
+                    delivery_handler=delivery_handler,
+                )
             )
-        )
         return event, outbox
 
 
@@ -90,6 +94,10 @@ def deliver_outbox_event(
     except PawnLoanAccountingOutbox.DoesNotExist as exc:
         raise LoanAccountingOutboxError("Accounting outbox event was not found.") from exc
     if outbox.status == LoanOutboxStatus.POSTED.value:
+        return outbox
+    if delivery_handler is None and not is_dea_integration_enabled(
+        outbox.event.loan.workspace
+    ):
         return outbox
     if outbox.status == LoanOutboxStatus.PROCESSING.value:
         raise LoanAccountingOutboxError("Accounting outbox event is already processing.")

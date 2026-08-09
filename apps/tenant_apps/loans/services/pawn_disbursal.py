@@ -172,6 +172,12 @@ def disburse_pawn_loan(
 def assert_pawn_loan_financial_actions_allowed(loan_id: int) -> PawnLoan:
     """Block later repayment/release actions while any loan posting is unresolved."""
     loan = _locked_loan(loan_id)
+    from apps.tenant_apps.loans.integrations.accounting_policy import (
+        is_dea_integration_enabled,
+    )
+
+    if not is_dea_integration_enabled(loan.workspace):
+        return loan
     if loan.accounting_events.filter(
         outbox__status__in=(
             LoanOutboxStatus.PENDING.value,

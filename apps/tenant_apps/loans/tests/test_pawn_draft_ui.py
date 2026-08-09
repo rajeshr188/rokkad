@@ -12,6 +12,7 @@ from django.urls import reverse
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 
+from apps.configuration.services import PreferenceService
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.domain import LoanDocumentKind
 from apps.tenant_apps.loans.models import (
@@ -72,6 +73,11 @@ class PawnDraftUiTests(TenantTestCase):
         static_url.start()
         self.addCleanup(static_url.stop)
         self.owner = self.tenant.owner
+        PreferenceService.set_workspace(
+            self.tenant,
+            "accounting__integration_mode",
+            "DEA",
+        )
         self.client = TenantClient(self.tenant)
         self.client.force_login(self.owner)
         self.party = Party.objects.create(display_name="Draft Borrower")
