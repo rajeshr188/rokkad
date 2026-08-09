@@ -288,6 +288,17 @@ def save_funding_loan_draft_inputs(
         for item in collateral_inputs
     }
     collateral = _locked_collateral(funding_loan.workspace_id, input_ids)
+    from .physical_verification import (
+        PawnPhysicalVerificationBlockerError,
+        assert_physical_verification_clear,
+    )
+
+    try:
+        assert_physical_verification_clear(
+            input_ids, operation="FundingLoan collateral pledge"
+        )
+    except PawnPhysicalVerificationBlockerError as exc:
+        raise FundingLoanServiceError(str(exc)) from exc
     active_pledges = {
         item.collateral_item_id: item.pk
         for item in FundingPledgeItem.objects.select_for_update()

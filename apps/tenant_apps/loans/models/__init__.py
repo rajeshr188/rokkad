@@ -57,6 +57,12 @@ from .funding import (
 from .regulatory import LoanLicenseRevision
 from .media import PawnCollateralLabelIssue, PawnCollateralPhoto
 from .storage import PawnCollateralStorageMovement, PawnStorageLocation
+from .verification import (
+    PawnPhysicalVerificationExpectation,
+    PawnPhysicalVerificationObservation,
+    PawnPhysicalVerificationResolution,
+    PawnPhysicalVerificationSession,
+)
 
 __all__ = [
     "LoanChangeLog",
@@ -112,4 +118,8 @@ __all__ = [
     "PawnCollateralPhoto",
     "PawnCollateralStorageMovement",
     "PawnStorageLocation",
+    "PawnPhysicalVerificationExpectation",
+    "PawnPhysicalVerificationObservation",
+    "PawnPhysicalVerificationResolution",
+    "PawnPhysicalVerificationSession",
 ]

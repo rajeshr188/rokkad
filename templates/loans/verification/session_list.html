@@ -1,0 +1,7 @@
+{% extends "base_tenant.html" %}
+{% block title %}Physical verification{% endblock %}
+{% block workspace_content %}
+<div class="mb-4"><a class="small text-decoration-none" href="{% url 'loans:license_list' %}">&larr; Loans setup</a><h1 class="h3 mt-2">Physical verification</h1><p class="text-muted">Freeze a vault or location subtree, then account for every expected collateral item.</p></div>
+<div class="card mb-4"><div class="card-body"><h2 class="h5">Start session</h2><form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}<div class="form-text">{{ field.help_text }}</div>{{ field.errors }}</div>{% endfor %}<button class="btn btn-primary">Freeze scope and start</button></form></div></div>
+<div class="card"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Started</th><th>Scope</th><th>Status</th><th>Expected</th><th></th></tr></thead><tbody>{% for session in sessions %}<tr><td>{{ session.started_at }}</td><td>{{ session.scope_location.path_label }}</td><td>{{ session.get_status_display }}</td><td>{{ session.expectations.count }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_physical_verification_detail' session.pk %}">Open</a></td></tr>{% empty %}<tr><td colspan="5" class="text-center text-muted py-4">No verification sessions yet.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

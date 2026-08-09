@@ -1,0 +1,7 @@
+{% extends "base_tenant.html" %}
+{% block title %}Resolve discrepancy{% endblock %}
+{% block workspace_content %}
+<div class="mb-4"><a class="small text-decoration-none" href="{% url 'loans:pawn_physical_verification_detail' observation.session_id %}">&larr; Verification session</a><h1 class="h3 mt-2">Resolve {{ observation.get_classification_display|lower }} collateral</h1><p class="text-muted">{{ observation.collateral_item.loan.loan_number }} · {{ observation.collateral_item.description }}. The original observation remains immutable.</p></div>
+<div class="alert alert-warning">Lost collateral requires current market value, negotiated compensation, and a cash-settlement reference. Damaged collateral remains blocked because its release policy is deferred.</div>
+<form method="post" class="card"><div class="card-body">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<button class="btn btn-primary">Record immutable resolution</button></div></form>
+{% endblock %}

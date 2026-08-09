@@ -74,6 +74,17 @@ def place_or_transfer_collateral(
     except (PawnCollateralItem.DoesNotExist, PawnStorageLocation.DoesNotExist) as exc:
         raise PawnStorageError("Collateral item or destination was not found in this workspace.") from exc
     _require_owner(item.loan.workspace, actor)
+    from .physical_verification import (
+        PawnPhysicalVerificationBlockerError,
+        assert_physical_verification_clear,
+    )
+
+    try:
+        assert_physical_verification_clear(
+            (item.pk,), operation="Collateral storage transfer"
+        )
+    except PawnPhysicalVerificationBlockerError as exc:
+        raise PawnStorageError(str(exc)) from exc
     if item.custody_state != CollateralCustodyState.IN_VAULT.value:
         raise PawnStorageError("Only collateral currently held in the vault can be placed or transferred.")
     if destination.level not in {

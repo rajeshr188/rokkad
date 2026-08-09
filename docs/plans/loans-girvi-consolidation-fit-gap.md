@@ -347,7 +347,7 @@ end with one application retired.
 | FundingLoan discovery and routine staff operation | Partial | Do not enable runtime or normal navigation until pilot permissions and operator entry points are approved. |
 | Regulatory license operations | Ready for pilot | Immutable revision evidence, renewal history, secure documents, expiry/readiness dashboard, exact PawnLoan revision links, register PDF, and origination blocking are complete. External expiry delivery stays in the OP5 Notify audit. |
 | Collateral identity, photographs, labels, and QR | Ready for pilot | Immutable UUID identity, mandatory approval evidence, append-only photos, approval hashes, audited labels, and tenant-scoped QR navigation are implemented. |
-| Hierarchical storage and physical verification | Missing pilot controls | Add location movement and verification evidence before Loans can win retirement approval. |
+| Hierarchical storage and physical verification | Ready for pilot | Required hierarchy, immutable movements, QR navigation, frozen verification scopes, immutable observations/resolutions, operational blockers, location correction, and lost-item compensation evidence are implemented. Damaged-collateral release policy remains deferred. |
 | Notices | Partial | Audit existing Notify v2 intents and add only confirmed expiry and discrepancy gaps. |
 | Essential reports and regulatory forms | Partial | Deliver only the essential set below from canonical selectors and document projections. |
 | Accounting reconciliation | Deferred by policy | Use the null/deferred evidence pack below; do not replay or claim posting. |
@@ -473,8 +473,8 @@ the failure evidence.
 ## Immediate Next Slice
 
 Gate D is authorized and in progress. OP1 regulatory operations are complete.
-OP2 collateral identity/media and OP3 hierarchical storage are complete. The
-immediate next slice is OP4 physical verification, then
-verification, and only the confirmed notice/report/document gaps. Do not enable
+OP2 collateral identity/media, OP3 hierarchical storage, and OP4 physical
+verification are complete. The immediate next slices are only the confirmed
+OP5 notice and OP6 report/document gaps. Do not enable
 FundingLoan runtime or normal navigation until those pilot blockers and the
 reconciliation pack pass.

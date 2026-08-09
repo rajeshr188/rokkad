@@ -124,6 +124,16 @@ from .pawn_renewals import (
     renew_pawn_loan,
     reverse_pawn_loan_renewal,
 )
+from .physical_verification import (
+    PawnPhysicalVerificationBlockerError,
+    PawnPhysicalVerificationError,
+    assert_physical_verification_clear,
+    complete_physical_verification,
+    record_physical_verification_observation,
+    resolve_physical_verification_discrepancy,
+    start_physical_verification,
+    unresolved_physical_verification_item_ids,
+)
 from .economic_policies import (
     PawnEconomicPolicyError,
     create_pawn_loan_economic_policy,
@@ -228,6 +238,14 @@ __all__ = (
     "place_or_transfer_collateral",
     "remove_collateral_from_storage",
     "render_storage_location_label",
+    "PawnPhysicalVerificationBlockerError",
+    "PawnPhysicalVerificationError",
+    "assert_physical_verification_clear",
+    "complete_physical_verification",
+    "record_physical_verification_observation",
+    "resolve_physical_verification_discrepancy",
+    "start_physical_verification",
+    "unresolved_physical_verification_item_ids",
     "PawnLifecycleError",
     "approve_pawn_loan",
     "cancel_pawn_loan",

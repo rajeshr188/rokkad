@@ -59,6 +59,9 @@ from apps.tenant_apps.loans.forms import (
     PawnCollateralPhotoForm,
     PawnStorageLocationForm,
     PawnStorageTransferForm,
+    PawnPhysicalVerificationStartForm,
+    PawnPhysicalVerificationObservationForm,
+    PawnPhysicalVerificationResolutionForm,
     PawnDisbursalForm,
     PawnDraftForm,
     PawnFullReleaseForm,
@@ -118,6 +121,8 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnCollateralItem,
     PawnCollateralPhoto,
+    PawnPhysicalVerificationObservation,
+    PawnPhysicalVerificationSession,
     PawnStorageLocation,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
@@ -228,8 +233,13 @@ from apps.tenant_apps.loans.services import (
     render_collateral_label,
     PawnCollateralMediaError,
     PawnStorageError,
+    PawnPhysicalVerificationError,
+    complete_physical_verification,
     create_storage_location,
     place_or_transfer_collateral,
+    record_physical_verification_observation,
+    resolve_physical_verification_discrepancy,
+    start_physical_verification,
     render_storage_location_label,
     update_license,
     update_pawn_draft,
@@ -1089,6 +1099,16 @@ def pawn_collateral_scan(request, public_id):
         public_id=public_id,
         loan__workspace=request.loans_workspace,
     )
+    verification = request.GET.get("verification")
+    if verification:
+        session = get_object_or_404(
+            PawnPhysicalVerificationSession,
+            public_id=verification,
+            workspace=request.loans_workspace,
+        )
+        return redirect(
+            f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}?item={item.pk}"
+        )
     return redirect(
         f"{reverse('loans:pawn_loan_detail', args=[item.loan_id])}#collateral-{item.public_id}"
     )
@@ -1162,6 +1182,24 @@ def pawn_storage_location_scan(request, public_id):
         is_active=True,
     )
     item_public_id = request.GET.get("item")
+    verification = request.GET.get("verification")
+    if verification:
+        session = get_object_or_404(
+            PawnPhysicalVerificationSession,
+            public_id=verification,
+            workspace=request.loans_workspace,
+        )
+        query = f"?location={location.pk}"
+        if item_public_id:
+            item = get_object_or_404(
+                PawnCollateralItem,
+                public_id=item_public_id,
+                loan__workspace=request.loans_workspace,
+            )
+            query += f"&item={item.pk}"
+        return redirect(
+            f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}{query}"
+        )
     if item_public_id:
         item = get_object_or_404(
             PawnCollateralItem,
@@ -1209,6 +1247,115 @@ def pawn_collateral_storage_transfer(request, pk, item_pk):
         "loans/storage/transfer_form.html",
         {"loan": loan, "item": item, "form": form},
     )
+
+
+@loans_setup_required
+def pawn_physical_verification_list(request):
+    form = PawnPhysicalVerificationStartForm(
+        request.POST or None, workspace=request.loans_workspace
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            session = start_physical_verification(
+                scope_location_id=form.cleaned_data["scope_location"].pk,
+                actor=request.user,
+            )
+        except (PawnPhysicalVerificationError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Physical-verification scope frozen.")
+            return redirect("loans:pawn_physical_verification_detail", pk=session.pk)
+    sessions = PawnPhysicalVerificationSession.objects.filter(
+        workspace=request.loans_workspace
+    ).select_related("scope_location", "started_by", "completed_by")
+    return render(
+        request,
+        "loans/verification/session_list.html",
+        {"form": form, "sessions": sessions},
+    )
+
+
+@loans_setup_required
+def pawn_physical_verification_detail(request, pk):
+    session = get_object_or_404(
+        PawnPhysicalVerificationSession.objects.select_related("scope_location"),
+        pk=pk,
+        workspace=request.loans_workspace,
+    )
+    initial = {}
+    if request.method == "GET":
+        if request.GET.get("item"):
+            initial["collateral_item"] = request.GET["item"]
+        if request.GET.get("location"):
+            initial["observed_location"] = request.GET["location"]
+    form = PawnPhysicalVerificationObservationForm(
+        request.POST or None, workspace=request.loans_workspace, initial=initial
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            record_physical_verification_observation(
+                session.pk,
+                collateral_item_id=form.cleaned_data["collateral_item"].pk,
+                classification=form.cleaned_data["classification"],
+                observed_location_id=(form.cleaned_data["observed_location"].pk if form.cleaned_data.get("observed_location") else None),
+                notes=form.cleaned_data.get("notes", ""),
+                actor=request.user,
+            )
+        except (PawnPhysicalVerificationError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Immutable verification observation recorded.")
+            return redirect("loans:pawn_physical_verification_detail", pk=session.pk)
+    expectations = session.expectations.select_related(
+        "collateral_item__loan", "expected_location"
+    ).order_by("expected_location__code", "collateral_item_id")
+    observations = session.observations.select_related(
+        "collateral_item__loan", "observed_location", "expectation__expected_location", "recorded_by"
+    ).order_by("recorded_at", "pk")
+    return render(
+        request,
+        "loans/verification/session_detail.html",
+        {"session": session, "expectations": expectations, "observations": observations, "form": form},
+    )
+
+
+@loans_setup_required
+@require_POST
+def pawn_physical_verification_complete(request, pk):
+    try:
+        complete_physical_verification(pk, actor=request.user)
+    except (PawnPhysicalVerificationError, ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Physical-verification session completed and frozen.")
+    return redirect("loans:pawn_physical_verification_detail", pk=pk)
+
+
+@loans_setup_required
+def pawn_physical_verification_resolve(request, observation_pk):
+    observation = get_object_or_404(
+        PawnPhysicalVerificationObservation.objects.select_related("session", "collateral_item__loan", "observed_location"),
+        pk=observation_pk,
+        session__workspace=request.loans_workspace,
+    )
+    form = PawnPhysicalVerificationResolutionForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            resolve_physical_verification_discrepancy(
+                observation.pk,
+                outcome=form.cleaned_data["outcome"],
+                reason=form.cleaned_data["reason"],
+                current_market_value=form.cleaned_data.get("current_market_value"),
+                agreed_compensation=form.cleaned_data.get("agreed_compensation"),
+                compensation_reference=form.cleaned_data.get("compensation_reference", ""),
+                actor=request.user,
+            )
+        except (PawnPhysicalVerificationError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Immutable discrepancy resolution recorded.")
+            return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
+    return render(request, "loans/verification/resolution_form.html", {"observation": observation, "form": form})
 
 
 @loans_workspace_required

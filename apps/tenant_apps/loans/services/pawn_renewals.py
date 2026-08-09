@@ -188,6 +188,17 @@ def renew_pawn_loan(
         raise PawnRenewalError(
             "Every collateral item must be in the vault before renewal."
         )
+    from .physical_verification import (
+        PawnPhysicalVerificationBlockerError,
+        assert_physical_verification_clear,
+    )
+
+    try:
+        assert_physical_verification_clear(
+            (item.pk for item in items), operation="PawnLoan release and renew"
+        )
+    except PawnPhysicalVerificationBlockerError as exc:
+        raise PawnRenewalError(str(exc)) from exc
     principal_paid = _money(principal_paid, source)
     top_up_amount = _money(top_up_amount, source)
     if retained_collateral is None:

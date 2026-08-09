@@ -112,6 +112,17 @@ def release_pawn_loan_in_full(
     )
     if not outstanding_collateral:
         raise PawnReleaseError("Every collateral item has already been returned.")
+    from .physical_verification import (
+        PawnPhysicalVerificationBlockerError,
+        assert_physical_verification_clear,
+    )
+
+    try:
+        assert_physical_verification_clear(
+            (item.pk for item in outstanding_collateral), operation="PawnLoan release"
+        )
+    except PawnPhysicalVerificationBlockerError as exc:
+        raise PawnReleaseError(str(exc)) from exc
     try:
         assert_pawn_loan_financial_actions_allowed(loan.pk)
         missing_accruals = preview_pawn_loan_accruals(

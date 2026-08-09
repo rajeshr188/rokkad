@@ -22,6 +22,8 @@ from apps.tenant_apps.loans.models import (
     PawnCollateralLabelIssue,
     PawnCollateralPhoto,
     PawnCollateralStorageMovement,
+    PawnPhysicalVerificationObservation,
+    PawnPhysicalVerificationResolution,
     PawnLoan,
     PawnStorageLocation,
 )
@@ -34,6 +36,13 @@ from apps.tenant_apps.loans.services import (
     place_or_transfer_collateral,
     remove_collateral_from_storage,
     PawnStorageError,
+    PawnPhysicalVerificationBlockerError,
+    PawnPhysicalVerificationError,
+    assert_physical_verification_clear,
+    complete_physical_verification,
+    record_physical_verification_observation,
+    resolve_physical_verification_discrepancy,
+    start_physical_verification,
 )
 from apps.tenant_apps.party.models import Party
 
@@ -265,6 +274,118 @@ class PawnCollateralMediaTests(TenantTestCase):
         self.assertRedirects(
             scan,
             f"{reverse('loans:pawn_collateral_storage_transfer', args=[self.loan.pk, self.item.pk])}?destination={box.pk}",
+            fetch_redirect_response=False,
+        )
+
+    def test_verification_freezes_scope_blocks_operations_and_requires_loss_compensation(self):
+        branch = self._location("BRANCH", "BR-V1", None)
+        vault = self._location("VAULT", "V-V1", branch)
+        cabinet = self._location("CABINET", "C-V1", vault)
+        box = self._location("BOX", "B-V1", cabinet)
+        place_or_transfer_collateral(
+            self.item.pk, destination_id=box.pk, reason="", actor=self.owner
+        )
+        outsider = get_user_model().objects.create_user(
+            username=f"verification-outsider-{uuid.uuid4().hex[:8]}"
+        )
+        with self.assertRaisesRegex(PawnPhysicalVerificationError, "Owner"):
+            start_physical_verification(scope_location_id=vault.pk, actor=outsider)
+
+        session = start_physical_verification(
+            scope_location_id=vault.pk, actor=self.owner
+        )
+        expectation = session.expectations.get()
+        self.assertEqual(expectation.expected_location, box)
+        with self.assertRaisesRegex(PawnPhysicalVerificationError, "remain"):
+            complete_physical_verification(session.pk, actor=self.owner)
+        observation = record_physical_verification_observation(
+            session.pk,
+            collateral_item_id=self.item.pk,
+            classification="MISSING",
+            actor=self.owner,
+        )
+        complete_physical_verification(session.pk, actor=self.owner)
+        with self.assertRaises(PawnPhysicalVerificationBlockerError):
+            assert_physical_verification_clear(
+                (self.item.pk,), operation="PawnLoan release"
+            )
+        with self.assertRaisesRegex(PawnStorageError, "physical-verification"):
+            place_or_transfer_collateral(
+                self.item.pk,
+                destination_id=box.pk,
+                reason="Attempt while missing",
+                actor=self.owner,
+            )
+        with self.assertRaisesRegex(PawnPhysicalVerificationError, "market value"):
+            resolve_physical_verification_discrepancy(
+                observation.pk,
+                outcome="LOST_COMPENSATED",
+                reason="Search exhausted",
+                actor=self.owner,
+            )
+        resolution = resolve_physical_verification_discrepancy(
+            observation.pk,
+            outcome="LOST_COMPENSATED",
+            reason="Search exhausted and settlement negotiated",
+            current_market_value="6500",
+            agreed_compensation="6000",
+            compensation_reference="CASH-SETTLEMENT-1",
+            actor=self.owner,
+        )
+        self.assertEqual(
+            resolution.outcome,
+            PawnPhysicalVerificationResolution.Outcome.LOST_COMPENSATED,
+        )
+        assert_physical_verification_clear(
+            (self.item.pk,), operation="Resolved verification check"
+        )
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.current_storage_location_id)
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            PawnPhysicalVerificationObservation.objects.filter(pk=observation.pk).update(
+                notes="changed"
+            )
+
+    def test_misplaced_resolution_corrects_location_and_qr_selects_session_item(self):
+        branch = self._location("BRANCH", "BR-V2", None)
+        vault = self._location("VAULT", "V-V2", branch)
+        cabinet = self._location("CABINET", "C-V2", vault)
+        expected_box = self._location("BOX", "B-V2A", cabinet)
+        observed_box = self._location("BOX", "B-V2B", cabinet)
+        place_or_transfer_collateral(
+            self.item.pk, destination_id=expected_box.pk, reason="", actor=self.owner
+        )
+        session = start_physical_verification(
+            scope_location_id=vault.pk, actor=self.owner
+        )
+        observation = record_physical_verification_observation(
+            session.pk,
+            collateral_item_id=self.item.pk,
+            classification="MISPLACED",
+            observed_location_id=observed_box.pk,
+            notes="Found in adjacent box",
+            actor=self.owner,
+        )
+        complete_physical_verification(session.pk, actor=self.owner)
+        resolve_physical_verification_discrepancy(
+            observation.pk,
+            outcome="LOCATION_CORRECTED",
+            reason="Projection corrected to physically observed location",
+            actor=self.owner,
+        )
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.current_storage_location, observed_box)
+        assert_physical_verification_clear(
+            (self.item.pk,), operation="Storage transfer"
+        )
+
+        scan = self.client.get(
+            reverse("loans:pawn_collateral_scan", args=[self.item.public_id]),
+            {"verification": session.public_id},
+        )
+        self.assertRedirects(
+            scan,
+            f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}?item={self.item.pk}",
             fetch_redirect_response=False,
         )
 

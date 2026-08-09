@@ -93,7 +93,7 @@ transfer reasons, prints location QR labels, and exposes awaiting placement.
 Release/auction remove location; renewal carries retained location and handles
 reversal.
 
-### OP4 Physical Verification
+### OP4 Physical Verification — Completed 2026-08-09
 
 - A verification session may cover an entire vault or a selected location
   subtree. It freezes the expected collateral and locations in that scope.
@@ -115,6 +115,14 @@ reversal.
 - The policy for releasing damaged collateral is deferred and must remain
   visible future work.
 - Completed sessions and observations are immutable.
+
+Implementation result: tenant migration `loans.0032` adds immutable sessions,
+frozen expectations, observations, and separate resolutions with PostgreSQL
+tenant/transition/append-only guards. Owner-only UI supports subtree sessions,
+QR-assisted item/location selection, completion, location correction, and
+lost-item cash-settlement evidence. Unresolved discrepancies block storage
+transfer, release, release-and-renew, and FundingLoan pledge. Damaged collateral
+remains deliberately blocked pending its future release policy.
 
 ### OP5 Notices
 
@@ -155,8 +163,8 @@ delete or mutable financial-history editing.
 2. Deliver OP1 regulatory operations. Completed 2026-08-08.
 3. Deliver OP2 identity/media/labels. Completed 2026-08-09.
 4. Deliver OP3 hierarchical storage. Completed 2026-08-09.
-5. Deliver OP4 physical verification. Next.
-6. Close OP5 notice gaps and OP6 report/document gaps.
+5. Deliver OP4 physical verification. Completed 2026-08-09.
+6. Close OP5 notice gaps and OP6 report/document gaps. Next.
 7. Run the parity pilot.
 8. Add selected bulk actions after their single commands prove stable.
 
