@@ -1,19 +1,19 @@
 ---
 status: active
 owner: project
-updated: 2026-08-08
+updated: 2026-08-09
 tags: [girvi, loans, parity, operations, pilot]
-related: [../adr/2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md, ../apps/loans/architecture-and-girvi-parity.md, loans-girvi-consolidation-fit-gap.md]
+related: [../adr/2026-08-09-girvi-capability-extraction-into-loans.md, ../apps/loans/architecture-and-girvi-parity.md, loans-girvi-consolidation-fit-gap.md]
 ---
 
 # Loan Operational Parity Pilot
 
 ## Objective
 
-Bring Loans to the required Girvi operational capability, run the same real
-operator scenarios in both products, and select the application with the
-clearest complete domain workflow. Coexistence remains temporary until a later
-retirement ADR.
+Extract mature Girvi business rules and operational outcomes, implement their
+simplest faithful form in Loans, and prove Loans through real operator
+scenarios. Girvi remains available as the reference and owner of its records
+until a later retirement ADR.
 
 ## Non-Negotiable Boundary
 
@@ -183,18 +183,14 @@ delete or mutable financial-history editing.
 4. Deliver OP3 hierarchical storage. Completed 2026-08-09.
 5. Deliver OP4 physical verification. Completed 2026-08-09.
 6. Close OP5 notice gaps. Completed 2026-08-09. Close OP6 report/document gaps. Completed 2026-08-09.
-7. Run the parity pilot. Next.
+7. Run the Loans capability acceptance scenarios. Next.
 8. Add selected bulk actions after their single commands prove stable.
 
-Pilot preparation started 2026-08-09. The executable baseline, identical
-scenario worksheet, weighted scorecard, critical-failure rules, and physical
-document handoff are maintained in
+Pilot preparation started 2026-08-09. The executable baseline, capability
+worksheet, critical-failure rules, and physical document handoff are maintained in
 [the operator parity-pilot runbook](../implementation/loans-girvi-operator-parity-pilot.md).
-The official operator clock has not started: the current worktree contains
-uncommitted accounting/Girvi runtime changes, so it is not yet a reproducible
-pilot checkpoint. `jcl1` is explicitly `DEFERRED`; document integrity and
-migration-drift checks pass. Consolidate the runtime checkpoint and finish the
-split software preflights before recording product scores.
+The runtime checkpoint and split software preflights are complete. `jcl1` is
+explicitly `DEFERRED`; document integrity and migration-drift checks pass.
 
 Pre-pilot document readiness completed 2026-08-09: document integrity now
 fails closed when an active configured loan-ticket assignment omits Original
@@ -203,9 +199,10 @@ therefore uses the compliant fixed dual-copy fallback; its document integrity
 command reports zero findings. Physical A4/A5 alignment and duplex behavior
 still require the operator printer matrix and cannot be certified in software.
 
-## Parity Comparison
+## Loans Capability Acceptance
 
-Run identical scenarios in Girvi and Loans and record:
+For each scenario, first record the Girvi rule or operator outcome being
+preserved, then run Loans and record:
 
 - operator steps and completion time;
 - clarity of the next valid action;
@@ -217,20 +214,15 @@ Run identical scenarios in Girvi and Loans and record:
 - required notice, report, and regulatory output;
 - operator errors, workarounds, and support intervention.
 
-Owner comparison gives greatest weight to clear architecture, clear documents,
-readable domain workflows, and ease of operation. Feature count alone does not
-select the winner.
-
-An application cannot win solely because it has fewer screens or more legacy
-features. It must complete the required workflow more clearly without weakening
-the project constitution.
+If Loans fails, create a bounded implementation slice and repeat the scenario.
+Do not copy Girvi internals or weaken the project constitution to obtain a pass.
 
 ## Exit Criteria
 
 - Every pilot blocker passes its acceptance workflow in Loans.
 - The fit-gap register has no undecided pilot capability.
-- Operators complete the same scenarios in both applications.
+- Operators complete every required scenario in Loans.
 - Results and unresolved risks are documented.
-- The owner selects the preferred application.
-- A separate accepted ADR defines retirement, remaining-record treatment,
+- Every Girvi capability is classified `PORT`, `REPLACE`, `RETIRE`, or `DEFER`.
+- A separate accepted ADR defines Girvi retirement, remaining-record treatment,
   rollback, and destructive cleanup.

@@ -6,7 +6,7 @@ tags: [loans, girvi, pilot, operations, acceptance]
 related: [../plans/loan-operational-parity-pilot.md, ../plans/loans-girvi-consolidation-fit-gap.md, loans-configurable-document-operations.md]
 ---
 
-# Girvi And Loans Operator Parity Pilot
+# Girvi Capability Extraction And Loans Acceptance Runbook
 
 ## Current State
 
@@ -25,14 +25,14 @@ and no active custom loan-ticket assignment. The compliant fixed ticket is
 therefore the current Original/Duplicate renderer. Document integrity reports
 zero findings.
 
-This is a real operator evaluation, not an automated migration or seed script.
-Create independent Girvi and Loans records with equivalent business facts.
-Never copy primary keys, lifecycle rows, accounting evidence, or custody rows
-between applications.
+Loans is the target platform. Girvi is inspected or exercised only to extract
+the mature rule and expected operator outcome. This is not a migration or seed
+script. Never copy primary keys, lifecycle rows, accounting evidence, or
+custody rows between applications.
 
 ## Start Gate
 
-Record these before scoring a scenario:
+Record these before accepting a scenario:
 
 | Evidence | Required value | Result |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ Record these before scoring a scenario:
 | Document integrity | Zero findings | Pass |
 | Printer | Make/model, driver, A4/A5 stock, duplex setting | Pending |
 
-Do not score accounting clarity unless the accounting mode is recorded. In
+Do not accept accounting behavior unless the accounting mode is recorded. In
 `DEFERRED`, pending outboxes are expected and must not be described as posted.
 In `DEA`, voucher/journal evidence and readiness must reconcile.
 
@@ -65,9 +65,9 @@ On 2026-08-09:
   new policy defaults to `DEFERRED`. After the scenario explicitly selected
   `DEA`, that focused borrower-accounting guidance test passed.
 
-The official operator clock and score remain stopped until printer metadata is
-recorded and scenario P1 begins. The runtime consolidation and split preflight
-are complete. Test-runner schema setup time is not an application score.
+The capability run starts when scenario P1 begins. The runtime consolidation
+and split preflight are complete. Printer metadata is required before accepting
+physical-document scenarios.
 
 ### Exact-checkpoint preflight record
 
@@ -92,10 +92,10 @@ teardown because old `--keepdb` schemas exhausted PostgreSQL's transaction lock
 budget. The concurrency suite was rerun alone on a recreated test database and
 passed; only completed reruns above count as preflight evidence.
 
-## Shared Scenario Facts
+## Scenario Facts
 
-Use the same human-readable facts in both products while allowing each product
-to allocate its own identifiers:
+Use these human-readable facts in Loans. Refer to an equivalent Girvi workflow
+only when needed to establish a rule that is not already documented:
 
 - one active Party with a long regional-language name and complete contact;
 - one gold item and one silver item with photographs;
@@ -109,30 +109,30 @@ to allocate its own identifiers:
 - a correction target whose later dependent event proves reverse-order
   rejection.
 
-Record the exact facts in the session notes. Equivalent facts matter more than
-matching generated numbers.
+Record the exact facts in the session notes. Business outcomes matter more than
+matching legacy screens or generated numbers.
 
 ## Scenario Worksheet
 
-For every row, first complete Girvi, reset the timer and operator notes, then
-complete Loans. Do not use database/admin shortcuts.
+For every row: extract or cite the Girvi rule, classify it, then execute Loans.
+Do not use database/admin shortcuts.
 
-| ID | Operator outcome | Required evidence | Girvi | Loans |
+| ID | Operator outcome | Required Loans evidence | Decision | Status |
 | --- | --- | --- | --- | --- |
-| P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior | Pending | Pending |
-| P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | Pending | Pending |
-| P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | Pending | Pending |
-| P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | Pending | Pending |
-| P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | Pending | Pending |
-| P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | Pending | Pending |
-| P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | Pending | Pending |
-| P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | Pending | Pending |
-| P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | Pending | Pending |
-| P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | Pending | Pending |
-| P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | Pending | Pending |
-| P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | Pending | Pending |
+| P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior | PORT | Pending |
+| P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | REPLACE | Pending |
+| P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | Pending |
+| P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | Pending |
+| P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | Pending |
+| P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | Pending |
+| P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | Pending |
+| P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | Pending |
+| P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | Pending |
+| P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | Pending |
+| P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | Pending |
+| P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | REPLACE | Pending |
 
-For each product and scenario record:
+For each scenario record:
 
 - start/end time and operator step count;
 - first unclear label or next action;
@@ -142,32 +142,22 @@ For each product and scenario record:
 - source event, custody, notice, and accounting evidence;
 - any unexplained financial or custody difference.
 
-## Scorecard
+## Acceptance Record
 
-Score `0` failed, `1` completed with serious confusion/workaround, `2` completed
-with minor friction, or `3` clear and complete. Double-weight the four agreed
-selection priorities.
+Each scenario is `PASS`, `FAIL`, or `BLOCKED`. A failure must name the smallest
+Loans implementation slice and the Girvi rule it preserves. It passes only when
+the operator outcome, evidence, permissions, error recovery, and required
+physical output are complete.
 
-| Criterion | Weight | Girvi | Loans | Evidence |
-| --- | ---: | ---: | ---: | --- |
-| Complete domain workflow | 2 | Pending | Pending | |
-| Architecture/audit clarity | 2 | Pending | Pending | |
-| Document clarity | 2 | Pending | Pending | |
-| Ease and readable next action | 2 | Pending | Pending | |
-| Operator time/error recovery | 1 | Pending | Pending | |
-| Custody/location correctness | 1 | Pending | Pending | |
-| Permission/tenant safety | 1 | Pending | Pending | |
-| Accounting/reconciliation quality | 1 | Pending | Pending | |
-
-The score cannot override a critical failure. A product is ineligible if money,
-custody, tenant isolation, a required document, backup/restore, or unexplained
-reconciliation fails.
+No acceptance can override a critical failure. Money, custody, tenant
+isolation, required documents, backup/restore, or unexplained reconciliation
+must be corrected before the scenario passes.
 
 ## Physical Document Matrix
 
 Use the detailed matrix in
 [Loans configurable document operations](loans-configurable-document-operations.md).
-At minimum print the same ticket on intended A4 and A5 paths, verify
+At minimum print the Loans ticket on intended A4 and A5 paths, verify
 Original/Duplicate identity and shared verification ID, sign both signature
 areas, scan the QR from paper, inspect margins at Actual size/100%, and test the
 driver's duplex flip edge. Record printer, driver, stock, scaling, operator and
@@ -175,8 +165,8 @@ date. On-screen PDF inspection is not a physical pass.
 
 ## Exit
 
-The pilot is complete only when all scenario evidence and scores are filled,
-the printer matrix is signed, backup/restore is rehearsed, no critical failure
-is open, and remaining Girvi capabilities are classified `PORT`, `REPLACE`, or
-`RETIRE`. The winner and loser remain undecided until a separate retirement ADR
-is accepted.
+The capability pass is complete only when all Loans scenario evidence is
+accepted, the printer matrix is signed, backup/restore is rehearsed, no
+critical failure is open, and remaining Girvi capabilities are classified
+`PORT`, `REPLACE`, `RETIRE`, or `DEFER`. A separate retirement ADR is still
+required before Girvi origination, routes, records, or schema are changed.

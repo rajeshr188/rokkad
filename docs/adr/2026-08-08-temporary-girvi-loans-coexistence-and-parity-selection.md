@@ -1,13 +1,18 @@
 ---
-status: accepted
+status: superseded
 owner: project
 updated: 2026-08-08
 tags: [girvi, loans, coexistence, parity, retirement, pilot]
 related: [2026-08-08-girvi-loans-permanent-independent-coexistence.md, 2026-08-08-loans-consolidation-and-girvi-retirement-evaluation.md, ../plans/loan-operational-parity-pilot.md]
 supersedes: [2026-08-08-girvi-loans-permanent-independent-coexistence.md permanence decision]
+superseded_by: 2026-08-09-girvi-capability-extraction-into-loans.md
 ---
 
 # ADR: Temporary Girvi And Loans Coexistence With Parity Selection
+
+> Superseded on 2026-08-09. Loans is now the selected target platform and
+> Girvi is the capability reference. The strict record-ownership and
+> no-dual-write boundary remains in force.
 
 ## Context
 

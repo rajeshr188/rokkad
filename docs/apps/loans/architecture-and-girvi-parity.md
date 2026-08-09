@@ -1,9 +1,9 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-08
+updated: 2026-08-09
 tags: [loans, girvi, architecture, parity, mvp, cutover]
-related: [../../adr/2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md, ../../adr/2026-08-08-loans-consolidation-and-girvi-retirement-evaluation.md, ../../plans/loan-operational-parity-pilot.md, ../../plans/loans-rewrite-roadmap.md, ../girvi/architecture.md, ../girvi/workflows.md]
+related: [../../adr/2026-08-09-girvi-capability-extraction-into-loans.md, ../../plans/loan-operational-parity-pilot.md, ../../plans/loans-rewrite-roadmap.md, ../girvi/architecture.md, ../girvi/workflows.md]
 ---
 
 # Loans Architecture And Girvi Parity Review
@@ -20,13 +20,12 @@ roadmap.
 
 ## Current Verdict
 
-The Loans rewrite is a strong foundation for pawn loans. Its audit, reversal,
-policy, custody, and tenant boundaries are explicit and tested. Girvi remains
-the richer operator reference. The products now coexist temporarily while
-required capability is brought to parity and identical operator scenarios are
-compared. Neither product is preselected as the winner.
+Loans is the selected target platform. Its audit, reversal, policy, custody,
+and tenant boundaries are explicit and tested. Girvi remains the richer
+operator and business-rule reference while required capabilities are extracted
+and implemented through Loans' architecture.
 
-Strict source ownership continues during evaluation. No Girvi removal, record
+Strict source ownership continues during extraction. No Girvi removal, record
 transfer, synchronization, mirroring, or dual write is authorized. Retirement
 requires completed FundingLoan and operational parity gates, operator
 acceptance, and a separate accepted ADR.
@@ -77,8 +76,8 @@ That would make rollback and record ownership ambiguous. The accepted model is:
 - Optional combined reads must label the owner and remain read-only.
 - Mutating actions always stay in the owning app.
 
-Coexistence is temporary. It ends only after evidence selects the clearer
-complete workflow and a later ADR authorizes retirement.
+Coexistence is temporary. It ends only after Loans passes the capability gates
+and a later ADR authorizes Girvi retirement.
 
 ## Why PawnLoan And FundingLoan Are Separate
 

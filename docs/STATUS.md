@@ -10,6 +10,17 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Loans is now the selected operational destination under accepted ADR
+  `2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi remains the
+  temporary business-rule/capability reference and continues to own and service
+  its existing records; no transfer, synchronization, dual write, or deletion
+  is authorized. The former winner-selection pilot is replaced by twelve Loans
+  acceptance gates. Each Girvi capability must be classified `PORT`, `REPLACE`,
+  `RETIRE`, or `DEFER`, implemented without weakening Loans' aggregate,
+  immutable-evidence, custody, tenant, correction, or accounting boundaries,
+  and proven by operator evidence. The next action is P1: extract and verify
+  regulatory license, numbering, and workspace-policy setup in Loans.
+
 - The outstanding accounting/Girvi/Loans runtime checkpoint is consolidated
   into four dependency-ordered commits: `0e847b2` adds the guarded standalone
   accounting successor and audited preferences; `9ca47c9` makes Loans DEA
@@ -96,10 +107,9 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   its only exposed release-item validation defect. External email/SMS expiry
   delivery remains OP5. OP2 collateral photographs and labels are next.
 
-- The intended Girvi/Loans end state is now evidence-based retirement after
-  temporary coexistence, recorded in the accepted parity-selection ADR and
-  `loan-operational-parity-pilot.md`. Neither app is preselected. Strict
-  source ownership remains in force. The first Loans parity pilot is blocked
+- The intended Girvi/Loans end state is Loans consolidation followed by
+  evidence-based Girvi retirement. Strict source ownership remains in force.
+  The first Loans capability pass was blocked
   on regulatory operations, collateral photos/labels, hierarchical storage,
   physical verification, and the required notices, reports, statements, and
   regulatory documents. Named bulk actions are useful follow-up work, not a
@@ -123,9 +133,9 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   shown as awaiting placement. Signatures may be handwritten or digital. The
   damaged-collateral release policy remains deferred.
 
-- Loans consolidation and eventual Girvi retirement are now under the accepted
-  evaluation ADR `2026-08-08-loans-consolidation-and-girvi-retirement-evaluation.md`
-  and active fit-gap plan. Strict independent ownership still controls runtime
+- Loans consolidation and eventual Girvi retirement are now under accepted ADR
+  `2026-08-09-girvi-capability-extraction-into-loans.md` and the active fit-gap
+  plan. Strict independent ownership still controls runtime
   during temporary coexistence; no Girvi removal, record transfer, migration
   deletion, route removal, or FundingLoan enablement is authorized. The first database-free
   FundingLoan Gate A probe now passes all 15 focused tests. It proves separate
@@ -226,20 +236,17 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   replay and projection plus all four PDFs before settlement, return, and
   closure. Runtime support, public navigation, Girvi changes, accounting
   delivery, and persisted/configurable FundingLoan documents remain deferred.
-  Gate D is now authorized with an essentials-only parity boundary. The current
-  assessment is that FundingLoan's Owner/Admin operational core is ready for a
-  controlled pilot, but Loans is not yet eligible to replace Girvi: versioned
-  regulatory evidence/renewal/expiry controls, mandatory collateral photos and
-  audited labels/QR, hierarchical storage, physical verification, and the
-  confirmed essential notice/report/form set remain pilot blockers. The pilot
+  Gate D is now the Girvi-capability-extraction and Loans-acceptance boundary.
+  FundingLoan's Owner/Admin operational core and the required regulatory,
+  collateral-media, label/QR, hierarchical-storage, physical-verification,
+  notice, report, and form capabilities are implemented. The acceptance pass
   must retain source, financial fold, custody/location fold, document,
   permission/tenant, accounting-disposition, exception, and backup/restore
   reconciliation evidence. Money, custody, tenant, required-document, or
-  unexplained reconciliation failures are disqualifying. Identical scenarios
-  will be scored in both products; one must be selected for eventual retirement
-  through a separate accepted ADR rather than permanent coexistence. OP1
-  regulatory operations is the next implementation slice. FundingLoan runtime,
-  normal navigation, and accounting delivery remain disabled meanwhile.
+  unexplained reconciliation failures are blocking. The twelve scenarios run
+  against Loans; Girvi supplies mature rules and expected outcomes where needed.
+  P1 regulatory setup is the next acceptance gate. FundingLoan runtime, normal
+  navigation, and accounting delivery remain disabled meanwhile.
   The in-place Girvi
   rebuild ADR and plan are on hold as the fallback if consolidation exposes a
   fundamental product or architecture mismatch.

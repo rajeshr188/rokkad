@@ -8,6 +8,18 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Loans is the selected target loan platform under accepted ADR
+`2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi is now a temporary
+business-rule and operator-capability reference, not a competing destination.
+Do not copy Girvi models, routes, statuses, mutable totals, or migration history
+into Loans. Extract each rule/outcome, classify it `PORT`, `REPLACE`, `RETIRE`,
+or `DEFER`, implement it through Loans' services, immutable evidence, selectors,
+custody, tenant, correction, and outbound-accounting boundaries, then prove it
+with the corresponding P1-P12 Loans acceptance scenario. Girvi still owns and
+services all Girvi-created records; no transfer, synchronization, dual write,
+origination shutdown, or deletion is authorized before a separate retirement
+ADR. The next acceptance gate is P1 license, numbering, and workspace policy.
+
 The previously dirty accounting/Girvi/Loans work is now organized into four
 dependency-ordered runtime commits: `0e847b2` (guarded standalone accounting
 successor and audited preferences), `9ca47c9` (Loans workspace-controlled DEA
@@ -73,14 +85,13 @@ status, and the license-register PDF. External expiry delivery remains OP5;
 OP2 collateral photographs and labels are the next pilot-blocking slice.
 
 Girvi and Loans coexist temporarily under accepted ADR
-`2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md`.
-Permanent coexistence is no longer the intended destination, but neither app is
-preselected as the winner. Keep strict source ownership and no transfer,
-synchronization, mirroring, or dual write. Loans must first reach operational
+`2026-08-09-girvi-capability-extraction-into-loans.md`. Loans is the target;
+Girvi is the capability reference. Keep strict source ownership and no transfer,
+synchronization, mirroring, or dual write. Loans must pass operational
 parity for regulatory operations, collateral photos/labels, hierarchical
 storage, physical verification, required notices, reports, statements, and
-documents. Run identical operator scenarios in both products and prefer the
-one with the clearest complete domain workflow. Bulk actions are useful but do
+documents. Run the twelve scenarios as Loans acceptance gates, consulting
+Girvi only to extract mature rules and expected outcomes. Bulk actions are useful but do
 not block the first parity pilot. Retirement still requires operator evidence
 and a separate accepted ADR.
 
@@ -233,13 +244,12 @@ must pass with a null accounting adapter before any accounting outbox is added.
 This direction remains proposed until the owner confirms the scope-decision
 table and destructive reset; do not begin the schema replacement before then.
 
-The preferred next direction is now an evidence-gated parity and consolidation
-evaluation under ADR
-`2026-08-08-loans-consolidation-and-girvi-retirement-evaluation.md` and plan
+The active direction is Girvi capability extraction into Loans under ADR
+`2026-08-09-girvi-capability-extraction-into-loans.md` and plan
 `loans-girvi-consolidation-fit-gap.md`; the Girvi rebuild is on hold as fallback.
 Strict independent ownership remains authoritative during temporary
-coexistence. A later accepted retirement ADR must select and authorize the
-winner. FundingLoan Gate A passes 15 pure tests covering immutable
+coexistence. A later accepted retirement ADR must authorize Girvi shutdown and
+record treatment. FundingLoan Gate A passes 15 pure tests covering immutable
 terms, lifecycle, simple monthly interest, repayment allocation, event-folded
 balance, multi-PawnLoan pledge/return LTV, settlement-plus-custody closure, and
 exact newest-first financial/custody correction. It has no ORM/accounting

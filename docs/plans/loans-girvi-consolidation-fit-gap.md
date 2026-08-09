@@ -1,10 +1,11 @@
 ---
 status: active
 owner: project
-updated: 2026-08-08
+updated: 2026-08-09
 tags: [loans, girvi, fit-gap, consolidation, funding-loan]
 related:
   - ../adr/2026-08-08-loans-consolidation-and-girvi-retirement-evaluation.md
+  - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
   - ../apps/loans/architecture-and-girvi-parity.md
   - loans-rewrite-roadmap.md
   - girvi-operational-core-rebuild.md
@@ -14,20 +15,18 @@ related:
 
 ## Goal
 
-Determine through executable vertical slices whether Loans should become the
-single operational loan platform and Girvi should be retired. Avoid both a
-second application-core rebuild and an unstructured feature merge.
+Extract mature Girvi business capabilities into Loans through executable
+vertical slices. Loans is the target platform; Girvi remains the temporary
+rule/reference runtime and owner of its existing records.
 
 ## Current Finding
 
-Consolidation is favored but not yet authorized. Loans already owns the clean
-PawnLoan lifecycle and most Girvi product value. The first pure-domain probe
-shows that lender repledge custody fits as a separate FundingLoan aggregate
-without changing PawnLoan or importing accounting.
-
-The accepted temporary-coexistence and parity-selection ADR controls runtime
-behavior until every gate in this plan passes, the pilot selects a winner, and
-a later retirement ADR is accepted.
+Consolidation into Loans is authorized by ADR
+`2026-08-09-girvi-capability-extraction-into-loans.md`. Loans already owns the
+clean PawnLoan lifecycle and most Girvi product value. FundingLoan proves that
+lender repledge custody fits as a separate aggregate without changing PawnLoan
+or importing accounting. Strict independent record ownership remains in force
+until a later retirement ADR.
 
 ## Architectural Guardrails
 
@@ -332,12 +331,11 @@ issuance, and Girvi changes remain outside this gate.
 Acceptance: an operator completes create-to-close with accounting disabled and
 cannot release borrower collateral while lender custody is active.
 
-### Gate D: Operational Parity Decisions
+### Gate D: Girvi Capability Extraction And Loans Acceptance
 
-Status: in progress. Owner direction on 2026-08-08 confirms that operators can
-complete the core FundingLoan workflow, the current control surface is mostly
-ready, only essential parity blocks the pilot, and temporary coexistence must
-end with one application retired.
+Status: in progress. Loans is the selected destination. The twelve operator
+scenarios now extract mature Girvi rules and prove the corresponding Loans
+workflow; they do not score two competing products.
 
 #### Current Readiness Assessment
 
@@ -351,7 +349,7 @@ end with one application retired.
 | Notices | Ready for pilot | Existing customer notices cover repayment, interest due, overdue, release, and auction; immutable Owner alerts now cover license expiry and completed verification discrepancy through Notify v2. |
 | Essential reports and regulatory forms | Partial | Deliver only the essential set below from canonical selectors and document projections. |
 | Accounting reconciliation | Deferred by policy | Use the null/deferred evidence pack below; do not replay or claim posting. |
-| Retirement readiness | Not ready | Select a winner only after identical pilot scenarios and a separate accepted retirement ADR. |
+| Retirement readiness | Not ready | Complete Loans acceptance gates, then authorize retirement in a separate ADR. |
 
 #### Essential Parity Matrix
 
@@ -368,11 +366,11 @@ report-count parity is required.
 | Loan ticket, repayment receipt, Form H/release memo, renewal agreement, notices, license register | PORT | Source-linked documents; required ticket/release signatures; Original/Duplicate ticket identity. |
 | Bulk servicing and broad historical archives | RETIRE for first pilot | Single-record workflows and filtered exports are sufficient. Reassess only from measured operator failure. |
 | Split/merge and mutable historical corrections | RETIRE | Use explicit successor/correction/reversal evidence instead. |
-| Customer portal | REPLACE after winner selection | Build against the winning application's selector/facade contracts, not both ORMs. |
+| Customer portal | REPLACE after Loans acceptance | Build against Loans selector/facade contracts, not both ORMs. |
 
 #### Minimum Reconciliation Evidence Pack
 
-For every pilot scenario and both products, retain:
+For every Loans acceptance scenario, retain:
 
 1. Source manifest: application owner, workspace, source identifiers, Party,
    series/license, effective dates, actor, and immutable request identity.
@@ -399,21 +397,18 @@ and every expected accounting disposition matched exactly. Open operational
 risks may remain only when explicitly accepted and unrelated to money, custody,
 tenant isolation, or required regulatory evidence.
 
-#### Winner And Retirement Decision
+#### Capability Acceptance And Retirement Decision
 
-Run identical scenarios in Girvi and Loans. Score each application from 0-3 on
-workflow completion, next-action clarity, operator time/error recovery,
-document clarity, custody/location correctness, audit/correction evidence,
-permission/tenant safety, and reconciliation quality. Architecture clarity,
-documents, readable workflow, and ease of operation receive double weight.
+For each scenario, document the Girvi rule and expected operator outcome,
+classify it `PORT`, `REPLACE`, `RETIRE`, or `DEFER`, and run the resulting Loans
+workflow. A failed Loans scenario becomes a named implementation slice rather
+than a vote for Girvi. Money, custody, tenant, required-document,
+backup/rollback, and unexplained-reconciliation failures always block
+acceptance.
 
-An application is ineligible to win if it fails any money, custody, tenant,
-required-document, backup/rollback, or unexplained-reconciliation criterion.
-The owner selects the higher qualifying result; a tie triggers one focused
-remediation pilot, not permanent coexistence. A separate accepted ADR must then
-name the winner, stop new origination in the loser, define servicing/export or
-retention for remaining records, define rollback, and only later authorize
-destructive cleanup.
+A separate accepted ADR must stop new Girvi origination, define servicing,
+export or retention for Girvi records, define rollback, and only later
+authorize destructive cleanup.
 
 Classify remaining non-pilot Girvi capabilities through operator evidence:
 
@@ -424,9 +419,8 @@ Classify remaining non-pilot Girvi capabilities through operator evidence:
 No item may disappear because it was absent from the Loans roadmap. Record
 frequency, regulatory need, affected roles, documents, and failure impact.
 
-Acceptance: all essential pilot rows pass, the reconciliation pack is complete,
-the fit-gap register has no undecided production capability, and a scored pilot
-result is ready for the owner's winner decision.
+Acceptance: all essential Loans rows pass, the reconciliation pack is complete,
+and the fit-gap register has no unclassified production capability.
 
 ### Gate E: Accounting And External Contracts
 
@@ -442,7 +436,7 @@ still pass unchanged with the null adapter. Replace external Girvi ORM imports
 with Loans facade/selectors for Party history, active-loan checks, dashboard,
 notifications, and period-close work.
 
-### Gate F: Pilot And Retirement Decision
+### Gate F: Loans Acceptance And Girvi Retirement Decision
 
 Run a selected-workspace pilot covering:
 
@@ -454,11 +448,11 @@ Run a selected-workspace pilot covering:
   accounting reconciliation;
 - backup and rollback rehearsal.
 
-If the pilot passes, write a separate accepted ADR that supersedes permanent
-coexistence, disables new Girvi origination, defines treatment of any remaining
-records, and authorizes destructive Girvi schema removal. If it fails on a
-fundamental product boundary, retain Girvi or resume its rebuild proposal with
-the failure evidence.
+If Loans passes, write a separate accepted ADR that disables new Girvi
+origination, defines treatment of remaining Girvi records, and authorizes any
+later destructive schema removal. If a required capability fails on a
+fundamental Loans boundary, record that evidence and require a new architecture
+decision before considering the Girvi rebuild fallback.
 
 ## Explicitly Deferred
 
@@ -468,13 +462,12 @@ the failure evidence.
 - Enabling FundingLoan runtime support.
 - Funding accounting payloads.
 - Changing workspace module flags or navigation ownership.
-- Accepting or rejecting permanent coexistence before the gates pass.
+- Disabling Girvi origination before the Loans gates and retirement ADR pass.
 
 ## Immediate Next Slice
 
-Gate D is authorized and in progress. OP1 regulatory operations are complete.
-OP2 collateral identity/media, OP3 hierarchical storage, and OP4 physical
-verification are complete. The immediate next slices are only the confirmed
-OP6 report/document gaps. OP5 notice auditing and its two confirmed gaps are complete. Do not enable
-FundingLoan runtime or normal navigation until those pilot blockers and the
-reconciliation pack pass.
+Gate D is authorized and in progress. OP1-OP6 implementation is complete. The
+immediate next action is P1: extract/cite Girvi's regulatory setup rule and run
+the Loans license, numbering, expiry, and workspace-policy acceptance workflow.
+Do not enable FundingLoan runtime or normal navigation until the relevant
+acceptance scenarios and reconciliation pack pass.

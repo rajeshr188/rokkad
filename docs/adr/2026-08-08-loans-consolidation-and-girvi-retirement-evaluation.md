@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded
 owner: project
 updated: 2026-08-08
 tags: [loans, girvi, consolidation, funding-loan, retirement]
@@ -9,12 +9,17 @@ related:
   - 2026-08-08-girvi-loans-permanent-independent-coexistence.md
   - 2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md
   - 2026-08-08-girvi-operational-core-rebuild.md
+superseded_by: 2026-08-09-girvi-capability-extraction-into-loans.md
 ---
 
 # ADR: Evaluate Loans Consolidation And Girvi Retirement
 
+> Superseded on 2026-08-09 after the evaluation succeeded. Loans is the target
+> platform; Girvi remains a temporary capability reference and record owner
+> until a separate retirement ADR.
+
 Date: 2026-08-08
-Status: Accepted
+Status: Superseded
 
 ## Context
 
@@ -48,10 +53,10 @@ The target shape is:
 - Girvi becomes eligible for retirement only after operational parity, pilot
   acceptance, and an explicit accepted retirement ADR.
 
-This evaluation does not authorize Girvi removal, record transfer, dual write,
-or schema deletion. The accepted temporary-coexistence and parity-selection
-ADR controls runtime behavior until the pilot selects a winner and a separate
-retirement ADR is accepted.
+This evaluation did not authorize Girvi removal, record transfer, dual write,
+or schema deletion. Its neutral winner-selection boundary was later superseded
+by ADR `2026-08-09-girvi-capability-extraction-into-loans.md`; the strict
+record-ownership boundary remains active.
 
 ## Evidence
 
