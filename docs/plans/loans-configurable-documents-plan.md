@@ -7,6 +7,7 @@ related:
   - ../apps/loans/architecture-and-girvi-parity.md
   - loans-rewrite-roadmap.md
   - ../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md
+  - ../adr/2026-08-09-loans-logical-layout-and-print-profile-separation.md
 ---
 
 # Loans Configurable Documents Plan
@@ -51,6 +52,32 @@ with validated data and fail-closed publication.
 
 Flow and overlay remain separate renderers over the same typed payload,
 immutable revision, deterministic assignment, and exact-issue infrastructure.
+
+## Approved Print-Profile Extraction
+
+ADR `2026-08-09-loans-logical-layout-and-print-profile-separation.md` accepts a
+cleaner pipeline for the next document slice:
+
+```text
+DocumentPayload
+  -> published logical layout
+  -> Original/Terms/Duplicate/D3 logical surfaces
+  -> resolved versioned workspace print profile
+  -> physical A5/A4 simplex/duplex artifact
+  -> immutable DocumentIssue
+```
+
+Logical layouts continue to own content, geometry, backgrounds, copy identity,
+copy-scoped blocks, signatures, and mandatory evidence. Print profiles own
+paper size, page order, selected copies, simplex/duplex packaging, A5 sequence
+or A4 landscape side-by-side imposition, scaling policy, and tested printer
+guidance. Profiles are immutable published revisions, not bare mutable dynamic
+preferences.
+
+Existing published layouts retain their embedded `copy_mode` and `sheet`
+behavior until a compatibility migration proves equivalent output. New issue
+evidence must eventually snapshot the resolved print-profile revision and hash
+while retaining exact PDF bytes for historical reprint.
 
 ## What To Learn From Girvi
 
@@ -404,6 +431,27 @@ integrity, pack boundaries, audited recovery, and the representative printer
 matrix. LPD6 must remain open until a real operator completes that physical A4,
 A5, simplex/duplex, long/regional content, background, QR, margin, and
 byte-identical reprint matrix.
+
+### LPD7: Versioned print profiles
+
+Status: accepted architecture; not implemented.
+
+- Add workspace-owned immutable print-profile revisions and workspace/Series
+  assignments with `Series -> Workspace -> built-in` precedence.
+- Move physical copy selection, A5/A4 imposition, simplex/duplex ordering,
+  orientation, and scaling policy out of new layout authoring.
+- Keep Original/Duplicate/Terms/D3 logical surfaces, backgrounds, copy-scoped
+  content, signatures, and mandatory evidence in published layouts.
+- Snapshot profile revision/hash on every official or regenerated issue.
+- Preserve all legacy published layouts and embedded composition settings.
+- Migrate each distinct embedded preset to an equivalent profile and prove
+  page-size, page-order, copy-label, background, and mandatory-content parity.
+- Extend integrity diagnostics, previews, issue detail, and the physical
+  printer matrix for the resolved profile.
+
+Gate: one logical ticket layout can be issued through A5 and A4 profiles
+without cloning legal content; profile changes affect only future issues;
+historical reprints remain exact stored bytes; legacy layouts remain renderable.
 
 ## Explicit Non-Goals
 

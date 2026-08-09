@@ -1,12 +1,13 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-06
+updated: 2026-08-09
 tags: [loans, documents, printing, operator-guide]
 related:
   - ../plans/loans-configurable-documents-plan.md
   - ../implementation/loans-configurable-document-operations.md
   - ../adr/2026-08-06-loans-versioned-configurable-documents.md
+  - ../adr/2026-08-09-loans-logical-layout-and-print-profile-separation.md
 ---
 
 # Loan Document Layouts: Starter Guide
@@ -49,6 +50,38 @@ Layout -> Draft revision -> Preview/test print -> Publish -> Assign -> Print
 
 Never try to repair a published revision. Clone it, correct the new draft, test
 it, publish it, and change the assignment.
+
+## Layout Versus Print Profile
+
+The approved target architecture separates two operator concerns:
+
+- **Document layout:** regulated content, wording, fields, tables, signatures,
+  geometry, logical Original/Duplicate identity, Terms/D3 back content, and
+  logical-surface backgrounds.
+- **Print profile:** which logical copies are printed, A5 sequence or A4
+  landscape side-by-side packaging, simplex/duplex order, orientation, scaling,
+  and printer guidance.
+
+The intended workflow is:
+
+```text
+Create and publish logical layout
+-> create and publish workspace print profile
+-> assign layout and print profile
+-> preview/test-print resolved combination
+-> use normal loan Print action
+```
+
+Print profiles are versioned and auditable. They are not ordinary mutable
+preferences. An official issue records the resolved layout and profile and
+stores the exact PDF bytes, so later assignment changes affect only future
+issues.
+
+**Current implementation note:** the print-profile runtime is not implemented
+yet. Existing published layouts still carry `copy_mode` and sheet-composition
+settings and remain authoritative. Continue using those controls until the
+profile migration is delivered; do not manually remove them from existing
+definitions.
 
 ## First Setup: Create A Loan Ticket
 
@@ -192,18 +225,24 @@ formatting, overflow, and duplex back-page blocks. PDF viewers may apply print
 scaling, so production acceptance must use **Actual size / 100%** on the real
 printer.
 
-### Original, duplicate, Terms, D3, and A4 imposition
+### Original, Duplicate, Terms, And D3 Logical Surfaces
 
-Sheet composition is available only for the **Loan ticket** document type. In
-**Page and background**, choose a sheet-composition preset and assign the
-appropriate background assets:
+Original, Duplicate, Terms, and D3 are logical loan-ticket surfaces. Keep their
+content and background assets in the published layout:
 
 - Original front
 - Duplicate front
 - Original back / Terms
 - Duplicate back / Form D3
 
-Sheet compositions use A5 as the logical page size:
+Each front block may apply to **Both copies**, **Original only**, or **Duplicate
+only**. Every logical front must retain all mandatory fields, tables, and
+verification; copy-specific decoration cannot remove legal evidence.
+
+In the approved target architecture, a separate versioned print profile will
+package these logical surfaces as A5 pages or A4 landscape sheets. Until that
+runtime slice ships, choose the existing sheet-composition preset in **Page and
+background**. It uses A5 as the logical page size:
 
 The editor sets this logical A5 size automatically. An A4 landscape preset
 still produces A4 landscape output by placing two logical A5 surfaces side by
@@ -214,7 +253,7 @@ Sheet-mode text blocks use shrink-to-fit overflow so realistic values that wrap
 on the narrower A5 surface reduce their font before preview is rejected.
 
 | Preset | Output sequence |
-|---|---|
+| --- | --- |
 | `A5_ORIGINAL` | Original front |
 | `A5_ORIGINAL_TERMS_DUPLEX` | Original front, Terms |
 | `A5_DUPLICATE` | Duplicate front |
@@ -223,11 +262,6 @@ on the narrower A5 surface reduce their font before preview is rejected.
 | `A5_BOTH_DUPLEX` | Original front, Terms, Duplicate front, D3 |
 | `A4_SIDE_BY_SIDE` | One A4 landscape page: Original left, Duplicate right |
 | `A4_SIDE_BY_SIDE_DUPLEX` | A4 front as above; A4 back: Terms left, D3 right |
-
-Set each front block's copy scope to **Both copies**, **Original only**, or
-**Duplicate only**. Every generated front copy must still contain all mandatory
-fields, tables, and verification; copy-specific decoration cannot remove legal
-evidence.
 
 For A4 landscape duplex, Rokkad preserves left/right positions but does not
 control the printer driver's flip-edge behavior. Test both sides using the real

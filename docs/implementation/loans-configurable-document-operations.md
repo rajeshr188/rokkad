@@ -1,12 +1,32 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-06
+updated: 2026-08-09
 tags: [loans, documents, operations, printing]
-related: [../plans/loans-configurable-documents-plan.md, ../adr/2026-08-06-loans-versioned-configurable-documents.md]
+related: [../plans/loans-configurable-documents-plan.md, ../adr/2026-08-06-loans-versioned-configurable-documents.md, ../adr/2026-08-09-loans-logical-layout-and-print-profile-separation.md]
 ---
 
 # Loans Configurable Document Operations
+
+## Logical Layout And Print Profile Boundary
+
+The accepted target architecture separates regulated document design from
+physical printing:
+
+```text
+payload -> published logical layout -> logical surfaces
+        -> published print profile -> physical PDF -> immutable issue
+```
+
+Layouts own content, signatures, Original/Duplicate identity, Terms/D3 content,
+copy scope, and backgrounds. Versioned workspace print profiles will own A5/A4
+packaging, included copies, simplex/duplex ordering, orientation, scaling, and
+printer guidance. Every issue must record both immutable revision hashes and
+retain exact artifact bytes.
+
+This architecture is approved but not yet implemented. Existing `copy_mode`
+and `sheet` settings remain authoritative for published layouts until
+compatibility migration and parity tests pass.
 
 ## Integrity Gate
 
@@ -48,6 +68,11 @@ Complete this with a real operator before production closeout:
 Record printer make/model, driver, paper stock, duplex setting, operator, date,
 and any scaling option used. Do not mark LPD6 operationally complete from an
 on-screen PDF review alone.
+
+After LPD7 ships, also record the print-profile name, revision, canonical hash,
+and assignment scope. Test the same logical layout through every assigned
+profile and verify that changing the active profile does not alter a historical
+issue reprint.
 
 ## Recovery
 
