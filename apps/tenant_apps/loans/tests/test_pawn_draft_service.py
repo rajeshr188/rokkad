@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
@@ -33,6 +34,7 @@ from apps.tenant_apps.loans.services import (
     PawnDraftError,
     UpdatePawnDraftCommand,
     approve_pawn_loan,
+    append_collateral_photo,
     create_pawn_draft,
     create_pawn_loan_economic_policy,
     create_pawn_metal_interest_rate_policy,
@@ -127,6 +129,18 @@ class PawnDraftServiceTests(TenantTestCase):
         }
         values.update(changes)
         return CreatePawnDraftCommand(**values)
+
+    def _add_photo(self, loan):
+        for item in loan.collateral_items.all():
+            append_collateral_photo(
+                item.pk,
+                upload=SimpleUploadedFile(
+                    f"collateral-{item.pk}.jpg",
+                    b"\xff\xd8\xff\xe0evidence",
+                    content_type="image/jpeg",
+                ),
+                actor=self.actor,
+            )
 
     def test_create_is_atomic_and_allocates_official_number_with_audit(self):
         loan = create_pawn_draft(self.command(), actor=self.actor)
@@ -340,6 +354,7 @@ class PawnDraftServiceTests(TenantTestCase):
             actor=self.actor,
         )
 
+        self._add_photo(loan)
         snapshot = approve_pawn_loan(loan.pk, actor=self.actor)
 
         self.assertEqual(
@@ -374,6 +389,7 @@ class PawnDraftServiceTests(TenantTestCase):
             ),
             actor=self.actor,
         )
+        self._add_photo(loan)
         approval = approve_pawn_loan(loan.pk, actor=self.actor)
 
         result = disburse_pawn_loan(
@@ -415,6 +431,7 @@ class PawnDraftServiceTests(TenantTestCase):
             ),
             actor=self.actor,
         )
+        self._add_photo(loan)
         approve_pawn_loan(loan.pk, actor=self.actor)
         posted = lambda _event: type(
             "Receipt", (), {"dea_voucher_id": None, "dea_journal_entry_id": None}
@@ -633,6 +650,7 @@ class PawnDraftServiceTests(TenantTestCase):
             ),
             actor=self.actor,
         )
+        self._add_photo(loan)
         approve_pawn_loan(loan.pk, actor=self.actor)
         posted = lambda _event: type(
             "Receipt", (), {"dea_voucher_id": None, "dea_journal_entry_id": None}

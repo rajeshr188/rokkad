@@ -43,7 +43,7 @@ readiness, and a selector-backed license-register PDF. Existing expiry rules
 continue to block new origination. External expiry delivery is retained for the
 OP5 Notify v2 audit rather than duplicated here.
 
-### OP2 Collateral Identity, Media, And Labels
+### OP2 Collateral Identity, Media, And Labels — Completed 2026-08-09
 
 - Stable workspace-scoped collateral identifier.
 - Source-linked photographs and attachment metadata are mandatory during draft
@@ -61,6 +61,14 @@ OP5 Notify v2 audit rather than duplicated here.
 - Scanning the QR code opens the owning loan detail by default. Release,
   physical-verification, and storage-transfer screens may consume the same scan
   to select the labelled item inside that workflow.
+
+Result: every collateral row now has immutable UUID identity; draft edits
+reconcile existing rows; JPEG/PNG evidence is mandatory for new UI items and
+approval fails closed when any item has no photograph. Photo metadata and
+content hashes are append-only and frozen into approval snapshots. Retained
+renewal items inherit explicit predecessor evidence while added items require a
+fresh renewal photograph. Audited preview/print label PDFs contain loan, item,
+description, Party, weight, and a QR that opens the tenant-scoped owning loan.
 
 ### OP3 Hierarchical Storage
 
@@ -138,8 +146,8 @@ delete or mutable financial-history editing.
 1. Confirm exact reports, regulatory documents, media rules, label content, and
    verification discrepancy policy.
 2. Deliver OP1 regulatory operations. Completed 2026-08-08.
-3. Deliver OP2 identity/media/labels. Next.
-4. Deliver OP3 hierarchical storage.
+3. Deliver OP2 identity/media/labels. Completed 2026-08-09.
+4. Deliver OP3 hierarchical storage. Next.
 5. Deliver OP4 physical verification.
 6. Close OP5 notice gaps and OP6 report/document gaps.
 7. Run the parity pilot.

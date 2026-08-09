@@ -65,6 +65,10 @@ from apps.tenant_apps.loans.services.pawn_interest import (
     should_record_pawn_accrual_event,
 )
 from apps.tenant_apps.loans.services.pawn_lifecycle import approve_pawn_loan
+from apps.tenant_apps.loans.services.collateral_media import (
+    append_collateral_photo,
+    inherit_collateral_photos,
+)
 from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
     get_pawn_principal_tranche_balances,
@@ -118,6 +122,7 @@ def renew_pawn_loan(
     request_key: str,
     retained_collateral: tuple[RetainedCollateralInput, ...] | None = None,
     additional_collateral: tuple[CollateralDraftInput, ...] = (),
+    additional_photo_uploads: tuple = (),
     actor=None,
     delivery_handler: DeliveryHandler | None = None,
 ) -> PawnRenewalResult:
@@ -301,7 +306,6 @@ def renew_pawn_loan(
         ),
         actor=actor,
     )
-    approval = approve_pawn_loan(successor.pk, actor=actor)
     successor_policy = _clone_policy(source, successor)
     successor_items = tuple(successor.collateral_items.order_by("pk"))
     if len(successor_items) != len(successor_collateral):
@@ -317,6 +321,22 @@ def renew_pawn_loan(
     ):
         new_item.renewed_from = source_by_id[source_item_id]
         new_item.save(update_fields=["renewed_from", "updated_at"])
+        inherit_collateral_photos(
+            source_by_id[source_item_id], new_item, actor=actor
+        )
+    additional_items = successor_items[len(retained_ids_in_order):]
+    if len(additional_items) != len(additional_photo_uploads):
+        raise PawnRenewalError(
+            "Every additional renewal collateral item requires one photograph."
+        )
+    for item, upload in zip(additional_items, additional_photo_uploads, strict=True):
+        append_collateral_photo(
+            item.pk,
+            upload=upload,
+            actor=actor,
+            workflow_source="RENEWAL",
+        )
+    approval = approve_pawn_loan(successor.pk, actor=actor)
 
     capitalized_paid = min(
         principal_paid,

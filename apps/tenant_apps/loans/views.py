@@ -56,6 +56,7 @@ from apps.tenant_apps.loans.forms import (
     PawnAdditionalCollateralFormSet,
     PawnCapitalizationForm,
     PawnCollateralDraftFormSet,
+    PawnCollateralPhotoForm,
     PawnDisbursalForm,
     PawnDraftForm,
     PawnFullReleaseForm,
@@ -113,6 +114,8 @@ from apps.tenant_apps.loans.models import (
     LoanLicenseRevision,
     LoanSeries,
     PawnLoan,
+    PawnCollateralItem,
+    PawnCollateralPhoto,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanAuction,
@@ -182,6 +185,7 @@ from apps.tenant_apps.loans.services import (
     create_license,
     create_funding_loan_draft,
     create_pawn_draft,
+    append_collateral_photo,
     create_pawn_loan_economic_policy,
     create_pawn_loan_fee_policy,
     create_pawn_metal_interest_rate_policy,
@@ -218,6 +222,8 @@ from apps.tenant_apps.loans.services import (
     reverse_pawn_loan_event,
     set_series_active,
     transfer_expired_draft_setup,
+    render_collateral_label,
+    PawnCollateralMediaError,
     update_license,
     update_pawn_draft,
     update_series,
@@ -866,7 +872,9 @@ def pawn_loan_create(request):
         workspace=request.loans_workspace,
         initial=initial,
     )
-    formset = PawnCollateralDraftFormSet(request.POST or None, prefix="collateral")
+    formset = PawnCollateralDraftFormSet(
+        request.POST or None, request.FILES or None, prefix="collateral"
+    )
     economics_preview = None
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         command = _create_command(request.loans_workspace.pk, form, formset)
@@ -880,7 +888,11 @@ def pawn_loan_create(request):
                 )
                 loan = None
             else:
-                loan = create_pawn_draft(command, actor=request.user)
+                with transaction.atomic():
+                    loan = create_pawn_draft(command, actor=request.user)
+                    _persist_formset_photos(
+                        loan, formset, actor=request.user, workflow_source="DRAFT"
+                    )
         except (PawnDraftError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
@@ -904,6 +916,7 @@ def pawn_loan_update(request, pk):
     initial = [
         {
             "description": item.description,
+            "collateral_item_id": item.pk,
             "metal": item.metal,
             "gross_weight": item.gross_weight,
             "net_weight": item.net_weight,
@@ -914,7 +927,10 @@ def pawn_loan_update(request, pk):
         for item in loan.collateral_items.all()
     ]
     formset = PawnCollateralDraftFormSet(
-        request.POST or None, prefix="collateral", initial=None if request.method == "POST" else initial
+        request.POST or None,
+        request.FILES or None,
+        prefix="collateral",
+        initial=None if request.method == "POST" else initial,
     )
     economics_preview = None
     if request.method == "POST" and form.is_valid() and formset.is_valid():
@@ -928,7 +944,11 @@ def pawn_loan_update(request, pk):
                     collateral=command.collateral,
                 )
             else:
-                update_pawn_draft(loan.pk, command, actor=request.user)
+                with transaction.atomic():
+                    loan = update_pawn_draft(loan.pk, command, actor=request.user)
+                    _persist_formset_photos(
+                        loan, formset, actor=request.user, workflow_source="DRAFT"
+                    )
         except (PawnDraftError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
@@ -988,6 +1008,82 @@ def pawn_loan_detail(request, pk):
     )
     context["primary_action"] = _primary_action(loan, context)
     return render(request, "loans/pawn/detail.html", context)
+
+
+@loans_workspace_required
+@require_POST
+def pawn_collateral_photo_add(request, pk, item_pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
+    form = PawnCollateralPhotoForm(request.POST, request.FILES)
+    if form.is_valid():
+        try:
+            append_collateral_photo(
+                item.pk,
+                upload=form.cleaned_data["photograph"],
+                actor=request.user,
+            )
+        except (PawnCollateralMediaError, ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, f"Photograph appended to {item.description}.")
+    else:
+        messages.error(request, "Select a valid collateral photograph.")
+    return redirect(f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}")
+
+
+@loans_workspace_required
+def pawn_collateral_photo_document(request, pk, item_pk, photo_pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    photo = get_object_or_404(
+        PawnCollateralPhoto,
+        pk=photo_pk,
+        collateral_item_id=item_pk,
+        collateral_item__loan=loan,
+    )
+    photo.file.open("rb")
+    response = HttpResponse(photo.file.read(), content_type=photo.mime_type)
+    response["Content-Disposition"] = content_disposition_header(
+        True, photo.original_filename
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@loans_workspace_required
+def pawn_collateral_label_pdf(request, pk, item_pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
+    action = request.GET.get("action", "PREVIEW").upper()
+    scan_url = request.build_absolute_uri(
+        reverse("loans:pawn_collateral_scan", args=[item.public_id])
+    )
+    try:
+        result = render_collateral_label(
+            item.pk,
+            qr_target=scan_url,
+            action=action,
+            actor=request.user,
+        )
+    except (PawnCollateralMediaError, ValidationError, ValueError) as exc:
+        return HttpResponse(str(exc), status=409)
+    response = HttpResponse(result.content, content_type="application/pdf")
+    response["Content-Disposition"] = content_disposition_header(
+        False, f"{loan.loan_number}-{item.public_id}-label.pdf"
+    )
+    return response
+
+
+@loans_workspace_required
+def pawn_collateral_scan(request, public_id):
+    item = get_object_or_404(
+        PawnCollateralItem.objects.select_related("loan"),
+        public_id=public_id,
+        loan__workspace=request.loans_workspace,
+    )
+    return redirect(
+        f"{reverse('loans:pawn_loan_detail', args=[item.loan_id])}#collateral-{item.public_id}"
+    )
 
 
 @loans_workspace_required
@@ -1505,6 +1601,7 @@ def pawn_loan_renew(request, pk):
     )
     additional_formset = PawnAdditionalCollateralFormSet(
         request.POST or None,
+        request.FILES or None,
         prefix="additional",
     )
     balance = None
@@ -1540,6 +1637,11 @@ def pawn_loan_renew(request, pk):
                 request_key=form.cleaned_data["request_key"],
                 retained_collateral=retained,
                 additional_collateral=_collateral_inputs(additional_formset),
+                additional_photo_uploads=tuple(
+                    row["photograph"]
+                    for row in additional_formset.cleaned_data
+                    if row and not row.get("DELETE")
+                ),
                 actor=request.user,
             )
         except (PawnRenewalError, ValidationError, ValueError) as exc:
@@ -2446,6 +2548,7 @@ def _pawn_loan_for_workspace(request, pk):
     return get_object_or_404(
         PawnLoan.objects.select_related("borrower", "license", "series").prefetch_related(
             "collateral_items",
+            "collateral_items__photos",
             "change_log__actor",
             "accounting_events__outbox",
             "accounting_events__reversed_by_event",
@@ -2534,6 +2637,7 @@ def _draft_readiness(workspace):
 def _collateral_inputs(formset):
     return tuple(
         CollateralDraftInput(
+            collateral_item_id=row.get("collateral_item_id"),
             description=row["description"],
             metal=row["metal"],
             gross_weight=row["gross_weight"],
@@ -2545,6 +2649,36 @@ def _collateral_inputs(formset):
         for row in formset.cleaned_data
         if row and not row.get("DELETE")
     )
+
+
+def _persist_formset_photos(loan, formset, *, actor, workflow_source):
+    rows = [
+        row
+        for row in formset.cleaned_data
+        if row and not row.get("DELETE")
+    ]
+    supplied_ids = {
+        row["collateral_item_id"]
+        for row in rows
+        if row.get("collateral_item_id")
+    }
+    new_items = iter(
+        loan.collateral_items.exclude(pk__in=supplied_ids).order_by("pk")
+    )
+    for row in rows:
+        item = (
+            loan.collateral_items.get(pk=row["collateral_item_id"])
+            if row.get("collateral_item_id")
+            else next(new_items)
+        )
+        upload = row.get("photograph")
+        if upload:
+            append_collateral_photo(
+                item.pk,
+                upload=upload,
+                actor=actor,
+                workflow_source=workflow_source,
+            )
 
 
 def _create_command(workspace_id, form, formset):

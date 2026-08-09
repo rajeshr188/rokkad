@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import override_settings
 from django.urls import reverse
@@ -98,6 +99,8 @@ class PawnDraftUiTests(TenantTestCase):
         )
         self.assertEqual(loan.state, "DRAFT")
         self.assertEqual(loan.collateral_items.count(), 1)
+        original_item = loan.collateral_items.get()
+        original_public_id = original_item.public_id
 
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
         self.assertContains(detail, loan.loan_number)
@@ -110,11 +113,14 @@ class PawnDraftUiTests(TenantTestCase):
         payload = self._payload(license, series)
         payload["collateral-0-allocated_principal"] = "12500.00"
         payload["collateral-0-description"] = "Corrected gold chain"
+        payload["collateral-0-collateral_item_id"] = str(loan.collateral_items.get().pk)
         response = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
         self.assertEqual(response.status_code, 302)
         loan.refresh_from_db()
         self.assertEqual(str(loan.principal_amount), "12500.00")
         self.assertEqual(loan.collateral_items.get().description, "Corrected gold chain")
+        self.assertEqual(loan.collateral_items.get().public_id, original_public_id)
+        self.assertEqual(loan.collateral_items.get().photos.count(), 2)
         self.assertEqual(loan.change_log.count(), 2)
 
     def test_invalid_create_rerenders_without_consuming_number(self):
@@ -573,4 +579,9 @@ class PawnDraftUiTests(TenantTestCase):
             "collateral-0-purity_percentage": "91.6000",
             "collateral-0-latest_appraised_value": "50000.00",
             "collateral-0-allocated_principal": "10000.00",
+            "collateral-0-photograph": SimpleUploadedFile(
+                "gold-chain.jpg",
+                b"\xff\xd8\xff\xe0evidence",
+                content_type="image/jpeg",
+            ),
         }

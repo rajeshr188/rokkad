@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
@@ -14,6 +15,7 @@ from apps.tenant_apps.loans.services import (
     CreatePawnDraftCommand,
     PawnLifecycleError,
     approve_pawn_loan,
+    append_collateral_photo,
     cancel_pawn_loan,
     create_pawn_draft,
     reopen_pawn_loan,
@@ -71,6 +73,13 @@ class PawnLifecycleServiceTests(TenantTestCase):
                     purity_percentage=Decimal("91.6000"),
                     latest_appraised_value=Decimal("120000.00"),
                 ),),
+            ),
+            actor=self.actor,
+        )
+        append_collateral_photo(
+            self.loan.collateral_items.get().pk,
+            upload=SimpleUploadedFile(
+                "bangles.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg"
             ),
             actor=self.actor,
         )

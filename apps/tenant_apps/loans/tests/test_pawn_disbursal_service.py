@@ -7,6 +7,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
@@ -69,6 +70,7 @@ from apps.tenant_apps.loans.services import (
     PawnInterestError,
     PawnReversalError,
     approve_pawn_loan,
+    append_collateral_photo,
     assess_pawn_loan_accounting_readiness,
     assert_pawn_loan_financial_actions_allowed,
     create_pawn_draft,
@@ -187,6 +189,13 @@ class PawnDisbursalServiceTests(TenantTestCase):
                         latest_appraised_value=Decimal("50000"),
                     ),
                 ),
+            ),
+            actor=self.actor,
+        )
+        append_collateral_photo(
+            self.loan.collateral_items.get().pk,
+            upload=SimpleUploadedFile(
+                "gold.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg"
             ),
             actor=self.actor,
         )
@@ -1541,6 +1550,13 @@ class PawnDisbursalServiceTests(TenantTestCase):
                         purity_percentage=Decimal("90"),
                         latest_appraised_value=Decimal("50000.00"),
                         allocated_principal=Decimal("9000.00"),
+                    ),
+                ),
+                additional_photo_uploads=(
+                    SimpleUploadedFile(
+                        "added-silver.jpg",
+                        b"\xff\xd8\xff\xe0renewal-evidence",
+                        content_type="image/jpeg",
                     ),
                 ),
                 actor=self.actor,

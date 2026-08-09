@@ -38,6 +38,10 @@ def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
         raise PawnLifecycleError("A PawnLoan requires collateral before approval.")
     for item in collateral:
         item.full_clean()
+        if not item.photos.exists():
+            raise PawnLifecycleError(
+                f"Collateral {item.description} requires at least one photograph before approval."
+            )
     resolved_economics = _validate_collateral_economics(loan, collateral)
 
     payload = _approval_payload(loan, collateral, resolved_economics)
@@ -274,6 +278,15 @@ def _approval_payload(loan, collateral, resolved_economics=None):
                     else None
                 ),
                 "interest_rate_policy_id": item.interest_rate_policy_id,
+                "photo_evidence": [
+                    {
+                        "photo_id": photo.pk,
+                        "sha256": photo.sha256,
+                        "workflow_source": photo.workflow_source,
+                        "captured_at": photo.captured_at.isoformat(),
+                    }
+                    for photo in item.photos.all()
+                ],
             }
             for item in collateral
         ],

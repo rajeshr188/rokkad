@@ -539,6 +539,12 @@ class PawnDraftForm(forms.Form):
 
 
 class PawnCollateralDraftForm(forms.ModelForm):
+    collateral_item_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
+    photograph = forms.FileField(
+        required=False,
+        help_text="JPEG or PNG, up to 10 MB. New collateral requires one photograph.",
+    )
+
     class Meta:
         model = PawnCollateralItem
         fields = (
@@ -561,6 +567,24 @@ class PawnCollateralDraftForm(forms.ModelForm):
         ]
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-select" if field is self.fields["metal"] else "form-control")
+
+    def clean(self):
+        cleaned = super().clean()
+        if (
+            cleaned.get("description")
+            and not cleaned.get("collateral_item_id")
+            and not cleaned.get("photograph")
+        ):
+            self.add_error("photograph", "New collateral requires a JPEG or PNG photograph.")
+        return cleaned
+
+
+class PawnCollateralPhotoForm(forms.Form):
+    photograph = forms.FileField(help_text="JPEG or PNG, up to 10 MB.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["photograph"].widget.attrs["class"] = "form-control"
 
 
 PawnCollateralDraftFormSet = forms.formset_factory(

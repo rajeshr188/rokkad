@@ -43,6 +43,7 @@ class CollateralDraftInput:
     purity_percentage: Decimal
     latest_appraised_value: Decimal | None = None
     allocated_principal: Decimal | None = None
+    collateral_item_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -188,11 +189,47 @@ def update_pawn_draft(
             "updated_at",
         ]
     )
-    loan.collateral_items.all().delete()
-    for item in collateral:
-        item.loan = loan
-    PawnCollateralItem.objects.bulk_create(collateral)
-    after = _draft_snapshot(loan, tuple(collateral))
+    existing = {
+        item.pk: item
+        for item in PawnCollateralItem.objects.select_for_update().filter(loan=loan)
+    }
+    supplied_ids = [item.pk for item in collateral if item.pk is not None]
+    if len(supplied_ids) != len(set(supplied_ids)) or any(
+        item_id not in existing for item_id in supplied_ids
+    ):
+        raise PawnDraftError("Collateral identity does not belong to this draft.")
+    removed = [item for item_id, item in existing.items() if item_id not in supplied_ids]
+    if any(item.photos.exists() for item in removed):
+        raise PawnDraftError(
+            "Collateral with photograph evidence cannot be removed; cancel this draft and start again."
+        )
+    for item in removed:
+        item.delete()
+    persisted = []
+    editable_fields = (
+        "description",
+        "metal",
+        "gross_weight",
+        "net_weight",
+        "purity_percentage",
+        "latest_appraised_value",
+        "allocated_principal",
+        "monthly_interest_rate",
+        "interest_rate_policy",
+    )
+    for candidate in collateral:
+        if candidate.pk is None:
+            candidate.loan = loan
+            candidate.save()
+            persisted.append(candidate)
+            continue
+        target = existing[candidate.pk]
+        for field in editable_fields:
+            setattr(target, field, getattr(candidate, field))
+        target.full_clean()
+        target.save(update_fields=(*editable_fields, "updated_at"))
+        persisted.append(target)
+    after = _draft_snapshot(loan, tuple(persisted))
     LoanChangeLog.objects.create(
         loan=loan,
         event_kind=PawnLoanEventKind.DRAFT_UPDATED.value,
@@ -245,6 +282,7 @@ def _validated_collateral(loan, inputs, *, resolved=None):
             tranche = resolved.economics.tranches[index] if resolved else None
             rate_policy = resolved.rate_policies[index] if resolved else None
             model = PawnCollateralItem(
+                pk=item.collateral_item_id,
                 loan=loan,
                 description=item.description,
                 metal=CollateralMetal(item.metal).value,
@@ -260,6 +298,8 @@ def _validated_collateral(loan, inputs, *, resolved=None):
                 ),
                 interest_rate_policy=rate_policy,
             )
+            if model.pk is not None:
+                model._state.adding = False
             model.full_clean(exclude={"loan"})
             items.append(model)
         except (ValidationError, ValueError) as exc:
@@ -303,6 +343,8 @@ def _draft_snapshot(loan, collateral):
         "tenure_months": loan.tenure_months,
         "collateral": [
             {
+                "collateral_item_id": item.pk,
+                "public_id": str(item.public_id),
                 "description": item.description,
                 "metal": item.metal,
                 "gross_weight": str(item.gross_weight),

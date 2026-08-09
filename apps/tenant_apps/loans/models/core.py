@@ -1,4 +1,5 @@
 from decimal import Decimal
+import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -572,6 +573,7 @@ class PawnLoan(models.Model):
 
 
 class PawnCollateralItem(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,

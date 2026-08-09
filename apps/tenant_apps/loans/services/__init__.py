@@ -174,6 +174,14 @@ from .funding_loans import (
     save_funding_loan_draft_inputs,
 )
 from .regulatory_documents import render_loan_license_register_pdf
+from .collateral_media import (
+    PawnCollateralLabelResult,
+    PawnCollateralMediaError,
+    append_collateral_photo,
+    inherit_collateral_photos,
+    render_collateral_label,
+    validate_collateral_photo,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -200,6 +208,12 @@ __all__ = (
     "UpdatePawnDraftCommand",
     "create_pawn_draft",
     "update_pawn_draft",
+    "PawnCollateralLabelResult",
+    "PawnCollateralMediaError",
+    "append_collateral_photo",
+    "inherit_collateral_photos",
+    "render_collateral_label",
+    "validate_collateral_photo",
     "PawnLifecycleError",
     "approve_pawn_loan",
     "cancel_pawn_loan",
