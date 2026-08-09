@@ -34,6 +34,13 @@ Loans lifecycle readiness is accounting-mode aware. In `DEFERRED`, intact
 `PENDING` outboxes are expected source evidence and must not block servicing or
 be described as posted; missing, `FAILED`, or `PROCESSING` evidence still
 blocks. In `DEA`, every non-posted outbox blocks dependent financial actions.
+Future activation is proposed in ADR
+`2026-08-09-loans-deferred-to-dea-activation.md`: prefer a frozen,
+Owner-confirmed opening-position cutover with append-only coverage for included
+pending outboxes, followed by exact reconciliation and only then the audited
+mode switch. This is not accepted or implemented. Never treat a preference
+toggle as replay, mutate covered outboxes to `POSTED`, or fabricate historical
+cash vouchers.
 
 Loans is the selected target loan platform under accepted ADR
 `2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi is now a temporary

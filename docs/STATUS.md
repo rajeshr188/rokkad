@@ -10,6 +10,14 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Future Loans activation from `DEFERRED` back to DEA is now documented in
+  proposed ADR `2026-08-09-loans-deferred-to-dea-activation.md`. The recommended
+  default is an Owner-confirmed opening-position cutover: freeze an event
+  watermark, preview active-loan/Party balances, post idempotent source-linked
+  DEA openings, append coverage for pre-cutover pending outboxes, reconcile,
+  then enable DEA. A preference toggle alone remains unsafe and unauthorized;
+  the activation workflow is documented future work, not implemented runtime.
+
 - PawnLoan release now respects the workspace accounting integration mode all
   the way through canonical balance and release readiness. In `DEFERRED`, an
   intact `PENDING` outbox is expected and no longer blocks repayment, accrual,

@@ -3,7 +3,7 @@ status: accepted
 owner: project
 updated: 2026-08-08
 tags: [accounting, dea, loans, girvi, integration, outbox]
-related: [2026-08-08-girvi-loans-permanent-independent-coexistence.md, ../domain/accounting.md, ../constitution.md]
+related: [2026-08-08-girvi-loans-permanent-independent-coexistence.md, 2026-08-09-loans-deferred-to-dea-activation.md, ../domain/accounting.md, ../constitution.md]
 ---
 
 # ADR: Operational Accounting Integration Deferral
@@ -86,5 +86,9 @@ delivery to DEA.
   effects and must not include deferred `PENDING` events as ledger truth.
 - Activation back to DEA needs readiness, replay ordering, idempotency,
   reversal, and reconciliation design before any deferred event is delivered.
+- The proposed follow-up ADR
+  `2026-08-09-loans-deferred-to-dea-activation.md` recommends an
+  opening-position cutover with an immutable watermark and coverage evidence;
+  it is not yet accepted or implemented.
 - This refines accounting delivery while the temporary parity-selection ADR's
   strict source-ownership rules remain in force.

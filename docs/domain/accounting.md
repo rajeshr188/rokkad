@@ -16,8 +16,10 @@ accounting matures: Loans records immutable source events and outboxes but does
 not run DEA readiness or automatic delivery. Those outboxes remain `PENDING`;
 they are not ledger truth and must not be reported as posted or failed. `DEA`
 mode preserves the existing posting and reversal behavior. Existing DEA
-history is never rewritten. Deferred replay requires a future explicit
-activation and reconciliation design. Girvi `GivenLoan` disbursal and
+history is never rewritten. Deferred activation requires an explicit,
+reconciled workflow; the proposed design is documented in
+[Loans deferred-to-DEA activation](../adr/2026-08-09-loans-deferred-to-dea-activation.md).
+Changing the preference alone is not a safe activation. Girvi `GivenLoan` disbursal and
 `TakenLoan` activation record canonical versioned outbox events instead of
 creating DEA payment vouchers while deferred. `TakenLoan` repayment is also
 decoupled: immutable Girvi `LoanRepayment` rows are operational truth, while
