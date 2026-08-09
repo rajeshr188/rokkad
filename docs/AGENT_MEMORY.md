@@ -18,14 +18,15 @@ Approval freezes those values and disbursal rehydrates its immutable
 classified: license/series and independent numbering are `PORT`; immutable
 license revisions and bounded sequence exhaustion are `REPLACE`; loan-count and
 loan-amount auto-deactivation thresholds are `RETIRE for MVP`. Focused gates
-pass. P2 mixed-metal origination and disbursal has passed its software gate and
-is Owner-walkthrough pending. Loans models each collateral item as a principal/rate tranche,
+pass. P2 mixed-metal origination and disbursal was accepted by the workspace
+Owner on 2026-08-09. Loans models each collateral item as a principal/rate tranche,
 requires draft photographs, enforces item LTV, freezes approval evidence, and
 snapshots gross principal, advance-interest/fee deductions, net cash, and
 tranches at disbursal. The draft preview exposes per-item rate, value, LTV
 limit, and interest, and LTV failures attach to the offending item without
 consuming a number. Do not restore a mutable loan-level interest rate as
-authority or mark P2 finally accepted before recording the Owner workflow.
+authority. The accepted walkthrough includes the number visibility and
+deferred-accounting lifecycle corrections.
 P2 walkthrough feedback requires number clarity on the draft itself: create
 shows non-consuming next-number previews for selectable series, while a saved
 draft shows its permanently allocated official number.
@@ -52,7 +53,8 @@ custody, tenant, correction, and outbound-accounting boundaries, then prove it
 with the corresponding P1-P12 Loans acceptance scenario. Girvi still owns and
 services all Girvi-created records; no transfer, synchronization, dual write,
 origination shutdown, or deletion is authorized before a separate retirement
-ADR. The next acceptance gate is P2 mixed-metal origination and disbursal.
+ADR. The next acceptance gate is P3 physical identity: Original/Duplicate loan
+ticket, signature fields, collateral labels, and tenant-scoped QR scans.
 
 The previously dirty accounting/Girvi/Loans work is now organized into four
 dependency-ordered runtime commits: `0e847b2` (guarded standalone accounting

@@ -10,6 +10,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P2 mixed-metal origination and disbursal was accepted by the workspace Owner
+  on 2026-08-09 after the number-visibility and deferred-accounting release
+  corrections. P3 physical identity is now active: prove the signed
+  Original/Duplicate loan ticket, collateral label output, and tenant-scoped QR
+  scan to the correct loan. Physical printer behavior remains operator evidence
+  and cannot be certified by software tests alone.
+
 - Future Loans activation from `DEFERRED` back to DEA is now documented in
   proposed ADR `2026-08-09-loans-deferred-to-dea-activation.md`. The recommended
   default is an Owner-confirmed opening-position cutover: freeze an event
@@ -35,7 +42,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 - P1 regulatory setup was accepted by the workspace Owner on 2026-08-09 after
   passing its complete software gate. P2 mixed-metal origination and disbursal
-  has now passed its software gate and awaits the Owner browser walkthrough.
+  passed its software gate and was subsequently accepted by the Owner.
   Its audit confirms that Loans owns per-item principal,
   effective-dated metal rates, mandatory draft photographs, item LTV,
   immutable approval evidence, and net-disbursal snapshots. The remaining

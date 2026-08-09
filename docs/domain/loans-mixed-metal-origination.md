@@ -66,4 +66,5 @@ related:
   approval revalidation/freeze, immutable disbursal tranche evidence, atomic
   policy snapshot/outbox creation, and use of policy frozen at approval.
 - The complete 18-test draft UI suite and 11 focused domain/service tests pass.
-- Final P2 acceptance still requires the Owner to execute the browser workflow.
+- The workspace Owner accepted P2 on 2026-08-09 after executing the browser
+  workflow and verifying the number and deferred-accounting corrections.
