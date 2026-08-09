@@ -30,6 +30,11 @@ P2 walkthrough feedback requires number clarity on the draft itself: create
 shows non-consuming next-number previews for selectable series, while a saved
 draft shows its permanently allocated official number.
 
+Loans lifecycle readiness is accounting-mode aware. In `DEFERRED`, intact
+`PENDING` outboxes are expected source evidence and must not block servicing or
+be described as posted; missing, `FAILED`, or `PROCESSING` evidence still
+blocks. In `DEA`, every non-posted outbox blocks dependent financial actions.
+
 Loans is the selected target loan platform under accepted ADR
 `2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi is now a temporary
 business-rule and operator-capability reference, not a competing destination.

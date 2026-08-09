@@ -10,6 +10,15 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- PawnLoan release now respects the workspace accounting integration mode all
+  the way through canonical balance and release readiness. In `DEFERRED`, an
+  intact `PENDING` outbox is expected and no longer blocks repayment, accrual,
+  release, or other dependent commands; missing, `FAILED`, and `PROCESSING`
+  evidence still fail closed, and `DEA` mode still requires every event to be
+  posted. A full deferred disbursal-to-release test proves pending source
+  events, exact settlement, custody return, and loan closure without fabricated
+  voucher evidence.
+
 - P2 Owner walkthrough feedback found that the draft form did not expose the
   number represented by the selected series. The create page now shows the
   non-consuming next expected PawnLoan number for every selectable series both

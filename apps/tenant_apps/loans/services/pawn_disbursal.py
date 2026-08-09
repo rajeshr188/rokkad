@@ -5,6 +5,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Q
 
 from apps.tenant_apps.loans.domain import (
     AccountingRecognition,
@@ -182,17 +183,17 @@ def assert_pawn_loan_financial_actions_allowed(loan_id: int) -> PawnLoan:
         is_dea_integration_enabled,
     )
 
-    if not is_dea_integration_enabled(loan.workspace):
-        return loan
+    blocking_statuses = [
+        LoanOutboxStatus.PROCESSING.value,
+        LoanOutboxStatus.FAILED.value,
+    ]
+    if is_dea_integration_enabled(loan.workspace):
+        blocking_statuses.append(LoanOutboxStatus.PENDING.value)
     if loan.accounting_events.filter(
-        outbox__status__in=(
-            LoanOutboxStatus.PENDING.value,
-            LoanOutboxStatus.PROCESSING.value,
-            LoanOutboxStatus.FAILED.value,
-        )
+        Q(outbox__isnull=True) | Q(outbox__status__in=blocking_statuses)
     ).exists():
         raise PawnDisbursalError(
-            "PawnLoan financial actions are blocked until its accounting delivery succeeds."
+            "PawnLoan financial actions are blocked by missing, failed, or unresolved accounting evidence."
         )
     return loan
 

@@ -12,6 +12,9 @@ from apps.tenant_apps.loans.domain import (
     LoanOutboxStatus,
     TransactionKind,
 )
+from apps.tenant_apps.loans.integrations.accounting_policy import (
+    is_dea_integration_enabled,
+)
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 
 
@@ -73,7 +76,7 @@ def get_pawn_loan_balance(loan_or_id, *, as_of_date: date) -> PawnLoanBalance:
     loan_id = getattr(loan_or_id, "pk", loan_or_id)
     try:
         loan = (
-            PawnLoan.objects.select_related("policy_snapshot")
+            PawnLoan.objects.select_related("policy_snapshot", "workspace")
             .prefetch_related("collateral_items", "accounting_events__outbox")
             .get(pk=loan_id, workspace_id=workspace_id)
         )
@@ -87,6 +90,7 @@ def get_pawn_loan_balance(loan_or_id, *, as_of_date: date) -> PawnLoanBalance:
         collateral_items=tuple(loan.collateral_items.all()),
         policy_snapshot=_optional_policy_snapshot(loan),
         as_of_date=as_of_date,
+        pending_delivery_blocks=is_dea_integration_enabled(loan.workspace),
     )
 
 
@@ -97,6 +101,7 @@ def calculate_pawn_loan_balance(
     collateral_items,
     policy_snapshot,
     as_of_date: date,
+    pending_delivery_blocks: bool = True,
 ) -> PawnLoanBalance:
     """Pure event-fold used by repayment, release, reporting, and tests."""
     totals = {
@@ -117,7 +122,10 @@ def calculate_pawn_loan_balance(
             continue
         _apply_event(totals, event)
         blocker = _posting_blocker(event)
-        if blocker:
+        if blocker and not (
+            blocker.status == LoanOutboxStatus.PENDING.value
+            and not pending_delivery_blocks
+        ):
             posting_blockers.append(blocker)
 
     quantum = Decimal(str(getattr(policy_snapshot, "currency_quantum", DEFAULT_QUANTUM)))

@@ -1212,6 +1212,64 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertTrue(repeated.already_released)
         self.assertEqual(repeated.release.pk, result.release.pk)
 
+    def test_deferred_pending_events_do_not_block_full_release(self):
+        PreferenceService.set_workspace(
+            self.tenant,
+            "accounting__integration_mode",
+            "DEFERRED",
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            disbursal = disburse_pawn_loan(
+                self.loan.pk,
+                effective_date=date(2026, 8, 3),
+                actor=self.actor,
+            )
+        disbursal.outbox.refresh_from_db()
+        self.assertEqual(disbursal.outbox.status, LoanOutboxStatus.PENDING.value)
+        balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertTrue(balance.posting_ready)
+        self.assertEqual(balance.posting_blockers, ())
+        allowed = assert_pawn_loan_financial_actions_allowed(self.loan.pk)
+        self.assertEqual(allowed.pk, self.loan.pk)
+
+        disbursal.outbox.status = LoanOutboxStatus.FAILED.value
+        disbursal.outbox.last_error = "Earlier delivery attempt failed"
+        disbursal.outbox.save(update_fields=["status", "last_error", "updated_at"])
+        with self.assertRaises(PawnDisbursalError):
+            assert_pawn_loan_financial_actions_allowed(self.loan.pk)
+        failed_balance = get_pawn_loan_balance(
+            self.loan.pk,
+            as_of_date=date(2026, 8, 3),
+        )
+        self.assertFalse(failed_balance.posting_ready)
+        disbursal.outbox.status = LoanOutboxStatus.PENDING.value
+        disbursal.outbox.last_error = ""
+        disbursal.outbox.save(update_fields=["status", "last_error", "updated_at"])
+
+        source = RateSource.objects.create(name="Deferred Release", location="Market")
+        self._create_release_rate(source)
+        with self.captureOnCommitCallbacks(execute=True):
+            released = release_pawn_loan_in_full(
+                self.loan.pk,
+                settlement_amount=Decimal("51000.00"),
+                request_key="deferred-release",
+                actor=self.actor,
+            )
+
+        released.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        self.assertEqual(released.outbox.status, LoanOutboxStatus.PENDING.value)
+        self.assertEqual(self.loan.state, PawnLoanState.CLOSED.value)
+        self.assertTrue(
+            all(
+                item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value
+                for item in self.loan.collateral_items.all()
+            )
+        )
+
     def test_full_release_fails_before_mutation_when_accrual_is_missing(self):
         self._activate_loan()
         with patch(

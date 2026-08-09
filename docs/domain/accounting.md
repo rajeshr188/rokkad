@@ -146,6 +146,10 @@ receipts to be reversed first.
 - Operational apps create business documents and durable accounting intent.
   A workspace in `DEA` mode requests effects through the DEA facade; a
   workspace in `DEFERRED` mode retains pending source evidence only.
+- Canonical Loans balance and lifecycle readiness treat an intact `PENDING`
+  outbox as expected, non-blocking evidence in `DEFERRED` mode. Missing,
+  `FAILED`, or `PROCESSING` delivery evidence still fails closed. In `DEA`
+  mode, every non-posted outbox remains a blocker.
 - DEA converts business intent into vouchers and journal entries.
 - Period-lock validation belongs in posting engine paths, not scattered view-only checks.
 - Posting rules should be registered and test-covered for every seeded `VoucherType`.
