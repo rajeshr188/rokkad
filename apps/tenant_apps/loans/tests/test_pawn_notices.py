@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
-from django.db import connection
+from django.db import DatabaseError, connection, transaction
 from django.core.management import call_command
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
@@ -27,6 +27,8 @@ from apps.tenant_apps.loans.models import (
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanNotice,
+    PawnCollateralItem,
+    LoanOperationalNotice,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_notice_rows
 from apps.tenant_apps.loans.services import (
@@ -34,6 +36,13 @@ from apps.tenant_apps.loans.services import (
     create_pawn_loan_notice,
     dispatch_due_pawn_loan_notices,
     dispatch_pawn_loan_notice,
+    create_license_expiry_notice,
+    create_verification_discrepancy_notice,
+    create_storage_location,
+    place_or_transfer_collateral,
+    start_physical_verification,
+    record_physical_verification_observation,
+    complete_physical_verification,
 )
 from apps.tenant_apps.notify_v2.models import NotificationEvent, NotificationJob
 from apps.tenant_apps.party.models import Party
@@ -214,6 +223,76 @@ class PawnLoanNoticeTests(TenantTestCase):
         self.assertIn("due=2, sent=1, failed=1", output.getvalue())
         scheduler.assert_called_once()
         self.assertEqual(scheduler.call_args.kwargs["limit"], 25)
+
+    def test_license_expiry_alert_is_owner_addressed_and_notify_backed(self):
+        self.loan.license.expires_on = timezone.localdate() + timedelta(days=10)
+        self.loan.license.save(update_fields=["expires_on", "updated_at"])
+        notice = create_license_expiry_notice(
+            self.loan.license_id,
+            request_key="license-expiry-1",
+            actor=self.actor,
+            dispatch_due=False,
+        )
+        self.assertEqual(notice.recipient_email, self.tenant.owner.email)
+        self.assertEqual(notice.payload_snapshot["license"]["days_remaining"], 10)
+        job = NotificationJob.objects.get(pk=notice.notification_job_id)
+        self.assertEqual(job.event.event_type.key, "loans.license_expiry")
+        self.assertEqual(job.event.source_model, "LoanLicense")
+        repeated = create_license_expiry_notice(
+            self.loan.license_id,
+            request_key="license-expiry-1",
+            actor=self.actor,
+            dispatch_due=False,
+        )
+        self.assertEqual(repeated.pk, notice.pk)
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            LoanOperationalNotice.objects.filter(pk=notice.pk).update(
+                recipient_email="changed@example.com"
+            )
+
+    def test_completed_verification_discrepancy_alert_snapshots_operational_truth(self):
+        item = PawnCollateralItem.objects.create(
+            loan=self.loan,
+            description="Notice ring",
+            metal="GOLD",
+            gross_weight=Decimal("2.1000"),
+            net_weight=Decimal("2.0000"),
+            purity_percentage=Decimal("91.6000"),
+        )
+        owner = self.tenant.owner
+        branch = create_storage_location(
+            workspace=self.tenant, level="BRANCH", code="N-BR", name="Branch", actor=owner
+        )
+        vault = create_storage_location(
+            workspace=self.tenant, parent=branch, level="VAULT", code="N-V", name="Vault", actor=owner
+        )
+        cabinet = create_storage_location(
+            workspace=self.tenant, parent=vault, level="CABINET", code="N-C", name="Cabinet", actor=owner
+        )
+        box = create_storage_location(
+            workspace=self.tenant, parent=cabinet, level="BOX", code="N-BOX", name="Box", actor=owner
+        )
+        place_or_transfer_collateral(item.pk, destination_id=box.pk, reason="", actor=owner)
+        session = start_physical_verification(scope_location_id=vault.pk, actor=owner)
+        observation = record_physical_verification_observation(
+            session.pk,
+            collateral_item_id=item.pk,
+            classification="MISSING",
+            notes="Not found during count",
+            actor=owner,
+        )
+        complete_physical_verification(session.pk, actor=owner)
+        notice = create_verification_discrepancy_notice(
+            observation.pk,
+            request_key="verification-alert-1",
+            actor=self.actor,
+            dispatch_due=False,
+        )
+        self.assertEqual(notice.payload_snapshot["verification"]["classification"], "MISSING")
+        self.assertEqual(notice.payload_snapshot["collateral"]["loan_number"], self.loan.loan_number)
+        job = NotificationJob.objects.get(pk=notice.notification_job_id)
+        self.assertEqual(job.event.event_type.key, "loans.verification_discrepancy")
+        self.assertEqual(job.event.source_model, "PawnPhysicalVerificationObservation")
 
     def _create_notice(
         self,

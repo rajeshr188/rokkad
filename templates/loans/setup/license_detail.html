@@ -12,6 +12,7 @@
   <div class="d-flex gap-2">
     <a class="btn btn-outline-primary" href="{% url 'loans:license_update' license.pk %}">Edit</a>
     <a class="btn btn-primary" href="{% url 'loans:license_renew' license.pk %}">Record renewal</a>
+    <form method="post" action="{% url 'loans:license_expiry_notice_create' license.pk %}">{% csrf_token %}<button class="btn btn-outline-warning" type="submit">Alert Owner of expiry</button></form>
     {% if license.is_active %}
       <form method="post" action="{% url 'loans:license_expire' license.pk %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Deactivate</button></form>
     {% elif not license.is_expired %}
@@ -28,6 +29,8 @@
     {% else %}<span class="badge text-bg-secondary">Inactive — new drafts blocked</span>{% endif %}
   </div>
 </div></div>
+
+{% if expiry_notices %}<div class="card mb-4"><div class="card-header"><strong>Expiry alerts</strong></div><div class="card-body">{% for notice in expiry_notices %}<div class="d-flex justify-content-between align-items-center mb-2"><span>{{ notice.created_at }} · {{ notice.recipient_email }}</span><form method="post" action="{% url 'loans:operational_notice_retry' notice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Retry delivery</button></form></div>{% endfor %}</div></div>{% endif %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div><h2 class="h5 mb-1">Regulatory history</h2><div class="small text-muted">Append-only issue, amendment, and renewal evidence.</div></div>

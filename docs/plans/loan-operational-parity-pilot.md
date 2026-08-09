@@ -124,12 +124,20 @@ lost-item cash-settlement evidence. Unresolved discrepancies block storage
 transfer, release, release-and-renew, and FundingLoan pledge. Damaged collateral
 remains deliberately blocked pending its future release policy.
 
-### OP5 Notices
+### OP5 Notices — Completed 2026-08-09
 
 - Audit current Notify v2 coverage before adding new paths.
 - Required intents include repayment, interest due, overdue, release,
   regulatory expiry, and verification discrepancy where confirmed.
 - Delivery is idempotent and remains separate from loan-domain truth.
+
+Audit result: existing PawnLoan intents already cover repayment, interest due,
+overdue, release confirmation, and auction. Tenant migration `loans.0033` adds
+the two confirmed gaps as immutable operational intents: license expiry and
+completed verification discrepancy. They snapshot source and Owner recipient,
+reuse Notify v2 for job/delivery state, participate in the tenant scheduler,
+and expose source-local create/retry controls. No duplicate provider state is
+stored in Loans.
 
 ### OP6 Reports, Statements, And Regulatory Documents
 
@@ -164,7 +172,7 @@ delete or mutable financial-history editing.
 3. Deliver OP2 identity/media/labels. Completed 2026-08-09.
 4. Deliver OP3 hierarchical storage. Completed 2026-08-09.
 5. Deliver OP4 physical verification. Completed 2026-08-09.
-6. Close OP5 notice gaps and OP6 report/document gaps. Next.
+6. Close OP5 notice gaps. Completed 2026-08-09. Close OP6 report/document gaps. Next.
 7. Run the parity pilot.
 8. Add selected bulk actions after their single commands prove stable.
 

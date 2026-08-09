@@ -348,7 +348,7 @@ end with one application retired.
 | Regulatory license operations | Ready for pilot | Immutable revision evidence, renewal history, secure documents, expiry/readiness dashboard, exact PawnLoan revision links, register PDF, and origination blocking are complete. External expiry delivery stays in the OP5 Notify audit. |
 | Collateral identity, photographs, labels, and QR | Ready for pilot | Immutable UUID identity, mandatory approval evidence, append-only photos, approval hashes, audited labels, and tenant-scoped QR navigation are implemented. |
 | Hierarchical storage and physical verification | Ready for pilot | Required hierarchy, immutable movements, QR navigation, frozen verification scopes, immutable observations/resolutions, operational blockers, location correction, and lost-item compensation evidence are implemented. Damaged-collateral release policy remains deferred. |
-| Notices | Partial | Audit existing Notify v2 intents and add only confirmed expiry and discrepancy gaps. |
+| Notices | Ready for pilot | Existing customer notices cover repayment, interest due, overdue, release, and auction; immutable Owner alerts now cover license expiry and completed verification discrepancy through Notify v2. |
 | Essential reports and regulatory forms | Partial | Deliver only the essential set below from canonical selectors and document projections. |
 | Accounting reconciliation | Deferred by policy | Use the null/deferred evidence pack below; do not replay or claim posting. |
 | Retirement readiness | Not ready | Select a winner only after identical pilot scenarios and a separate accepted retirement ADR. |
@@ -475,6 +475,6 @@ the failure evidence.
 Gate D is authorized and in progress. OP1 regulatory operations are complete.
 OP2 collateral identity/media, OP3 hierarchical storage, and OP4 physical
 verification are complete. The immediate next slices are only the confirmed
-OP5 notice and OP6 report/document gaps. Do not enable
+OP6 report/document gaps. OP5 notice auditing and its two confirmed gaps are complete. Do not enable
 FundingLoan runtime or normal navigation until those pilot blockers and the
 reconciliation pack pass.

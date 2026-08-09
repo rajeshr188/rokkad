@@ -885,8 +885,8 @@ Status: **Temporary coexistence is active while Loans completes operational
 parity. PawnLoan MVP and FundingLoan Gates A-C are implemented. The immediate
 OP1 regulatory license operations are complete. The immediate execution slice
 has completed OP2 collateral photos/labels/QR, OP3 hierarchical storage, and
-OP4 physical verification. The next blockers are the confirmed OP5 notice and
-OP6 report/document gaps. FundingLoan remains an Owner/Admin
+OP4 physical verification and OP5 notice coverage. The next blocker is the
+OP6 essential report/document gap. FundingLoan remains an Owner/Admin
 evaluation surface until those pilot blockers pass.**
 
 The plan is not authorization to combine phases or bypass gates. Each tenant

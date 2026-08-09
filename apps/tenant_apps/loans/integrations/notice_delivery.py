@@ -50,6 +50,19 @@ _EVENT_DEFAULTS = {
     ),
 }
 
+_OPERATIONAL_EVENT_DEFAULTS = {
+    "LICENSE_EXPIRY": (
+        "loans.license_expiry",
+        "Loan license expiry alert",
+        "Loan license {{ license.number }} expires on {{ license.expires_on }} ({{ license.days_remaining }} days remaining).",
+    ),
+    "VERIFICATION_DISCREPANCY": (
+        "loans.verification_discrepancy",
+        "Collateral verification discrepancy",
+        "Physical verification recorded {{ verification.classification }} for {{ collateral.description }} on loan {{ collateral.loan_number }} at {{ verification.scope }}.",
+    ),
+}
+
 
 @transaction.atomic
 def create_pawn_notice_job(notice) -> PawnNoticeJobReference:
@@ -112,6 +125,72 @@ def create_pawn_notice_job(notice) -> PawnNoticeJobReference:
     job = NotificationJob.objects.create(
         event=event,
         channel=notice.channel,
+        template=template,
+        scheduled_for=notice.scheduled_for,
+    )
+    return PawnNoticeJobReference(event.pk, job.pk)
+
+
+@transaction.atomic
+def create_operational_notice_job(notice) -> PawnNoticeJobReference:
+    from apps.tenant_apps.notify_v2.models import (
+        NotificationEventType,
+        NotificationJob,
+        NotificationPolicy,
+        NotificationRecipient,
+        NotificationTemplate,
+    )
+    from apps.tenant_apps.notify_v2.services import emit_event
+
+    try:
+        event_key, name, body = _OPERATIONAL_EVENT_DEFAULTS[notice.notice_kind]
+    except KeyError as exc:
+        raise ValueError("This Loans operational notice has no delivery workflow.") from exc
+    event_type, _ = NotificationEventType.objects.update_or_create(
+        key=event_key,
+        defaults={
+            "name": name,
+            "domain": NotificationEventType.Domain.LOAN,
+            "description": f"Loans-owned {name.lower()} event.",
+            "is_active": True,
+        },
+    )
+    NotificationPolicy.objects.update_or_create(
+        event_type=event_type,
+        channel="EMAIL",
+        defaults={"priority": 100, "is_active": True},
+    )
+    template, _ = NotificationTemplate.objects.get_or_create(
+        event_type=event_type,
+        channel="EMAIL",
+        locale="en",
+        version=1,
+        defaults={
+            "renderer_type": NotificationTemplate.RendererType.DJANGO,
+            "name": name,
+            "subject_template": name,
+            "body_template": body,
+            "is_active": True,
+        },
+    )
+    recipient = NotificationRecipient.objects.create(
+        name_snapshot=notice.recipient_name,
+        email=notice.recipient_email,
+    )
+    source = notice.source_license or notice.source_verification_observation
+    source_model = "LoanLicense" if notice.source_license_id else "PawnPhysicalVerificationObservation"
+    event = emit_event(
+        recipient=recipient,
+        event_type=event_type,
+        payload=notice.payload_snapshot,
+        source_app="loans",
+        source_model=source_model,
+        source_pk=source.pk,
+        dedupe_key=f"loans-operational-notice:{notice.pk}",
+    )
+    job = NotificationJob.objects.create(
+        event=event,
+        channel="EMAIL",
         template=template,
         scheduled_for=notice.scheduled_for,
     )

@@ -116,6 +116,7 @@ from apps.tenant_apps.loans.models import (
     LoanDocumentLayout,
     LoanDocumentLayoutRevision,
     LoanLicense,
+    LoanOperationalNotice,
     LoanLicenseRevision,
     LoanSeries,
     PawnLoan,
@@ -207,6 +208,7 @@ from apps.tenant_apps.loans.services import (
     save_funding_loan_draft_inputs,
     disburse_pawn_loan,
     dispatch_pawn_loan_notice,
+    dispatch_operational_notice,
     ensure_pawn_borrower_accounting,
     initiate_pawn_loan_auction,
     start_pawn_loan_auction,
@@ -234,7 +236,10 @@ from apps.tenant_apps.loans.services import (
     PawnCollateralMediaError,
     PawnStorageError,
     PawnPhysicalVerificationError,
+    LoanOperationalNoticeError,
     complete_physical_verification,
+    create_license_expiry_notice,
+    create_verification_discrepancy_notice,
     create_storage_location,
     place_or_transfer_collateral,
     record_physical_verification_observation,
@@ -1356,6 +1361,27 @@ def pawn_physical_verification_resolve(request, observation_pk):
             messages.success(request, "Immutable discrepancy resolution recorded.")
             return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
     return render(request, "loans/verification/resolution_form.html", {"observation": observation, "form": form})
+
+
+@loans_setup_required
+@require_POST
+def pawn_physical_verification_discrepancy_notice(request, observation_pk):
+    observation = get_object_or_404(
+        PawnPhysicalVerificationObservation,
+        pk=observation_pk,
+        session__workspace=request.loans_workspace,
+    )
+    try:
+        create_verification_discrepancy_notice(
+            observation.pk, request_key=uuid.uuid4().hex, actor=request.user
+        )
+    except (LoanOperationalNoticeError, ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request, "Verification discrepancy alert queued for the workspace Owner."
+        )
+    return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
 
 
 @loans_workspace_required
@@ -2592,7 +2618,51 @@ def license_detail(request, pk):
     return render(
         request,
         "loans/setup/license_detail.html",
-        {"license": license, "series_rows": series_rows, "revisions": revisions},
+        {
+            "license": license,
+            "series_rows": series_rows,
+            "revisions": revisions,
+            "expiry_notices": license.operational_notices.order_by("-created_at"),
+        },
+    )
+
+
+@loans_setup_required
+@require_POST
+def license_expiry_notice_create(request, pk):
+    license = _license_for_workspace(request, pk)
+    try:
+        create_license_expiry_notice(
+            license.pk, request_key=uuid.uuid4().hex, actor=request.user
+        )
+    except (LoanOperationalNoticeError, ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "License expiry alert queued for the workspace Owner.")
+    return redirect("loans:license_detail", pk=license.pk)
+
+
+@loans_setup_required
+@require_POST
+def operational_notice_retry(request, notice_pk):
+    notice = get_object_or_404(
+        LoanOperationalNotice,
+        pk=notice_pk,
+        workspace=request.loans_workspace,
+    )
+    try:
+        result = dispatch_operational_notice(notice.pk)
+    except (LoanOperationalNoticeError, ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request, f"Operational alert delivery is {result.delivery.status.lower()}."
+        )
+    if notice.source_license_id:
+        return redirect("loans:license_detail", pk=notice.source_license_id)
+    return redirect(
+        "loans:pawn_physical_verification_detail",
+        pk=notice.source_verification_observation.session_id,
     )
 
 

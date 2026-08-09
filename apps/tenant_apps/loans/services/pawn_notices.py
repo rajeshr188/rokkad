@@ -196,7 +196,18 @@ def dispatch_due_pawn_loan_notices(*, as_of=None, limit=100) -> PawnLoanNoticeDi
             sent += 1
         elif result.delivery.status == PawnLoanNoticeStatus.FAILED.value:
             failed += 1
-    return PawnLoanNoticeDispatchSummary(len(due_ids), sent, failed)
+    from .operational_notices import dispatch_due_operational_notices
+
+    remaining = max(0, limit - len(due_ids))
+    operational_due, operational_sent, operational_failed = (
+        dispatch_due_operational_notices(as_of=as_of, limit=remaining)
+        if remaining else (0, 0, 0)
+    )
+    return PawnLoanNoticeDispatchSummary(
+        len(due_ids) + operational_due,
+        sent + operational_sent,
+        failed + operational_failed,
+    )
 
 
 def _locked_loan(loan_id):

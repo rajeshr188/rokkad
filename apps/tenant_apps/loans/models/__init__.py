@@ -63,6 +63,7 @@ from .verification import (
     PawnPhysicalVerificationResolution,
     PawnPhysicalVerificationSession,
 )
+from .operational_notices import LoanOperationalNotice
 
 __all__ = [
     "LoanChangeLog",
@@ -122,4 +123,5 @@ __all__ = [
     "PawnPhysicalVerificationObservation",
     "PawnPhysicalVerificationResolution",
     "PawnPhysicalVerificationSession",
+    "LoanOperationalNotice",
 ]

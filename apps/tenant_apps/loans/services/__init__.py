@@ -134,6 +134,14 @@ from .physical_verification import (
     start_physical_verification,
     unresolved_physical_verification_item_ids,
 )
+from .operational_notices import (
+    LoanOperationalNoticeDispatchResult,
+    LoanOperationalNoticeError,
+    create_license_expiry_notice,
+    create_verification_discrepancy_notice,
+    dispatch_due_operational_notices,
+    dispatch_operational_notice,
+)
 from .economic_policies import (
     PawnEconomicPolicyError,
     create_pawn_loan_economic_policy,
@@ -246,6 +254,12 @@ __all__ = (
     "resolve_physical_verification_discrepancy",
     "start_physical_verification",
     "unresolved_physical_verification_item_ids",
+    "LoanOperationalNoticeDispatchResult",
+    "LoanOperationalNoticeError",
+    "create_license_expiry_notice",
+    "create_verification_discrepancy_notice",
+    "dispatch_due_operational_notices",
+    "dispatch_operational_notice",
     "PawnLifecycleError",
     "approve_pawn_loan",
     "cancel_pawn_loan",
