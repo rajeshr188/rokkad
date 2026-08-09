@@ -112,7 +112,7 @@ class FundingLoan(models.Model):
         indexes = [
             models.Index(
                 fields=("workspace", "state", "created_at"),
-                name="loans_funding_state_created_idx",
+                name="loans_fund_state_created_idx",
             ),
             models.Index(
                 fields=("lender", "state"),

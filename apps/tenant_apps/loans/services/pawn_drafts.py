@@ -78,6 +78,7 @@ def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None) -> PawnLoa
         series_id=command.series_id,
     )
     assert_series_can_issue(series)
+    license_revision = license.revisions.order_by("-revision_number").first()
 
     resolved = _resolve_new_economics(
         workspace_id=workspace_id,
@@ -89,6 +90,7 @@ def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None) -> PawnLoa
     loan = PawnLoan(
         workspace_id=workspace_id,
         license=license,
+        license_revision=license_revision,
         series=series,
         borrower=borrower,
         loan_number="PENDING-ALLOCATION",
@@ -152,6 +154,7 @@ def update_pawn_draft(
         pk=loan.pk,
         workspace_id=workspace_id,
         license=loan.license,
+        license_revision=loan.license_revision,
         series=loan.series,
         borrower=borrower,
         loan_number=loan.loan_number,
@@ -292,6 +295,8 @@ def _aggregate_terms(command, resolved):
 def _draft_snapshot(loan, collateral):
     return {
         "borrower_id": loan.borrower_id,
+        "license_id": loan.license_id,
+        "license_revision_id": loan.license_revision_id,
         "principal_amount": str(loan.principal_amount),
         "monthly_interest_rate": str(loan.monthly_interest_rate),
         "loan_date": loan.loan_date.isoformat(),

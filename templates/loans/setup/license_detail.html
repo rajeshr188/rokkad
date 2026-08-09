@@ -11,6 +11,7 @@
   </div>
   <div class="d-flex gap-2">
     <a class="btn btn-outline-primary" href="{% url 'loans:license_update' license.pk %}">Edit</a>
+    <a class="btn btn-primary" href="{% url 'loans:license_renew' license.pk %}">Record renewal</a>
     {% if license.is_active %}
       <form method="post" action="{% url 'loans:license_expire' license.pk %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Deactivate</button></form>
     {% elif not license.is_expired %}
@@ -26,6 +27,26 @@
     {% elif license.is_active %}<span class="badge text-bg-success">Active</span>
     {% else %}<span class="badge text-bg-secondary">Inactive — new drafts blocked</span>{% endif %}
   </div>
+</div></div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div><h2 class="h5 mb-1">Regulatory history</h2><div class="small text-muted">Append-only issue, amendment, and renewal evidence.</div></div>
+</div>
+<div class="card mb-4"><div class="table-responsive">
+  <table class="table align-middle mb-0">
+    <thead><tr><th>Revision</th><th>Kind</th><th>Validity</th><th>Evidence</th><th>Recorded</th></tr></thead>
+    <tbody>
+    {% for revision in revisions %}
+      <tr>
+        <td>#{{ revision.revision_number }}</td>
+        <td>{{ revision.get_kind_display }}</td>
+        <td>{{ revision.issued_on }} &ndash; {{ revision.expires_on }}</td>
+        <td>{% if revision.has_document %}<a href="{% url 'loans:license_revision_document' license.pk revision.pk %}">{{ revision.original_filename }}</a><div class="small text-muted font-monospace">{{ revision.sha256|slice:":12" }}</div>{% else %}<span class="text-warning">No document</span>{% endif %}</td>
+        <td>{{ revision.created_at }}<div class="small text-muted">{{ revision.created_by|default:"System" }}</div></td>
+      </tr>
+    {% empty %}<tr><td colspan="5" class="text-center py-4 text-muted">No revision evidence has been recorded.</td></tr>{% endfor %}
+    </tbody>
+  </table>
 </div></div>
 
 <div class="d-flex justify-content-between align-items-center mb-3">

@@ -345,7 +345,7 @@ end with one application retired.
 | --- | --- | --- |
 | FundingLoan lifecycle, balance, custody, correction, tenant isolation | Ready for controlled Owner/Admin pilot | Preserve Gate C commands and invariants. |
 | FundingLoan discovery and routine staff operation | Partial | Do not enable runtime or normal navigation until pilot permissions and operator entry points are approved. |
-| Regulatory license operations | Partial | Build versioned license evidence, renewal history, expiry dashboard/notices, and origination blocking. |
+| Regulatory license operations | Ready for pilot | Immutable revision evidence, renewal history, secure documents, expiry/readiness dashboard, exact PawnLoan revision links, register PDF, and origination blocking are complete. External expiry delivery stays in the OP5 Notify audit. |
 | Collateral identity, photographs, labels, and QR | Missing pilot controls | Add stable item identity, mandatory draft photo evidence, append-only later photos, and audited label print/reprint. |
 | Hierarchical storage and physical verification | Missing pilot controls | Add location movement and verification evidence before Loans can win retirement approval. |
 | Notices | Partial | Audit existing Notify v2 intents and add only confirmed expiry and discrepancy gaps. |
@@ -472,9 +472,9 @@ the failure evidence.
 
 ## Immediate Next Slice
 
-Gate D is authorized and in progress. Start with OP1 regulatory operations:
-versioned license evidence, renewal history, expiry dashboard/notices, and
-expired-license origination blocking. Then deliver OP2 collateral identity,
-photos, labels, and QR; OP3 storage; OP4 verification; and only the confirmed
-notice/report/document gaps. Do not enable FundingLoan runtime or normal
-navigation until those pilot blockers and the reconciliation pack pass.
+Gate D is authorized and in progress. OP1 regulatory operations are complete.
+The immediate next slice is OP2 collateral identity, mandatory draft photos,
+append-only later photos, audited labels, and QR. Then deliver OP3 storage, OP4
+verification, and only the confirmed notice/report/document gaps. Do not enable
+FundingLoan runtime or normal navigation until those pilot blockers and the
+reconciliation pack pass.

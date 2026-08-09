@@ -54,6 +54,7 @@ from .funding import (
     FundingReturnItem,
     FundingReturnReversal,
 )
+from .regulatory import LoanLicenseRevision
 
 __all__ = [
     "LoanChangeLog",
@@ -104,4 +105,5 @@ __all__ = [
     "FundingReturn",
     "FundingReturnItem",
     "FundingReturnReversal",
+    "LoanLicenseRevision",
 ]

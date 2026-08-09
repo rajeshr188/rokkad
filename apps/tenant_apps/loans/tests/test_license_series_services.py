@@ -112,6 +112,7 @@ class LicenseSeriesServiceTests(TenantTestCase):
     def test_sequence_configuration_is_guarded_and_audited(self, audit_log):
         license = self._create_license()
         series = create_series(license=license, name="Main", code="A")
+        audit_log.reset_mock()
 
         sequence = configure_sequence(
             series=series,

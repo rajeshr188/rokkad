@@ -54,6 +54,11 @@ from .funding_loans import (
     get_funding_loan_summaries,
     get_funding_settlement_readiness,
 )
+from .regulatory import (
+    LoanLicenseRegisterError,
+    LoanLicenseRegisterRow,
+    get_loan_license_register,
+)
 
 __all__ = [
     "PawnLoanBalance",
@@ -99,4 +104,7 @@ __all__ = [
     "get_funding_loan_integrity_findings",
     "get_funding_loan_summaries",
     "get_funding_settlement_readiness",
+    "LoanLicenseRegisterError",
+    "LoanLicenseRegisterRow",
+    "get_loan_license_register",
 ]

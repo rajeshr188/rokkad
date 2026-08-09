@@ -271,6 +271,11 @@ from apps.tenant_apps.party.models import Party
 
 
 class LoanLicenseForm(forms.ModelForm):
+    supporting_document = forms.FileField(
+        required=False,
+        help_text="PDF, PNG, or JPEG up to 10 MB.",
+    )
+
     class Meta:
         model = LoanLicense
         fields = (
@@ -289,8 +294,42 @@ class LoanLicenseForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.fields["supporting_document"].required = True
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
+
+
+class LoanLicenseRenewalForm(forms.Form):
+    license_number = forms.CharField(max_length=100)
+    issuing_authority = forms.CharField(max_length=255, required=False)
+    issued_on = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    expires_on = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    supporting_document = forms.FileField(
+        help_text="Renewal evidence is required. PDF, PNG, or JPEG up to 10 MB."
+    )
+
+    def __init__(self, *args, license, **kwargs):
+        kwargs.setdefault(
+            "initial",
+            {
+                "license_number": license.license_number,
+                "issuing_authority": license.issuing_authority,
+                "notes": license.notes,
+            },
+        )
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-control")
+
+    def clean(self):
+        cleaned = super().clean()
+        issued_on = cleaned.get("issued_on")
+        expires_on = cleaned.get("expires_on")
+        if issued_on and expires_on and expires_on < issued_on:
+            self.add_error("expires_on", "Expiry date cannot precede issue date.")
+        return cleaned
 
 
 class LoanSeriesSetupForm(forms.ModelForm):

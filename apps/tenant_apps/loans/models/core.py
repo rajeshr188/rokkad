@@ -465,6 +465,13 @@ class PawnLoan(models.Model):
         on_delete=models.PROTECT,
         related_name="pawn_loans",
     )
+    license_revision = models.ForeignKey(
+        "loans.LoanLicenseRevision",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pawn_loans",
+    )
     series = models.ForeignKey(
         LoanSeries,
         on_delete=models.PROTECT,
@@ -548,6 +555,11 @@ class PawnLoan(models.Model):
             series_license_id = self.series.license_id
             if series_license_id != self.license_id:
                 errors["series"] = "Series must belong to the selected license."
+        if self.license_revision_id and self.license_id:
+            if self.license_revision.license_id != self.license_id:
+                errors["license_revision"] = (
+                    "License revision must belong to the selected license."
+                )
         if errors:
             raise ValidationError(errors)
 
@@ -1520,20 +1532,6 @@ class PawnLoanReleaseItem(models.Model):
 
     def clean(self):
         super().clean()
-        source_count = sum(
-            source_id is not None
-            for source_id in (
-                self.release_id,
-                self.auction_id,
-                self.renewal_id,
-                self.funding_pledge_id,
-                self.funding_return_id,
-            )
-        )
-        if source_count != 1:
-            raise ValidationError(
-                "A custody event requires exactly one base workflow source."
-            )
         if (
             self.release_id
             and self.collateral_item_id

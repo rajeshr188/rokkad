@@ -349,11 +349,13 @@ class PawnLoanDocumentProjectionBuilder:
 
     @staticmethod
     def _identity_rows(loan):
-        license = loan.license
+        license_revision = getattr(loan, "license_revision", None)
+        license = license_revision or loan.license
+        source_type = "LoanLicenseRevision" if license_revision else "LoanLicense"
         return (
             ("Workspace", loan.workspace.name), ("Workspace source ID", f"Workspace:{loan.workspace_id}"),
             ("Regulatory license", f"{license.name} ({license.license_number})"),
-            ("License source ID", f"LoanLicense:{license.pk}"),
+            ("License source ID", f"{source_type}:{license.pk}"),
             ("License authority", license.issuing_authority or "—"),
             ("License validity", f"{license.issued_on} to {license.expires_on}"),
         )

@@ -883,8 +883,8 @@ integration, repayment backdating, or staff allocation overrides.
 
 Status: **Temporary coexistence is active while Loans completes operational
 parity. PawnLoan MVP and FundingLoan Gates A-C are implemented. The immediate
-execution slice is OP1 regulatory license operations, followed by collateral
-photos/labels/QR, hierarchical storage, physical verification, and the
+OP1 regulatory license operations are complete. The immediate execution slice
+is OP2 collateral photos/labels/QR, followed by hierarchical storage, physical verification, and the
 confirmed notice/report/document gaps. FundingLoan remains an Owner/Admin
 evaluation surface until those pilot blockers pass.**
 

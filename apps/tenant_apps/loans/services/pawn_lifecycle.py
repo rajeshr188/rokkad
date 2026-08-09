@@ -133,15 +133,26 @@ def transfer_expired_draft_setup(
     allocation = allocate_pawn_loan_number(series=series, actor=actor)
     old = {
         "license_id": loan.license_id,
+        "license_revision_id": loan.license_revision_id,
         "series_id": loan.series_id,
         "loan_number": loan.loan_number,
     }
     loan.license = license
+    loan.license_revision = license.revisions.order_by("-revision_number").first()
     loan.series = series
     loan.loan_number = allocation.value
     loan.updated_by = actor
     loan.full_clean()
-    loan.save(update_fields=["license", "series", "loan_number", "updated_by", "updated_at"])
+    loan.save(
+        update_fields=[
+            "license",
+            "license_revision",
+            "series",
+            "loan_number",
+            "updated_by",
+            "updated_at",
+        ]
+    )
     LoanChangeLog.objects.create(
         loan=loan,
         event_kind=PawnLoanEventKind.LICENSE_TRANSFERRED.value,
@@ -149,7 +160,15 @@ def transfer_expired_draft_setup(
         to_state=PawnLoanState.DRAFT.value,
         reason=reason.strip(),
         actor=actor,
-        metadata={"before": old, "after": {"license_id": license.pk, "series_id": series.pk, "loan_number": allocation.value}},
+        metadata={
+            "before": old,
+            "after": {
+                "license_id": license.pk,
+                "license_revision_id": loan.license_revision_id,
+                "series_id": series.pk,
+                "loan_number": allocation.value,
+            },
+        },
     )
     return loan
 
@@ -229,6 +248,7 @@ def _approval_payload(loan, collateral, resolved_economics=None):
         "workspace_id": loan.workspace_id,
         "borrower_id": loan.borrower_id,
         "license_id": loan.license_id,
+        "license_revision_id": loan.license_revision_id,
         "series_id": loan.series_id,
         "principal_amount": str(loan.principal_amount),
         "monthly_interest_rate": str(loan.monthly_interest_rate),

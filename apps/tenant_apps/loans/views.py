@@ -13,6 +13,7 @@ from django.http import Http404, HttpResponse, HttpResponseGone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 
 from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
@@ -29,6 +30,7 @@ from apps.tenant_apps.loans.feature_flags import (
 )
 from apps.tenant_apps.loans.forms import (
     LoanLicenseForm,
+    LoanLicenseRenewalForm,
     LoanDocumentAssetUploadForm,
     LoanDocumentAssignmentForm,
     LoanDocumentLayoutCreateForm,
@@ -108,6 +110,7 @@ from apps.tenant_apps.loans.models import (
     LoanDocumentLayout,
     LoanDocumentLayoutRevision,
     LoanLicense,
+    LoanLicenseRevision,
     LoanSeries,
     PawnLoan,
     PawnLoanAccountingEvent,
@@ -127,6 +130,7 @@ from apps.tenant_apps.loans.selectors import (
     get_funding_loan_integrity_findings,
     get_funding_settlement_readiness,
     get_funding_loan_summaries,
+    get_loan_license_register,
     get_pawn_loan_balance,
     get_pawn_loan_notice_rows,
     get_pawn_loan_operations_snapshot,
@@ -198,6 +202,7 @@ from apps.tenant_apps.loans.services import (
     complete_pawn_loan_auction,
     reverse_pawn_loan_auction,
     renew_pawn_loan,
+    renew_license,
     reverse_pawn_loan_renewal,
     expire_license,
     finalize_pawn_loan_accrual,
@@ -216,6 +221,7 @@ from apps.tenant_apps.loans.services import (
     update_license,
     update_pawn_draft,
     update_series,
+    render_loan_license_register_pdf,
 )
 from apps.tenant_apps.loans.documents import (
     ConfigurableDocumentRenderer,
@@ -2088,10 +2094,35 @@ def funding_loan_read_detail(request, pk):
 
 @loans_setup_required
 def license_list(request):
-    licenses = LoanLicense.objects.filter(workspace=request.loans_workspace).prefetch_related(
-        "series__number_sequences"
+    register_rows = get_loan_license_register(request.loans_workspace.pk)
+    return render(
+        request,
+        "loans/setup/license_list.html",
+        {
+            "register_rows": register_rows,
+            "as_of_date": timezone.localdate(),
+        },
     )
-    return render(request, "loans/setup/license_list.html", {"licenses": licenses})
+
+
+@loans_setup_required
+def license_register_pdf(request):
+    as_of_date = timezone.localdate()
+    rows = get_loan_license_register(
+        request.loans_workspace.pk,
+        as_of_date=as_of_date,
+    )
+    content = render_loan_license_register_pdf(
+        workspace=request.loans_workspace,
+        rows=rows,
+        as_of_date=as_of_date,
+    )
+    response = HttpResponse(content, content_type="application/pdf")
+    response["Content-Disposition"] = content_disposition_header(
+        True,
+        f"loan-license-register-{as_of_date.isoformat()}.pdf",
+    )
+    return response
 
 
 @loans_setup_required
@@ -2170,6 +2201,9 @@ def pawn_economics_setup(request):
 @loans_setup_required
 def license_detail(request, pk):
     license = _license_for_workspace(request, pk)
+    revisions = license.revisions.select_related("created_by").order_by(
+        "-revision_number"
+    )
     series_rows = []
     for series in license.series.prefetch_related("number_sequences").all():
         series_rows.append(
@@ -2184,38 +2218,106 @@ def license_detail(request, pk):
     return render(
         request,
         "loans/setup/license_detail.html",
-        {"license": license, "series_rows": series_rows},
+        {"license": license, "series_rows": series_rows, "revisions": revisions},
     )
 
 
 @loans_setup_required
 def license_create(request):
-    form = LoanLicenseForm(request.POST or None)
+    form = LoanLicenseForm(request.POST or None, request.FILES or None)
     form.instance.workspace = request.loans_workspace
     if request.method == "POST" and form.is_valid():
-        license = create_license(
-            workspace=request.loans_workspace,
-            actor=request.user,
-            **form.cleaned_data,
-        )
-        messages.success(request, "Loan license created.")
-        return redirect("loans:license_detail", pk=license.pk)
+        try:
+            license = create_license(
+                workspace=request.loans_workspace,
+                actor=request.user,
+                request=request,
+                **form.cleaned_data,
+            )
+        except LicenseSeriesError as exc:
+            form.add_error("supporting_document", str(exc))
+        else:
+            messages.success(request, "Loan license and initial evidence created.")
+            return redirect("loans:license_detail", pk=license.pk)
     return render(request, "loans/setup/license_form.html", {"form": form})
 
 
 @loans_setup_required
 def license_update(request, pk):
     license = _license_for_workspace(request, pk)
-    form = LoanLicenseForm(request.POST or None, instance=license)
+    form = LoanLicenseForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=license,
+    )
     if request.method == "POST" and form.is_valid():
-        update_license(license, actor=request.user, **form.cleaned_data)
-        messages.success(request, "Loan license updated.")
-        return redirect("loans:license_detail", pk=license.pk)
+        try:
+            update_license(
+                license,
+                actor=request.user,
+                request=request,
+                **form.cleaned_data,
+            )
+        except LicenseSeriesError as exc:
+            form.add_error("supporting_document", str(exc))
+        else:
+            messages.success(request, "License amendment evidence recorded.")
+            return redirect("loans:license_detail", pk=license.pk)
     return render(
         request,
         "loans/setup/license_form.html",
         {"form": form, "license": license},
     )
+
+
+@loans_setup_required
+def license_renew(request, pk):
+    license = _license_for_workspace(request, pk)
+    form = LoanLicenseRenewalForm(
+        request.POST or None,
+        request.FILES or None,
+        license=license,
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            renew_license(
+                license,
+                actor=request.user,
+                request=request,
+                **form.cleaned_data,
+            )
+        except LicenseSeriesError as exc:
+            form.add_error("supporting_document", str(exc))
+        else:
+            messages.success(request, "License renewal evidence recorded and activated.")
+            return redirect("loans:license_detail", pk=license.pk)
+    return render(
+        request,
+        "loans/setup/license_renewal_form.html",
+        {"form": form, "license": license},
+    )
+
+
+@loans_setup_required
+def license_revision_document(request, pk, revision_pk):
+    license = _license_for_workspace(request, pk)
+    revision = get_object_or_404(
+        LoanLicenseRevision,
+        pk=revision_pk,
+        license=license,
+    )
+    if not revision.has_document:
+        raise Http404("This license revision has no supporting document.")
+    revision.supporting_document.open("rb")
+    content = revision.supporting_document.read()
+    revision.supporting_document.close()
+    response = HttpResponse(content, content_type=revision.mime_type)
+    response["Content-Disposition"] = content_disposition_header(
+        True,
+        revision.original_filename,
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @loans_setup_required

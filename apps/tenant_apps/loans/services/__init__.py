@@ -7,6 +7,7 @@ from .license_series import (
     create_license,
     create_series,
     expire_license,
+    renew_license,
     set_series_active,
     update_license,
     update_series,
@@ -172,6 +173,7 @@ from .funding_loans import (
     return_funding_collateral,
     save_funding_loan_draft_inputs,
 )
+from .regulatory_documents import render_loan_license_register_pdf
 
 __all__ = (
     "LicenseSeriesError",
@@ -181,6 +183,7 @@ __all__ = (
     "create_license",
     "create_series",
     "expire_license",
+    "renew_license",
     "set_series_active",
     "update_license",
     "update_series",
@@ -310,4 +313,5 @@ __all__ = (
     "reverse_funding_return",
     "return_funding_collateral",
     "save_funding_loan_draft_inputs",
+    "render_loan_license_register_pdf",
 )

@@ -27,6 +27,7 @@ from apps.tenant_apps.loans.models import (
     FundingLoanSequence,
     LoanChangeLog,
     LoanLicense,
+    LoanLicenseRevision,
     LoanDocumentIssue,
     LoanDocumentLayout,
     LoanDocumentLayoutRevision,
@@ -116,6 +117,11 @@ class LoansSetupUiTests(TenantTestCase):
                 "issued_on": "2026-01-01",
                 "expires_on": "2027-01-01",
                 "notes": "",
+                "supporting_document": SimpleUploadedFile(
+                    "license.pdf",
+                    b"%PDF-1.4\n%%EOF",
+                    content_type="application/pdf",
+                ),
             },
         )
         license = LoanLicense.objects.get(license_number="PBL-UI-1")
@@ -198,6 +204,44 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertFalse(license.is_active)
         detail = self.tenant_get(reverse("loans:license_detail", args=[license.pk]))
         self.assertContains(detail, "new drafts blocked")
+
+    def test_owner_can_record_and_download_license_renewal_evidence(self):
+        license, _ = self._configured_setup()
+        response = self.tenant_post(
+            reverse("loans:license_renew", args=[license.pk]),
+            {
+                "license_number": license.license_number,
+                "issuing_authority": "Renewal Authority",
+                "issued_on": "2027-01-02",
+                "expires_on": "2028-01-01",
+                "notes": "Renewed for pilot",
+                "supporting_document": SimpleUploadedFile(
+                    "renewal.pdf",
+                    b"%PDF-1.4\n%%EOF",
+                    content_type="application/pdf",
+                ),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("loans:license_detail", args=[license.pk]),
+            fetch_redirect_response=False,
+        )
+        revision = license.revisions.get(kind=LoanLicenseRevision.Kind.RENEWAL)
+        download = self.tenant_get(
+            reverse(
+                "loans:license_revision_document",
+                args=[license.pk, revision.pk],
+            )
+        )
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(download["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(download.content, b"%PDF-1.4\n%%EOF")
+
+        register = self.tenant_get(reverse("loans:license_register_pdf"))
+        self.assertEqual(register.status_code, 200)
+        self.assertTrue(register.content.startswith(b"%PDF-"))
 
     def test_exhausted_sequence_is_visible_and_not_ready(self):
         license, series = self._configured_setup()
