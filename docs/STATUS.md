@@ -23,8 +23,12 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   6 Loans outbox, 30 Loans disbursal/lifecycle, 16 Loans draft/UI, 58 Girvi
   service/adapter/payment, and 6 Girvi tenant workflows. A fresh tenant migration
   replay through Girvi 0033, Loans 0033, and standalone accounting 0013 passes.
-  The exact checkpoint still needs the split final preflight and twelve-scenario
-  operator/printer evidence before parity scoring begins.
+  Exact checkpoint `ab399e2` passes the split final preflight: 40 accounting
+  kernel/projection, 4 clean-database concurrency, 33 accounting facade/UI,
+  59 Loans, and 64 Girvi tests, plus system, diff, migration-drift, fresh tenant
+  replay, and zero `jcl1` document-integrity findings. The named pre-pilot
+  archive is validated. Twelve operator scenarios and the physical printer
+  matrix remain before parity scoring can conclude.
 
 - Loans operational-parity slice OP5 is complete. The audit confirmed existing
   customer intents already cover repayment, interest due, overdue, release,

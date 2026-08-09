@@ -10,9 +10,8 @@ related: [../plans/loan-operational-parity-pilot.md, ../plans/loans-girvi-consol
 
 ## Current State
 
-Pilot preparation has started for tenant `jcl1`. The last clean Loans
-checkpoint is `2eba0b0`; the exact pilot runtime checkpoint remains pending
-while separate accounting/Girvi changes are uncommitted.
+Pilot preparation is complete for tenant `jcl1`. The exact tested runtime
+checkpoint is `ab399e2e80abdb3e63afeca31b36cbcf1f52f13b`.
 The starting data is intentionally not transferred or synchronized:
 
 | Product | Existing customer loans | State summary |
@@ -37,12 +36,12 @@ Record these before scoring a scenario:
 
 | Evidence | Required value | Result |
 | --- | --- | --- |
-| Commit | Exact tested commit | Pending; last clean Loans checkpoint `2eba0b0` |
-| Worktree | No unreviewed runtime changes | **Blocked: accounting/Girvi runtime changes are uncommitted** |
+| Commit | Exact tested commit | `ab399e2e80abdb3e63afeca31b36cbcf1f52f13b` |
+| Worktree | No unreviewed runtime changes | Pass: clean at preflight start |
 | Tenant | `jcl1` | Ready |
-| Workspace Owner | Named operator | Pending |
+| Workspace Owner | Named operator | `rajesh` (`rajesh@rajesh.com`) |
 | Accounting mode | Explicitly `DEFERRED` or `DEA` | `DEFERRED` |
-| Backup identity and restore location | Named disposable-development snapshot | Pending |
+| Backup identity and restore location | Named disposable-development snapshot | `backup/pre_parity_ab399e2_20260809.dump`; custom archive list validated; SHA-256 `0B0974621C61579C74272494FF843E8D98176D983857D52CDBF83A879E08A950` |
 | Document integrity | Zero findings | Pass |
 | Printer | Make/model, driver, A4/A5 stock, duplex setting | Pending |
 
@@ -66,10 +65,32 @@ On 2026-08-09:
   new policy defaults to `DEFERRED`. After the scenario explicitly selected
   `DEA`, that focused borrower-accounting guidance test passed.
 
-The official operator clock and score remain stopped. First consolidate the
-current accounting/Girvi runtime changes into a reviewed checkpoint, retain
-explicit accounting-mode setup in tests, and complete smaller product-specific
-preflight suites. Test-runner schema setup time is not an application score.
+The official operator clock and score remain stopped until printer metadata is
+recorded and scenario P1 begins. The runtime consolidation and split preflight
+are complete. Test-runner schema setup time is not an application score.
+
+### Exact-checkpoint preflight record
+
+Checkpoint `ab399e2e80abdb3e63afeca31b36cbcf1f52f13b` passed the following
+completed, sequential gates on 2026-08-09:
+
+- clean worktree, Django system check, diff check, and zero migration drift for
+  DEA, standalone accounting, Loans, and Girvi;
+- 40 standalone-accounting kernel/scenario/posting/projection tests;
+- 4 standalone-accounting separate-connection concurrency tests on a freshly
+  recreated test database;
+- 33 accounting configuration, facade, access, and visual-workflow tests;
+- 13 Loans accounting-readiness and outbox tests;
+- 30 Loans disbursal, lifecycle, accounting, and correction tests;
+- 16 Loans draft/UI tests, including a complete fresh tenant migration replay;
+- 58 Girvi service, adapter, payment, transition, and exact-replay tests;
+- 6 Girvi PostgreSQL tenant workflow and immutability tests; and
+- `jcl1` document integrity with zero findings.
+
+One earlier mixed accounting run passed all assertions but failed during tenant
+teardown because old `--keepdb` schemas exhausted PostgreSQL's transaction lock
+budget. The concurrency suite was rerun alone on a recreated test database and
+passed; only completed reruns above count as preflight evidence.
 
 ## Shared Scenario Facts
 

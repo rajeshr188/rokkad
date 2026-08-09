@@ -19,9 +19,12 @@ evidence; do not weaken the production fail-closed check. Itemized accrual after
 capitalization remains blocked until capitalized principal has immutable item
 attribution, although repayment of the separately classified capitalized amount
 is supported. Girvi outbox and repayment replay now reject a reused key when
-economic details differ. The completed focused gates total 110 accounting and
-configuration tests, 59 Loans tests across four suites, 64 Girvi tests across
-service and tenant suites, plus a successful fresh tenant migration replay.
+economic details differ. Exact checkpoint `ab399e2` passes the final sequential
+preflight: 40 accounting kernel/projection, 4 clean-database concurrency, 33
+accounting facade/UI, 59 Loans, and 64 Girvi tests; system/diff/migration-drift,
+fresh tenant migration, and `jcl1` document-integrity gates also pass. The
+validated pre-pilot archive is `backup/pre_parity_ab399e2_20260809.dump` with
+SHA-256 `0B0974621C61579C74272494FF843E8D98176D983857D52CDBF83A879E08A950`.
 
 Loans OP5 notice coverage is complete under accepted ADR
 `2026-08-09-loans-operational-notice-intents.md`. Existing PawnLoan intents
