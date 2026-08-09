@@ -1,9 +1,9 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-04
+updated: 2026-08-08
 tags: [loans, girvi, architecture, parity, mvp, cutover]
-related: [../../adr/2026-08-08-girvi-loans-permanent-independent-coexistence.md, ../../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, ../../plans/loans-rewrite-roadmap.md, ../girvi/architecture.md, ../girvi/workflows.md, ../../implementation/pawn-loan-mvp-operations-runbook.md]
+related: [../../adr/2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md, ../../adr/2026-08-08-loans-consolidation-and-girvi-retirement-evaluation.md, ../../plans/loan-operational-parity-pilot.md, ../../plans/loans-rewrite-roadmap.md, ../girvi/architecture.md, ../girvi/workflows.md]
 ---
 
 # Loans Architecture And Girvi Parity Review
@@ -20,10 +20,16 @@ roadmap.
 
 ## Current Verdict
 
-The Loans rewrite is a strong independent foundation for pawn loans. Its
-accounting, audit, reversal, policy, custody, and tenant boundaries are explicit
-and tested. It is not a Girvi replacement; both applications are permanent
-independent products under the 2026-08-08 coexistence ADR.
+The Loans rewrite is a strong foundation for pawn loans. Its audit, reversal,
+policy, custody, and tenant boundaries are explicit and tested. Girvi remains
+the richer operator reference. The products now coexist temporarily while
+required capability is brought to parity and identical operator scenarios are
+compared. Neither product is preselected as the winner.
+
+Strict source ownership continues during evaluation. No Girvi removal, record
+transfer, synchronization, mirroring, or dual write is authorized. Retirement
+requires completed FundingLoan and operational parity gates, operator
+acceptance, and a separate accepted ADR.
 
 - The PawnLoan MVP lifecycle is implemented and passes the Phase 5 test gate.
 - `jcl1` currently uses Loans as its default loan landing page; that route
@@ -35,8 +41,18 @@ independent products under the 2026-08-08 coexistence ADR.
   implemented through Notify v2. E7.2 auction/recovery and E7.3 renewals are
   implemented. FundingLoan, repledging, and portal integration remain
   essential future workflows.
-- Feature-parity work is product improvement, not a prerequisite for Girvi
-  retirement.
+- Regulatory operations, photos/labels, hierarchical storage, physical
+  verification, and required notices/reports/documents block the first Loans
+  parity pilot. Bulk actions are useful but do not block it.
+- Draft photographs are mandatory. MVP labels carry loan, item, description,
+  Party, weight, and QR identity. Only necessary reports/forms are required;
+  the comparison prioritizes architecture, documents, readable workflows, and
+  ease of operation over raw feature count.
+- The confirmed report set covers active loans, daily disbursal/repayment,
+  interest due, overdue, releases/renewals, storage, license expiry, and Party
+  statements. Required forms are ticket, receipt, Form H/release, renewal,
+  notices, and license register. Verification discrepancies fail closed until
+  administrator resolution.
 
 Girvi is not treated as wholly obsolete or poorly designed. It has been
 stabilized with command services, lifecycle controls, custody history, DEA
@@ -61,7 +77,8 @@ That would make rollback and record ownership ambiguous. The accepted model is:
 - Optional combined reads must label the owner and remain read-only.
 - Mutating actions always stay in the owning app.
 
-Coexistence is the intended permanent product state.
+Coexistence is temporary. It ends only after evidence selects the clearer
+complete workflow and a later ADR authorizes retirement.
 
 ## Why PawnLoan And FundingLoan Are Separate
 

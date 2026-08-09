@@ -1,15 +1,19 @@
 ---
-status: accepted
+status: superseded
 owner: project
 updated: 2026-08-08
 tags: [girvi, loans, ownership, coexistence, dea]
-related: [2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, 2026-08-08-girvi-canonical-cleanup-and-coexistence-retirement.md, ../apps/loans/architecture-and-girvi-parity.md]
+related: [2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, 2026-08-08-girvi-canonical-cleanup-and-coexistence-retirement.md, 2026-08-08-operational-accounting-integration-deferral.md, ../apps/loans/architecture-and-girvi-parity.md]
+superseded_by: [2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md]
 ---
 
 # ADR: Girvi And Loans Permanent Independent Coexistence
 
 Date: 2026-08-08
-Status: Accepted
+Status: Superseded
+
+This ADR's strict record-ownership and no-dual-write rules remain active during
+temporary coexistence. Its permanent-end-state decision is superseded.
 
 ## Context
 
@@ -34,9 +38,10 @@ application to own or mutate the other's records.
    the applications. Similar identifiers do not imply shared identity.
 5. Girvi and Loans retain independent regulatory setup, number sequences,
    policies, services, lifecycle states, permissions, documents, and URLs.
-6. DEA remains the sole owner of vouchers, journals, period controls, posting
-   rules, and accounting reversals for both applications. Source and
-   idempotency identities must include the owning application.
+6. DEA remains the sole owner of its vouchers, journals, period controls,
+   posting rules, and accounting reversals. Operational delivery may be
+   deferred under the accounting-integration ADR. Source and idempotency
+   identities must include the owning application whenever delivery is active.
 7. Navigation must expose Girvi and Pawn Loans as distinct destinations. A
    workspace may choose a default loan landing page, but that choice must not
    disable the other application or change record ownership.

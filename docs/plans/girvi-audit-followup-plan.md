@@ -1,5 +1,9 @@
 # Girvi Audit Follow-Up: Small Phased Implementation Plan
 
+> Superseded for future implementation by
+> `docs/plans/girvi-operational-core-rebuild.md`. This file remains historical
+> evidence of the completed stabilization and destructive compatibility cleanup.
+
 Status: Phases 1-6 complete on 2026-07-15. Phase 7 remains explicitly deferred.
 
 Destructive cleanup follow-up (no production/legacy protection mode) completed

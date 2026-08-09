@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-08-05
+updated: 2026-08-07
 tags: [domain, accounting, dea]
 related: [../flows/dea-posting-flow.md, ../implementation/dea-vouchers.md, ../implementation/dependency-policy.md, party.md, ../adr/2026-06-18-party-domain-model.md]
 ---
@@ -10,9 +10,142 @@ related: [../flows/dea-posting-flow.md, ../implementation/dea-vouchers.md, ../im
 
 DEA is the accounting core. It owns charts/accounts, accounting documents, vouchers, voucher lines, journal entries, posting rules, opening balances, and period controls.
 
+Operational delivery is controlled by audited workspace preference
+`accounting__integration_mode`. `DEFERRED` is the default while central
+accounting matures: Loans records immutable source events and outboxes but does
+not run DEA readiness or automatic delivery. Those outboxes remain `PENDING`;
+they are not ledger truth and must not be reported as posted or failed. `DEA`
+mode preserves the existing posting and reversal behavior. Existing DEA
+history is never rewritten. Deferred replay requires a future explicit
+activation and reconciliation design. Girvi `GivenLoan` disbursal and
+`TakenLoan` activation record canonical versioned outbox events instead of
+creating DEA payment vouchers while deferred. `TakenLoan` repayment is also
+decoupled: immutable Girvi `LoanRepayment` rows are operational truth, while
+DEA mode atomically links a payment voucher and deferred mode records one
+pending `TAKEN_LOAN_REPAYMENT` event without fabricating accounting evidence.
+Settlement combines these rows with only unlinked historical DEA vouchers.
+Correction uses a separate exact compensating repayment row, never mutation.
+Other Girvi money events remain on DEA until separate slices replace their
+operational payment-voucher evidence safely.
+
+## Standalone Successor Architecture
+
+Current DEA remains the runtime accounting authority. Accepted ADR
+`2026-08-07-standalone-accounting-transaction-kernel.md` governs a side-by-side
+successor at `apps.tenant_apps.accounting`. It is registered as a tenant app and
+has side-by-side persistence, but no runtime posting integration yet.
+
+The accepted successor ontology stores one positive atomic monetary movement
+as either internal-ledger to internal-ledger or internal-ledger to external
+account. External accounts are genuine transaction sides with frozen reporting
+classification, not duplicated sidecars beside a complete control-ledger
+posting. Compound events are ordered batches. Conventional debit/credit lines,
+statements, and financial reports are projections over that single truth.
+K0-K3 proved scenarios, balanced reports without double-counting, historical
+classification, authorization, idempotency, periods, currency conversion, and
+append-only correction. Do not infer cutover or migrate DEA data from the ADR's
+acceptance; persistence design and a later explicit runtime transition remain
+separate stages.
+
+K4 added the accepted relational mapping in
+`docs/implementation/standalone-accounting-persistence-design.md`. K5.1 then
+registered the tenant app and introduced organization/book, period, and ledger
+master persistence. The mapping requires one atomic transaction row through draft
+and posted lifecycle; a future posting batch will make it immutable rather than
+copying it into a second ledger table.
+
+K5.2 adds external accounts and immutable effective-dated classification core.
+Each account is book-owned and identifies a Party through an adapter key plus
+accounting purpose; no Rokkad Party dependency exists. Classifications map the
+external side to one same-book posting ledger and freeze reporting class/normal
+side by version.
+
+K5.3 adds voucher headers and complete draft atomic transactions. Every common
+transaction row has exactly one ledger-to-ledger or ledger-to-external-account
+subtype; the database defers that exact-cardinality check until the atomic write
+boundary. Account transactions retain the classification version effective on
+their voucher date. Authorization freezes voucher and transaction intent but
+does not itself post it.
+
+K5.4 adds the posting boundary. An authorized voucher is fingerprinted from its
+frozen source, rule, currency, ledger, account, and classification facts and is
+atomically paired with one immutable `TransactionBatch` in the unique covering
+period. Ordinary vouchers require an open period; adjustment-only periods admit
+only adjustment vouchers. Posted state cannot exist without exactly one batch,
+and repeated posting returns that original evidence. This is side-by-side
+persistence only: DEA remains the production runtime authority.
+
+K5.5 implements append-only correction. A reversal is a newly posted adjustment
+voucher linked to its original batch. Its atomic transactions appear in reverse
+order with every side swapped while money, currency provenance, account identity,
+and frozen classification remain identical. The database verifies that exact
+relationship and permits only one reversal of a non-reversal batch. Correction
+is the untouched original plus this compensating batch plus a newly authorized
+replacement, grouped for explanation; it never rewrites historical truth.
+
+K5.6 persists settlement explanation without adding money. A posted external-
+account transaction may originate one open item that freezes its exact account
+and transaction/base amounts. A posted opposite-side transaction on the same
+book/account can allocate some or all of that item. Capacity is checked against
+both settlement and item under locks, allocation rows are immutable, and
+outstanding is derived. Reversal of settlement allocation still requires future
+compensating allocation evidence; existing rows must never be edited or deleted.
+
+K5.7 closes that lifecycle gap. Reversing a settlement creates an exact
+compensating allocation linked to the original allocation and the financial
+reversal transaction. Outstanding subtracts compensations from original
+allocations. This is explanation only and introduces no new monetary effect.
+
+K5.8 connects persisted posted truth to the proven report projections without
+storing balances. It exposes two conventional lines per atomic transaction,
+separate internal and external statements, a combined balanced trial balance,
+P&L, balance sheet, and frozen-classification reconciliation. Draft and
+authorized intent is excluded. This completes the intended persisted MVP kernel
+proof; it does not authorize runtime cutover from DEA.
+
+K6 accountant evidence distinguishes an open item's outstanding amount from an
+external account's net balance. A settlement can be only partly allocated: a
+customer receipt of INR 600 with INR 400 allocated leaves INR 600 outstanding
+on a INR 1,000 invoice, INR 200 unapplied customer credit, and INR 400 net
+receivable. `posted_unapplied_settlements` exposes that unused settlement
+capacity without creating or changing any financial entry.
+
+K7 period operations are explicit accounting events rather than ordinary model
+edits. Open periods may move to adjustment-only or closed; adjustment-only may
+close; closed may reopen only to adjustment-only with a reason or become locked;
+locked is terminal. Each transition carries immutable actor/time evidence. The
+MVP bootstrap deliberately creates only the primary INR book, one period, and
+Cash, Accounts Receivable, and Sales ledgers.
+
+The K7 MVP integration vocabulary is deliberately limited to versioned cash
+sale, credit sale, and customer receipt events. Source identity is not the
+voucher number. Exact delivery replay returns the original posted result;
+reusing that identity with different monetary or classification input is an
+error, and failed attempts leave operational evidence but no partial voucher.
+
+## Visual Workflow Modes
+
+The K8 visual MVP has two explicit modes. `OWNER` is the KISS default: one real
+workspace Owner confirmation moves a voucher through draft, authorization, and
+immutable posting while recording the same truthful actor at each stage.
+`TEAM` retains separate maker, authorizer, and poster actions. The owner mode is
+an audited segregation-of-duties waiver, not impersonation. Credit-sale or
+receipt entry may create a standalone customer receivable/classification
+inline. New visual accounts link directly to the existing tenant `Party`; the
+external account still owns the accounting purpose and balance.
+
+Posted transactions are never unposted. The visual workflow creates a linked
+opposite reversal voucher. Owner mode permits the actual Owner to reverse their
+own posting with explicit date, reason, and confirmation; Team mode retains the
+different-user rule. A reversed credit-sale open item reports zero outstanding,
+cannot accept new allocations, and an already allocated invoice requires its
+receipts to be reversed first.
+
 ## Boundary
 
-- Operational apps create business documents and request accounting effects through the DEA facade.
+- Operational apps create business documents and durable accounting intent.
+  A workspace in `DEA` mode requests effects through the DEA facade; a
+  workspace in `DEFERRED` mode retains pending source evidence only.
 - DEA converts business intent into vouchers and journal entries.
 - Period-lock validation belongs in posting engine paths, not scattered view-only checks.
 - Posting rules should be registered and test-covered for every seeded `VoucherType`.

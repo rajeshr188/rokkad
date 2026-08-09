@@ -1,12 +1,123 @@
 ---
 status: active
 owner: project
-updated: 2026-08-06
+updated: 2026-08-08
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
 
 # Agent Memory
+
+The previously dirty accounting/Girvi/Loans work is now organized into four
+dependency-ordered runtime commits: `0e847b2` (guarded standalone accounting
+successor and audited preferences), `9ca47c9` (Loans workspace-controlled DEA
+deferral), `cc7fc38` (Girvi deferred events plus immutable TakenLoan repayment
+evidence), and `7c74d07` (development-only retirement of obsolete Girvi data
+transforms). Missing workspace context always resolves to `DEFERRED`. Loans
+itemized tests must freeze real economic/rate policy and opening-tranche
+evidence; do not weaken the production fail-closed check. Itemized accrual after
+capitalization remains blocked until capitalized principal has immutable item
+attribution, although repayment of the separately classified capitalized amount
+is supported. Girvi outbox and repayment replay now reject a reused key when
+economic details differ. The completed focused gates total 110 accounting and
+configuration tests, 59 Loans tests across four suites, 64 Girvi tests across
+service and tenant suites, plus a successful fresh tenant migration replay.
+
+Loans OP5 notice coverage is complete under accepted ADR
+`2026-08-09-loans-operational-notice-intents.md`. Existing PawnLoan intents
+cover repayment, interest due, overdue, release confirmation, and auction.
+Migration `loans.0033` adds immutable Owner-addressed operational intents for
+license expiry and completed physical-verification discrepancies. Loans owns
+intent/source/recipient/payload evidence; Notify v2 alone owns delivery state.
+The shared tenant scheduler and source-local retry controls cover both streams.
+OP6 essential reports and regulatory documents are the final parity blocker.
+
+Loans OP4 physical verification is complete under accepted ADR
+`2026-08-09-loans-physical-verification-evidence.md`. Owner-only sessions freeze
+in-vault items and expected locations for a Vault/subtree; found, missing,
+misplaced, and unexpected observations are immutable. Completion requires all
+expected items. Separate immutable resolution may correct location, confirm a
+find, record lost-item market value/negotiated cash settlement, or classify
+damage. Unresolved discrepancies block transfer, release, renewal, and funding
+pledge. Damage remains blocked pending future policy. OP5 notices and OP6
+essential reports/documents are next.
+
+Loans OP3 hierarchical storage is complete under accepted ADR
+`2026-08-09-loans-hierarchical-collateral-storage.md`. Storage enforces Branch
+→ Vault → Cabinet → Box → optional Slot, with tenant-unique codes, stable QR
+identity, optional capacity, immutable movement evidence, and a guarded single
+current-location projection. Manual placement/transfer is Owner-only for the
+pilot. Null in-vault location is visibly awaiting placement. Release, auction,
+renewal, and renewal reversal maintain location evidence without accounting.
+OP4 physical verification is next.
+
+Loans OP2 collateral identity/media/labels is complete under accepted ADR
+`2026-08-09-loans-collateral-identity-media-and-labels.md`. Collateral has an
+immutable UUID identity; draft edits preserve rows; approval requires at least
+one append-only JPEG/PNG evidence row per item and freezes its hash. Retained
+renewal items inherit explicit predecessor media evidence and added items need
+fresh media. Audited label preview/print contains loan, item, Party, description,
+weight, and tenant-scoped QR navigation. OP3 hierarchical storage is next.
+
+Loans OP1 regulatory-license operations are complete under accepted ADR
+`2026-08-08-loans-license-regulatory-evidence.md`. `LoanLicense` is the
+workspace-scoped current projection; issue, amendment, and renewal append
+immutable `LoanLicenseRevision` evidence with validated supporting documents.
+Every new PawnLoan captures the exact license revision at draft creation so a
+later renewal cannot rewrite the legal identity of an existing loan. The setup
+UI exposes revision history, secure evidence downloads, readiness/expiry
+status, and the license-register PDF. External expiry delivery remains OP5;
+OP2 collateral photographs and labels are the next pilot-blocking slice.
+
+Girvi and Loans coexist temporarily under accepted ADR
+`2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md`.
+Permanent coexistence is no longer the intended destination, but neither app is
+preselected as the winner. Keep strict source ownership and no transfer,
+synchronization, mirroring, or dual write. Loans must first reach operational
+parity for regulatory operations, collateral photos/labels, hierarchical
+storage, physical verification, required notices, reports, statements, and
+documents. Run identical operator scenarios in both products and prefer the
+one with the clearest complete domain workflow. Bulk actions are useful but do
+not block the first parity pilot. Retirement still requires operator evidence
+and a separate accepted ADR.
+
+For the parity pilot, collateral photographs are mandatory at PawnLoan draft
+capture and must block approval when required evidence is absent. The MVP label
+contains loan number, item identifier, item description, Party, weight, and a
+QR code. Only legally or operationally necessary reports and regulatory forms
+block the pilot; broad Girvi report parity does not. The owner will compare
+Girvi and Loans primarily by architecture clarity, document clarity, readable
+domain workflow, and ease of operation.
+
+The parity pilot's required reports are active loans, daily disbursal and
+repayment, interest due, overdue, release/renewal, storage inventory, license
+expiry, and Party statement. Required forms are loan ticket, repayment receipt,
+release memo/Form H, renewal agreement, notices, and license register. Every
+collateral item needs at least one draft photograph. QR opens the owning loan by
+default and may select the item inside release, verification, or storage
+transfer flows. Missing or misplaced verification status blocks release,
+renewal, repledging, and storage transfer until an administrator records
+resolution evidence.
+
+Post-approval collateral photos are append-only; prior photos cannot be
+replaced or deleted. Each item projects exactly one current storage location,
+and transfer scans both item and destination QR. Verification may cover a whole
+vault or selected location subtree. Administrator discrepancy resolution may
+correct custody/location or classify loss/damage without changing the original
+observation. Loan tickets and releases require customer/staff signatures; loan
+tickets require original and duplicate copies.
+
+For the first operational parity pilot, only the workspace Owner may transfer
+stored collateral or conduct physical verification. Lost collateral requires
+cash-settlement compensation before its discrepancy and workflow blockers can
+be cleared. Current market value is the basis, and negotiation determines the
+final amount; required evidence is still undecided. Damaged-collateral release
+policy is explicitly deferred. Loan-ticket Original and Duplicate
+copies share one document number and verification identity. Signatures may be
+handwritten or digitally captured. Storage uses the required unskippable path
+Branch -> Vault -> Cabinet -> Box -> optional Slot. Initial placement may occur
+after disbursement and must remain visibly awaiting placement. A Custodian role
+may receive transfer and verification permissions after the pilot.
 
 Loans configurable documents have an in-app Owner/Admin starter guide at
 `/loans/setup/documents/guide/`, linked from the layout list, plus the canonical
@@ -46,14 +157,559 @@ first-page background raster, proportional rectangles, drag-to-update X/Y,
 exact numeric/property forms, supported block add/remove, settings, preview,
 and test print. It persists only through the same validated JSON revision
 service; advanced JSON still owns specialized and back-page properties.
-Loan-ticket-only overlay sheet composition treats A5 Original front, Original Terms, Duplicate
-front, and Duplicate D3 as logical surfaces before output imposition. Eight
-presets sequence A5 pages or impose left/right pairs on A4 landscape. Blocks
-have Both/Original/Duplicate scope; each front copy independently requires all
-mandatory evidence, and every required surface asset fails closed. Printer
-duplex flip-edge behavior is deliberately outside the PDF contract.
+Loan-ticket-only overlay sheet composition currently treats A5 Original front,
+Original Terms, Duplicate front, and Duplicate D3 as logical surfaces before
+output imposition. Eight embedded layout presets sequence A5 pages or impose
+left/right pairs on A4 landscape. Blocks have Both/Original/Duplicate scope;
+each front copy independently requires all mandatory evidence, and every
+required surface asset fails closed. Printer duplex flip-edge behavior is
+deliberately outside the PDF contract.
+
+Accepted ADR `2026-08-09-loans-logical-layout-and-print-profile-separation.md`
+defines the target extraction: layouts retain logical copy identity, content,
+backgrounds, signatures, and mandatory evidence; immutable workspace print
+profiles own physical copy bundles, paper, imposition, page order,
+simplex/duplex, orientation, scaling, and printer guidance. Issues must snapshot
+the resolved profile revision/hash and exact PDF bytes. This is not implemented
+yet. Existing published layouts and embedded `copy_mode`/`sheet` settings remain
+authoritative and renderable until deterministic migration and parity checks
+pass; OP3 remains the next operational-parity slice.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
+
+Girvi and Loans are temporarily independent products under accepted ADR
+`2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md`. Both may
+originate new records. Girvi exclusively owns every Girvi-created record and
+Loans exclusively owns every Loans-created record for the full lifecycle; do
+not copy, transfer, synchronize, or dual-write records between them. Both post
+through DEA only when the audited workspace `accounting__integration_mode` is
+explicitly `DEA`. The default `DEFERRED` mode preserves Loans source events and
+outboxes as `PENDING`, skips automatic delivery and DEA readiness, and never
+claims those events are posted. Existing DEA history remains authoritative and
+untouched. Do not replay deferred events without a separate reconciled
+activation design. Girvi `GivenLoan` disbursal and `TakenLoan` activation use
+versioned outbox contracts in `DEFERRED` mode and bypass DEA account resolution
+and voucher creation; `DEA` mode is unchanged. `TakenLoan` repayment now owns
+immutable `LoanRepayment` evidence, uses it for idempotency and settlement,
+retains only unlinked historical DEA vouchers in compatibility totals, and
+emits a pending `TAKEN_LOAN_REPAYMENT` event in deferred mode. Its reversal
+contract is a separate exact compensating row; update/delete is database-
+blocked. Do not generalize this behavior to `GivenLoan` repayment, release,
+accrual, recovery, renewal, write-off, or reversal delivery yet. Real DEA
+TakenLoan posting currently fails in its existing rules because
+`DualLedgerLine.currency` is omitted. The current
+`loan__new_module_enabled` setting is transitional
+default-route behavior and must not be interpreted as an ownership cutover.
+Optional combined reporting must be read-only and source-labelled.
+
+Girvi destructive cleanup completed on branch `dea-kiss` on 2026-08-08.
+`GivenLoan` and `TakenLoan` are the only runtime loan models in
+`girvi.models.loan`; deprecated `Loan`/`LoanPayment` classes and resources are
+deleted by migration state `girvi.0029`, while active `LoanChangeLog` lives in
+`girvi.models.audit`. Runtime managers are canonical in `girvi.managers` and an
+AST guard rejects transitional/legacy model imports. Lifecycle status and
+transition aliases are removed. The Girvi/Loans unified-read, comparison, and
+coexistence-readiness surfaces are retired under ADR
+`2026-08-08-girvi-canonical-cleanup-and-coexistence-retirement.md`. Notify uses
+generic `NotificationItem` links only. Fresh tenant migration replay, the
+64-test cross-app gate, focused lifecycle/import suites, Django checks, and
+migration drift checks pass. The full `apps.tenant_apps.girvi.tests` package is
+a valid tenant-aware gate: database-backed series guardrail tests use isolated
+tenant schemas, and all 409 tests pass. Wave 4's destructive reset runbook exists
+but has not been executed.
+
+Future Girvi implementation is proposed as a destructive in-place operational-
+core rebuild under ADR `2026-08-08-girvi-operational-core-rebuild.md` and plan
+`girvi-operational-core-rebuild.md`. Keep the `girvi` app/product identity and
+Girvi/Loans independence, but replace current internals with explicit
+`CustomerLoan` and `FundingLoan` aggregates, Party-only counterparties,
+immutable operational evidence, projected balances/custody, and application
+handlers. Narrow cross-app access to facades before replacing the 33-step
+Girvi migration chain with a clean baseline. The complete operational lifecycle
+must pass with a null accounting adapter before any accounting outbox is added.
+This direction remains proposed until the owner confirms the scope-decision
+table and destructive reset; do not begin the schema replacement before then.
+
+The preferred next direction is now an evidence-gated parity and consolidation
+evaluation under ADR
+`2026-08-08-loans-consolidation-and-girvi-retirement-evaluation.md` and plan
+`loans-girvi-consolidation-fit-gap.md`; the Girvi rebuild is on hold as fallback.
+Strict independent ownership remains authoritative during temporary
+coexistence. A later accepted retirement ADR must select and authorize the
+winner. FundingLoan Gate A passes 15 pure tests covering immutable
+terms, lifecycle, simple monthly interest, repayment allocation, event-folded
+balance, multi-PawnLoan pledge/return LTV, settlement-plus-custody closure, and
+exact newest-first financial/custody correction. It has no ORM/accounting
+dependency and leaves runtime support false. Gate B must begin with reviewed
+persistence, constraints, commands/repositories, concurrency, and a null
+accounting adapter before any model or migration. Do not delete Girvi
+schema/routes, transfer rows, change module flags, or connect funding accounting
+during this evaluation.
+
+FundingLoan Gate B persistence/application design is accepted at
+`docs/implementation/funding-loan-gate-b-persistence-design.md`. It requires a
+separate operational event table, immutable terms/pledge/return/custody
+evidence, a partial unique active pledge per Pawn collateral item, database
+cross-workspace/source and append-only guards, deterministic lock order, and
+null outbound adapters. Schema slice 1 completed on 2026-08-08 in additive
+tenant migrations `loans.0019` and `loans.0020`: eight FundingLoan persistence
+models, funding sources on the shared custody stream, active-pledge uniqueness,
+and reversible PostgreSQL lifecycle/immutability/source/custody guards. Eight
+focused database tests, fresh tenant replay, and auction/renewal custody
+regressions pass. Application slices 2-3 now provide transaction-scoped locked
+numbering, draft/cancel, atomic multi-PawnLoan activation, canonical request
+replay, event-backed interest/fee/repayment, settlement, LTV-safe return, and
+financial-plus-custody closure through null outbound delivery. Concurrent
+double pledge has one winner, outbound failure rolls back all operational
+evidence, and bounded numbering issues its maximum once via migration
+`loans.0021`. Gate B corrections are complete through additive tenant
+migrations `loans.0022`-`loans.0025`: exact newest-first financial reversal,
+immutable pledge/return reversal evidence, exact inverse custody provenance,
+atomic pledge-membership/custody compensation, and corrected re-return.
+PostgreSQL guards enforce immutable evidence, source agreement, exact/latest
+inversion, and one unreversed return per pledge item. The final 40-test
+FundingLoan gate plus one legacy custody regression passes. Gate C should start
+with read-only selectors and integrity findings before any write surface. That
+read-only foundation is now complete in `loans.selectors.funding_loans`:
+tenant-scoped immutable summaries/details fold balances only from FundingLoan
+events; detail includes terms, lender, source collateral, and combined
+financial/custody correction timeline; integrity checks report sequence,
+activation, event-fold, custody projection/timeline, and closed-state
+discrepancies without mutation. The full 40-test FundingLoan suite passes. Next
+an unlinked Owner/Admin-only read console and detail page were added under Loans
+setup. They render selector output only, expose no write controls, deny ordinary
+members, return not found for unknown/cross-workspace identifiers, and preserve
+`FUNDING_LOAN_RUNTIME_SUPPORTED = False`. The unlinked Owner/Admin draft and
+lender-capture flow is now complete: it selects only active Party lenders,
+delegates creation and numbering to `CreateFundingLoanDraft`, records the real
+actor, and redirects to read detail. Invalid/inactive choices consume no
+sequence. Draft completion is also complete through tenant migration
+`loans.0026`: mutable pre-activation terms and collateral choices remain
+separate from immutable activation evidence; eligible choices are active,
+appraised, in-vault Pawn collateral without an active funding pledge; the
+existing funding policy validates terms and LTV before save; detail shows
+readiness; and cancellation records immutable reason/actor evidence. Draft and
+cancelled loans with no events project zero balances. Controlled Owner/Admin
+activation is complete: exact `ACTIVATE` confirmation invokes
+`ActivateSavedFundingLoanDraft`, which locks and revalidates saved inputs through
+the existing activation service, creates immutable terms/event/pledge/custody
+evidence, and deletes mutable inputs only after success. Stale inputs roll back
+without losing the proposal. Hidden Owner/Admin repayment capture now delegates
+to `record_funding_repayment`; a form UUID preserves exact browser replay,
+overpayments create no evidence, actor identity is stored, and allocation stays
+fees then interest then principal. Funding detail projects reversal-aware
+component effects and running balances solely from immutable FundingLoan events.
+Hidden settlement review and controlled collateral return are complete. The UI
+starts review only when the event-derived total due is zero, distinguishes
+financial settlement from custody completion, and exposes active collateral
+returns only in `SETTLEMENT_PENDING`. The existing return service remains
+authoritative for locking, LTV, active pledge membership, exact replay, custody
+evidence, and actor capture. Runtime remains false. Controlled closure is
+complete. `begin_funding_settlement` now enforces zero
+balance inside the locked service rather than relying on UI visibility. Closure
+requires exact `CLOSE` confirmation and delegates to `close_funding_loan`, which
+recomputes financial/custody readiness, records the actor, and replays terminal
+state idempotently; closed detail exposes no servicing controls. Runtime remains
+false. Gate C is complete. Hidden correction controls expose selector-approved
+latest financial, eligible return, and whole-pledge targets; POSTs require a
+reason/effective date/request key and delegate immutable compensation, exact
+replay, actor evidence, ordering, and custody checks to the existing services.
+Fixed, non-persisted FundingLoan preview PDFs cover agreement/handoff,
+repayment receipt, return receipt, and event-derived statement with source-
+linked verification IDs and `Operational accounting: Not posted`. They do not
+create document issues or extend configurable layouts. The tenant workflow
+proves correction replay/projection, all four PDFs, settlement, return, and
+closure. Keep runtime support false and leave public navigation, Girvi changes,
+accounting delivery, and persisted/configurable FundingLoan documents deferred
+unless a later gate explicitly authorizes them.
+
+Gate D is authorized with essentials-only parity. FundingLoan's current hidden
+Owner/Admin core is ready for a controlled pilot, but Loans cannot yet win
+retirement approval. Blocking capabilities are versioned license evidence and
+renewal/expiry operations; mandatory draft photos plus append-only later media,
+audited labels and QR; hierarchical Branch/Vault/Cabinet/Box/optional Slot
+storage; immutable physical verification/discrepancy resolution; and only the
+confirmed notices, reports, and regulatory forms in the parity pilot plan.
+Bulk workflows, broad archive parity, split/merge, and mutable historical
+correction do not block the first pilot. The minimum reconciliation pack must
+cover source identity, financial and custody/location folds, documents,
+permissions/tenant isolation, actual deferred-or-posted accounting disposition,
+exceptions/replay/corrections, and backup/restore hashes. Unexplained money,
+custody, tenant, required-document, or reconciliation differences disqualify a
+candidate. Run identical scored scenarios in both applications; one product
+must eventually retire, but only a later accepted ADR may name the winner,
+stop loser origination, define remaining-record treatment/rollback, or
+authorize destructive cleanup. Implement OP1 regulatory operations next; do
+not enable FundingLoan runtime, navigation, or accounting as part of OP1.
+
+Fresh migration replay intentionally skips three retired Girvi data operations:
+RepledgedLoanItem custody copying, legacy Loan copying into GivenLoan/TakenLoan,
+and LoanPayment archival into draft DEA vouchers. Their migration nodes and all
+schema operations remain for graph compatibility; already-applied databases are
+unchanged. Do not restore these conversions unless legacy-data preservation is
+explicitly reauthorized.
+
+Standalone accounting architecture proof K0 began on 2026-08-07 under proposed
+ADR `2026-08-07-standalone-accounting-transaction-kernel.md` and active plan
+`standalone-accounting-kernel-proof.md`. The supplied *Ledger - Double Entry*
+schema is being evaluated as a new accounting ontology, not copied literally.
+The proof package is `apps.tenant_apps.accounting` and must remain unregistered,
+model-free, migration-free, URL-free, and disconnected from current DEA until
+the architecture gate passes. Its initial pure kernel treats each positive
+monetary transaction as exactly one ledger-to-ledger or
+ledger-to-external-account atomic pair; external accounts are genuine sides
+with frozen classification versions, compound events are ordered batches, and
+reversal creates opposite transactions in reverse order. Current DEA remains
+the runtime authority. Do not mark the ADR accepted or introduce persistence
+until K1-K3 prove financial reports without double-counting, external-account
+reconciliation, historical classification stability, period/idempotency rules,
+and transaction/base currency behavior.
+
+Standalone accounting proof K1 is complete. Its executable corpus covers cash
+sale, credit sale, partially allocated customer receipt, supplier purchase and
+payment, loan disbursal, split principal/interest/fee repayment, an explicit
+many-sided atomic batch, and whole-batch reversal. All scenarios balance when
+internal-ledger and external-account sides are counted once; none creates a
+duplicate GL control posting. `AccountSettlement` and `OpenItemAllocation` are
+non-financial explanation over an existing account transaction and must never
+materialize money. They reject over-allocation and cross-account allocation.
+The K1 fold is only a test oracle. K2 production projections must be implemented
+independently and compared with it; do not reuse the oracle as reporting code.
+
+Standalone accounting proof K2 is complete. The independent
+`accounting.domain.projections` layer produces exactly two conventional lines
+per atomic transaction, separate internal/external balances, a combined trial
+balance, P&L, and a balance sheet with current-period result. External account
+effects enter financial statements through their frozen classification exactly
+once; they do not require duplicate GL control postings. Classification
+reconciliation defines `external detail + direct internal reporting-ledger
+activity = trial-balance row`, and later classification versions do not alter
+older transactions. Whole-batch reversal neutralizes all projections. This
+clears the primary reporting objection to the proposed ontology, but the ADR
+must remain proposed until K3 proves voucher authorization, book-scoped
+idempotency, periods, currency provenance, corrections, and source/rule identity.
+
+Standalone accounting proof K3 and the formal architecture gate passed on
+2026-08-07 with all 40 K0-K3 tests passing. The pure posting layer requires
+immutable authorization, retains source-event and posting-rule versions in its
+fingerprint, makes idempotency book-scoped, returns exact replays, rejects key
+reuse with changed economics, enforces period policy, validates transaction-to-
+base conversion and rate source, and models correction as original plus new
+reversal plus new replacement. ADR
+`2026-08-07-standalone-accounting-transaction-kernel.md` is accepted for
+persistence design. This does not change current runtime ownership: DEA remains
+authoritative, while `apps.tenant_apps.accounting` remains unregistered and has
+no models, migrations, routes, or integrations. K4 must design the persistence
+mapping and app skeleton before any tenant schema is introduced; later tenant
+migrations use `migrate_schemas`.
+
+Standalone accounting K4 is complete. `apps.tenant_apps.accounting.apps` now
+defines import-safe `AccountingConfig` with label `standalone_accounting`, but
+the app remains absent from `TENANT_APPS`/`INSTALLED_APPS` and still has no
+models, migrations, URLs, admin, or integrations. The accepted persistence
+mapping is `docs/implementation/standalone-accounting-persistence-design.md`.
+It uses one `AccountingTransaction` row lifecycle: editable as authorized
+voucher intent, then immutable when a one-to-one posting batch is created; no
+second posted transaction table is allowed. A transaction has exactly one
+deferred-constraint-enforced ledger or account subtype. Explicit accounting
+organization/book ownership avoids workspace-model dependency. PostgreSQL
+constraints/triggers must enforce subtype exclusivity, posted immutability,
+ledger cycles/leaves/debit-credit permissions, cross-table book agreement, and
+protected classification versions. K5.1 must introduce only organization/book,
+period, and ledger master models, review the tenant migration, then use
+`migrate_schemas`; external accounts and monetary transactions remain later
+slices.
+
+Standalone accounting K5.1 is complete. `AccountingConfig` is now registered
+in `TENANT_APPS`. Tenant migration `standalone_accounting.0001_initial` contains
+only `AccountingOrganization`, organization-scoped `AccountingBook`,
+non-overlapping `AccountingPeriod`, and hierarchical `Ledger`. It deliberately
+uses `external_tenant_key` rather than a workspace FK. Period overlap is
+database-enforced with `btree_gist` and an inclusive daterange exclusion per
+book. A PostgreSQL trigger enforces same-book/intermediate parents, prevents
+cycles, and blocks children under posting ledgers even when model validation is
+bypassed. All 52 focused tests pass; tenant/public isolation is covered. The
+migration was applied with `migrate_schemas --tenant` and verified in `jcl1`,
+`jsk`, and `test`; no accounting master rows were seeded. Current DEA remains
+the only runtime accounting authority. K5.2 may add external accounts and
+immutable effective-dated classifications only; vouchers and monetary
+transactions remain out of scope until that boundary passes.
+
+Standalone accounting K5.2 is complete. Tenant migration
+`standalone_accounting.0002_externalaccount_externalaccountclassification_and_more`
+adds `ExternalAccount` and `ExternalAccountClassification`. External accounts
+belong to a book, carry an adapter `party_key`, and separate accounting purpose;
+they do not FK to Rokkad Party. Classification ranges cannot overlap. Their
+reporting ledger must be a same-book posting ledger whose reporting class and
+normal side match. Database triggers prohibit deletion and all core mutation;
+the sole allowed update closes an open range once. The atomic append service
+locks versions, closes the current range immediately before its successor, and
+the selector fails unless exactly one version covers the posting date. All 57
+focused tests pass. Migration/table verification passed in `jcl1`, `jsk`, and
+`test`, with no seeded accounts. K5.3 may add voucher headers and draft atomic
+transaction base/exclusive subtypes only; posting batches/runtime posting remain
+K5.4.
+
+Standalone accounting K5.3 is complete. Tenant migration
+`standalone_accounting.0003_voucher_accountingtransaction_accounttransaction_and_more`
+adds voucher headers, a shared positive monetary `AccountingTransaction`, and
+exclusive `LedgerTransaction`/`AccountTransaction` subtypes. Deferred database
+constraints require exactly one matching subtype. Immediate guards enforce
+same-book posting sides, book currency conversion, effective frozen external
+classification, and authorized-intent immutability even through bulk SQL paths.
+Draft services construct complete pairs atomically and authorization freezes
+intent without posting it. All 63 focused tests pass; migration and four-table
+verification passed in `jcl1`, `jsk`, and `test`, with no seeded rows. DEA is
+still the sole runtime accounting authority. K5.4 may add one-to-one posting
+batches and an atomic posting repository/service, but not runtime cutover.
+
+Standalone accounting K5.4 is complete. Tenant migration
+`standalone_accounting.0004_transactionbatch_and_more` adds `POSTED` vouchers
+and a one-to-one immutable `TransactionBatch`. The canonical service locks an
+authorized voucher and its unique covering period, enforces open versus
+adjustment-only purpose, fingerprints frozen source/rule/economic/
+classification facts, and creates the posted state plus batch atomically.
+Deferred PostgreSQL cardinality prevents a posted voucher without exactly one
+batch or a batch on a non-posted voucher. Posted intent and batches reject
+update/delete bypasses; exact repeated posting returns the original evidence.
+All 67 focused tests pass and migration/table verification passed in `jcl1`,
+`jsk`, and `test`, with no seeded rows. DEA remains production authority and no
+runtime callers use the successor. K5.5 may implement append-only reversal and
+correction with exact opposite/reverse-order verification.
+
+Standalone accounting K5.5 is complete. Tenant migration
+`standalone_accounting.0005_transactionbatch_reversal_reason_and_more` adds
+mandatory reversal reason and a PostgreSQL exact-reversal trigger. The service
+locks the original posted batch and creates a new adjustment voucher whose
+transactions are the exact reverse-order opposite: ledger sides swap; account
+internal side swaps while account, ledger, money, currency provenance, and the
+original frozen classification FK remain identical. It authorizes and posts
+that evidence atomically. One original permits one reversal; same-idempotency
+replay returns it, a distinct second reversal fails, and reversal-of-reversal is
+prohibited. Correction composes reversal plus an authorized replacement under
+one correction group without changing the original. All 71 focused tests pass;
+migration and trigger verification passed in `jcl1`, `jsk`, and `test`, with no
+seeded rows. DEA remains production authority. K5.6 may persist open items and
+non-financial allocations over posted account transactions.
+
+Standalone accounting K5.6 is complete. Tenant migration
+`standalone_accounting.0006_openitem_openitemallocation_and_more` adds immutable
+`OpenItem` and `OpenItemAllocation`. An open item is one-to-one with a posted
+account transaction and freezes its book, external account, transaction/base
+money, and optional due date. Allocation is explanatory only: it points to a
+posted opposite-side settlement on the same book/account/currencies and never
+creates an `AccountingTransaction`. The canonical service locks settlement and
+open-item capacities; database triggers independently reject cross-boundary or
+over-capacity inserts and all update/delete bypasses. Outstanding is derived
+from original minus allocated values. All 74 focused tests pass; migration,
+both tables, and both triggers are verified in `jcl1`, `jsk`, and `test`, with
+no seeded rows. K5.7 must add compensating allocation evidence for reversed
+settlements rather than editing/deleting original allocations, then proceed to
+persisted reporting projections. DEA remains production authority.
+
+Standalone accounting K5.7 is complete and is an explicit MVP integrity slice,
+not feature expansion. Migration
+`standalone_accounting.0007_openitemallocation_reversal_of_and_more` adds one
+nullable one-to-one `reversal_of` link. Reversing a posted settlement now also
+creates exact compensating allocation rows against the corresponding reversed
+account transaction in the same atomic operation. Original rows never change;
+outstanding derives from original allocation totals minus compensations. Model
+and PostgreSQL rules verify item, transaction/base money, currencies, and
+financial reversal lineage. All 75 focused tests pass; migration, column, and
+trigger verification passed in `jcl1`, `jsk`, and `test`, with no seeded rows.
+Do not expand this into allocation strategies, UI, aging caches, runtime wiring,
+or cutover. K5.8 should implement only read-only ORM projections needed for the
+persisted MVP kernel, without another writable accounting representation.
+
+Standalone accounting K5.8 completes the persisted MVP kernel proof. It adds
+no model or migration. Read-only ORM selectors load posted vouchers for one
+book/date range, adapt their frozen facts to the proven K2 pure contracts, and
+project conventional journal lines, separate internal/external balances,
+balanced trial balance, P&L, balance sheet with current-period result, and
+classification reconciliation. Draft/authorized vouchers are excluded and no
+reporting balance is stored. A persisted credit-sale plus receipt scenario
+passes every report/reconciliation expectation without changing transaction
+row count; all 76 focused tests pass. Pause feature expansion here. The next
+stage is a K6 MVP readiness review that chooses the smallest safe pilot or stops;
+do not infer UI, tax, bank feeds, budgets, consolidation, recurring entries,
+allocation strategies, caches, data migration, runtime wiring, or cutover. DEA
+remains production authority.
+
+Standalone accounting K6 readiness decision: GO only for an isolated synthetic
+non-production acceptance pilot; NO-GO for production posting/shadow traffic,
+DEA replacement, or data migration. The kernel has 76 passing focused tests,
+all seven migrations verified in `jcl1`, `jsk`, and `test`, no public-schema
+tables, and no local successor data. Production blockers are: authenticated
+tenant-bound facade and permissions/trusted time; durable actor evidence and
+voucher-number policy; controlled period lifecycle; deterministic bootstrap;
+one idempotent source adapter; operational diagnostics; migration/backup/
+restore rehearsal; separate-connection concurrency tests; and accountant
+sign-off. The authoritative review and smallest synthetic pilot are in
+`docs/plans/standalone-accounting-mvp-readiness.md`. Do not implement broad UI,
+tax, bank, allocation strategy, reporting cache, legacy migration, or cutover
+work under K6. The next permitted implementation is only the isolated pilot
+bootstrap/harness; a production boundary requires a separately approved K7.
+
+The owner accepted the recommended K6 defaults without further interview. ADR
+`2026-08-07-standalone-accounting-pilot-policy.md` fixes a correctness-first,
+synthetic-only sales/receipts pilot, permits the dedicated tenant owner to
+create/authorize/post only in sandbox, and chooses independent book/year
+voucher numbers with separate source identity. The guarded idempotent command
+`run_accounting_acceptance_pilot` requires `DEBUG`, an existing
+`accounting_pilot_*` schema, explicit `--confirm-synthetic`, and that tenant's
+owner ID. It creates a deterministic five-voucher sale/receipt/reversal/
+correction cycle and verifies reports/reconciliation. All 77 accounting tests
+pass. On 2026-08-07, the normal onboarding path created the disposable
+`accounting_pilot_mvp` tenant and the harness ran twice with identical balanced
+evidence and no change to DEA beyond its standard seed baseline. Automated
+sandbox execution and idempotent replay therefore pass; owner/accountant review
+and sign-off remain outstanding. Do not open K7 or production integration before
+that review.
+
+The internal accountant-style K6 review accepted the synthetic accounting with
+one presentation observation: the INR 600 receipt needed to expose INR 400
+allocated and INR 200 unapplied separately. The read-only
+`posted_unapplied_settlements` projection now provides that evidence, the live
+pilot reports it, and all 77 tests pass. K7 production-boundary work may begin;
+this is not production approval. Independent owner/professional acceptance and
+the other K6 gates still precede any production authority or DEA replacement.
+
+Standalone accounting K7.1 is complete. `accounting.facade` is the required
+future production mutation boundary: it verifies active authentication, exact
+tenant schema/workspace context, workspace permissions, and accounting-book
+tenant identity; supplies server timestamps; separates authorizer from poster;
+and prevents the original poster from approving a reversal. Member prepares;
+Admin/Owner authorizes, posts, and reverses. Persisted evidence is reloaded to
+prevent stale-object bypass. Low-level services remain internal, and no route or
+runtime caller exists. K7.2 must add durable actor snapshots/created-by evidence
+and atomic annual voucher numbering before runtime integration.
+
+Standalone accounting K7.2 is complete. Vouchers now retain immutable creator
+and authorizer ID plus identity snapshots, posting batches retain poster ID plus
+snapshot, and database constraints/triggers protect the evidence. Facade-created
+vouchers ignore caller-supplied numbers and atomically allocate
+`BOOK-YEAR-NNNNNN` using the containing accounting period's start year and a
+locked per-book/year sequence. Direct proof services preserve compatibility with
+explicit pilot numbers. Tenant migrations `0008`/`0009` backfilled the pilot and
+are applied to all four local tenant schemas with zero missing actor evidence.
+All 82 accounting tests and the live pilot pass. Separate-connection race proof
+remains K7.5; K7.3 is controlled periods and deterministic bootstrap.
+
+Standalone accounting K7.3 is complete. `accounting_period_manage` is limited
+to Admin/Owner through the facade. Periods transition Open -> Adjustment-only or
+Closed, Adjustment-only -> Closed, and Closed -> Adjustment-only or Locked;
+reopen requires a reason and Locked is terminal. Immutable transition rows store
+actor snapshots and time, while PostgreSQL requires the latest evidence for a
+status update. The idempotent bootstrap creates only WORKSPACE organization,
+PRIMARY INR book, a caller-specified period, and Cash/Accounts Receivable/Sales
+ledgers, failing closed on conflicts. Migrations `0010`/`0011` are on all local
+tenant schemas and all 84 accounting tests pass. K7.4 is one narrow source adapter.
+
+Standalone accounting K7.4 is complete. `SalesReceiptEventV1` is the sole MVP
+runtime DTO and supports only INR CASH_SALE, CREDIT_SALE, and CUSTOMER_RECEIPT.
+The adapter resolves accounting configuration internally and calls the
+authenticated facade with separate maker/authorizer/poster. A canonical payload
+hash permits exact replay, rejects changed-payload source reuse, rolls back all
+partial accounting on failure, and preserves FAILED attempt/error evidence.
+Posted delivery/source identity is database-immutable. Migration `0012` is on
+all local tenants with no seeded rows; all 87 accounting tests pass. K7.5 is
+integrity diagnostics, real separate-connection races, and recovery rehearsal.
+
+Standalone accounting K7.5 engineering assurance is complete. The tenant-only
+`check_accounting_integrity` command is read-only and fails on posting/subtype,
+fingerprint, actor, report, classification, allocation, or delivery findings.
+Four ThreadPoolExecutor tests use separate database connections/tenant contexts
+to race identical delivery, changed payload, reversal, and allocation capacity.
+The `accounting_pilot_mvp` schema was dumped and restored to a temporary schema;
+all 16 accounting table counts and diagnostics matched, and the clone was
+removed. The operations runbook is canonical. K7.6 remains independent UAT and
+explicit go/no-go; DEA is still production authority.
+
+Standalone accounting K7.6 engineering evidence is complete. The source
+adapter now creates credit-sale open items and receipt allocations inside its
+atomic authenticated delivery, and the accountant evidence command presents
+voucher actors, journal/reports, external balances, open items, allocated and
+unapplied receipts, reversal lineage, deliveries, and diagnostics. Fresh tenant
+`accounting_pilot_k7_uat` passed the real adapter scenario with distinct maker,
+authorizer, and poster: four deliveries, five posted vouchers, zero report
+differences, INR 600 invoice outstanding, INR 400 allocated plus INR 200
+unapplied, and zero integrity findings. The owner accepted the evidence on
+2026-08-07, stated that an independent
+accountant is unavailable, knowingly waived professional review, and authorized
+moving ahead only with the tested sales/receipts MVP. Treat this as owner risk
+acceptance, not accountant endorsement. K7 is a conditional GO to prepare one
+off-by-default narrow caller. Do not migrate data, add other adapters, or
+displace DEA; target-tenant readiness verification and explicit enablement are
+still required before the caller becomes authoritative.
+
+Standalone accounting K8.1 activation safety is complete. Central audited
+workspace preference `accounting__successor_enabled` defaults false. Only an
+actor with accounting period-management permission in the matching tenant can
+change it, and enablement fails closed without exactly one tenant-bound PRIMARY
+book, active CASH/ACCOUNTS_RECEIVABLE/SALES ledgers, an open period, and clean
+integrity diagnostics. `accounting_pilot_k7_uat` is ready with zero blockers
+but remains disabled. K8.2 is the immediate first visual slice: tenant-scoped
+dashboard, sales/receipt entry, voucher evidence, journal, trial balance, P&L,
+and balance sheet, with mutations only through the facade/source adapter.
+
+Standalone accounting K8.2a is complete. Tenant URL `/accounting/` renders an
+authenticated read-only dashboard with activation readiness, headline evidence,
+and recent posted vouchers; `/accounting/reports/` renders trial balance, P&L,
+balance sheet, and open items; voucher detail renders durable maker/authorizer/
+poster/source evidence and conventional journal lines. These screens remain
+available for inspection while the activation flag is off and outsiders are
+rejected. K8.2b must model three genuine user actions for source entry,
+authorization, and posting; never select users behind the scenes or attribute
+actions to people who did not perform them.
+
+Standalone accounting K8.2b is complete for the visual MVP. With the audited
+activation flag on, `/accounting/transactions/create/` creates cash-sale,
+credit-sale, or customer-receipt drafts through the facade; voucher detail
+offers state-appropriate POST-only authorize and post actions; and posted
+receipts expose explicit single-open-item allocation. The maker cannot authorize
+their voucher and the authorizer cannot post it. Credit-sale posting plus open
+item creation is one outer atomic facade operation. A three-client tenant test
+proves Member creation, rejected maker approval, Admin authorization, Owner
+posting, and persisted open-item evidence. K8.3 must run this visually in the
+pilot tenant and rerun diagnostics/evidence before any real target enablement.
+
+Standalone accounting visual setup now handles ordinary tenants with no
+successor configuration. The dashboard exposes `/accounting/setup/` only to an
+actor with `accounting_period_manage`; its validated period form calls the
+authenticated idempotent bootstrap for the tenant-bound PRIMARY INR book and
+CASH/ACCOUNTS_RECEIVABLE/SALES ledgers. Setup deliberately leaves activation
+off and does not import DEA data. Never instruct owners to use shell bootstrap
+for this normal state.
+
+Owner/Admin users can explicitly manage the successor write gate at
+`/accounting/activation/`. The page shows current readiness and narrow-scope
+warnings, requires `ENABLE ACCOUNTING` to turn writes on, and uses the audited
+fail-closed feature service. Turning it off is immediate and does not alter
+posted data. Enabling this gate permits standalone UI writes only; it is not a
+DEA cutover or historical-data migration.
+
+The standalone accounting visual MVP defaults to audited `OWNER` workflow
+mode. The real workspace Owner may confirm once; dedicated facade logic records
+that Owner truthfully as creator, authorizer, and poster while preserving
+draft/authorized/posted lifecycle and immutability. This is an explicit
+segregation-of-duties waiver in the amended authorization ADR, never actor
+impersonation. `TEAM` retains separate actions. Entry can create a missing
+Party and its standalone customer-receivable/classification inline. Migration
+`0013` adds a protected Party FK and uniqueness by book/Party/purpose; it is
+applied in all five local tenant schemas. Pre-link synthetic external accounts
+may remain null, but every new visual customer account must link to the tenant
+Party. Keep this KISS flow and add no configuration without a concrete owner
+task.
+
+Standalone accounting visual reversal is implemented. Never offer “unpost”:
+posted voucher detail links to a reversal form requiring date, reason, and
+typed `REVERSE`. In OWNER mode a dedicated facade truthfully permits the actual
+Owner to reverse their own original; TEAM mode uses the different-user facade
+rule. Original and opposite vouchers remain linked. A reversed invoice open
+item reads as zero and cannot receive allocations; an allocated invoice must
+have its receipts reversed first. Verification is temporarily blocked at
+Django import by unrelated user-owned Girvi edits whose `loan.py` imports the
+removed `LoanManager`; do not modify those changes as part of accounting work.
 
 ## Project Identity
 
@@ -248,25 +904,15 @@ Girvi custody transitions own custody-field persistence. `LoanItem`'s normal pos
 
 Girvi final release settlement must fail on selector or accrual-query errors. `SELECTOR_COMPATIBILITY` is reserved for the explicit no-posted-accrual-rows case and must remain visible in reconciliation.
 
-The planned side-by-side loans rewrite should use explicit `PawnLoan` and `FundingLoan` concepts rather than a single over-generic `Loan` model. `PawnLoan` replaces customer-facing GivenLoan semantics; `FundingLoan` replaces lender/repledge TakenLoan semantics.
+The side-by-side Loans app uses explicit `PawnLoan` and future `FundingLoan` concepts rather than a single over-generic `Loan` model. These are Loans-owned aggregates; they do not replace or absorb Girvi `GivenLoan` or `TakenLoan` records.
 
-The loans rewrite is PawnLoan-first. A regulatory license belongs to one workspace and owns multiple bounded pawn-loan/release numbering series; official loan numbers allocate at draft creation and never recycle. Loan economics and policy are snapshotted at disbursal, loan events use a durable idempotent DEA outbox, posted corrections use strict reverse-order administrator reversals, and closure requires both zero balance and completed collateral return. Legacy Girvi remains write owner of its existing active loans during coexistence; the new app owns only newly created loans, with unified source-labelled reads across both systems.
+The Loans app is PawnLoan-first. A regulatory license belongs to one workspace and owns multiple bounded pawn-loan/release numbering series; official loan numbers allocate at draft creation and never recycle. Loan economics and policy are snapshotted at disbursal, loan events use a durable idempotent DEA outbox, posted corrections use strict reverse-order administrator reversals, and closure requires both zero balance and completed collateral return. Girvi and Loans may both originate records and each remains exclusive write owner of the records it creates.
 
-The authoritative loans rewrite execution order is the `E0-E7` plan in `docs/plans/loans-rewrite-roadmap.md`, governed by `docs/adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md`. The older numbered capability list is reference material only. Implementation starts at `E1.1`; FundingLoan, notices, auctions, renewals, and portal integration remain essential post-MVP vertical slices and must not be introduced as partial runtime models.
+The historical Loans execution order is the `E0-E7` plan in `docs/plans/loans-rewrite-roadmap.md`; its replacement/cutover objective is superseded by `docs/adr/2026-08-08-girvi-loans-permanent-independent-coexistence.md`. The older numbered capability list is reference material only. FundingLoan remains a future vertical slice and must not be introduced as a partial runtime model.
 
-The durable Girvi-versus-Loans architecture explanation and feature-parity register lives in `docs/apps/loans/architecture-and-girvi-parity.md`. Its P0 items govern cutover, P1 items are essential post-MVP workflows, and P2 Girvi capabilities require an explicit implement-or-reject decision before Girvi retirement.
+The durable Girvi-versus-Loans architecture explanation and feature-parity register lives in `docs/apps/loans/architecture-and-girvi-parity.md`. Operational parity is now a required evidence gate for selecting one application and retiring the other; it does not predetermine the winner.
 
-Loans rewrite E6.1 is complete. `girvi.facade.get_loan_coexistence_rows()` is the legacy read boundary for GivenLoan and TakenLoan portfolio rows. `loans.selectors.coexistence` adapts those rows beside tenant-scoped PawnLoans into immutable source-labelled contracts with per-source totals and owner-app action identity/URLs. Cross-owner action namespaces fail validation, and the read-only feature-hidden portfolio is available at `/loans/internal/coexistence/`.
-
-Loans rewrite E6.2 is complete. `loans.selectors.comparison` performs a deterministic read-only source-to-unified-contract comparison across counts, lifecycle buckets, principal/interest/due balances, collateral/custody, release state, and DEA-reference visibility. `compare_loan_coexistence` provides text or JSON output and an optional `--fail-on-mismatch` deployment gate; it must run in a tenant schema (normally through `tenant_command`). Findings use COUNT, LIFECYCLE, MONEY, CUSTODY, RELEASE, and DEA_VISIBILITY categories. No historical snapshot model was added; any future snapshots must remain immutable validation artifacts rather than writable operational loans.
-
-Loans rewrite E6.3 is complete. Central audited workspace preference `loan__new_module_enabled` defaults false and is the sole new-pawn-loan cutover switch. Owner/Admin users manage it at `/loans/setup/cutover/`; the setter rejects workspaces other than the active tenant. When enabled, `/w/<workspace_slug>/loans/` and known creation links use Loans, while Legacy Girvi remains available for its existing records. Girvi create, customer-create, and preview entrypoints enforce the cutover on GET, POST, and HTMX requests and preserve the linked Party when redirecting. Disabling changes navigation/origination ownership back to Girvi without deleting or migrating PawnLoan records. Record ownership never changes with the flag. The complete 148-test Loans suite passes and no migration is required. E6.4 production hardening and real-workflow pilot acceptance is next.
-
-Loans rewrite E6.4 engineering hardening is implemented through tenant command `check_pawn_loan_cutover_readiness`. It is fail-closed across applied Loans migrations, numbering readiness, failed/stale outbox work, accounting setup, Loans-to-DEA reconciliation, coexistence comparison, and explicit human acknowledgements for backup, rollback, support, monitoring, permissions, and real pilot acceptance. `jcl1` passes all automated checks and the expanded 153-test Loans suite passes; production remains NO-GO until its six manual acknowledgements are genuinely completed. E6.4 also corrected DEA's PawnLoan reconciliation inspector to total balanced ledger-only voucher lines when account lines are one-sided subledger attribution, matching journal materialization rather than double-counting the Party movement.
-
-The `jcl1` E6.4 technical pilot completed on 2026-08-04 using permanent test evidence `PL-00004`. Normal services performed audited feature enable/disable, draft, approval, borrower accounting setup, disbursal, full repayment, full release, collateral return, and closure. Financial vouchers are source/journal-linked and balanced, all fixed documents render, and post-pilot reconciliation/coexistence checks pass. The flag was returned off when the technical pilot concluded and record ownership was preserved. A pre-pilot backup exists and its archive structure is valid, but isolated restore, named support/monitoring owners, target-staff permission review, and real operator acceptance remain pending; readiness is still NO-GO with five acknowledged blockers after marking rollback rehearsed.
-
-Loans rewrite E6.5 is active for the disposable `jcl1` development workspace as of 2026-08-04. The audited feature flag is on: canonical new-loan routing and blocked Girvi origination point to Loans, while existing Girvi records remain owned and serviceable in Girvi and unified reads still reconcile with zero mismatches. The product owner accepted skipping the remaining manual E6.4 exercises for development only. Never interpret that development waiver as production readiness; a workspace with real data still requires the full manual register and a GO result before cutover.
+Historical Loans E6.1-E6.5 work implemented and piloted temporary unified reads, comparison, cutover readiness, and default routing in disposable workspace `jcl1`. Cleanup checkpoint `01c99f6` retired the unified-read, comparison, and coexistence-readiness implementation. The remaining `loan__new_module_enabled` setting may choose the canonical landing route only; it does not block Girvi origination, transfer ownership, or disable either app. Replace it with independent module-availability settings and a default-module preference before treating the configuration as final product policy.
 
 Loans rewrite E7.1 is complete. `PawnLoanNotice` owns tenant-scoped, idempotent
 notice intent, schedule, recipient snapshot, financial payload snapshot, and
@@ -746,6 +1392,12 @@ from automated or on-screen PDF checks.
 The active design track is Girvi event-driven DEA posting. See [plans/active](plans/active.md) and the archived full spec at [GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC](archive/girvi/GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC.md).
 
 DEA Phase 7 cleanup readiness audit has started, expense-post characterization is complete, dead voucher helper definitions have been removed, and the first accountant permission boundary hardening is complete. The next recommended DEA slice is navigation cleanup: normal staff should be guided to business events and reports, while accountant/admin users retain manual voucher, payment, expense, journal, opening-balance, period, and diagnostic routes.
+
+Loans operational parity OP6 is complete. All eight pilot report/statement projections use the canonical PawnLoan selector/balance fold, and CSV/XLSX/PDF exports only format those results. The Loans Party statement combines current positions with immutable PawnLoan events and excludes Girvi rows. Fixed loan-ticket recovery produces Original and Duplicate signed pages with one verification identity; configurable pilot layouts must select their existing Original/Duplicate composition. The next Loans step is the operator parity pilot, not another report-count parity build.
+
+LPD7 is accepted and committed as architecture only; there are no print-profile models, migrations, resolver, UI, renderer stage, or issue provenance yet. Until it ships, embedded layout `copy_mode`/`sheet` composition remains authoritative. Document integrity now treats any active loan-ticket assignment that omits Original or Duplicate as a pilot blocker; no assignment is compliant because the fixed fallback emits both. `jcl1` currently has no active ticket assignment and passes with zero findings after canonical revalidation of an unassigned draft. The real physical printer matrix remains an operator gate.
+
+Operator parity-pilot preparation is documented in `docs/implementation/loans-girvi-operator-parity-pilot.md`. `jcl1` starts with 8 Loans PawnLoans and 8 Girvi GivenLoans, explicit `DEFERRED` accounting, zero document-integrity findings, and no Loans storage hierarchy, verification session, or operational notice. The official clock is stopped while accounting/Girvi runtime work is uncommitted. A combined 191-test preflight did not complete within ten minutes and exposed a stale implicit-DEA test; its focused scenario passes when DEA is explicit. DEA/Loans/Girvi migration drift checks are clean. Do not claim a cross-product pass until smaller suites finish on a reproducible checkpoint.
 
 ## Documentation Memory
 
