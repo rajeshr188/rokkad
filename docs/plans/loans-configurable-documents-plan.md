@@ -436,6 +436,12 @@ byte-identical reprint matrix.
 
 Status: accepted architecture; not implemented.
 
+Pre-pilot compatibility guard completed 2026-08-09: existing integrity
+diagnostics now reject active loan-ticket assignments that omit either the
+Original or Duplicate copy. This protects the accepted pilot requirement while
+embedded layout composition remains authoritative; it does not implement or
+partially migrate the LPD7 print-profile runtime.
+
 - Add workspace-owned immutable print-profile revisions and workspace/Series
   assignments with `Series -> Workspace -> built-in` precedence.
 - Move physical copy selection, A5/A4 imposition, simplex/duplex ordering,

@@ -83,6 +83,12 @@ settings and remain authoritative. Continue using those controls until the
 profile migration is delivered; do not manually remove them from existing
 definitions.
 
+Before the parity pilot, open **Integrity diagnostics**. An active ticket
+assignment that prints only Original or only Duplicate is a blocking finding.
+Choose one of the `BOTH`/side-by-side sheet presets or Original/Duplicate copy
+mode. If there is no configured assignment, the fixed fallback already emits
+both required copies.
+
 ## First Setup: Create A Loan Ticket
 
 1. Select **Create starter layout**.

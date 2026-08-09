@@ -4,7 +4,7 @@ from apps.tenant_apps.loans.documents.integrity import get_document_integrity_fi
 
 
 class Command(BaseCommand):
-    help = "Check configurable loan document layouts, assets, and issued artifacts in the active tenant schema."
+    help = "Check configurable loan document evidence and pilot ticket-copy readiness in the active tenant schema."
 
     def add_arguments(self, parser):
         parser.add_argument("--fail-on-findings", action="store_true")

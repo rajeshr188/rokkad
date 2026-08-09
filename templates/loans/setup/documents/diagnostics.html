@@ -1,7 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}Loan document integrity{% endblock %}
 {% block workspace_content %}
-<div class="d-flex justify-content-between mb-4"><div><h1 class="h3 mb-1">Loan document integrity</h1><p class="text-muted mb-0">Read-only verification of layout definitions, stored assets, issue lineage, and exact PDF hashes.</p></div><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document layouts</a></div>
+<div class="d-flex justify-content-between mb-4"><div><h1 class="h3 mb-1">Loan document integrity</h1><p class="text-muted mb-0">Read-only verification of layout definitions, stored assets, issue lineage, exact PDF hashes, and pilot Original/Duplicate ticket readiness.</p></div><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document layouts</a></div>
 {% if findings %}<div class="alert alert-danger">{{ findings|length }} integrity finding{{ findings|length|pluralize }} require attention.</div><div class="table-responsive"><table class="table"><thead><tr><th>Category</th><th>Object</th><th>Finding</th></tr></thead><tbody>{% for finding in findings %}<tr><td><code>{{ finding.category }}</code></td><td>{{ finding.object_type }}:{{ finding.object_id }}</td><td>{{ finding.message }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="alert alert-success">All configurable loan document evidence passed integrity checks.</div>{% endif %}
 <p class="small text-muted">Deployment gate: <code>tenant_command check_loan_document_integrity --schema=&lt;schema&gt; --fail-on-findings</code></p>
 {% endblock %}

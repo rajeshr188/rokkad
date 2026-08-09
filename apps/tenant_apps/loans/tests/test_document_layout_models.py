@@ -239,3 +239,34 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
 
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].category, "LAYOUT_HASH")
+
+    def test_integrity_selector_requires_both_ticket_copies_for_pilot_assignment(self):
+        single = LoanDocumentLayoutService.publish(
+            revision=self._create_revision(name="Single copy"), actor=self.actor
+        )
+        LoanDocumentLayoutService.assign(
+            revision=single, workspace=self.tenant, actor=self.actor
+        )
+
+        findings = get_document_integrity_findings()
+
+        self.assertEqual(
+            [finding.category for finding in findings],
+            ["PILOT_TICKET_COPY_BUNDLE"],
+        )
+
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["copy_mode"] = "ORIGINAL_DUPLICATE"
+        dual = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name=f"Dual copy {uuid.uuid4().hex[:6]}",
+            definition=definition,
+            actor=self.actor,
+        )
+        dual = LoanDocumentLayoutService.publish(revision=dual, actor=self.actor)
+        LoanDocumentLayoutService.assign(
+            revision=dual, workspace=self.tenant, actor=self.actor
+        )
+
+        self.assertEqual(get_document_integrity_findings(), ())

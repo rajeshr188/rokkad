@@ -7,6 +7,7 @@ from apps.tenant_apps.loans.documents.layouts import DocumentLayoutValidator
 from apps.tenant_apps.loans.models import (
     LoanDocumentAsset,
     LoanDocumentIssue,
+    LoanDocumentLayoutAssignment,
     LoanDocumentLayoutRevision,
     current_tenant_workspace_id,
 )
@@ -59,7 +60,39 @@ def get_document_integrity_findings():
         else:
             if hashlib.sha256(content).hexdigest() != issue.pdf_hash:
                 findings.append(DocumentIntegrityFinding("ISSUE_HASH", "issue", issue.pk, "Issued PDF bytes do not match the immutable hash."))
+    assignments = LoanDocumentLayoutAssignment.objects.filter(
+        workspace_id=workspace_id,
+        document_type="loan_ticket",
+        is_active=True,
+        revision__state=LoanDocumentLayoutRevision.State.PUBLISHED,
+    ).select_related("revision")
+    for assignment in assignments:
+        try:
+            layout = DocumentLayoutValidator.load(assignment.revision.definition)
+        except ValueError:
+            continue
+        if not _includes_original_and_duplicate(layout):
+            findings.append(DocumentIntegrityFinding(
+                "PILOT_TICKET_COPY_BUNDLE",
+                "assignment",
+                assignment.pk,
+                "The active pilot loan-ticket layout must issue both Original and Duplicate copies. Choose a BOTH or A4 side-by-side sheet preset, or Original/Duplicate copy mode.",
+            ))
     return tuple(findings)
+
+
+def _includes_original_and_duplicate(layout):
+    if layout.sheet is not None:
+        return layout.sheet.composition in {
+            "A5_BOTH_SIMPLEX",
+            "A5_BOTH_DUPLEX",
+            "A4_SIDE_BY_SIDE",
+            "A4_SIDE_BY_SIDE_DUPLEX",
+        }
+    return layout.copy_mode in {
+        "ORIGINAL_DUPLICATE",
+        "ORIGINAL_DUPLICATE_DUPLEX",
+    }
 
 
 __all__ = ["DocumentIntegrityFinding", "get_document_integrity_findings"]

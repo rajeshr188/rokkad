@@ -186,6 +186,13 @@ delete or mutable financial-history editing.
 7. Run the parity pilot. Next.
 8. Add selected bulk actions after their single commands prove stable.
 
+Pre-pilot document readiness completed 2026-08-09: document integrity now
+fails closed when an active configured loan-ticket assignment omits Original
+or Duplicate. `jcl1` currently has no active configured ticket assignment and
+therefore uses the compliant fixed dual-copy fallback; its document integrity
+command reports zero findings. Physical A4/A5 alignment and duplex behavior
+still require the operator printer matrix and cannot be certified in software.
+
 ## Parity Comparison
 
 Run identical scenarios in Girvi and Loans and record:

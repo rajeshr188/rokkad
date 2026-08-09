@@ -38,8 +38,13 @@ python manage.py tenant_command check_loan_document_integrity --schema=<schema> 
 
 The command verifies canonical layout hashes, layout/document scope, asset
 workspace and byte hashes, issued artifact hashes, revision scope, and
-regeneration lineage. Any finding blocks rollout. The same findings are visible
-to Owner/Admin under Loans setup > Document layouts > Integrity diagnostics.
+regeneration lineage. For the parity pilot it also rejects every active
+loan-ticket assignment that would emit only Original or only Duplicate. A
+configured ticket must use `A5_BOTH_SIMPLEX`, `A5_BOTH_DUPLEX`,
+`A4_SIDE_BY_SIDE`, `A4_SIDE_BY_SIDE_DUPLEX`, or an Original/Duplicate copy
+mode. No assignment is valid because the fixed fallback emits both copies.
+Any finding blocks rollout. The same findings are visible to Owner/Admin under
+Loans setup > Document layouts > Integrity diagnostics.
 
 ## Layout Pack Boundary
 
