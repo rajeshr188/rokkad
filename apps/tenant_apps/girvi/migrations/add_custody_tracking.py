@@ -17,61 +17,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
-def migrate_repledged_items_forward(apps, schema_editor):
-    """
-    Migrate existing RepledgedLoanItem records to new custody system.
-    """
-    # Some legacy tenant schemas never had this table. Skip safely.
-    if "girvi_repledgedloanitem" not in schema_editor.connection.introspection.table_names():
-        return
-
-    LoanItem = apps.get_model("girvi", "LoanItem")
-    RepledgedLoanItem = apps.get_model("girvi", "RepledgedLoanItem")
-    RepledgeHistory = apps.get_model("girvi", "RepledgeHistory")
-
-    migrated = 0
-    skipped = 0
-
-    for repledge in RepledgedLoanItem.objects.all():
-        item = repledge.original_loanitem
-
-        # Update item custody
-        item.custody_status = "with_lender"
-        item.repledged_to = repledge.loan
-        item.repledged_amount = repledge.repledged_loanamount
-        item.repledged_at = repledge.repledged_date
-        item.save()
-
-        # Create history record
-        RepledgeHistory.objects.create(
-            loan_item=item,
-            taken_loan=repledge.loan,
-            repledged_amount=repledge.repledged_loanamount,
-            item_value_at_repledge=repledge.repledged_loanamount,  # Approximate
-            repledged_at=repledge.repledged_date,
-            notes="Migrated from RepledgedLoanItem",
-        )
-
-        migrated += 1
-
-    print(f"Migrated {migrated} repledged items, skipped {skipped}")
-
-
-def migrate_repledged_items_reverse(apps, schema_editor):
-    """
-    Reverse migration - restore old RepledgedLoanItem state.
-    """
-    LoanItem = apps.get_model("girvi", "LoanItem")
-
-    # Reset all items to in_vault
-    LoanItem.objects.update(
-        custody_status="in_vault",
-        repledged_to=None,
-        repledged_amount=None,
-        repledged_at=None,
-    )
-
-
 class Migration(migrations.Migration):
     dependencies = [
         ("girvi", "0003_loan_auto_post_to_accounting_loan_updated_by_and_more"),
@@ -238,9 +183,5 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="repledgehistory",
             index=models.Index(fields=["returned_at"], name="girvi_repl_returne_idx"),
-        ),
-        # Migrate existing data
-        migrations.RunPython(
-            migrate_repledged_items_forward, migrate_repledged_items_reverse
         ),
     ]
