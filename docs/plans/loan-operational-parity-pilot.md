@@ -186,6 +186,16 @@ delete or mutable financial-history editing.
 7. Run the parity pilot. Next.
 8. Add selected bulk actions after their single commands prove stable.
 
+Pilot preparation started 2026-08-09. The executable baseline, identical
+scenario worksheet, weighted scorecard, critical-failure rules, and physical
+document handoff are maintained in
+[the operator parity-pilot runbook](../implementation/loans-girvi-operator-parity-pilot.md).
+The official operator clock has not started: the current worktree contains
+uncommitted accounting/Girvi runtime changes, so it is not yet a reproducible
+pilot checkpoint. `jcl1` is explicitly `DEFERRED`; document integrity and
+migration-drift checks pass. Consolidate the runtime checkpoint and finish the
+split software preflights before recording product scores.
+
 Pre-pilot document readiness completed 2026-08-09: document integrity now
 fails closed when an active configured loan-ticket assignment omits Original
 or Duplicate. `jcl1` currently has no active configured ticket assignment and
