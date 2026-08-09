@@ -174,6 +174,14 @@ class LoansSetupUiTests(TenantTestCase):
                 "configuration-valuation_method": "LATEST_APPRAISAL",
                 "configuration-maximum_ltv_ratio": "0.80",
                 "configuration-advance_interest_periods": "1",
+                "configuration-interest_method": "COMPOUND",
+                "configuration-partial_month_method": "SLAB",
+                "configuration-partial_month_cutoff_days": "15",
+                "configuration-partial_month_lower_fraction": "0.5",
+                "configuration-capitalization_interval_periods": "12",
+                "configuration-accounting_recognition": "CASH",
+                "configuration-rounding_method": "PER_ACCRUAL_PERIOD",
+                "configuration-currency_quantum": "0.01",
                 "configuration-gold_monthly_interest_rate": "2",
                 "configuration-silver_monthly_interest_rate": "4",
                 "configuration-effective_from": "2026-08-05",
@@ -185,12 +193,17 @@ class LoansSetupUiTests(TenantTestCase):
             reverse("loans:pawn_economics_setup"),
             fetch_redirect_response=False,
         )
-        self.assertEqual(PawnLoanEconomicPolicy.objects.count(), 1)
+        policy = PawnLoanEconomicPolicy.objects.get()
+        self.assertEqual(policy.interest_method, "COMPOUND")
+        self.assertEqual(policy.partial_month_method, "SLAB")
+        self.assertEqual(policy.accounting_recognition, "CASH")
         self.assertEqual(PawnMetalInterestRatePolicy.objects.count(), 2)
         page = self.tenant_get(reverse("loans:pawn_economics_setup"))
         self.assertContains(page, "PawnLoan economic policies")
         self.assertContains(page, "Gold")
         self.assertContains(page, "Silver")
+        self.assertContains(page, "Compound")
+        self.assertContains(page, "Slab")
 
     def test_expiry_is_post_only_and_blocks_readiness_without_deleting_license(self):
         license, _ = self._configured_setup()

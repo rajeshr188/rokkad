@@ -10,6 +10,19 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P1 regulatory setup has passed its software gate. Migration `loans.0034`
+  extends effective-dated workspace/license economic policy to own interest
+  method, part-month slab, capitalization interval, cash/accrual recognition,
+  and rounding alongside valuation/LTV/advance-interest. Approval freezes the
+  complete resolved policy and disbursal builds its immutable snapshot from
+  that evidence. The setup UI now exposes every agreed choice. The completed
+  gates are 12 license/policy, 5 numbering/concurrency, and 3 focused
+  setup/disbursal tests and 16 adjacent lifecycle/model tests, plus system
+  check, migration drift, fresh tenant replay, and successful local tenant
+  rollout through `migrate_schemas --tenant`. P1 still needs the Owner browser walkthrough before final
+  acceptance; P2 must not start by silently treating that manual evidence as
+  complete.
+
 - Loans is now the selected operational destination under accepted ADR
   `2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi remains the
   temporary business-rule/capability reference and continues to own and service

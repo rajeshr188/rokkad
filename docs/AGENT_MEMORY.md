@@ -8,6 +8,19 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+P1 regulatory setup software acceptance is complete under ADR
+`2026-08-09-loans-effective-dated-calculation-policy.md` and domain reference
+`loans-regulatory-setup-and-policy.md`. Effective-dated workspace/license
+economic policy now owns calculation method, part-month slab, capitalization,
+cash/accrual recognition, valuation/LTV, advance interest, and rounding.
+Approval freezes those values and disbursal rehydrates its immutable
+`LoanPolicySnapshot` from approval evidence. Girvi's license/series outcomes are
+classified: license/series and independent numbering are `PORT`; immutable
+license revisions and bounded sequence exhaustion are `REPLACE`; loan-count and
+loan-amount auto-deactivation thresholds are `RETIRE for MVP`. Focused gates
+pass, but P1 remains Owner-walkthrough pending; do not mark it finally accepted
+or begin P2 on that assumption without recording the manual result.
+
 Loans is the selected target loan platform under accepted ADR
 `2026-08-09-girvi-capability-extraction-into-loans.md`. Girvi is now a temporary
 business-rule and operator-capability reference, not a competing destination.

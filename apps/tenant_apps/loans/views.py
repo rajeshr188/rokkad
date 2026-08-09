@@ -2612,6 +2612,18 @@ def pawn_economics_setup(request):
                     valuation_method=data["valuation_method"],
                     maximum_ltv_ratio=data["maximum_ltv_ratio"],
                     advance_interest_periods=data["advance_interest_periods"],
+                    interest_method=data["interest_method"],
+                    partial_month_method=data["partial_month_method"],
+                    partial_month_cutoff_days=data["partial_month_cutoff_days"],
+                    partial_month_lower_fraction=data[
+                        "partial_month_lower_fraction"
+                    ],
+                    capitalization_interval_periods=data[
+                        "capitalization_interval_periods"
+                    ],
+                    accounting_recognition=data["accounting_recognition"],
+                    rounding_method=data["rounding_method"],
+                    currency_quantum=data["currency_quantum"],
                     effective_from=data["effective_from"],
                     actor=request.user,
                 )

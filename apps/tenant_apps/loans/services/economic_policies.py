@@ -9,8 +9,12 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
+    AccountingRecognition,
     CollateralMetal,
     FeeCalculationType,
+    InterestMethod,
+    PartialMonthMethod,
+    RoundingMethod,
     ValuationMethod,
 )
 from apps.tenant_apps.loans.models import (
@@ -32,6 +36,14 @@ def create_pawn_loan_economic_policy(
     valuation_method: ValuationMethod | str,
     maximum_ltv_ratio: Decimal,
     advance_interest_periods: int = 1,
+    interest_method: InterestMethod | str = InterestMethod.SIMPLE,
+    partial_month_method: PartialMonthMethod | str = PartialMonthMethod.FULL_MONTH,
+    partial_month_cutoff_days: int = 15,
+    partial_month_lower_fraction: Decimal = Decimal("0.5"),
+    capitalization_interval_periods: int = 12,
+    accounting_recognition: AccountingRecognition | str = AccountingRecognition.CASH,
+    rounding_method: RoundingMethod | str = RoundingMethod.PER_ACCRUAL_PERIOD,
+    currency_quantum: Decimal = Decimal("0.01"),
     effective_from: date | None = None,
     effective_until: date | None = None,
     license: LoanLicense | None = None,
@@ -44,6 +56,14 @@ def create_pawn_loan_economic_policy(
         valuation_method=ValuationMethod(valuation_method).value,
         maximum_ltv_ratio=maximum_ltv_ratio,
         advance_interest_periods=advance_interest_periods,
+        interest_method=InterestMethod(interest_method).value,
+        partial_month_method=PartialMonthMethod(partial_month_method).value,
+        partial_month_cutoff_days=partial_month_cutoff_days,
+        partial_month_lower_fraction=partial_month_lower_fraction,
+        capitalization_interval_periods=capitalization_interval_periods,
+        accounting_recognition=AccountingRecognition(accounting_recognition).value,
+        rounding_method=RoundingMethod(rounding_method).value,
+        currency_quantum=currency_quantum,
         effective_from=effective_from or timezone.localdate(),
         effective_until=effective_until,
         created_by=actor,

@@ -302,6 +302,26 @@ def _approval_payload(loan, collateral, resolved_economics=None):
             "advance_interest_periods": (
                 resolved_economics.economic_policy.advance_interest_periods
             ),
+            "interest_method": resolved_economics.economic_policy.interest_method,
+            "partial_month_method": (
+                resolved_economics.economic_policy.partial_month_method
+            ),
+            "partial_month_cutoff_days": (
+                resolved_economics.economic_policy.partial_month_cutoff_days
+            ),
+            "partial_month_lower_fraction": str(
+                resolved_economics.economic_policy.partial_month_lower_fraction
+            ),
+            "capitalization_interval_periods": (
+                resolved_economics.economic_policy.capitalization_interval_periods
+            ),
+            "accounting_recognition": (
+                resolved_economics.economic_policy.accounting_recognition
+            ),
+            "rounding_method": resolved_economics.economic_policy.rounding_method,
+            "currency_quantum": str(
+                resolved_economics.economic_policy.currency_quantum
+            ),
             "monthly_interest": str(economics.monthly_interest),
             "advance_interest": str(economics.advance_interest),
             "deducted_fees": str(economics.deducted_fees),

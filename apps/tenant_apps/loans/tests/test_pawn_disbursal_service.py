@@ -245,10 +245,54 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(result.accounting_event.payload["values"]["principal"], "50000")
         self.assertEqual(LoanPolicySnapshot.objects.filter(loan=self.loan).count(), 1)
         self.assertEqual(result.policy_snapshot.accounting_recognition, "CASH")
+        self.assertEqual(result.policy_snapshot.interest_method, "SIMPLE")
+        self.assertEqual(result.policy_snapshot.partial_month_method, "FULL_MONTH")
         self.assertEqual(result.outbox.status, LoanOutboxStatus.PENDING.value)
         audit = self.loan.change_log.get(event_kind=PawnLoanEventKind.DISBURSED.value)
         self.assertEqual(audit.metadata["accounting_event_id"], result.accounting_event.pk)
         readiness.assert_called_once()
+
+    @patch(
+        "apps.tenant_apps.loans.services.accounting_outbox.is_dea_integration_enabled",
+        return_value=False,
+    )
+    @patch("apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness")
+    def test_disbursal_uses_the_calculation_policy_frozen_at_approval(
+        self,
+        _readiness,
+        _integration_enabled,
+    ):
+        approval = self.loan.approval_snapshots.get()
+        payload = dict(approval.payload)
+        evidence = dict(payload["collateral_economics"])
+        evidence.update(
+            {
+                "interest_method": "COMPOUND",
+                "partial_month_method": "SLAB",
+                "partial_month_cutoff_days": 15,
+                "partial_month_lower_fraction": "0.5",
+                "capitalization_interval_periods": 12,
+                "accounting_recognition": "ACCRUAL",
+                "rounding_method": "PER_ACCRUAL_PERIOD",
+                "currency_quantum": "0.01",
+            }
+        )
+        payload["collateral_economics"] = evidence
+        self.loan.approval_snapshots.filter(pk=approval.pk).update(payload=payload)
+
+        result = disburse_pawn_loan(
+            self.loan.pk,
+            effective_date=date(2026, 8, 3),
+            actor=self.actor,
+        )
+
+        self.assertEqual(result.policy_snapshot.interest_method, "COMPOUND")
+        self.assertEqual(result.policy_snapshot.partial_month_method, "SLAB")
+        self.assertEqual(result.policy_snapshot.partial_month_cutoff_days, 15)
+        self.assertEqual(
+            result.policy_snapshot.accounting_recognition,
+            "ACCRUAL",
+        )
 
     @patch("apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness")
     def test_repeat_disbursal_returns_the_original_event_without_duplicate_effects(self, _readiness):

@@ -7,10 +7,16 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.tenant_apps.loans.domain import (
+    AccountingRecognition,
+    InterestMethod,
     LoanOutboxStatus,
     PawnLoanEventKind,
     PawnLoanState,
+    PartialMonthMethod,
+    RoundingMethod,
     TransactionKind,
+    ValuationMethod,
+    WorkspacePolicyDefaults,
     resolve_policy,
 )
 from apps.tenant_apps.loans.integrations import disbursal_payload
@@ -72,7 +78,7 @@ def disburse_pawn_loan(
     if approval_snapshot is None:
         raise PawnDisbursalError("Approved PawnLoan is missing its approval snapshot.")
     economics = _approved_economics(loan, approval_snapshot)
-    resolved_policy = resolve_policy()
+    resolved_policy = _approved_disbursal_policy(economics)
     recognition = resolved_policy.accounting_recognition.value
 
     try:
@@ -266,6 +272,49 @@ def _approved_economics(loan, approval_snapshot):
     ):
         raise PawnDisbursalError("Approved gross-to-net disbursal does not reconcile.")
     return values
+
+
+def _approved_disbursal_policy(economics):
+    """Rehydrate frozen policy, with compatibility for pre-itemized approvals."""
+    if economics is None:
+        return resolve_policy()
+    evidence = economics["evidence"]
+    required = {
+        "interest_method",
+        "partial_month_method",
+        "partial_month_cutoff_days",
+        "partial_month_lower_fraction",
+        "capitalization_interval_periods",
+        "accounting_recognition",
+        "valuation_method",
+        "maximum_ltv_ratio",
+        "rounding_method",
+        "currency_quantum",
+    }
+    if not required.issubset(evidence):
+        return resolve_policy()
+    try:
+        defaults = WorkspacePolicyDefaults(
+            interest_method=InterestMethod(evidence["interest_method"]),
+            partial_month_method=PartialMonthMethod(evidence["partial_month_method"]),
+            partial_month_cutoff_days=int(evidence["partial_month_cutoff_days"]),
+            partial_month_lower_fraction=Decimal(
+                str(evidence["partial_month_lower_fraction"])
+            ),
+            capitalization_interval_periods=int(
+                evidence["capitalization_interval_periods"]
+            ),
+            accounting_recognition=AccountingRecognition(
+                evidence["accounting_recognition"]
+            ),
+            valuation_method=ValuationMethod(evidence["valuation_method"]),
+            maximum_ltv_ratio=Decimal(str(evidence["maximum_ltv_ratio"])),
+            rounding_method=RoundingMethod(evidence["rounding_method"]),
+            currency_quantum=Decimal(str(evidence["currency_quantum"])),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PawnDisbursalError("Approval has an invalid frozen loan policy.") from exc
+    return resolve_policy(workspace_defaults=defaults)
 
 
 def _existing_disbursal_result(loan: PawnLoan) -> PawnDisbursalResult:

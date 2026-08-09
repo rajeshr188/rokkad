@@ -167,6 +167,38 @@ class PawnLoanEconomicPolicy(models.Model):
         default=Decimal("0.800000"),
     )
     advance_interest_periods = models.PositiveSmallIntegerField(default=1)
+    interest_method = models.CharField(
+        max_length=16,
+        choices=enum_choices(InterestMethod),
+        default=InterestMethod.SIMPLE.value,
+    )
+    partial_month_method = models.CharField(
+        max_length=16,
+        choices=enum_choices(PartialMonthMethod),
+        default=PartialMonthMethod.FULL_MONTH.value,
+    )
+    partial_month_cutoff_days = models.PositiveSmallIntegerField(default=15)
+    partial_month_lower_fraction = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        default=Decimal("0.5"),
+    )
+    capitalization_interval_periods = models.PositiveSmallIntegerField(default=12)
+    accounting_recognition = models.CharField(
+        max_length=16,
+        choices=enum_choices(AccountingRecognition),
+        default=AccountingRecognition.CASH.value,
+    )
+    rounding_method = models.CharField(
+        max_length=32,
+        choices=enum_choices(RoundingMethod),
+        default=RoundingMethod.PER_ACCRUAL_PERIOD.value,
+    )
+    currency_quantum = models.DecimalField(
+        max_digits=8,
+        decimal_places=4,
+        default=Decimal("0.01"),
+    )
     effective_from = models.DateField(default=timezone.localdate, db_index=True)
     effective_until = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
@@ -202,6 +234,24 @@ class PawnLoanEconomicPolicy(models.Model):
                 name="loans_econ_advance_range",
             ),
             models.CheckConstraint(
+                condition=Q(partial_month_cutoff_days__gte=1)
+                & Q(partial_month_cutoff_days__lte=30),
+                name="loans_econ_partial_cutoff_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(partial_month_lower_fraction__gt=0)
+                & Q(partial_month_lower_fraction__lte=1),
+                name="loans_econ_partial_fraction_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(capitalization_interval_periods__gte=1),
+                name="loans_econ_cap_interval_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(currency_quantum__gt=0),
+                name="loans_econ_currency_quantum_positive",
+            ),
+            models.CheckConstraint(
                 condition=Q(effective_until__isnull=True)
                 | Q(effective_until__gte=F("effective_from")),
                 name="loans_econ_dates_valid",
@@ -217,6 +267,24 @@ class PawnLoanEconomicPolicy(models.Model):
     def clean(self):
         super().clean()
         _validate_policy_scope(self, label="Economic policy")
+        try:
+            DisbursalPolicySnapshot(
+                policy_version=1,
+                interest_method=InterestMethod(self.interest_method),
+                partial_month_method=PartialMonthMethod(self.partial_month_method),
+                partial_month_cutoff_days=self.partial_month_cutoff_days,
+                partial_month_lower_fraction=self.partial_month_lower_fraction,
+                capitalization_interval_periods=self.capitalization_interval_periods,
+                accounting_recognition=AccountingRecognition(
+                    self.accounting_recognition
+                ),
+                valuation_method=ValuationMethod(self.valuation_method),
+                maximum_ltv_ratio=self.maximum_ltv_ratio,
+                rounding_method=RoundingMethod(self.rounding_method),
+                currency_quantum=self.currency_quantum,
+            )
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
 
     def save(self, *args, **kwargs):
         self.clean()

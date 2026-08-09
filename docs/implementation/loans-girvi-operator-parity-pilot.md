@@ -119,7 +119,7 @@ Do not use database/admin shortcuts.
 
 | ID | Operator outcome | Required Loans evidence | Decision | Status |
 | --- | --- | --- | --- | --- |
-| P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior | PORT | Pending |
+| P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior, full effective-dated calculation policy | PORT/REPLACE | Software pass; Owner walkthrough pending |
 | P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | REPLACE | Pending |
 | P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | Pending |
 | P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | Pending |

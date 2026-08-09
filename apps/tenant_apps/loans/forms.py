@@ -3,12 +3,16 @@ from decimal import Decimal
 from django import forms
 
 from apps.tenant_apps.loans.domain import (
+    AccountingRecognition,
     STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS,
     CollateralMetal,
     FeeCalculationType,
+    InterestMethod,
+    PartialMonthMethod,
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
     PawnLoanRenewalMode,
+    RoundingMethod,
     ValuationMethod,
 )
 from apps.tenant_apps.loans.models import (
@@ -735,6 +739,54 @@ class PawnEconomicConfigurationForm(forms.Form):
         help_text="Enter 0.80 for 80%.",
     )
     advance_interest_periods = forms.IntegerField(min_value=0, max_value=12, initial=1)
+    interest_method = forms.ChoiceField(
+        choices=[(item.value, item.name.title()) for item in InterestMethod],
+        initial=InterestMethod.SIMPLE.value,
+    )
+    partial_month_method = forms.ChoiceField(
+        choices=[
+            (PartialMonthMethod.FULL_MONTH.value, "Always charge a full month"),
+            (PartialMonthMethod.SLAB.value, "Use part-month slab"),
+        ],
+        initial=PartialMonthMethod.FULL_MONTH.value,
+    )
+    partial_month_cutoff_days = forms.IntegerField(
+        min_value=1,
+        max_value=30,
+        initial=15,
+        help_text="For slab mode, days up to this cutoff use the lower fraction.",
+    )
+    partial_month_lower_fraction = forms.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        max_value=Decimal("1"),
+        initial=Decimal("0.5"),
+        help_text="Enter 0.5 for half a month.",
+    )
+    capitalization_interval_periods = forms.IntegerField(
+        min_value=1,
+        max_value=120,
+        initial=12,
+        help_text="Compound loans may capitalize after this many monthly periods.",
+    )
+    accounting_recognition = forms.ChoiceField(
+        choices=[(item.value, item.name.title()) for item in AccountingRecognition],
+        initial=AccountingRecognition.CASH.value,
+    )
+    rounding_method = forms.ChoiceField(
+        choices=[
+            (RoundingMethod.PER_ACCRUAL_PERIOD.value, "Round each monthly accrual row")
+        ],
+        initial=RoundingMethod.PER_ACCRUAL_PERIOD.value,
+    )
+    currency_quantum = forms.DecimalField(
+        max_digits=8,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        initial=Decimal("0.01"),
+        help_text="Use 0.01 for paise-level currency rounding.",
+    )
     gold_monthly_interest_rate = forms.DecimalField(
         max_digits=9, decimal_places=6, min_value=0, max_value=100
     )
