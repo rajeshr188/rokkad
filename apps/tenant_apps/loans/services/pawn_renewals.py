@@ -69,6 +69,10 @@ from apps.tenant_apps.loans.services.collateral_media import (
     append_collateral_photo,
     inherit_collateral_photos,
 )
+from apps.tenant_apps.loans.services.storage_operations import (
+    carry_storage_to_renewal_successor,
+    remove_collateral_from_storage,
+)
 from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
     get_pawn_principal_tranche_balances,
@@ -520,6 +524,11 @@ def renew_pawn_loan(
         created_by=actor,
     )
     effective_now = timezone.now()
+    successor_by_source = {
+        item.renewed_from_id: item
+        for item in successor_items
+        if item.renewed_from_id is not None
+    }
     for old_item in items:
         retained = old_item.pk in retained_item_ids
         destination = (
@@ -527,6 +536,20 @@ def renew_pawn_loan(
             if retained
             else CollateralCustodyState.WITH_CUSTOMER.value
         )
+        if retained:
+            carry_storage_to_renewal_successor(
+                old_item,
+                successor_by_source[old_item.pk],
+                renewal=renewal,
+                actor=actor,
+            )
+        else:
+            remove_collateral_from_storage(
+                old_item,
+                workflow_source="RENEWAL_RETURN",
+                source_reference=str(renewal.pk),
+                actor=actor,
+            )
         PawnCollateralCustodyEvent.objects.create(
             collateral_item=old_item,
             renewal=renewal,
@@ -678,6 +701,26 @@ def reverse_pawn_loan_renewal(
         reason=reason,
         created_by=actor,
     )
+    for item in successor_items:
+        if item.renewed_from_id:
+            carry_storage_to_renewal_successor(
+                item,
+                next(
+                    source
+                    for source in source_items
+                    if source.pk == item.renewed_from_id
+                ),
+                renewal=reversal,
+                actor=actor,
+                workflow_source="RENEWAL_REVERSAL",
+            )
+        else:
+            remove_collateral_from_storage(
+                item,
+                workflow_source="RENEWAL_REVERSAL",
+                source_reference=str(reversal.pk),
+                actor=actor,
+            )
     effective_date = timezone.localdate()
     for item in source_items:
         transition = source_transitions[item.pk]

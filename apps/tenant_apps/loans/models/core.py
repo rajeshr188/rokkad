@@ -615,6 +615,13 @@ class PawnCollateralItem(models.Model):
         default=CollateralCustodyState.IN_VAULT.value,
         db_index=True,
     )
+    current_storage_location = models.ForeignKey(
+        "loans.PawnStorageLocation",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="current_collateral_items",
+    )
     renewed_from = models.OneToOneField(
         "self",
         null=True,
@@ -690,6 +697,11 @@ class PawnCollateralItem(models.Model):
                             "A license-specific rate policy must match the loan license."
                         )
                     }
+                )
+        if self.current_storage_location_id and self.loan_id:
+            if self.current_storage_location.workspace_id != self.loan.workspace_id:
+                raise ValidationError(
+                    {"current_storage_location": "Storage location must belong to the loan workspace."}
                 )
 
     def save(self, *args, **kwargs):

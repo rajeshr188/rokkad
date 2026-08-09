@@ -21,13 +21,19 @@ from apps.tenant_apps.loans.models import (
     PawnCollateralItem,
     PawnCollateralLabelIssue,
     PawnCollateralPhoto,
+    PawnCollateralStorageMovement,
     PawnLoan,
+    PawnStorageLocation,
 )
 from apps.tenant_apps.loans.services import (
     PawnCollateralMediaError,
     PawnLifecycleError,
     append_collateral_photo,
     approve_pawn_loan,
+    create_storage_location,
+    place_or_transfer_collateral,
+    remove_collateral_from_storage,
+    PawnStorageError,
 )
 from apps.tenant_apps.party.models import Party
 
@@ -178,4 +184,97 @@ class PawnCollateralMediaTests(TenantTestCase):
             scan,
             f"{reverse('loans:pawn_loan_detail', args=[self.loan.pk])}#collateral-{self.item.public_id}",
             fetch_redirect_response=False,
+        )
+
+    def test_required_storage_hierarchy_and_owner_only_transfer(self):
+        branch = self._location("BRANCH", "BR-1", None)
+        vault = self._location("VAULT", "V-1", branch)
+        cabinet = self._location("CABINET", "C-1", vault)
+        box = self._location("BOX", "B-1", cabinet, capacity=1)
+        slot = self._location("SLOT", "S-1", box)
+
+        with self.assertRaises(ValidationError):
+            PawnStorageLocation.objects.create(
+                workspace=self.tenant,
+                parent=branch,
+                level="BOX",
+                code="SKIP",
+                name="Skipped hierarchy",
+            )
+        outsider = get_user_model().objects.create_user(
+            username=f"storage-outsider-{uuid.uuid4().hex[:8]}"
+        )
+        with self.assertRaisesRegex(PawnStorageError, "Owner"):
+            place_or_transfer_collateral(
+                self.item.pk,
+                destination_id=box.pk,
+                reason="",
+                actor=outsider,
+            )
+
+        placement = place_or_transfer_collateral(
+            self.item.pk,
+            destination_id=box.pk,
+            reason="",
+            actor=self.owner,
+        )
+        self.item.refresh_from_db()
+        self.assertEqual(placement.kind, "PLACEMENT")
+        self.assertEqual(self.item.current_storage_location, box)
+
+        transfer = place_or_transfer_collateral(
+            self.item.pk,
+            destination_id=slot.pk,
+            reason="Move to dedicated slot",
+            actor=self.owner,
+        )
+        self.item.refresh_from_db()
+        self.assertEqual(transfer.from_location, box)
+        self.assertEqual(self.item.current_storage_location, slot)
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            PawnCollateralStorageMovement.objects.filter(pk=transfer.pk).update(
+                reason="changed"
+            )
+        removal = remove_collateral_from_storage(
+            self.item,
+            workflow_source="RELEASE",
+            source_reference="release-1",
+            actor=self.owner,
+        )
+        self.item.refresh_from_db()
+        self.assertEqual(removal.from_location, slot)
+        self.assertIsNone(self.item.current_storage_location_id)
+
+    def test_storage_label_and_destination_scan(self):
+        branch = self._location("BRANCH", "BR-2", None)
+        vault = self._location("VAULT", "V-2", branch)
+        cabinet = self._location("CABINET", "C-2", vault)
+        box = self._location("BOX", "B-2", cabinet)
+
+        label = self.client.get(
+            reverse("loans:pawn_storage_location_label", args=[box.pk])
+        )
+        self.assertEqual(label.status_code, 200)
+        text = "".join(page.get_text() for page in fitz.open(stream=label.content, filetype="pdf"))
+        self.assertIn("B-2", text)
+
+        scan = self.client.get(
+            reverse("loans:pawn_storage_location_scan", args=[box.public_id]),
+            {"item": self.item.public_id},
+        )
+        self.assertRedirects(
+            scan,
+            f"{reverse('loans:pawn_collateral_storage_transfer', args=[self.loan.pk, self.item.pk])}?destination={box.pk}",
+            fetch_redirect_response=False,
+        )
+
+    def _location(self, level, code, parent, capacity=None):
+        return create_storage_location(
+            workspace=self.tenant,
+            level=level,
+            code=code,
+            name=code,
+            parent=parent,
+            capacity=capacity,
+            actor=self.owner,
         )

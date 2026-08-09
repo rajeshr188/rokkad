@@ -473,8 +473,8 @@ the failure evidence.
 ## Immediate Next Slice
 
 Gate D is authorized and in progress. OP1 regulatory operations are complete.
-OP2 collateral identity, mandatory draft photos, append-only later photos,
-audited labels, and QR is complete. The immediate next slice is OP3 storage, then OP4
+OP2 collateral identity/media and OP3 hierarchical storage are complete. The
+immediate next slice is OP4 physical verification, then
 verification, and only the confirmed notice/report/document gaps. Do not enable
 FundingLoan runtime or normal navigation until those pilot blockers and the
 reconciliation pack pass.

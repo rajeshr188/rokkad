@@ -56,6 +56,7 @@ from .funding import (
 )
 from .regulatory import LoanLicenseRevision
 from .media import PawnCollateralLabelIssue, PawnCollateralPhoto
+from .storage import PawnCollateralStorageMovement, PawnStorageLocation
 
 __all__ = [
     "LoanChangeLog",
@@ -109,4 +110,6 @@ __all__ = [
     "LoanLicenseRevision",
     "PawnCollateralLabelIssue",
     "PawnCollateralPhoto",
+    "PawnCollateralStorageMovement",
+    "PawnStorageLocation",
 ]

@@ -51,6 +51,9 @@ from apps.tenant_apps.loans.services.pawn_interest import (
     should_record_pawn_accrual_event,
 )
 from apps.tenant_apps.loans.services.pawn_notices import create_pawn_loan_notice
+from apps.tenant_apps.loans.services.storage_operations import (
+    remove_collateral_from_storage,
+)
 
 
 class PawnAuctionError(ValueError):
@@ -324,6 +327,12 @@ def complete_pawn_loan_auction(
                 "latest_appraised_value": str(item.latest_appraised_value) if item.latest_appraised_value is not None else None,
             },
             disposed_at=now,
+        )
+        remove_collateral_from_storage(
+            item,
+            workflow_source="AUCTION",
+            source_reference=str(auction.pk),
+            actor=actor,
         )
         PawnCollateralCustodyEvent.objects.create(
             collateral_item=item,

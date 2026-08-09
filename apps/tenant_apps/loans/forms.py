@@ -16,6 +16,7 @@ from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanSeries,
     PawnCollateralItem,
+    PawnStorageLocation,
 )
 from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
 
@@ -585,6 +586,51 @@ class PawnCollateralPhotoForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["photograph"].widget.attrs["class"] = "form-control"
+
+
+class PawnStorageLocationForm(forms.Form):
+    parent = forms.ModelChoiceField(
+        queryset=PawnStorageLocation.objects.none(), required=False
+    )
+    level = forms.ChoiceField(choices=PawnStorageLocation.Level.choices)
+    code = forms.CharField(max_length=32)
+    name = forms.CharField(max_length=100)
+    capacity = forms.IntegerField(required=False, min_value=1)
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["parent"].queryset = PawnStorageLocation.objects.filter(
+            workspace=workspace, is_active=True
+        ).select_related("parent").order_by("level", "code")
+        for field in self.fields.values():
+            field.widget.attrs["class"] = (
+                "form-select"
+                if isinstance(field, (forms.ModelChoiceField, forms.ChoiceField))
+                else "form-control"
+            )
+
+
+class PawnStorageTransferForm(forms.Form):
+    destination = forms.ModelChoiceField(
+        queryset=PawnStorageLocation.objects.none(),
+        help_text="Scan the destination QR or select its Box/Slot code.",
+    )
+    reason = forms.CharField(
+        required=False,
+        max_length=500,
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Required when moving an already placed item.",
+    )
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["destination"].queryset = PawnStorageLocation.objects.filter(
+            workspace=workspace,
+            is_active=True,
+            level__in=(PawnStorageLocation.Level.BOX, PawnStorageLocation.Level.SLOT),
+        ).select_related("parent").order_by("code")
+        self.fields["destination"].widget.attrs["class"] = "form-select"
+        self.fields["reason"].widget.attrs["class"] = "form-control"
 
 
 PawnCollateralDraftFormSet = forms.formset_factory(

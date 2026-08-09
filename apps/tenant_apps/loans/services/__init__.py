@@ -182,6 +182,14 @@ from .collateral_media import (
     render_collateral_label,
     validate_collateral_photo,
 )
+from .storage_operations import (
+    PawnStorageError,
+    carry_storage_to_renewal_successor,
+    create_storage_location,
+    place_or_transfer_collateral,
+    remove_collateral_from_storage,
+    render_storage_location_label,
+)
 
 __all__ = (
     "LicenseSeriesError",
@@ -214,6 +222,12 @@ __all__ = (
     "inherit_collateral_photos",
     "render_collateral_label",
     "validate_collateral_photo",
+    "PawnStorageError",
+    "carry_storage_to_renewal_successor",
+    "create_storage_location",
+    "place_or_transfer_collateral",
+    "remove_collateral_from_storage",
+    "render_storage_location_label",
     "PawnLifecycleError",
     "approve_pawn_loan",
     "cancel_pawn_loan",

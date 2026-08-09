@@ -1,0 +1,6 @@
+{% extends "base_tenant.html" %}
+{% block title %}Collateral storage{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start mb-4"><div><a class="small text-decoration-none" href="{% url 'loans:license_list' %}">&larr; Loans setup</a><h1 class="h3 mt-2">Collateral storage</h1><p class="text-muted">Required hierarchy: Branch → Vault → Cabinet → Box → optional Slot.</p></div><a class="btn btn-primary" href="{% url 'loans:pawn_storage_location_create' %}">Add location</a></div>
+<div class="card"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Path</th><th>Level</th><th>Capacity</th><th>Current items</th><th></th></tr></thead><tbody>{% for location in locations %}<tr><td><strong>{{ location.path_label }}</strong><div class="small text-muted">{{ location.name }}</div></td><td>{{ location.get_level_display }}</td><td>{{ location.capacity|default:"Unlimited" }}</td><td>{{ location.current_collateral_items.count }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_storage_location_label' location.pk %}">Location QR</a></td></tr>{% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Create the Branch first, then each required child level.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

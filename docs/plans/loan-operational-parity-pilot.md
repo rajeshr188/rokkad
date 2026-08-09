@@ -70,7 +70,7 @@ renewal items inherit explicit predecessor evidence while added items require a
 fresh renewal photograph. Audited preview/print label PDFs contain loan, item,
 description, Party, weight, and a QR that opens the tenant-scoped owning loan.
 
-### OP3 Hierarchical Storage
+### OP3 Hierarchical Storage — Completed 2026-08-09
 
 - A tenant-scoped location tree supporting branch, vault, cabinet, box, and
   optional slot levels. The hierarchy is required and levels cannot be skipped:
@@ -85,6 +85,13 @@ description, Party, weight, and a QR that opens the tenant-scoped owning loan.
 - Initial placement may happen after loan disbursement. Missing initial
   placement does not block disbursement and must remain visible as awaiting
   storage placement.
+
+Result: services and PostgreSQL enforce Branch → Vault → Cabinet → Box →
+optional Slot. Immutable movements drive a guarded current-location projection.
+Owner-only placement/transfer accepts Box or Slot, checks capacity, requires
+transfer reasons, prints location QR labels, and exposes awaiting placement.
+Release/auction remove location; renewal carries retained location and handles
+reversal.
 
 ### OP4 Physical Verification
 
@@ -147,8 +154,8 @@ delete or mutable financial-history editing.
    verification discrepancy policy.
 2. Deliver OP1 regulatory operations. Completed 2026-08-08.
 3. Deliver OP2 identity/media/labels. Completed 2026-08-09.
-4. Deliver OP3 hierarchical storage. Next.
-5. Deliver OP4 physical verification.
+4. Deliver OP3 hierarchical storage. Completed 2026-08-09.
+5. Deliver OP4 physical verification. Next.
 6. Close OP5 notice gaps and OP6 report/document gaps.
 7. Run the parity pilot.
 8. Add selected bulk actions after their single commands prove stable.

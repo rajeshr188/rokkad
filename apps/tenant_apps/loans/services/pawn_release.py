@@ -52,6 +52,9 @@ from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
     get_pawn_principal_tranche_balances,
 )
+from apps.tenant_apps.loans.services.storage_operations import (
+    remove_collateral_from_storage,
+)
 
 
 class PawnReleaseError(ValueError):
@@ -266,6 +269,12 @@ def release_pawn_loan_in_full(
             collateral_item=item,
             valuation_snapshot=_json_snapshot(snapshot),
             returned_at=now,
+        )
+        remove_collateral_from_storage(
+            item,
+            workflow_source="RELEASE",
+            source_reference=str(release.pk),
+            actor=actor,
         )
         PawnCollateralCustodyEvent.objects.create(
             collateral_item=item,

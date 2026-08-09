@@ -57,6 +57,8 @@ from apps.tenant_apps.loans.forms import (
     PawnCapitalizationForm,
     PawnCollateralDraftFormSet,
     PawnCollateralPhotoForm,
+    PawnStorageLocationForm,
+    PawnStorageTransferForm,
     PawnDisbursalForm,
     PawnDraftForm,
     PawnFullReleaseForm,
@@ -116,6 +118,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnCollateralItem,
     PawnCollateralPhoto,
+    PawnStorageLocation,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanAuction,
@@ -224,6 +227,10 @@ from apps.tenant_apps.loans.services import (
     transfer_expired_draft_setup,
     render_collateral_label,
     PawnCollateralMediaError,
+    PawnStorageError,
+    create_storage_location,
+    place_or_transfer_collateral,
+    render_storage_location_label,
     update_license,
     update_pawn_draft,
     update_series,
@@ -974,6 +981,7 @@ def pawn_loan_detail(request, pk):
         "loan": loan,
         "today": timezone.localdate(),
         "can_administer": _can_administer(request),
+        "can_manage_storage": request.loans_workspace.owner_id == request.user.pk,
         "notice_rows": get_pawn_loan_notice_rows(loan),
         "auctions": loan.auctions.select_related("accounting_event__outbox").order_by("-attempt_number"),
         "renewals": PawnLoanRenewal.objects.filter(
@@ -1083,6 +1091,123 @@ def pawn_collateral_scan(request, public_id):
     )
     return redirect(
         f"{reverse('loans:pawn_loan_detail', args=[item.loan_id])}#collateral-{item.public_id}"
+    )
+
+
+@loans_setup_required
+def pawn_storage_location_list(request):
+    locations = PawnStorageLocation.objects.filter(
+        workspace=request.loans_workspace
+    ).select_related("parent", "parent__parent", "parent__parent__parent")
+    return render(
+        request,
+        "loans/storage/location_list.html",
+        {"locations": locations},
+    )
+
+
+@loans_setup_required
+def pawn_storage_location_create(request):
+    form = PawnStorageLocationForm(
+        request.POST or None,
+        workspace=request.loans_workspace,
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            location = create_storage_location(
+                workspace=request.loans_workspace,
+                parent=form.cleaned_data.get("parent"),
+                level=form.cleaned_data["level"],
+                code=form.cleaned_data["code"],
+                name=form.cleaned_data["name"],
+                capacity=form.cleaned_data.get("capacity"),
+                actor=request.user,
+            )
+        except (PawnStorageError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, f"Storage location {location.code} created.")
+            return redirect("loans:pawn_storage_location_list")
+    return render(
+        request,
+        "loans/storage/location_form.html",
+        {"form": form},
+    )
+
+
+@loans_setup_required
+def pawn_storage_location_label(request, pk):
+    location = get_object_or_404(
+        PawnStorageLocation,
+        pk=pk,
+        workspace=request.loans_workspace,
+    )
+    qr_target = request.build_absolute_uri(
+        reverse("loans:pawn_storage_location_scan", args=[location.public_id])
+    )
+    content = render_storage_location_label(location, qr_target=qr_target)
+    response = HttpResponse(content, content_type="application/pdf")
+    response["Content-Disposition"] = content_disposition_header(
+        False, f"storage-{location.code}.pdf"
+    )
+    return response
+
+
+@loans_workspace_required
+def pawn_storage_location_scan(request, public_id):
+    location = get_object_or_404(
+        PawnStorageLocation,
+        public_id=public_id,
+        workspace=request.loans_workspace,
+        is_active=True,
+    )
+    item_public_id = request.GET.get("item")
+    if item_public_id:
+        item = get_object_or_404(
+            PawnCollateralItem,
+            public_id=item_public_id,
+            loan__workspace=request.loans_workspace,
+        )
+        return redirect(
+            f"{reverse('loans:pawn_collateral_storage_transfer', args=[item.loan_id, item.pk])}?destination={location.pk}"
+        )
+    return redirect("loans:pawn_storage_location_list")
+
+
+@loans_workspace_required
+def pawn_collateral_storage_transfer(request, pk, item_pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
+    initial = {}
+    if request.method == "GET" and request.GET.get("destination"):
+        initial["destination"] = request.GET["destination"]
+    form = PawnStorageTransferForm(
+        request.POST or None,
+        workspace=request.loans_workspace,
+        initial=initial,
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            movement = place_or_transfer_collateral(
+                item.pk,
+                destination_id=form.cleaned_data["destination"].pk,
+                reason=form.cleaned_data.get("reason", ""),
+                actor=request.user,
+            )
+        except (PawnStorageError, ValidationError, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(
+                request,
+                f"{item.description} {movement.get_kind_display().lower()} recorded.",
+            )
+            return redirect(
+                f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}"
+            )
+    return render(
+        request,
+        "loans/storage/transfer_form.html",
+        {"loan": loan, "item": item, "form": form},
     )
 
 
