@@ -24,6 +24,7 @@ TENANT_ERP_URLPATTERNS = [
     path("notify/", include("apps.tenant_apps.notify.urls")),
     path("notify-v2/", include("apps.tenant_apps.notify_v2.urls")),
     path("dea/", include("apps.tenant_apps.dea.urls")),
+    path("accounting/", include("apps.tenant_apps.accounting.urls")),
 ]
 
 urlpatterns = TENANT_ADMIN_URLPATTERNS + TENANT_ERP_URLPATTERNS + shared_urlpatterns

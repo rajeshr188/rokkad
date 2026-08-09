@@ -2,6 +2,10 @@ from django.contrib.auth import get_user_model
 from django.db.models import Max
 from django.test import TestCase
 
+from apps.configuration.accounting_integration import (
+    get_accounting_integration_mode,
+)
+
 from apps.configuration.models import PreferenceAuditLog, WorkspacePreferenceModel
 from apps.configuration.services import PreferenceService
 from apps.orgs.models import Company, CompanyPreferenceModel
@@ -10,6 +14,10 @@ from apps.orgs.registries import company_preference_registry
 
 
 class PreferenceServiceTests(TestCase):
+
+    def test_accounting_integration_without_workspace_fails_closed(self):
+        self.assertEqual(get_accounting_integration_mode(None), "DEFERRED")
+
     def setUp(self):
         User = get_user_model()
         self.user = User.objects.create_user(
@@ -58,6 +66,30 @@ class PreferenceServiceTests(TestCase):
                 section="accounting",
                 name="default_currency",
             ).exists()
+        )
+
+    def test_workspace_write_invalidates_cached_default(self):
+        self.assertEqual(
+            PreferenceService.get_workspace(
+                self.workspace,
+                "accounting__integration_mode",
+            ),
+            "DEFERRED",
+        )
+
+        PreferenceService.set_workspace(
+            self.workspace,
+            "accounting__integration_mode",
+            "DEA",
+            user=self.user,
+        )
+
+        self.assertEqual(
+            PreferenceService.get_workspace(
+                self.workspace,
+                "accounting__integration_mode",
+            ),
+            "DEA",
         )
 
     def test_workspace_preferences_are_instance_scoped(self):

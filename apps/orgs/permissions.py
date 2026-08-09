@@ -147,6 +147,15 @@ DEA_PERMISSIONS: List[PermissionDef] = [
     ("dea_report_export", "Can export financial reports", "Export financial reports"),
 ]
 
+# FEATURE-SPECIFIC PERMISSIONS (STANDALONE ACCOUNTING)
+STANDALONE_ACCOUNTING_PERMISSIONS: List[PermissionDef] = [
+    ("accounting_voucher_create", "Can create accounting vouchers", "Create draft vouchers and their transactions"),
+    ("accounting_voucher_authorize", "Can authorize accounting vouchers", "Authorize complete draft vouchers"),
+    ("accounting_voucher_post", "Can post accounting vouchers", "Post authorized vouchers to the accounting book"),
+    ("accounting_voucher_reverse", "Can reverse accounting vouchers", "Create an append-only reversal of a posted voucher"),
+    ("accounting_period_manage", "Can manage accounting periods", "Transition accounting periods and bootstrap the MVP book"),
+]
+
 # FEATURE-SPECIFIC PERMISSIONS (CONTACT MODULE)
 # ============================================================================
 
@@ -173,6 +182,7 @@ ALL_PERMISSIONS: List[PermissionDef] = (
     + REPORT_PERMISSIONS
     + GIRVI_PERMISSIONS
     + DEA_PERMISSIONS
+    + STANDALONE_ACCOUNTING_PERMISSIONS
     + CONTACT_PERMISSIONS
 )
 
@@ -244,6 +254,12 @@ class RolePermissions:
         "dea_close_period",
         "dea_report_view",
         "dea_report_export",
+        # Standalone accounting - Full operational access
+        "accounting_voucher_create",
+        "accounting_voucher_authorize",
+        "accounting_voucher_post",
+        "accounting_voucher_reverse",
+        "accounting_period_manage",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -305,6 +321,12 @@ class RolePermissions:
         "dea_close_period",
         "dea_report_view",
         "dea_report_export",
+        # Standalone accounting - Full operational access
+        "accounting_voucher_create",
+        "accounting_voucher_authorize",
+        "accounting_voucher_post",
+        "accounting_voucher_reverse",
+        "accounting_period_manage",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -342,6 +364,8 @@ class RolePermissions:
         "dea_entry_view",
         "dea_entry_create",
         "dea_entry_edit",
+        # Standalone accounting - Draft preparation only
+        "accounting_voucher_create",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -465,5 +489,6 @@ def get_permissions_by_category() -> Dict[str, List[PermissionDef]]:
         "Reports": REPORT_PERMISSIONS,
         "Girvi (Loans)": GIRVI_PERMISSIONS,
         "DEA (Accounting)": DEA_PERMISSIONS,
+        "Standalone Accounting": STANDALONE_ACCOUNTING_PERMISSIONS,
         "Contacts": CONTACT_PERMISSIONS,
     }

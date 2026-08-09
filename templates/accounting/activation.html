@@ -1,0 +1,8 @@
+{% extends "base_tenant.html" %}
+{% block title %}Accounting activation{% endblock %}
+{% block workspace_content %}
+<div class="mb-4"><a class="small text-decoration-none" href="{% url 'accounting:dashboard' %}">&larr; Accounting</a><h1 class="h3 mt-2">Standalone accounting activation</h1><p class="text-muted">Control whether this workspace may create, authorize, post, and allocate successor transactions.</p></div>
+<div class="alert {% if activation.ready %}alert-success{% else %}alert-danger{% endif %}"><strong>{% if activation.ready %}Readiness checks passed{% else %}Activation blocked{% endif %}</strong>{% if activation.blockers %}<ul class="mb-0 mt-2">{% for blocker in activation.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}</div>
+<div class="alert alert-warning"><strong>Scope:</strong> enabling permits only the tested INR cash-sale, credit-sale, customer-receipt, and receipt-allocation workflow. Owner-operated mode lets the workspace Owner confirm in one step; Team mode requires separate users. It does not import DEA history, post tax, or replace DEA as production authority.</div>
+<div class="card"><div class="card-body"><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn {% if activation.enabled %}btn-outline-danger{% else %}btn-primary{% endif %}" type="submit">Save activation state</button></form></div></div>
+{% endblock %}

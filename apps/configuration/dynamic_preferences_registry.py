@@ -251,6 +251,32 @@ class LoanNewModuleEnabled(BooleanPreference):
 
 
 @register_workspace_and_global
+class AccountingSuccessorEnabled(BooleanPreference):
+    section = accounting
+    name = "successor_enabled"
+    default = False
+    required = False
+
+
+@register_workspace_and_global
+class AccountingWorkflowMode(ChoicePreference):
+    section = accounting
+    name = "workflow_mode"
+    default = "OWNER"
+    choices = [("OWNER", "Owner-operated"), ("TEAM", "Team approval")]
+    required = True
+
+
+@register_workspace_and_global
+class AccountingIntegrationMode(ChoicePreference):
+    section = accounting
+    name = "integration_mode"
+    default = "DEFERRED"
+    choices = [("DEFERRED", "Deferred"), ("DEA", "DEA")]
+    required = True
+
+
+@register_workspace_and_global
 class LoanDefaultDate(StringPreference):
     section = loan
     name = "default_date"

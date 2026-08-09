@@ -38,6 +38,9 @@ class PreferenceService:
             "loan__notice_timing_days",
             "loan__auction_timing_days",
             "loan__new_module_enabled",
+            "accounting__successor_enabled",
+            "accounting__workflow_mode",
+            "accounting__integration_mode",
         }
     )
 
@@ -74,6 +77,11 @@ class PreferenceService:
             return default
 
     @classmethod
+    def _invalidate_manager_cache(cls, manager, key):
+        section, name = manager.parse_lookup(cls.normalize_key(key))
+        manager.cache.delete(manager.get_cache_key(section, name))
+
+    @classmethod
     def _audit(
         cls,
         *,
@@ -105,6 +113,7 @@ class PreferenceService:
         manager = global_preferences_registry.manager()
         old_value = cls._safe_get(manager, normalized_key, None)
         manager[normalized_key] = value
+        cls._invalidate_manager_cache(manager, normalized_key)
         cls._audit(
             scope=PreferenceAuditLog.Scope.GLOBAL,
             key=normalized_key,
@@ -176,6 +185,7 @@ class PreferenceService:
         manager = workspace_preferences_registry.manager(instance=workspace)
         old_value = cls._safe_get(manager, normalized_key, None)
         manager[normalized_key] = value
+        cls._invalidate_manager_cache(manager, normalized_key)
         cls._audit(
             scope=PreferenceAuditLog.Scope.WORKSPACE,
             key=normalized_key,
@@ -214,6 +224,7 @@ class PreferenceService:
         manager = user_preferences_registry.manager(instance=user)
         old_value = cls._safe_get(manager, normalized_key, None)
         manager[normalized_key] = value
+        cls._invalidate_manager_cache(manager, normalized_key)
         cls._audit(
             scope=PreferenceAuditLog.Scope.USER,
             key=normalized_key,
