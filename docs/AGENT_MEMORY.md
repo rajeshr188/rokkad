@@ -8,6 +8,16 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Loans usability UP1 adds capture-first collateral media without changing the
+evidence model: mobile inputs request the rear camera, desktop browsers can use
+an in-page webcam dialog, and all captures submit through existing validated,
+immutable photo services. `docs/plans/loans-usability-and-url-consistency.md`
+tracks UP2 pagination/contextual django-filter work and UP3 canonical URL
+migration. Current `/w/<slug>/loans`, `/loans/internal`, and `/loans/setup`
+planes are inconsistent; several workspace-slug loan detail/report aliases
+still call Girvi directly. URL cleanup requires an ADR, feature-aware aliases,
+and safe compatibility handling rather than a mass rename.
+
 P12 was accepted by the workspace Owner on 2026-08-10. All twelve Loans
 capability scenarios are accepted. LPD7.1-LPD7.4 are implemented: physical
 print profiles are immutable tenant evidence resolved by `Series -> Workspace

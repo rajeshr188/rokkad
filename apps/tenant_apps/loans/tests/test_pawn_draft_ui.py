@@ -116,6 +116,8 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(detail, loan.loan_number)
         self.assertContains(detail, "Recommended next step")
         self.assertContains(detail, "Approve loan")
+        self.assertContains(detail, "Capture collateral photograph")
+        self.assertContains(detail, 'capture="environment"')
         self.assertNotContains(detail, "Loan ticket PDF")
         ticket = self.client.get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]))
         self.assertEqual(ticket.status_code, 409)
@@ -123,6 +125,9 @@ class PawnDraftUiTests(TenantTestCase):
         edit = self.client.get(reverse("loans:pawn_loan_update", args=[loan.pk]))
         self.assertContains(edit, "Official loan number")
         self.assertContains(edit, loan.loan_number)
+        self.assertContains(edit, "Use camera/webcam")
+        self.assertContains(edit, "loans/collateral_camera.js")
+        self.assertContains(edit, 'capture="environment"')
 
         payload = self._payload(license, series)
         payload["collateral-0-allocated_principal"] = "12500.00"
@@ -1110,6 +1115,8 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(page, "Renewal-day interest")
         self.assertContains(page, "Successor and cash preview")
         self.assertContains(page, "I confirm the source settlement")
+        self.assertContains(page, "Use camera/webcam")
+        self.assertContains(page, "Capture collateral photograph")
 
     def _configured_setup(self):
         license = LoanLicense.objects.create(

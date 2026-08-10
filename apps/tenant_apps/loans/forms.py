@@ -700,6 +700,11 @@ class PawnCollateralDraftForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["allocated_principal"].required = True
+        self.fields["photograph"].widget.attrs.update({
+            "class": "form-control js-collateral-photo-input",
+            "accept": "image/jpeg,image/png",
+            "capture": "environment",
+        })
         self.fields["metal"].choices = [
             (item.value, item.name.title())
             for item in CollateralMetal
@@ -724,7 +729,11 @@ class PawnCollateralPhotoForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["photograph"].widget.attrs["class"] = "form-control"
+        self.fields["photograph"].widget.attrs.update({
+            "class": "form-control js-collateral-photo-input",
+            "accept": "image/jpeg,image/png",
+            "capture": "environment",
+        })
 
 
 class PawnStorageLocationForm(forms.Form):

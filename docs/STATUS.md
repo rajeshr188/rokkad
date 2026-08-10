@@ -10,6 +10,16 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Loans usability follow-up UP1 is complete. Draft/edit, post-draft collateral
+  append, and release-and-renew additional collateral now support direct mobile
+  rear-camera intent and an in-page desktop webcam capture dialog. Captured
+  JPEGs still pass through the existing server-side media validation and
+  immutable hash evidence. The active usability plan records bounded
+  django-filter/Paginator tables as UP2 and canonical workspace Loans URLs as
+  ADR-gated UP3; the audit confirms current `/w/<slug>/loans`,
+  `/loans/internal`, and `/loans/setup` planes are inconsistent and some slug
+  detail/report aliases still delegate directly to Girvi.
+
 - P12 was accepted by the workspace Owner on 2026-08-10; all twelve Loans
   capability scenarios are accepted. LPD7.4 is complete. New configurable
   loan-ticket issues now resolve `Series -> Workspace -> built-in` physical

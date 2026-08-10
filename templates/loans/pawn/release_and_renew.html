@@ -54,7 +54,7 @@
     <p class="small text-muted">Optional. Complete a row only when new collateral is entering the successor loan.</p>
     {{ additional_formset.management_form }}
     {% for error in additional_formset.non_form_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
-    {% for item_form in additional_formset %}<div class="border rounded p-3 mb-3">{% for field in item_form.hidden_fields %}{{ field }}{% endfor %}<div class="row g-3">{% for field in item_form.visible_fields %}<div class="{% if field.name == 'description' or field.name == 'photograph' %}col-md-6{% else %}col-md-3{% endif %}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endfor %}</div></div>{% endfor %}
+    {% for item_form in additional_formset %}<div class="border rounded p-3 mb-3">{% for field in item_form.hidden_fields %}{{ field }}{% endfor %}<div class="row g-3">{% for field in item_form.visible_fields %}<div class="{% if field.name == 'description' or field.name == 'photograph' %}col-md-6{% else %}col-md-3{% endif %}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.name == 'photograph' %}<div class="input-group">{{ field }}<button class="btn btn-outline-primary js-collateral-camera" type="button" data-photo-input="{{ field.id_for_label }}">Use camera/webcam</button></div>{% else %}{{ field }}{% endif %}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endfor %}</div></div>{% endfor %}
   </div></div>
 
   <div class="alert alert-info">Successor allocations must equal current principal minus principal paid, plus top-up. Current metal-rate and LTV policies are validated before anything is committed.</div>
@@ -64,6 +64,7 @@
   <button class="btn btn-primary" type="submit">Complete release and renew</button>
   <a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a>
 </form>
+{% include "loans/pawn/_camera_capture.html" %}
 {% if not renewal_quote.error %}<script>
 (() => {
   const calculator = document.getElementById("renewal-calculator");
