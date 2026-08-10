@@ -15,7 +15,7 @@ from .base import BasePostingRule
 @register_rule("PAWN_LOAN_RENEWAL")
 class PawnLoanRenewalRule(BasePostingRule):
     voucher_type = "PAWN_LOAN_RENEWAL"
-    rule_version = "1"
+    rule_version = "2"
 
     def build_posting(self, ctx) -> PostingBundle:
         event = ctx.doc
@@ -30,6 +30,14 @@ class PawnLoanRenewalRule(BasePostingRule):
         successor_control = _amount(renewal, "successor_control_principal")
         interest = _amount(values, "interest")
         fees = _amount(values, "fees")
+        successor_advance_interest = _amount(
+            renewal,
+            "successor_advance_interest",
+        )
+        successor_deducted_fees = _amount(
+            renewal,
+            "successor_deducted_fees",
+        )
         if not renewal.get("successor_loan_id"):
             raise ValidationError("Renewal successor identity is required.")
 
@@ -82,6 +90,33 @@ class PawnLoanRenewalRule(BasePostingRule):
                     cash_id,
                     _ledger_id("DOCUMENT_CHARGE_INCOME"),
                     fees,
+                    currency,
+                )
+            )
+        if successor_advance_interest:
+            successor_recognition = renewal.get(
+                "successor_accounting_recognition",
+                "CASH",
+            )
+            destination = (
+                "Unearned Revenue"
+                if successor_recognition == "ACCRUAL"
+                else "INTEREST_INCOME"
+            )
+            ledger_lines.append(
+                _line(
+                    cash_id,
+                    _ledger_id(destination),
+                    successor_advance_interest,
+                    currency,
+                )
+            )
+        if successor_deducted_fees:
+            ledger_lines.append(
+                _line(
+                    cash_id,
+                    _ledger_id("DOCUMENT_CHARGE_INCOME"),
+                    successor_deducted_fees,
                     currency,
                 )
             )

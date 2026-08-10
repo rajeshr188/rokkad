@@ -10,23 +10,20 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
-- P7 release-and-renew operator-readiness pass is complete. A tenant-scoped,
-  non-writing and non-locking source preview now exposes source principal,
-  existing interest, renewal-day interest, fees, and base cash collection.
-  The form gives a live successor-principal/allocation/net-cash projection,
-  requires explicit plan confirmation, validates paydown/top-up exclusivity,
-  reports returned/retained/added counts plus both accounting dispositions,
-  and issues a correctly named renewal agreement. Seven focused lifecycle,
-  LTV, idempotency, UI, document, and composite-reversal tests pass; the
-  preview also succeeds outside a transaction on active `jcl1` PawnLoan 7.
-  Tenant migration `loans.0035` is applied to all local schemas.
-
-- One accepted P7 economic requirement remains explicit rather than hidden:
-  renewal approval snapshots calculate fresh successor advance interest and
-  fee deductions, but the current renewal settlement/opening does not yet
-  collect/post those deductions or give successor accruals prepaid-interest
-  evidence. Implement that accounting slice or explicitly re-scope it before
-  final P7 acceptance.
+- P7 successor-economics execution is complete. Release and Renew now requires
+  an exact server-calculated preview before confirmation and freezes the fresh
+  successor policy, item rates, advance interest, deducted fees, and gross-to-
+  net cash handoff. The settlement event posts source dues/principal movement
+  and successor deductions as separate gross facts; cash recognition credits
+  interest income while accrual recognition credits Unearned Revenue. The
+  successor opening carries per-item prepaid-interest evidence, so the first
+  covered accrual consumes it without charging the borrower twice. Renewal
+  agreement output and reconciliation expose the same values, and composite
+  reversal reverses the complete voucher. A one-item compatibility call may
+  infer its sole successor allocation; multi-item renewal requires an explicit
+  allocation plan. Tenant migration `loans.0036` is applied to every local
+  schema. Focused UI, document, DEA-contract, lifecycle, accrual, reporting,
+  and reversal tests pass. P7 now awaits Owner operator/document acceptance.
 
 - P6 full release was accepted by the workspace Owner on 2026-08-10 after the
   exact non-locking settlement quote, complete collateral handoff, closure,

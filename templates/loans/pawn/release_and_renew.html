@@ -22,7 +22,7 @@
   {% endif %}
 </div></div>
 
-<form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+<form id="renewal-form" method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
   {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
   <div class="card mb-4"><div class="card-body"><h2 class="h5">Successor terms</h2><div class="row g-3">
     {% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.name != 'confirm_renewal_plan' %}<div class="col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endif %}{% endfor %}
@@ -31,7 +31,7 @@
   {% if not renewal_quote.error %}<div class="card mb-4"><div class="card-header">Successor and cash preview</div><div class="card-body"><div class="row g-3">
     <div class="col-md-4"><div class="small text-muted">Successor principal</div><strong id="renewal-successor-principal">—</strong><div class="small text-muted">source principal − principal paid + top-up</div></div>
     <div class="col-md-4"><div class="small text-muted">Successor allocations entered</div><strong id="renewal-allocation-total">—</strong><div class="small" id="renewal-allocation-status"></div></div>
-    <div class="col-md-4"><div class="small text-muted">Net cash handoff today</div><strong id="renewal-net-cash">—</strong><div class="small text-muted">interest + fees + principal paid − top-up</div></div>
+    <div class="col-md-4"><div class="small text-muted">Source-only cash estimate</div><strong id="renewal-net-cash">—</strong><div class="small text-muted">Calculate exact renewal to include fresh successor advance interest and fees.</div></div>
   </div></div></div>{% endif %}
 
   <div class="card mb-4"><div class="card-body">
@@ -58,6 +58,8 @@
   </div></div>
 
   <div class="alert alert-info">Successor allocations must equal current principal minus principal paid, plus top-up. Current metal-rate and LTV policies are validated before anything is committed.</div>
+  <div id="renewal-exact-preview" class="alert alert-secondary d-none" role="status"></div>
+  <button class="btn btn-outline-primary mb-3" id="calculate-renewal" type="button">Calculate exact renewal</button>
   <div class="form-check mb-3">{{ form.confirm_renewal_plan }}<label class="form-check-label" for="{{ form.confirm_renewal_plan.id_for_label }}">{{ form.confirm_renewal_plan.label }}</label>{% for error in form.confirm_renewal_plan.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
   <button class="btn btn-primary" type="submit">Complete release and renew</button>
   <a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a>
@@ -66,6 +68,10 @@
 (() => {
   const calculator = document.getElementById("renewal-calculator");
   if (!calculator) return;
+  const form = document.getElementById("renewal-form");
+  const calculateButton = document.getElementById("calculate-renewal");
+  const exactNode = document.getElementById("renewal-exact-preview");
+  const fingerprintInput = document.getElementById("id_preview_fingerprint");
   const amount = value => Number.parseFloat(value || "0") || 0;
   const principalInput = document.getElementById("id_principal_paid");
   const topUpInput = document.getElementById("id_top_up_amount");
@@ -90,7 +96,43 @@
     const netCash = amount(calculator.dataset.baseCash) + amount(principalInput.value) - amount(topUpInput.value);
     netCashNode.textContent = netCash >= 0 ? `Collect ${netCash.toFixed(2)} from customer` : `Pay ${Math.abs(netCash).toFixed(2)} to customer`;
   };
-  document.querySelector("form").addEventListener("input", refresh);
+  form.addEventListener("input", event => {
+    if (event.target !== fingerprintInput) {
+      fingerprintInput.value = "";
+      exactNode.classList.add("d-none");
+    }
+    refresh();
+  });
+  calculateButton.addEventListener("click", async () => {
+    calculateButton.disabled = true;
+    exactNode.className = "alert alert-secondary";
+    exactNode.textContent = "Calculating current policy, item LTV, successor deductions, and cash handoff…";
+    const data = new FormData(form);
+    data.set("action", "preview");
+    try {
+      const response = await fetch(form.action || window.location.href, {
+        method: "POST",
+        body: data,
+        headers: {"X-Requested-With": "XMLHttpRequest"},
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.message || "Renewal preview failed.");
+      fingerprintInput.value = result.fingerprint;
+      const handoff = result.net_cash_direction === "COLLECT_FROM_CUSTOMER"
+        ? `Collect ${result.net_cash_amount} from customer`
+        : result.net_cash_direction === "PAY_TO_CUSTOMER"
+          ? `Pay ${result.net_cash_amount} to customer`
+          : "No net cash handoff";
+      exactNode.className = "alert alert-success";
+      exactNode.innerHTML = `<strong>Exact renewal:</strong> successor principal ${result.successor_principal}; monthly interest ${result.successor_monthly_interest}; fresh advance interest ${result.successor_advance_interest}; fresh deducted fees ${result.successor_deducted_fees}; <strong>${handoff}</strong>. Returned ${result.returned_count}, retained ${result.retained_count}, successor collateral ${result.successor_collateral_count}.`;
+    } catch (error) {
+      fingerprintInput.value = "";
+      exactNode.className = "alert alert-danger";
+      exactNode.textContent = error.message;
+    } finally {
+      calculateButton.disabled = false;
+    }
+  });
   refresh();
 })();
 </script>{% endif %}

@@ -88,6 +88,8 @@ def deliver_loan_accounting_event(event):
         if (
             Decimal(str(values.get("interest", "0"))) == 0
             and Decimal(str(values.get("fees", "0"))) == 0
+            and Decimal(str(renewal.get("successor_advance_interest", "0"))) == 0
+            and Decimal(str(renewal.get("successor_deducted_fees", "0"))) == 0
             and Decimal(str(renewal.get("source_control_principal", "0")))
             == Decimal(str(renewal.get("successor_control_principal", "0")))
         ):

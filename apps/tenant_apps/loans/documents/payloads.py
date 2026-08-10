@@ -80,6 +80,9 @@ class PawnLoanDocumentProjectionBuilder:
         "Principal paid": "renewal.principal_paid", "Top-up disbursed": "renewal.top_up_disbursed",
         "Successor principal": "renewal.successor_principal", "Settlement accounting": "renewal.settlement_accounting",
         "Successor opening": "renewal.successor_opening",
+        "Successor advance interest": "renewal.successor_advance_interest",
+        "Successor deducted fees": "renewal.successor_deducted_fees",
+        "Net cash handoff": "renewal.net_cash_handoff",
     }
     SECTION_KEYS = {
         "Collateral": "collateral.items", "Collateral principal allocation": "repayment.principal_allocations",
@@ -284,6 +287,20 @@ class PawnLoanDocumentProjectionBuilder:
         source, successor = renewal.source_loan, renewal.successor_loan
         reversal = cls._related_or_none(renewal, "reversal")
         verification = cls._verification(source, f"renewal:{renewal.pk}:{renewal.settlement_event.payload_fingerprint}")
+        cash_received = (
+            renewal.interest_settled
+            + renewal.fees_settled
+            + renewal.principal_paid
+            + renewal.successor_advance_interest
+            + renewal.successor_deducted_fees
+        )
+        net_cash = cash_received - renewal.top_up_amount
+        if net_cash > 0:
+            net_cash_handoff = f"Collect {cls._money(net_cash)} from customer"
+        elif net_cash < 0:
+            net_cash_handoff = f"Pay {cls._money(-net_cash)} to customer"
+        else:
+            net_cash_handoff = "No net cash handoff"
         details = cls._identity_rows(source) + (
             ("Document", "Pawn loan renewal agreement"),
             ("Renewal source ID", f"PawnLoanRenewal:{renewal.pk}"),
@@ -298,6 +315,9 @@ class PawnLoanDocumentProjectionBuilder:
             ("Principal paid", cls._money(renewal.principal_paid)),
             ("Top-up disbursed", cls._money(renewal.top_up_amount)),
             ("Successor principal", cls._money(renewal.successor_principal_amount)),
+            ("Successor advance interest", cls._money(renewal.successor_advance_interest)),
+            ("Successor deducted fees", cls._money(renewal.successor_deducted_fees)),
+            ("Net cash handoff", net_cash_handoff),
             ("Settlement accounting", renewal.settlement_event.outbox.get_status_display()),
             ("Successor opening", renewal.opening_event.outbox.get_status_display()),
         )

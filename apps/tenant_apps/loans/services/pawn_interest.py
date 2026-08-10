@@ -250,12 +250,31 @@ def _itemized_accrual_lines(
             if opening_event
             else ()
         )
+        opening_economics = (
+            (opening_event.payload.get("renewal") or {}).get(
+                "successor_economics"
+            )
+            if opening_event
+            else None
+        ) or {}
+        opening_tranches = {
+            int(item["collateral_item_id"]): item
+            for item in opening_economics.get("tranches", ())
+            if item.get("collateral_item_id") is not None
+        }
         tranches = tuple(
             {
                 "collateral_item_id": line.collateral_item_id,
                 "allocated_principal": line.principal_opened,
                 "monthly_interest_rate": line.monthly_interest_rate,
-                "advance_interest": Decimal("0"),
+                "advance_interest": Decimal(
+                    str(
+                        opening_tranches.get(line.collateral_item_id, {}).get(
+                            "advance_interest",
+                            "0",
+                        )
+                    )
+                ),
             }
             for line in opening_lines
         )

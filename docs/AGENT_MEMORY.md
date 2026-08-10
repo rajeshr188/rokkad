@@ -8,21 +8,19 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
-P7 operator-readiness is implemented. `preview_pawn_loan_renewal_source` is a
-tenant-scoped, non-writing, non-locking source quote with renewal-day interest;
-the browser derives successor principal, entered allocation total, and net
-cash direction, then the transactional command independently revalidates all
-facts. Confirmation is mandatory, completion reports collateral counts and
-both outbox dispositions, and legal output is named Renewal Agreement. Seven
-focused tests pass, the preview was verified outside a transaction on `jcl1`
-PawnLoan 7, and tenant migration `loans.0035` is applied.
-
-Do not silently declare final P7 economic parity yet. The accepted release-and-
-renew ADR requires fresh successor fee and advance-interest evidence. Approval
-already calculates those values, but renewal settlement/opening does not yet
-collect/post them and successor accrual opening lines currently carry zero
-prepaid interest. This needs a focused accounting implementation or an explicit
-scope decision before P7 acceptance.
+P7 software execution is complete and awaits Owner operator/document
+acceptance. `preview_pawn_loan_renewal_plan` is the tenant-scoped, non-writing
+exact preflight: it includes source dues, successor principal/monthly interest,
+fresh advance interest and deducted fees, collateral counts, and net cash
+direction. The UI must submit its fingerprint, and the atomic command must
+recalculate and reject stale economics. Renewal freezes the current successor
+policy rather than cloning the source policy. Settlement preserves source
+dues, principal delta, successor advance interest, and successor fees as
+separate gross accounting facts. Successor opening evidence feeds itemized
+accruals so prepaid interest is consumed once. Cash recognition credits income;
+accrual recognition credits Unearned Revenue until accrual. Renewal documents,
+reconciliation, and composite reversal include the full economics. Migration
+`loans.0036` is applied to all local schemas.
 
 P6 full release was accepted by the workspace Owner on 2026-08-10. P7 release
 and renew is active. Preserve the accepted boundary: close the source contract,

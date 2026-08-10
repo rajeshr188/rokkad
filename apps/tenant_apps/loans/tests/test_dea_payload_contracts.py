@@ -247,6 +247,8 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                 "renewal": {
                     "source_control_principal": "10000",
                     "successor_control_principal": "10000",
+                    "successor_advance_interest": "0",
+                    "successor_deducted_fees": "0",
                 },
             },
             created_by=None,
@@ -275,6 +277,9 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
                     "source_control_principal": "10000",
                     "successor_control_principal": "8500",
                     "accounting_recognition": "CASH",
+                    "successor_accounting_recognition": "CASH",
+                    "successor_advance_interest": "170",
+                    "successor_deducted_fees": "30",
                 },
             },
             loan=SimpleNamespace(borrower=object()),
@@ -297,9 +302,55 @@ class PawnLoanDeaPayloadContractTests(SimpleTestCase):
 
         self.assertEqual(
             [line.amount for line in bundle.ledger_lines],
-            [Decimal("1500"), Decimal("200"), Decimal("50")],
+            [
+                Decimal("1500"),
+                Decimal("200"),
+                Decimal("50"),
+                Decimal("170"),
+                Decimal("30"),
+            ],
         )
         self.assertEqual(bundle.account_lines[0].amount, Decimal("1500"))
+
+    def test_renewal_rule_defers_successor_advance_interest_under_accrual(self):
+        event = SimpleNamespace(
+            pk=18,
+            idempotency_key="renewal-18",
+            payload_fingerprint="fingerprint-18",
+            effective_date=self.effective_date,
+            event_kind=TransactionKind.RENEWAL_SETTLEMENT.value,
+            payload={
+                "currency": "INR",
+                "values": {"interest": "0", "fees": "0"},
+                "renewal": {
+                    "successor_loan_id": 73,
+                    "source_control_principal": "10000",
+                    "successor_control_principal": "10000",
+                    "successor_accounting_recognition": "ACCRUAL",
+                    "successor_advance_interest": "200",
+                    "successor_deducted_fees": "0",
+                },
+            },
+            loan=SimpleNamespace(borrower=object()),
+        )
+        ledger_ids = {
+            "CASH": 1,
+            "LOAN_PRINCIPAL_CTRL": 2,
+            "Unearned Revenue": 3,
+        }
+        with patch(
+            "apps.tenant_apps.dea.posting.rules.pawn_loan_renewal.resolve_party_account",
+            return_value=SimpleNamespace(account=SimpleNamespace(pk=99)),
+        ), patch(
+            "apps.tenant_apps.dea.posting.rules.pawn_loan_renewal._ledger_id",
+            side_effect=lambda key: ledger_ids[key],
+        ):
+            bundle = PawnLoanRenewalRule().build_posting(SimpleNamespace(doc=event))
+
+        self.assertEqual(len(bundle.ledger_lines), 1)
+        self.assertEqual(bundle.ledger_lines[0].credit_ledger_id, 3)
+        self.assertEqual(bundle.ledger_lines[0].amount, Decimal("200"))
+        self.assertEqual(bundle.account_lines, [])
 
     def test_auction_rule_reads_accrual_recognition_from_auction_snapshot(self):
         event = SimpleNamespace(

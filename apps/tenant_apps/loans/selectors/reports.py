@@ -633,6 +633,8 @@ def _requires_dea_reference(event):
                 source_control - successor_control,
                 Decimal(str(values.get("interest", "0"))),
                 Decimal(str(values.get("fees", "0"))),
+                Decimal(str(renewal.get("successor_advance_interest", "0"))),
+                Decimal(str(renewal.get("successor_deducted_fees", "0"))),
             )
         )
     if event.event_kind == TransactionKind.REVERSAL.value:
@@ -662,7 +664,9 @@ def _event_amount(event):
         )
         return abs(source_control - successor_control) + Decimal(
             str(values.get("interest", "0"))
-        ) + Decimal(str(values.get("fees", "0")))
+        ) + Decimal(str(values.get("fees", "0"))) + Decimal(
+            str(renewal.get("successor_advance_interest", "0"))
+        ) + Decimal(str(renewal.get("successor_deducted_fees", "0")))
     elif kind == TransactionKind.RENEWAL_OPENING.value:
         return ZERO
     else:

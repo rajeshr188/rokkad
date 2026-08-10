@@ -1028,6 +1028,11 @@ class PawnRenewalForm(forms.Form):
     successor_series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
     tenure_months = forms.IntegerField(min_value=1, max_value=600)
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+    preview_fingerprint = forms.CharField(
+        max_length=64,
+        required=False,
+        widget=forms.HiddenInput(),
+    )
     confirm_renewal_plan = forms.BooleanField(
         label=(
             "I confirm the source settlement, returned items, retained items, "

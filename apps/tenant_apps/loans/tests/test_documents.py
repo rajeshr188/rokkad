@@ -308,6 +308,8 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             source_principal_amount=Decimal("10000"),
             interest_settled=Decimal("0"),
             fees_settled=Decimal("0"),
+            successor_advance_interest=Decimal("200"),
+            successor_deducted_fees=Decimal("50"),
             principal_paid=Decimal("0"),
             top_up_amount=Decimal("0"),
             successor_principal_amount=Decimal("10000"),
@@ -337,6 +339,9 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             for page in fitz.open(stream=result.pdf, filetype="pdf")
         )
         self.assertIn("Pawn Loan Renewal Agreement", text)
+        self.assertIn("Successor advance interest", text)
+        self.assertIn("Successor deducted fees", text)
+        self.assertIn("Net cash handoff", text)
         custom = ConfigurableDocumentRenderer.render(
             PawnLoanDocumentProjectionBuilder.renewal_memo(renewal),
             starter_layout("renewal"),

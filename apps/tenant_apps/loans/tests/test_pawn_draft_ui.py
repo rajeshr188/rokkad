@@ -743,6 +743,22 @@ class PawnDraftUiTests(TenantTestCase):
             base_cash_received=Decimal("100.00"),
             balance=SimpleNamespace(interest_outstanding=Decimal("0.00")),
         )
+        exact_plan = SimpleNamespace(
+            fingerprint="renewal-preview-fingerprint",
+            source=quote,
+            successor_principal=Decimal("9000.00"),
+            successor_monthly_interest=Decimal("180.00"),
+            successor_advance_interest=Decimal("180.00"),
+            successor_deducted_fees=Decimal("50.00"),
+            principal_paid=Decimal("1000.00"),
+            total_cash_received=Decimal("1330.00"),
+            top_up_amount=Decimal("0.00"),
+            net_cash_amount=Decimal("1330.00"),
+            net_cash_direction="COLLECT_FROM_CUSTOMER",
+            retained_item_ids=frozenset((collateral.pk,)),
+            returned_item_ids=(),
+            successor_collateral_count=1,
+        )
         payload = {
             "mode": "PAY_AND_RENEW",
             "principal_paid": "1000.00",
@@ -779,10 +795,15 @@ class PawnDraftUiTests(TenantTestCase):
         command.assert_not_called()
 
         payload["confirm_renewal_plan"] = "on"
+        payload["preview_fingerprint"] = exact_plan.fingerprint
         with (
             patch(
                 "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
                 return_value=quote,
+            ),
+            patch(
+                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_plan",
+                return_value=exact_plan,
             ),
             patch(
                 "apps.tenant_apps.loans.views.renew_pawn_loan",
@@ -802,6 +823,38 @@ class PawnDraftUiTests(TenantTestCase):
             Decimal("9000.00"),
         )
         self.assertEqual(call["additional_collateral"], ())
+        self.assertEqual(
+            call["expected_preview_fingerprint"],
+            exact_plan.fingerprint,
+        )
+
+        preview_payload = dict(payload)
+        preview_payload.pop("confirm_renewal_plan")
+        preview_payload.pop("preview_fingerprint")
+        preview_payload["action"] = "preview"
+        with (
+            patch(
+                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
+                return_value=quote,
+            ),
+            patch(
+                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_plan",
+                return_value=exact_plan,
+            ),
+            patch("apps.tenant_apps.loans.views.renew_pawn_loan") as command,
+        ):
+            preview_response = self.client.post(
+                reverse("loans:pawn_loan_renew", args=[loan.pk]),
+                preview_payload,
+            )
+        self.assertEqual(preview_response.status_code, 200)
+        self.assertEqual(
+            preview_response.json()["fingerprint"], exact_plan.fingerprint
+        )
+        self.assertEqual(
+            preview_response.json()["successor_advance_interest"], "180.00"
+        )
+        command.assert_not_called()
 
         with patch(
             "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",

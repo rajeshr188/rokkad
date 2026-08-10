@@ -2222,6 +2222,16 @@ class PawnLoanRenewal(models.Model):
     top_up_amount = models.DecimalField(max_digits=18, decimal_places=4)
     successor_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
     successor_capitalized_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    successor_advance_interest = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+    )
+    successor_deducted_fees = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+    )
     valuation_snapshot = models.JSONField(default=dict)
     settlement_event = models.OneToOneField(
         PawnLoanAccountingEvent,
@@ -2284,6 +2294,8 @@ class PawnLoanRenewal(models.Model):
             self.top_up_amount,
             self.successor_principal_amount,
             self.successor_capitalized_principal_amount,
+            self.successor_advance_interest,
+            self.successor_deducted_fees,
         )
         if any(value is None or value < 0 for value in amounts):
             errors["successor_principal_amount"] = "Renewal amounts must be non-negative."

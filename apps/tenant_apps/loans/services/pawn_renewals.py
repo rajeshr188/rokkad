@@ -26,7 +26,9 @@ from apps.tenant_apps.loans.integrations import (
 )
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
+    LoanLicense,
     LoanPolicySnapshot,
+    LoanSeries,
     PawnCollateralCustodyEvent,
     PawnCollateralItem,
     PawnLoan,
@@ -58,6 +60,10 @@ from apps.tenant_apps.loans.services.pawn_drafts import (
     CreatePawnDraftCommand,
     create_pawn_draft,
 )
+from apps.tenant_apps.loans.services.pawn_economics import (
+    resolve_pawn_draft_economics,
+)
+from apps.tenant_apps.loans.services.license_series import assert_series_can_issue
 from apps.tenant_apps.loans.services.pawn_interest import (
     build_pawn_accrual_detail,
     persist_pawn_accrual_lines,
@@ -149,6 +155,42 @@ class PawnRenewalSourcePreview:
         return self.readiness.item_valuations
 
 
+@dataclass(frozen=True)
+class PawnRenewalPlanPreview:
+    fingerprint: str
+    source: PawnRenewalSourcePreview
+    successor_principal: Decimal
+    successor_monthly_interest: Decimal
+    successor_advance_interest: Decimal
+    successor_deducted_fees: Decimal
+    principal_paid: Decimal
+    top_up_amount: Decimal
+    retained_item_ids: frozenset[int]
+    returned_item_ids: tuple[int, ...]
+    successor_collateral_count: int
+
+    @property
+    def total_cash_received(self):
+        return (
+            self.source.base_cash_received
+            + self.principal_paid
+            + self.successor_advance_interest
+            + self.successor_deducted_fees
+        )
+
+    @property
+    def net_cash_amount(self):
+        return self.total_cash_received - self.top_up_amount
+
+    @property
+    def net_cash_direction(self):
+        if self.net_cash_amount > 0:
+            return "COLLECT_FROM_CUSTOMER"
+        if self.net_cash_amount < 0:
+            return "PAY_TO_CUSTOMER"
+        return "NO_NET_CASH"
+
+
 def preview_pawn_loan_renewal_source(
     source_loan_id: int,
 ) -> PawnRenewalSourcePreview:
@@ -220,6 +262,117 @@ def preview_pawn_loan_renewal_source(
     )
 
 
+def preview_pawn_loan_renewal_plan(
+    source_loan_id: int,
+    *,
+    mode,
+    principal_paid,
+    top_up_amount,
+    successor_license_id: int,
+    successor_series_id: int,
+    tenure_months: int,
+    retained_collateral: tuple[RetainedCollateralInput, ...],
+    additional_collateral: tuple[CollateralDraftInput, ...] = (),
+) -> PawnRenewalPlanPreview:
+    """Validate and price a complete renewal plan without allocating a number."""
+    source_preview = preview_pawn_loan_renewal_source(source_loan_id)
+    source = source_preview.source_loan
+    try:
+        renewal_mode = PawnLoanRenewalMode(mode)
+    except ValueError as exc:
+        raise PawnRenewalError("Unknown PawnLoan renewal mode.") from exc
+    principal_paid = _money(principal_paid, source)
+    top_up_amount = _money(top_up_amount, source)
+    if not 1 <= int(tenure_months) <= 600:
+        raise PawnRenewalError("Renewal tenure must be between 1 and 600 months.")
+    if renewal_mode == PawnLoanRenewalMode.PAY_AND_RENEW:
+        if top_up_amount != 0:
+            raise PawnRenewalError("Pay-and-renew cannot include a top-up amount.")
+    elif top_up_amount <= 0 or principal_paid != 0:
+        raise PawnRenewalError(
+            "Top-up renewal requires a positive top-up and no simultaneous principal paydown."
+        )
+    balance = source_preview.balance
+    if principal_paid >= balance.principal_outstanding:
+        raise PawnRenewalError(
+            "Renewal must carry a positive principal; use full release to settle the loan."
+        )
+    quantum = Decimal(str(source.policy_snapshot.currency_quantum)).normalize()
+    successor_principal = (
+        balance.principal_outstanding - principal_paid + top_up_amount
+    ).quantize(quantum)
+    successor_collateral, retained_ids = _successor_collateral_plan(
+        source_preview.source_items,
+        retained_collateral=retained_collateral,
+        additional_collateral=additional_collateral,
+        successor_principal=successor_principal,
+    )
+    workspace_id = source.workspace_id
+    try:
+        license = LoanLicense.objects.get(
+            pk=successor_license_id,
+            workspace_id=workspace_id,
+        )
+        series = LoanSeries.objects.select_related("license").get(
+            pk=successor_series_id,
+            license=license,
+        )
+        assert_series_can_issue(series, as_of_date=timezone.localdate())
+        resolved = resolve_pawn_draft_economics(
+            workspace_id=workspace_id,
+            license_id=license.pk,
+            as_of_date=timezone.localdate(),
+            collateral=successor_collateral,
+        )
+    except (LoanLicense.DoesNotExist, LoanSeries.DoesNotExist) as exc:
+        raise PawnRenewalError(
+            "Successor license and series must belong to the active workspace."
+        ) from exc
+    except Exception as exc:
+        raise PawnRenewalError(str(exc)) from exc
+    economics = resolved.economics
+    if economics.gross_principal != successor_principal:
+        raise PawnRenewalError(
+            "Successor collateral allocations do not reconcile to successor principal."
+        )
+    if balance.capitalized_interest_principal_outstanding:
+        raise PawnRenewalError(
+            "Release and renew cannot carry capitalized interest until it has "
+            "explicit successor-item attribution. Settle it before renewal."
+        )
+    return PawnRenewalPlanPreview(
+        fingerprint=_renewal_plan_fingerprint(
+            source_loan_id=source.pk,
+            effective_date=timezone.localdate(),
+            mode=renewal_mode.value,
+            principal_paid=principal_paid,
+            top_up_amount=top_up_amount,
+            successor_license_id=license.pk,
+            successor_series_id=series.pk,
+            tenure_months=int(tenure_months),
+            retained_collateral=retained_collateral,
+            additional_collateral=additional_collateral,
+            successor_principal=successor_principal,
+            successor_advance_interest=economics.advance_interest,
+            successor_deducted_fees=economics.deducted_fees,
+        ),
+        source=source_preview,
+        successor_principal=successor_principal,
+        successor_monthly_interest=economics.monthly_interest,
+        successor_advance_interest=economics.advance_interest,
+        successor_deducted_fees=economics.deducted_fees,
+        principal_paid=principal_paid,
+        top_up_amount=top_up_amount,
+        retained_item_ids=retained_ids,
+        returned_item_ids=tuple(
+            item.pk
+            for item in source_preview.source_items
+            if item.pk not in retained_ids
+        ),
+        successor_collateral_count=len(successor_collateral),
+    )
+
+
 @transaction.atomic
 def renew_pawn_loan(
     source_loan_id: int,
@@ -236,6 +389,7 @@ def renew_pawn_loan(
     retained_collateral: tuple[RetainedCollateralInput, ...] | None = None,
     additional_collateral: tuple[CollateralDraftInput, ...] = (),
     additional_photo_uploads: tuple = (),
+    expected_preview_fingerprint: str | None = None,
     actor=None,
     delivery_handler: DeliveryHandler | None = None,
 ) -> PawnRenewalResult:
@@ -430,7 +584,6 @@ def renew_pawn_loan(
         ),
         actor=actor,
     )
-    successor_policy = _clone_policy(source, successor)
     successor_items = tuple(successor.collateral_items.order_by("pk"))
     if len(successor_items) != len(successor_collateral):
         raise PawnRenewalError("Renewal collateral lineage could not be established.")
@@ -461,6 +614,59 @@ def renew_pawn_loan(
             workflow_source="RENEWAL",
         )
     approval = approve_pawn_loan(successor.pk, actor=actor)
+    successor_economics = _successor_approval_economics(successor, approval)
+    successor_policy = _successor_policy_from_approval(
+        successor,
+        successor_economics,
+    )
+    actual_preview_fingerprint = _renewal_plan_fingerprint(
+        source_loan_id=source.pk,
+        effective_date=renewal_date,
+        mode=renewal_mode.value,
+        principal_paid=principal_paid,
+        top_up_amount=top_up_amount,
+        successor_license_id=successor_license_id,
+        successor_series_id=successor_series_id,
+        tenure_months=int(tenure_months),
+        retained_collateral=retained_collateral,
+        additional_collateral=additional_collateral,
+        successor_principal=successor_principal,
+        successor_advance_interest=successor_economics["advance_interest"],
+        successor_deducted_fees=successor_economics["deducted_fees"],
+    )
+    if (
+        expected_preview_fingerprint is not None
+        and expected_preview_fingerprint != actual_preview_fingerprint
+    ):
+        raise PawnRenewalError(
+            "Renewal economics changed after preview; calculate and review it again."
+        )
+    require_pawn_loan_accounting_readiness(
+        source,
+        effective_date=renewal_date,
+        requires_fee_income=(
+            balance.fees_outstanding > 0
+            or successor_economics["deducted_fees"] > 0
+        ),
+        requires_interest_receivable=(
+            source.policy_snapshot.accounting_recognition
+            == AccountingRecognition.ACCRUAL.value
+            and balance.interest_outstanding > 0
+        ),
+        requires_unearned_interest=(
+            (
+                source.policy_snapshot.accounting_recognition
+                == AccountingRecognition.ACCRUAL.value
+                and partial is not None
+                and partial.advance_interest_applied > 0
+            )
+            or (
+                successor_policy.accounting_recognition
+                == AccountingRecognition.ACCRUAL.value
+                and successor_economics["advance_interest"] > 0
+            )
+        ),
+    )
 
     capitalized_paid = min(
         principal_paid,
@@ -513,6 +719,15 @@ def renew_pawn_loan(
         "source_control_principal": str(source_control),
         "successor_control_principal": str(successor_control),
         "accounting_recognition": source.policy_snapshot.accounting_recognition,
+        "successor_accounting_recognition": (
+            successor_policy.accounting_recognition
+        ),
+        "successor_advance_interest": str(
+            successor_economics["advance_interest"]
+        ),
+        "successor_deducted_fees": str(
+            successor_economics["deducted_fees"]
+        ),
         "catch_up_event_id": (
             catch_up.accounting_event_id if catch_up is not None else None
         ),
@@ -560,6 +775,19 @@ def renew_pawn_loan(
         "additional_successor_item_ids": [
             item.pk for item in successor_items if item.renewed_from_id is None
         ],
+        "successor_economics": {
+            "approval_snapshot_id": approval.pk,
+            "policy_snapshot_id": successor_policy.pk,
+            "accounting_recognition": successor_policy.accounting_recognition,
+            "advance_interest_periods": successor_economics[
+                "advance_interest_periods"
+            ],
+            "monthly_interest": str(successor_economics["monthly_interest"]),
+            "advance_interest": str(successor_economics["advance_interest"]),
+            "deducted_fees": str(successor_economics["deducted_fees"]),
+            "tranches": successor_economics["evidence"].get("tranches", []),
+            "fees": successor_economics["evidence"].get("fees", []),
+        },
     }
     opening_event, opening_outbox = record_loan_accounting_event(
         successor.pk,
@@ -569,22 +797,21 @@ def renew_pawn_loan(
         actor=actor,
         delivery_handler=delivery_handler,
     )
-    if retained_collateral is not None:
-        if sum(
-            (item.allocated_principal for item in successor_items), Decimal("0")
-        ) != successor_original:
-            raise PawnRenewalError(
-                "Successor item principal does not reconcile to original principal."
-            )
-        for order, item in enumerate(successor_items, start=1):
-            PawnLoanPrincipalOpeningLine.objects.create(
-                accounting_event=opening_event,
-                collateral_item=item,
-                predecessor_collateral_item=item.renewed_from,
-                allocation_order=order,
-                monthly_interest_rate=item.monthly_interest_rate,
-                principal_opened=item.allocated_principal,
-            )
+    if sum(
+        (item.allocated_principal for item in successor_items), Decimal("0")
+    ) != successor_original:
+        raise PawnRenewalError(
+            "Successor item principal does not reconcile to original principal."
+        )
+    for order, item in enumerate(successor_items, start=1):
+        PawnLoanPrincipalOpeningLine.objects.create(
+            accounting_event=opening_event,
+            collateral_item=item,
+            predecessor_collateral_item=item.renewed_from,
+            allocation_order=order,
+            monthly_interest_rate=item.monthly_interest_rate,
+            principal_opened=item.allocated_principal,
+        )
     valuation_snapshot = {
         "request_fingerprint": request_fingerprint,
         "valuation_method": readiness.valuation_method,
@@ -611,6 +838,17 @@ def renew_pawn_loan(
             for value in readiness.item_valuations
         ],
         "successor_approval_snapshot_id": approval.pk,
+        "successor_economics": {
+            "policy_snapshot_id": successor_policy.pk,
+            "advance_interest_periods": successor_economics[
+                "advance_interest_periods"
+            ],
+            "monthly_interest": str(successor_economics["monthly_interest"]),
+            "advance_interest": str(successor_economics["advance_interest"]),
+            "deducted_fees": str(successor_economics["deducted_fees"]),
+            "tranches": successor_economics["evidence"].get("tranches", []),
+            "fees": successor_economics["evidence"].get("fees", []),
+        },
         "retained_source_item_ids": list(retained_item_ids),
         "returned_source_item_ids": [
             item.pk for item in items if item.pk not in retained_item_ids
@@ -637,6 +875,8 @@ def renew_pawn_loan(
         top_up_amount=top_up_amount,
         successor_principal_amount=successor_principal,
         successor_capitalized_principal_amount=successor_capitalized,
+        successor_advance_interest=successor_economics["advance_interest"],
+        successor_deducted_fees=successor_economics["deducted_fees"],
         valuation_snapshot=valuation_snapshot,
         settlement_event=settlement_event,
         opening_event=opening_event,
@@ -972,10 +1212,49 @@ def _reverse_catch_up(renewal, *, reason, actor, delivery_handler):
     return event
 
 
-def _clone_policy(source, successor):
-    source_policy = source.policy_snapshot
-    fields = (
-        "policy_version",
+def _successor_approval_economics(successor, approval):
+    evidence = approval.payload.get("collateral_economics")
+    if evidence is None:
+        raise PawnRenewalError(
+            "Renewal successor approval is missing collateral economics."
+        )
+    try:
+        values = {
+            "gross_principal": Decimal(str(approval.payload["principal_amount"])),
+            "monthly_interest": Decimal(str(evidence["monthly_interest"])),
+            "advance_interest_periods": int(evidence["advance_interest_periods"]),
+            "advance_interest": Decimal(str(evidence["advance_interest"])),
+            "deducted_fees": Decimal(str(evidence["deducted_fees"])),
+            "net_disbursed": Decimal(str(evidence["net_disbursed"])),
+            "evidence": evidence,
+        }
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PawnRenewalError(
+            "Renewal successor approval has incomplete economics."
+        ) from exc
+    if not evidence.get("tranches"):
+        raise PawnRenewalError(
+            "Renewal successor approval is missing tranche evidence."
+        )
+    if values["gross_principal"] != successor.principal_amount:
+        raise PawnRenewalError(
+            "Renewal successor approved principal no longer matches the loan."
+        )
+    if (
+        values["net_disbursed"]
+        + values["advance_interest"]
+        + values["deducted_fees"]
+        != values["gross_principal"]
+    ):
+        raise PawnRenewalError(
+            "Renewal successor gross-to-net economics do not reconcile."
+        )
+    return values
+
+
+def _successor_policy_from_approval(successor, economics):
+    evidence = economics["evidence"]
+    required = (
         "interest_method",
         "partial_month_method",
         "partial_month_cutoff_days",
@@ -987,10 +1266,33 @@ def _clone_policy(source, successor):
         "rounding_method",
         "currency_quantum",
     )
-    return LoanPolicySnapshot.objects.create(
-        loan=successor,
-        **{field: getattr(source_policy, field) for field in fields},
-    )
+    if any(key not in evidence for key in required):
+        raise PawnRenewalError(
+            "Renewal successor approval is missing frozen policy evidence."
+        )
+    try:
+        return LoanPolicySnapshot.objects.create(
+            loan=successor,
+            policy_version=1,
+            interest_method=evidence["interest_method"],
+            partial_month_method=evidence["partial_month_method"],
+            partial_month_cutoff_days=int(evidence["partial_month_cutoff_days"]),
+            partial_month_lower_fraction=Decimal(
+                str(evidence["partial_month_lower_fraction"])
+            ),
+            capitalization_interval_periods=int(
+                evidence["capitalization_interval_periods"]
+            ),
+            accounting_recognition=evidence["accounting_recognition"],
+            valuation_method=evidence["valuation_method"],
+            maximum_ltv_ratio=Decimal(str(evidence["maximum_ltv_ratio"])),
+            rounding_method=evidence["rounding_method"],
+            currency_quantum=Decimal(str(evidence["currency_quantum"])),
+        )
+    except (TypeError, ValueError) as exc:
+        raise PawnRenewalError(
+            "Renewal successor approval has invalid frozen policy evidence."
+        ) from exc
 
 
 def _successor_collateral_plan(
@@ -1006,6 +1308,10 @@ def _successor_collateral_plan(
             raise PawnRenewalError(
                 "Additional collateral requires an explicit retained-collateral plan."
             )
+        if len(source_items) != 1:
+            raise PawnRenewalError(
+                "A multi-item renewal requires an explicit retained-collateral plan."
+            )
         return (
             tuple(
                 CollateralDraftInput(
@@ -1015,6 +1321,7 @@ def _successor_collateral_plan(
                     net_weight=item.net_weight,
                     purity_percentage=item.purity_percentage,
                     latest_appraised_value=item.latest_appraised_value,
+                    allocated_principal=successor_principal,
                 )
                 for item in source_items
             ),
@@ -1091,6 +1398,10 @@ def _renewal_request_fingerprint(**values):
 
     serialized = json.dumps(normalize(values), sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _renewal_plan_fingerprint(**values):
+    return _renewal_request_fingerprint(**values)
 
 
 def _locked_loan(loan_id):
@@ -1176,7 +1487,9 @@ __all__ = [
     "PawnRenewalError",
     "PawnRenewalResult",
     "PawnRenewalReversalResult",
+    "PawnRenewalPlanPreview",
     "PawnRenewalSourcePreview",
+    "preview_pawn_loan_renewal_plan",
     "preview_pawn_loan_renewal_source",
     "renew_pawn_loan",
     "reverse_pawn_loan_renewal",

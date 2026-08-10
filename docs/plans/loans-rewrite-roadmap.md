@@ -779,6 +779,20 @@ release/renewal verification PDFs. Auction item allocation remains the final
 collateral-principal evidence gap and may stay deferred when auction is outside
 the limited MVP pilot.
 
+P7's successor-economics follow-through is complete in tenant migration
+`loans.0036`. The operator must calculate an exact, non-writing renewal preview
+and confirm its fingerprint; execution recalculates it atomically and rejects a
+stale plan. The new loan uses economic policy effective on the renewal date,
+not a clone of the source loan policy. Its advance interest and deducted fees
+are immutable renewal evidence and separate DEA posting facts. Cash accounting
+recognizes advance interest immediately; accrual accounting holds it in
+Unearned Revenue. The opening event carries item-level prepaid-interest evidence
+so covered successor accrual periods consume the deduction without a second
+customer charge. The renewal agreement, reconciliation, and composite reversal
+all use the same evidence. Multi-item renewal always requires explicit retained
+and additional item allocations; the single-item service compatibility path may
+allocate the full successor principal to its sole item.
+
 #### E7.3A.8 Add Auction Item-Principal Evidence — Deferred Post-MVP
 
 This slice is explicitly deferred from the initial limited MVP pilot, not

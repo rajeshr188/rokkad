@@ -17,6 +17,7 @@ from apps.tenant_apps.loans.domain import (
     AccountingRecognition,
     CollateralMetal,
     CollateralCustodyState,
+    FeeCalculationType,
     InterestMethod,
     LoanDocumentKind,
     LoanOutboxStatus,
@@ -96,6 +97,7 @@ from apps.tenant_apps.loans.services import (
     PawnRenewalError,
     RetainedCollateralInput,
     create_pawn_loan_economic_policy,
+    create_pawn_loan_fee_policy,
     create_pawn_metal_interest_rate_policy,
     renew_pawn_loan,
     reverse_pawn_loan_renewal,
@@ -1564,6 +1566,17 @@ class PawnDisbursalServiceTests(TenantTestCase):
 
     def test_pay_and_renew_posts_net_settlement_and_composite_reversal(self):
         self._activate_loan()
+        self.loan.license.economic_policies.update(advance_interest_periods=1)
+        create_pawn_loan_fee_policy(
+            workspace=self.tenant,
+            license=self.loan.license,
+            code="RENEWAL_DOC",
+            name="Renewal documentation",
+            calculation_type=FeeCalculationType.FIXED,
+            value=Decimal("100.00"),
+            effective_from=date(2026, 1, 1),
+            actor=self.actor,
+        )
         self._create_release_rate(
             RateSource.objects.create(name="Renewal", location="Market")
         )
@@ -1605,6 +1618,23 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(result.source_loan.state, PawnLoanState.CLOSED.value)
         self.assertEqual(result.successor_loan.state, PawnLoanState.ACTIVE.value)
         self.assertEqual(result.renewal.successor_principal_amount, Decimal("39000.00"))
+        self.assertEqual(result.renewal.successor_advance_interest, Decimal("780.00"))
+        self.assertEqual(result.renewal.successor_deducted_fees, Decimal("100.00"))
+        settlement_renewal = result.settlement_event.payload["renewal"]
+        self.assertEqual(settlement_renewal["successor_advance_interest"], "780.00")
+        self.assertEqual(settlement_renewal["successor_deducted_fees"], "100.00")
+        opening_economics = result.opening_event.payload["renewal"][
+            "successor_economics"
+        ]
+        self.assertEqual(opening_economics["advance_interest"], "780.00")
+        self.assertEqual(opening_economics["deducted_fees"], "100.00")
+        successor_accrual = preview_pawn_loan_accruals(
+            result.successor_loan.pk,
+            as_of_date=date(2026, 9, 2),
+            include_partial=False,
+        )[0]
+        self.assertEqual(successor_accrual.advance_interest_applied, Decimal("780.00"))
+        self.assertEqual(successor_accrual.recognized_interest, Decimal("0.00"))
         self.assertIsNotNone(result.settlement_outbox.dea_voucher_id)
         self.assertIsNone(result.opening_outbox.dea_voucher_id)
         self.assertEqual(
