@@ -434,9 +434,9 @@ byte-identical reprint matrix.
 
 ### LPD7: Versioned print profiles
 
-Status: LPD7.1 foundation, LPD7.2 legacy compatibility/provenance, and LPD7.3
-resolved-profile renderer stage completed 2026-08-10; profile-management UI
-and physical printer acceptance remain pending.
+Status: LPD7.1 foundation, LPD7.2 legacy compatibility/provenance, LPD7.3
+resolved-profile renderer, and LPD7.4 operator workspace completed 2026-08-10;
+physical printer acceptance remains pending.
 
 Pre-pilot compatibility guard completed 2026-08-09: existing integrity
 diagnostics now reject active loan-ticket assignments that omit either the
@@ -497,9 +497,13 @@ uses `SERIES`, `WORKSPACE`, `BUILT_IN`, or `LEGACY_LAYOUT` truthfully, and
 diagnostics validate the effective pair for every Series. No migration was
 required.
 
-LPD7.4 should add Owner/Admin profile list/create/clone/publish/assign/retire
-screens and profile-aware preview/test-print controls. It must use the existing
-services and renderer rather than creating a second profile schema.
+LPD7.4 result: Owner/Admin can list, create, edit drafts, clone, publish,
+assign at workspace or Series scope, preview/test-print, and retire profiles.
+The UI delegates to the existing profile services and renderer. Assignment
+validates the effective layout/profile pair for every affected Series before
+mutation. The issued-documents ledger shows immutable layout/profile/hash
+provenance and serves exact stored artifact bytes. Member access is rejected.
+No migration was required.
 
 Gate: one logical ticket layout can be issued through A5 and A4 profiles
 without cloning legal content; profile changes affect only future issues;

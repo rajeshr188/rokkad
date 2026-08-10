@@ -19,7 +19,7 @@ payload -> published logical layout -> logical surfaces
 ```
 
 Layouts own content, signatures, Original/Duplicate identity, Terms/D3 content,
-copy scope, and backgrounds. Versioned workspace print profiles will own A5/A4
+copy scope, and backgrounds. Versioned workspace print profiles own A5/A4
 packaging, included copies, simplex/duplex ordering, orientation, scaling, and
 printer guidance. Every issue must record both immutable revision hashes and
 retain exact artifact bytes.
@@ -35,6 +35,26 @@ now makes resolved profiles drive new configurable loan-ticket issues. The
 renderer first produces logical copy surfaces, validates the selected pair,
 then performs A5 sequencing or A4 side-by-side imposition. Existing issued
 artifacts are returned before current defaults are resolved.
+
+## Owner/Admin Workspace
+
+Open **Loans setup > Print profiles** to manage physical packaging. Create a
+draft, choose A5 sequential or A4 side-by-side composition and printer
+guidance, preview it against a published loan-ticket layout and approved loan,
+then publish and assign it at workspace or Series scope. Editing is restricted
+to drafts; change a published profile by cloning it. Retirement disables its
+active assignments but preserves issue evidence.
+
+Assignment validates the actual effective logical layout for each affected
+Series before changing state. For example, a duplex profile requiring Terms or
+D3 cannot be assigned where that surface is absent. Workspace assignment
+checks all Series except those already protected by a Series-specific profile.
+
+Open **Loans setup > Issued documents** to inspect the immutable issue ledger.
+Each detail records source, verification identity, layout revision/hash, print
+profile revision/hash/scope, payload hash, and PDF hash. **Download exact
+artifact** returns the stored bytes; it does not regenerate from current
+defaults.
 
 Owner/Admin compatibility recovery is explicit:
 

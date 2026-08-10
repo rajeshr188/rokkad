@@ -363,12 +363,6 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
         layout_revision = LoanDocumentLayoutService.publish(
             revision=layout_revision, actor=self.actor
         )
-        LoanDocumentLayoutService.assign(
-            revision=layout_revision,
-            workspace=self.tenant,
-            series=self.series,
-            actor=self.actor,
-        )
         profile_definition = built_in_print_profile(
             "A5_BOTH_DUPLEX"
         ).canonical_dict()
@@ -385,6 +379,14 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
         )
         LoanDocumentPrintProfileService.assign(
             revision=profile_revision,
+            workspace=self.tenant,
+            series=self.series,
+            actor=self.actor,
+        )
+        # A later layout change can still create an incompatible effective
+        # pair; diagnostics must catch it before issuance.
+        LoanDocumentLayoutService.assign(
+            revision=layout_revision,
             workspace=self.tenant,
             series=self.series,
             actor=self.actor,

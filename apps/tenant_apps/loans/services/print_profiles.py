@@ -16,6 +16,7 @@ from apps.tenant_apps.loans.models import (
     LoanDocumentPrintProfile,
     LoanDocumentPrintProfileAssignment,
     LoanDocumentPrintProfileRevision,
+    LoanSeries,
     current_tenant_workspace_id,
 )
 
@@ -205,6 +206,12 @@ class LoanDocumentPrintProfileService:
             raise PrintProfileServiceError(
                 "The pilot loan-ticket profile must include Original and Duplicate fronts."
             )
+        cls._assert_current_layout_compatibility(
+            workspace=workspace,
+            document_type=revision.profile.document_type,
+            definition=definition,
+            series=series,
+        )
         scope = LoanDocumentPrintProfileAssignment.objects.select_for_update().filter(
             workspace=workspace,
             document_type=revision.profile.document_type,
@@ -226,6 +233,51 @@ class LoanDocumentPrintProfileService:
             "series_id": getattr(series, "pk", None),
         })
         return assignment
+
+    @staticmethod
+    def _assert_current_layout_compatibility(
+        *, workspace, document_type, definition, series=None
+    ):
+        if document_type != "loan_ticket":
+            return
+        from apps.tenant_apps.loans.documents import (
+            ConfigurableDocumentRenderer,
+            DocumentLayoutValidator,
+        )
+        from apps.tenant_apps.loans.services.document_layouts import (
+            LoanDocumentLayoutService,
+        )
+
+        if series is not None:
+            candidate_series = (series,)
+        else:
+            overridden = LoanDocumentPrintProfileAssignment.objects.filter(
+                workspace=workspace,
+                document_type=document_type,
+                is_active=True,
+                series__isnull=False,
+            ).values_list("series_id", flat=True)
+            candidate_series = LoanSeries.objects.filter(
+                license__workspace=workspace
+            ).exclude(pk__in=overridden).select_related("license")
+        for candidate in candidate_series:
+            layout_revision = LoanDocumentLayoutService.resolve(
+                workspace=workspace,
+                document_type=document_type,
+                license=candidate.license,
+                series=candidate,
+            )
+            if layout_revision is None:
+                continue
+            try:
+                ConfigurableDocumentRenderer.assert_print_profile_compatible(
+                    DocumentLayoutValidator.load(layout_revision.definition),
+                    definition,
+                )
+            except ValueError as exc:
+                raise PrintProfileServiceError(
+                    f"Series {candidate.code} has an incompatible loan-ticket layout: {exc}"
+                ) from exc
 
     @staticmethod
     def resolve(*, workspace, document_type, series=None):

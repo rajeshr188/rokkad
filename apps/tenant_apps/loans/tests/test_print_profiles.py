@@ -15,12 +15,14 @@ from apps.tenant_apps.loans.documents import (
     PrintProfileValidator,
     built_in_print_profile,
     legacy_print_profile,
+    starter_layout,
 )
 from apps.tenant_apps.loans.documents.integrity import get_document_integrity_findings
 from apps.tenant_apps.loans.models import LoanDocumentPrintProfileRevision
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
 from apps.tenant_apps.loans.services import (
     LoanDocumentPrintProfileService,
+    LoanDocumentLayoutService,
     PrintProfileServiceError,
 )
 
@@ -261,3 +263,38 @@ class PrintProfilePersistenceTests(TenantTestCase):
             [finding.category for finding in get_document_integrity_findings()],
             ["PRINT_PROFILE_HASH"],
         )
+
+    def test_assignment_rejects_profile_incompatible_with_current_layout(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["copy_mode"] = "ORIGINAL_DUPLICATE"
+        layout_revision = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name="No logical backs",
+            definition=definition,
+            actor=self.actor,
+        )
+        layout_revision = LoanDocumentLayoutService.publish(
+            revision=layout_revision, actor=self.actor
+        )
+        LoanDocumentLayoutService.assign(
+            revision=layout_revision,
+            workspace=self.tenant,
+            series=self.series_a,
+            actor=self.actor,
+        )
+        profile_revision = self._published(
+            "Requires logical backs", "A5_BOTH_DUPLEX"
+        )
+
+        with self.assertRaisesMessage(
+            PrintProfileServiceError, "incompatible loan-ticket layout"
+        ):
+            LoanDocumentPrintProfileService.assign(
+                revision=profile_revision,
+                workspace=self.tenant,
+                series=self.series_a,
+                actor=self.actor,
+            )
+
+        self.assertFalse(profile_revision.assignments.filter(is_active=True).exists())

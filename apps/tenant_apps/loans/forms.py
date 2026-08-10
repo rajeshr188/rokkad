@@ -25,6 +25,7 @@ from apps.tenant_apps.loans.models import (
     PawnStorageLocation,
 )
 from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
+from apps.tenant_apps.loans.documents.print_profiles import built_in_print_profile
 
 
 class LoanDocumentLayoutCreateForm(forms.Form):
@@ -274,6 +275,81 @@ class LoanDocumentLayoutPackImportForm(forms.Form):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+
+
+class LoanDocumentPrintProfileDefinitionForm(forms.Form):
+    composition = forms.ChoiceField(choices=(
+        ("A5_BOTH_SIMPLEX", "A5 Original + Duplicate (simplex)"),
+        ("A5_BOTH_DUPLEX", "A5 Original/Terms + Duplicate/D3 (duplex)"),
+        ("A4_SIDE_BY_SIDE", "A4 landscape side-by-side (simplex)"),
+        ("A4_SIDE_BY_SIDE_DUPLEX", "A4 landscape side-by-side (duplex)"),
+    ))
+    scaling_policy = forms.ChoiceField(choices=(
+        ("FIT_PRINTABLE_AREA", "Fit proportionally to the profile slot"),
+        ("ACTUAL_SIZE", "Actual size (layout page must match)"),
+    ))
+    flip_edge_guidance = forms.ChoiceField(choices=(
+        ("NOT_APPLICABLE", "Not applicable"),
+        ("LONG_EDGE", "Flip on long edge"),
+        ("SHORT_EDGE", "Flip on short edge"),
+        ("VERIFY_ON_PRINTER", "Verify on the physical printer"),
+    ))
+    printer_guidance = forms.CharField(
+        required=False, max_length=500,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Operator guidance only; it does not control the printer driver.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault(
+                "class",
+                "form-select" if isinstance(field, forms.ChoiceField) else "form-control",
+            )
+
+    def clean(self):
+        cleaned = super().clean()
+        composition = cleaned.get("composition") or ""
+        duplex = composition.endswith("DUPLEX")
+        flip = cleaned.get("flip_edge_guidance")
+        if duplex and flip == "NOT_APPLICABLE":
+            self.add_error(
+                "flip_edge_guidance",
+                "Duplex profiles require explicit or verify-on-printer flip guidance.",
+            )
+        if not duplex:
+            cleaned["flip_edge_guidance"] = "NOT_APPLICABLE"
+        return cleaned
+
+    def definition(self, *, name):
+        composition = self.cleaned_data["composition"]
+        definition = built_in_print_profile(composition).canonical_dict()
+        definition.update({
+            "name": name,
+            "scaling_policy": self.cleaned_data["scaling_policy"],
+            "flip_edge_guidance": self.cleaned_data["flip_edge_guidance"],
+            "printer_guidance": self.cleaned_data["printer_guidance"],
+        })
+        return definition
+
+
+class LoanDocumentPrintProfileCreateForm(LoanDocumentPrintProfileDefinitionForm):
+    name = forms.CharField(max_length=100)
+
+
+class LoanDocumentPrintProfileAssignmentForm(forms.Form):
+    series = forms.ModelChoiceField(
+        queryset=LoanSeries.objects.none(), required=False,
+        help_text="Leave blank for the workspace default.",
+    )
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["series"].queryset = LoanSeries.objects.filter(
+            license__workspace=workspace
+        ).select_related("license").order_by("license__license_number", "code")
+        self.fields["series"].widget.attrs["class"] = "form-select"
 from apps.tenant_apps.party.models import Party
 
 

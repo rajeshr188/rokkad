@@ -77,11 +77,21 @@ preferences. An official issue records the resolved layout and profile and
 stores the exact PDF bytes, so later assignment changes affect only future
 issues.
 
-**Current implementation note:** the print-profile runtime is not implemented
-yet. Existing published layouts still carry `copy_mode` and sheet-composition
-settings and remain authoritative. Continue using those controls until the
-profile migration is delivered; do not manually remove them from existing
-definitions.
+**Current implementation note:** resolved print profiles now package new
+configurable loan-ticket issues. Manage them under **Loans setup > Print
+profiles**. Existing published layouts retain embedded `copy_mode` and
+sheet-composition settings only for explicit audited legacy recovery; do not
+manually remove those settings from existing definitions.
+
+Create and preview a draft profile first. Publish it only after the PDF looks
+correct, then assign it to the entire workspace or one Series. A Series
+assignment wins over the workspace assignment. The assignment screen refuses
+an incompatible effective layout/profile pair. To change a published profile,
+clone it and publish the clone; never edit historical evidence.
+
+Use **Loans setup > Issued documents** to inspect which layout and profile
+produced an official document. Downloading the exact artifact from that page
+returns the immutable stored PDF even after assignments change.
 
 Before the parity pilot, open **Integrity diagnostics**. An active ticket
 assignment that prints only Original or only Duplicate is a blocking finding.

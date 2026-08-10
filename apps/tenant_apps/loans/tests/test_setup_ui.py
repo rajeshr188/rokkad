@@ -31,6 +31,8 @@ from apps.tenant_apps.loans.models import (
     LoanDocumentIssue,
     LoanDocumentLayout,
     LoanDocumentLayoutRevision,
+    LoanDocumentPrintProfile,
+    LoanDocumentPrintProfileRevision,
     LoanNumberSequence,
     LoanSeries,
     PawnLoan,
@@ -419,6 +421,14 @@ class LoansSetupUiTests(TenantTestCase):
         )
         self.assertEqual(
             self.tenant_get(reverse("loans:document_layout_guide")).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:document_print_profile_list")).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:document_issue_list")).status_code,
             403,
         )
         self.assertEqual(
@@ -1215,6 +1225,15 @@ class LoansSetupUiTests(TenantTestCase):
         issue = LoanDocumentIssue.objects.get(source_id=str(loan.pk))
         self.assertEqual(issue.print_profile_source_scope, "BUILT_IN")
         self.assertEqual(issue.print_profile_hash, first["X-Rokkad-Print-Profile-Hash"])
+        evidence = self.tenant_get(
+            reverse("loans:document_issue_detail", args=[issue.pk])
+        )
+        self.assertContains(evidence, "Built-in A5 Both Simplex")
+        artifact = self.tenant_get(
+            reverse("loans:document_issue_artifact", args=[issue.pk])
+        )
+        self.assertEqual(artifact.content, first.content)
+        self.assertEqual(artifact["X-Rokkad-PDF-Hash"], issue.pdf_hash)
 
         profile_definition = built_in_print_profile(
             "A4_SIDE_BY_SIDE"
@@ -1304,6 +1323,151 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(retire_response.status_code, 302)
         revision.refresh_from_db()
         self.assertEqual(revision.state, "RETIRED")
+
+    def test_owner_can_manage_assign_preview_and_retire_print_profile(self):
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-PROFILE-00001", state="APPROVED")
+        PawnLoanApprovalSnapshot.objects.create(
+            loan=loan,
+            version=1,
+            payload={
+                "loan_number": loan.loan_number,
+                "loan_date": str(loan.loan_date),
+                "principal_amount": str(loan.principal_amount),
+                "monthly_interest_rate": str(loan.monthly_interest_rate),
+                "tenure_months": loan.tenure_months,
+                "borrower_id": loan.borrower_id,
+                "collateral": [],
+            },
+            fingerprint="profile-ui-approval",
+            approved_by=self.owner,
+        )
+        layout_definition = starter_layout("loan_ticket").canonical_dict()
+        layout_definition["copy_mode"] = "ORIGINAL_DUPLICATE"
+        layout_revision = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name=f"Profile preview layout {uuid.uuid4().hex[:6]}",
+            definition=layout_definition,
+            actor=self.owner,
+        )
+        layout_revision = LoanDocumentLayoutService.publish(
+            revision=layout_revision, actor=self.owner
+        )
+        LoanDocumentLayoutService.assign(
+            revision=layout_revision,
+            workspace=self.tenant,
+            series=series,
+            actor=self.owner,
+        )
+
+        create = self.tenant_post(
+            reverse("loans:document_print_profile_create"),
+            {
+                "name": "Front counter profile",
+                "composition": "A5_BOTH_SIMPLEX",
+                "scaling_policy": "FIT_PRINTABLE_AREA",
+                "flip_edge_guidance": "NOT_APPLICABLE",
+                "printer_guidance": "Load A5 paper in tray 2.",
+            },
+        )
+        profile_revision = LoanDocumentPrintProfileRevision.objects.get(
+            profile__name="Front counter profile", version=1
+        )
+        self.assertRedirects(
+            create,
+            reverse(
+                "loans:document_print_profile_detail",
+                args=[profile_revision.pk],
+            ),
+            fetch_redirect_response=False,
+        )
+        detail = self.tenant_get(
+            reverse("loans:document_print_profile_detail", args=[profile_revision.pk])
+        )
+        self.assertContains(detail, "Front counter profile")
+        self.assertContains(detail, "Preview and test print")
+
+        preview_url = reverse(
+            "loans:document_print_profile_preview", args=[profile_revision.pk]
+        )
+        preview = self.tenant_get(
+            f"{preview_url}?layout={layout_revision.pk}&loan={loan.pk}"
+        )
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview["X-Rokkad-Preview"], "true")
+        self.assertEqual(preview["X-Rokkad-Print-Profile"], "Front counter profile")
+        preview_pdf = fitz.open(stream=preview.content, filetype="pdf")
+        self.assertEqual(len(preview_pdf), 2)
+        preview_pdf.close()
+
+        update = self.tenant_post(
+            reverse("loans:document_print_profile_update", args=[profile_revision.pk]),
+            {
+                "composition": "A4_SIDE_BY_SIDE",
+                "scaling_policy": "FIT_PRINTABLE_AREA",
+                "flip_edge_guidance": "NOT_APPLICABLE",
+                "printer_guidance": "Use landscape A4.",
+            },
+        )
+        self.assertEqual(update.status_code, 302)
+        profile_revision.refresh_from_db()
+        self.assertEqual(
+            profile_revision.definition["composition"], "A4_SIDE_BY_SIDE"
+        )
+
+        self.tenant_post(
+            reverse("loans:document_print_profile_publish", args=[profile_revision.pk])
+        )
+        profile_revision.refresh_from_db()
+        self.assertEqual(profile_revision.state, "PUBLISHED")
+        assign = self.tenant_post(
+            reverse("loans:document_print_profile_assign", args=[profile_revision.pk]),
+            {"series": series.pk},
+        )
+        self.assertEqual(assign.status_code, 302)
+        self.assertTrue(
+            profile_revision.assignments.filter(
+                series=series, is_active=True
+            ).exists()
+        )
+
+        test_print = self.tenant_get(
+            f"{preview_url}?layout={layout_revision.pk}&loan={loan.pk}&download=1"
+        )
+        self.assertTrue(test_print["Content-Disposition"].startswith("attachment"))
+        test_pdf = fitz.open(stream=test_print.content, filetype="pdf")
+        self.assertEqual(len(test_pdf), 1)
+        self.assertGreater(test_pdf[0].rect.width, test_pdf[0].rect.height)
+        test_pdf.close()
+
+        clone = self.tenant_post(
+            reverse("loans:document_print_profile_clone", args=[profile_revision.pk])
+        )
+        cloned_revision = LoanDocumentPrintProfileRevision.objects.get(
+            profile=profile_revision.profile, version=2
+        )
+        self.assertRedirects(
+            clone,
+            reverse(
+                "loans:document_print_profile_detail", args=[cloned_revision.pk]
+            ),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(cloned_revision.state, "DRAFT")
+
+        self.tenant_post(
+            reverse("loans:document_print_profile_retire", args=[profile_revision.pk])
+        )
+        profile_revision.refresh_from_db()
+        self.assertEqual(profile_revision.state, "RETIRED")
+        self.assertFalse(profile_revision.assignments.filter(is_active=True).exists())
+        self.assertEqual(
+            LoanDocumentPrintProfile.objects.filter(
+                workspace=self.tenant, name="Front counter profile"
+            ).count(),
+            1,
+        )
 
     def _configured_setup(self):
         license = LoanLicense.objects.create(

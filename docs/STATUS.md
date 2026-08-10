@@ -11,7 +11,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ## Latest Update
 
 - P12 was accepted by the workspace Owner on 2026-08-10; all twelve Loans
-  capability scenarios are accepted. LPD7.3 is complete. New configurable
+  capability scenarios are accepted. LPD7.4 is complete. New configurable
   loan-ticket issues now resolve `Series -> Workspace -> built-in` physical
   profiles and package independently rendered Original/Terms/Duplicate/D3
   surfaces as A5 sequential or A4 side-by-side output. Pair validation rejects
@@ -25,8 +25,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   profile identity. Diagnostics now validate each Series' effective
   layout/profile pair. Forty-four renderer/contract tests plus the effective-
   pair integrity test and configured issue-route test pass; system checks are
-  clean and `jcl1` still has zero findings. No migration was required. Profile
-  management UI and the real physical printer matrix remain pending.
+  clean and `jcl1` still has zero findings. Owner/Admin can now create, edit,
+  clone, publish, assign, preview/test-print, and retire versioned print
+  profiles under Loans setup. Assignment fails before mutation when an
+  effective logical layout cannot supply the requested physical composition.
+  The issued-documents ledger exposes immutable provenance and serves the
+  exact stored artifact. No migration was required. The real physical printer
+  matrix is the only remaining LPD7 acceptance gate.
 
 - P12's accepted boundary rejects Members
   before administrator-only auction/correction identifiers are looked up and

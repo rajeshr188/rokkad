@@ -1,0 +1,55 @@
+{% extends "base_tenant.html" %}
+{% block title %}{{ revision.profile.name }} revision {{ revision.version }}{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1 class="h3 mb-1">{{ revision.profile.name }}</h1>
+    <p class="text-muted mb-0">Revision {{ revision.version }} · {{ revision.get_state_display }} · {{ revision.content_hash|slice:':16' }}</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{% url 'loans:document_print_profile_list' %}">All print profiles</a>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <form method="post" action="{% url 'loans:document_print_profile_clone' revision.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary">Clone to new draft</button></form>
+  {% if revision.state == 'DRAFT' %}<form method="post" action="{% url 'loans:document_print_profile_publish' revision.pk %}">{% csrf_token %}<button class="btn btn-success">Publish and freeze</button></form>{% endif %}
+  {% if revision.state == 'PUBLISHED' %}<form method="post" action="{% url 'loans:document_print_profile_retire' revision.pk %}">{% csrf_token %}<button class="btn btn-outline-danger">Retire revision</button></form>{% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card mb-4"><div class="card-header">Physical packaging</div><div class="card-body">
+      {% if revision.state == 'DRAFT' %}
+      <form method="post" action="{% url 'loans:document_print_profile_update' revision.pk %}">{% csrf_token %}{{ definition_form.as_p }}<button class="btn btn-primary">Validate and save draft</button></form>
+      {% else %}
+      <dl class="row mb-0">
+        <dt class="col-sm-4">Composition</dt><dd class="col-sm-8">{{ profile.composition }}</dd>
+        <dt class="col-sm-4">Paper</dt><dd class="col-sm-8">{{ profile.paper_size }} {{ profile.orientation|lower }}</dd>
+        <dt class="col-sm-4">Duplex</dt><dd class="col-sm-8">{{ profile.duplex }}</dd>
+        <dt class="col-sm-4">Scaling</dt><dd class="col-sm-8">{{ profile.scaling_policy }}</dd>
+        <dt class="col-sm-4">Flip guidance</dt><dd class="col-sm-8">{{ profile.flip_edge_guidance }}</dd>
+        <dt class="col-sm-4">Operator guidance</dt><dd class="col-sm-8">{{ profile.printer_guidance|default:'—' }}</dd>
+      </dl>
+      {% endif %}
+    </div></div>
+
+    <div class="card"><div class="card-header">Preview and test print</div><div class="card-body">
+      <p class="small text-muted">Choose a published logical layout and an approved sample loan. Preview is watermarked and never creates an official issue.</p>
+      {% if layout_revisions and sample_loans %}
+      <form method="get" action="{% url 'loans:document_print_profile_preview' revision.pk %}" target="_blank" class="row g-3">
+        <div class="col-md-6"><label class="form-label" for="profile-layout">Logical layout</label><select class="form-select" id="profile-layout" name="layout" required>{% for item in layout_revisions %}<option value="{{ item.pk }}">{{ item.layout.name }} v{{ item.version }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label" for="profile-loan">Sample loan</label><select class="form-select" id="profile-loan" name="loan" required>{% for item in sample_loans %}<option value="{{ item.pk }}">{{ item.loan_number }} · {{ item.borrower }}</option>{% endfor %}</select></div>
+        <div class="col-12 d-flex gap-2"><button class="btn btn-outline-primary">Preview PDF</button><button class="btn btn-outline-primary" name="download" value="1">Download test print</button></div>
+      </form>
+      {% else %}<div class="alert alert-warning mb-0">Publish a loan-ticket layout and approve a PawnLoan to enable profile preview.</div>{% endif %}
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if revision.state == 'PUBLISHED' %}<div class="card"><div class="card-header">Assign default scope</div><div class="card-body">
+      <p class="small text-muted">Leave Series blank for the workspace default. Assignment is rejected if an affected layout cannot supply the selected surfaces.</p>
+      <form method="post" action="{% url 'loans:document_print_profile_assign' revision.pk %}">{% csrf_token %}{{ assignment_form.as_p }}<button class="btn btn-primary">Assign print profile</button></form>
+      <hr><ul>{% for assignment in revision.assignments.all %}{% if assignment.is_active %}<li>{% if assignment.series %}Series {{ assignment.series.code }} · {{ assignment.series.license.license_number }}{% else %}Workspace default{% endif %}</li>{% endif %}{% empty %}<li class="text-muted">Not assigned</li>{% endfor %}</ul>
+    </div></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

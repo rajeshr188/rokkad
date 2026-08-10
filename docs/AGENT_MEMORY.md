@@ -9,7 +9,7 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 # Agent Memory
 
 P12 was accepted by the workspace Owner on 2026-08-10. All twelve Loans
-capability scenarios are accepted. LPD7.1-LPD7.3 are implemented: physical
+capability scenarios are accepted. LPD7.1-LPD7.4 are implemented: physical
 print profiles are immutable tenant evidence resolved by `Series -> Workspace
 -> built-in`; all embedded legacy compositions have compatibility contracts;
 and new configurable ticket issues render logical Original/Terms/Duplicate/D3
@@ -18,10 +18,12 @@ returned before current profile resolution. New issues record immutable
 profile identity/hash/source; Owner/Admin has audited
 `?print_profile=legacy` recovery and runtime never falls back silently. Pair
 validation and integrity diagnostics reject profiles the resolved layout cannot
-supply. Migrations `loans.0037` and `0038` are applied across all six local
-tenants, and `jcl1` has zero findings. Profile-management UI and the physical
-printer matrix remain open; embedded composition must stay readable for
-compatibility.
+supply. Owner/Admin profile lifecycle, scoped assignment, resolved preview/test
+print, and immutable issued-document evidence are exposed under Loans setup;
+assignment itself rejects incompatible current layout/profile pairs. Migrations
+`loans.0037` and `0038` are applied across all six local tenants, and `jcl1`
+has zero findings. Only the physical printer matrix remains open; embedded
+composition must stay readable for compatibility.
 
 Under P12, ordinary workspace members may perform the
 normal PawnLoan lifecycle but must be rejected before administrator-only
@@ -1610,7 +1612,11 @@ default physical packaging authority for new configurable ticket issues,
 while embedded `copy_mode`/`sheet` remains readable through explicit audited
 compatibility recovery. Active loan-ticket profile assignment must include
 Original and Duplicate, resolved pairs must be compatible, and the real
-physical printer matrix remains an operator gate.
+physical printer matrix remains an operator gate. LPD7.4 exposes the existing
+contracts through Owner/Admin list/create/edit/clone/publish/assign/retire and
+resolved preview/test-print screens. Assignment validates every affected
+Series before changing workspace or Series scope. The issued-document ledger
+shows immutable layout/profile provenance and returns exact stored PDF bytes.
 
 Operator parity-pilot preparation is documented in `docs/implementation/loans-girvi-operator-parity-pilot.md`. `jcl1` starts with 8 Loans PawnLoans and 8 Girvi GivenLoans, explicit `DEFERRED` accounting, zero document-integrity findings, and no Loans storage hierarchy, verification session, or operational notice. The official clock is stopped while accounting/Girvi runtime work is uncommitted. A combined 191-test preflight did not complete within ten minutes and exposed a stale implicit-DEA test; its focused scenario passes when DEA is explicit. DEA/Loans/Girvi migration drift checks are clean. Do not claim a cross-product pass until smaller suites finish on a reproducible checkpoint.
 
