@@ -10,6 +10,12 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P5 accrual and repayment was accepted by the workspace Owner on 2026-08-10.
+  P6 full release is active: prove exact complete settlement, required accrual
+  catch-up, immutable accounting and item-principal closure evidence, return of
+  every remaining collateral item, storage removal, signed release/Form H
+  output, loan closure, and strict reversal behavior.
+
 - P5 software execution is complete. Eligible accruals expose per-collateral
   principal, metal rate, calculated interest, advance-interest offset, and
   newly due interest; finalized immutable lines remain visible on loan detail.

@@ -123,8 +123,8 @@ Do not use database/admin shortcuts.
 | P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | REPLACE | **Accepted 2026-08-09 by Owner** |
 | P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | **Accepted 2026-08-09 by Owner** |
 | P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | **Accepted 2026-08-10 by Owner** |
-| P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | **Active** |
-| P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | Pending |
+| P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | **Accepted 2026-08-10 by Owner** |
+| P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | **Active** |
 | P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | Pending |
 | P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | Pending |
 | P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | Pending |
@@ -248,6 +248,15 @@ Twenty-five focused UI, no-write preview, allocation-priority, DEA posting/balan
 receipt PDF, and Party-statement/export tests pass. Django checks and Loans
 migration-drift checks are clean. Owner browser execution remains the P5
 acceptance gate.
+
+### P5 Acceptance
+
+The workspace Owner accepted P5 on 2026-08-10 after exercising itemized
+accrual, the no-write repayment allocation preview, confirmation, receipt,
+accounting disposition, and Party statement. This accepts current-date-only
+repayment and the fixed fees → overdue interest → current interest → principal
+priority with highest-rate-first item-principal reduction. P6 full release is
+now the active gate.
 
 ## Physical Document Matrix
 

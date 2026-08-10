@@ -8,6 +8,14 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+P5 accrual and repayment was accepted by the workspace Owner on 2026-08-10.
+P6 full release is active. A full release must use the canonical current-date
+settlement/readiness calculation, finalize required catch-up interest, append
+immutable accounting plus item-principal closure evidence, return and remove
+every remaining collateral item from storage, produce the required signed
+release/Form H document, close the loan, and remain reversible only under the
+strict newest-first compensating rule.
+
 P5 accrual/repayment software execution is complete. `preview_pawn_loan_repayment`
 is a tenant-scoped, current-date, no-write application service that uses the
 same canonical allocation functions as confirmation. Never turn preview into
@@ -18,7 +26,7 @@ shows fees → overdue interest → current interest → principal and
 highest-rate-first item-principal impact. Confirmation remains the sole event,
 outbox, and allocation-line write boundary and reports its actual delivery
 state. Loan detail links to the receipt and Party statement. Twenty-five focused tests
-pass; P5 still requires Owner browser acceptance before P6 is activated.
+pass; P5 was accepted by the Owner on 2026-08-10 and P6 is active.
 
 P4 hierarchical storage was accepted by the workspace Owner on 2026-08-10.
 P5 accrual and repayment is active. Preserve current-date-only repayment,
