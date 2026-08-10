@@ -42,6 +42,8 @@ from apps.tenant_apps.loans.models import (
     PawnLoanAccountingOutbox,
     PawnLoanEconomicPolicy,
     PawnMetalInterestRatePolicy,
+    PawnPhysicalVerificationSession,
+    PawnStorageLocation,
 )
 from apps.tenant_apps.loans.views import _license_for_workspace
 from apps.tenant_apps.party.models import Party
@@ -201,6 +203,118 @@ class LoansSetupUiTests(TenantTestCase):
             {"profile_scope": "NOT_RECORDED"},
         )
         self.assertEqual(historical.context["page_obj"].paginator.count, 52)
+
+    def test_storage_and_verification_worklists_filter_hierarchy_and_paginate(self):
+        branches = [
+            PawnStorageLocation.objects.create(
+                workspace=self.tenant,
+                level=PawnStorageLocation.Level.BRANCH,
+                code=f"BR-{sequence:03d}",
+                name=f"Branch {sequence}",
+                created_by=self.owner,
+            )
+            for sequence in range(51)
+        ]
+        special_branch = PawnStorageLocation.objects.create(
+            workspace=self.tenant,
+            level=PawnStorageLocation.Level.BRANCH,
+            code="SPECIAL-BRANCH",
+            name="Special Branch",
+            created_by=self.owner,
+        )
+        special_vault = PawnStorageLocation.objects.create(
+            workspace=self.tenant,
+            parent=special_branch,
+            level=PawnStorageLocation.Level.VAULT,
+            code="SPECIAL-VAULT",
+            name="Special Vault",
+            created_by=self.owner,
+        )
+        special_cabinet = PawnStorageLocation.objects.create(
+            workspace=self.tenant,
+            parent=special_vault,
+            level=PawnStorageLocation.Level.CABINET,
+            code="SPECIAL-CABINET",
+            name="Special Cabinet",
+            created_by=self.owner,
+        )
+        special_box = PawnStorageLocation.objects.create(
+            workspace=self.tenant,
+            parent=special_cabinet,
+            level=PawnStorageLocation.Level.BOX,
+            code="SPECIAL-BOX",
+            name="Special Box",
+            created_by=self.owner,
+        )
+        special_slot = PawnStorageLocation.objects.create(
+            workspace=self.tenant,
+            parent=special_box,
+            level=PawnStorageLocation.Level.SLOT,
+            code="SPECIAL-SLOT",
+            name="Special Slot",
+            is_active=False,
+            created_by=self.owner,
+        )
+
+        branch_page = self.client.get(
+            reverse("loans:pawn_storage_location_list"),
+            {"level": PawnStorageLocation.Level.BRANCH},
+        )
+        self.assertEqual(branch_page.context["page_obj"].paginator.count, 52)
+        self.assertEqual(len(branch_page.context["locations"]), 50)
+        self.assertContains(branch_page, "?level=BRANCH&amp;page=2")
+
+        storage_filtered = self.client.get(
+            reverse("loans:pawn_storage_location_list"),
+            {
+                "q": "Special Branch",
+                "within": special_branch.pk,
+                "level": PawnStorageLocation.Level.SLOT,
+                "status": "INACTIVE",
+            },
+        )
+        self.assertEqual(list(storage_filtered.context["locations"]), [special_slot])
+        self.assertContains(storage_filtered, "SPECIAL-SLOT")
+
+        for branch in branches:
+            PawnPhysicalVerificationSession.objects.create(
+                workspace=self.tenant,
+                scope_location=branch,
+                started_by=self.owner,
+            )
+        special_session = PawnPhysicalVerificationSession.objects.create(
+            workspace=self.tenant,
+            scope_location=special_slot,
+            status=PawnPhysicalVerificationSession.Status.COMPLETED,
+            started_by=self.owner,
+            completed_by=self.owner,
+            completed_at=timezone.now(),
+        )
+        started_date = timezone.localdate()
+
+        open_sessions = self.client.get(
+            reverse("loans:pawn_physical_verification_list"),
+            {"status": PawnPhysicalVerificationSession.Status.OPEN},
+        )
+        self.assertEqual(open_sessions.context["page_obj"].paginator.count, 51)
+        self.assertEqual(len(open_sessions.context["sessions"]), 50)
+        self.assertContains(open_sessions, "?status=OPEN&amp;page=2")
+
+        verification_filtered = self.client.get(
+            reverse("loans:pawn_physical_verification_list"),
+            {
+                "q": "Special Branch",
+                "within": special_branch.pk,
+                "status": PawnPhysicalVerificationSession.Status.COMPLETED,
+                "started_date_from": started_date.isoformat(),
+                "started_date_to": started_date.isoformat(),
+            },
+        )
+        self.assertEqual(
+            list(verification_filtered.context["sessions"]),
+            [special_session],
+        )
+        self.assertContains(verification_filtered, "SPECIAL-SLOT")
 
     def test_owner_can_complete_license_and_series_setup_without_admin(self):
         response = self.tenant_post(

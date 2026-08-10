@@ -8,6 +8,14 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Loans usability UP2.3 bounds the Owner-only storage-location and physical-
+verification worklists at 50 deterministic rows. “Within hierarchy” means the
+selected location plus every descendant through the fixed Branch/Vault/
+Cabinet/Box/Slot depth; free-text path search also traverses those ancestors.
+Storage exposes level and active state, while verification exposes status and
+inclusive start dates. Use annotated item/expectation counts to avoid per-row
+queries, and never alter frozen verification or custody evidence for listing.
+
 Loans usability UP2.2 replaces the issued-document ledger's silent newest-200
 slice with 50-row pagination over all tenant-scoped immutable issues. Its
 dedicated filter supports issue/source/profile search, document type, issue

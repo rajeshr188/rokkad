@@ -32,7 +32,7 @@ Status: implemented 2026-08-10.
 
 ## UP2: Bounded Tables And Contextual Filters
 
-Status: in progress; UP2.1 and UP2.2 implemented 2026-08-10.
+Status: in progress; UP2.1-UP2.3 implemented 2026-08-10.
 
 Use `django-filter`, already installed, plus Django `Paginator`. Preserve active
 filter query parameters in page links and apply tenant scope before filters.
@@ -47,8 +47,13 @@ Priority order:
    issue kind, profile source (including historical evidence without recorded
    LPD7 provenance), and inclusive issued-date filters compose across 50-row
    pages. The former silent newest-200 cutoff is removed.
-3. Storage inventory and physical verification: hierarchy/state/session/date;
-   50 rows.
+3. Storage hierarchy/inventory and physical verification: implemented. The
+   location directory supports code/name/path search, descendant-aware
+   hierarchy scope, level, and active state. Verification sessions support
+   session/scope/operator search, the same descendant-aware hierarchy scope,
+   status, and inclusive start dates. Both use deterministic 50-row pages;
+   location item counts and session expectation counts are annotated instead
+   of queried once per displayed row.
 4. Notices and operational diagnostics: kind/status/date; 50 rows.
 5. License, profile, and layout administration only when realistic workspace
    volume justifies it.

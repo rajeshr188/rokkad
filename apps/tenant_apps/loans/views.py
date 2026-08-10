@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, HttpResponseGone, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -37,7 +37,12 @@ from apps.tenant_apps.loans.feature_flags import (
     get_loan_module_feature_state,
     set_new_loans_enabled,
 )
-from apps.tenant_apps.loans.filters import LoanDocumentIssueFilter, PawnLoanFilter
+from apps.tenant_apps.loans.filters import (
+    LoanDocumentIssueFilter,
+    PawnLoanFilter,
+    PawnPhysicalVerificationSessionFilter,
+    PawnStorageLocationFilter,
+)
 from apps.tenant_apps.loans.forms import (
     LoanLicenseForm,
     LoanLicenseRenewalForm,
@@ -1615,11 +1620,30 @@ def pawn_collateral_scan(request, public_id):
 def pawn_storage_location_list(request):
     locations = PawnStorageLocation.objects.filter(
         workspace=request.loans_workspace
-    ).select_related("parent", "parent__parent", "parent__parent__parent")
+    ).select_related(
+        "parent",
+        "parent__parent",
+        "parent__parent__parent",
+        "parent__parent__parent__parent",
+    ).annotate(current_item_count=Count("current_collateral_items")).order_by(
+        "level",
+        "code",
+        "pk",
+    )
+    location_filter = PawnStorageLocationFilter(
+        request.GET,
+        queryset=locations,
+        workspace=request.loans_workspace,
+    )
+    page_obj = Paginator(location_filter.qs, 50).get_page(request.GET.get("page"))
     return render(
         request,
         "loans/storage/location_list.html",
-        {"locations": locations},
+        {
+            "location_filter": location_filter,
+            "locations": page_obj.object_list,
+            "page_obj": page_obj,
+        },
     )
 
 
@@ -1797,11 +1821,33 @@ def pawn_physical_verification_list(request):
             return redirect("loans:pawn_physical_verification_detail", pk=session.pk)
     sessions = PawnPhysicalVerificationSession.objects.filter(
         workspace=request.loans_workspace
-    ).select_related("scope_location", "started_by", "completed_by")
+    ).select_related(
+        "scope_location",
+        "scope_location__parent",
+        "scope_location__parent__parent",
+        "scope_location__parent__parent__parent",
+        "scope_location__parent__parent__parent__parent",
+        "started_by",
+        "completed_by",
+    ).annotate(expected_item_count=Count("expectations")).order_by(
+        "-started_at",
+        "-pk",
+    )
+    session_filter = PawnPhysicalVerificationSessionFilter(
+        request.GET,
+        queryset=sessions,
+        workspace=request.loans_workspace,
+    )
+    page_obj = Paginator(session_filter.qs, 50).get_page(request.GET.get("page"))
     return render(
         request,
         "loans/verification/session_list.html",
-        {"form": form, "sessions": sessions},
+        {
+            "form": form,
+            "session_filter": session_filter,
+            "sessions": page_obj.object_list,
+            "page_obj": page_obj,
+        },
     )
 
 

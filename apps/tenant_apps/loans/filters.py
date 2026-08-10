@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import django_filters
 from django import forms
 from django.db.models import Q
@@ -7,7 +9,31 @@ from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanSeries,
     PawnLoan,
+    PawnPhysicalVerificationSession,
+    PawnStorageLocation,
 )
+
+
+def _within_storage_hierarchy(field_prefix, location):
+    return (
+        Q(**{f"{field_prefix}pk": location.pk})
+        | Q(**{f"{field_prefix}parent_id": location.pk})
+        | Q(**{f"{field_prefix}parent__parent_id": location.pk})
+        | Q(**{f"{field_prefix}parent__parent__parent_id": location.pk})
+        | Q(**{f"{field_prefix}parent__parent__parent__parent_id": location.pk})
+    )
+
+
+def _storage_text_query(field_prefix, value):
+    query = Q(**{f"{field_prefix}code__icontains": value}) | Q(
+        **{f"{field_prefix}name__icontains": value}
+    )
+    parent_prefix = f"{field_prefix}parent__"
+    for _ in range(4):
+        query |= Q(**{f"{parent_prefix}code__icontains": value})
+        query |= Q(**{f"{parent_prefix}name__icontains": value})
+        parent_prefix += "parent__"
+    return query
 
 
 class PawnLoanFilter(django_filters.FilterSet):
@@ -146,3 +172,136 @@ class LoanDocumentIssueFilter(django_filters.FilterSet):
         if value == "NOT_RECORDED":
             return queryset.filter(print_profile_source_scope="")
         return queryset.filter(print_profile_source_scope=value)
+
+
+class PawnStorageLocationFilter(django_filters.FilterSet):
+    q = django_filters.CharFilter(
+        method="filter_search",
+        label="Search",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Location code, name, or path...",
+            }
+        ),
+    )
+    within = django_filters.ModelChoiceFilter(
+        method="filter_within",
+        queryset=PawnStorageLocation.objects.none(),
+        empty_label="All locations",
+        label="Within hierarchy",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    level = django_filters.ChoiceFilter(
+        choices=PawnStorageLocation.Level.choices,
+        empty_label="All levels",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    status = django_filters.ChoiceFilter(
+        method="filter_status",
+        choices=(("ACTIVE", "Active"), ("INACTIVE", "Inactive")),
+        empty_label="All states",
+        label="State",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    class Meta:
+        model = PawnStorageLocation
+        fields = ()
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.filters["within"].queryset = PawnStorageLocation.objects.filter(
+            workspace=workspace
+        ).select_related(
+            "parent",
+            "parent__parent",
+            "parent__parent__parent",
+            "parent__parent__parent__parent",
+        )
+
+    def filter_search(self, queryset, name, value):
+        value = value.strip()
+        if not value:
+            return queryset
+        return queryset.filter(_storage_text_query("", value))
+
+    def filter_within(self, queryset, name, value):
+        return queryset.filter(_within_storage_hierarchy("", value))
+
+    def filter_status(self, queryset, name, value):
+        return queryset.filter(is_active=value == "ACTIVE")
+
+
+class PawnPhysicalVerificationSessionFilter(django_filters.FilterSet):
+    q = django_filters.CharFilter(
+        method="filter_search",
+        label="Search",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Session, scope, or operator...",
+            }
+        ),
+    )
+    within = django_filters.ModelChoiceFilter(
+        method="filter_within",
+        queryset=PawnStorageLocation.objects.none(),
+        empty_label="All locations",
+        label="Within hierarchy",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    status = django_filters.ChoiceFilter(
+        choices=PawnPhysicalVerificationSession.Status.choices,
+        empty_label="All statuses",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    started_date_from = django_filters.DateFilter(
+        field_name="started_at",
+        lookup_expr="date__gte",
+        label="Started from",
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+    )
+    started_date_to = django_filters.DateFilter(
+        field_name="started_at",
+        lookup_expr="date__lte",
+        label="Started to",
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+    )
+
+    class Meta:
+        model = PawnPhysicalVerificationSession
+        fields = ()
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.filters["within"].queryset = PawnStorageLocation.objects.filter(
+            workspace=workspace
+        ).select_related(
+            "parent",
+            "parent__parent",
+            "parent__parent__parent",
+            "parent__parent__parent__parent",
+        )
+
+    def filter_search(self, queryset, name, value):
+        value = value.strip()
+        if not value:
+            return queryset
+        query = (
+            _storage_text_query("scope_location__", value)
+            | Q(started_by__username__icontains=value)
+            | Q(completed_by__username__icontains=value)
+        )
+        try:
+            public_id = UUID(value)
+        except (TypeError, ValueError):
+            public_id = None
+        if public_id is not None:
+            query |= Q(public_id=public_id)
+        return queryset.filter(query)
+
+    def filter_within(self, queryset, name, value):
+        return queryset.filter(
+            _within_storage_hierarchy("scope_location__", value)
+        )

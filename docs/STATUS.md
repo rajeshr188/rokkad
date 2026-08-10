@@ -10,6 +10,14 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Loans usability UP2.3 is complete. Owner-only collateral-storage and
+  physical-verification worklists now use deterministic 50-row pages. Storage
+  filters cover code/name/path, descendant-aware hierarchy, level, and active
+  state; verification filters cover session/scope/operator, hierarchy, status,
+  and inclusive start dates. Per-row collateral and expectation counts were
+  replaced with query annotations. Custody and verification evidence remains
+  unchanged.
+
 - Loans usability UP2.2 is complete. The Owner/Admin issued-document evidence
   ledger no longer silently truncates at the newest 200 rows: every immutable
   issue is reachable through 50-row pages. Search plus document type, issue
