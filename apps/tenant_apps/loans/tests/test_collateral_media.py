@@ -13,12 +13,14 @@ from django.contrib.staticfiles.storage import StaticFilesStorage, staticfiles_s
 from django.db import DatabaseError, connection, transaction
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.models import (
     LoanLicense,
+    LoanOperationalNotice,
     LoanSeries,
     PawnCollateralItem,
     PawnCollateralLabelIssue,
@@ -46,6 +48,7 @@ from apps.tenant_apps.loans.services import (
     resolve_physical_verification_discrepancy,
     start_physical_verification,
 )
+from apps.tenant_apps.notify_v2.models import NotificationJob
 from apps.tenant_apps.party.models import Party
 
 
@@ -443,6 +446,96 @@ class PawnCollateralMediaTests(TenantTestCase):
             f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}?item={self.item.pk}",
             fetch_redirect_response=False,
         )
+
+    def test_verification_screen_guides_completion_and_preserves_one_alert_intent(self):
+        branch = self._location("BRANCH", "BR-V3", None)
+        vault = self._location("VAULT", "V-V3", branch)
+        cabinet = self._location("CABINET", "C-V3", vault)
+        expected_box = self._location("BOX", "B-V3A", cabinet)
+        observed_box = self._location("BOX", "B-V3B", cabinet)
+        place_or_transfer_collateral(
+            self.item.pk, destination_id=expected_box.pk, reason="", actor=self.owner
+        )
+        session = start_physical_verification(
+            scope_location_id=vault.pk, actor=self.owner
+        )
+        detail_url = reverse(
+            "loans:pawn_physical_verification_detail", args=[session.pk]
+        )
+
+        pending = self.client.get(detail_url)
+        self.assertContains(pending, "Frozen items")
+        self.assertContains(pending, "Observe 1 pending item first.")
+        self.assertContains(pending, "Record found here")
+        self.assertContains(pending, "Complete and freeze", html=False)
+        self.assertContains(pending, "disabled")
+
+        quick_found = self.client.get(
+            detail_url,
+            {
+                "item": self.item.pk,
+                "classification": "FOUND",
+                "location": expected_box.pk,
+            },
+        )
+        self.assertEqual(
+            quick_found.context["form"]["collateral_item"].value(), str(self.item.pk)
+        )
+        self.assertEqual(quick_found.context["form"]["classification"].value(), "FOUND")
+        self.assertEqual(
+            quick_found.context["form"]["observed_location"].value(),
+            str(expected_box.pk),
+        )
+
+        observation = record_physical_verification_observation(
+            session.pk,
+            collateral_item_id=self.item.pk,
+            classification="MISPLACED",
+            observed_location_id=observed_box.pk,
+            notes="Found in neighbouring box",
+            actor=self.owner,
+        )
+        complete_physical_verification(session.pk, actor=self.owner)
+        blocked = self.client.get(detail_url)
+        self.assertContains(blocked, "Blocks operations")
+        self.assertContains(blocked, "Resolve discrepancy")
+        self.assertContains(blocked, "Alert Owner")
+
+        alert_url = reverse(
+            "loans:pawn_physical_verification_discrepancy_notice",
+            args=[observation.pk],
+        )
+        self.client.post(alert_url)
+        self.client.post(alert_url)
+        notices = LoanOperationalNotice.objects.filter(
+            source_verification_observation=observation
+        )
+        self.assertEqual(notices.count(), 1)
+        evidence = self.client.get(detail_url)
+        self.assertContains(evidence, "Owner alert QUEUED")
+        self.assertContains(evidence, f"intent {notices.get().pk}")
+        self.assertNotContains(evidence, "Retry failed alert")
+
+        notice = notices.get()
+        job = NotificationJob.objects.get(pk=notice.notification_job_id)
+        job.status = NotificationJob.Status.FAILED
+        job.failure_reason = "Pilot provider failure"
+        job.attempt_count = 2
+        job.last_attempt_at = timezone.now()
+        job.save(
+            update_fields=[
+                "status",
+                "failure_reason",
+                "attempt_count",
+                "last_attempt_at",
+                "modified",
+            ]
+        )
+        failed = self.client.get(detail_url)
+        self.assertContains(failed, "Owner alert FAILED")
+        self.assertContains(failed, "Attempts 2")
+        self.assertContains(failed, "Pilot provider failure")
+        self.assertContains(failed, "Retry failed alert")
 
     def _location(self, level, code, parent, capacity=None):
         return create_storage_location(

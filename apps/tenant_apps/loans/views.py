@@ -150,6 +150,7 @@ from apps.tenant_apps.loans.selectors import (
     get_loan_license_register,
     get_pawn_loan_balance,
     get_pawn_loan_notice_rows,
+    get_physical_verification_detail,
     get_pawn_loan_operations_snapshot,
     get_pawn_loan_reports,
     get_pawn_party_statement,
@@ -1413,6 +1414,10 @@ def pawn_physical_verification_detail(request, pk):
             initial["collateral_item"] = request.GET["item"]
         if request.GET.get("location"):
             initial["observed_location"] = request.GET["location"]
+        if request.GET.get("classification") in dict(
+            PawnPhysicalVerificationObservation.Classification.choices
+        ):
+            initial["classification"] = request.GET["classification"]
     form = PawnPhysicalVerificationObservationForm(
         request.POST or None, workspace=request.loans_workspace, initial=initial
     )
@@ -1431,16 +1436,11 @@ def pawn_physical_verification_detail(request, pk):
         else:
             messages.success(request, "Immutable verification observation recorded.")
             return redirect("loans:pawn_physical_verification_detail", pk=session.pk)
-    expectations = session.expectations.select_related(
-        "collateral_item__loan", "expected_location"
-    ).order_by("expected_location__code", "collateral_item_id")
-    observations = session.observations.select_related(
-        "collateral_item__loan", "observed_location", "expectation__expected_location", "recorded_by"
-    ).order_by("recorded_at", "pk")
+    detail = get_physical_verification_detail(session)
     return render(
         request,
         "loans/verification/session_detail.html",
-        {"session": session, "expectations": expectations, "observations": observations, "form": form},
+        {"session": session, "detail": detail, "form": form},
     )
 
 
@@ -1493,13 +1493,15 @@ def pawn_physical_verification_discrepancy_notice(request, observation_pk):
     )
     try:
         create_verification_discrepancy_notice(
-            observation.pk, request_key=uuid.uuid4().hex, actor=request.user
+            observation.pk,
+            request_key=f"verification-discrepancy:{observation.pk}",
+            actor=request.user,
         )
     except (LoanOperationalNoticeError, ValidationError, ValueError) as exc:
         messages.error(request, str(exc))
     else:
         messages.success(
-            request, "Verification discrepancy alert queued for the workspace Owner."
+            request, "Verification discrepancy alert intent is ready for the workspace Owner."
         )
     return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
 

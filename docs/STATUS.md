@@ -10,16 +10,25 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
-- P7 was accepted by the workspace Owner on 2026-08-10. P8 overdue
-  communication is active. Its operator-readiness slice links the current
+- P8 was accepted by the workspace Owner on 2026-08-10. P9 physical inventory
+  verification is active. Its operator-readiness slice exposes frozen,
+  observed, pending, discrepancy, and unresolved-blocker evidence; disables
+  completion while expected items remain; provides a found-at-expected-location
+  shortcut; and displays immutable resolution and compensation evidence. Each
+  discrepancy now has one stable Owner-alert identity, with joined Notify job,
+  attempt, failure, provider, and failed-only retry state. Nine focused
+  collateral media/storage/verification tests and eight notice tests pass. P9
+  awaits Owner execution of the found/misplaced, blocked-operation, correction,
+  and alert-delivery walkthrough.
+
+- P8's accepted operator-readiness slice links the current
   due/overdue report directly to preselected Interest Due or Overdue notices,
   requires confirmation of the displayed recipient and due snapshot, and
   exposes immutable Loans intent plus Notify event/job, attempt, failure,
   provider-reference, and retry evidence on loan detail. Historical reports do
   not expose a misleading current send action. Notice idempotency now rejects
   a changed explicit schedule as well as changed kind/channel/source. Eight
-  notice-domain tests and three focused UI/evidence tests pass. P8 awaits Owner
-  browser and delivery-result acceptance.
+  notice-domain tests and three focused UI/evidence tests pass.
 
 - P7 zero-balance top-up preview is corrected. Renewal eligibility now tests
   the resulting successor principal after applying both principal paid and

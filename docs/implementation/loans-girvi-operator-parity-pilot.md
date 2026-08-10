@@ -126,8 +126,8 @@ Do not use database/admin shortcuts.
 | P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | **Accepted 2026-08-10 by Owner** |
 | P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | **Accepted 2026-08-10 by Owner** |
 | P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | **Accepted 2026-08-10 by Owner** |
-| P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | **Active** |
-| P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | Pending |
+| P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | **Accepted 2026-08-10** |
+| P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | **Active** |
 | P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | Pending |
 | P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | Pending |
 | P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | REPLACE | Pending |
@@ -362,8 +362,38 @@ shows notice/event/job identity, source calculation date, due breakdown,
 attempt count, last attempt, provider reference and failure reason. Failed jobs
 retain the existing controlled retry action; already-sent jobs remain
 idempotent. Eight focused notice service/scheduler/operational-intent tests and
-three focused report/form/delivery-evidence tests pass. Owner browser execution
-and delivery-result inspection remain the P8 acceptance gate.
+three focused report/form/delivery-evidence tests pass.
+
+### P8 Acceptance
+
+The workspace Owner accepted P8 for the current pilot boundary on 2026-08-10.
+This accepts the current due/overdue routing, explicit notice confirmation,
+immutable source and recipient evidence, and the joined Loans/Notify delivery
+and retry trail. P9 physical inventory verification is now active.
+
+### P9 Software Evidence
+
+The verification-session screen now presents the frozen expected count,
+observed count, remaining count, and unresolved operational-blocker count. It
+keeps completion disabled until every expected item has an immutable
+observation and offers an explicit shortcut for recording an item found at its
+expected location. QR query parameters only preselect the form; GET remains
+non-writing.
+
+Every observation shows expected and observed locations, operator notes,
+resolution reason and compensation evidence where applicable. An unresolved
+missing, misplaced, unexpected, or damaged item is visibly identified as
+blocking transfer, full release, release and renew, and funding pledge. The
+existing services remain authoritative for those blocks and for append-only
+location correction or compensated-loss evidence.
+
+A discrepancy has one stable Owner-alert request identity, so repeated clicks
+cannot create duplicate operational intents. The screen joins that immutable
+Loans intent to Notify-owned job status, attempts, last attempt, provider
+reference, and failure reason; only a failed delivery exposes Retry. Nine
+focused collateral media/storage/verification tests and eight notice tests
+pass. Owner execution of the found/misplaced, blocked-operation, correction,
+and alert-delivery walkthrough remains the P9 acceptance gate.
 
 ## Physical Document Matrix
 

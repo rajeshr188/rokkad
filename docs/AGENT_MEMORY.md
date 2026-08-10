@@ -8,8 +8,14 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
-P7 was accepted by the workspace Owner on 2026-08-10. P8 overdue
-communication is active. Preserve the ownership boundary: Loans freezes notice
+P8 was accepted by the workspace Owner on 2026-08-10. P9 physical inventory
+verification is active. The operator screen must expose frozen/observed/pending
+and blocker counts, keep completion unavailable until all expected items are
+observed, and show expected versus observed location plus immutable resolution
+and alert evidence. A verification discrepancy uses the stable request key
+`verification-discrepancy:<observation id>`; repeated clicks must not create
+duplicate alerts. Only failed Notify jobs expose Retry. Preserve the ownership
+boundary: Loans freezes notice
 intent, source balance, recipient and schedule; Notify v2 owns templates,
 delivery jobs, attempts and provider state. The current report may route an
 operator to a preselected interest-due/overdue notice, but the service must

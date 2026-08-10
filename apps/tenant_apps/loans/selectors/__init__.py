@@ -40,6 +40,12 @@ from .cutover_readiness import (
     get_pawn_loan_cutover_readiness,
 )
 from .notices import PawnLoanNoticeRow, get_pawn_loan_notice_rows
+from .physical_verification import (
+    PhysicalVerificationDetail,
+    VerificationNoticeRow,
+    VerificationObservationRow,
+    get_physical_verification_detail,
+)
 from .funding_loans import (
     FundingCollateralRow,
     FundingCorrectionTarget,
@@ -95,6 +101,10 @@ __all__ = [
     "get_pawn_loan_cutover_readiness",
     "PawnLoanNoticeRow",
     "get_pawn_loan_notice_rows",
+    "PhysicalVerificationDetail",
+    "VerificationNoticeRow",
+    "VerificationObservationRow",
+    "get_physical_verification_detail",
     "FundingCollateralRow",
     "FundingCorrectionTarget",
     "FundingLoanDetail",
