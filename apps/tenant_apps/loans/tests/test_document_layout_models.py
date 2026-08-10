@@ -300,3 +300,32 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
             [finding.category for finding in findings],
             ["PILOT_TICKET_SIGNATURES"],
         )
+
+    def test_integrity_selector_requires_release_signatures(self):
+        definition = starter_layout("release_memo").canonical_dict()
+        definition["blocks"] = [
+            block for block in definition["blocks"] if block["type"] != "signature"
+        ]
+        unsigned = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="release_memo",
+            name=f"Unsigned release {uuid.uuid4().hex[:6]}",
+            definition=definition,
+            actor=self.actor,
+        )
+        unsigned = LoanDocumentLayoutService.publish(
+            revision=unsigned,
+            actor=self.actor,
+        )
+        LoanDocumentLayoutService.assign(
+            revision=unsigned,
+            workspace=self.tenant,
+            actor=self.actor,
+        )
+
+        findings = get_document_integrity_findings()
+
+        self.assertEqual(
+            [finding.category for finding in findings],
+            ["PILOT_RELEASE_SIGNATURES"],
+        )

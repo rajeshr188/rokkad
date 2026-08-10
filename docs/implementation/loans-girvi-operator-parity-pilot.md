@@ -258,6 +258,32 @@ repayment and the fixed fees → overdue interest → current interest → princ
 priority with highest-rate-first item-principal reduction. P6 full release is
 now the active gate.
 
+### P6 Software Evidence
+
+The full-release screen now obtains its exact current-date settlement from
+`preview_pawn_loan_full_release`, the tenant-scoped no-write service that shares
+the release command's calculation boundary. The quote therefore includes any
+release-day partial-period catch-up interest instead of showing the lower
+completed-period balance. It separates interest and fees, release-day
+interest, and principal, and lists every outstanding collateral item that will
+be returned.
+
+Confirmation requires the operator to acknowledge that the exact settlement
+was collected and every listed item was physically handed back. The success
+result names the immutable release number, settlement, returned-item count,
+closed state, and actual accounting delivery disposition. Existing service
+guards continue to require completed-period accrual, append immutable
+accounting and item-principal closure evidence, remove every item from storage,
+close the loan, prohibit partial collateral release, and allow reversal only
+through the strict compensating workflow. Fixed release memos retain customer
+and authorized-pawnbroker signature areas; active configurable release/Form H
+layouts missing either signature role are now document-integrity findings.
+
+Eight focused release, UI, document, deferred-accounting, fail-before-write,
+partial-release prohibition, and reversal tests pass. Django checks and Loans
+migration-drift checks are clean. Owner browser execution, release-memo review,
+signing, and QR verification remain the P6 acceptance gate.
+
 ## Physical Document Matrix
 
 Use the detailed matrix in

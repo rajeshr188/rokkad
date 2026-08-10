@@ -81,6 +81,7 @@ from apps.tenant_apps.loans.services import (
     capitalize_pawn_loan_interest,
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
+    preview_pawn_loan_full_release,
     preview_pawn_loan_repayment,
     reverse_pawn_loan_event,
     record_pawn_loan_repayment,
@@ -1175,6 +1176,12 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self._activate_loan()
         source = RateSource.objects.create(name="Release", location="Market")
         self._create_release_rate(source)
+
+        preview = preview_pawn_loan_full_release(self.loan.pk)
+        self.assertEqual(preview.release_day_catch_up_interest, Decimal("1000.00"))
+        self.assertEqual(preview.minimum_settlement, Decimal("51000.00"))
+        self.assertFalse(PawnLoanRelease.objects.filter(loan=self.loan).exists())
+        self.assertFalse(PawnLoanInterestAccrual.objects.filter(loan=self.loan).exists())
 
         with self.captureOnCommitCallbacks(execute=True):
             result = release_pawn_loan_in_full(

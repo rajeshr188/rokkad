@@ -33,10 +33,12 @@
       <div class="card mb-3"><div class="card-header">Release readiness</div><div class="card-body">
         {% if quote.error %}<div class="alert alert-danger mb-0">{{ quote.error }}</div>{% else %}
           <div class="row g-3 mb-3">
-            <div class="col-md-4"><div class="small text-muted">Minimum settlement</div><strong>{{ quote.minimum_settlement|default_if_none:"Unavailable" }}</strong></div>
-            <div class="col-md-4"><div class="small text-muted">Interest and fees first</div>{{ quote.fees_and_interest_settlement }}</div>
-            <div class="col-md-4"><div class="small text-muted">Principal reduction</div>{{ quote.principal_reduction_required|default_if_none:"Unavailable" }}</div>
+            <div class="col-md-3"><div class="small text-muted">Exact settlement</div><strong>{{ quote.minimum_settlement|default_if_none:"Unavailable" }}</strong></div>
+            <div class="col-md-3"><div class="small text-muted">Interest and fees</div>{{ quote.fees_and_interest_settlement }}</div>
+            <div class="col-md-3"><div class="small text-muted">Release-day interest</div>{{ quote.release_day_catch_up_interest }}</div>
+            <div class="col-md-3"><div class="small text-muted">Principal settled</div>{{ quote.principal_reduction_required|default_if_none:"Unavailable" }}</div>
           </div>
+          {% if quote.item_valuations %}<div class="small fw-semibold mb-2">Collateral that will be returned</div><div class="table-responsive mb-3"><table class="table table-sm mb-0"><thead><tr><th>Item</th><th>Metal</th><th>Net weight</th><th>Release valuation</th></tr></thead><tbody>{% for item in quote.item_valuations %}{% if item.selected_for_release %}<tr><td>{{ item.description }}</td><td>{{ item.metal|title }}</td><td>{{ item.net_weight }}</td><td>{{ item.valuation_amount|default_if_none:"Unavailable" }}</td></tr>{% endif %}{% endfor %}</tbody></table></div>{% endif %}
           {% for blocker in quote.blockers %}<div class="alert alert-warning py-2 mb-2">{{ blocker.message }}</div>{% empty %}<div class="alert alert-success mb-0">Collateral and accounting checks passed.</div>{% endfor %}
         {% endif %}
       </div></div>

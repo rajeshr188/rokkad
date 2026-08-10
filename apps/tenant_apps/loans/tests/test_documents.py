@@ -229,6 +229,12 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         self.assertIn("release:27:RL-A-00001:release-fingerprint-29", result.verification_id)
         self.assertIn(b"Item principal settled", result.pdf)
         self.assertIn(b"Gold chain", result.pdf)
+        text = "".join(
+            page.get_text()
+            for page in fitz.open(stream=result.pdf, filetype="pdf")
+        )
+        self.assertIn("Borrower / customer signature", text)
+        self.assertIn("Authorized pawnbroker signature", text)
         custom = ConfigurableDocumentRenderer.render(
             PawnLoanDocumentProjectionBuilder.release_memo(release),
             starter_layout("release_memo"),

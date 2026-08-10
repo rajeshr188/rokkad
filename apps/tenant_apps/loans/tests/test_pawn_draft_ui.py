@@ -633,6 +633,89 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertEqual(response.status_code, 410)
         self.assertContains(response, "release and renew", status_code=410)
 
+    def test_full_release_shows_exact_catch_up_quote_and_requires_handoff_confirmation(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+        collateral = loan.collateral_items.get()
+        quote = SimpleNamespace(
+            minimum_settlement=Decimal("10550.00"),
+            fees_and_interest_settlement=Decimal("550.00"),
+            release_day_catch_up_interest=Decimal("50.00"),
+            principal_reduction_required=Decimal("10000.00"),
+            item_valuations=(
+                SimpleNamespace(
+                    selected_for_release=True,
+                    description=collateral.description,
+                    metal="GOLD",
+                    net_weight=Decimal("10.0000"),
+                    valuation_amount=Decimal("50000.00"),
+                ),
+            ),
+            blockers=(),
+        )
+        url = reverse("loans:pawn_loan_release_full", args=[loan.pk])
+        with patch(
+            "apps.tenant_apps.loans.views.preview_pawn_loan_full_release",
+            return_value=quote,
+        ):
+            page = self.client.get(url)
+
+        self.assertContains(page, "Exact settlement")
+        self.assertContains(page, "Release-day interest")
+        self.assertContains(page, "10550.00")
+        self.assertContains(page, collateral.description)
+        self.assertContains(page, "physically returned to the customer")
+
+        payload = {
+            "settlement_amount": "10550.00",
+            "request_key": "full-release-ui-1",
+        }
+        with (
+            patch(
+                "apps.tenant_apps.loans.views.preview_pawn_loan_full_release",
+                return_value=quote,
+            ),
+            patch("apps.tenant_apps.loans.views.release_pawn_loan_in_full") as command,
+        ):
+            rejected = self.client.post(url, payload)
+        self.assertEqual(rejected.status_code, 200)
+        self.assertContains(rejected, "This field is required")
+        command.assert_not_called()
+
+        result = SimpleNamespace(
+            release=SimpleNamespace(
+                release_number="RL-A-00001",
+                settlement_amount=Decimal("10550.00"),
+                items=SimpleNamespace(count=lambda: 1),
+            ),
+            outbox=SimpleNamespace(get_status_display=lambda: "Pending"),
+        )
+        payload["confirm_collateral_handoff"] = "on"
+        with (
+            patch(
+                "apps.tenant_apps.loans.views.preview_pawn_loan_full_release",
+                return_value=quote,
+            ),
+            patch(
+                "apps.tenant_apps.loans.views.release_pawn_loan_in_full",
+                return_value=result,
+            ) as command,
+        ):
+            accepted = self.client.post(url, payload)
+        self.assertRedirects(
+            accepted,
+            reverse("loans:pawn_loan_detail", args=[loan.pk]),
+            fetch_redirect_response=False,
+        )
+        command.assert_called_once_with(
+            loan.pk,
+            settlement_amount=Decimal("10550.00"),
+            request_key="full-release-ui-1",
+            actor=self.owner,
+        )
+
     def test_release_and_renew_form_submits_explicit_retained_plan(self):
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))

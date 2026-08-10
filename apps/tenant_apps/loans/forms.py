@@ -927,10 +927,17 @@ class PawnFullReleaseForm(forms.Form):
         min_value=0,
     )
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+    confirm_collateral_handoff = forms.BooleanField(
+        label=(
+            "I confirm the exact settlement was collected and every listed "
+            "collateral item was physically returned to the customer."
+        )
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["settlement_amount"].widget.attrs["class"] = "form-control"
+        self.fields["confirm_collateral_handoff"].widget.attrs["class"] = "form-check-input"
 
 
 class PawnReversalForm(forms.Form):

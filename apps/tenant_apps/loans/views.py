@@ -151,7 +151,6 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
     get_pawn_loan_notice_rows,
     get_pawn_loan_operations_snapshot,
-    get_pawn_loan_release_readiness,
     get_pawn_loan_reports,
     get_pawn_party_statement,
 )
@@ -231,6 +230,7 @@ from apps.tenant_apps.loans.services import (
     expire_license,
     finalize_pawn_loan_accrual,
     preview_number,
+    preview_pawn_loan_full_release,
     preview_pawn_loan_repayment,
     preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
@@ -1738,7 +1738,7 @@ def pawn_loan_release_full(request, pk):
     form = PawnFullReleaseForm(request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         try:
-            release_pawn_loan_in_full(
+            result = release_pawn_loan_in_full(
                 loan.pk,
                 settlement_amount=form.cleaned_data["settlement_amount"],
                 request_key=form.cleaned_data["request_key"],
@@ -1747,7 +1747,14 @@ def pawn_loan_release_full(request, pk):
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, "Full settlement and collateral return recorded.")
+            messages.success(
+                request,
+                f"Release {result.release.release_number} completed: "
+                f"{result.release.settlement_amount} collected, "
+                f"{result.release.items.count()} collateral item(s) returned, "
+                f"loan closed. Accounting delivery: "
+                f"{result.outbox.get_status_display()}.",
+            )
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return _render_action(
         request,
@@ -3321,22 +3328,9 @@ def _accrual_preview_rows(loan, previews):
     )
 
 
-def _release_quote(loan, selected_item_ids):
-    return get_pawn_loan_release_readiness(
-        loan.pk,
-        selected_item_ids=selected_item_ids,
-        as_of_date=timezone.localdate(),
-    )
-
-
 def _full_release_quote(loan):
-    selected_ids = tuple(
-        loan.collateral_items.exclude(custody_state="WITH_CUSTOMER").values_list(
-            "pk", flat=True
-        )
-    )
     try:
-        return _release_quote(loan, selected_ids)
+        return preview_pawn_loan_full_release(loan.pk)
     except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
         return {"error": str(exc), "minimum_settlement": None}
 

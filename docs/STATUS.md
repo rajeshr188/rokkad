@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-08-09
+updated: 2026-08-10
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -9,6 +9,19 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 # Status
 
 ## Latest Update
+
+- P6 full-release software execution is complete. The release screen now uses
+  the same tenant-scoped, no-write calculation as confirmation, including
+  release-day partial-period interest, and identifies every collateral item
+  being returned. Confirmation requires an explicit exact-settlement and
+  physical-handoff acknowledgement and reports the resulting release number,
+  closure, item count, and real accounting disposition. Configurable active
+  release/Form H layouts now fail document-integrity preflight when customer
+  or authorized-staff signature evidence is absent. Eight focused release,
+  UI, document, deferred-accounting, fail-before-write, partial-release
+  prohibition, and strict-reversal tests pass; Django checks and Loans
+  migration-drift checks are clean. Owner browser/document execution remains
+  P6's acceptance step.
 
 - P5 accrual and repayment was accepted by the workspace Owner on 2026-08-10.
   P6 full release is active: prove exact complete settlement, required accrual

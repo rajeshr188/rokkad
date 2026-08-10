@@ -1,12 +1,27 @@
 ---
 status: active
 owner: project
-updated: 2026-08-09
+updated: 2026-08-10
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
 
 # Agent Memory
+
+P6 full-release software execution is complete. Use
+`preview_pawn_loan_full_release` for the operator quote: it is tenant-scoped,
+performs no writes, includes release-day partial-period catch-up, and shares
+the canonical calculation boundary with confirmation. The release UI lists
+every returned collateral item and requires an explicit exact-settlement plus
+physical-handoff acknowledgement. Confirmation reports the actual release,
+closure, returned-item count, and accounting delivery state. Active
+configurable release/Form H layouts without both customer and authorized-staff
+signature evidence are document-integrity findings. Existing domain behavior
+still enforces completed-period accrual, immutable accounting and
+item-principal closure evidence, all-item return/storage removal, loan closure,
+no partial collateral release, and strict newest-first compensating reversal.
+Eight focused tests plus Django and migration-drift checks pass. P6 still needs
+Owner browser/document acceptance; do not activate P7 until that acceptance.
 
 P5 accrual and repayment was accepted by the workspace Owner on 2026-08-10.
 P6 full release is active. A full release must use the canonical current-date

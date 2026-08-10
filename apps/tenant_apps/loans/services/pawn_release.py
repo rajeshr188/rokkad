@@ -70,6 +70,62 @@ class PawnFullReleaseResult:
     already_released: bool = False
 
 
+@dataclass(frozen=True)
+class PawnFullReleasePreview:
+    readiness: object
+    release_day_accrual: object | None
+    minimum_settlement: Decimal | None
+
+    @property
+    def release_day_catch_up_interest(self):
+        return (
+            self.release_day_accrual.recognized_interest
+            if self.release_day_accrual is not None
+            else Decimal("0")
+        )
+
+    @property
+    def fees_and_interest_settlement(self):
+        return (
+            self.readiness.fees_and_interest_settlement
+            + self.release_day_catch_up_interest
+        )
+
+    @property
+    def principal_reduction_required(self):
+        return self.readiness.principal_reduction_required
+
+    @property
+    def item_valuations(self):
+        return self.readiness.item_valuations
+
+    @property
+    def blockers(self):
+        return self.readiness.blockers
+
+
+def preview_pawn_loan_full_release(loan_id: int) -> PawnFullReleasePreview:
+    """Return the exact current-date full-release quote without mutation."""
+    loan = _tenant_loan(loan_id)
+    if loan.state != PawnLoanState.ACTIVE.value:
+        raise PawnReleaseError("Only an active PawnLoan can be released.")
+    collateral = tuple(loan.collateral_items.all())
+    if not collateral:
+        raise PawnReleaseError("A PawnLoan without collateral cannot be released.")
+    outstanding = tuple(
+        item
+        for item in collateral
+        if item.custody_state != CollateralCustodyState.WITH_CUSTOMER.value
+    )
+    if not outstanding:
+        raise PawnReleaseError("Every collateral item has already been returned.")
+    return _build_full_release_preview(
+        loan,
+        outstanding,
+        effective_date=timezone.localdate(),
+    )
+
+
 @transaction.atomic
 def release_pawn_loan_in_full(
     loan_id: int,
@@ -112,43 +168,14 @@ def release_pawn_loan_in_full(
     )
     if not outstanding_collateral:
         raise PawnReleaseError("Every collateral item has already been returned.")
-    from .physical_verification import (
-        PawnPhysicalVerificationBlockerError,
-        assert_physical_verification_clear,
-    )
-
     try:
-        assert_physical_verification_clear(
-            (item.pk for item in outstanding_collateral), operation="PawnLoan release"
+        preview = _build_full_release_preview(
+            loan,
+            outstanding_collateral,
+            effective_date=effective_date,
         )
-    except PawnPhysicalVerificationBlockerError as exc:
-        raise PawnReleaseError(str(exc)) from exc
-    try:
-        assert_pawn_loan_financial_actions_allowed(loan.pk)
-        missing_accruals = preview_pawn_loan_accruals(
-            loan.pk,
-            as_of_date=effective_date,
-            include_partial=False,
-        )
-        if missing_accruals:
-            raise PawnReleaseError(
-                "Finalize every completed interest period before releasing the loan."
-            )
-        partial_candidates = preview_pawn_loan_accruals(
-            loan.pk,
-            as_of_date=effective_date,
-            include_partial=True,
-        )
-        partial_accrual = (
-            partial_candidates[0]
-            if partial_candidates and partial_candidates[0].is_partial
-            else None
-        )
-        readiness = get_pawn_loan_release_readiness(
-            loan.pk,
-            selected_item_ids=tuple(item.pk for item in outstanding_collateral),
-            as_of_date=effective_date,
-        )
+        partial_accrual = preview.release_day_accrual
+        readiness = preview.readiness
         if not readiness.ready:
             raise PawnReleaseError(
                 "PawnLoan is not ready for release: "
@@ -156,10 +183,8 @@ def release_pawn_loan_in_full(
             )
         if not readiness.is_full_release:
             raise PawnReleaseError("Full release must return every collateral item.")
-        catch_up_interest = (
-            partial_accrual.recognized_interest if partial_accrual else Decimal("0")
-        )
-        required_settlement = readiness.minimum_settlement + catch_up_interest
+        catch_up_interest = preview.release_day_catch_up_interest
+        required_settlement = preview.minimum_settlement
         if amount != required_settlement:
             raise PawnReleaseError(
                 "Full release settlement must equal the current total due of "
@@ -354,6 +379,74 @@ def _locked_loan(loan_id):
         raise PawnReleaseError(
             "PawnLoan was not found in the active workspace."
         ) from exc
+
+
+def _tenant_loan(loan_id):
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise PawnReleaseError("PawnLoan release requires an active tenant schema.")
+    try:
+        return (
+            PawnLoan.objects.select_related("series", "policy_snapshot", "borrower")
+            .prefetch_related("collateral_items")
+            .get(pk=loan_id, workspace_id=workspace_id)
+        )
+    except PawnLoan.DoesNotExist as exc:
+        raise PawnReleaseError(
+            "PawnLoan was not found in the active workspace."
+        ) from exc
+
+
+def _build_full_release_preview(loan, outstanding_collateral, *, effective_date):
+    from .physical_verification import (
+        PawnPhysicalVerificationBlockerError,
+        assert_physical_verification_clear,
+    )
+
+    try:
+        assert_physical_verification_clear(
+            (item.pk for item in outstanding_collateral), operation="PawnLoan release"
+        )
+    except PawnPhysicalVerificationBlockerError as exc:
+        raise PawnReleaseError(str(exc)) from exc
+    assert_pawn_loan_financial_actions_allowed(loan.pk)
+    missing_accruals = preview_pawn_loan_accruals(
+        loan.pk,
+        as_of_date=effective_date,
+        include_partial=False,
+    )
+    if missing_accruals:
+        raise PawnReleaseError(
+            "Finalize every completed interest period before releasing the loan."
+        )
+    partial_candidates = preview_pawn_loan_accruals(
+        loan.pk,
+        as_of_date=effective_date,
+        include_partial=True,
+    )
+    partial_accrual = (
+        partial_candidates[0]
+        if partial_candidates and partial_candidates[0].is_partial
+        else None
+    )
+    readiness = get_pawn_loan_release_readiness(
+        loan.pk,
+        selected_item_ids=tuple(item.pk for item in outstanding_collateral),
+        as_of_date=effective_date,
+    )
+    catch_up_interest = (
+        partial_accrual.recognized_interest if partial_accrual else Decimal("0")
+    )
+    minimum_settlement = (
+        readiness.minimum_settlement + catch_up_interest
+        if readiness.minimum_settlement is not None
+        else None
+    )
+    return PawnFullReleasePreview(
+        readiness=readiness,
+        release_day_accrual=partial_accrual,
+        minimum_settlement=minimum_settlement,
+    )
 
 
 def _request_key(value):

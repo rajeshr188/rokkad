@@ -62,28 +62,35 @@ def get_document_integrity_findings():
                 findings.append(DocumentIntegrityFinding("ISSUE_HASH", "issue", issue.pk, "Issued PDF bytes do not match the immutable hash."))
     assignments = LoanDocumentLayoutAssignment.objects.filter(
         workspace_id=workspace_id,
-        document_type="loan_ticket",
+        document_type__in=("loan_ticket", "release_memo"),
         is_active=True,
         revision__state=LoanDocumentLayoutRevision.State.PUBLISHED,
-    ).select_related("revision")
+    ).select_related("revision", "revision__layout")
     for assignment in assignments:
         try:
             layout = DocumentLayoutValidator.load(assignment.revision.definition)
         except ValueError:
             continue
-        if not _includes_original_and_duplicate(layout):
+        if assignment.document_type == "loan_ticket" and not _includes_original_and_duplicate(layout):
             findings.append(DocumentIntegrityFinding(
                 "PILOT_TICKET_COPY_BUNDLE",
                 "assignment",
                 assignment.pk,
                 "The active pilot loan-ticket layout must issue both Original and Duplicate copies. Choose a BOTH or A4 side-by-side sheet preset, or Original/Duplicate copy mode.",
             ))
-        if not _includes_required_ticket_signatures(layout):
+        if assignment.document_type == "loan_ticket" and not _includes_required_ticket_signatures(layout):
             findings.append(DocumentIntegrityFinding(
                 "PILOT_TICKET_SIGNATURES",
                 "assignment",
                 assignment.pk,
                 "The active pilot loan-ticket layout must provide borrower/customer and authorized staff signature labels on both Original and Duplicate fronts.",
+            ))
+        if assignment.document_type == "release_memo" and not _includes_required_ticket_signatures(layout):
+            findings.append(DocumentIntegrityFinding(
+                "PILOT_RELEASE_SIGNATURES",
+                "assignment",
+                assignment.pk,
+                "The active pilot release/Form H layout must provide borrower/customer and authorized staff signature labels.",
             ))
     return tuple(findings)
 
