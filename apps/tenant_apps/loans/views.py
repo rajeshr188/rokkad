@@ -7,6 +7,7 @@ import fitz
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.http import Http404, HttpResponse, HttpResponseGone, JsonResponse
@@ -36,6 +37,7 @@ from apps.tenant_apps.loans.feature_flags import (
     get_loan_module_feature_state,
     set_new_loans_enabled,
 )
+from apps.tenant_apps.loans.filters import PawnLoanFilter
 from apps.tenant_apps.loans.forms import (
     LoanLicenseForm,
     LoanLicenseRenewalForm,
@@ -321,8 +323,23 @@ def pawn_loan_list(request):
     loans = PawnLoan.objects.filter(workspace=request.loans_workspace).select_related(
         "borrower", "license", "series"
     ).order_by("-created_at")
+    loan_filter = PawnLoanFilter(
+        request.GET,
+        queryset=loans,
+        workspace=request.loans_workspace,
+    )
+    page_obj = Paginator(loan_filter.qs, 25).get_page(request.GET.get("page"))
     readiness = _draft_readiness(request.loans_workspace)
-    return render(request, "loans/pawn/list.html", {"loans": loans, "readiness": readiness})
+    return render(
+        request,
+        "loans/pawn/list.html",
+        {
+            "loans": page_obj.object_list,
+            "loan_filter": loan_filter,
+            "page_obj": page_obj,
+            "readiness": readiness,
+        },
+    )
 
 
 @loans_workspace_required

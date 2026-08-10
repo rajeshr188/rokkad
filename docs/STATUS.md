@@ -10,6 +10,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Loans usability UP2.1 is complete. The primary PawnLoan worklist now applies
+  tenant scope before a dedicated `django-filter` FilterSet, supports combined
+  text/state/license/Series/inclusive-date filtering, and paginates at 25 rows
+  while preserving active query parameters. License and Series choices are
+  workspace-bound. Issued-document, storage/verification, and notice/
+  diagnostic worklists remain in the ordered UP2 follow-up.
+
 - Loans usability follow-up UP1 is complete. Draft/edit, post-draft collateral
   append, and release-and-renew additional collateral now support direct mobile
   rear-camera intent and an in-page desktop webcam capture dialog. Captured

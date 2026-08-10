@@ -8,6 +8,13 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Loans usability UP2.1 bounds the primary PawnLoan worklist at 25 rows and uses
+a dedicated tenant-aware `django-filter` FilterSet. Apply workspace scope to
+the base queryset first; also bind license and Series filter choices to that
+workspace. Search, state, license, Series, and inclusive loan-date filters must
+compose, and pagination must retain the active query string. The remaining UP2
+order is issued documents, storage/verification, then notices/diagnostics.
+
 Loans usability UP1 adds capture-first collateral media without changing the
 evidence model: mobile inputs request the rear camera, desktop browsers can use
 an in-page webcam dialog, and all captures submit through existing validated,

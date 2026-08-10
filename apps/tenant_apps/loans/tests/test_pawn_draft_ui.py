@@ -86,6 +86,87 @@ class PawnDraftUiTests(TenantTestCase):
         self.client.force_login(self.owner)
         self.party = Party.objects.create(display_name="Draft Borrower")
 
+    def test_list_filters_workspace_loans_and_preserves_filters_while_paging(self):
+        license, series = self._configured_setup()
+        for sequence in range(26):
+            PawnLoan.objects.create(
+                workspace=self.tenant,
+                license=license,
+                series=series,
+                borrower=self.party,
+                loan_number=f"PL-LIST-{sequence:03d}",
+                state="DRAFT",
+                principal_amount=Decimal("1000.00"),
+                monthly_interest_rate=Decimal("2.000000"),
+                loan_date=date(2026, 7, 18),
+                created_by=self.owner,
+            )
+
+        special_party = Party.objects.create(display_name="Special Borrower")
+        second_license = LoanLicense.objects.create(
+            workspace=self.tenant,
+            name="Second License",
+            license_number=f"PBL-SECOND-{uuid.uuid4().hex[:8]}",
+            issued_on=date(2026, 1, 1),
+            expires_on=date(2027, 1, 1),
+            created_by=self.owner,
+        )
+        second_series = LoanSeries.objects.create(
+            license=second_license,
+            name="Second",
+            code="B",
+        )
+        special_loan = PawnLoan.objects.create(
+            workspace=self.tenant,
+            license=second_license,
+            series=second_series,
+            borrower=special_party,
+            loan_number="PL-SPECIAL-001",
+            state="ACTIVE",
+            principal_amount=Decimal("5000.00"),
+            monthly_interest_rate=Decimal("2.000000"),
+            loan_date=date(2026, 7, 20),
+            created_by=self.owner,
+        )
+
+        first_page = self.client.get(
+            reverse("loans:pawn_loan_list"),
+            {"state": "DRAFT"},
+        )
+        self.assertEqual(first_page.status_code, 200)
+        self.assertEqual(first_page.context["page_obj"].paginator.count, 26)
+        self.assertEqual(len(first_page.context["loans"]), 25)
+        self.assertContains(first_page, "?state=DRAFT&amp;page=2")
+
+        second_page = self.client.get(
+            reverse("loans:pawn_loan_list"),
+            {"state": "DRAFT", "page": 2},
+        )
+        self.assertEqual(len(second_page.context["loans"]), 1)
+
+        filtered = self.client.get(
+            reverse("loans:pawn_loan_list"),
+            {
+                "q": "Special Borrower",
+                "state": "ACTIVE",
+                "license": second_license.pk,
+                "series": second_series.pk,
+                "loan_date_from": "2026-07-20",
+                "loan_date_to": "2026-07-20",
+            },
+        )
+        self.assertEqual(list(filtered.context["loans"]), [special_loan])
+        self.assertContains(filtered, "PL-SPECIAL-001")
+        self.assertNotContains(filtered, "PL-LIST-000")
+        self.assertEqual(
+            set(
+                filtered.context["loan_filter"]
+                .form.fields["license"]
+                .queryset.values_list("pk", flat=True)
+            ),
+            {license.pk, second_license.pk},
+        )
+
     def test_create_is_blocked_with_clear_setup_action(self):
         response = self.client.get(reverse("loans:pawn_loan_create"))
 
