@@ -41,6 +41,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanEconomicPolicy,
+    PawnLoanNotice,
     PawnMetalInterestRatePolicy,
     PawnPhysicalVerificationSession,
     PawnStorageLocation,
@@ -568,6 +569,109 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertContains(response, reverse("loans:pawn_outbox_retry", args=[outbox.pk]))
         self.assertContains(response, reverse("loans:pawn_operations_runbook"))
 
+    def test_notice_and_delivery_diagnostics_filter_and_paginate(self):
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-UP2-00001")
+        scheduled_for = timezone.now()
+        for sequence in range(51):
+            PawnLoanNotice.objects.create(
+                workspace=self.tenant,
+                loan=loan,
+                notice_kind="REPAYMENT_REMINDER",
+                channel="EMAIL",
+                request_key=f"up2-notice-{sequence}",
+                scheduled_for=scheduled_for,
+                recipient_name=f"Recipient {sequence}",
+                recipient_email=f"recipient-{sequence}@example.com",
+                payload_snapshot={},
+                created_by=self.owner,
+            )
+        special_notice = PawnLoanNotice.objects.create(
+            workspace=self.tenant,
+            loan=loan,
+            notice_kind="INTEREST_DUE",
+            channel="EMAIL",
+            request_key="up2-notice-special",
+            scheduled_for=scheduled_for,
+            recipient_name="Special Notice Recipient",
+            recipient_email="special@example.com",
+            payload_snapshot={},
+            created_by=self.owner,
+        )
+
+        notice_page = self.client.get(
+            reverse("loans:pawn_loan_notice_list"),
+            {"notice_kind": "REPAYMENT_REMINDER"},
+        )
+        self.assertEqual(notice_page.context["page_obj"].paginator.count, 51)
+        self.assertEqual(len(notice_page.context["notice_rows"]), 50)
+        self.assertContains(
+            notice_page,
+            "?notice_kind=REPAYMENT_REMINDER&amp;page=2",
+        )
+        notice_filtered = self.client.get(
+            reverse("loans:pawn_loan_notice_list"),
+            {
+                "q": "Special Notice Recipient",
+                "notice_kind": "INTEREST_DUE",
+                "channel": "EMAIL",
+                "delivery_status": "MISSING",
+                "scheduled_date_from": scheduled_for.date().isoformat(),
+                "scheduled_date_to": scheduled_for.date().isoformat(),
+            },
+        )
+        self.assertEqual(notice_filtered.context["page_obj"].paginator.count, 1)
+        self.assertEqual(
+            notice_filtered.context["notice_rows"][0].notice,
+            special_notice,
+        )
+        self.assertEqual(notice_filtered.context["notice_rows"][0].status, "MISSING")
+        self.assertContains(notice_filtered, "Missing")
+
+        effective_date = date(2026, 8, 10)
+        for sequence in range(51):
+            event = PawnLoanAccountingEvent.objects.create(
+                loan=loan,
+                event_kind="DISBURSAL",
+                effective_date=effective_date,
+                payload={},
+                payload_fingerprint=f"up2-event-fingerprint-{sequence}",
+                idempotency_key=f"up2-event-{sequence}",
+                created_by=self.owner,
+            )
+            PawnLoanAccountingOutbox.objects.create(
+                event=event,
+                idempotency_key=f"up2-outbox-{sequence}",
+                payload={},
+                payload_fingerprint=f"up2-outbox-fingerprint-{sequence}",
+                status="FAILED",
+                last_error=(
+                    "SPECIAL DELIVERY FAILURE"
+                    if sequence == 50
+                    else f"Delivery failure {sequence}"
+                ),
+            )
+
+        outbox_page = self.client.get(
+            reverse("loans:pawn_operations_console"),
+            {"status": "FAILED"},
+        )
+        self.assertEqual(outbox_page.context["page_obj"].paginator.count, 51)
+        self.assertEqual(len(outbox_page.context["outboxes"]), 50)
+        self.assertContains(outbox_page, "?status=FAILED&amp;page=2")
+        outbox_filtered = self.client.get(
+            reverse("loans:pawn_operations_console"),
+            {
+                "q": "SPECIAL DELIVERY FAILURE",
+                "status": "FAILED",
+                "event_kind": "DISBURSAL",
+                "effective_date_from": effective_date.isoformat(),
+                "effective_date_to": effective_date.isoformat(),
+            },
+        )
+        self.assertEqual(outbox_filtered.context["page_obj"].paginator.count, 1)
+        self.assertContains(outbox_filtered, "SPECIAL DELIVERY FAILURE")
+
     def test_operations_retry_returns_to_console(self):
         license, series = self._configured_setup()
         loan = self._loan(license, series, "PL-A-00002")
@@ -633,6 +737,10 @@ class LoansSetupUiTests(TenantTestCase):
         )
         self.assertEqual(
             self.tenant_get(reverse("loans:document_issue_list")).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:pawn_loan_notice_list")).status_code,
             403,
         )
         self.assertEqual(

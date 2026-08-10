@@ -10,6 +10,16 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Loans usability UP2.4 is complete, closing the primary UP2 scope. A new
+  Owner/Admin customer-notice ledger provides 50-row pages and composable
+  loan/recipient, notice-kind, channel, Notify delivery-state, and scheduled-
+  date filters; missing delivery jobs remain explicit evidence. The operations
+  console replaces its capped failed-only table with all tenant accounting
+  outbox rows filtered by loan/key/error, status, event kind, and effective
+  date. Retry remains available only for failed rows. Loans still reaches
+  Notify state through its integration adapter, and neither worklist mutates
+  notice, outbox, DEA, or delivery evidence.
+
 - Loans usability UP2.3 is complete. Owner-only collateral-storage and
   physical-verification worklists now use deterministic 50-row pages. Storage
   filters cover code/name/path, descendant-aware hierarchy, level, and active

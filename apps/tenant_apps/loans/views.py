@@ -39,7 +39,9 @@ from apps.tenant_apps.loans.feature_flags import (
 )
 from apps.tenant_apps.loans.filters import (
     LoanDocumentIssueFilter,
+    PawnLoanAccountingOutboxFilter,
     PawnLoanFilter,
+    PawnLoanNoticeFilter,
     PawnPhysicalVerificationSessionFilter,
     PawnStorageLocationFilter,
 )
@@ -172,6 +174,7 @@ from apps.tenant_apps.loans.models import (
 )
 from apps.tenant_apps.loans.selectors import (
     FundingLoanSelectorError,
+    build_pawn_loan_notice_rows,
     get_funding_loan_detail,
     get_funding_loan_draft_inputs,
     get_funding_loan_integrity_findings,
@@ -2784,10 +2787,48 @@ def pawn_outbox_retry(request, pk):
 
 @loans_setup_required
 def pawn_operations_console(request):
+    outboxes = PawnLoanAccountingOutbox.objects.filter(
+        event__loan__workspace=request.loans_workspace
+    ).select_related(
+        "event",
+        "event__loan",
+    ).order_by("-updated_at", "-pk")
+    outbox_filter = PawnLoanAccountingOutboxFilter(
+        request.GET,
+        queryset=outboxes,
+    )
+    page_obj = Paginator(outbox_filter.qs, 50).get_page(request.GET.get("page"))
     return render(
         request,
         "loans/setup/operations_console.html",
-        {"snapshot": get_pawn_loan_operations_snapshot()},
+        {
+            "outbox_filter": outbox_filter,
+            "outboxes": page_obj.object_list,
+            "page_obj": page_obj,
+            "snapshot": get_pawn_loan_operations_snapshot(),
+        },
+    )
+
+
+@loans_setup_required
+def pawn_loan_notice_list(request):
+    notices = PawnLoanNotice.objects.filter(
+        workspace=request.loans_workspace
+    ).select_related(
+        "loan",
+        "loan__borrower",
+        "created_by",
+    ).order_by("-created_at", "-pk")
+    notice_filter = PawnLoanNoticeFilter(request.GET, queryset=notices)
+    page_obj = Paginator(notice_filter.qs, 50).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "loans/setup/notices/list.html",
+        {
+            "notice_filter": notice_filter,
+            "notice_rows": build_pawn_loan_notice_rows(page_obj.object_list),
+            "page_obj": page_obj,
+        },
     )
 
 

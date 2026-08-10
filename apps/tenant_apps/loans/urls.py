@@ -60,6 +60,7 @@ urlpatterns = [
     path("setup/verification/<int:pk>/complete/", views.pawn_physical_verification_complete, name="pawn_physical_verification_complete"),
     path("setup/verification/observations/<int:observation_pk>/resolve/", views.pawn_physical_verification_resolve, name="pawn_physical_verification_resolve"),
     path("setup/verification/observations/<int:observation_pk>/notice/", views.pawn_physical_verification_discrepancy_notice, name="pawn_physical_verification_discrepancy_notice"),
+    path("setup/notices/", views.pawn_loan_notice_list, name="pawn_loan_notice_list"),
     path("setup/notices/<int:notice_pk>/retry/", views.operational_notice_retry, name="operational_notice_retry"),
     path("setup/funding/", views.funding_loan_read_console, name="funding_loan_read_console"),
     path("setup/funding/create/", views.funding_loan_draft_create, name="funding_loan_draft_create"),

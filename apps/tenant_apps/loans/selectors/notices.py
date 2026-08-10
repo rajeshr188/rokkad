@@ -18,8 +18,8 @@ class PawnLoanNoticeRow:
     last_attempt_at: object | None
 
 
-def get_pawn_loan_notice_rows(loan) -> tuple[PawnLoanNoticeRow, ...]:
-    notices = tuple(loan.notices.all().order_by("-created_at", "-pk"))
+def build_pawn_loan_notice_rows(notices) -> tuple[PawnLoanNoticeRow, ...]:
+    notices = tuple(notices)
     states = get_pawn_notice_delivery_states(
         notice.notification_job_id for notice in notices
     )
@@ -44,4 +44,14 @@ def get_pawn_loan_notice_rows(loan) -> tuple[PawnLoanNoticeRow, ...]:
     return tuple(rows)
 
 
-__all__ = ["PawnLoanNoticeRow", "get_pawn_loan_notice_rows"]
+def get_pawn_loan_notice_rows(loan) -> tuple[PawnLoanNoticeRow, ...]:
+    return build_pawn_loan_notice_rows(
+        loan.notices.all().order_by("-created_at", "-pk")
+    )
+
+
+__all__ = [
+    "PawnLoanNoticeRow",
+    "build_pawn_loan_notice_rows",
+    "get_pawn_loan_notice_rows",
+]

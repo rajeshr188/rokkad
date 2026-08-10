@@ -32,7 +32,7 @@ Status: implemented 2026-08-10.
 
 ## UP2: Bounded Tables And Contextual Filters
 
-Status: in progress; UP2.1-UP2.3 implemented 2026-08-10.
+Status: implemented 2026-08-10; UP2.1-UP2.4 complete.
 
 Use `django-filter`, already installed, plus Django `Paginator`. Preserve active
 filter query parameters in page links and apply tenant scope before filters.
@@ -54,7 +54,14 @@ Priority order:
    status, and inclusive start dates. Both use deterministic 50-row pages;
    location item counts and session expectation counts are annotated instead
    of queried once per displayed row.
-4. Notices and operational diagnostics: kind/status/date; 50 rows.
+4. Notices and operational diagnostics: implemented. The new Owner/Admin
+   customer-notice ledger supports loan/recipient/notice search, notice kind,
+   channel, Notify-owned delivery state (including missing-job evidence), and
+   inclusive scheduled dates. The operations console now exposes every
+   accounting outbox row through loan/key/error search, delivery status, event
+   kind, and inclusive effective dates. Both use 50-row pages. Source-specific
+   license-expiry and verification-discrepancy alerts remain embedded with
+   their source evidence because those collections are small.
 5. License, profile, and layout administration only when realistic workspace
    volume justifies it.
 

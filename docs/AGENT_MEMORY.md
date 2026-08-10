@@ -8,6 +8,16 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Loans usability UP2.4 completes the primary bounded-worklist scope. The
+Owner/Admin customer-notice ledger pages 50 Loans-owned intents at a time and
+hydrates/filter delivery status only through the Loans-to-Notify adapter;
+missing jobs are a distinct visible state. The operations console pages all
+tenant-scoped accounting outboxes at 50 rows with status/event/effective-date
+and text filters, replacing the failed-only cap; safe retry remains failed-
+only. Source-local license and verification alerts stay embedded because they
+are small evidence collections. No listing may mutate notice, Notify, outbox,
+or DEA evidence.
+
 Loans usability UP2.3 bounds the Owner-only storage-location and physical-
 verification worklists at 50 deterministic rows. “Within hierarchy” means the
 selected location plus every descendant through the fixed Branch/Vault/
