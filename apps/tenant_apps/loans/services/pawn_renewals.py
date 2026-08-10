@@ -293,14 +293,14 @@ def preview_pawn_loan_renewal_plan(
             "Top-up renewal requires a positive top-up and no simultaneous principal paydown."
         )
     balance = source_preview.balance
-    if principal_paid >= balance.principal_outstanding:
-        raise PawnRenewalError(
-            "Renewal must carry a positive principal; use full release to settle the loan."
-        )
     quantum = Decimal(str(source.policy_snapshot.currency_quantum)).normalize()
     successor_principal = (
         balance.principal_outstanding - principal_paid + top_up_amount
     ).quantize(quantum)
+    if successor_principal <= 0:
+        raise PawnRenewalError(
+            "Renewal must carry a positive principal; use full release to settle the loan."
+        )
     successor_collateral, retained_ids = _successor_collateral_plan(
         source_preview.source_items,
         retained_collateral=retained_collateral,
@@ -514,16 +514,16 @@ def renew_pawn_loan(
             raise PawnRenewalError(
                 "Renewal source item principal does not reconcile to original principal."
             )
-        if principal_paid >= balance.principal_outstanding:
-            raise PawnRenewalError(
-                "Renewal must carry a positive principal; use full release to settle the loan."
-            )
         currency_quantum = Decimal(
             str(source.policy_snapshot.currency_quantum)
         ).normalize()
         successor_principal = (
             balance.principal_outstanding - principal_paid + top_up_amount
         ).quantize(currency_quantum)
+        if successor_principal <= 0:
+            raise PawnRenewalError(
+                "Renewal must carry a positive principal; use full release to settle the loan."
+            )
         successor_collateral, retained_item_ids = _successor_collateral_plan(
             items,
             retained_collateral=retained_collateral,

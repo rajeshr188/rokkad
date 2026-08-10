@@ -83,6 +83,7 @@ from apps.tenant_apps.loans.services import (
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
     preview_pawn_loan_full_release,
+    preview_pawn_loan_renewal_plan,
     preview_pawn_loan_renewal_source,
     preview_pawn_loan_repayment,
     reverse_pawn_loan_event,
@@ -1937,6 +1938,70 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(
             voucher.lines.get(side="Dr", account__isnull=True).amount.amount,
             Decimal("10000.00"),
+        )
+
+    def test_top_up_renewal_can_restart_from_zero_outstanding_principal(self):
+        self._activate_loan()
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), self.captureOnCommitCallbacks(execute=True):
+            record_pawn_loan_repayment(
+                self.loan.pk,
+                amount=Decimal("50000.00"),
+                request_key="repay-before-zero-balance-topup",
+                actor=self.actor,
+            )
+        self.assertEqual(
+            get_pawn_loan_balance(
+                self.loan.pk, as_of_date=date(2026, 8, 3)
+            ).principal_outstanding,
+            Decimal("0.00"),
+        )
+        collateral = self.loan.collateral_items.get()
+        retained = (RetainedCollateralInput(collateral.pk, Decimal("5000.00")),)
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
+            return_value=(),
+        ):
+            preview = preview_pawn_loan_renewal_plan(
+                self.loan.pk,
+                mode=PawnLoanRenewalMode.TOP_UP_RENEW,
+                principal_paid=Decimal("0.00"),
+                top_up_amount=Decimal("5000.00"),
+                successor_license_id=self.loan.license_id,
+                successor_series_id=self.loan.series_id,
+                tenure_months=3,
+                retained_collateral=retained,
+            )
+            with self.captureOnCommitCallbacks(execute=True):
+                result = renew_pawn_loan(
+                    self.loan.pk,
+                    mode=PawnLoanRenewalMode.TOP_UP_RENEW,
+                    renewal_date=date(2026, 8, 3),
+                    principal_paid=Decimal("0.00"),
+                    top_up_amount=Decimal("5000.00"),
+                    successor_license_id=self.loan.license_id,
+                    successor_series_id=self.loan.series_id,
+                    tenure_months=3,
+                    request_key="zero-balance-topup-renewal",
+                    retained_collateral=retained,
+                    expected_preview_fingerprint=preview.fingerprint,
+                    actor=self.actor,
+                )
+
+        self.assertEqual(preview.successor_principal, Decimal("5000.00"))
+        self.assertEqual(
+            result.renewal.successor_principal_amount, Decimal("5000.00")
+        )
+        self.assertEqual(
+            get_pawn_loan_balance(
+                result.successor_loan.pk, as_of_date=date(2026, 8, 3)
+            ).principal_outstanding,
+            Decimal("5000.00"),
         )
 
     def _activate_loan(self, policy=None):

@@ -8,6 +8,13 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+P7 permits Top-up Renewal from an active source with zero outstanding
+principal when the top-up produces a positive collateral-backed successor.
+Validate `source outstanding - principal paid + top-up > 0`; do not test
+`principal paid >= source outstanding` independently because that incorrectly
+rejects the zero-balance top-up case. Pay and Renew with a zero successor still
+belongs to Full Release.
+
 P7 software execution is complete and awaits Owner operator/document
 acceptance. `preview_pawn_loan_renewal_plan` is the tenant-scoped, non-writing
 exact preflight: it includes source dues, successor principal/monthly interest,

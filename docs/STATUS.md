@@ -10,6 +10,15 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P7 zero-balance top-up preview is corrected. Renewal eligibility now tests
+  the resulting successor principal after applying both principal paid and
+  top-up, rather than rejecting whenever the source outstanding principal is
+  zero. An active zero-principal source can therefore close into a positive,
+  collateral-backed successor; Pay and Renew still rejects a zero-principal
+  result and directs the operator to full release. Focused preview, execution,
+  accounting, and successor-balance regression coverage passes for a ₹5,000
+  top-up from a ₹0 source balance.
+
 - P7 successor-economics execution is complete. Release and Renew now requires
   an exact server-calculated preview before confirmation and freezes the fresh
   successor policy, item rates, advance interest, deducted fees, and gross-to-
