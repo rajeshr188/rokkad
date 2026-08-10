@@ -8,6 +8,14 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+P4 hierarchical storage was accepted by the workspace Owner on 2026-08-10.
+P5 accrual and repayment is active. Preserve current-date-only repayment,
+fees → overdue interest → current interest → principal priority, and
+highest-monthly-rate-first item-principal reduction. The missing pilot surface
+is operator preview/readability, not new financial authority: expose itemized
+accrual calculations and repayment allocation before confirmation, then prove
+the immutable event, receipt, accounting disposition, and Party statement.
+
 P4 hierarchical-storage software execution is complete. Owner item-label scans
 and the Place/Transfer action select an in-vault item in a workspace-scoped
 browser session; scanning a Box/Slot destination then opens the same transfer
@@ -15,7 +23,7 @@ form preselected. The session is only navigation state, is revalidated against
 tenant/custody, and is cleared on success; immutable movements and the guarded
 current-location projection remain domain truth. Loan detail now exposes the
 movement ledger. The 8-test collateral media/storage/verification gate passes.
-P4 still requires Owner browser acceptance before P5 is activated.
+P4 was accepted by the Owner on 2026-08-10 and P5 is active.
 
 P1 regulatory setup is accepted by the workspace Owner as of 2026-08-09 under ADR
 `2026-08-09-loans-effective-dated-calculation-policy.md` and domain reference

@@ -122,8 +122,8 @@ Do not use database/admin shortcuts.
 | P1 | Set up license, numbering and required business policy | active license/series, next-number clarity, expiry behavior, full effective-dated calculation policy | PORT/REPLACE | **Accepted 2026-08-09 by Owner** |
 | P2 | Create and disburse a mixed-metal customer loan | Party, two items, photos, item principal/rates, LTV rejection test, immutable approval/disbursal evidence | REPLACE | **Accepted 2026-08-09 by Owner** |
 | P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | **Accepted 2026-08-09 by Owner** |
-| P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | **Active** |
-| P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | Pending |
+| P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | **Accepted 2026-08-10 by Owner** |
+| P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | **Active** |
 | P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | Pending |
 | P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | Pending |
 | P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | Pending |
@@ -217,6 +217,14 @@ the immutable placement, transfer, and workflow-removal history alongside the
 current path. The complete 8-test collateral media, QR, storage, capacity,
 movement immutability, lifecycle-removal, and physical-verification suite
 passes. Owner browser execution remains the P4 acceptance gate.
+
+### P4 Acceptance
+
+The workspace Owner accepted P4 on 2026-08-10 after the software gate and
+browser placement/transfer workflow. This accepts the required hierarchy,
+Box/Slot capacity boundary, item-to-destination scan flow, Owner-only manual
+movement, immutable movement history, and current-location projection. P5
+accrual and repayment is now the active gate.
 
 ## Physical Document Matrix
 
