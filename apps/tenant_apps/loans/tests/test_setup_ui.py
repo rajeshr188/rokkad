@@ -1017,9 +1017,14 @@ class LoansSetupUiTests(TenantTestCase):
         response = self.tenant_get(reverse("loans:document_layout_guide"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Create draft")
+        self.assertContains(response, "Understand the LPD7 boundary")
+        self.assertContains(response, "Print profile owns")
         self.assertContains(response, "Resolution order:")
         self.assertContains(response, "Series &rarr; License &rarr; Workspace")
+        self.assertContains(response, "Profile resolution:")
+        self.assertContains(response, "Series &rarr; Workspace")
+        self.assertContains(response, "Issued documents")
+        self.assertContains(response, "?print_profile=legacy")
 
     def test_owner_can_create_publish_and_assign_starter_ticket_layout(self):
         response = self.tenant_post(

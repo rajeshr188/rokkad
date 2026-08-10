@@ -31,7 +31,10 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   effective logical layout cannot supply the requested physical composition.
   The issued-documents ledger exposes immutable provenance and serves the
   exact stored artifact. No migration was required. The real physical printer
-  matrix is the only remaining LPD7 acceptance gate.
+  matrix is the only remaining LPD7 acceptance gate. The in-app document
+  printing guide now describes the LPD7 layout/profile boundary, both
+  resolution orders, preview/test-print workflow, immutable issue evidence,
+  and explicit audited recovery paths.
 
 - P12's accepted boundary rejects Members
   before administrator-only auction/correction identifiers are looked up and

@@ -1,12 +1,21 @@
 {% extends "base_tenant.html" %}
-{% block title %}Loan document layouts starter guide{% endblock %}
+{% block title %}Loan document printing guide{% endblock %}
 {% block workspace_content %}
 <div class="d-flex justify-content-between align-items-start mb-4">
-  <div><h1 class="h3 mb-1">Loan document layouts: starter guide</h1><p class="text-muted mb-0">A safe first workflow for Owners and Admins.</p></div>
-  <a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Back to layouts</a>
+  <div><h1 class="h3 mb-1">Loan document printing guide</h1><p class="text-muted mb-0">Layouts, physical print profiles, official issues, and safe recovery for Owners and Admins.</p></div>
+  <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{% url 'loans:document_print_profile_list' %}">Print profiles</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document layouts</a></div>
 </div>
 
-<div class="alert alert-primary"><strong>The basic workflow:</strong> Create draft &rarr; preview and test-print &rarr; publish &rarr; assign &rarr; use the normal loan Print button.</div>
+<div class="alert alert-primary"><strong>The safe workflow:</strong> Design and publish logical content &rarr; create and test a physical print profile &rarr; assign both &rarr; use the normal loan Print button &rarr; verify the immutable issue evidence.</div>
+
+<div class="card card-body mb-3">
+  <h2 class="h5">Understand the LPD7 boundary</h2>
+  <div class="row g-3">
+    <div class="col-md-6"><strong>Document layout owns</strong><ul class="mb-0"><li>Legal wording, fields, tables, signatures, and QR</li><li>Original, Duplicate, Terms, and D3 logical surfaces</li><li>Flow geometry or exact PDF-overlay backgrounds</li></ul></div>
+    <div class="col-md-6"><strong>Print profile owns</strong><ul class="mb-0"><li>A5 sequential or A4 landscape side-by-side packaging</li><li>Simplex/duplex page order and selected logical surfaces</li><li>Scaling, flip-edge, and printer guidance</li></ul></div>
+  </div>
+  <p class="mt-3 mb-0">Changing paper or duplex packaging does not require cloning the legal layout. Published layout and profile revisions are immutable.</p>
+</div>
 
 <div class="card card-body mb-3">
   <h2 class="h5">1. Create your first layout</h2>
@@ -20,7 +29,7 @@
 </div>
 
 <div class="card card-body mb-3">
-  <h2 class="h5">2. Publish and assign it</h2>
+  <h2 class="h5">2. Publish and assign the layout</h2>
   <p>Publishing freezes a revision. If it later needs correction, clone it to a new draft; published revisions cannot be edited.</p>
   <p class="mb-2">Choose the narrowest assignment that matches the business need:</p>
   <ul class="mb-0">
@@ -32,8 +41,20 @@
 </div>
 
 <div class="card card-body mb-3">
-  <h2 class="h5">3. Print during normal loan work</h2>
-  <p class="mb-0">Staff continue using the existing Print/PDF actions on the loan, repayment, release, auction, and renewal screens. Loans automatically resolves the applicable published layout. The first official issue is stored exactly; later reprints return those same stored PDF bytes even if assignments change.</p>
+  <h2 class="h5">3. Create, test, and assign the loan-ticket print profile</h2>
+  <ol class="mb-2">
+    <li>Open <a href="{% url 'loans:document_print_profile_list' %}">Print profiles</a> and create a draft.</li>
+    <li>Choose A5 or A4 side-by-side packaging, simplex or duplex, scaling, and printer guidance.</li>
+    <li>Preview and download a test print using a published logical layout and an approved sample loan.</li>
+    <li>Publish the validated draft, then assign it to the workspace or one Series.</li>
+  </ol>
+  <p class="mb-0"><strong>Profile resolution:</strong> Series &rarr; Workspace &rarr; built-in A5 Original + Duplicate. A Series-specific profile wins. Assignment is rejected if the effective layout cannot supply every surface required by the profile.</p>
+</div>
+
+<div class="card card-body mb-3">
+  <h2 class="h5">4. Print and inspect official evidence</h2>
+  <p>Staff continue using the existing Print/PDF actions on the loan, repayment, release, auction, and renewal screens. Loans resolves the applicable published layout and, for configurable loan tickets, the physical print profile.</p>
+  <p class="mb-0">The first official issue is stored exactly. Open <a href="{% url 'loans:document_issue_list' %}">Issued documents</a> to inspect its layout/profile revisions and hashes or download the exact stored PDF. Later reprints return those same bytes even if assignments change.</p>
 </div>
 
 <div class="card card-body mb-3">
@@ -89,8 +110,8 @@
 
 <div class="card card-body mb-3">
   <h2 class="h5">Sheet composition</h2>
-  <p>Loan ticket overlay layouts can assign separate Original front, Duplicate front, Original Terms, and Duplicate D3 backgrounds. Sheet composition is not available for other document types. Choose an A5 sequential/duplex preset or impose Original and Duplicate side by side on A4 landscape.</p>
-  <p class="mb-0">Blocks may apply to Both, Original only, or Duplicate only. Required front evidence is checked separately for every generated copy, and required back assets cannot be silently omitted.</p>
+  <p>Loan-ticket layouts define separate Original front, Duplicate front, Original Terms, and Duplicate D3 logical surfaces. The print profile decides whether those surfaces become sequential A5 pages or Original/Duplicate imposed side by side on A4 landscape.</p>
+  <p class="mb-0">Blocks may apply to Both, Original only, or Duplicate only. Required front evidence is checked for every generated copy, and a duplex profile cannot be assigned when required Terms or D3 surfaces are absent. Older published layouts retain embedded composition only for explicit legacy recovery.</p>
 </div>
 
 <div class="card card-body mb-3">
@@ -103,11 +124,12 @@
   <h2 class="h5">If a print fails</h2>
   <ol class="mb-0">
     <li>Open <a href="{% url 'loans:document_layout_diagnostics' %}">Integrity diagnostics</a>.</li>
-    <li>Clone and correct a defective published revision; do not alter stored issue files.</li>
-    <li>For an urgent recovery print, an Owner/Admin can add <code>?renderer=fixed</code> to the normal PDF URL. This action is audited.</li>
+    <li>Clone and correct the defective layout or profile revision; do not alter stored issue files.</li>
+    <li>For a loan-ticket packaging problem, an Owner/Admin can explicitly add <code>?print_profile=legacy</code> to use the published layout's embedded composition. Runtime never selects this silently.</li>
+    <li>For urgent fixed-renderer recovery, an Owner/Admin can add <code>?renderer=fixed</code> to the normal PDF URL. Both recovery paths are audited.</li>
     <li>Before production use, physically test A4/A5, simplex/duplex, long names and tables, regional text, backgrounds, margins, signatures, and QR scanning.</li>
   </ol>
 </div>
 
-<div class="d-flex gap-2"><a class="btn btn-primary" href="{% url 'loans:document_layout_create' %}">Create starter layout</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">View layouts</a></div>
+<div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="{% url 'loans:document_layout_create' %}">Create starter layout</a><a class="btn btn-outline-primary" href="{% url 'loans:document_print_profile_create' %}">Create print profile</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_issue_list' %}">Issued documents</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_diagnostics' %}">Integrity diagnostics</a></div>
 {% endblock %}
