@@ -10,6 +10,16 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P5 software execution is complete. Eligible accruals expose per-collateral
+  principal, metal rate, calculated interest, advance-interest offset, and
+  newly due interest; finalized immutable lines remain visible on loan detail.
+  Repayment now supports a canonical no-write allocation preview, displays the
+  fixed priority and highest-rate-first principal impact, and reports its real
+  accounting disposition after confirmation. Loan detail links to the Party
+  statement and existing repayment receipt. Twenty-five focused tests, Django checks,
+  and Loans migration-drift checks pass. Owner browser execution remains P5's
+  acceptance step.
+
 - P4 hierarchical storage was accepted by the workspace Owner on 2026-08-10.
   P5 accrual and repayment is active. Its domain core already provides
   itemized accruals, fixed fees/interest/principal priority, highest-rate-first

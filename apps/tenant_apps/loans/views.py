@@ -231,6 +231,7 @@ from apps.tenant_apps.loans.services import (
     expire_license,
     finalize_pawn_loan_accrual,
     preview_number,
+    preview_pawn_loan_repayment,
     preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
     resolve_pawn_draft_economics,
@@ -1596,34 +1597,65 @@ def pawn_borrower_account_setup(request, pk):
 @loans_workspace_required
 def pawn_loan_repay(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
+    repayment_preview = None
     form = PawnRepaymentForm(
         request.POST or None,
         initial={"request_key": uuid.uuid4().hex},
     )
     if request.method == "POST" and form.is_valid():
         try:
-            result = record_pawn_loan_repayment(
-                loan.pk,
-                amount=form.cleaned_data["amount"],
-                request_key=form.cleaned_data["request_key"],
-                actor=request.user,
-            )
+            if request.POST.get("action") == "preview":
+                repayment_preview = preview_pawn_loan_repayment(
+                    loan.pk,
+                    amount=form.cleaned_data["amount"],
+                )
+            else:
+                result = record_pawn_loan_repayment(
+                    loan.pk,
+                    amount=form.cleaned_data["amount"],
+                    request_key=form.cleaned_data["request_key"],
+                    actor=request.user,
+                )
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(
-                request,
-                f"Repayment {result.allocation.amount_received} recorded and queued.",
-            )
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            if repayment_preview is None:
+                delivery = result.outbox.get_status_display()
+                allocation = result.allocation
+                messages.success(
+                    request,
+                    "Repayment "
+                    f"{allocation.amount_received} recorded: fees {allocation.fees}, "
+                    f"overdue interest {allocation.overdue_interest}, current interest "
+                    f"{allocation.current_interest}, principal {allocation.principal}. "
+                    f"Accounting delivery: {delivery}.",
+                )
+                return redirect("loans:pawn_loan_detail", pk=loan.pk)
     balance = _safe_balance(loan)
+    item_by_id = {item.pk: item for item in loan.collateral_items.all()}
     return _render_action(
         request,
         loan,
         form,
         "Record repayment",
         "Allocation is fixed: fees, overdue interest, current interest, then principal.",
-        {"balance": balance},
+        {
+            "balance": balance,
+            "supports_preview": True,
+            "preview_action_label": "Preview allocation",
+            "repayment_preview": repayment_preview,
+            "repayment_item_rows": tuple(
+                {
+                    "allocation": row,
+                    "item": item_by_id.get(row.collateral_item_id),
+                }
+                for row in (
+                    repayment_preview.item_allocations
+                    if repayment_preview is not None
+                    else ()
+                )
+            ),
+        },
     )
 
 
@@ -1635,7 +1667,7 @@ def pawn_loan_accrue(request, pk):
     form = PawnAccrualForm(request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         try:
-            finalize_pawn_loan_accrual(
+            result = finalize_pawn_loan_accrual(
                 loan.pk,
                 period_number=form.cleaned_data["period_number"],
                 actor=request.user,
@@ -1643,7 +1675,15 @@ def pawn_loan_accrue(request, pk):
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, "Interest accrual finalized and queued.")
+            disposition = (
+                result.outbox.get_status_display()
+                if result.outbox is not None
+                else "No accounting event required by the cash-recognition policy"
+            )
+            messages.success(
+                request,
+                f"Interest accrual finalized. Accounting disposition: {disposition}.",
+            )
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return _render_action(
         request,
@@ -1651,7 +1691,10 @@ def pawn_loan_accrue(request, pk):
         form,
         "Finalize interest accrual",
         "Only the next eligible completed monthly period can be finalized.",
-        {"previews": previews},
+        {
+            "previews": previews,
+            "accrual_preview_rows": _accrual_preview_rows(loan, previews),
+        },
     )
 
 
@@ -3018,9 +3061,11 @@ def _pawn_loan_for_workspace(request, pk):
             "collateral_items__storage_movements__from_location",
             "collateral_items__storage_movements__to_location",
             "collateral_items__storage_movements__moved_by",
+            "interest_accruals__lines__collateral_item",
             "change_log__actor",
             "accounting_events__outbox",
             "accounting_events__reversed_by_event",
+            "accounting_events__repayment_allocation_lines__collateral_item",
             "releases__items__collateral_item",
             "approval_snapshots",
         ),
@@ -3257,6 +3302,23 @@ def _safe_accrual_previews(loan, *, include_partial):
         )
     except (ObjectDoesNotExist, ValidationError, ValueError):
         return ()
+
+
+def _accrual_preview_rows(loan, previews):
+    item_by_id = {item.pk: item for item in loan.collateral_items.all()}
+    return tuple(
+        {
+            "preview": preview,
+            "lines": tuple(
+                {
+                    "line": line,
+                    "item": item_by_id.get(line.collateral_item_id),
+                }
+                for line in preview.lines
+            ),
+        }
+        for preview in previews
+    )
 
 
 def _release_quote(loan, selected_item_ids):

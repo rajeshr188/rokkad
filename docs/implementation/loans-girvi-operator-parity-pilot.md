@@ -226,6 +226,29 @@ Box/Slot capacity boundary, item-to-destination scan flow, Owner-only manual
 movement, immutable movement history, and current-location projection. P5
 accrual and repayment is now the active gate.
 
+### P5 Software Evidence
+
+The accrual screen now shows the frozen calculation for every eligible period
+and collateral tranche: item, principal base, monthly metal rate, calculated
+interest, advance-interest offset, and newly due interest. After finalization,
+the same immutable tranche rows remain visible on loan detail.
+
+Repayment remains current-date-only for the MVP. Its screen now separates fees,
+overdue interest, current interest, principal, and total due. **Preview
+allocation** runs the canonical service calculation without recording an event;
+it shows fees → overdue interest → current interest → principal and any
+principal reduction against collateral tranches in highest-rate-first order.
+Confirmation reuses that calculation boundary, appends the repayment event and
+immutable allocation lines, and reports the actual accounting disposition
+instead of generically claiming success was queued. Loan detail links directly
+to the Loans-owned Party statement; the existing accounting-event row exposes
+the repayment receipt and delivery state.
+
+Twenty-five focused UI, no-write preview, allocation-priority, DEA posting/balance,
+receipt PDF, and Party-statement/export tests pass. Django checks and Loans
+migration-drift checks are clean. Owner browser execution remains the P5
+acceptance gate.
+
 ## Physical Document Matrix
 
 Use the detailed matrix in

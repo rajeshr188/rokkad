@@ -81,6 +81,7 @@ from apps.tenant_apps.loans.services import (
     capitalize_pawn_loan_interest,
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
+    preview_pawn_loan_repayment,
     reverse_pawn_loan_event,
     record_pawn_loan_repayment,
     release_pawn_loan_in_full,
@@ -596,6 +597,18 @@ class PawnDisbursalServiceTests(TenantTestCase):
             "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
             return_value=date(2026, 8, 3),
         ):
+            preview = preview_pawn_loan_repayment(
+                self.loan.pk,
+                amount=Decimal("1000.00"),
+            )
+            self.assertEqual(preview.allocation.principal, Decimal("1000.00"))
+            self.assertEqual(preview.item_allocations[0].principal_applied, Decimal("1000.00"))
+            self.assertFalse(
+                PawnLoanAccountingEvent.objects.filter(
+                    loan=self.loan,
+                    event_kind=TransactionKind.REPAYMENT.value,
+                ).exists()
+            )
             with self.captureOnCommitCallbacks(execute=True):
                 repayment = record_pawn_loan_repayment(
                     self.loan.pk,

@@ -66,6 +66,14 @@ class PawnRepaymentResult:
 
 
 @dataclass(frozen=True)
+class PawnRepaymentPreview:
+    allocation: RepaymentAllocation
+    original_principal: Decimal
+    capitalized_principal: Decimal
+    item_allocations: tuple["ItemPrincipalAllocation", ...] = ()
+
+
+@dataclass(frozen=True)
 class ItemPrincipalAllocation:
     collateral_item_id: int
     allocation_order: int
@@ -73,6 +81,29 @@ class ItemPrincipalAllocation:
     balance_before: Decimal
     principal_applied: Decimal
     balance_after: Decimal
+
+
+def preview_pawn_loan_repayment(
+    loan_id: int,
+    *,
+    amount,
+) -> PawnRepaymentPreview:
+    """Calculate the exact current-date allocation without recording money."""
+    loan = _tenant_loan(loan_id)
+    amount = _money_amount(amount, loan)
+    if loan.state != PawnLoanState.ACTIVE.value:
+        raise PawnRepaymentError("Only an active PawnLoan can receive repayment.")
+    try:
+        assert_pawn_loan_financial_actions_allowed(loan.pk)
+        balance = get_pawn_loan_balance(
+            loan.pk, as_of_date=timezone.localdate()
+        )
+        allocation = allocate_repayment(balance, amount)
+        return _repayment_preview(loan, balance, allocation)
+    except PawnRepaymentError:
+        raise
+    except Exception as exc:
+        raise PawnRepaymentError(str(exc)) from exc
 
 
 @transaction.atomic
@@ -114,16 +145,10 @@ def record_pawn_loan_repayment(
     except Exception as exc:
         raise PawnRepaymentError(str(exc)) from exc
 
-    capitalized_principal = min(
-        allocation.principal,
-        balance.capitalized_interest_principal_outstanding,
-    )
-    original_principal = allocation.principal - capitalized_principal
-    item_allocations = allocate_repayment_principal_to_tranches(
-        loan,
-        original_principal,
-        expected_outstanding=balance.original_principal_outstanding,
-    )
+    preview = _repayment_preview(loan, balance, allocation)
+    capitalized_principal = preview.capitalized_principal
+    original_principal = preview.original_principal
+    item_allocations = preview.item_allocations
     payload = repayment_payload(
         loan,
         effective_date=effective_date,
@@ -202,6 +227,25 @@ def record_pawn_loan_repayment(
         allocation,
         event,
         outbox,
+        item_allocations=item_allocations,
+    )
+
+
+def _repayment_preview(loan, balance, allocation):
+    capitalized_principal = min(
+        allocation.principal,
+        balance.capitalized_interest_principal_outstanding,
+    )
+    original_principal = allocation.principal - capitalized_principal
+    item_allocations = allocate_repayment_principal_to_tranches(
+        loan,
+        original_principal,
+        expected_outstanding=balance.original_principal_outstanding,
+    )
+    return PawnRepaymentPreview(
+        allocation=allocation,
+        original_principal=original_principal,
+        capitalized_principal=capitalized_principal,
         item_allocations=item_allocations,
     )
 
@@ -286,6 +330,18 @@ def _locked_loan(loan_id):
             PawnLoan.objects.select_for_update()
             .select_related("borrower")
             .get(pk=loan_id, workspace_id=workspace_id)
+        )
+    except PawnLoan.DoesNotExist as exc:
+        raise PawnRepaymentError("PawnLoan was not found in the active workspace.") from exc
+
+
+def _tenant_loan(loan_id):
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise PawnRepaymentError("PawnLoan repayment requires an active tenant schema.")
+    try:
+        return PawnLoan.objects.select_related("borrower", "policy_snapshot").get(
+            pk=loan_id, workspace_id=workspace_id
         )
     except PawnLoan.DoesNotExist as exc:
         raise PawnRepaymentError("PawnLoan was not found in the active workspace.") from exc

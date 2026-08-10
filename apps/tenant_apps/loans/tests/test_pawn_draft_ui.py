@@ -23,6 +23,8 @@ from apps.tenant_apps.loans.models import (
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
     PawnLoanEconomicPolicy,
+    PawnLoanInterestAccrual,
+    PawnLoanInterestAccrualLine,
     PawnLoanRelease,
     PawnLoanReleaseItem,
     PawnMetalInterestRatePolicy,
@@ -453,9 +455,117 @@ class PawnDraftUiTests(TenantTestCase):
             detail,
             reverse("loans:pawn_loan_notice_create", args=[loan.pk]),
         )
+        self.assertContains(
+            detail,
+            reverse("loans:pawn_party_statement", args=[loan.borrower_id]),
+        )
+
+        collateral = loan.collateral_items.get()
+        accrual_line = SimpleNamespace(
+            collateral_item_id=collateral.pk,
+            principal_base=Decimal("10000.00"),
+            monthly_interest_rate=Decimal("2.000000"),
+            calculated_interest=Decimal("200.00"),
+            advance_interest_applied=Decimal("0.00"),
+            recognized_interest=Decimal("200.00"),
+        )
+        accrual_preview = SimpleNamespace(
+            period_number=1,
+            period_start=date(2026, 8, 1),
+            period_end=date(2026, 8, 31),
+            calculated_interest=Decimal("200.00"),
+            advance_interest_applied=Decimal("0.00"),
+            recognized_interest=Decimal("200.00"),
+            lines=(accrual_line,),
+        )
+        with patch(
+            "apps.tenant_apps.loans.views.preview_pawn_loan_accruals",
+            return_value=(accrual_preview,),
+        ):
+            accrual_page = self.client.get(
+                reverse("loans:pawn_loan_accrue", args=[loan.pk])
+            )
+        self.assertContains(accrual_page, collateral.description)
+        self.assertContains(accrual_page, "Principal base")
+        self.assertContains(accrual_page, "Advance applied")
+        self.assertContains(accrual_page, "2.000000%")
+
+        finalized = PawnLoanInterestAccrual.objects.create(
+            loan=loan,
+            period_number=1,
+            period_start=date(2026, 8, 1),
+            period_end=date(2026, 8, 31),
+            period_fraction=Decimal("1.0000"),
+            calculation_base=Decimal("10000.00"),
+            unrounded_interest=Decimal("200.00"),
+            recognized_interest=Decimal("200.00"),
+            finalized_by=self.owner,
+        )
+        PawnLoanInterestAccrualLine.objects.create(
+            accrual=finalized,
+            collateral_item=collateral,
+            principal_base=Decimal("10000.00"),
+            monthly_interest_rate=Decimal("2.000000"),
+            period_fraction=Decimal("1.0000"),
+            unrounded_interest=Decimal("200.00"),
+            calculated_interest=Decimal("200.00"),
+            advance_interest_applied=Decimal("0.00"),
+            recognized_interest=Decimal("200.00"),
+        )
+        with (
+            patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
+            patch("apps.tenant_apps.loans.views.preview_pawn_loan_accruals", return_value=()),
+        ):
+            finalized_detail = self.client.get(
+                reverse("loans:pawn_loan_detail", args=[loan.pk])
+            )
+        self.assertContains(finalized_detail, "Finalized interest accruals")
+        self.assertContains(finalized_detail, "Immutable collateral-tranche calculation")
+
+        allocation = SimpleNamespace(
+            amount_received=Decimal("500.00"),
+            fees=Decimal("0.00"),
+            overdue_interest=Decimal("100.00"),
+            current_interest=Decimal("50.00"),
+            principal=Decimal("350.00"),
+        )
+        item_allocation = SimpleNamespace(
+            collateral_item_id=collateral.pk,
+            monthly_interest_rate=Decimal("2.000000"),
+            balance_before=Decimal("10000.00"),
+            principal_applied=Decimal("350.00"),
+            balance_after=Decimal("9650.00"),
+        )
+        preview = SimpleNamespace(
+            allocation=allocation,
+            item_allocations=(item_allocation,),
+        )
+        with (
+            patch(
+                "apps.tenant_apps.loans.views.preview_pawn_loan_repayment",
+                return_value=preview,
+            ) as preview_command,
+            patch("apps.tenant_apps.loans.views.record_pawn_loan_repayment") as record_command,
+        ):
+            response = self.client.post(
+                reverse("loans:pawn_loan_repay", args=[loan.pk]),
+                {
+                    "amount": "500.00",
+                    "request_key": "ui-repayment-1",
+                    "action": "preview",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "no money recorded yet")
+        self.assertContains(response, "Overdue interest")
+        self.assertContains(response, "highest monthly rate first")
+        preview_command.assert_called_once_with(loan.pk, amount=Decimal("500.00"))
+        record_command.assert_not_called()
 
         result = SimpleNamespace(
-            allocation=SimpleNamespace(amount_received=Decimal("500.00"))
+            allocation=allocation,
+            outbox=SimpleNamespace(get_status_display=lambda: "Pending"),
         )
         with patch(
             "apps.tenant_apps.loans.views.record_pawn_loan_repayment",

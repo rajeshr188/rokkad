@@ -8,6 +8,18 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+P5 accrual/repayment software execution is complete. `preview_pawn_loan_repayment`
+is a tenant-scoped, current-date, no-write application service that uses the
+same canonical allocation functions as confirmation. Never turn preview into
+a temporary event or duplicate the arithmetic in views/templates. Accrual
+preview and finalized loan detail expose immutable item principal/rate,
+calculated interest, advance offset, and newly due rows. Repayment preview
+shows fees → overdue interest → current interest → principal and
+highest-rate-first item-principal impact. Confirmation remains the sole event,
+outbox, and allocation-line write boundary and reports its actual delivery
+state. Loan detail links to the receipt and Party statement. Twenty-five focused tests
+pass; P5 still requires Owner browser acceptance before P6 is activated.
+
 P4 hierarchical storage was accepted by the workspace Owner on 2026-08-10.
 P5 accrual and repayment is active. Preserve current-date-only repayment,
 fees → overdue interest → current interest → principal priority, and

@@ -9,9 +9,23 @@
 
     {% if balance %}
       <div class="card mb-3"><div class="card-body row g-3">
-        <div class="col-md-4"><div class="small text-muted">Principal outstanding</div>{{ balance.principal_outstanding }}</div>
-        <div class="col-md-4"><div class="small text-muted">Interest outstanding</div>{{ balance.interest_outstanding }}</div>
-        <div class="col-md-4"><div class="small text-muted">Total due</div><strong>{{ balance.total_due }}</strong></div>
+        <div class="col-md-3"><div class="small text-muted">Fees</div>{{ balance.fees_outstanding }}</div>
+        <div class="col-md-3"><div class="small text-muted">Overdue / current interest</div>{{ balance.overdue_interest_outstanding }} / {{ balance.current_interest_outstanding }}</div>
+        <div class="col-md-3"><div class="small text-muted">Principal</div>{{ balance.principal_outstanding }}</div>
+        <div class="col-md-3"><div class="small text-muted">Total due</div><strong>{{ balance.total_due }}</strong></div>
+      </div></div>
+    {% endif %}
+
+    {% if repayment_preview %}
+      <div class="card mb-3"><div class="card-header">Repayment allocation preview — no money recorded yet</div><div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col"><div class="small text-muted">Fees</div>{{ repayment_preview.allocation.fees }}</div>
+          <div class="col"><div class="small text-muted">Overdue interest</div>{{ repayment_preview.allocation.overdue_interest }}</div>
+          <div class="col"><div class="small text-muted">Current interest</div>{{ repayment_preview.allocation.current_interest }}</div>
+          <div class="col"><div class="small text-muted">Principal</div>{{ repayment_preview.allocation.principal }}</div>
+        </div>
+        {% if repayment_item_rows %}<div class="small fw-semibold mb-2">Principal allocation: highest monthly rate first</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Item</th><th>Rate</th><th>Before</th><th>Applied</th><th>After</th></tr></thead><tbody>{% for row in repayment_item_rows %}<tr><td>{% if row.item %}{{ row.item.description }}{% else %}Item #{{ row.allocation.collateral_item_id }}{% endif %}</td><td>{{ row.allocation.monthly_interest_rate }}%</td><td>{{ row.allocation.balance_before }}</td><td>{{ row.allocation.principal_applied }}</td><td>{{ row.allocation.balance_after }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+        <div class="small text-muted mt-2">Confirming records immutable allocation evidence. Previewing again does not create an event.</div>
       </div></div>
     {% endif %}
 
@@ -28,15 +42,18 @@
       </div></div>
     {% endif %}
 
-    {% if previews %}
+    {% if accrual_preview_rows %}
       <div class="card mb-3"><div class="card-header">Eligible periods</div><ul class="list-group list-group-flush">
-        {% for preview in previews %}
+        {% for row in accrual_preview_rows %}{% with preview=row.preview %}
           <li class="list-group-item">
             <strong>Period {{ preview.period_number }}</strong>: {{ preview.period_start }} to {{ preview.period_end }}<br>
             <span class="small text-muted">Calculated {{ preview.calculated_interest }} &middot; Advance interest applied {{ preview.advance_interest_applied }} &middot; Newly due {{ preview.recognized_interest }}</span>
+            {% if row.lines %}<div class="table-responsive mt-2"><table class="table table-sm mb-0"><thead><tr><th>Collateral</th><th>Principal base</th><th>Monthly rate</th><th>Calculated</th><th>Advance applied</th><th>Newly due</th></tr></thead><tbody>{% for item_row in row.lines %}<tr><td>{% if item_row.item %}{{ item_row.item.description }}{% else %}Item #{{ item_row.line.collateral_item_id }}{% endif %}</td><td>{{ item_row.line.principal_base }}</td><td>{{ item_row.line.monthly_interest_rate }}%</td><td>{{ item_row.line.calculated_interest }}</td><td>{{ item_row.line.advance_interest_applied }}</td><td>{{ item_row.line.recognized_interest }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
           </li>
-        {% endfor %}
+        {% endwith %}{% endfor %}
       </ul></div>
+    {% elif previews %}
+      <div class="card mb-3"><div class="card-header">Eligible periods</div><ul class="list-group list-group-flush">{% for preview in previews %}<li class="list-group-item"><strong>Period {{ preview.period_number }}</strong>: {{ preview.period_start }} to {{ preview.period_end }}<br><span class="small text-muted">Calculated {{ preview.calculated_interest }} &middot; Advance interest applied {{ preview.advance_interest_applied }} &middot; Newly due {{ preview.recognized_interest }}</span></li>{% endfor %}</ul></div>
     {% endif %}
 
     {% if accounting_event %}
@@ -67,7 +84,7 @@
           <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>
         {% endif %}
       {% endfor %}
-      <div class="d-flex gap-2">{% if supports_preview %}<button class="btn btn-outline-primary" type="submit" name="action" value="preview">Preview minimum</button>{% endif %}<button class="btn btn-primary" type="submit" name="action" value="confirm">{{ action_label }}</button><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a></div>
+      <div class="d-flex gap-2">{% if supports_preview %}<button class="btn btn-outline-primary" type="submit" name="action" value="preview">{{ preview_action_label|default:"Preview" }}</button>{% endif %}<button class="btn btn-primary" type="submit" name="action" value="confirm">{{ action_label }}</button><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a></div>
     </div></form>
   </div>
 </div>

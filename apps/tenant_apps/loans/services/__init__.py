@@ -59,10 +59,12 @@ from .pawn_disbursal import (
 from .pawn_repayment import (
     ItemPrincipalAllocation,
     PawnRepaymentError,
+    PawnRepaymentPreview,
     PawnRepaymentResult,
     RepaymentAllocation,
     allocate_repayment,
     allocate_repayment_principal_to_tranches,
+    preview_pawn_loan_repayment,
     record_pawn_loan_repayment,
 )
 from .pawn_interest import (
@@ -292,11 +294,13 @@ __all__ = (
     "assert_pawn_loan_financial_actions_allowed",
     "disburse_pawn_loan",
     "PawnRepaymentError",
+    "PawnRepaymentPreview",
     "PawnRepaymentResult",
     "RepaymentAllocation",
     "ItemPrincipalAllocation",
     "allocate_repayment",
     "allocate_repayment_principal_to_tranches",
+    "preview_pawn_loan_repayment",
     "record_pawn_loan_repayment",
     "AccrualFinalizationResult",
     "AccrualPeriodPreview",
