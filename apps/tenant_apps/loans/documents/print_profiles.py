@@ -135,7 +135,7 @@ class PrintProfileValidator:
                 "LPD7.1 print profiles support loan tickets only."
             )
         name = str(definition.get("name") or "").strip()
-        if not name or len(name) > 100:
+        if not name or len(name) > 100 or any(character in name for character in "\r\n"):
             raise PrintProfileValidationError("Print profile name is required and must be at most 100 characters.")
         composition = definition.get("composition")
         expected = _COMPOSITIONS.get(composition)
@@ -191,12 +191,12 @@ def built_in_print_profile(composition="A5_BOTH_SIMPLEX"):
         "paper_size": expected.get("paper_size") or expected["paper_sizes"][0],
         "orientation": expected["orientation"],
         "duplex": expected["duplex"],
-        "scaling_policy": "ACTUAL_SIZE",
+        "scaling_policy": "FIT_PRINTABLE_AREA",
         "flip_edge_guidance": (
             "VERIFY_ON_PRINTER" if expected["duplex"] == "DUPLEX"
             else "NOT_APPLICABLE"
         ),
-        "printer_guidance": "Print at Actual size / 100% and verify physical margins.",
+        "printer_guidance": "Use the PDF page size; disable extra printer-driver scaling.",
     })
 
 

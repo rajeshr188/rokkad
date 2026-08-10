@@ -9,16 +9,19 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 # Agent Memory
 
 P12 was accepted by the workspace Owner on 2026-08-10. All twelve Loans
-capability scenarios are accepted. LPD7.1 is active: physical print profiles
-are versioned tenant evidence with immutable published revisions and `Series
--> Workspace -> built-in` resolution. The six schema-v1 compositions cover A5
-and A4 Original/Duplicate simplex/duplex packaging. Active pilot ticket
-assignment must include both fronts. The existing layout `copy_mode`/`sheet`
-renderer remains authoritative until compatibility parity, issue profile
-provenance, diagnostics, UI, and physical printing pass; do not silently mix
-the new resolver into official issuance before those gates. Migration
-`loans.0037` is applied across all six local tenant schemas; the focused seven-
-test gate passes and `jcl1` retains zero document-integrity findings.
+capability scenarios are accepted. LPD7.1-LPD7.3 are implemented: physical
+print profiles are immutable tenant evidence resolved by `Series -> Workspace
+-> built-in`; all embedded legacy compositions have compatibility contracts;
+and new configurable ticket issues render logical Original/Terms/Duplicate/D3
+surfaces before profile-owned A5/A4 packaging. Exact stored official issues are
+returned before current profile resolution. New issues record immutable
+profile identity/hash/source; Owner/Admin has audited
+`?print_profile=legacy` recovery and runtime never falls back silently. Pair
+validation and integrity diagnostics reject profiles the resolved layout cannot
+supply. Migrations `loans.0037` and `0038` are applied across all six local
+tenants, and `jcl1` has zero findings. Profile-management UI and the physical
+printer matrix remain open; embedded composition must stay readable for
+compatibility.
 
 Under P12, ordinary workspace members may perform the
 normal PawnLoan lifecycle but must be rejected before administrator-only
@@ -1601,11 +1604,13 @@ Workspace -> built-in` resolution. LPD7.2 adds exact compatibility contracts
 for all eight sheet modes and the older sequential A4/A5/Letter copy modes,
 plus migration `loans.0038` for immutable issue profile name/version/hash/source
 evidence and profile-aware integrity diagnostics. New configurable ticket
-issues record the `LEGACY_LAYOUT` profile actually used; historical issues are
-not backfilled. Embedded layout `copy_mode`/`sheet` composition remains runtime
-authority until LPD7.3 connects resolved profiles to packaging. Active
-loan-ticket profile assignment must include Original and Duplicate, and the
-real physical printer matrix remains an operator gate.
+issues initially recorded the `LEGACY_LAYOUT` profile actually used;
+historical issues were not backfilled. LPD7.3 now makes resolved profiles the
+default physical packaging authority for new configurable ticket issues,
+while embedded `copy_mode`/`sheet` remains readable through explicit audited
+compatibility recovery. Active loan-ticket profile assignment must include
+Original and Duplicate, resolved pairs must be compatible, and the real
+physical printer matrix remains an operator gate.
 
 Operator parity-pilot preparation is documented in `docs/implementation/loans-girvi-operator-parity-pilot.md`. `jcl1` starts with 8 Loans PawnLoans and 8 Girvi GivenLoans, explicit `DEFERRED` accounting, zero document-integrity findings, and no Loans storage hierarchy, verification session, or operational notice. The official clock is stopped while accounting/Girvi runtime work is uncommitted. A combined 191-test preflight did not complete within ten minutes and exposed a stale implicit-DEA test; its focused scenario passes when DEA is explicit. DEA/Loans/Girvi migration drift checks are clean. Do not claim a cross-product pass until smaller suites finish on a reproducible checkpoint.
 

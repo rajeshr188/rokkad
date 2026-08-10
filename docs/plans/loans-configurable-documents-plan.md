@@ -434,9 +434,9 @@ byte-identical reprint matrix.
 
 ### LPD7: Versioned print profiles
 
-Status: LPD7.1 foundation and LPD7.2 legacy compatibility/provenance completed
-2026-08-10; resolved-profile renderer stage, UI, and physical printer
-acceptance remain pending.
+Status: LPD7.1 foundation, LPD7.2 legacy compatibility/provenance, and LPD7.3
+resolved-profile renderer stage completed 2026-08-10; profile-management UI
+and physical printer acceptance remain pending.
 
 Pre-pilot compatibility guard completed 2026-08-09: existing integrity
 diagnostics now reject active loan-ticket assignments that omit either the
@@ -482,10 +482,24 @@ validate profile revision hashes/scopes, active assignment validity/copy
 bundles, and issue-to-profile evidence. The migration is applied across all six
 local tenants and `jcl1` has zero findings.
 
-LPD7.3 must connect `Series -> Workspace -> built-in` resolution to the
-physical renderer stage for future issues. It must not reinterpret historical
-issues or remove the LPD7.2 legacy compatibility path until the physical
-printer matrix passes.
+LPD7.3 result: future configurable loan-ticket issues resolve `Series ->
+Workspace -> built-in`, independently render the logical surfaces selected by
+that immutable profile, and package them as sequential A5 or imposed A4
+landscape output. `FIT_PRINTABLE_AREA` scales a logical page proportionally;
+`ACTUAL_SIZE` fails when logical and physical slots differ. Side-by-side output
+fails if either surface spans multiple logical pages. Mandatory front evidence
+and verification are rechecked for every selected copy, and Terms/D3 profiles
+fail if the layout provides no matching back surface. Existing official issues
+are located before current layout/profile resolution and returned from exact
+stored bytes. Owner/Admin may explicitly select audited
+`?print_profile=legacy`; runtime never silently downgrades. Issue provenance
+uses `SERIES`, `WORKSPACE`, `BUILT_IN`, or `LEGACY_LAYOUT` truthfully, and
+diagnostics validate the effective pair for every Series. No migration was
+required.
+
+LPD7.4 should add Owner/Admin profile list/create/clone/publish/assign/retire
+screens and profile-aware preview/test-print controls. It must use the existing
+services and renderer rather than creating a second profile schema.
 
 Gate: one logical ticket layout can be issued through A5 and A4 profiles
 without cloning legal content; profile changes affect only future issues;

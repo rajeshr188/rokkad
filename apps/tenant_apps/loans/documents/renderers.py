@@ -23,6 +23,7 @@ from reportlab.pdfgen import canvas as pdf_canvas
 import fitz
 
 from .assets import DocumentAssetError, validate_asset_set
+from .layouts import DocumentLayoutValidator, REQUIRED_BINDINGS, REQUIRED_SECTIONS
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,37 @@ class LayoutRenderResult:
 class ConfigurableDocumentRenderer:
     VERSION = "layout-reportlab-v1"
     PAGE_SIZES = {"A4": A4, "A5": A5, "LETTER": LETTER}
+
+    @classmethod
+    def render_with_print_profile(
+        cls, payload, layout, print_profile, *, preview=False, assets=()
+    ):
+        """Render logical ticket surfaces, then package them using a profile."""
+        if payload.document_type != "loan_ticket" or layout.document_type != "loan_ticket":
+            raise ValueError("Print-profile rendering supports loan tickets only.")
+        if print_profile.document_type != payload.document_type:
+            raise ValueError("Print profile document type does not match the payload.")
+        fields, sections, asset_map = cls._validated_context(
+            payload, layout, assets
+        )
+        cls.assert_print_profile_compatible(layout, print_profile)
+        rendered_surfaces = {}
+        for surface in print_profile.included_surfaces:
+            rendered_surfaces[surface] = cls._render_logical_surface(
+                payload, layout, fields, sections, asset_map, surface, preview
+            )
+        pdf = cls._package_surfaces(rendered_surfaces, print_profile)
+        output_page_size = (
+            f"{print_profile.paper_size}_LANDSCAPE"
+            if print_profile.orientation == "LANDSCAPE"
+            else print_profile.paper_size
+        )
+        return LayoutRenderResult(
+            pdf, layout.content_hash, cls._payload_hash(payload),
+            "layout-reportlab-profile-v1", output_page_size,
+            print_profile.composition,
+            tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())),
+        )
 
     @classmethod
     def render(cls, payload, layout, *, preview=False, assets=()):
@@ -109,6 +141,236 @@ class ConfigurableDocumentRenderer:
         renderer_version = cls.VERSION if layout.schema_version == 1 else "layout-reportlab-v2"
         return LayoutRenderResult(pdf, layout.content_hash, cls._payload_hash(payload), renderer_version, layout.page_size, layout.copy_mode,
                                   tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())))
+
+    @classmethod
+    def _validated_context(cls, payload, layout, assets):
+        fields = {field.key: field for field in payload.fields}
+        sections = {section.key: section for section in payload.sections}
+        workspace_field = fields.get("workspace.source_id")
+        try:
+            workspace_id = int(str(workspace_field.value).split(":", 1)[1])
+        except (AttributeError, IndexError, TypeError, ValueError) as exc:
+            raise DocumentAssetError(
+                "Payload has no valid workspace asset boundary."
+            ) from exc
+        asset_map = validate_asset_set(assets, workspace_id=workspace_id)
+        required_assets = {
+            block.asset_key for block in layout.all_blocks() if block.asset_key
+        }
+        required_assets.update(layout.background_asset_keys())
+        missing_assets = required_assets - set(asset_map)
+        if missing_assets:
+            raise DocumentAssetError(
+                f"Required document assets are missing: {', '.join(sorted(missing_assets))}."
+            )
+        cls._assert_bindings(layout, fields, sections)
+        return fields, sections, asset_map
+
+    @classmethod
+    def assert_print_profile_compatible(cls, layout, profile):
+        logical_paper_size = (
+            "A5" if any(len(sheet) == 2 for sheet in profile.sheets)
+            else profile.paper_size
+        )
+        if (
+            profile.scaling_policy == "ACTUAL_SIZE"
+            and layout.page_size != logical_paper_size
+        ):
+            raise ValueError(
+                "Actual-size print profile does not match the logical layout page; "
+                "use a matching layout or FIT_PRINTABLE_AREA."
+            )
+        for surface in profile.included_surfaces:
+            if surface.endswith("FRONT"):
+                copy_scope = "ORIGINAL" if surface.startswith("ORIGINAL") else "DUPLICATE"
+                required = REQUIRED_BINDINGS[layout.document_type] | REQUIRED_SECTIONS[layout.document_type]
+                present = DocumentLayoutValidator._unconditional_bindings_for_scope(
+                    layout.blocks, copy_scope
+                )
+                missing = required - present
+                if missing:
+                    raise ValueError(
+                        f"Print profile cannot select {surface}: mandatory evidence is missing: "
+                        f"{', '.join(sorted(missing))}."
+                    )
+                if not DocumentLayoutValidator._has_unconditional_type_for_scope(
+                    layout.blocks, "verification", copy_scope
+                ):
+                    raise ValueError(
+                        f"Print profile cannot select {surface}: verification evidence is missing."
+                    )
+                continue
+            surface_key = {
+                "ORIGINAL_TERMS": "original_back",
+                "DUPLICATE_D3": "duplicate_back",
+            }[surface]
+            has_background = bool(
+                layout.sheet and layout.sheet.background(surface_key)
+            )
+            if not layout.back_blocks and not has_background:
+                raise ValueError(
+                    f"Print profile cannot select {surface}: the layout has no logical back surface."
+                )
+
+    @classmethod
+    def _render_logical_surface(
+        cls, payload, layout, fields, sections, assets, surface, preview
+    ):
+        copy_scope = "ORIGINAL" if surface.startswith("ORIGINAL") else "DUPLICATE"
+        is_front = surface.endswith("FRONT")
+        blocks = layout.blocks if is_front else layout.back_blocks
+        if layout.layout_mode == "ABSOLUTE_OVERLAY":
+            pdf = cls._render_overlay_surface(
+                payload, layout, fields, sections, assets, preview,
+                blocks=blocks, copy_scope=copy_scope,
+            )
+        else:
+            pdf = cls._render_flow_surface(
+                payload, layout, fields, sections, assets, preview,
+                blocks=blocks, copy_scope=copy_scope,
+            )
+        background_key = ""
+        if layout.sheet is not None:
+            background_key = layout.sheet.background({
+                "ORIGINAL_FRONT": "original_front",
+                "ORIGINAL_TERMS": "original_back",
+                "DUPLICATE_FRONT": "duplicate_front",
+                "DUPLICATE_D3": "duplicate_back",
+            }[surface])
+        elif layout.background_asset_key:
+            background_key = layout.background_asset_key
+        return cls._apply_background(pdf, assets[background_key]) if background_key else pdf
+
+    @classmethod
+    def _render_flow_surface(
+        cls, payload, layout, fields, sections, assets, preview, *, blocks,
+        copy_scope,
+    ):
+        buffer = io.BytesIO()
+        header_height = layout.header.height_mm if layout.header else 0
+        footer_height = layout.footer.height_mm if layout.footer else 0
+        document = SimpleDocTemplate(
+            buffer, pagesize=cls.PAGE_SIZES[layout.page_size],
+            leftMargin=layout.margin_mm * mm, rightMargin=layout.margin_mm * mm,
+            topMargin=(layout.margin_mm + header_height) * mm,
+            bottomMargin=(layout.margin_mm + footer_height) * mm,
+            pageCompression=0, title=payload.title,
+        )
+        styles = cls._styles(layout)
+        available_width = cls.PAGE_SIZES[layout.page_size][0] - (2 * layout.margin_mm * mm)
+        story = []
+        cls._append_blocks(
+            story, blocks, payload, fields, sections, styles, copy_scope,
+            preview, assets, layout, available_width, enforce_copy_scope=True,
+        )
+
+        def draw_regions(canvas, _document):
+            cls._draw_page_region(
+                canvas, layout.header, top=True, payload=payload, fields=fields,
+                sections=sections, styles=styles, assets=assets, layout=layout,
+                available_width=available_width, copy_name=copy_scope,
+                enforce_copy_scope=True,
+            )
+            cls._draw_page_region(
+                canvas, layout.footer, top=False, payload=payload, fields=fields,
+                sections=sections, styles=styles, assets=assets, layout=layout,
+                available_width=available_width, copy_name=copy_scope,
+                enforce_copy_scope=True,
+            )
+
+        document.build(story, onFirstPage=draw_regions, onLaterPages=draw_regions)
+        value = buffer.getvalue()
+        buffer.close()
+        return value
+
+    @classmethod
+    def _package_surfaces(cls, surfaces, profile):
+        output = fitz.open()
+        page_size = cls.PAGE_SIZES[profile.paper_size]
+        if profile.orientation == "LANDSCAPE":
+            page_size = (page_size[1], page_size[0])
+        try:
+            for sheet in profile.sheets:
+                if len(sheet) == 1:
+                    normalized = cls._normalize_pdf_pages(
+                        surfaces[sheet[0]], page_size, profile.scaling_policy
+                    )
+                    source = fitz.open(stream=normalized, filetype="pdf")
+                    try:
+                        output.insert_pdf(source)
+                    finally:
+                        source.close()
+                    continue
+                left_size = (page_size[0] / 2, page_size[1])
+                left = cls._normalize_pdf_pages(
+                    surfaces[sheet[0]], left_size, profile.scaling_policy
+                )
+                right = cls._normalize_pdf_pages(
+                    surfaces[sheet[1]], left_size, profile.scaling_policy
+                )
+                left_doc = fitz.open(stream=left, filetype="pdf")
+                right_doc = fitz.open(stream=right, filetype="pdf")
+                try:
+                    if len(left_doc) != 1 or len(right_doc) != 1:
+                        raise ValueError(
+                            "Side-by-side print profiles require each logical surface to fit one page."
+                        )
+                    page = output.new_page(width=page_size[0], height=page_size[1])
+                    page.show_pdf_page(
+                        fitz.Rect(0, 0, page_size[0] / 2, page_size[1]), left_doc, 0
+                    )
+                    page.show_pdf_page(
+                        fitz.Rect(page_size[0] / 2, 0, page_size[0], page_size[1]),
+                        right_doc, 0,
+                    )
+                finally:
+                    left_doc.close()
+                    right_doc.close()
+            return output.tobytes(garbage=4, deflate=True)
+        finally:
+            output.close()
+
+    @staticmethod
+    def _normalize_pdf_pages(content, target_size, scaling_policy):
+        source = fitz.open(stream=content, filetype="pdf")
+        output = fitz.open()
+        try:
+            for source_page in source:
+                source_size = (source_page.rect.width, source_page.rect.height)
+                if scaling_policy == "ACTUAL_SIZE" and (
+                    abs(source_size[0] - target_size[0]) > 2
+                    or abs(source_size[1] - target_size[1]) > 2
+                ):
+                    raise ValueError(
+                        "Actual-size print profile does not match the logical layout page; "
+                        "use a matching layout or FIT_PRINTABLE_AREA."
+                    )
+                page = output.new_page(width=target_size[0], height=target_size[1])
+                if scaling_policy == "ACTUAL_SIZE":
+                    target = fitz.Rect(
+                        (target_size[0] - source_size[0]) / 2,
+                        (target_size[1] - source_size[1]) / 2,
+                        (target_size[0] + source_size[0]) / 2,
+                        (target_size[1] + source_size[1]) / 2,
+                    )
+                else:
+                    scale = min(
+                        target_size[0] / source_size[0],
+                        target_size[1] / source_size[1],
+                    )
+                    width = source_size[0] * scale
+                    height = source_size[1] * scale
+                    target = fitz.Rect(
+                        (target_size[0] - width) / 2,
+                        (target_size[1] - height) / 2,
+                        (target_size[0] + width) / 2,
+                        (target_size[1] + height) / 2,
+                    )
+                page.show_pdf_page(target, source, source_page.number)
+            return output.tobytes(garbage=4, deflate=True)
+        finally:
+            source.close()
+            output.close()
 
     @classmethod
     def _render_absolute_overlay(cls, payload, layout, fields, sections, assets, preview):
@@ -321,12 +583,14 @@ class ConfigurableDocumentRenderer:
         table.drawOn(canvas, x, y + height - required_height)
 
     @classmethod
-    def _append_blocks(cls, story, blocks, payload, fields, sections, styles, copy_name, preview, assets, layout, available_width, *, nested=False):
+    def _append_blocks(cls, story, blocks, payload, fields, sections, styles, copy_name, preview, assets, layout, available_width, *, nested=False, enforce_copy_scope=False):
         if not nested:
             if preview:
                 story.extend([Paragraph("PREVIEW / NOT AN OFFICIAL ISSUE", styles["Heading2"]), Spacer(1, 4)])
             story.extend([Paragraph(copy_name, styles["Heading3"]), Spacer(1, 3)])
         for block in blocks:
+            if enforce_copy_scope and block.copy_scope not in {"BOTH", copy_name}:
+                continue
             if not cls._is_visible(block, fields):
                 continue
             if block.type == "title":
@@ -409,7 +673,7 @@ class ConfigurableDocumentRenderer:
                 inner = []
                 if block.text:
                     inner.extend([Paragraph(escape(block.text), styles["Heading2"]), Spacer(1, 3)])
-                cls._append_blocks(inner, block.blocks, payload, fields, sections, styles, copy_name, False, assets, layout, available_width - 12, nested=True)
+                cls._append_blocks(inner, block.blocks, payload, fields, sections, styles, copy_name, False, assets, layout, available_width - 12, nested=True, enforce_copy_scope=enforce_copy_scope)
                 section = Table([[inner]], colWidths=[available_width])
                 commands = [("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]
                 if block.style_variant in {"OUTLINED", "TINTED"}:
@@ -423,7 +687,7 @@ class ConfigurableDocumentRenderer:
                 for column in block.columns:
                     column_width = available_width * column.width_percent / 100
                     inner = []
-                    cls._append_blocks(inner, column.blocks, payload, fields, sections, styles, copy_name, False, assets, layout, column_width - 8, nested=True)
+                    cls._append_blocks(inner, column.blocks, payload, fields, sections, styles, copy_name, False, assets, layout, column_width - 8, nested=True, enforce_copy_scope=enforce_copy_scope)
                     cells.append(inner); widths.append(column_width)
                 columns = Table([cells], colWidths=widths)
                 columns.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4)]))
@@ -473,12 +737,13 @@ class ConfigurableDocumentRenderer:
         return value, style
 
     @classmethod
-    def _draw_page_region(cls, canvas, region, *, top, payload, fields, sections, styles, assets, layout, available_width):
+    def _draw_page_region(cls, canvas, region, *, top, payload, fields, sections, styles, assets, layout, available_width, copy_name="", enforce_copy_scope=False):
         if region is None:
             return
         flowables = []
-        cls._append_blocks(flowables, region.blocks, payload, fields, sections, styles, "", False,
-                           assets, layout, available_width, nested=True)
+        cls._append_blocks(flowables, region.blocks, payload, fields, sections, styles, copy_name, False,
+                           assets, layout, available_width, nested=True,
+                           enforce_copy_scope=enforce_copy_scope)
         page_height = cls.PAGE_SIZES[layout.page_size][1]
         y = page_height - (layout.margin_mm * mm) if top else (layout.margin_mm + region.height_mm) * mm
         minimum_y = y - region.height_mm * mm

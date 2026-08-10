@@ -36,7 +36,7 @@ class ResolvedPrintProfile:
 
     @property
     def is_built_in(self):
-        return self.revision is None
+        return self.source_scope == "BUILT_IN"
 
 
 def _require_workspace(workspace_id):

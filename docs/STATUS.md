@@ -11,20 +11,22 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ## Latest Update
 
 - P12 was accepted by the workspace Owner on 2026-08-10; all twelve Loans
-  capability scenarios are accepted. LPD7.2 is complete. Every legacy ticket
-  packaging mode now maps to a validated physical profile, including the two
-  single-copy duplex sheet modes and older A4/A5/Letter sequential copy modes.
-  The renderer remains unchanged, while every newly created configurable
-  ticket issue records the physical profile name, schema/revision version,
-  canonical hash, and `LEGACY_LAYOUT` source alongside its exact PDF bytes.
-  Historical issues remain untouched and byte-reprintable. Migration
-  `loans.0038` adds nullable immutable issue provenance and is applied across
-  all six local tenant schemas. Integrity diagnostics now cover profile
-  revisions, assignments, and issue evidence. Forty contract/renderer tests
-  and the three affected tenant tests pass; migration drift and system checks are
-  clean, and `jcl1` still reports zero document-integrity findings. LPD7.3 is
-  next: make resolved workspace/Series profiles drive physical packaging while
-  preserving the proven legacy path as compatibility fallback.
+  capability scenarios are accepted. LPD7.3 is complete. New configurable
+  loan-ticket issues now resolve `Series -> Workspace -> built-in` physical
+  profiles and package independently rendered Original/Terms/Duplicate/D3
+  surfaces as A5 sequential or A4 side-by-side output. Pair validation rejects
+  missing mandatory front evidence, missing back surfaces, dishonest
+  actual-size combinations, and multi-page side-by-side surfaces. Existing
+  official issues are returned from their exact stored bytes before current
+  layout/profile resolution, so later assignment changes cannot alter or break
+  historical reprints. Owner/Admin retains audited
+  `?print_profile=legacy` compatibility recovery; there is no silent fallback.
+  Issue evidence records built-in/workspace/Series/legacy source and immutable
+  profile identity. Diagnostics now validate each Series' effective
+  layout/profile pair. Forty-four renderer/contract tests plus the effective-
+  pair integrity test and configured issue-route test pass; system checks are
+  clean and `jcl1` still has zero findings. No migration was required. Profile
+  management UI and the real physical printer matrix remain pending.
 
 - P12's accepted boundary rejects Members
   before administrator-only auction/correction identifiers are looked up and

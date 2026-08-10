@@ -9,6 +9,7 @@ from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.documents import (
     DocumentLayoutValidator,
+    built_in_print_profile,
     legacy_print_profile,
     starter_layout,
 )
@@ -23,6 +24,7 @@ from apps.tenant_apps.loans.models import (
 from apps.tenant_apps.loans.services import (
     DocumentLayoutServiceError,
     LoanDocumentLayoutService,
+    LoanDocumentPrintProfileService,
 )
 from apps.tenant_apps.loans.services.print_profiles import ResolvedPrintProfile
 
@@ -346,4 +348,49 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
         self.assertEqual(
             [finding.category for finding in findings],
             ["PILOT_RELEASE_SIGNATURES"],
+        )
+
+    def test_integrity_selector_rejects_incompatible_resolved_profile_pair(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["copy_mode"] = "ORIGINAL_DUPLICATE"
+        layout_revision = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name=f"Pair layout {uuid.uuid4().hex[:6]}",
+            definition=definition,
+            actor=self.actor,
+        )
+        layout_revision = LoanDocumentLayoutService.publish(
+            revision=layout_revision, actor=self.actor
+        )
+        LoanDocumentLayoutService.assign(
+            revision=layout_revision,
+            workspace=self.tenant,
+            series=self.series,
+            actor=self.actor,
+        )
+        profile_definition = built_in_print_profile(
+            "A5_BOTH_DUPLEX"
+        ).canonical_dict()
+        profile_definition["name"] = "Missing backs"
+        profile_revision = LoanDocumentPrintProfileService.create_profile(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name="Missing backs",
+            definition=profile_definition,
+            actor=self.actor,
+        )
+        profile_revision = LoanDocumentPrintProfileService.publish(
+            revision=profile_revision, actor=self.actor
+        )
+        LoanDocumentPrintProfileService.assign(
+            revision=profile_revision,
+            workspace=self.tenant,
+            series=self.series,
+            actor=self.actor,
+        )
+
+        self.assertIn(
+            "PRINT_PROFILE_LAYOUT_PAIR",
+            [finding.category for finding in get_document_integrity_findings()],
         )

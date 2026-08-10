@@ -300,7 +300,11 @@ from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
     get_pawn_principal_tranche_balances,
 )
-from apps.tenant_apps.loans.services.print_profiles import ResolvedPrintProfile
+from apps.tenant_apps.loans.services.print_profiles import (
+    LoanDocumentPrintProfileService,
+    PrintProfileServiceError,
+    ResolvedPrintProfile,
+)
 
 
 @loans_workspace_required
@@ -879,6 +883,22 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
             source_id=source_id, actor=request.user, request=request,
         )
         return None
+    existing_issue = LoanDocumentLayoutService.find_official_issue(
+        workspace=request.loans_workspace,
+        document_type=payload.document_type,
+        source_type=source_type,
+        source_id=source_id,
+        source_fingerprint=source_fingerprint,
+    )
+    if existing_issue is not None:
+        return _issued_document_response(existing_issue, payload)
+    use_legacy_profile = request.GET.get("print_profile") == "legacy"
+    if use_legacy_profile and not _can_administer(request):
+        return HttpResponse(
+            "Legacy print-profile recovery requires workspace administration access.",
+            status=403,
+            content_type="text/plain",
+        )
     revision = LoanDocumentLayoutService.resolve(
         workspace=request.loans_workspace, document_type=payload.document_type,
         license=loan.license, series=loan.series,
@@ -887,14 +907,36 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
         return None
     try:
         layout = DocumentLayoutValidator.load(revision.definition)
-        rendered = ConfigurableDocumentRenderer.render(
-            payload, layout, assets=_revision_assets(revision)
-        )
         print_profile = None
         if payload.document_type == "loan_ticket":
-            print_profile = ResolvedPrintProfile(
-                source_scope="LEGACY_LAYOUT",
-                definition=legacy_print_profile(layout),
+            if use_legacy_profile:
+                LoanDocumentLayoutService.audit_legacy_profile_recovery(
+                    workspace=request.loans_workspace,
+                    source_type=source_type,
+                    source_id=source_id,
+                    actor=request.user,
+                    request=request,
+                )
+                print_profile = ResolvedPrintProfile(
+                    source_scope="LEGACY_LAYOUT",
+                    definition=legacy_print_profile(layout),
+                )
+                rendered = ConfigurableDocumentRenderer.render(
+                    payload, layout, assets=_revision_assets(revision)
+                )
+            else:
+                print_profile = LoanDocumentPrintProfileService.resolve(
+                    workspace=request.loans_workspace,
+                    document_type=payload.document_type,
+                    series=loan.series,
+                )
+                rendered = ConfigurableDocumentRenderer.render_with_print_profile(
+                    payload, layout, print_profile.definition,
+                    assets=_revision_assets(revision),
+                )
+        else:
+            rendered = ConfigurableDocumentRenderer.render(
+                payload, layout, assets=_revision_assets(revision)
             )
         issue = LoanDocumentLayoutService.issue(
             workspace=request.loans_workspace, document_type=payload.document_type,
@@ -904,9 +946,18 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
             filename=payload.file_name, actor=request.user, revision=revision,
             print_profile=print_profile,
         )
-        issue.artifact.open("rb"); pdf = issue.artifact.read(); issue.artifact.close()
-    except (ValueError, ValidationError, DocumentLayoutServiceError) as exc:
+    except (
+        ValueError, ValidationError, DocumentLayoutServiceError,
+        PrintProfileServiceError,
+    ) as exc:
         return HttpResponse(str(exc), status=409, content_type="text/plain")
+    return _issued_document_response(issue, payload)
+
+
+def _issued_document_response(issue, payload):
+    issue.artifact.open("rb")
+    pdf = issue.artifact.read()
+    issue.artifact.close()
     response = HttpResponse(pdf, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="{payload.file_name}"'
     response["X-Rokkad-Verification-ID"] = payload.verification_id

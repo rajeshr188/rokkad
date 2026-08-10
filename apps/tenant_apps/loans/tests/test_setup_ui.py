@@ -45,8 +45,11 @@ from apps.tenant_apps.loans.views import _license_for_workspace
 from apps.tenant_apps.party.models import Party
 from apps.orgs.models import Membership, Role
 from PIL import Image as PillowImage
-from apps.tenant_apps.loans.documents import starter_layout
-from apps.tenant_apps.loans.services import LoanDocumentLayoutService
+from apps.tenant_apps.loans.documents import built_in_print_profile, starter_layout
+from apps.tenant_apps.loans.services import (
+    LoanDocumentLayoutService,
+    LoanDocumentPrintProfileService,
+)
 
 
 @override_settings(
@@ -1154,18 +1157,19 @@ class LoansSetupUiTests(TenantTestCase):
     def test_published_ticket_layout_drives_official_issue_and_reprint(self):
         license, series = self._configured_setup()
         loan = self._loan(license, series, "PL-DOC-00001", state="APPROVED")
+        approval_payload = {
+            "loan_number": loan.loan_number,
+            "loan_date": str(loan.loan_date),
+            "principal_amount": str(loan.principal_amount),
+            "monthly_interest_rate": str(loan.monthly_interest_rate),
+            "tenure_months": loan.tenure_months,
+            "borrower_id": loan.borrower_id,
+            "collateral": [],
+        }
         PawnLoanApprovalSnapshot.objects.create(
             loan=loan,
             version=1,
-            payload={
-                "loan_number": loan.loan_number,
-                "loan_date": str(loan.loan_date),
-                "principal_amount": str(loan.principal_amount),
-                "monthly_interest_rate": str(loan.monthly_interest_rate),
-                "tenure_months": loan.tenure_months,
-                "borrower_id": loan.borrower_id,
-                "collateral": [],
-            },
+            payload=approval_payload,
             fingerprint="ui-approval-fingerprint",
             approved_by=self.owner,
         )
@@ -1205,12 +1209,85 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(first.status_code, 200)
         self.assertTrue(first.content.startswith(b"%PDF"))
         self.assertEqual(first["X-Rokkad-Document-Issue"], second["X-Rokkad-Document-Issue"])
-        self.assertEqual(first["X-Rokkad-Print-Profile"], "Legacy embedded Legacy Original")
+        self.assertEqual(first["X-Rokkad-Print-Profile"], "Built-in A5 Both Simplex")
         self.assertEqual(first["X-Rokkad-Print-Profile-Hash"], second["X-Rokkad-Print-Profile-Hash"])
         self.assertEqual(LoanDocumentIssue.objects.filter(source_id=str(loan.pk)).count(), 1)
         issue = LoanDocumentIssue.objects.get(source_id=str(loan.pk))
-        self.assertEqual(issue.print_profile_source_scope, "LEGACY_LAYOUT")
+        self.assertEqual(issue.print_profile_source_scope, "BUILT_IN")
         self.assertEqual(issue.print_profile_hash, first["X-Rokkad-Print-Profile-Hash"])
+
+        profile_definition = built_in_print_profile(
+            "A4_SIDE_BY_SIDE"
+        ).canonical_dict()
+        profile_definition["name"] = "Series counter A4"
+        profile_revision = LoanDocumentPrintProfileService.create_profile(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name="Series counter A4",
+            definition=profile_definition,
+            actor=self.owner,
+        )
+        profile_revision = LoanDocumentPrintProfileService.publish(
+            revision=profile_revision, actor=self.owner
+        )
+        LoanDocumentPrintProfileService.assign(
+            revision=profile_revision,
+            workspace=self.tenant,
+            series=series,
+            actor=self.owner,
+        )
+
+        unchanged_reprint = self.tenant_get(url)
+        self.assertEqual(
+            unchanged_reprint["X-Rokkad-Document-Issue"],
+            first["X-Rokkad-Document-Issue"],
+        )
+        self.assertEqual(unchanged_reprint.content, first.content)
+
+        PawnLoanApprovalSnapshot.objects.create(
+            loan=loan,
+            version=2,
+            payload=approval_payload,
+            fingerprint="ui-approval-fingerprint-2",
+            approved_by=self.owner,
+        )
+        future = self.tenant_get(url)
+        self.assertEqual(future.status_code, 200)
+        self.assertNotEqual(
+            future["X-Rokkad-Document-Issue"], first["X-Rokkad-Document-Issue"]
+        )
+        self.assertEqual(future["X-Rokkad-Print-Profile"], "Series counter A4")
+        future_issue = LoanDocumentIssue.objects.get(
+            pk=future["X-Rokkad-Document-Issue"]
+        )
+        self.assertEqual(future_issue.print_profile_source_scope, "SERIES")
+        self.assertEqual(
+            future_issue.print_profile_revision_id, profile_revision.pk
+        )
+        future_pdf = fitz.open(stream=future.content, filetype="pdf")
+        self.assertEqual(len(future_pdf), 1)
+        self.assertGreater(future_pdf[0].rect.width, future_pdf[0].rect.height)
+        future_pdf.close()
+
+        PawnLoanApprovalSnapshot.objects.create(
+            loan=loan,
+            version=3,
+            payload=approval_payload,
+            fingerprint="ui-approval-fingerprint-3",
+            approved_by=self.owner,
+        )
+        legacy = self.tenant_get(f"{url}?print_profile=legacy")
+        self.assertEqual(legacy.status_code, 200)
+        self.assertEqual(
+            legacy["X-Rokkad-Print-Profile"],
+            "Legacy embedded Legacy Original",
+        )
+        legacy_issue = LoanDocumentIssue.objects.get(
+            pk=legacy["X-Rokkad-Document-Issue"]
+        )
+        self.assertEqual(
+            legacy_issue.print_profile_source_scope, "LEGACY_LAYOUT"
+        )
 
         fixed = self.tenant_get(f"{url}?renderer=fixed")
         self.assertEqual(fixed.status_code, 200)

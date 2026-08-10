@@ -9,6 +9,8 @@ from apps.tenant_apps.loans.documents import (
     DocumentAssetValidator,
     DocumentLayoutValidator,
     LayoutValidationError,
+    PrintProfileValidator,
+    built_in_print_profile,
     legacy_print_profile,
     starter_layout,
 )
@@ -318,6 +320,71 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
                     else profile.paper_size,
                 )
                 pdf.close()
+
+    def test_profile_renderer_repackages_one_flow_layout_as_a5_both(self):
+        layout = starter_layout("loan_ticket")
+        profile = built_in_print_profile("A5_BOTH_SIMPLEX")
+
+        result = ConfigurableDocumentRenderer.render_with_print_profile(
+            self.payload, layout, profile
+        )
+
+        self.assertEqual(result.renderer_version, "layout-reportlab-profile-v1")
+        self.assertEqual(result.page_size, "A5")
+        self.assertEqual(result.copy_mode, "A5_BOTH_SIMPLEX")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 2)
+        self.assertIn("ORIGINAL", pdf[0].get_text())
+        self.assertIn("DUPLICATE", pdf[1].get_text())
+        pdf.close()
+
+    def test_profile_renderer_can_override_legacy_sheet_packaging(self):
+        assets = tuple(
+            DocumentAssetValidator.validate(
+                key=key, kind="BACKGROUND", content=self._pdf_bytes(text),
+                workspace_id=7,
+            )
+            for key, text in (
+                ("original.front", "ORIGINAL BACKGROUND"),
+                ("duplicate.front", "DUPLICATE BACKGROUND"),
+                ("original.terms", "ORIGINAL TERMS"),
+                ("duplicate.d3", "FORM D3"),
+            )
+        )
+        layout = DocumentLayoutValidator.load(
+            self._sheet_definition("A5_BOTH_DUPLEX")
+        )
+        profile = built_in_print_profile("A4_SIDE_BY_SIDE")
+
+        result = ConfigurableDocumentRenderer.render_with_print_profile(
+            self.payload, layout, profile, assets=assets
+        )
+
+        self.assertEqual(result.page_size, "A4_LANDSCAPE")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 1)
+        text = pdf[0].get_text()
+        self.assertIn("ORIGINAL BACKGROUND", text)
+        self.assertIn("DUPLICATE BACKGROUND", text)
+        pdf.close()
+
+    def test_profile_renderer_rejects_a_missing_logical_back_surface(self):
+        with self.assertRaisesMessage(ValueError, "no logical back surface"):
+            ConfigurableDocumentRenderer.render_with_print_profile(
+                self.payload,
+                starter_layout("loan_ticket"),
+                built_in_print_profile("A5_BOTH_DUPLEX"),
+            )
+
+    def test_actual_size_profile_rejects_mismatched_logical_page(self):
+        definition = built_in_print_profile("A5_BOTH_SIMPLEX").canonical_dict()
+        definition["scaling_policy"] = "ACTUAL_SIZE"
+        profile = PrintProfileValidator.load(definition)
+
+        with self.assertRaisesMessage(ValueError, "Actual-size print profile"):
+            ConfigurableDocumentRenderer.render_with_print_profile(
+                self.payload, starter_layout("loan_ticket"), profile
+            )
 
     def test_sheet_composition_requires_assets_and_copy_complete_evidence(self):
         definition = self._sheet_definition("A4_SIDE_BY_SIDE")

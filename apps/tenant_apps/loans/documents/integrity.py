@@ -4,7 +4,11 @@ import hashlib
 from dataclasses import dataclass
 
 from apps.tenant_apps.loans.documents.layouts import DocumentLayoutValidator
-from apps.tenant_apps.loans.documents.print_profiles import PrintProfileValidator
+from apps.tenant_apps.loans.documents.print_profiles import (
+    PrintProfileValidator,
+    built_in_print_profile,
+)
+from apps.tenant_apps.loans.documents.renderers import ConfigurableDocumentRenderer
 from apps.tenant_apps.loans.models import (
     LoanDocumentAsset,
     LoanDocumentIssue,
@@ -12,6 +16,7 @@ from apps.tenant_apps.loans.models import (
     LoanDocumentLayoutRevision,
     LoanDocumentPrintProfileAssignment,
     LoanDocumentPrintProfileRevision,
+    LoanSeries,
     current_tenant_workspace_id,
 )
 
@@ -96,6 +101,41 @@ def get_document_integrity_findings():
             findings.append(DocumentIntegrityFinding(
                 "PILOT_PRINT_PROFILE_COPY_BUNDLE", "print_profile_assignment", assignment.pk,
                 "The active pilot print profile must include Original and Duplicate fronts.",
+            ))
+    layout_assignments = LoanDocumentLayoutAssignment.objects.filter(
+        workspace_id=workspace_id,
+        document_type="loan_ticket",
+        is_active=True,
+        revision__state=LoanDocumentLayoutRevision.State.PUBLISHED,
+    ).select_related("revision__layout", "license", "series__license")
+    profile_assignment_list = tuple(profile_assignments)
+    layout_assignment_list = tuple(layout_assignments)
+    for series in LoanSeries.objects.filter(
+        license__workspace_id=workspace_id
+    ).select_related("license"):
+        layout_assignment = _resolve_layout_assignment(
+            layout_assignment_list, series
+        )
+        if layout_assignment is None:
+            continue
+        profile_assignment = _resolve_profile_assignment(
+            profile_assignment_list, series
+        )
+        try:
+            layout = DocumentLayoutValidator.load(
+                layout_assignment.revision.definition
+            )
+            profile = (
+                PrintProfileValidator.load(profile_assignment.revision.definition)
+                if profile_assignment else built_in_print_profile()
+            )
+            ConfigurableDocumentRenderer.assert_print_profile_compatible(
+                layout, profile
+            )
+        except ValueError as exc:
+            findings.append(DocumentIntegrityFinding(
+                "PRINT_PROFILE_LAYOUT_PAIR", "series", series.pk,
+                f"Resolved loan-ticket layout/profile pair is incompatible: {exc}",
             ))
     for issue in LoanDocumentIssue.objects.filter(workspace_id=workspace_id).select_related(
         "revision__layout", "prior_issue", "print_profile_revision__profile"
@@ -182,6 +222,29 @@ def _includes_original_and_duplicate(layout):
         "ORIGINAL_DUPLICATE",
         "ORIGINAL_DUPLICATE_DUPLEX",
     }
+
+
+def _resolve_layout_assignment(assignments, series):
+    for assignment in assignments:
+        if assignment.series_id == series.pk:
+            return assignment
+    for assignment in assignments:
+        if assignment.series_id is None and assignment.license_id == series.license_id:
+            return assignment
+    for assignment in assignments:
+        if assignment.series_id is None and assignment.license_id is None:
+            return assignment
+    return None
+
+
+def _resolve_profile_assignment(assignments, series):
+    for assignment in assignments:
+        if assignment.series_id == series.pk:
+            return assignment
+    for assignment in assignments:
+        if assignment.series_id is None:
+            return assignment
+    return None
 
 
 def _includes_required_ticket_signatures(layout):

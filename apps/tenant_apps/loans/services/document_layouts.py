@@ -44,6 +44,40 @@ class LoanDocumentLayoutService:
                 request=request, success=True,
             )
 
+    @staticmethod
+    def audit_legacy_profile_recovery(
+        *, workspace, source_type, source_id, actor=None, request=None
+    ):
+        _require_workspace(workspace.pk)
+        with schema_context(get_public_schema_name()):
+            AuditLog.log(
+                "DATA_EXPORT", user=actor, company=workspace,
+                description=(
+                    f"Used legacy print-profile compatibility rendering for "
+                    f"{source_type}:{source_id}."
+                ),
+                data={
+                    "entity": "loan_document_legacy_profile_recovery",
+                    "source_type": source_type,
+                    "source_id": str(source_id),
+                },
+                request=request, success=True,
+            )
+
+    @staticmethod
+    def find_official_issue(
+        *, workspace, document_type, source_type, source_id, source_fingerprint
+    ):
+        _require_workspace(workspace.pk)
+        return LoanDocumentIssue.objects.filter(
+            workspace=workspace,
+            document_type=document_type,
+            source_type=source_type,
+            source_id=str(source_id),
+            source_fingerprint=source_fingerprint,
+            issue_kind=LoanDocumentIssue.Kind.OFFICIAL,
+        ).first()
+
     @classmethod
     @transaction.atomic
     def create_layout(cls, *, workspace, document_type, name, definition, actor=None, request=None):

@@ -31,7 +31,21 @@ records that profile's name, version, canonical hash, and `LEGACY_LAYOUT`
 source on every new configurable ticket issue. Existing `copy_mode` and
 `sheet` settings still drive rendering, so this evidence describes the output
 actually produced rather than claiming an assigned profile was used. LPD7.3
-will make resolved profiles drive future physical packaging after parity.
+now makes resolved profiles drive new configurable loan-ticket issues. The
+renderer first produces logical copy surfaces, validates the selected pair,
+then performs A5 sequencing or A4 side-by-side imposition. Existing issued
+artifacts are returned before current defaults are resolved.
+
+Owner/Admin compatibility recovery is explicit:
+
+```text
+<loan-ticket-pdf-url>?print_profile=legacy
+```
+
+This uses the published layout's embedded composition, records
+`LEGACY_LAYOUT` evidence on a newly created issue, and emits a workspace audit
+event. It never activates automatically after a profile failure. The separate
+`?renderer=fixed` recovery remains available under its existing rules.
 
 ## Integrity Gate
 
@@ -42,7 +56,8 @@ python manage.py tenant_command check_loan_document_integrity --schema=<schema> 
 ```
 
 The command verifies canonical layout/profile hashes, layout/document scope,
-profile revision and assignment scope, profile evidence on new issues, asset
+profile revision and assignment scope, every Series' effective layout/profile
+compatibility, profile evidence on new issues, asset
 workspace and byte hashes, issued artifact hashes, revision scope, and
 regeneration lineage. For the parity pilot it also rejects every active
 loan-ticket assignment that would emit only Original or only Duplicate. A
@@ -80,11 +95,11 @@ Record printer make/model, driver, paper stock, duplex setting, operator, date,
 and any scaling option used. Do not mark LPD6 operationally complete from an
 on-screen PDF review alone.
 
-For LPD7.2 compatibility output, record the issue's print-profile name,
-version, canonical hash, and `LEGACY_LAYOUT` scope. After LPD7.3, test the same
-logical layout through every assigned
-profile and verify that changing the active profile does not alter a historical
-issue reprint.
+For compatibility output, record the issue's print-profile name, version,
+canonical hash, and `LEGACY_LAYOUT` scope. For resolved output, record the
+`SERIES`, `WORKSPACE`, or `BUILT_IN` scope. Test the same logical layout through
+every assigned profile and verify that changing the active profile does not
+alter a historical issue reprint.
 
 ## Recovery
 
