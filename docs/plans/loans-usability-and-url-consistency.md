@@ -32,7 +32,7 @@ Status: implemented 2026-08-10.
 
 ## UP2: Bounded Tables And Contextual Filters
 
-Status: in progress; UP2.1 implemented 2026-08-10.
+Status: in progress; UP2.1 and UP2.2 implemented 2026-08-10.
 
 Use `django-filter`, already installed, plus Django `Paginator`. Preserve active
 filter query parameters in page links and apply tenant scope before filters.
@@ -43,8 +43,10 @@ Priority order:
    code, license number, and Series code; state, tenant-bound license/Series,
    and inclusive loan-date filters compose with it. Results are capped at 25
    rows and filter state survives pagination.
-2. Issued documents: document kind, issue kind, profile scope, issued-date
-   range; 50 rows.
+2. Issued documents: implemented. Source/issue/profile search, document kind,
+   issue kind, profile source (including historical evidence without recorded
+   LPD7 provenance), and inclusive issued-date filters compose across 50-row
+   pages. The former silent newest-200 cutoff is removed.
 3. Storage inventory and physical verification: hierarchy/state/session/date;
    50 rows.
 4. Notices and operational diagnostics: kind/status/date; 50 rows.

@@ -10,6 +10,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Loans usability UP2.2 is complete. The Owner/Admin issued-document evidence
+  ledger no longer silently truncates at the newest 200 rows: every immutable
+  issue is reachable through 50-row pages. Search plus document type, issue
+  kind, profile source, and inclusive issued-date filters compose and survive
+  pagination. Historical issues without LPD7 profile provenance have an
+  explicit filter, and opening an issue still serves its exact stored PDF.
+
 - Loans usability UP2.1 is complete. The primary PawnLoan worklist now applies
   tenant scope before a dedicated `django-filter` FilterSet, supports combined
   text/state/license/Series/inclusive-date filtering, and paginates at 25 rows

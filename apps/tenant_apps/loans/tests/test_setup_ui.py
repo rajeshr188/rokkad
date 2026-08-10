@@ -112,6 +112,96 @@ class LoansSetupUiTests(TenantTestCase):
     def tenant_post(self, url, data=None):
         return self.client.post(url, data or {})
 
+    def test_document_issue_list_filters_and_paginates_immutable_evidence(self):
+        def create_issue(sequence, **overrides):
+            values = {
+                "workspace": self.tenant,
+                "document_type": "repayment_receipt",
+                "issue_kind": LoanDocumentIssue.Kind.OFFICIAL,
+                "source_type": "PawnLoanRepayment",
+                "source_id": f"SOURCE-{sequence}",
+                "source_fingerprint": f"fingerprint-{sequence}",
+                "fixed_renderer_version": "test-v1",
+                "payload_schema_version": 1,
+                "payload_hash": f"payload-{sequence}",
+                "pdf_hash": f"pdf-{sequence}",
+                "artifact": SimpleUploadedFile(
+                    f"issue-{sequence}.pdf",
+                    b"%PDF-1.4 test evidence",
+                    content_type="application/pdf",
+                ),
+                "issued_by": self.owner,
+            }
+            values.update(overrides)
+            return LoanDocumentIssue.objects.create(**values)
+
+        for sequence in range(51):
+            create_issue(sequence)
+
+        prior_issue = create_issue(
+            "special-original",
+            document_type="loan_ticket",
+            source_type="PawnLoan",
+            source_id="SPECIAL-LOAN",
+        )
+        special_issue = create_issue(
+            "special-regenerated",
+            document_type="loan_ticket",
+            issue_kind=LoanDocumentIssue.Kind.REGENERATED,
+            source_type="PawnLoan",
+            source_id="SPECIAL-LOAN",
+            prior_issue=prior_issue,
+            print_profile_name="Special Profile",
+            print_profile_version=1,
+            print_profile_hash="profile-special",
+            print_profile_source_scope=LoanDocumentIssue.PrintProfileSource.BUILT_IN,
+        )
+        issued_at = timezone.now() - timedelta(days=2)
+        LoanDocumentIssue.objects.filter(pk=special_issue.pk).update(
+            issued_at=issued_at
+        )
+
+        first_page = self.tenant_get(reverse("loans:document_issue_list"))
+        self.assertEqual(first_page.status_code, 200)
+        self.assertEqual(first_page.context["page_obj"].paginator.count, 53)
+        self.assertEqual(len(first_page.context["issues"]), 50)
+
+        receipt_page = self.client.get(
+            reverse("loans:document_issue_list"),
+            {"document_type": "repayment_receipt"},
+        )
+        self.assertEqual(receipt_page.context["page_obj"].paginator.count, 51)
+        self.assertContains(
+            receipt_page,
+            "?document_type=repayment_receipt&amp;page=2",
+        )
+        receipt_page_two = self.client.get(
+            reverse("loans:document_issue_list"),
+            {"document_type": "repayment_receipt", "page": 2},
+        )
+        self.assertEqual(len(receipt_page_two.context["issues"]), 1)
+
+        filtered = self.client.get(
+            reverse("loans:document_issue_list"),
+            {
+                "q": "Special Profile",
+                "document_type": "loan_ticket",
+                "issue_kind": LoanDocumentIssue.Kind.REGENERATED,
+                "profile_scope": LoanDocumentIssue.PrintProfileSource.BUILT_IN,
+                "issued_date_from": issued_at.date().isoformat(),
+                "issued_date_to": issued_at.date().isoformat(),
+            },
+        )
+        self.assertEqual(list(filtered.context["issues"]), [special_issue])
+        self.assertContains(filtered, "SPECIAL-LOAN")
+        self.assertContains(filtered, "Built-in fallback")
+
+        historical = self.client.get(
+            reverse("loans:document_issue_list"),
+            {"profile_scope": "NOT_RECORDED"},
+        )
+        self.assertEqual(historical.context["page_obj"].paginator.count, 52)
+
     def test_owner_can_complete_license_and_series_setup_without_admin(self):
         response = self.tenant_post(
             reverse("loans:license_create"),

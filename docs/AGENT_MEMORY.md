@@ -8,6 +8,13 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Loans usability UP2.2 replaces the issued-document ledger's silent newest-200
+slice with 50-row pagination over all tenant-scoped immutable issues. Its
+dedicated filter supports issue/source/profile search, document type, issue
+kind, profile resolution source, and inclusive issued dates; blank historical
+LPD7 provenance is deliberately filterable. This is a read-only evidence
+worklist change and must never rerender or mutate stored official artifacts.
+
 Loans usability UP2.1 bounds the primary PawnLoan worklist at 25 rows and uses
 a dedicated tenant-aware `django-filter` FilterSet. Apply workspace scope to
 the base queryset first; also bind license and Series filter choices to that

@@ -37,7 +37,7 @@ from apps.tenant_apps.loans.feature_flags import (
     get_loan_module_feature_state,
     set_new_loans_enabled,
 )
-from apps.tenant_apps.loans.filters import PawnLoanFilter
+from apps.tenant_apps.loans.filters import LoanDocumentIssueFilter, PawnLoanFilter
 from apps.tenant_apps.loans.forms import (
     LoanLicenseForm,
     LoanLicenseRenewalForm,
@@ -674,9 +674,17 @@ def document_issue_list(request):
         workspace=request.loans_workspace
     ).select_related(
         "revision__layout", "print_profile_revision__profile", "issued_by"
-    ).order_by("-issued_at", "-pk")[:200]
+    ).order_by("-issued_at", "-pk")
+    issue_filter = LoanDocumentIssueFilter(request.GET, queryset=issues)
+    page_obj = Paginator(issue_filter.qs, 50).get_page(request.GET.get("page"))
     return render(
-        request, "loans/setup/documents/issues.html", {"issues": issues}
+        request,
+        "loans/setup/documents/issues.html",
+        {
+            "issue_filter": issue_filter,
+            "issues": page_obj.object_list,
+            "page_obj": page_obj,
+        },
     )
 
 
