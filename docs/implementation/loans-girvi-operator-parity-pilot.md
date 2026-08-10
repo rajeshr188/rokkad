@@ -129,8 +129,8 @@ Do not use database/admin shortcuts.
 | P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | **Accepted 2026-08-10** |
 | P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | **Accepted 2026-08-10** |
 | P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | **Accepted 2026-08-10** |
-| P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | **Active** |
-| P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | REPLACE | Pending |
+| P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | **Accepted 2026-08-10** |
+| P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | REPLACE | **Active** |
 
 For each scenario record:
 
@@ -458,6 +458,34 @@ repayment receipt, and release memo bytes with verification identity. Owner
 inspection of all report families, representative exports, Party statement,
 license register, renewal agreement, notices, and intended physical print
 outputs remains the P11 acceptance gate.
+
+### P11 Acceptance
+
+The workspace Owner proceeded to P12 on 2026-08-10, accepting P11's canonical
+screen/export projections, correction-aware daily and Party evidence, and
+typed regulatory-document navigation as the pilot reporting boundary.
+
+### P12 Software Evidence
+
+The HTTP boundary now mirrors the accepted role policy instead of relying on a
+later service error. Workspace members retain ordinary PawnLoan operations.
+Owner/Admin users control setup, auction, and correction workflows. Manual
+storage and physical verification use a distinct Owner-only boundary during
+the pilot; platform superusers retain the accepted explicit override in both
+the HTTP and service layers.
+
+Member requests are rejected before administrator-owned identifiers are
+looked up. Admin users are likewise rejected before Owner-only storage and
+verification identifiers are looked up, while remaining authorized for the
+administrator boundary. Item scans still open the owning loan for a workspace
+member, but verification preselection requires Owner authority.
+
+Tenant regressions prove foreign-workspace loan detail, draft edit, ticket,
+repayment receipt, collateral photo, label, QR scan, Party statement, and
+license sources all return the same `404` outcome as unknown identifiers. The
+complete nine-test collateral media/storage/verification gate remains green,
+along with the focused role-boundary and foreign-source tests. P12 awaits Owner
+acceptance of the role matrix; no schema migration is required.
 
 ## Physical Document Matrix
 

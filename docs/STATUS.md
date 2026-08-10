@@ -10,15 +10,25 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
-- P10 was accepted by the workspace Owner on 2026-08-10. P11 daily and
-  regulatory outputs are active. The report hub now exposes CSV, XLSX, and PDF
+- P11 was accepted by the workspace Owner on 2026-08-10 and P12 permission and
+  isolation verification is active. The HTTP boundary now rejects Members
+  before administrator-only auction/correction identifiers are looked up and
+  rejects Members and Admins before Owner-only storage/physical-verification
+  identifiers are looked up. The explicit platform-superuser override is
+  consistent across these views and their services. Foreign-workspace loan,
+  document, photo, scan, Party, and license sources return the same 404 as an
+  unknown identifier. The focused role and isolation tests plus the complete
+  nine-test collateral media/storage/verification gate pass. P12 awaits Owner
+  acceptance; no migration is required.
+
+- P11's accepted report hub exposes CSV, XLSX, and PDF
   for every required projection plus direct license-register, available ticket,
   repayment-receipt, release-memo/Form H, renewal-agreement, and Party-statement
   navigation. Daily and Party histories expose event, delivery, original/
   compensation linkage, and corrected status; Party transactions now honor the
   selected as-of date. Release/renewal exports include completion/reversal
   status. Sixteen selector/export tests and three focused tenant UI/document
-  tests pass. P11 awaits Owner report/export/document inspection.
+  tests pass.
 
 - P10's accepted operator-readiness slice orders business events newest-first, exposes correction
   only on the newest eligible event, explains later-event dependencies and

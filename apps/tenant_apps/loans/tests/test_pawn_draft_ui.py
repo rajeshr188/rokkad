@@ -11,9 +11,10 @@ from django.test import override_settings
 from django.urls import reverse
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
+from django_tenants.utils import schema_context
 
 from apps.configuration.services import PreferenceService
-from apps.orgs.models import Membership, Role
+from apps.orgs.models import Company, Membership, Role
 from apps.tenant_apps.loans.domain import LoanDocumentKind, TransactionKind
 from apps.tenant_apps.loans.models import (
     LoanLicense,
@@ -404,6 +405,60 @@ class PawnDraftUiTests(TenantTestCase):
             ).status_code,
             403,
         )
+
+    def test_unknown_and_cross_workspace_loan_sources_are_not_exposed(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        item = loan.collateral_items.get()
+        event = PawnLoanAccountingEvent.objects.create(
+            loan=loan,
+            event_kind="REPAYMENT",
+            effective_date=date(2026, 8, 2),
+            payload={
+                "values": {"principal": "1.00", "interest": "0", "fees": "0"},
+                "repayment": {"amount_received": "1.00"},
+            },
+            payload_fingerprint="p12-cross-workspace-event",
+            idempotency_key="p12-cross-workspace-event",
+            created_by=self.owner,
+        )
+        with schema_context("public"):
+            other_workspace = Company(
+                name=f"P12 Foreign {uuid.uuid4().hex[:8]}",
+                schema_name=f"p12_foreign_{uuid.uuid4().hex[:8]}",
+                owner=self.owner,
+                creator=self.owner,
+            )
+            other_workspace.auto_create_schema = False
+            other_workspace.save()
+        PawnLoan.objects.filter(pk=loan.pk).update(workspace=other_workspace)
+        LoanLicense.objects.filter(pk=license.pk).update(workspace=other_workspace)
+
+        scoped_routes = (
+            reverse("loans:pawn_loan_detail", args=[loan.pk]),
+            reverse("loans:pawn_loan_update", args=[loan.pk]),
+            reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]),
+            reverse("loans:pawn_repayment_receipt_pdf", args=[loan.pk, event.pk]),
+            reverse("loans:pawn_collateral_photo_document", args=[loan.pk, item.pk, item.photos.get().pk]),
+            reverse("loans:pawn_collateral_label_pdf", args=[loan.pk, item.pk]),
+            reverse("loans:pawn_collateral_scan", args=[item.public_id]),
+            reverse("loans:pawn_party_statement", args=[loan.borrower_id]),
+            reverse("loans:license_detail", args=[license.pk]),
+        )
+        for url in scoped_routes:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+
+        unknown_routes = (
+            reverse("loans:pawn_loan_detail", args=[999999]),
+            reverse("loans:pawn_loan_ticket_pdf", args=[999999]),
+            reverse("loans:pawn_party_statement", args=[999999]),
+            reverse("loans:license_detail", args=[999999]),
+        )
+        for url in unknown_routes:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
 
     def test_staff_can_approve_reopen_reapprove_and_cancel_through_ui(self):
         license, series = self._configured_setup()

@@ -501,6 +501,57 @@ class LoansSetupUiTests(TenantTestCase):
             403,
         )
 
+    def test_pilot_sensitive_routes_fail_at_the_http_permission_boundary(self):
+        member = get_user_model().objects.create_user(
+            username=f"pilot-boundary-member-{uuid.uuid4().hex[:8]}"
+        )
+        member_role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.create(user=member, company=self.tenant, role=member_role)
+        self.client.force_login(member)
+
+        administrator_routes = (
+            ("get", reverse("loans:pawn_loan_reverse_event", args=[999, 999])),
+            ("get", reverse("loans:pawn_loan_auction_initiate", args=[999])),
+            ("post", reverse("loans:pawn_loan_auction_start", args=[999])),
+            ("get", reverse("loans:pawn_loan_auction_cancel", args=[999])),
+            ("get", reverse("loans:pawn_loan_auction_complete", args=[999])),
+            ("get", reverse("loans:pawn_loan_auction_reverse", args=[999])),
+            ("get", reverse("loans:pawn_loan_renewal_reverse", args=[999])),
+        )
+        owner_routes = (
+            ("get", reverse("loans:pawn_storage_location_list")),
+            ("get", reverse("loans:pawn_storage_location_create")),
+            ("get", reverse("loans:pawn_storage_location_label", args=[999])),
+            ("get", reverse("loans:pawn_storage_location_scan", args=[uuid.uuid4()])),
+            ("get", reverse("loans:pawn_collateral_storage_transfer", args=[999, 999])),
+            ("get", reverse("loans:pawn_physical_verification_list")),
+            ("get", reverse("loans:pawn_physical_verification_detail", args=[999])),
+            ("post", reverse("loans:pawn_physical_verification_complete", args=[999])),
+            ("get", reverse("loans:pawn_physical_verification_resolve", args=[999])),
+            ("post", reverse("loans:pawn_physical_verification_discrepancy_notice", args=[999])),
+        )
+        for method, url in administrator_routes + owner_routes:
+            with self.subTest(method=method, url=url):
+                response = getattr(self.client, method)(url)
+                self.assertEqual(response.status_code, 403)
+
+        admin = get_user_model().objects.create_user(
+            username=f"pilot-boundary-admin-{uuid.uuid4().hex[:8]}"
+        )
+        admin_role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.create(user=admin, company=self.tenant, role=admin_role)
+        self.client.force_login(admin)
+        for method, url in owner_routes:
+            with self.subTest(role="Admin", method=method, url=url):
+                response = getattr(self.client, method)(url)
+                self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            self.client.get(
+                reverse("loans:pawn_loan_auction_initiate", args=[999])
+            ).status_code,
+            404,
+        )
+
     def test_owner_can_create_funding_draft_with_active_lender_only(self):
         active_lender = Party.objects.create(
             display_name="Active funding lender",

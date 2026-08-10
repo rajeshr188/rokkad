@@ -31,6 +31,27 @@ def loans_setup_required(view_func):
     return _wrapped
 
 
+def assert_loans_owner_access(request):
+    workspace = resolve_request_workspace(request)
+    if workspace is None:
+        raise PermissionDenied("No tenant workspace selected.")
+
+    user = getattr(request, "user", None)
+    if is_platform_admin(user) or workspace.owner_id == getattr(user, "pk", None):
+        return workspace
+    raise PermissionDenied("This Loans operation requires the workspace Owner.")
+
+
+def loans_owner_required(view_func):
+    @functools.wraps(view_func)
+    @login_required
+    def _wrapped(request, *args, **kwargs):
+        request.loans_workspace = assert_loans_owner_access(request)
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
 def assert_loans_workspace_access(request):
     workspace = resolve_request_workspace(request)
     if workspace is None:

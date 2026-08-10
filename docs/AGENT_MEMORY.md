@@ -8,8 +8,18 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
-P10 was accepted by the workspace Owner on 2026-08-10. P11 daily and regulatory
-outputs are active. All required report screens and CSV/XLSX/PDF exports must
+P11 was accepted by the workspace Owner on 2026-08-10. P12 permission and
+isolation verification is active. Ordinary workspace members may perform the
+normal PawnLoan lifecycle but must be rejected before administrator-only
+auction/correction identifiers are resolved. Setup and corrections permit
+Owner/Admin; manual storage and physical verification remain Owner-only for
+the pilot. The sole global override is `is_platform_admin`, and it must agree
+at HTTP, service, and UI boundaries. Unknown and foreign-workspace identifiers
+must be indistinguishable `404` outcomes for an otherwise authorized user.
+Collateral item scans may open their workspace-owned loan for Members, but
+verification preselection is Owner-only.
+
+P11 requires all report screens and CSV/XLSX/PDF exports to
 use the same tenant-scoped canonical selector. Daily activity and Party
 statements retain original and compensating events with correction links and
 honest delivery state. Party transaction history must not include an event

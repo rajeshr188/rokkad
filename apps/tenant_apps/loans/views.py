@@ -19,7 +19,12 @@ from django.views.decorators.http import require_POST
 
 from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
 from apps.tenant_apps.party.models import Party
-from apps.tenant_apps.loans.access import loans_setup_required, loans_workspace_required
+from apps.tenant_apps.loans.access import (
+    assert_loans_owner_access,
+    loans_owner_required,
+    loans_setup_required,
+    loans_workspace_required,
+)
 from apps.tenant_apps.loans.domain import (
     CollateralEconomicsError,
     LoanDocumentKind,
@@ -1090,7 +1095,7 @@ def pawn_loan_detail(request, pk):
         "loan": loan,
         "today": timezone.localdate(),
         "can_administer": _can_administer(request),
-        "can_manage_storage": request.loans_workspace.owner_id == request.user.pk,
+        "can_manage_storage": _can_manage_storage(request),
         "notice_rows": get_pawn_loan_notice_rows(loan),
         "auctions": loan.auctions.select_related("accounting_event__outbox").order_by("-attempt_number"),
         "renewals": PawnLoanRenewal.objects.filter(
@@ -1200,6 +1205,7 @@ def pawn_collateral_scan(request, public_id):
     )
     verification = request.GET.get("verification")
     if verification:
+        assert_loans_owner_access(request)
         session = get_object_or_404(
             PawnPhysicalVerificationSession,
             public_id=verification,
@@ -1209,7 +1215,7 @@ def pawn_collateral_scan(request, public_id):
             f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}?item={item.pk}"
         )
     if (
-        request.loans_workspace.owner_id == request.user.pk
+        _can_manage_storage(request)
         and item.custody_state == "IN_VAULT"
     ):
         request.session[_PENDING_STORAGE_ITEM_SESSION_KEY] = {
@@ -1221,7 +1227,7 @@ def pawn_collateral_scan(request, public_id):
     )
 
 
-@loans_setup_required
+@loans_owner_required
 def pawn_storage_location_list(request):
     locations = PawnStorageLocation.objects.filter(
         workspace=request.loans_workspace
@@ -1233,7 +1239,7 @@ def pawn_storage_location_list(request):
     )
 
 
-@loans_setup_required
+@loans_owner_required
 def pawn_storage_location_create(request):
     form = PawnStorageLocationForm(
         request.POST or None,
@@ -1262,7 +1268,7 @@ def pawn_storage_location_create(request):
     )
 
 
-@loans_setup_required
+@loans_owner_required
 def pawn_storage_location_label(request, pk):
     location = get_object_or_404(
         PawnStorageLocation,
@@ -1280,7 +1286,7 @@ def pawn_storage_location_label(request, pk):
     return response
 
 
-@loans_workspace_required
+@loans_owner_required
 def pawn_storage_location_scan(request, public_id):
     location = get_object_or_404(
         PawnStorageLocation,
@@ -1324,7 +1330,7 @@ def pawn_storage_location_scan(request, public_id):
         )
     pending = request.session.get(_PENDING_STORAGE_ITEM_SESSION_KEY, {})
     if (
-        request.loans_workspace.owner_id == request.user.pk
+        _can_manage_storage(request)
         and pending.get("workspace_id") == request.loans_workspace.pk
         and pending.get("item_public_id")
     ):
@@ -1342,7 +1348,7 @@ def pawn_storage_location_scan(request, public_id):
     return redirect("loans:pawn_storage_location_list")
 
 
-@loans_workspace_required
+@loans_owner_required
 def pawn_collateral_storage_transfer(request, pk, item_pk):
     loan = _pawn_loan_for_workspace(request, pk)
     item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
@@ -1351,7 +1357,7 @@ def pawn_collateral_storage_transfer(request, pk, item_pk):
         initial["destination"] = request.GET["destination"]
     if (
         request.method == "GET"
-        and request.loans_workspace.owner_id == request.user.pk
+        and _can_manage_storage(request)
         and item.custody_state == "IN_VAULT"
     ):
         request.session[_PENDING_STORAGE_ITEM_SESSION_KEY] = {
@@ -1389,7 +1395,7 @@ def pawn_collateral_storage_transfer(request, pk, item_pk):
     )
 
 
-@loans_setup_required
+@loans_owner_required
 def pawn_physical_verification_list(request):
     form = PawnPhysicalVerificationStartForm(
         request.POST or None, workspace=request.loans_workspace
@@ -1415,7 +1421,7 @@ def pawn_physical_verification_list(request):
     )
 
 
-@loans_setup_required
+@loans_owner_required
 def pawn_physical_verification_detail(request, pk):
     session = get_object_or_404(
         PawnPhysicalVerificationSession.objects.select_related("scope_location"),
@@ -1458,7 +1464,7 @@ def pawn_physical_verification_detail(request, pk):
     )
 
 
-@loans_setup_required
+@loans_owner_required
 @require_POST
 def pawn_physical_verification_complete(request, pk):
     try:
@@ -1470,7 +1476,7 @@ def pawn_physical_verification_complete(request, pk):
     return redirect("loans:pawn_physical_verification_detail", pk=pk)
 
 
-@loans_setup_required
+@loans_owner_required
 def pawn_physical_verification_resolve(request, observation_pk):
     observation = get_object_or_404(
         PawnPhysicalVerificationObservation.objects.select_related("session", "collateral_item__loan", "observed_location"),
@@ -1497,7 +1503,7 @@ def pawn_physical_verification_resolve(request, observation_pk):
     return render(request, "loans/verification/resolution_form.html", {"observation": observation, "form": form})
 
 
-@loans_setup_required
+@loans_owner_required
 @require_POST
 def pawn_physical_verification_discrepancy_notice(request, observation_pk):
     observation = get_object_or_404(
@@ -1798,7 +1804,7 @@ def pawn_loan_release_partial(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_setup_required
 def pawn_loan_reverse_event(request, pk, event_pk):
     loan = _pawn_loan_for_workspace(request, pk)
     event = get_object_or_404(
@@ -1917,7 +1923,7 @@ def pawn_loan_notice_retry(request, pk, notice_pk):
     return redirect("loans:pawn_loan_detail", pk=loan.pk)
 
 
-@loans_workspace_required
+@loans_setup_required
 def pawn_loan_auction_initiate(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     form = PawnAuctionInitiateForm(
@@ -1947,7 +1953,7 @@ def pawn_loan_auction_initiate(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_setup_required
 @require_POST
 def pawn_loan_auction_start(request, auction_pk):
     auction = _pawn_auction_for_workspace(request, auction_pk)
@@ -1960,7 +1966,7 @@ def pawn_loan_auction_start(request, auction_pk):
     return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
 
 
-@loans_workspace_required
+@loans_setup_required
 def pawn_loan_auction_cancel(request, auction_pk):
     auction = _pawn_auction_for_workspace(request, auction_pk)
     form = PawnTransitionReasonForm(request.POST or None)
@@ -1986,7 +1992,7 @@ def pawn_loan_auction_cancel(request, auction_pk):
     )
 
 
-@loans_workspace_required
+@loans_setup_required
 def pawn_loan_auction_complete(request, auction_pk):
     auction = _pawn_auction_for_workspace(request, auction_pk)
     form = PawnAuctionCompletionForm(request.POST or None)
@@ -2014,7 +2020,7 @@ def pawn_loan_auction_complete(request, auction_pk):
     )
 
 
-@loans_workspace_required
+@loans_setup_required
 def pawn_loan_auction_reverse(request, auction_pk):
     auction = _pawn_auction_for_workspace(request, auction_pk)
     form = PawnReversalForm(request.POST or None)
@@ -2268,7 +2274,7 @@ def pawn_loan_renew(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_setup_required
 def pawn_loan_renewal_reverse(request, renewal_pk):
     renewal = _pawn_renewal_for_workspace(request, renewal_pk)
     form = PawnReversalForm(request.POST or None)
@@ -3520,6 +3526,13 @@ def _can_administer(request):
         is_platform_admin(user)
         or workspace.owner_id == user.pk
         or get_workspace_role_name(user, workspace) in {"Owner", "Admin"}
+    )
+
+
+def _can_manage_storage(request):
+    return bool(
+        is_platform_admin(request.user)
+        or request.loans_workspace.owner_id == request.user.pk
     )
 
 
