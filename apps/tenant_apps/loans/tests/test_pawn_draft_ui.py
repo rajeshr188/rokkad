@@ -723,7 +723,25 @@ class PawnDraftUiTests(TenantTestCase):
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         collateral = loan.collateral_items.get()
         result = SimpleNamespace(
-            successor_loan=SimpleNamespace(pk=99, loan_number="PL-A-00099")
+            successor_loan=SimpleNamespace(pk=99, loan_number="PL-A-00099"),
+            renewal=SimpleNamespace(
+                renewal_number="REN-PL-A-00001",
+                valuation_snapshot={
+                    "returned_source_item_ids": [],
+                    "retained_source_item_ids": [collateral.pk],
+                    "additional_successor_item_ids": [],
+                },
+            ),
+            settlement_outbox=SimpleNamespace(get_status_display=lambda: "Pending"),
+            opening_outbox=SimpleNamespace(get_status_display=lambda: "Completed"),
+        )
+        quote = SimpleNamespace(
+            source_principal=Decimal("10000.00"),
+            release_day_interest=Decimal("100.00"),
+            interest_settled=Decimal("100.00"),
+            fees_settled=Decimal("0.00"),
+            base_cash_received=Decimal("100.00"),
+            balance=SimpleNamespace(interest_outstanding=Decimal("0.00")),
         )
         payload = {
             "mode": "PAY_AND_RENEW",
@@ -745,10 +763,32 @@ class PawnDraftUiTests(TenantTestCase):
             "additional-MIN_NUM_FORMS": "0",
             "additional-MAX_NUM_FORMS": "1000",
         }
-        with patch(
-            "apps.tenant_apps.loans.views.renew_pawn_loan",
-            return_value=result,
-        ) as command:
+        with (
+            patch(
+                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
+                return_value=quote,
+            ),
+            patch("apps.tenant_apps.loans.views.renew_pawn_loan") as command,
+        ):
+            rejected = self.client.post(
+                reverse("loans:pawn_loan_renew", args=[loan.pk]),
+                payload,
+            )
+        self.assertEqual(rejected.status_code, 200)
+        self.assertContains(rejected, "This field is required")
+        command.assert_not_called()
+
+        payload["confirm_renewal_plan"] = "on"
+        with (
+            patch(
+                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
+                return_value=quote,
+            ),
+            patch(
+                "apps.tenant_apps.loans.views.renew_pawn_loan",
+                return_value=result,
+            ) as command,
+        ):
             response = self.client.post(
                 reverse("loans:pawn_loan_renew", args=[loan.pk]),
                 payload,
@@ -762,6 +802,18 @@ class PawnDraftUiTests(TenantTestCase):
             Decimal("9000.00"),
         )
         self.assertEqual(call["additional_collateral"], ())
+
+        with patch(
+            "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
+            return_value=quote,
+        ):
+            page = self.client.get(
+                reverse("loans:pawn_loan_renew", args=[loan.pk])
+            )
+        self.assertContains(page, "Exact source settlement")
+        self.assertContains(page, "Renewal-day interest")
+        self.assertContains(page, "Successor and cash preview")
+        self.assertContains(page, "I confirm the source settlement")
 
     def _configured_setup(self):
         license = LoanLicense.objects.create(

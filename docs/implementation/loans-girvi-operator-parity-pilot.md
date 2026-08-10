@@ -124,8 +124,8 @@ Do not use database/admin shortcuts.
 | P3 | Print and scan physical identity | Original/Duplicate ticket, signatures, item label, QR opens correct loan | PORT | **Accepted 2026-08-09 by Owner** |
 | P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | **Accepted 2026-08-10 by Owner** |
 | P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | **Accepted 2026-08-10 by Owner** |
-| P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | **Active** |
-| P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | Pending |
+| P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | **Accepted 2026-08-10 by Owner** |
+| P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | **Active** |
 | P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | Pending |
 | P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | Pending |
 | P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | Pending |
@@ -289,6 +289,48 @@ Eight focused release, UI, document, deferred-accounting, fail-before-write,
 partial-release prohibition, and reversal tests pass. Django checks and Loans
 migration-drift checks are clean. Owner browser execution, release-memo review,
 signing, and QR verification remain the P6 acceptance gate.
+
+### P6 Acceptance
+
+The workspace Owner accepted P6 on 2026-08-10 after exercising the corrected
+non-locking exact settlement preview and the complete full-release workflow.
+This accepts release-day catch-up, exact settlement, every-item return and
+storage removal, immutable accounting/item-principal evidence, loan closure,
+release/Form H output, and strict compensating reversal. P7 release and renew
+is now the active gate.
+
+### P7 Software Evidence
+
+The established renewal aggregate already closes the source, activates one
+newly numbered successor, returns omitted collateral, carries retained
+identity/photo/storage lineage, accepts photographed additions, freezes source
+closing and successor opening principal lines, posts the real principal delta
+plus source interest/fees, emits the renewal document, and reverses the
+composite newest-first.
+
+The operator surface now starts with a tenant-scoped, non-writing and
+non-locking source quote. It exposes source principal, existing interest,
+renewal-day catch-up, total interest, fees, and the base cash collection. The
+form derives successor principal, totals retained/additional allocations, and
+shows whether net cash is collected from or paid to the customer. Paydown and
+top-up modes fail early when contradictory values are entered, and completion
+requires explicit confirmation of source settlement and the returned,
+retained, additional, and allocation plan. The result reports the immutable
+renewal number, successor number, each collateral category count, and actual
+settlement/opening accounting disposition. The legal PDF and configurable
+document label are now **Renewal Agreement**.
+
+Seven focused paydown, top-up, LTV rejection, idempotency, mixed-collateral,
+UI/document, and composite-reversal tests pass. The preview succeeds outside a
+transaction on active `jcl1` PawnLoan 7. Tenant migration `loans.0035` applies
+the document-label change across all local schemas.
+
+One accepted economic requirement remains open before final P7 acceptance:
+the successor approval snapshot calculates fresh advance interest and fee
+deductions, but renewal settlement/opening does not yet collect or post them,
+and successor accrual opening evidence currently records no prepaid interest.
+This must be implemented as a focused accounting slice or explicitly re-scoped;
+it must not disappear from the pilot record.
 
 ## Physical Document Matrix
 

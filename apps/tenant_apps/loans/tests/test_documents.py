@@ -328,6 +328,15 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         self.assertIn(b"Successor item principal opened", result.pdf)
         self.assertIn(b"Returned bracelet", result.pdf)
         self.assertIn(b"Added silver anklet", result.pdf)
+        self.assertEqual(
+            result.file_name,
+            "pawn_renewal_agreement_REN-PL-A-00019.pdf",
+        )
+        text = "".join(
+            page.get_text()
+            for page in fitz.open(stream=result.pdf, filetype="pdf")
+        )
+        self.assertIn("Pawn Loan Renewal Agreement", text)
         custom = ConfigurableDocumentRenderer.render(
             PawnLoanDocumentProjectionBuilder.renewal_memo(renewal),
             starter_layout("renewal"),

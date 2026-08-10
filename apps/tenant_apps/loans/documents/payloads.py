@@ -285,7 +285,7 @@ class PawnLoanDocumentProjectionBuilder:
         reversal = cls._related_or_none(renewal, "reversal")
         verification = cls._verification(source, f"renewal:{renewal.pk}:{renewal.settlement_event.payload_fingerprint}")
         details = cls._identity_rows(source) + (
-            ("Document", "Pawn loan renewal memo"),
+            ("Document", "Pawn loan renewal agreement"),
             ("Renewal source ID", f"PawnLoanRenewal:{renewal.pk}"),
             ("Renewal number", renewal.renewal_number),
             ("Document status", f"Reversed by {reversal.pk}" if reversal else "Completed"),
@@ -329,8 +329,8 @@ class PawnLoanDocumentProjectionBuilder:
                          f"{line.monthly_interest_rate}%", cls._money(line.principal_opened))
                         for line in opening.order_by("allocation_order"))
             if len(rows) > 1: sections.append(("Successor item principal opened", rows))
-        return cls._payload("renewal", "Pawn Loan Renewal Memo",
-                            f"pawn_renewal_{renewal.renewal_number}.pdf", verification, details, sections)
+        return cls._payload("renewal", "Pawn Loan Renewal Agreement",
+                            f"pawn_renewal_agreement_{renewal.renewal_number}.pdf", verification, details, sections)
 
     @classmethod
     def _payload(cls, document_type, title, file_name, verification, details, sections=()):

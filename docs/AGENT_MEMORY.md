@@ -8,6 +8,31 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+P7 operator-readiness is implemented. `preview_pawn_loan_renewal_source` is a
+tenant-scoped, non-writing, non-locking source quote with renewal-day interest;
+the browser derives successor principal, entered allocation total, and net
+cash direction, then the transactional command independently revalidates all
+facts. Confirmation is mandatory, completion reports collateral counts and
+both outbox dispositions, and legal output is named Renewal Agreement. Seven
+focused tests pass, the preview was verified outside a transaction on `jcl1`
+PawnLoan 7, and tenant migration `loans.0035` is applied.
+
+Do not silently declare final P7 economic parity yet. The accepted release-and-
+renew ADR requires fresh successor fee and advance-interest evidence. Approval
+already calculates those values, but renewal settlement/opening does not yet
+collect/post them and successor accrual opening lines currently carry zero
+prepaid interest. This needs a focused accounting implementation or an explicit
+scope decision before P7 acceptance.
+
+P6 full release was accepted by the workspace Owner on 2026-08-10. P7 release
+and renew is active. Preserve the accepted boundary: close the source contract,
+return omitted items, carry retained item identity/photo/storage lineage,
+accept photographed additional collateral, and activate exactly one newly
+numbered successor with fresh item economics and immutable closing/opening
+evidence. The pilot still needs an operator-readable exact preview and must
+present its legal output as the renewal agreement; do not weaken composite
+newest-first reversal or turn renewal into an in-place edit.
+
 P6 preview hotfix: `assert_pawn_loan_financial_actions_allowed` defaults to a
 locking read for mutation commands, while read-only release and repayment
 previews explicitly pass `lock=False`. Do not reintroduce `select_for_update`

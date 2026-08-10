@@ -111,6 +111,115 @@ class PawnRenewalReversalResult:
     already_reversed: bool = False
 
 
+@dataclass(frozen=True)
+class PawnRenewalSourcePreview:
+    source_loan: PawnLoan
+    source_items: tuple[PawnCollateralItem, ...]
+    balance: object
+    release_day_accrual: object | None
+    readiness: object
+
+    @property
+    def source_principal(self):
+        return self.balance.principal_outstanding
+
+    @property
+    def release_day_interest(self):
+        return (
+            self.release_day_accrual.recognized_interest
+            if self.release_day_accrual is not None
+            else Decimal("0")
+        )
+
+    @property
+    def interest_settled(self):
+        return self.balance.interest_outstanding + self.release_day_interest
+
+    @property
+    def fees_settled(self):
+        return self.balance.fees_outstanding
+
+    @property
+    def base_cash_received(self):
+        """Interest and fees collected before principal paydown/top-up netting."""
+        return self.interest_settled + self.fees_settled
+
+    @property
+    def item_valuations(self):
+        return self.readiness.item_valuations
+
+
+def preview_pawn_loan_renewal_source(
+    source_loan_id: int,
+) -> PawnRenewalSourcePreview:
+    """Return current source settlement facts without locks or writes."""
+    source = _tenant_loan(source_loan_id)
+    if source.state != PawnLoanState.ACTIVE.value:
+        raise PawnRenewalError("Only an active PawnLoan can be renewed.")
+    if hasattr(source, "renewal_as_source"):
+        raise PawnRenewalError("This PawnLoan already has a renewal successor.")
+    if source.auctions.filter(state__in=("INITIATED", "IN_PROGRESS")).exists():
+        raise PawnRenewalError("Cancel the active auction before renewing this loan.")
+    items = tuple(source.collateral_items.order_by("pk"))
+    if not items or any(
+        item.custody_state != CollateralCustodyState.IN_VAULT.value
+        for item in items
+    ):
+        raise PawnRenewalError(
+            "Every collateral item must be in the vault before renewal."
+        )
+    from .physical_verification import (
+        PawnPhysicalVerificationBlockerError,
+        assert_physical_verification_clear,
+    )
+
+    try:
+        assert_physical_verification_clear(
+            (item.pk for item in items), operation="PawnLoan release and renew"
+        )
+    except PawnPhysicalVerificationBlockerError as exc:
+        raise PawnRenewalError(str(exc)) from exc
+    try:
+        assert_pawn_loan_financial_actions_allowed(source.pk, lock=False)
+        effective_date = timezone.localdate()
+        completed = preview_pawn_loan_accruals(
+            source.pk,
+            as_of_date=effective_date,
+            include_partial=False,
+        )
+        if completed:
+            raise PawnRenewalError(
+                "Finalize every completed interest period before renewal."
+            )
+        partials = preview_pawn_loan_accruals(
+            source.pk,
+            as_of_date=effective_date,
+            include_partial=True,
+        )
+        partial = partials[0] if partials and partials[0].is_partial else None
+        balance = get_pawn_loan_balance(source.pk, as_of_date=effective_date)
+        readiness = get_pawn_loan_release_readiness(
+            source.pk,
+            selected_item_ids=tuple(item.pk for item in items),
+            as_of_date=effective_date,
+        )
+        if readiness.blockers:
+            raise PawnRenewalError(
+                "; ".join(blocker.message for blocker in readiness.blockers)
+            )
+    except PawnRenewalError:
+        raise
+    except Exception as exc:
+        raise PawnRenewalError(str(exc)) from exc
+    return PawnRenewalSourcePreview(
+        source_loan=source,
+        source_items=items,
+        balance=balance,
+        release_day_accrual=partial,
+        readiness=readiness,
+    )
+
+
 @transaction.atomic
 def renew_pawn_loan(
     source_loan_id: int,
@@ -998,6 +1107,22 @@ def _locked_loan(loan_id):
         raise PawnRenewalError("PawnLoan was not found in the active workspace.") from exc
 
 
+def _tenant_loan(loan_id):
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise PawnRenewalError("PawnLoan renewal requires an active tenant schema.")
+    try:
+        return (
+            PawnLoan.objects.select_related(
+                "workspace", "license", "series", "borrower", "policy_snapshot"
+            )
+            .prefetch_related("collateral_items")
+            .get(pk=loan_id, workspace_id=workspace_id)
+        )
+    except PawnLoan.DoesNotExist as exc:
+        raise PawnRenewalError("PawnLoan was not found in the active workspace.") from exc
+
+
 def _locked_renewal(renewal_id):
     workspace_id = current_tenant_workspace_id()
     try:
@@ -1051,6 +1176,8 @@ __all__ = [
     "PawnRenewalError",
     "PawnRenewalResult",
     "PawnRenewalReversalResult",
+    "PawnRenewalSourcePreview",
+    "preview_pawn_loan_renewal_source",
     "renew_pawn_loan",
     "reverse_pawn_loan_renewal",
 ]

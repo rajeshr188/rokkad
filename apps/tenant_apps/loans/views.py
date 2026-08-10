@@ -231,6 +231,7 @@ from apps.tenant_apps.loans.services import (
     finalize_pawn_loan_accrual,
     preview_number,
     preview_pawn_loan_full_release,
+    preview_pawn_loan_renewal_source,
     preview_pawn_loan_repayment,
     preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
@@ -2023,6 +2024,10 @@ def pawn_loan_auction_recovery_pdf(request, auction_pk):
 @loans_workspace_required
 def pawn_loan_renew(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
+    try:
+        renewal_quote = preview_pawn_loan_renewal_source(loan.pk)
+    except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+        renewal_quote = {"error": str(exc)}
     source_items = tuple(
         loan.collateral_items.filter(custody_state="IN_VAULT").order_by("pk")
     )
@@ -2064,12 +2069,6 @@ def pawn_loan_renew(request, pk):
         request.FILES or None,
         prefix="additional",
     )
-    balance = None
-    if loan.state == PawnLoanState.ACTIVE.value:
-        try:
-            balance = get_pawn_loan_balance(loan.pk, as_of_date=timezone.localdate())
-        except (ValidationError, ValueError):
-            pass
     if (
         request.method == "POST"
         and form.is_valid()
@@ -2107,9 +2106,17 @@ def pawn_loan_renew(request, pk):
         except (PawnRenewalError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
+            snapshot = result.renewal.valuation_snapshot
             messages.success(
                 request,
-                f"Renewal completed. Successor loan {result.successor_loan.loan_number} is active.",
+                f"Release and renew {result.renewal.renewal_number} completed: "
+                f"source loan closed, successor {result.successor_loan.loan_number} active; "
+                f"{len(snapshot.get('returned_source_item_ids') or [])} item(s) returned, "
+                f"{len(snapshot.get('retained_source_item_ids') or [])} retained, "
+                f"{len(snapshot.get('additional_successor_item_ids') or [])} added. "
+                f"Accounting delivery: settlement "
+                f"{result.settlement_outbox.get_status_display()}, successor opening "
+                f"{result.opening_outbox.get_status_display()}.",
             )
             return redirect("loans:pawn_loan_detail", pk=result.successor_loan.pk)
     return render(
@@ -2121,7 +2128,7 @@ def pawn_loan_renew(request, pk):
             "retained_formset": retained_formset,
             "retained_rows": tuple(zip(source_items, retained_formset.forms)),
             "additional_formset": additional_formset,
-            "balance": balance,
+            "renewal_quote": renewal_quote,
         },
     )
 

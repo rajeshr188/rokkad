@@ -82,6 +82,7 @@ from apps.tenant_apps.loans.services import (
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
     preview_pawn_loan_full_release,
+    preview_pawn_loan_renewal_source,
     preview_pawn_loan_repayment,
     reverse_pawn_loan_event,
     record_pawn_loan_repayment,
@@ -1573,6 +1574,16 @@ class PawnDisbursalServiceTests(TenantTestCase):
             "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
             return_value=(),
         ), self.captureOnCommitCallbacks(execute=True):
+            with patch(
+                "apps.tenant_apps.loans.services.pawn_renewals._locked_loan",
+                side_effect=AssertionError("read-only preview acquired a row lock"),
+            ):
+                source_preview = preview_pawn_loan_renewal_source(self.loan.pk)
+            self.assertEqual(source_preview.source_principal, Decimal("50000.00"))
+            self.assertEqual(source_preview.base_cash_received, Decimal("0.00"))
+            self.assertFalse(
+                PawnLoanRenewal.objects.filter(source_loan=self.loan).exists()
+            )
             result = renew_pawn_loan(
                 self.loan.pk,
                 mode=PawnLoanRenewalMode.PAY_AND_RENEW,

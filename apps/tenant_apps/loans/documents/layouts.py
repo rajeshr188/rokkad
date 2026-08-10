@@ -681,7 +681,7 @@ def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
         "release_memo": "Starter release memo",
         "auction_notice": "Starter auction notice",
         "auction_recovery": "Starter auction recovery memo",
-        "renewal": "Starter renewal memo",
+        "renewal": "Starter renewal agreement",
     }
     tables = {
         "loan_ticket": "collateral.items",

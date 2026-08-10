@@ -36,7 +36,7 @@ class LoanDocumentLayoutCreateForm(forms.Form):
             ("release_memo", "Release memo"),
             ("auction_notice", "Auction notice"),
             ("auction_recovery", "Auction recovery memo"),
-            ("renewal", "Renewal memo"),
+            ("renewal", "Renewal agreement"),
         )
     )
     layout_mode = forms.ChoiceField(
@@ -1011,15 +1011,29 @@ class PawnRenewalForm(forms.Form):
         initial=PawnLoanRenewalMode.PAY_AND_RENEW.value,
     )
     principal_paid = forms.DecimalField(
-        max_digits=18, decimal_places=2, min_value=0, initial=0
+        label="Principal paid now",
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+        initial=0,
     )
     top_up_amount = forms.DecimalField(
-        max_digits=18, decimal_places=2, min_value=0, initial=0
+        label="Additional principal paid to borrower",
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+        initial=0,
     )
     successor_license = forms.ModelChoiceField(queryset=LoanLicense.objects.none())
     successor_series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
     tenure_months = forms.IntegerField(min_value=1, max_value=600)
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+    confirm_renewal_plan = forms.BooleanField(
+        label=(
+            "I confirm the source settlement, returned items, retained items, "
+            "additional collateral, and successor allocations shown here."
+        )
+    )
 
     def __init__(self, *args, workspace, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1033,7 +1047,9 @@ class PawnRenewalForm(forms.Form):
             is_active=True,
         ).select_related("license").order_by("license__name", "name")
         for name, field in self.fields.items():
-            if name != "mode":
+            if isinstance(field, forms.BooleanField):
+                field.widget.attrs.setdefault("class", "form-check-input")
+            elif name != "mode":
                 field.widget.attrs.setdefault(
                     "class",
                     "form-select" if name in {"successor_license", "successor_series"} else "form-control",
@@ -1048,6 +1064,23 @@ class PawnRenewalForm(forms.Form):
                 "successor_series",
                 "Successor series must belong to the selected license.",
             )
+        mode = cleaned.get("mode")
+        principal_paid = cleaned.get("principal_paid")
+        top_up_amount = cleaned.get("top_up_amount")
+        if (
+            mode == PawnLoanRenewalMode.PAY_AND_RENEW.value
+            and top_up_amount is not None
+            and top_up_amount != 0
+        ):
+            self.add_error("top_up_amount", "Pay and renew cannot include a top-up.")
+        if mode == PawnLoanRenewalMode.TOP_UP_RENEW.value:
+            if top_up_amount is not None and top_up_amount <= 0:
+                self.add_error("top_up_amount", "Top-up renewal requires a positive amount.")
+            if principal_paid is not None and principal_paid != 0:
+                self.add_error(
+                    "principal_paid",
+                    "Top-up renewal cannot include a simultaneous principal payment.",
+                )
         return cleaned
 
 

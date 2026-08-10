@@ -14,7 +14,7 @@ DOCUMENT_KIND_CHOICES = (
     ("release_memo", "Release memo"),
     ("auction_notice", "Auction notice"),
     ("auction_recovery", "Auction recovery memo"),
-    ("renewal", "Renewal memo"),
+    ("renewal", "Renewal agreement"),
 )
 
 

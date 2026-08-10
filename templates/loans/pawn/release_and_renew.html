@@ -7,19 +7,32 @@
   <p class="text-muted">Close the old contract, return omitted items, and create a newly numbered loan for retained and additional collateral.</p>
 </div>
 
-{% if balance %}
-<div class="card mb-4"><div class="card-body row g-3">
-  <div class="col-md-4"><div class="small text-muted">Current principal</div><strong>{{ balance.principal_outstanding }}</strong></div>
-  <div class="col-md-4"><div class="small text-muted">Interest due</div>{{ balance.interest_outstanding }}</div>
-  <div class="col-md-4"><div class="small text-muted">Fees due</div>{{ balance.fees_outstanding }}</div>
+<div class="card mb-4"><div class="card-header">Exact source settlement</div><div class="card-body">
+  {% if renewal_quote.error %}<div class="alert alert-danger mb-0">{{ renewal_quote.error }}</div>{% else %}
+  <div class="row g-3" id="renewal-calculator"
+       data-source-principal="{{ renewal_quote.source_principal }}"
+       data-base-cash="{{ renewal_quote.base_cash_received }}">
+    <div class="col-md-2"><div class="small text-muted">Source principal</div><strong>{{ renewal_quote.source_principal }}</strong></div>
+    <div class="col-md-2"><div class="small text-muted">Existing interest</div>{{ renewal_quote.balance.interest_outstanding }}</div>
+    <div class="col-md-2"><div class="small text-muted">Renewal-day interest</div>{{ renewal_quote.release_day_interest }}</div>
+    <div class="col-md-2"><div class="small text-muted">Total interest settled</div>{{ renewal_quote.interest_settled }}</div>
+    <div class="col-md-2"><div class="small text-muted">Fees settled</div>{{ renewal_quote.fees_settled }}</div>
+    <div class="col-md-2"><div class="small text-muted">Interest + fees collected</div><strong>{{ renewal_quote.base_cash_received }}</strong></div>
+  </div>
+  {% endif %}
 </div></div>
-{% endif %}
 
 <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
   {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
   <div class="card mb-4"><div class="card-body"><h2 class="h5">Successor terms</h2><div class="row g-3">
-    {% for field in form %}{% if field.is_hidden %}{{ field }}{% else %}<div class="col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endif %}{% endfor %}
+    {% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.name != 'confirm_renewal_plan' %}<div class="col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endif %}{% endfor %}
   </div></div></div>
+
+  {% if not renewal_quote.error %}<div class="card mb-4"><div class="card-header">Successor and cash preview</div><div class="card-body"><div class="row g-3">
+    <div class="col-md-4"><div class="small text-muted">Successor principal</div><strong id="renewal-successor-principal">—</strong><div class="small text-muted">source principal − principal paid + top-up</div></div>
+    <div class="col-md-4"><div class="small text-muted">Successor allocations entered</div><strong id="renewal-allocation-total">—</strong><div class="small" id="renewal-allocation-status"></div></div>
+    <div class="col-md-4"><div class="small text-muted">Net cash handoff today</div><strong id="renewal-net-cash">—</strong><div class="small text-muted">interest + fees + principal paid − top-up</div></div>
+  </div></div></div>{% endif %}
 
   <div class="card mb-4"><div class="card-body">
     <h2 class="h5 mb-1">Existing collateral</h2>
@@ -45,7 +58,40 @@
   </div></div>
 
   <div class="alert alert-info">Successor allocations must equal current principal minus principal paid, plus top-up. Current metal-rate and LTV policies are validated before anything is committed.</div>
+  <div class="form-check mb-3">{{ form.confirm_renewal_plan }}<label class="form-check-label" for="{{ form.confirm_renewal_plan.id_for_label }}">{{ form.confirm_renewal_plan.label }}</label>{% for error in form.confirm_renewal_plan.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
   <button class="btn btn-primary" type="submit">Complete release and renew</button>
   <a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a>
 </form>
+{% if not renewal_quote.error %}<script>
+(() => {
+  const calculator = document.getElementById("renewal-calculator");
+  if (!calculator) return;
+  const amount = value => Number.parseFloat(value || "0") || 0;
+  const principalInput = document.getElementById("id_principal_paid");
+  const topUpInput = document.getElementById("id_top_up_amount");
+  const successorNode = document.getElementById("renewal-successor-principal");
+  const allocationNode = document.getElementById("renewal-allocation-total");
+  const allocationStatus = document.getElementById("renewal-allocation-status");
+  const netCashNode = document.getElementById("renewal-net-cash");
+  const refresh = () => {
+    const successor = amount(calculator.dataset.sourcePrincipal) - amount(principalInput.value) + amount(topUpInput.value);
+    let allocations = 0;
+    document.querySelectorAll("input[name^='retained-'][name$='-retain']").forEach(check => {
+      if (!check.checked) return;
+      const allocation = document.querySelector(`input[name='${check.name.replace(/-retain$/, "-allocated_principal")}']`);
+      allocations += amount(allocation && allocation.value);
+    });
+    document.querySelectorAll("input[name^='additional-'][name$='-allocated_principal']").forEach(input => allocations += amount(input.value));
+    const difference = allocations - successor;
+    successorNode.textContent = successor.toFixed(2);
+    allocationNode.textContent = allocations.toFixed(2);
+    allocationStatus.textContent = Math.abs(difference) < 0.005 ? "Allocations reconcile." : `Difference: ${difference.toFixed(2)}`;
+    allocationStatus.className = `small ${Math.abs(difference) < 0.005 ? "text-success" : "text-danger"}`;
+    const netCash = amount(calculator.dataset.baseCash) + amount(principalInput.value) - amount(topUpInput.value);
+    netCashNode.textContent = netCash >= 0 ? `Collect ${netCash.toFixed(2)} from customer` : `Pay ${Math.abs(netCash).toFixed(2)} to customer`;
+  };
+  document.querySelector("form").addEventListener("input", refresh);
+  refresh();
+})();
+</script>{% endif %}
 {% endblock %}
