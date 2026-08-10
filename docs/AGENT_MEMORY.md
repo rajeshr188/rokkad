@@ -8,6 +8,16 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+P7 was accepted by the workspace Owner on 2026-08-10. P8 overdue
+communication is active. Preserve the ownership boundary: Loans freezes notice
+intent, source balance, recipient and schedule; Notify v2 owns templates,
+delivery jobs, attempts and provider state. The current report may route an
+operator to a preselected interest-due/overdue notice, but the service must
+recheck eligibility and confirmation must freeze current facts. Historical
+reports must not present their old balance as a current send instruction.
+Loan detail is the audit/retry surface and shows both Loans and Notify identity,
+snapshotted due components, attempt count, failure and provider evidence.
+
 P7 permits Top-up Renewal from an active source with zero outstanding
 principal when the top-up produces a positive collateral-backed successor.
 Validate `source outstanding - principal paid + top-up > 0`; do not test
@@ -15,8 +25,8 @@ Validate `source outstanding - principal paid + top-up > 0`; do not test
 rejects the zero-balance top-up case. Pay and Renew with a zero successor still
 belongs to Full Release.
 
-P7 software execution is complete and awaits Owner operator/document
-acceptance. `preview_pawn_loan_renewal_plan` is the tenant-scoped, non-writing
+P7 software execution and Owner acceptance are complete.
+`preview_pawn_loan_renewal_plan` is the tenant-scoped, non-writing
 exact preflight: it includes source dues, successor principal/monthly interest,
 fresh advance interest and deducted fees, collateral counts, and net cash
 direction. The UI must submit its fingerprint, and the atomic command must

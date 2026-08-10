@@ -16,6 +16,17 @@
       </div></div>
     {% endif %}
 
+    {% if notice_preview %}
+      <div class="alert alert-info">
+        <strong>Notice recipient:</strong> {{ loan.borrower.display_name }}
+        &middot; email {{ loan.borrower.primary_email|default:"not recorded" }}
+        &middot; phone {{ loan.borrower.primary_phone|default:"not recorded" }}.<br>
+        The notice will freeze this loan number, borrower, due date, principal,
+        interest, fees, total due, recipient, and calculation date. Later loan
+        activity will not rewrite that notice evidence.
+      </div>
+    {% endif %}
+
     {% if repayment_preview %}
       <div class="card mb-3"><div class="card-header">Repayment allocation preview — no money recorded yet</div><div class="card-body">
         <div class="row g-3 mb-3">

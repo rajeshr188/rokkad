@@ -81,6 +81,7 @@ def create_pawn_loan_notice(
     elif source_auction_id is not None:
         raise PawnLoanNoticeError("Only an auction notice can reference an auction.")
 
+    requested_scheduled_for = scheduled_for
     scheduled_for = scheduled_for or timezone.now()
     if timezone.is_naive(scheduled_for):
         scheduled_for = timezone.make_aware(scheduled_for, timezone.get_current_timezone())
@@ -97,6 +98,13 @@ def create_pawn_loan_notice(
         if existing.source_auction_id != getattr(source_auction, "pk", None):
             raise PawnLoanNoticeError(
                 "This notice request key was already used for a different source."
+            )
+        if (
+            requested_scheduled_for is not None
+            and existing.scheduled_for != scheduled_for
+        ):
+            raise PawnLoanNoticeError(
+                "This notice request key was already used with a different schedule."
             )
         return existing
 

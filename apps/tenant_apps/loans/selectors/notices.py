@@ -14,6 +14,8 @@ class PawnLoanNoticeRow:
     external_reference: str
     failure_reason: str
     sent_at: object | None
+    attempt_count: int
+    last_attempt_at: object | None
 
 
 def get_pawn_loan_notice_rows(loan) -> tuple[PawnLoanNoticeRow, ...]:
@@ -35,6 +37,8 @@ def get_pawn_loan_notice_rows(loan) -> tuple[PawnLoanNoticeRow, ...]:
                     else "The linked Notify delivery job is missing."
                 ),
                 sent_at=state.sent_at if state else None,
+                attempt_count=state.attempt_count if state else 0,
+                last_attempt_at=state.last_attempt_at if state else None,
             )
         )
     return tuple(rows)

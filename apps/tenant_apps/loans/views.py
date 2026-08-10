@@ -300,7 +300,12 @@ def pawn_loan_reports(request):
     return render(
         request,
         "loans/pawn/reports.html",
-        {"report": report, "parties": parties, "can_administer": _can_administer(request)},
+        {
+            "report": report,
+            "parties": parties,
+            "can_administer": _can_administer(request),
+            "report_is_current": as_of_date == timezone.localdate(),
+        },
     )
 
 
@@ -1811,9 +1816,16 @@ def pawn_loan_reverse_event(request, pk, event_pk):
 @loans_workspace_required
 def pawn_loan_notice_create(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
+    requested_kind = request.GET.get("kind", "")
+    allowed_kinds = {
+        value for value, _label in PawnLoanNoticeForm.base_fields["notice_kind"].choices
+    }
     form = PawnLoanNoticeForm(
         request.POST or None,
-        initial={"request_key": uuid.uuid4().hex},
+        initial={
+            "request_key": uuid.uuid4().hex,
+            "notice_kind": requested_kind if requested_kind in allowed_kinds else "",
+        },
     )
     if request.method == "POST" and form.is_valid():
         try:
@@ -1838,7 +1850,8 @@ def pawn_loan_notice_create(request, pk):
         loan,
         form,
         "Create loan notice",
-        "Loans records notice intent; Notify owns templates, provider delivery, and attempts.",
+        "Review and confirm the immutable notice source. Loans owns the intent; Notify owns templates, provider delivery, and attempts.",
+        {"balance": _safe_balance(loan), "notice_preview": True},
     )
 
 

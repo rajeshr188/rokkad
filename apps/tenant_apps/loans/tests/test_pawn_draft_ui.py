@@ -219,12 +219,47 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(response, "Reports &amp; reconciliation")
         self.assertContains(response, "Actionable reconciliation")
         self.assertContains(response, "Active, due &amp; overdue")
+        self.assertContains(response, "Communication")
         self.assertContains(response, "Finalized accruals")
         self.assertContains(response, "Repayments")
         self.assertContains(response, "Releases")
         self.assertContains(response, "Release and renew")
         self.assertContains(response, "Collateral custody")
         self.assertContains(response, "Posting health")
+
+    def test_current_overdue_report_links_directly_to_overdue_notice(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        PawnLoan.objects.filter(pk=loan.pk).update(
+            state="ACTIVE",
+            loan_date=date(2026, 1, 1),
+            tenure_months=1,
+        )
+        event = PawnLoanAccountingEvent.objects.create(
+            loan=loan,
+            event_kind="DISBURSAL",
+            effective_date=date(2026, 1, 1),
+            payload={
+                "values": {"principal": "10000.00", "interest": "0", "fees": "0"}
+            },
+            payload_fingerprint="9" * 64,
+            idempotency_key="overdue-report-disbursal",
+            created_by=self.owner,
+        )
+        PawnLoanAccountingOutbox.objects.create(
+            event=event,
+            idempotency_key="overdue-report-outbox",
+            payload=event.payload,
+            payload_fingerprint=event.payload_fingerprint,
+            status="PENDING",
+        )
+
+        response = self.client.get(reverse("loans:pawn_loan_reports"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Prepare overdue notice")
+        self.assertContains(response, "?kind=OVERDUE_NOTICE")
 
     def test_essential_pdf_routes_use_workspace_scoped_immutable_sources(self):
         license, series = self._configured_setup()
@@ -593,18 +628,38 @@ class PawnDraftUiTests(TenantTestCase):
             get_notice_kind_display=lambda: "Repayment Reminder",
         )
 
+        form_page = self.client.get(
+            reverse("loans:pawn_loan_notice_create", args=[loan.pk]),
+            {"kind": "OVERDUE_NOTICE"},
+        )
+        self.assertEqual(form_page.status_code, 200)
+        self.assertContains(form_page, "immutable notice source")
+        self.assertEqual(
+            form_page.context["form"].initial["notice_kind"], "OVERDUE_NOTICE"
+        )
+
+        unconfirmed_payload = {
+            "notice_kind": "REPAYMENT_REMINDER",
+            "channel": "EMAIL",
+            "scheduled_for": "",
+            "request_key": "ui-notice-1",
+        }
+        with patch("apps.tenant_apps.loans.views.create_pawn_loan_notice") as command:
+            rejected = self.client.post(
+                reverse("loans:pawn_loan_notice_create", args=[loan.pk]),
+                unconfirmed_payload,
+            )
+        self.assertEqual(rejected.status_code, 200)
+        self.assertContains(rejected, "This field is required")
+        command.assert_not_called()
+
         with patch(
             "apps.tenant_apps.loans.views.create_pawn_loan_notice",
             return_value=notice,
         ) as command:
             response = self.client.post(
                 reverse("loans:pawn_loan_notice_create", args=[loan.pk]),
-                {
-                    "notice_kind": "REPAYMENT_REMINDER",
-                    "channel": "EMAIL",
-                    "scheduled_for": "",
-                    "request_key": "ui-notice-1",
-                },
+                {**unconfirmed_payload, "confirm_notice_snapshot": "on"},
             )
 
         self.assertRedirects(

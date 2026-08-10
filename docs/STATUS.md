@@ -10,6 +10,17 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P7 was accepted by the workspace Owner on 2026-08-10. P8 overdue
+  communication is active. Its operator-readiness slice links the current
+  due/overdue report directly to preselected Interest Due or Overdue notices,
+  requires confirmation of the displayed recipient and due snapshot, and
+  exposes immutable Loans intent plus Notify event/job, attempt, failure,
+  provider-reference, and retry evidence on loan detail. Historical reports do
+  not expose a misleading current send action. Notice idempotency now rejects
+  a changed explicit schedule as well as changed kind/channel/source. Eight
+  notice-domain tests and three focused UI/evidence tests pass. P8 awaits Owner
+  browser and delivery-result acceptance.
+
 - P7 zero-balance top-up preview is corrected. Renewal eligibility now tests
   the resulting successor principal after applying both principal paid and
   top-up, rather than rejecting whenever the source outstanding principal is
@@ -32,7 +43,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   infer its sole successor allocation; multi-item renewal requires an explicit
   allocation plan. Tenant migration `loans.0036` is applied to every local
   schema. Focused UI, document, DEA-contract, lifecycle, accrual, reporting,
-  and reversal tests pass. P7 now awaits Owner operator/document acceptance.
+  and reversal tests pass. P7 was accepted by the Owner on 2026-08-10.
 
 - P6 full release was accepted by the workspace Owner on 2026-08-10 after the
   exact non-locking settlement quote, complete collateral handoff, closure,

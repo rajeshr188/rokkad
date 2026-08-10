@@ -17,6 +17,8 @@ class PawnNoticeDeliveryReceipt:
     external_reference: str = ""
     failure_reason: str = ""
     sent_at: object | None = None
+    attempt_count: int = 0
+    last_attempt_at: object | None = None
 
 
 PawnNoticeDeliveryState = PawnNoticeDeliveryReceipt
@@ -214,6 +216,8 @@ def deliver_pawn_notice_job(job_id: int) -> PawnNoticeDeliveryReceipt:
         external_reference=job.provider_message_id,
         failure_reason=job.failure_reason,
         sent_at=job.sent_at,
+        attempt_count=job.attempt_count,
+        last_attempt_at=job.last_attempt_at,
     )
 
 
@@ -229,6 +233,8 @@ def get_pawn_notice_delivery_states(job_ids) -> dict[int, PawnNoticeDeliveryStat
             external_reference=job.provider_message_id,
             failure_reason=job.failure_reason,
             sent_at=job.sent_at,
+            attempt_count=job.attempt_count,
+            last_attempt_at=job.last_attempt_at,
         )
         for job in NotificationJob.objects.filter(pk__in=ids)
     }

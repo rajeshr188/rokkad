@@ -125,8 +125,8 @@ Do not use database/admin shortcuts.
 | P4 | Place and transfer collateral | complete Branch/Vault/Cabinet/Box path, item and destination scan, immutable movement/current location | PORT | **Accepted 2026-08-10 by Owner** |
 | P5 | Accrue and record repayment | interest calculation, allocation, receipt, event/accounting disposition, Party statement | REPLACE | **Accepted 2026-08-10 by Owner** |
 | P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | **Accepted 2026-08-10 by Owner** |
-| P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | **Active** |
-| P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | Pending |
+| P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | **Accepted 2026-08-10 by Owner** |
+| P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | **Active** |
 | P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | Pending |
 | P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | Pending |
 | P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | Pending |
@@ -325,12 +325,45 @@ UI/document, and composite-reversal tests pass. The preview succeeds outside a
 transaction on active `jcl1` PawnLoan 7. Tenant migration `loans.0035` applies
 the document-label change across all local schemas.
 
-One accepted economic requirement remains open before final P7 acceptance:
-the successor approval snapshot calculates fresh advance interest and fee
-deductions, but renewal settlement/opening does not yet collect or post them,
-and successor accrual opening evidence currently records no prepaid interest.
-This must be implemented as a focused accounting slice or explicitly re-scoped;
-it must not disappear from the pilot record.
+The successor-economics follow-through is complete in migration `loans.0036`.
+Exact preview and confirmation now include fresh successor advance interest and
+deducted fees, settlement posts them as distinct gross facts, successor opening
+freezes their item evidence, covered accrual consumes prepaid interest once,
+and the renewal agreement, reconciliation, and composite reversal use the same
+facts. The zero-balance top-up correction also validates the resulting
+successor principal rather than incorrectly requiring positive source
+principal.
+
+### P7 Acceptance
+
+The workspace Owner accepted P7 on 2026-08-10 after exercising Release and
+Renew, including paydown/top-up inputs and the zero-source-balance top-up
+correction. This accepts source closure, returned/retained/additional
+collateral, fresh successor numbering and economics, exact net cash preview,
+renewal agreement, immutable accounting/opening evidence, and composite
+reversal. P8 overdue communication is now active.
+
+### P8 Software Evidence
+
+The current due/overdue report now provides the primary operator path: an
+overdue row opens a preselected Overdue Notice, while a non-overdue row with
+interest opens an Interest Due notice. Historical report dates do not expose a
+misleading send action; the operator is directed to the current report.
+
+Before creation, the notice screen shows the current principal, interest,
+fees, total due, borrower email/phone and schedule, explains which facts become
+immutable, and requires explicit confirmation. Execution still independently
+checks active/due/overdue eligibility and freezes the source balance and
+recipient. A reused request key with changed kind, channel, source, or explicit
+schedule fails rather than silently changing the original instruction.
+
+Loan detail joins the immutable Loans notice to Notify-owned delivery state and
+shows notice/event/job identity, source calculation date, due breakdown,
+attempt count, last attempt, provider reference and failure reason. Failed jobs
+retain the existing controlled retry action; already-sent jobs remain
+idempotent. Eight focused notice service/scheduler/operational-intent tests and
+three focused report/form/delivery-evidence tests pass. Owner browser execution
+and delivery-result inspection remain the P8 acceptance gate.
 
 ## Physical Document Matrix
 

@@ -966,6 +966,12 @@ class PawnLoanNoticeForm(forms.Form):
         help_text="Leave blank to send immediately after saving.",
     )
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
+    confirm_notice_snapshot = forms.BooleanField(
+        label=(
+            "I confirm the borrower, delivery channel, due amounts, and schedule "
+            "shown for this notice."
+        )
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

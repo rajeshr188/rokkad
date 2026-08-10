@@ -148,6 +148,11 @@ class PawnLoanNoticeTests(TenantTestCase):
                 request_key="same-request",
                 channel=PawnLoanNoticeChannel.SMS,
             )
+        with self.assertRaisesRegex(PawnLoanNoticeError, "different schedule"):
+            self._create_notice(
+                request_key="same-request",
+                scheduled_for=timezone.now() + timedelta(days=1),
+            )
 
     def test_auction_and_ineligible_overdue_notice_fail_closed(self):
         with self.assertRaisesRegex(PawnLoanNoticeError, "source auction"):
@@ -176,10 +181,23 @@ class PawnLoanNoticeTests(TenantTestCase):
         job.provider_message_id = "notify-456"
         job.status = NotificationJob.Status.SENT
         job.sent_at = sent_at
-        job.save(update_fields=["provider_message_id", "status", "sent_at", "modified"])
+        job.attempt_count = 2
+        job.last_attempt_at = sent_at
+        job.save(
+            update_fields=[
+                "provider_message_id",
+                "status",
+                "sent_at",
+                "attempt_count",
+                "last_attempt_at",
+                "modified",
+            ]
+        )
         row = get_pawn_loan_notice_rows(self.loan)[0]
         self.assertEqual(row.status, PawnLoanNoticeStatus.SENT.value)
         self.assertEqual(row.external_reference, "notify-456")
+        self.assertEqual(row.attempt_count, 2)
+        self.assertEqual(row.last_attempt_at, sent_at)
         duplicate_handler = Mock()
         repeated = dispatch_pawn_loan_notice(
             notice.pk,
