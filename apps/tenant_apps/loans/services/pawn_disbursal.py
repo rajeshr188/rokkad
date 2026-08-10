@@ -176,9 +176,17 @@ def disburse_pawn_loan(
     )
 
 
-def assert_pawn_loan_financial_actions_allowed(loan_id: int) -> PawnLoan:
-    """Block later repayment/release actions while any loan posting is unresolved."""
-    loan = _locked_loan(loan_id)
+def assert_pawn_loan_financial_actions_allowed(
+    loan_id: int,
+    *,
+    lock: bool = True,
+) -> PawnLoan:
+    """Block financial actions while posting is unresolved.
+
+    Mutation commands retain the default row lock. Read-only previews must pass
+    ``lock=False`` so they remain safe outside an atomic request.
+    """
+    loan = _locked_loan(loan_id) if lock else _tenant_loan(loan_id)
     from apps.tenant_apps.loans.integrations.accounting_policy import (
         is_dea_integration_enabled,
     )
@@ -208,6 +216,18 @@ def _locked_loan(loan_id: int) -> PawnLoan:
             .select_related("license", "series", "series__license", "borrower")
             .get(pk=loan_id, workspace_id=workspace_id)
         )
+    except PawnLoan.DoesNotExist as exc:
+        raise PawnDisbursalError("PawnLoan was not found in the active workspace.") from exc
+
+
+def _tenant_loan(loan_id: int) -> PawnLoan:
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise PawnDisbursalError("PawnLoan disbursal requires an active tenant schema.")
+    try:
+        return PawnLoan.objects.select_related(
+            "license", "series", "series__license", "borrower"
+        ).get(pk=loan_id, workspace_id=workspace_id)
     except PawnLoan.DoesNotExist as exc:
         raise PawnDisbursalError("PawnLoan was not found in the active workspace.") from exc
 

@@ -94,7 +94,7 @@ def preview_pawn_loan_repayment(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnRepaymentError("Only an active PawnLoan can receive repayment.")
     try:
-        assert_pawn_loan_financial_actions_allowed(loan.pk)
+        assert_pawn_loan_financial_actions_allowed(loan.pk, lock=False)
         balance = get_pawn_loan_balance(
             loan.pk, as_of_date=timezone.localdate()
         )

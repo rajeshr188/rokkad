@@ -10,6 +10,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- P6 preview transaction hotfix is complete. The shared financial-action guard
+  now distinguishes locking mutation checks from non-locking read previews;
+  full-release GET and repayment preview no longer issue `SELECT ... FOR
+  UPDATE` outside an atomic transaction. Regression coverage proves both
+  previews avoid the locking loader, and a real non-atomic `jcl1` preview for
+  PawnLoan 11 returned the exact settlement successfully.
+
 - P6 full-release software execution is complete. The release screen now uses
   the same tenant-scoped, no-write calculation as confirmation, including
   release-day partial-period interest, and identifies every collateral item

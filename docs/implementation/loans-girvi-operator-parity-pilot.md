@@ -268,6 +268,12 @@ completed-period balance. It separates interest and fees, release-day
 interest, and principal, and lists every outstanding collateral item that will
 be returned.
 
+The read-only release and repayment previews explicitly use the non-locking
+financial-action readiness path. Mutation commands continue to lock the loan,
+but a normal GET/preview request never executes `SELECT ... FOR UPDATE` outside
+a transaction. This boundary is regression-tested and was verified directly
+against PawnLoan 11 in the `jcl1` development tenant without an atomic wrapper.
+
 Confirmation requires the operator to acknowledge that the exact settlement
 was collected and every listed item was physically handed back. The success
 result names the immutable release number, settlement, returned-item count,

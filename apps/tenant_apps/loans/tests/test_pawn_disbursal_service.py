@@ -598,10 +598,14 @@ class PawnDisbursalServiceTests(TenantTestCase):
             "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
             return_value=date(2026, 8, 3),
         ):
-            preview = preview_pawn_loan_repayment(
-                self.loan.pk,
-                amount=Decimal("1000.00"),
-            )
+            with patch(
+                "apps.tenant_apps.loans.services.pawn_disbursal._locked_loan",
+                side_effect=AssertionError("read-only preview acquired a row lock"),
+            ):
+                preview = preview_pawn_loan_repayment(
+                    self.loan.pk,
+                    amount=Decimal("1000.00"),
+                )
             self.assertEqual(preview.allocation.principal, Decimal("1000.00"))
             self.assertEqual(preview.item_allocations[0].principal_applied, Decimal("1000.00"))
             self.assertFalse(
@@ -1177,7 +1181,11 @@ class PawnDisbursalServiceTests(TenantTestCase):
         source = RateSource.objects.create(name="Release", location="Market")
         self._create_release_rate(source)
 
-        preview = preview_pawn_loan_full_release(self.loan.pk)
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_disbursal._locked_loan",
+            side_effect=AssertionError("read-only preview acquired a row lock"),
+        ):
+            preview = preview_pawn_loan_full_release(self.loan.pk)
         self.assertEqual(preview.release_day_catch_up_interest, Decimal("1000.00"))
         self.assertEqual(preview.minimum_settlement, Decimal("51000.00"))
         self.assertFalse(PawnLoanRelease.objects.filter(loan=self.loan).exists())

@@ -123,6 +123,7 @@ def preview_pawn_loan_full_release(loan_id: int) -> PawnFullReleasePreview:
         loan,
         outstanding,
         effective_date=timezone.localdate(),
+        lock=False,
     )
 
 
@@ -173,6 +174,7 @@ def release_pawn_loan_in_full(
             loan,
             outstanding_collateral,
             effective_date=effective_date,
+            lock=True,
         )
         partial_accrual = preview.release_day_accrual
         readiness = preview.readiness
@@ -397,7 +399,13 @@ def _tenant_loan(loan_id):
         ) from exc
 
 
-def _build_full_release_preview(loan, outstanding_collateral, *, effective_date):
+def _build_full_release_preview(
+    loan,
+    outstanding_collateral,
+    *,
+    effective_date,
+    lock,
+):
     from .physical_verification import (
         PawnPhysicalVerificationBlockerError,
         assert_physical_verification_clear,
@@ -409,7 +417,7 @@ def _build_full_release_preview(loan, outstanding_collateral, *, effective_date)
         )
     except PawnPhysicalVerificationBlockerError as exc:
         raise PawnReleaseError(str(exc)) from exc
-    assert_pawn_loan_financial_actions_allowed(loan.pk)
+    assert_pawn_loan_financial_actions_allowed(loan.pk, lock=lock)
     missing_accruals = preview_pawn_loan_accruals(
         loan.pk,
         as_of_date=effective_date,

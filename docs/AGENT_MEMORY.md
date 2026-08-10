@@ -8,6 +8,13 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+P6 preview hotfix: `assert_pawn_loan_financial_actions_allowed` defaults to a
+locking read for mutation commands, while read-only release and repayment
+previews explicitly pass `lock=False`. Do not reintroduce `select_for_update`
+into GET/preview paths. `preview_pawn_loan_full_release(11)` was verified in
+the real `jcl1` tenant outside an atomic block and returned settlement 5100
+with release-day catch-up 100. Focused release and repayment tests pass.
+
 P6 full-release software execution is complete. Use
 `preview_pawn_loan_full_release` for the operator quote: it is tenant-scoped,
 performs no writes, includes release-day partial-period catch-up, and shares
