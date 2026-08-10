@@ -9,6 +9,7 @@ from apps.tenant_apps.loans.documents import (
     DocumentAssetValidator,
     DocumentLayoutValidator,
     LayoutValidationError,
+    legacy_print_profile,
     starter_layout,
 )
 from apps.tenant_apps.loans.documents.payloads import (
@@ -279,6 +280,44 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         self.assertIn("ORIGINAL TERMS", back)
         self.assertIn("FORM D3", back)
         pdf.close()
+
+    def test_legacy_sheet_profiles_match_renderer_page_packaging(self):
+        assets = tuple(
+            DocumentAssetValidator.validate(
+                key=key, kind="BACKGROUND", content=self._pdf_bytes(text),
+                workspace_id=7,
+            )
+            for key, text in (
+                ("original.front", "ORIGINAL BACKGROUND"),
+                ("duplicate.front", "DUPLICATE BACKGROUND"),
+                ("original.terms", "ORIGINAL TERMS"),
+                ("duplicate.d3", "FORM D3"),
+            )
+        )
+        compositions = (
+            "A5_ORIGINAL", "A5_ORIGINAL_TERMS_DUPLEX",
+            "A5_DUPLICATE", "A5_DUPLICATE_D3_DUPLEX",
+            "A5_BOTH_SIMPLEX", "A5_BOTH_DUPLEX",
+            "A4_SIDE_BY_SIDE", "A4_SIDE_BY_SIDE_DUPLEX",
+        )
+        for composition in compositions:
+            with self.subTest(composition=composition):
+                layout = DocumentLayoutValidator.load(
+                    self._sheet_definition(composition)
+                )
+                profile = legacy_print_profile(layout)
+                result = ConfigurableDocumentRenderer.render(
+                    self.payload, layout, assets=assets
+                )
+                pdf = fitz.open(stream=result.pdf, filetype="pdf")
+                self.assertEqual(result.copy_mode, profile.composition)
+                self.assertEqual(len(pdf), len(profile.sheets))
+                self.assertEqual(
+                    result.page_size,
+                    "A4_LANDSCAPE" if profile.orientation == "LANDSCAPE"
+                    else profile.paper_size,
+                )
+                pdf.close()
 
     def test_sheet_composition_requires_assets_and_copy_complete_evidence(self):
         definition = self._sheet_definition("A4_SIDE_BY_SIDE")

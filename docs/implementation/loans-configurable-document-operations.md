@@ -24,11 +24,14 @@ packaging, included copies, simplex/duplex ordering, orientation, scaling, and
 printer guidance. Every issue must record both immutable revision hashes and
 retain exact artifact bytes.
 
-LPD7.1 now provides validated versioned profile persistence and deterministic
-`Series -> Workspace -> built-in` resolution. It does not yet drive rendering
-or official issue provenance. Existing `copy_mode` and `sheet` settings remain
-authoritative for published layouts until compatibility migration, parity
-tests, issue-profile evidence, and the physical printer gate pass.
+LPD7.1 provides validated versioned profile persistence and deterministic
+`Series -> Workspace -> built-in` resolution. LPD7.2 maps every embedded
+loan-ticket sheet/copy composition to an equivalent compatibility profile and
+records that profile's name, version, canonical hash, and `LEGACY_LAYOUT`
+source on every new configurable ticket issue. Existing `copy_mode` and
+`sheet` settings still drive rendering, so this evidence describes the output
+actually produced rather than claiming an assigned profile was used. LPD7.3
+will make resolved profiles drive future physical packaging after parity.
 
 ## Integrity Gate
 
@@ -38,7 +41,8 @@ Run inside each tenant schema before and after a document-layout rollout:
 python manage.py tenant_command check_loan_document_integrity --schema=<schema> --fail-on-findings
 ```
 
-The command verifies canonical layout hashes, layout/document scope, asset
+The command verifies canonical layout/profile hashes, layout/document scope,
+profile revision and assignment scope, profile evidence on new issues, asset
 workspace and byte hashes, issued artifact hashes, revision scope, and
 regeneration lineage. For the parity pilot it also rejects every active
 loan-ticket assignment that would emit only Original or only Duplicate. A
@@ -76,8 +80,9 @@ Record printer make/model, driver, paper stock, duplex setting, operator, date,
 and any scaling option used. Do not mark LPD6 operationally complete from an
 on-screen PDF review alone.
 
-After LPD7 ships, also record the print-profile name, revision, canonical hash,
-and assignment scope. Test the same logical layout through every assigned
+For LPD7.2 compatibility output, record the issue's print-profile name,
+version, canonical hash, and `LEGACY_LAYOUT` scope. After LPD7.3, test the same
+logical layout through every assigned
 profile and verify that changing the active profile does not alter a historical
 issue reprint.
 

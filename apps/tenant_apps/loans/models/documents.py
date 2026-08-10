@@ -337,6 +337,12 @@ class LoanDocumentIssue(models.Model):
         OFFICIAL = "OFFICIAL", "Official"
         REGENERATED = "REGENERATED", "Regenerated"
 
+    class PrintProfileSource(models.TextChoices):
+        LEGACY_LAYOUT = "LEGACY_LAYOUT", "Legacy embedded layout"
+        SERIES = "SERIES", "Series assignment"
+        WORKSPACE = "WORKSPACE", "Workspace assignment"
+        BUILT_IN = "BUILT_IN", "Built-in fallback"
+
     workspace = models.ForeignKey("orgs.Company", on_delete=models.PROTECT, related_name="loan_document_issues")
     document_type = models.CharField(max_length=32, choices=DOCUMENT_KIND_CHOICES)
     issue_kind = models.CharField(max_length=12, choices=Kind.choices, default=Kind.OFFICIAL)
@@ -344,6 +350,16 @@ class LoanDocumentIssue(models.Model):
     source_id = models.CharField(max_length=64)
     source_fingerprint = models.CharField(max_length=128)
     revision = models.ForeignKey(LoanDocumentLayoutRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="issues")
+    print_profile_revision = models.ForeignKey(
+        LoanDocumentPrintProfileRevision, null=True, blank=True,
+        on_delete=models.PROTECT, related_name="issues",
+    )
+    print_profile_name = models.CharField(max_length=100, blank=True)
+    print_profile_version = models.PositiveIntegerField(null=True, blank=True)
+    print_profile_hash = models.CharField(max_length=64, blank=True)
+    print_profile_source_scope = models.CharField(
+        max_length=16, choices=PrintProfileSource.choices, blank=True,
+    )
     fixed_renderer_version = models.CharField(max_length=64, blank=True)
     payload_schema_version = models.PositiveIntegerField()
     payload_hash = models.CharField(max_length=64)
@@ -373,6 +389,46 @@ class LoanDocumentIssue(models.Model):
             errors["workspace"] = "Document issue workspace must match the active tenant."
         if self.revision_id and (self.revision.layout.workspace_id != self.workspace_id or self.revision.layout.document_type != self.document_type):
             errors["revision"] = "Issue revision scope does not match the source document."
+        profile_fields = (
+            self.print_profile_name,
+            self.print_profile_version,
+            self.print_profile_hash,
+            self.print_profile_source_scope,
+        )
+        if any(value not in (None, "") for value in profile_fields) and not all(
+            value not in (None, "") for value in profile_fields
+        ):
+            errors["print_profile_hash"] = "Print profile evidence must be complete."
+        if self.print_profile_revision_id:
+            profile_revision = self.print_profile_revision
+            profile = profile_revision.profile
+            if (
+                profile.workspace_id != self.workspace_id
+                or profile.document_type != self.document_type
+            ):
+                errors["print_profile_revision"] = "Issue print profile scope does not match."
+            if self.print_profile_source_scope not in {
+                self.PrintProfileSource.SERIES,
+                self.PrintProfileSource.WORKSPACE,
+            }:
+                errors["print_profile_source_scope"] = (
+                    "Persisted print profile revisions require an assignment scope."
+                )
+            if (
+                self.print_profile_name != profile.name
+                or self.print_profile_version != profile_revision.version
+                or self.print_profile_hash != profile_revision.content_hash
+            ):
+                errors["print_profile_revision"] = (
+                    "Issue print profile evidence must match its immutable revision."
+                )
+        elif self.print_profile_source_scope in {
+            self.PrintProfileSource.SERIES,
+            self.PrintProfileSource.WORKSPACE,
+        }:
+            errors["print_profile_revision"] = (
+                "Assigned print profile evidence requires its immutable revision."
+            )
         if self.issue_kind == self.Kind.REGENERATED and not self.prior_issue_id:
             errors["prior_issue"] = "Regenerated issues require a prior issue."
         if self.prior_issue_id and self.prior_issue.workspace_id != self.workspace_id:

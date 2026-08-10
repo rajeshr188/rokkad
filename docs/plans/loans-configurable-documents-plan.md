@@ -434,9 +434,9 @@ byte-identical reprint matrix.
 
 ### LPD7: Versioned print profiles
 
-Status: LPD7.1 runtime foundation implemented 2026-08-10; renderer cutover,
-issue provenance, UI, compatibility migration, diagnostics, and physical
-printer acceptance remain pending.
+Status: LPD7.1 foundation and LPD7.2 legacy compatibility/provenance completed
+2026-08-10; resolved-profile renderer stage, UI, and physical printer
+acceptance remain pending.
 
 Pre-pilot compatibility guard completed 2026-08-09: existing integrity
 diagnostics now reject active loan-ticket assignments that omit either the
@@ -457,8 +457,8 @@ partially migrate the LPD7 print-profile runtime.
 - Extend integrity diagnostics, previews, issue detail, and the physical
   printer matrix for the resolved profile.
 
-LPD7.1 result: schema-v1 physical profile contracts now validate the six
-accepted A5/A4 simplex/duplex compositions, paper/orientation agreement,
+LPD7.1 result: schema-v1 physical profile contracts validate the accepted
+A5/A4 simplex/duplex compositions, paper/orientation agreement,
 scaling policy, flip-edge guidance, and deterministic canonical hash. Tenant
 models and audited services provide immutable draft/publish/clone/retire
 revisions, workspace/Series assignment, and `Series -> Workspace -> built-in`
@@ -467,6 +467,25 @@ and Duplicate fronts. Migration `loans.0037` adds this persistence. The current
 migration is applied across all six local tenant schemas and the seven focused
 tests pass. The current renderer deliberately continues using embedded layout
 composition until the compatibility and parity gate is implemented.
+
+LPD7.2 result: all eight embedded sheet compositions now have exact profile
+contracts, including Original+Terms and Duplicate+D3 duplex modes. Compatibility
+contracts also preserve the older sequential `SINGLE`,
+`ORIGINAL_DUPLICATE`, and `ORIGINAL_DUPLICATE_DUPLEX` behavior across A4, A5,
+and Letter paper. Renderer parity tests prove composition identity, physical
+page count, paper size, and orientation without changing PDF generation.
+New configurable loan-ticket issues snapshot the compatibility profile name,
+schema/revision version, canonical hash, and source scope; old issue rows remain
+valid with blank provenance and retain their exact stored bytes. Migration
+`loans.0038` adds these nullable immutable evidence fields. Diagnostics now
+validate profile revision hashes/scopes, active assignment validity/copy
+bundles, and issue-to-profile evidence. The migration is applied across all six
+local tenants and `jcl1` has zero findings.
+
+LPD7.3 must connect `Series -> Workspace -> built-in` resolution to the
+physical renderer stage for future issues. It must not reinterpret historical
+issues or remove the LPD7.2 legacy compatibility path until the physical
+printer matrix passes.
 
 Gate: one logical ticket layout can be issued through A5 and A4 profiles
 without cloning legal content; profile changes affect only future issues;

@@ -7,7 +7,11 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
-from apps.tenant_apps.loans.documents import starter_layout
+from apps.tenant_apps.loans.documents import (
+    DocumentLayoutValidator,
+    legacy_print_profile,
+    starter_layout,
+)
 from apps.tenant_apps.loans.documents.integrity import get_document_integrity_findings
 from apps.tenant_apps.loans.documents.packs import export_layout_pack, import_layout_pack
 from apps.tenant_apps.loans.models import (
@@ -20,6 +24,7 @@ from apps.tenant_apps.loans.services import (
     DocumentLayoutServiceError,
     LoanDocumentLayoutService,
 )
+from apps.tenant_apps.loans.services.print_profiles import ResolvedPrintProfile
 
 
 class LoanDocumentLayoutPersistenceTests(TenantTestCase):
@@ -181,6 +186,12 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
             filename="ticket-19.pdf",
             actor=self.actor,
             revision=revision,
+            print_profile=ResolvedPrintProfile(
+                source_scope="LEGACY_LAYOUT",
+                definition=legacy_print_profile(
+                    DocumentLayoutValidator.load(revision.definition)
+                ),
+            ),
         )
 
         issue = LoanDocumentLayoutService.issue(**kwargs)
@@ -194,6 +205,13 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
         issue.artifact.close()
         self.assertEqual(regenerated.issue_kind, LoanDocumentIssue.Kind.REGENERATED)
         self.assertEqual(regenerated.prior_issue_id, issue.pk)
+        self.assertEqual(issue.print_profile_source_scope, "LEGACY_LAYOUT")
+        self.assertEqual(issue.print_profile_name, "Legacy embedded Legacy Original")
+        self.assertEqual(issue.print_profile_version, 1)
+        self.assertEqual(
+            issue.print_profile_hash,
+            kwargs["print_profile"].definition.content_hash,
+        )
         issue.pdf_hash = "c" * 64
         with self.assertRaisesMessage(ValidationError, "immutable"):
             issue.save()

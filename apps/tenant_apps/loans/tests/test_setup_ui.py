@@ -1205,7 +1205,12 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(first.status_code, 200)
         self.assertTrue(first.content.startswith(b"%PDF"))
         self.assertEqual(first["X-Rokkad-Document-Issue"], second["X-Rokkad-Document-Issue"])
+        self.assertEqual(first["X-Rokkad-Print-Profile"], "Legacy embedded Legacy Original")
+        self.assertEqual(first["X-Rokkad-Print-Profile-Hash"], second["X-Rokkad-Print-Profile-Hash"])
         self.assertEqual(LoanDocumentIssue.objects.filter(source_id=str(loan.pk)).count(), 1)
+        issue = LoanDocumentIssue.objects.get(source_id=str(loan.pk))
+        self.assertEqual(issue.print_profile_source_scope, "LEGACY_LAYOUT")
+        self.assertEqual(issue.print_profile_hash, first["X-Rokkad-Print-Profile-Hash"])
 
         fixed = self.tenant_get(f"{url}?renderer=fixed")
         self.assertEqual(fixed.status_code, 200)

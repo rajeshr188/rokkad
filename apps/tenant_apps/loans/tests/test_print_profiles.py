@@ -1,5 +1,6 @@
 import uuid
 from datetime import date
+from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -13,7 +14,10 @@ from apps.tenant_apps.loans.documents import (
     PrintProfileValidationError,
     PrintProfileValidator,
     built_in_print_profile,
+    legacy_print_profile,
 )
+from apps.tenant_apps.loans.documents.integrity import get_document_integrity_findings
+from apps.tenant_apps.loans.models import LoanDocumentPrintProfileRevision
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
 from apps.tenant_apps.loans.services import (
     LoanDocumentPrintProfileService,
@@ -48,6 +52,39 @@ class PrintProfileContractTests(SimpleTestCase):
             PrintProfileValidationError, "Simplex profiles"
         ):
             PrintProfileValidator.load(definition)
+
+    def test_every_legacy_sheet_composition_has_an_exact_profile(self):
+        compositions = (
+            "A5_ORIGINAL", "A5_ORIGINAL_TERMS_DUPLEX",
+            "A5_DUPLICATE", "A5_DUPLICATE_D3_DUPLEX",
+            "A5_BOTH_SIMPLEX", "A5_BOTH_DUPLEX",
+            "A4_SIDE_BY_SIDE", "A4_SIDE_BY_SIDE_DUPLEX",
+        )
+        for composition in compositions:
+            with self.subTest(composition=composition):
+                profile = legacy_print_profile(SimpleNamespace(
+                    document_type="loan_ticket", page_size="A5",
+                    copy_mode="SINGLE", sheet=SimpleNamespace(composition=composition),
+                ))
+                self.assertEqual(profile.composition, composition)
+
+    def test_legacy_sequential_copy_modes_preserve_page_size_and_surfaces(self):
+        cases = (
+            ("SINGLE", "LEGACY_ORIGINAL", {"ORIGINAL_FRONT"}),
+            ("ORIGINAL_DUPLICATE", "LEGACY_BOTH_SIMPLEX", {"ORIGINAL_FRONT", "DUPLICATE_FRONT"}),
+            ("ORIGINAL_DUPLICATE_DUPLEX", "LEGACY_BOTH_DUPLEX", {
+                "ORIGINAL_FRONT", "ORIGINAL_TERMS", "DUPLICATE_FRONT", "DUPLICATE_D3",
+            }),
+        )
+        for copy_mode, composition, surfaces in cases:
+            with self.subTest(copy_mode=copy_mode):
+                profile = legacy_print_profile(SimpleNamespace(
+                    document_type="loan_ticket", page_size="LETTER",
+                    copy_mode=copy_mode, sheet=None,
+                ))
+                self.assertEqual(profile.composition, composition)
+                self.assertEqual(profile.paper_size, "LETTER")
+                self.assertEqual(profile.included_surfaces, surfaces)
 
 
 class PrintProfilePersistenceTests(TenantTestCase):
@@ -211,3 +248,16 @@ class PrintProfilePersistenceTests(TenantTestCase):
         self.assertEqual(first.state, first.State.PUBLISHED)
         self.assertEqual(second.version, 2)
         self.assertNotEqual(first.content_hash, second.content_hash)
+
+    def test_integrity_detects_print_profile_hash_drift(self):
+        revision = self._published("Integrity profile", "A5_BOTH_SIMPLEX")
+        self.assertEqual(get_document_integrity_findings(), ())
+
+        LoanDocumentPrintProfileRevision.objects.filter(pk=revision.pk).update(
+            content_hash="0" * 64
+        )
+
+        self.assertEqual(
+            [finding.category for finding in get_document_integrity_findings()],
+            ["PRINT_PROFILE_HASH"],
+        )

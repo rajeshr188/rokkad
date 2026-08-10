@@ -287,6 +287,7 @@ from apps.tenant_apps.loans.documents import (
     DocumentAsset,
     DocumentLayoutValidator,
     PawnLoanDocumentProjectionBuilder,
+    legacy_print_profile,
     starter_layout,
 )
 from apps.tenant_apps.loans.documents.integrity import get_document_integrity_findings
@@ -299,6 +300,7 @@ from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
     get_pawn_principal_tranche_balances,
 )
+from apps.tenant_apps.loans.services.print_profiles import ResolvedPrintProfile
 
 
 @loans_workspace_required
@@ -884,15 +886,23 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
     if revision is None:
         return None
     try:
+        layout = DocumentLayoutValidator.load(revision.definition)
         rendered = ConfigurableDocumentRenderer.render(
-            payload, DocumentLayoutValidator.load(revision.definition), assets=_revision_assets(revision)
+            payload, layout, assets=_revision_assets(revision)
         )
+        print_profile = None
+        if payload.document_type == "loan_ticket":
+            print_profile = ResolvedPrintProfile(
+                source_scope="LEGACY_LAYOUT",
+                definition=legacy_print_profile(layout),
+            )
         issue = LoanDocumentLayoutService.issue(
             workspace=request.loans_workspace, document_type=payload.document_type,
             source_type=source_type, source_id=source_id,
             source_fingerprint=source_fingerprint,
             payload_schema_version=payload.schema_version, render_result=rendered,
             filename=payload.file_name, actor=request.user, revision=revision,
+            print_profile=print_profile,
         )
         issue.artifact.open("rb"); pdf = issue.artifact.read(); issue.artifact.close()
     except (ValueError, ValidationError, DocumentLayoutServiceError) as exc:
@@ -901,6 +911,9 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
     response["Content-Disposition"] = f'inline; filename="{payload.file_name}"'
     response["X-Rokkad-Verification-ID"] = payload.verification_id
     response["X-Rokkad-Document-Issue"] = str(issue.pk)
+    if issue.print_profile_hash:
+        response["X-Rokkad-Print-Profile"] = issue.print_profile_name
+        response["X-Rokkad-Print-Profile-Hash"] = issue.print_profile_hash
     return response
 
 

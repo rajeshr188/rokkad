@@ -4,11 +4,14 @@ import hashlib
 from dataclasses import dataclass
 
 from apps.tenant_apps.loans.documents.layouts import DocumentLayoutValidator
+from apps.tenant_apps.loans.documents.print_profiles import PrintProfileValidator
 from apps.tenant_apps.loans.models import (
     LoanDocumentAsset,
     LoanDocumentIssue,
     LoanDocumentLayoutAssignment,
     LoanDocumentLayoutRevision,
+    LoanDocumentPrintProfileAssignment,
+    LoanDocumentPrintProfileRevision,
     current_tenant_workspace_id,
 )
 
@@ -48,11 +51,83 @@ def get_document_integrity_findings():
         else:
             if hashlib.sha256(content).hexdigest() != asset.sha256:
                 findings.append(DocumentIntegrityFinding("ASSET_HASH", "asset", asset.pk, "Asset bytes do not match the stored hash."))
-    for issue in LoanDocumentIssue.objects.filter(workspace_id=workspace_id).select_related("revision__layout", "prior_issue"):
+    profile_revisions = LoanDocumentPrintProfileRevision.objects.filter(
+        profile__workspace_id=workspace_id
+    ).select_related("profile")
+    for revision in profile_revisions:
+        try:
+            profile = PrintProfileValidator.load(revision.definition)
+        except ValueError as exc:
+            findings.append(DocumentIntegrityFinding(
+                "PRINT_PROFILE_INVALID", "print_profile_revision", revision.pk, str(exc)
+            ))
+        else:
+            if revision.content_hash != profile.content_hash:
+                findings.append(DocumentIntegrityFinding(
+                    "PRINT_PROFILE_HASH", "print_profile_revision", revision.pk,
+                    "Stored print profile hash does not match its canonical definition.",
+                ))
+            if profile.document_type != revision.profile.document_type:
+                findings.append(DocumentIntegrityFinding(
+                    "PRINT_PROFILE_SCOPE", "print_profile_revision", revision.pk,
+                    "Print profile revision document type differs from its profile.",
+                ))
+    profile_assignments = LoanDocumentPrintProfileAssignment.objects.filter(
+        workspace_id=workspace_id, is_active=True,
+    ).select_related("revision__profile", "series__license")
+    for assignment in profile_assignments:
+        if (
+            assignment.revision.state != LoanDocumentPrintProfileRevision.State.PUBLISHED
+            or assignment.revision.profile.workspace_id != workspace_id
+            or assignment.revision.profile.document_type != assignment.document_type
+        ):
+            findings.append(DocumentIntegrityFinding(
+                "PRINT_PROFILE_ASSIGNMENT", "print_profile_assignment", assignment.pk,
+                "Active print profile assignment has an invalid state or scope.",
+            ))
+            continue
+        try:
+            profile = PrintProfileValidator.load(assignment.revision.definition)
+        except ValueError:
+            continue
+        if assignment.document_type == "loan_ticket" and not {
+            "ORIGINAL_FRONT", "DUPLICATE_FRONT"
+        }.issubset(profile.included_surfaces):
+            findings.append(DocumentIntegrityFinding(
+                "PILOT_PRINT_PROFILE_COPY_BUNDLE", "print_profile_assignment", assignment.pk,
+                "The active pilot print profile must include Original and Duplicate fronts.",
+            ))
+    for issue in LoanDocumentIssue.objects.filter(workspace_id=workspace_id).select_related(
+        "revision__layout", "prior_issue", "print_profile_revision__profile"
+    ):
         if issue.revision_id and issue.revision.layout.workspace_id != issue.workspace_id:
             findings.append(DocumentIntegrityFinding("ISSUE_SCOPE", "issue", issue.pk, "Issue revision belongs to another workspace."))
         if issue.prior_issue_id and issue.prior_issue.workspace_id != issue.workspace_id:
             findings.append(DocumentIntegrityFinding("ISSUE_LINEAGE", "issue", issue.pk, "Prior issue belongs to another workspace."))
+        profile_values = (
+            issue.print_profile_name, issue.print_profile_version,
+            issue.print_profile_hash, issue.print_profile_source_scope,
+        )
+        if any(value not in (None, "") for value in profile_values) and not all(
+            value not in (None, "") for value in profile_values
+        ):
+            findings.append(DocumentIntegrityFinding(
+                "ISSUE_PRINT_PROFILE", "issue", issue.pk,
+                "Issue print profile evidence is incomplete.",
+            ))
+        if issue.print_profile_revision_id:
+            revision = issue.print_profile_revision
+            if (
+                revision.profile.workspace_id != issue.workspace_id
+                or revision.profile.document_type != issue.document_type
+                or revision.content_hash != issue.print_profile_hash
+                or revision.version != issue.print_profile_version
+                or revision.profile.name != issue.print_profile_name
+            ):
+                findings.append(DocumentIntegrityFinding(
+                    "ISSUE_PRINT_PROFILE", "issue", issue.pk,
+                    "Issue print profile evidence differs from its immutable revision.",
+                ))
         try:
             issue.artifact.open("rb"); content = issue.artifact.read(); issue.artifact.close()
         except Exception:

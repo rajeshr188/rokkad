@@ -11,16 +11,20 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ## Latest Update
 
 - P12 was accepted by the workspace Owner on 2026-08-10; all twelve Loans
-  capability scenarios are accepted. LPD7.1 is now the active document slice.
-  It adds validated physical print-profile contracts, immutable tenant-owned
-  revisions, workspace/Series assignment, and deterministic `Series ->
-  Workspace -> built-in` resolution. Pilot loan-ticket assignments cannot omit
-  Original or Duplicate fronts. Migration `loans.0037` adds the three profile
-  tables and is applied across all six local tenant schemas. Seven focused
-  contract/persistence tests pass, tenant migration drift is clear, and the
-  `jcl1` document-integrity gate still has zero findings. The current renderer
-  and issue path remain unchanged until profile provenance and legacy-
-  composition parity are implemented.
+  capability scenarios are accepted. LPD7.2 is complete. Every legacy ticket
+  packaging mode now maps to a validated physical profile, including the two
+  single-copy duplex sheet modes and older A4/A5/Letter sequential copy modes.
+  The renderer remains unchanged, while every newly created configurable
+  ticket issue records the physical profile name, schema/revision version,
+  canonical hash, and `LEGACY_LAYOUT` source alongside its exact PDF bytes.
+  Historical issues remain untouched and byte-reprintable. Migration
+  `loans.0038` adds nullable immutable issue provenance and is applied across
+  all six local tenant schemas. Integrity diagnostics now cover profile
+  revisions, assignments, and issue evidence. Forty contract/renderer tests
+  and the three affected tenant tests pass; migration drift and system checks are
+  clean, and `jcl1` still reports zero document-integrity findings. LPD7.3 is
+  next: make resolved workspace/Series profiles drive physical packaging while
+  preserving the proven legacy path as compatibility fallback.
 
 - P12's accepted boundary rejects Members
   before administrator-only auction/correction identifiers are looked up and

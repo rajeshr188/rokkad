@@ -203,7 +203,7 @@ class LoanDocumentLayoutService:
     @transaction.atomic
     def issue(cls, *, workspace, document_type, source_type, source_id, source_fingerprint,
               payload_schema_version, render_result, filename, actor=None, revision=None,
-              prior_issue=None):
+              prior_issue=None, print_profile=None):
         _require_workspace(workspace.pk)
         existing = LoanDocumentIssue.objects.select_for_update().filter(
             workspace=workspace, document_type=document_type, source_type=source_type,
@@ -215,11 +215,21 @@ class LoanDocumentLayoutService:
         if prior_issue is not None and prior_issue.workspace_id != workspace.pk:
             raise DocumentLayoutServiceError("Prior issue belongs to another workspace.")
         pdf_hash = hashlib.sha256(render_result.pdf).hexdigest()
+        profile_revision = print_profile.revision if print_profile else None
+        profile_definition = print_profile.definition if print_profile else None
         issue = LoanDocumentIssue(
             workspace=workspace, document_type=document_type,
             issue_kind=LoanDocumentIssue.Kind.REGENERATED if prior_issue else LoanDocumentIssue.Kind.OFFICIAL,
             source_type=source_type, source_id=str(source_id), source_fingerprint=source_fingerprint,
             revision=revision, fixed_renderer_version="" if revision else render_result.renderer_version,
+            print_profile_revision=profile_revision,
+            print_profile_name=profile_definition.name if profile_definition else "",
+            print_profile_version=(
+                profile_revision.version if profile_revision else
+                (profile_definition.schema_version if profile_definition else None)
+            ),
+            print_profile_hash=print_profile.content_hash if print_profile else "",
+            print_profile_source_scope=print_profile.source_scope if print_profile else "",
             payload_schema_version=payload_schema_version, payload_hash=render_result.payload_hash,
             layout_hash=render_result.layout_hash, asset_hashes=dict(render_result.asset_hashes),
             pdf_hash=pdf_hash, prior_issue=prior_issue, issued_by=actor,
@@ -232,6 +242,8 @@ class LoanDocumentLayoutService:
                 description=f"Issued {document_type} for {source_type}:{source_id}.",
                 data={"entity": "loan_document_issue", "issue_id": issue.pk,
                       "issue_kind": issue.issue_kind, "pdf_hash": pdf_hash,
+                      "print_profile_hash": issue.print_profile_hash,
+                      "print_profile_source_scope": issue.print_profile_source_scope,
                       "prior_issue_id": issue.prior_issue_id}, success=True,
             )
         return issue

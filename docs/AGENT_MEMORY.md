@@ -1597,13 +1597,15 @@ Loans operational parity OP6 is complete. All eight pilot report/statement proje
 
 LPD7.1 adds print-profile models, tenant migration `loans.0037`, validated
 schema-v1 contracts, immutable publication, audited assignment, and `Series ->
-Workspace -> built-in` resolution. There is still no UI, renderer-stage
-integration, compatibility materialization, integrity extension, or issue
-profile provenance. Until those ship and parity passes, embedded layout
-`copy_mode`/`sheet` composition remains authoritative. Active loan-ticket
-profile assignment must include Original and Duplicate, matching the existing
-layout guard and fixed fallback. The real physical printer matrix remains an
-operator gate.
+Workspace -> built-in` resolution. LPD7.2 adds exact compatibility contracts
+for all eight sheet modes and the older sequential A4/A5/Letter copy modes,
+plus migration `loans.0038` for immutable issue profile name/version/hash/source
+evidence and profile-aware integrity diagnostics. New configurable ticket
+issues record the `LEGACY_LAYOUT` profile actually used; historical issues are
+not backfilled. Embedded layout `copy_mode`/`sheet` composition remains runtime
+authority until LPD7.3 connects resolved profiles to packaging. Active
+loan-ticket profile assignment must include Original and Duplicate, and the
+real physical printer matrix remains an operator gate.
 
 Operator parity-pilot preparation is documented in `docs/implementation/loans-girvi-operator-parity-pilot.md`. `jcl1` starts with 8 Loans PawnLoans and 8 Girvi GivenLoans, explicit `DEFERRED` accounting, zero document-integrity findings, and no Loans storage hierarchy, verification session, or operational notice. The official clock is stopped while accounting/Girvi runtime work is uncommitted. A combined 191-test preflight did not complete within ten minutes and exposed a stale implicit-DEA test; its focused scenario passes when DEA is explicit. DEA/Loans/Girvi migration drift checks are clean. Do not claim a cross-product pass until smaller suites finish on a reproducible checkpoint.
 

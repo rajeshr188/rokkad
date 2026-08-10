@@ -16,9 +16,17 @@ _COMPOSITIONS = {
         "paper_size": "A5", "orientation": "PORTRAIT", "duplex": "SIMPLEX",
         "sheets": (("ORIGINAL_FRONT",),),
     },
+    "A5_ORIGINAL_TERMS_DUPLEX": {
+        "paper_size": "A5", "orientation": "PORTRAIT", "duplex": "DUPLEX",
+        "sheets": (("ORIGINAL_FRONT",), ("ORIGINAL_TERMS",)),
+    },
     "A5_DUPLICATE": {
         "paper_size": "A5", "orientation": "PORTRAIT", "duplex": "SIMPLEX",
         "sheets": (("DUPLICATE_FRONT",),),
+    },
+    "A5_DUPLICATE_D3_DUPLEX": {
+        "paper_size": "A5", "orientation": "PORTRAIT", "duplex": "DUPLEX",
+        "sheets": (("DUPLICATE_FRONT",), ("DUPLICATE_D3",)),
     },
     "A5_BOTH_SIMPLEX": {
         "paper_size": "A5", "orientation": "PORTRAIT", "duplex": "SIMPLEX",
@@ -40,6 +48,24 @@ _COMPOSITIONS = {
         "sheets": (
             ("ORIGINAL_FRONT", "DUPLICATE_FRONT"),
             ("ORIGINAL_TERMS", "DUPLICATE_D3"),
+        ),
+    },
+    "LEGACY_ORIGINAL": {
+        "paper_sizes": ("A4", "A5", "LETTER"),
+        "orientation": "PORTRAIT", "duplex": "SIMPLEX",
+        "sheets": (("ORIGINAL_FRONT",),),
+    },
+    "LEGACY_BOTH_SIMPLEX": {
+        "paper_sizes": ("A4", "A5", "LETTER"),
+        "orientation": "PORTRAIT", "duplex": "SIMPLEX",
+        "sheets": (("ORIGINAL_FRONT",), ("DUPLICATE_FRONT",)),
+    },
+    "LEGACY_BOTH_DUPLEX": {
+        "paper_sizes": ("A4", "A5", "LETTER"),
+        "orientation": "PORTRAIT", "duplex": "DUPLEX",
+        "sheets": (
+            ("ORIGINAL_FRONT",), ("ORIGINAL_TERMS",),
+            ("DUPLICATE_FRONT",), ("DUPLICATE_D3",),
         ),
     },
 }
@@ -115,7 +141,14 @@ class PrintProfileValidator:
         expected = _COMPOSITIONS.get(composition)
         if expected is None:
             raise PrintProfileValidationError("Unknown print-profile composition.")
-        for key in ("paper_size", "orientation", "duplex"):
+        paper_size = definition.get("paper_size")
+        allowed_paper_sizes = expected.get("paper_sizes", (expected.get("paper_size"),))
+        if paper_size not in allowed_paper_sizes:
+            required = expected.get("paper_size") or "/".join(allowed_paper_sizes)
+            raise PrintProfileValidationError(
+                f"{composition} requires paper_size={required}."
+            )
+        for key in ("orientation", "duplex"):
             if definition.get(key) != expected[key]:
                 raise PrintProfileValidationError(
                     f"{composition} requires {key}={expected[key]}."
@@ -136,7 +169,7 @@ class PrintProfileValidator:
             document_type="loan_ticket",
             name=name,
             composition=composition,
-            paper_size=expected["paper_size"],
+            paper_size=paper_size,
             orientation=expected["orientation"],
             duplex=expected["duplex"],
             scaling_policy=scaling,
@@ -155,7 +188,7 @@ def built_in_print_profile(composition="A5_BOTH_SIMPLEX"):
         "document_type": "loan_ticket",
         "name": f"Built-in {composition.replace('_', ' ').title()}",
         "composition": composition,
-        "paper_size": expected["paper_size"],
+        "paper_size": expected.get("paper_size") or expected["paper_sizes"][0],
         "orientation": expected["orientation"],
         "duplex": expected["duplex"],
         "scaling_policy": "ACTUAL_SIZE",
@@ -164,6 +197,52 @@ def built_in_print_profile(composition="A5_BOTH_SIMPLEX"):
             else "NOT_APPLICABLE"
         ),
         "printer_guidance": "Print at Actual size / 100% and verify physical margins.",
+    })
+
+
+def legacy_print_profile(layout):
+    """Describe the physical packaging the existing renderer will actually use."""
+    if layout.document_type != "loan_ticket":
+        raise PrintProfileValidationError(
+            "Legacy print-profile provenance supports loan tickets only."
+        )
+    if layout.sheet is not None:
+        composition = layout.sheet.composition
+        expected = _COMPOSITIONS.get(composition)
+        if expected is None:
+            raise PrintProfileValidationError(
+                "The legacy sheet composition has no print-profile equivalent."
+            )
+        paper_size = expected.get("paper_size") or layout.page_size
+    else:
+        composition = {
+            "SINGLE": "LEGACY_ORIGINAL",
+            "ORIGINAL_DUPLICATE": "LEGACY_BOTH_SIMPLEX",
+            "ORIGINAL_DUPLICATE_DUPLEX": "LEGACY_BOTH_DUPLEX",
+        }.get(layout.copy_mode)
+        if composition is None:
+            raise PrintProfileValidationError(
+                "The legacy copy mode has no print-profile equivalent."
+            )
+        expected = _COMPOSITIONS[composition]
+        paper_size = layout.page_size
+    return PrintProfileValidator.load({
+        "schema_version": 1,
+        "document_type": "loan_ticket",
+        "name": f"Legacy embedded {composition.replace('_', ' ').title()}",
+        "composition": composition,
+        "paper_size": paper_size,
+        "orientation": expected["orientation"],
+        "duplex": expected["duplex"],
+        "scaling_policy": "ACTUAL_SIZE",
+        "flip_edge_guidance": (
+            "VERIFY_ON_PRINTER" if expected["duplex"] == "DUPLEX"
+            else "NOT_APPLICABLE"
+        ),
+        "printer_guidance": (
+            "Compatibility profile derived from the published layout; "
+            "print at Actual size / 100%."
+        ),
     })
 
 
@@ -176,4 +255,5 @@ __all__ = [
     "PrintProfileValidationError",
     "PrintProfileValidator",
     "built_in_print_profile",
+    "legacy_print_profile",
 ]

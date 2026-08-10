@@ -10,6 +10,7 @@ from .print_profiles import (
     PrintProfileValidationError,
     PrintProfileValidator,
     built_in_print_profile,
+    legacy_print_profile,
 )
 
-__all__ = ["BUILT_IN_PRINT_PROFILE_COMPOSITIONS", "ConfigurableDocumentRenderer", "DocumentAsset", "DocumentAssetError", "DocumentAssetValidator", "DocumentLayoutValidator", "DocumentPayload", "LayoutRenderResult", "LayoutValidationError", "PawnLoanDocumentProjectionBuilder", "PrintProfileDefinition", "PrintProfileValidationError", "PrintProfileValidator", "built_in_print_profile", "starter_layout"]
+__all__ = ["BUILT_IN_PRINT_PROFILE_COMPOSITIONS", "ConfigurableDocumentRenderer", "DocumentAsset", "DocumentAssetError", "DocumentAssetValidator", "DocumentLayoutValidator", "DocumentPayload", "LayoutRenderResult", "LayoutValidationError", "PawnLoanDocumentProjectionBuilder", "PrintProfileDefinition", "PrintProfileValidationError", "PrintProfileValidator", "built_in_print_profile", "legacy_print_profile", "starter_layout"]
