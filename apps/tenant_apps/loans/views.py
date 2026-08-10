@@ -86,6 +86,17 @@ _OVERLAY_PAGE_DIMENSIONS_MM = {
 
 _PENDING_STORAGE_ITEM_SESSION_KEY = "loans_pending_storage_item"
 
+_PILOT_REPORT_EXPORT_SECTIONS = (
+    ("active", "Active loans"),
+    ("daily", "Daily disbursals / repayments"),
+    ("interest_due", "Interest due"),
+    ("overdue", "Overdue loans"),
+    ("releases_renewals", "Releases / renewals"),
+    ("storage", "Storage inventory"),
+    ("license_expiry", "License expiry"),
+)
+_PILOT_REPORT_EXPORT_FORMATS = (("csv", "CSV"), ("xlsx", "XLSX"), ("pdf", "PDF"))
+
 
 def _fit_overlay_geometry(definition, target_page_size):
     """Proportionally fit flat absolute-overlay blocks to another page size."""
@@ -307,6 +318,8 @@ def pawn_loan_reports(request):
             "parties": parties,
             "can_administer": _can_administer(request),
             "report_is_current": as_of_date == timezone.localdate(),
+            "report_export_sections": _PILOT_REPORT_EXPORT_SECTIONS,
+            "report_export_formats": _PILOT_REPORT_EXPORT_FORMATS,
         },
     )
 

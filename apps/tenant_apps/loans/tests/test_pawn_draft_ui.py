@@ -227,6 +227,20 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(response, "Release and renew")
         self.assertContains(response, "Collateral custody")
         self.assertContains(response, "Posting health")
+        self.assertContains(response, "Every format below is rendered from the same")
+        for section in (
+            "active", "daily", "interest_due", "overdue",
+            "releases_renewals", "storage", "license_expiry",
+        ):
+            for export_format in ("csv", "xlsx", "pdf"):
+                self.assertContains(
+                    response,
+                    reverse(
+                        "loans:pawn_loan_report_export",
+                        args=[section, export_format],
+                    ),
+                )
+        self.assertContains(response, reverse("loans:license_register_pdf"))
 
     def test_current_overdue_report_links_directly_to_overdue_notice(self):
         license, series = self._configured_setup()
@@ -261,6 +275,40 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Prepare overdue notice")
         self.assertContains(response, "?kind=OVERDUE_NOTICE")
+
+    def test_party_statement_transaction_history_honors_as_of_date(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+        future = PawnLoanAccountingEvent.objects.create(
+            loan=loan,
+            event_kind="REPAYMENT",
+            effective_date=date(2026, 8, 5),
+            payload={
+                "values": {"principal": "777.00", "interest": "0", "fees": "0"},
+                "repayment": {"amount_received": "777.00"},
+            },
+            payload_fingerprint="future-party-statement",
+            idempotency_key="future-party-statement",
+            created_by=self.owner,
+        )
+        PawnLoanAccountingOutbox.objects.create(
+            event=future,
+            idempotency_key="future-party-statement",
+            payload=future.payload,
+            payload_fingerprint=future.payload_fingerprint,
+            status="PENDING",
+        )
+        url = reverse("loans:pawn_party_statement", args=[loan.borrower_id])
+
+        earlier = self.client.get(url, {"as_of": "2026-08-04"})
+        included = self.client.get(url, {"as_of": "2026-08-05"})
+
+        self.assertNotContains(earlier, f"Event #{future.pk}")
+        self.assertContains(included, f"Event #{future.pk}")
+        self.assertContains(included, "CURRENT")
+        self.assertContains(included, "PENDING")
 
     def test_essential_pdf_routes_use_workspace_scoped_immutable_sources(self):
         license, series = self._configured_setup()

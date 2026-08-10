@@ -45,6 +45,19 @@ class PawnLoanReconciliationIssue:
 
 
 @dataclass(frozen=True)
+class PawnLoanEventReportRow:
+    event: object
+    activity: str
+    amount: object
+    principal: Decimal
+    interest: Decimal
+    fees: Decimal
+    correction_status: str
+    correction_event_id: int | None
+    delivery_status: str
+
+
+@dataclass(frozen=True)
 class PawnLoanReportBundle:
     as_of_date: date
     portfolio: tuple[PawnLoanPortfolioRow, ...]
@@ -103,6 +116,29 @@ class PawnLoanReportBundle:
         return tuple(event for event in self.repayments if event.effective_date == self.as_of_date)
 
     @property
+    def daily_activity(self):
+        rows = []
+        for row in self.portfolio:
+            for event in row.loan.accounting_events.all():
+                if event.effective_date != self.as_of_date:
+                    continue
+                original_kind = (event.payload.get("reversal") or {}).get(
+                    "original_event_kind"
+                )
+                if event.event_kind in {
+                    TransactionKind.DISBURSAL.value,
+                    TransactionKind.REPAYMENT.value,
+                } or (
+                    event.event_kind == TransactionKind.REVERSAL.value
+                    and original_kind in {
+                        TransactionKind.DISBURSAL.value,
+                        TransactionKind.REPAYMENT.value,
+                    }
+                ):
+                    rows.append(_event_report_row(event, as_of_date=self.as_of_date))
+        return tuple(sorted(rows, key=lambda row: row.event.pk))
+
+    @property
     def daily_releases(self):
         return tuple(row for row in self.releases if row.effective_date == self.as_of_date)
 
@@ -147,6 +183,13 @@ class PawnPartyStatement:
     @property
     def total_due(self):
         return sum((row.balance.total_due for row in self.loans if row.balance), ZERO)
+
+    @property
+    def transaction_rows(self):
+        return tuple(
+            _event_report_row(event, as_of_date=self.as_of_date)
+            for event in self.transactions
+        )
 
 
 def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
@@ -278,7 +321,12 @@ def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartySta
         dea_inspector=dea_facade.inspect_pawn_loan_accounting_reference,
     )
     transactions = tuple(sorted(
-        (event for row in report.portfolio for event in row.loan.accounting_events.all()),
+        (
+            event
+            for row in report.portfolio
+            for event in row.loan.accounting_events.all()
+            if event.effective_date <= as_of_date
+        ),
         key=lambda event: (event.effective_date, event.pk),
     ))
     return PawnPartyStatement(party, as_of_date, report.portfolio, transactions)
@@ -686,6 +734,69 @@ def _portfolio_status(loan, balance):
     return "ACTIVE"
 
 
+def _event_report_row(event, *, as_of_date=None):
+    reversal = event.payload.get("reversal") or {}
+    values = event.payload.get("values") or {}
+    sign = Decimal("-1") if event.event_kind == TransactionKind.REVERSAL.value else Decimal("1")
+    if event.event_kind == TransactionKind.REVERSAL.value:
+        original_kind = reversal.get("original_event_kind", "EVENT")
+        activity = f"Reversal of {str(original_kind).replace('_', ' ').title()}"
+        correction_status = "COMPENSATION"
+        correction_event_id = event.reversal_of_id
+        amount = -_report_event_amount(event, original_kind=original_kind)
+    else:
+        display = getattr(event, "get_event_kind_display", None)
+        activity = (
+            display()
+            if display
+            else str(event.event_kind).replace("_", " ").title()
+        )
+        try:
+            reversed_by = event.reversed_by_event
+        except (AttributeError, ObjectDoesNotExist):
+            reversed_by = None
+        if (
+            reversed_by is not None
+            and as_of_date is not None
+            and reversed_by.effective_date > as_of_date
+        ):
+            reversed_by = None
+        correction_status = "REVERSED" if reversed_by else "CURRENT"
+        correction_event_id = reversed_by.pk if reversed_by else None
+        amount = _report_event_amount(event)
+    try:
+        delivery_status = event.outbox.status
+    except (AttributeError, ObjectDoesNotExist):
+        delivery_status = "MISSING"
+    return PawnLoanEventReportRow(
+        event=event,
+        activity=activity,
+        amount=amount,
+        principal=sign * Decimal(str(values.get("principal", "0"))),
+        interest=sign * Decimal(str(values.get("interest", "0"))),
+        fees=sign * Decimal(str(values.get("fees", "0"))),
+        correction_status=correction_status,
+        correction_event_id=correction_event_id,
+        delivery_status=delivery_status,
+    )
+
+
+def _report_event_amount(event, *, original_kind=None):
+    kind = original_kind or event.event_kind
+    values = event.payload.get("values") or {}
+    if kind == TransactionKind.DISBURSAL.value:
+        return Decimal(str(values.get("principal", "0")))
+    if kind == TransactionKind.REPAYMENT.value:
+        received = (event.payload.get("repayment") or {}).get("amount_received")
+        if received is not None:
+            return Decimal(str(received))
+        return sum(
+            (Decimal(str(values.get(key, "0"))) for key in ("principal", "interest", "fees")),
+            ZERO,
+        )
+    return ZERO
+
+
 def _optional_policy(loan):
     try:
         return loan.policy_snapshot
@@ -706,6 +817,7 @@ def _issue(code, loan, message, *, severity="ERROR", **kwargs):
 __all__ = [
     "PawnLoanPortfolioRow",
     "PawnLoanReconciliationIssue",
+    "PawnLoanEventReportRow",
     "PawnLoanReportBundle",
     "LoanLicenseExpiryRow",
     "PawnPartyStatement",

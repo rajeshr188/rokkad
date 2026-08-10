@@ -128,8 +128,8 @@ Do not use database/admin shortcuts.
 | P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | **Accepted 2026-08-10 by Owner** |
 | P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | **Accepted 2026-08-10** |
 | P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | **Accepted 2026-08-10** |
-| P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | **Active** |
-| P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | Pending |
+| P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | **Accepted 2026-08-10** |
+| P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | **Active** |
 | P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | REPLACE | Pending |
 
 For each scenario record:
@@ -427,6 +427,37 @@ append-only evidence. Three focused mode/custody tests and one operator UI test
 pass, together with the existing DEA newest-first regression.
 Owner execution of later-event rejection followed by newest-first correction
 and balance/custody inspection remains the P10 acceptance gate.
+
+### P10 Acceptance
+
+The workspace Owner accepted P10 on 2026-08-10. This accepts strict newest-
+first correction, immutable reason/confirmation evidence, mode-aware DEA or
+deferred compensation, and resulting balance/custody explanation. P11 daily
+and regulatory output verification is now active.
+
+### P11 Software Evidence
+
+The existing canonical report selector remains the sole source for screen,
+CSV, XLSX, and PDF output. The report hub now exposes all three formats for
+each required projection: active loans, daily activity, interest due, overdue,
+release/renewal, storage inventory, and license expiry. It also links the
+license register, available loan tickets, every repayment receipt, release
+memo/Form H equivalent, renewal agreement, and Loans-owned Party statement.
+
+Daily activity and Party statements now expose event identity, delivery state,
+and `CURRENT`, `REVERSED`, or `COMPENSATION` evidence with the linked correction
+event. Compensations use a negative displayed amount; originals remain visible.
+Party statement transactions are bounded by the selected as-of date, so later
+events and later corrections cannot leak into an earlier statement. Release
+and renewal exports now carry completed/reversed status rather than presenting
+a corrected document as current.
+
+Sixteen selector/export tests and three focused tenant UI/document tests pass.
+The existing essential PDF route test proves tenant-scoped loan ticket,
+repayment receipt, and release memo bytes with verification identity. Owner
+inspection of all report families, representative exports, Party statement,
+license register, renewal agreement, notices, and intended physical print
+outputs remains the P11 acceptance gate.
 
 ## Physical Document Matrix
 

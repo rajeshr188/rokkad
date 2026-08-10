@@ -10,8 +10,17 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
-- P9 was accepted by the workspace Owner on 2026-08-10. P10 operator correction
-  is active. Loan detail orders business events newest-first, exposes correction
+- P10 was accepted by the workspace Owner on 2026-08-10. P11 daily and
+  regulatory outputs are active. The report hub now exposes CSV, XLSX, and PDF
+  for every required projection plus direct license-register, available ticket,
+  repayment-receipt, release-memo/Form H, renewal-agreement, and Party-statement
+  navigation. Daily and Party histories expose event, delivery, original/
+  compensation linkage, and corrected status; Party transactions now honor the
+  selected as-of date. Release/renewal exports include completion/reversal
+  status. Sixteen selector/export tests and three focused tenant UI/document
+  tests pass. P11 awaits Owner report/export/document inspection.
+
+- P10's accepted operator-readiness slice orders business events newest-first, exposes correction
   only on the newest eligible event, explains later-event dependencies and
   preserves original-to-compensation evidence. The preflight shows source
   amounts, mode, delivery, and custody and requires an immutable administrator
@@ -21,7 +30,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   change. Deferred full-release correction restores active lifecycle and
   in-vault custody through append-only evidence. Three focused mode/custody
   tests, the operator UI test, and the existing DEA newest-first regression
-  pass. P10 awaits Owner correction and resulting balance/custody acceptance.
+  pass.
 
 - P9's accepted operator-readiness slice exposes frozen,
   observed, pending, discrepancy, and unresolved-blocker evidence; disables

@@ -1,5 +1,6 @@
 import io
 from datetime import date
+from decimal import Decimal
 from types import SimpleNamespace
 
 from django.test import SimpleTestCase
@@ -11,6 +12,7 @@ from apps.tenant_apps.loans.services import (
     PawnLoanReportDataset,
     PawnLoanReportExportError,
     build_party_statement_dataset,
+    build_pawn_loan_report_dataset,
     render_report_dataset,
 )
 
@@ -63,6 +65,37 @@ class PawnLoanReportExportTests(SimpleTestCase):
         self.assertEqual(dataset.rows[0][0], "LOAN POSITION")
         self.assertEqual(dataset.rows[1][0], "TRANSACTION")
         self.assertEqual(dataset.rows[1][3], "Repayment")
+        self.assertIn("Correction status", dataset.columns)
+        self.assertEqual(dataset.rows[1][9], "CURRENT")
+        self.assertEqual(dataset.rows[1][7], Decimal("250.00"))
+
+    def test_daily_export_retains_correction_and_delivery_evidence(self):
+        event = SimpleNamespace(
+            pk=22,
+            effective_date=date(2026, 8, 3),
+            loan=SimpleNamespace(
+                loan_number="PL-A-00001",
+                borrower=SimpleNamespace(display_name="Asha Devi"),
+            ),
+        )
+        report = SimpleNamespace(
+            as_of_date=date(2026, 8, 3),
+            daily_activity=(
+                SimpleNamespace(
+                    event=event,
+                    activity="Reversal of Repayment",
+                    amount="-500.00",
+                    correction_status="COMPENSATION",
+                    correction_event_id=21,
+                    delivery_status="PENDING",
+                ),
+            ),
+        )
+
+        dataset = build_pawn_loan_report_dataset(report, "daily")
+
+        self.assertIn("Correction status", dataset.columns)
+        self.assertEqual(dataset.rows[0][6:], ("COMPENSATION", 21, "PENDING"))
 
     def test_unknown_export_format_is_rejected(self):
         with self.assertRaises(PawnLoanReportExportError):

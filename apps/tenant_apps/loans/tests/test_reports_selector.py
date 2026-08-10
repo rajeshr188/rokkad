@@ -72,6 +72,36 @@ class PawnLoanReportsSelectorTests(SimpleTestCase):
         self.assertEqual(report.storage_inventory, tuple(loan.collateral_items.all()))
         self.assertEqual(report.license_expiry, (license_row,))
 
+    def test_daily_activity_exposes_original_and_compensating_correction_evidence(self):
+        disbursal = self._event(1, TransactionKind.DISBURSAL, principal="1000")
+        repayment = self._event(2, TransactionKind.REPAYMENT, principal="200")
+        reversal = self._event(3, TransactionKind.REVERSAL, principal="200")
+        for event in (disbursal, repayment, reversal):
+            event.effective_date = self.as_of
+        reversal.reversal_of_id = repayment.pk
+        reversal.reversal_of = repayment
+        reversal.payload["reversal"] = {
+            "original_event_kind": TransactionKind.REPAYMENT.value,
+            "reason": "Duplicate receipt",
+        }
+        repayment.reversed_by_event = reversal
+        loan = self._loan(events=(disbursal, repayment, reversal))
+
+        report = build_pawn_loan_reports(
+            (loan,),
+            as_of_date=self.as_of,
+            dea_inspector=self._matching_evidence,
+        )
+
+        self.assertEqual(
+            [row.correction_status for row in report.daily_activity],
+            ["CURRENT", "REVERSED", "COMPENSATION"],
+        )
+        self.assertEqual(report.daily_activity[1].correction_event_id, reversal.pk)
+        self.assertEqual(report.daily_activity[2].correction_event_id, repayment.pk)
+        self.assertEqual(report.daily_activity[2].amount, Decimal("-200"))
+        self.assertEqual(report.daily_activity[2].principal, Decimal("-200"))
+
     def test_missing_and_failed_accounting_are_categorized(self):
         failed = self._event(
             2,

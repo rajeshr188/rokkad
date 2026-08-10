@@ -16,6 +16,7 @@ from .release_readiness import (
     get_pawn_loan_release_readiness,
 )
 from .reports import (
+    PawnLoanEventReportRow,
     PawnLoanPortfolioRow,
     PawnLoanReconciliationIssue,
     PawnLoanReportBundle,
@@ -82,6 +83,7 @@ __all__ = [
     "calculate_pawn_loan_release_readiness",
     "get_pawn_loan_release_readiness",
     "PawnLoanPortfolioRow",
+    "PawnLoanEventReportRow",
     "PawnLoanReconciliationIssue",
     "PawnLoanReportBundle",
     "PawnPartyStatement",

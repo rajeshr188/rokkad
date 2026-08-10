@@ -8,8 +8,16 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
-P9 was accepted by the workspace Owner on 2026-08-10. P10 operator correction
-is active. Corrections are administrator-only, reason-required, immutable, and
+P10 was accepted by the workspace Owner on 2026-08-10. P11 daily and regulatory
+outputs are active. All required report screens and CSV/XLSX/PDF exports must
+use the same tenant-scoped canonical selector. Daily activity and Party
+statements retain original and compensating events with correction links and
+honest delivery state. Party transaction history must not include an event
+after the selected as-of date. Required documents remain typed immutable
+projections; the report hub only routes operators to them and never recalculates
+or mutates their evidence.
+
+P10 corrections are administrator-only, reason-required, immutable, and
 strictly newest-first. In `DEA`, only a `POSTED` source may be reversed and DEA
 must receive the compensation. In `DEFERRED`, only an intact `PENDING` source
 may receive a `PENDING` compensating source event; it must carry no fabricated
