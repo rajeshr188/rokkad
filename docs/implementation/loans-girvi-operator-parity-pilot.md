@@ -127,8 +127,8 @@ Do not use database/admin shortcuts.
 | P6 | Complete full release | complete settlement, all remaining items returned, signatures, Form H/release memo, loan closed | PORT | **Accepted 2026-08-10 by Owner** |
 | P7 | Release and renew | old loan closed, selected item returned, retained/additional items on newly numbered loan, renewal agreement | REPLACE | **Accepted 2026-08-10 by Owner** |
 | P8 | Handle overdue communication | due/overdue report, notice source, idempotent delivery/retry evidence | PORT | **Accepted 2026-08-10** |
-| P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | **Active** |
-| P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | Pending |
+| P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | **Accepted 2026-08-10** |
+| P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | **Active** |
 | P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | Pending |
 | P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | REPLACE | Pending |
 
@@ -394,6 +394,39 @@ reference, and failure reason; only a failed delivery exposes Retry. Nine
 focused collateral media/storage/verification tests and eight notice tests
 pass. Owner execution of the found/misplaced, blocked-operation, correction,
 and alert-delivery walkthrough remains the P9 acceptance gate.
+
+### P9 Acceptance
+
+The workspace Owner accepted P9 on 2026-08-10. This accepts the frozen count,
+found/misplaced recording, unresolved workflow blocking, append-only resolution,
+and discrepancy alert evidence. P10 operator correction is now active.
+
+### P10 Software Evidence
+
+Loan detail now orders business events newest-first and exposes a correction
+action only on the newest eligible unreversed event. Every older source explains
+which later event must be corrected first; already-corrected sources retain a
+link to their compensating event. Auction and renewal events continue to direct
+operators to their composite workflows so custody and both contracts cannot be
+corrected separately.
+
+The correction preflight shows accounting mode, source delivery state, newest
+unreversed identity, immutable source amounts, and current collateral custody.
+It requires an explicit administrator confirmation and immutable reason. After
+confirmation, loan detail exposes the recalculated balance and custody alongside
+the original event, compensating event, reason, actor, and delivery disposition.
+
+Mode handling follows the accepted accounting-deferral boundary. A `POSTED`
+source is reversible only in `DEA`, where the voucher is compensated through
+the facade. A `PENDING` source is reversible only in `DEFERRED`, where Loans
+appends a `PENDING` compensating source event without fabricating a DEA voucher
+or journal identity. A posted source cannot be domain-only reversed after a
+workspace is changed to deferred. Deferred full-release correction also
+restores the active lifecycle and every returned item's in-vault custody using
+append-only evidence. Three focused mode/custody tests and one operator UI test
+pass, together with the existing DEA newest-first regression.
+Owner execution of later-event rejection followed by newest-first correction
+and balance/custody inspection remains the P10 acceptance gate.
 
 ## Physical Document Matrix
 

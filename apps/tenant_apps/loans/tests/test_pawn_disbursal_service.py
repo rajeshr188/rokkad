@@ -1085,6 +1085,81 @@ class PawnDisbursalServiceTests(TenantTestCase):
             2,
         )
 
+    def test_deferred_reversal_appends_pending_compensation_without_claiming_dea(self):
+        PreferenceService.set_workspace(
+            self.tenant,
+            "accounting__integration_mode",
+            "DEFERRED",
+        )
+        self._seed_dea_disbursal_setup()
+        with self.captureOnCommitCallbacks(execute=True):
+            disbursal_result = disburse_pawn_loan(
+                self.loan.pk,
+                effective_date=date(2026, 8, 3),
+                actor=self.actor,
+            )
+        disbursal_result.outbox.refresh_from_db()
+        self.assertEqual(
+            disbursal_result.outbox.status, LoanOutboxStatus.PENDING.value
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ):
+            repayment = record_pawn_loan_repayment(
+                self.loan.pk,
+                amount=Decimal("1000.00"),
+                request_key="deferred-reversal-target",
+                actor=self.actor,
+            )
+        repayment.outbox.refresh_from_db()
+        self.assertEqual(repayment.outbox.status, LoanOutboxStatus.PENDING.value)
+        original_payload = dict(repayment.accounting_event.payload)
+
+        with self.assertRaisesRegex(PawnReversalError, "later event"):
+            reverse_pawn_loan_event(
+                self.loan.accounting_events.get(
+                    event_kind=TransactionKind.DISBURSAL.value
+                ).pk,
+                reason="Wrong correction order",
+                actor=self.tenant.owner,
+            )
+        result = reverse_pawn_loan_event(
+            repayment.accounting_event.pk,
+            reason="Receipt entered twice during pilot",
+            actor=self.tenant.owner,
+        )
+        result.outbox.refresh_from_db()
+        repayment.accounting_event.refresh_from_db()
+        self.assertEqual(result.outbox.status, LoanOutboxStatus.PENDING.value)
+        self.assertIsNone(result.outbox.dea_voucher_id)
+        self.assertEqual(repayment.accounting_event.payload, original_payload)
+        self.assertEqual(
+            result.reversal_event.payload["reversal"]["reason"],
+            "Receipt entered twice during pilot",
+        )
+        balance = get_pawn_loan_balance(
+            self.loan.pk, as_of_date=date(2026, 8, 3)
+        )
+        self.assertEqual(balance.principal_outstanding, Decimal("50000.00"))
+
+    def test_posted_source_cannot_be_domain_only_reversed_after_mode_is_deferred(self):
+        self._activate_loan()
+        PreferenceService.set_workspace(
+            self.tenant,
+            "accounting__integration_mode",
+            "DEFERRED",
+        )
+        disbursal = self.loan.accounting_events.get(
+            event_kind=TransactionKind.DISBURSAL.value
+        )
+        with self.assertRaisesRegex(PawnReversalError, "DEA effect"):
+            reverse_pawn_loan_event(
+                disbursal.pk,
+                reason="Unsafe domain-only correction",
+                actor=self.tenant.owner,
+            )
+
     def test_accrual_and_capitalization_reverse_in_strict_order(self):
         policy = resolve_policy(
             workspace_defaults=WorkspacePolicyDefaults(
@@ -1298,6 +1373,22 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertTrue(
             all(
                 item.custody_state == CollateralCustodyState.WITH_CUSTOMER.value
+                for item in self.loan.collateral_items.all()
+            )
+        )
+        corrected = reverse_pawn_loan_event(
+            released.accounting_event.pk,
+            reason="Release recorded before customer handoff",
+            actor=self.tenant.owner,
+        )
+        corrected.outbox.refresh_from_db()
+        self.loan.refresh_from_db()
+        self.assertEqual(corrected.outbox.status, LoanOutboxStatus.PENDING.value)
+        self.assertIsNone(corrected.outbox.dea_voucher_id)
+        self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
+        self.assertTrue(
+            all(
+                item.custody_state == CollateralCustodyState.IN_VAULT.value
                 for item in self.loan.collateral_items.all()
             )
         )

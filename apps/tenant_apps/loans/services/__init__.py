@@ -79,7 +79,9 @@ from .pawn_interest import (
 )
 from .pawn_reversal import (
     PawnReversalError,
+    PawnReversalReadiness,
     PawnReversalResult,
+    assess_pawn_loan_event_reversal,
     reverse_pawn_loan_event,
 )
 from .pawn_release import (
@@ -317,7 +319,9 @@ __all__ = (
     "finalize_pawn_loan_accrual",
     "preview_pawn_loan_accruals",
     "PawnReversalError",
+    "PawnReversalReadiness",
     "PawnReversalResult",
+    "assess_pawn_loan_event_reversal",
     "reverse_pawn_loan_event",
     "PawnFullReleasePreview",
     "PawnFullReleaseResult",

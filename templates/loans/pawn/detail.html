@@ -45,5 +45,24 @@
 <h2 class="h5">Audit trail</h2><div class="card mb-4"><ul class="list-group list-group-flush">{% for event in loan.change_log.all %}<li class="list-group-item"><strong>{{ event.get_event_kind_display }}</strong><div class="small text-muted">{{ event.created_at }}{% if event.actor %} by {{ event.actor }}{% endif %}</div></li>{% endfor %}</ul></div>
 
 {% if loan.releases.exists %}<h2 class="h5">Release documents</h2><div class="card mb-4"><ul class="list-group list-group-flush">{% for release in loan.releases.all %}<li class="list-group-item d-flex justify-content-between align-items-center"><div><strong>{{ release.release_number }}</strong><div class="small text-muted">{{ release.effective_date }} · {% if release.is_full_release %}Full{% else %}Partial{% endif %} release · {{ release.settlement_amount }}</div></div><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_release_memo_pdf' release.pk %}">Release memo PDF</a></li>{% endfor %}</ul></div>{% endif %}
-<h2 class="h5" id="accounting-delivery">Accounting delivery</h2><div class="card"><ul class="list-group list-group-flush">{% for row in accounting_rows %}<li class="list-group-item d-flex justify-content-between gap-3"><div><strong>{{ row.event.get_event_kind_display }}</strong> <span class="badge text-bg-secondary">{{ row.outbox.get_status_display }}</span><div class="small text-muted">Effective {{ row.event.effective_date }} · Event #{{ row.event.pk }}</div>{% if row.outbox.last_error %}<div class="small text-danger">{{ row.outbox.last_error }}</div>{% endif %}</div><div class="d-flex gap-2">{% if row.event.event_kind == 'REPAYMENT' %}<a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_repayment_receipt_pdf' loan.pk row.event.pk %}">Receipt PDF</a>{% endif %}{% if row.can_retry %}<form method="post" action="{% url 'loans:pawn_outbox_retry' row.outbox.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">Retry posting</button></form>{% endif %}{% if row.can_reverse %}<a class="btn btn-sm btn-outline-danger" href="{% url 'loans:pawn_loan_reverse_event' loan.pk row.event.pk %}">Reverse</a>{% endif %}</div></li>{% empty %}<li class="list-group-item text-muted">No accounting events yet.</li>{% endfor %}</ul></div>
+<h2 class="h5" id="accounting-delivery">Business events and accounting delivery</h2>
+<div class="card"><ul class="list-group list-group-flush">
+{% for row in accounting_rows %}
+  <li class="list-group-item d-flex justify-content-between gap-3">
+    <div>
+      <strong>{{ row.event.get_event_kind_display }}</strong> <span class="badge text-bg-secondary">{{ row.outbox.get_status_display }}</span>
+      <div class="small text-muted">Effective {{ row.event.effective_date }} &middot; Event #{{ row.event.pk }} &middot; {{ row.accounting_mode }} mode</div>
+      {% if row.reversed_event %}<div class="small text-warning">Corrected by compensating event #{{ row.reversed_event.pk }}. Original evidence retained.</div>
+      {% elif row.event.event_kind == 'REVERSAL' %}<div class="small text-warning">Compensates event #{{ row.event.reversal_of_id }} &middot; reason: {{ row.event.payload.reversal.reason }}</div>
+      {% elif row.reversal_blocker and can_administer %}<div class="small text-muted">{{ row.reversal_blocker }}</div>{% endif %}
+      {% if row.outbox.last_error %}<div class="small text-danger">{{ row.outbox.last_error }}</div>{% endif %}
+    </div>
+    <div class="d-flex gap-2">
+      {% if row.event.event_kind == 'REPAYMENT' %}<a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_repayment_receipt_pdf' loan.pk row.event.pk %}">Receipt PDF</a>{% endif %}
+      {% if row.can_retry %}<form method="post" action="{% url 'loans:pawn_outbox_retry' row.outbox.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">Retry posting</button></form>{% endif %}
+      {% if row.can_reverse %}<a class="btn btn-sm btn-outline-danger" href="{% url 'loans:pawn_loan_reverse_event' loan.pk row.event.pk %}">Correct newest event</a>{% endif %}
+    </div>
+  </li>
+{% empty %}<li class="list-group-item text-muted">No business events yet.</li>{% endfor %}
+</ul></div>
 {% endblock %}

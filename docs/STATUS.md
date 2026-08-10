@@ -10,16 +10,26 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
-- P8 was accepted by the workspace Owner on 2026-08-10. P9 physical inventory
-  verification is active. Its operator-readiness slice exposes frozen,
+- P9 was accepted by the workspace Owner on 2026-08-10. P10 operator correction
+  is active. Loan detail orders business events newest-first, exposes correction
+  only on the newest eligible event, explains later-event dependencies and
+  preserves original-to-compensation evidence. The preflight shows source
+  amounts, mode, delivery, and custody and requires an immutable administrator
+  reason plus explicit confirmation. DEA mode remains posted-source-only;
+  deferred mode may compensate only intact pending sources and creates no fake
+  DEA identifiers. A posted source cannot be domain-only reversed after a mode
+  change. Deferred full-release correction restores active lifecycle and
+  in-vault custody through append-only evidence. Three focused mode/custody
+  tests, the operator UI test, and the existing DEA newest-first regression
+  pass. P10 awaits Owner correction and resulting balance/custody acceptance.
+
+- P9's accepted operator-readiness slice exposes frozen,
   observed, pending, discrepancy, and unresolved-blocker evidence; disables
   completion while expected items remain; provides a found-at-expected-location
   shortcut; and displays immutable resolution and compensation evidence. Each
   discrepancy now has one stable Owner-alert identity, with joined Notify job,
   attempt, failure, provider, and failed-only retry state. Nine focused
-  collateral media/storage/verification tests and eight notice tests pass. P9
-  awaits Owner execution of the found/misplaced, blocked-operation, correction,
-  and alert-delivery walkthrough.
+  collateral media/storage/verification tests and eight notice tests pass.
 
 - P8's accepted operator-readiness slice links the current
   due/overdue report directly to preselected Interest Due or Overdue notices,

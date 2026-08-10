@@ -73,6 +73,24 @@
       <div class="alert alert-warning">Event #{{ accounting_event.pk }}: {{ accounting_event.get_event_kind_display }} on {{ accounting_event.effective_date }}</div>
     {% endif %}
 
+    {% if reversal_readiness %}
+      <div class="card mb-3">
+        <div class="card-header">Correction preflight</div>
+        <div class="card-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4"><div class="small text-muted">Accounting mode</div><strong>{{ reversal_readiness.accounting_mode }}</strong></div>
+            <div class="col-md-4"><div class="small text-muted">Source delivery</div>{{ accounting_event.outbox.get_status_display }}</div>
+            <div class="col-md-4"><div class="small text-muted">Newest unreversed event</div>#{{ reversal_readiness.latest_event_id|default:"None" }}</div>
+          </div>
+          {% if reversal_readiness.can_reverse %}<div class="alert alert-success py-2">This event is currently the next safe correction target. Confirmation will append an exact compensating event.</div>{% else %}<div class="alert alert-danger py-2">{{ reversal_readiness.blocker }}</div>{% endif %}
+          {% if reversal_values %}<div class="small fw-semibold mb-2">Immutable source amounts</div><div class="table-responsive mb-3"><table class="table table-sm mb-0"><tbody>{% for name, value in reversal_values %}<tr><th>{{ name|title }}</th><td>{{ value }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+          <div class="small fw-semibold mb-2">Current custody before correction</div>
+          <ul class="small mb-0">{% for item in custody_items %}<li>{{ item.description }}: {{ item.get_custody_state_display }}{% if item.current_storage_location %} at {{ item.current_storage_location.path_label }}{% endif %}</li>{% empty %}<li>No collateral items.</li>{% endfor %}</ul>
+          <div class="small text-muted mt-2">After confirmation, return to the loan detail to verify the resulting balance, lifecycle, custody, original event, compensating event, reason, actor, and delivery state.</div>
+        </div>
+      </div>
+    {% endif %}
+
     {% if accounting_readiness_error %}
       <div class="alert alert-danger"><strong>Accounting readiness could not be checked.</strong> {{ accounting_readiness_error }}</div>
     {% elif accounting_readiness and not accounting_readiness.ready %}
@@ -97,7 +115,7 @@
           <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>
         {% endif %}
       {% endfor %}
-      <div class="d-flex gap-2">{% if supports_preview %}<button class="btn btn-outline-primary" type="submit" name="action" value="preview">{{ preview_action_label|default:"Preview" }}</button>{% endif %}<button class="btn btn-primary" type="submit" name="action" value="confirm">{{ action_label }}</button><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a></div>
+      <div class="d-flex gap-2">{% if supports_preview %}<button class="btn btn-outline-primary" type="submit" name="action" value="preview">{{ preview_action_label|default:"Preview" }}</button>{% endif %}<button class="btn btn-primary" type="submit" name="action" value="confirm" {% if reversal_readiness and not reversal_readiness.can_reverse %}disabled{% endif %}>{{ action_label }}</button><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a></div>
     </div></form>
   </div>
 </div>

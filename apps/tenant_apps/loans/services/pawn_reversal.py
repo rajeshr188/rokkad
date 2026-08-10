@@ -13,6 +13,9 @@ from apps.tenant_apps.loans.domain import (
     TransactionKind,
 )
 from apps.tenant_apps.loans.integrations import reversal_payload
+from apps.tenant_apps.loans.integrations.accounting_policy import (
+    get_accounting_integration_mode,
+)
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     PawnLoanAccountingEvent,
@@ -56,6 +59,72 @@ class PawnReversalResult:
     already_reversed: bool = False
     release_reversal: PawnLoanReleaseReversal | None = None
     catch_up_reversal_event: PawnLoanAccountingEvent | None = None
+
+
+@dataclass(frozen=True)
+class PawnReversalReadiness:
+    can_reverse: bool
+    accounting_mode: str
+    latest_event_id: int | None
+    blocker: str = ""
+
+
+def assess_pawn_loan_event_reversal(
+    original: PawnLoanAccountingEvent,
+    *,
+    latest_event_id: int | None = None,
+    allow_auction_recovery: bool = False,
+    allow_renewal: bool = False,
+) -> PawnReversalReadiness:
+    """Explain whether this immutable event is the next safe correction target."""
+    mode = get_accounting_integration_mode(original.loan.workspace)
+    if original.event_kind not in REVERSIBLE_EVENT_KINDS:
+        return PawnReversalReadiness(False, mode, latest_event_id, "This event kind cannot be reversed.")
+    if original.event_kind == TransactionKind.AUCTION_RECOVERY.value and not allow_auction_recovery:
+        return PawnReversalReadiness(
+            False, mode, latest_event_id,
+            "Use the auction reversal workflow so recovery and custody are corrected together.",
+        )
+    if original.event_kind in {
+        TransactionKind.RENEWAL_SETTLEMENT.value,
+        TransactionKind.RENEWAL_OPENING.value,
+    } and not allow_renewal:
+        return PawnReversalReadiness(
+            False, mode, latest_event_id,
+            "Use the renewal reversal workflow so both loans and custody are corrected together.",
+        )
+    if _existing_reversal(original):
+        return PawnReversalReadiness(False, mode, latest_event_id, "This event is already reversed.")
+    if latest_event_id is None:
+        latest = (
+            original.loan.accounting_events.exclude(event_kind=TransactionKind.REVERSAL.value)
+            .filter(reversed_by_event__isnull=True)
+            .order_by("-effective_date", "-pk")
+            .first()
+        )
+        latest_event_id = latest.pk if latest else None
+    if latest_event_id != original.pk:
+        return PawnReversalReadiness(
+            False,
+            mode,
+            latest_event_id,
+            f"Reverse later event #{latest_event_id} first." if latest_event_id else "No unreversed source event remains.",
+        )
+    status = original.outbox.status
+    if mode == "DEFERRED" and status == LoanOutboxStatus.PENDING.value:
+        return PawnReversalReadiness(True, mode, latest_event_id)
+    if mode == "DEA" and status == LoanOutboxStatus.POSTED.value:
+        return PawnReversalReadiness(True, mode, latest_event_id)
+    if status == LoanOutboxStatus.POSTED.value:
+        blocker = (
+            "This source already has a DEA effect. Use a controlled DEA-enabled correction "
+            "so its voucher is reversed as well."
+        )
+    elif status == LoanOutboxStatus.PENDING.value:
+        blocker = "This event must finish DEA posting before it can be reversed."
+    else:
+        blocker = f"Resolve the {original.outbox.get_status_display().lower()} accounting delivery first."
+    return PawnReversalReadiness(False, mode, latest_event_id, blocker)
 
 
 @transaction.atomic
@@ -110,27 +179,17 @@ def reverse_pawn_loan_event(
                 else None
             ),
         )
-    if original.outbox.status != LoanOutboxStatus.POSTED.value:
-        raise PawnReversalError(
-            "Only a successfully delivered PawnLoan event can be reversed."
-        )
-
     try:
         assert_pawn_loan_financial_actions_allowed(original.loan_id)
     except Exception as exc:
         raise PawnReversalError(str(exc)) from exc
-    latest = (
-        original.loan.accounting_events.exclude(
-            event_kind=TransactionKind.REVERSAL.value
-        )
-        .filter(reversed_by_event__isnull=True)
-        .order_by("-effective_date", "-pk")
-        .first()
+    readiness = assess_pawn_loan_event_reversal(
+        original,
+        allow_auction_recovery=allow_auction_recovery,
+        allow_renewal=allow_renewal,
     )
-    if latest is None or latest.pk != original.pk:
-        raise PawnReversalError(
-            "Later dependent events must be reversed first in reverse chronological order."
-        )
+    if not readiness.can_reverse:
+        raise PawnReversalError(readiness.blocker)
 
     release = None
     custody_transitions = ()
@@ -272,9 +331,16 @@ def _validate_release_reversal(original):
             )
     catch_up = release.catch_up_accrual
     if catch_up and catch_up.accounting_event:
-        if catch_up.accounting_event.outbox.status != LoanOutboxStatus.POSTED.value:
+        catch_up_status = catch_up.accounting_event.outbox.status
+        mode = get_accounting_integration_mode(original.loan.workspace)
+        catch_up_ready = (
+            mode == "DEA" and catch_up_status == LoanOutboxStatus.POSTED.value
+        ) or (
+            mode == "DEFERRED" and catch_up_status == LoanOutboxStatus.PENDING.value
+        )
+        if not catch_up_ready:
             raise PawnReversalError(
-                "Release catch-up accrual must be delivered before reversal."
+                "Release catch-up accrual is not correction-ready in the current accounting mode."
             )
         if _existing_reversal(catch_up.accounting_event):
             raise PawnReversalError(

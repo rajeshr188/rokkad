@@ -8,8 +8,17 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
-P8 was accepted by the workspace Owner on 2026-08-10. P9 physical inventory
-verification is active. The operator screen must expose frozen/observed/pending
+P9 was accepted by the workspace Owner on 2026-08-10. P10 operator correction
+is active. Corrections are administrator-only, reason-required, immutable, and
+strictly newest-first. In `DEA`, only a `POSTED` source may be reversed and DEA
+must receive the compensation. In `DEFERRED`, only an intact `PENDING` source
+may receive a `PENDING` compensating source event; it must carry no fabricated
+DEA voucher or journal identity. Never domain-only reverse an already-posted
+source after the mode changes to deferred. Loan detail and preflight must expose
+the original, compensation, reason, actor, resulting balance/custody, and honest
+delivery disposition.
+
+P9's operator screen must expose frozen/observed/pending
 and blocker counts, keep completion unavailable until all expected items are
 observed, and show expected versus observed location plus immutable resolution
 and alert evidence. A verification discrepancy uses the stable request key

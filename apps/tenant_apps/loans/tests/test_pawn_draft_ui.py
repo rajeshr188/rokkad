@@ -14,7 +14,7 @@ from django_tenants.test.client import TenantClient
 
 from apps.configuration.services import PreferenceService
 from apps.orgs.models import Membership, Role
-from apps.tenant_apps.loans.domain import LoanDocumentKind
+from apps.tenant_apps.loans.domain import LoanDocumentKind, TransactionKind
 from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanNumberSequence,
@@ -30,6 +30,7 @@ from apps.tenant_apps.loans.models import (
     PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.services import record_loan_accounting_event
 
 
 @override_settings(
@@ -618,6 +619,90 @@ class PawnDraftUiTests(TenantTestCase):
             request_key="ui-repayment-1",
             actor=self.owner,
         )
+
+    def test_deferred_correction_ui_exposes_only_newest_event_and_requires_confirmation(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+        loan.refresh_from_db()
+        PreferenceService.set_workspace(
+            self.tenant, "accounting__integration_mode", "DEFERRED"
+        )
+        disbursal, _ = record_loan_accounting_event(
+            loan.pk,
+            event_kind=TransactionKind.DISBURSAL,
+            effective_date=date(2026, 8, 1),
+            payload={"values": {"principal": "10000.00"}},
+            actor=self.owner,
+        )
+        repayment, _ = record_loan_accounting_event(
+            loan.pk,
+            event_kind=TransactionKind.REPAYMENT,
+            effective_date=date(2026, 8, 2),
+            payload={
+                "values": {
+                    "principal": "1000.00",
+                    "interest": "0.00",
+                    "fees": "0.00",
+                }
+            },
+            actor=self.owner,
+        )
+        balance = SimpleNamespace(
+            principal_outstanding=Decimal("9000.00"),
+            interest_outstanding=Decimal("0.00"),
+            fees_outstanding=Decimal("0.00"),
+            total_due=Decimal("9000.00"),
+            posting_ready=True,
+            posting_blockers=(),
+        )
+        with (
+            patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
+            patch("apps.tenant_apps.loans.views.preview_pawn_loan_accruals", return_value=()),
+        ):
+            detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
+            action = self.client.get(
+                reverse(
+                    "loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk]
+                )
+            )
+
+        self.assertContains(detail, "Business events and accounting delivery")
+        self.assertContains(detail, "Correct newest event", count=1)
+        self.assertContains(detail, f"Reverse later event #{repayment.pk} first.")
+        self.assertNotContains(
+            detail,
+            reverse("loans:pawn_loan_reverse_event", args=[loan.pk, disbursal.pk]),
+        )
+        self.assertContains(action, "Correction preflight")
+        self.assertContains(action, "This event is currently the next safe correction target")
+        self.assertContains(action, "Accounting mode")
+        self.assertContains(action, "DEFERRED")
+
+        missing_confirmation = self.client.post(
+            reverse("loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk]),
+            {"reason": "Duplicate receipt"},
+        )
+        self.assertContains(missing_confirmation, "This field is required")
+        with patch(
+            "apps.tenant_apps.loans.views.get_pawn_loan_balance",
+            return_value=SimpleNamespace(total_due=Decimal("10000.00")),
+        ):
+            recorded = self.client.post(
+                reverse(
+                    "loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk]
+                ),
+                {"reason": "Duplicate receipt", "confirm_reversal": "on"},
+            )
+        self.assertRedirects(
+            recorded,
+            reverse("loans:pawn_loan_detail", args=[loan.pk]),
+            fetch_redirect_response=False,
+        )
+        reversal = repayment.reversed_by_event
+        self.assertEqual(reversal.payload["reversal"]["reason"], "Duplicate receipt")
+        self.assertEqual(reversal.outbox.status, "PENDING")
 
     def test_active_loan_notice_form_dispatches_service_owned_command(self):
         license, series = self._configured_setup()

@@ -243,6 +243,7 @@ from apps.tenant_apps.loans.services import (
     release_pawn_loan_in_full,
     reopen_pawn_loan,
     retry_failed_outbox_event,
+    assess_pawn_loan_event_reversal,
     reverse_pawn_loan_event,
     set_series_active,
     transfer_expired_draft_setup,
@@ -1788,14 +1789,15 @@ def pawn_loan_release_partial(request, pk):
 def pawn_loan_reverse_event(request, pk, event_pk):
     loan = _pawn_loan_for_workspace(request, pk)
     event = get_object_or_404(
-        PawnLoanAccountingEvent,
+        PawnLoanAccountingEvent.objects.select_related("outbox", "loan__workspace"),
         pk=event_pk,
         loan=loan,
     )
+    readiness = assess_pawn_loan_event_reversal(event)
     form = PawnReversalForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            reverse_pawn_loan_event(
+            result = reverse_pawn_loan_event(
                 event.pk,
                 reason=form.cleaned_data["reason"],
                 actor=request.user,
@@ -1803,15 +1805,33 @@ def pawn_loan_reverse_event(request, pk, event_pk):
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, "Reversal recorded and queued through DEA.")
+            balance = _safe_balance(loan)
+            disposition = (
+                "Accounting delivery is deferred."
+                if readiness.accounting_mode == "DEFERRED"
+                else "The compensating event is queued through DEA."
+            )
+            balance_text = (
+                f" Resulting Loans total due is {balance.total_due}." if balance else ""
+            )
+            messages.success(
+                request,
+                f"Reversal event #{result.reversal_event.pk} recorded.{balance_text} {disposition}",
+            )
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return _render_action(
         request,
         loan,
         form,
         f"Reverse {event.get_event_kind_display()}",
-        "Administrator-only. Later dependent events must be reversed first.",
-        {"accounting_event": event},
+        "Administrator-only. Correct events newest-first; the original evidence is never edited.",
+        {
+            "accounting_event": event,
+            "balance": _safe_balance(loan),
+            "reversal_readiness": readiness,
+            "reversal_values": (event.payload.get("values") or {}).items(),
+            "custody_items": loan.collateral_items.all(),
+        },
     )
 
 
@@ -1930,7 +1950,7 @@ def pawn_loan_auction_start(request, auction_pk):
 @loans_workspace_required
 def pawn_loan_auction_cancel(request, auction_pk):
     auction = _pawn_auction_for_workspace(request, auction_pk)
-    form = PawnReversalForm(request.POST or None)
+    form = PawnTransitionReasonForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
             cancel_pawn_loan_auction(
@@ -3491,30 +3511,39 @@ def _can_administer(request):
 
 
 def _accounting_rows(loan, *, can_administer):
+    events = tuple(
+        loan.accounting_events.select_related(
+            "outbox", "reversed_by_event", "loan__workspace"
+        ).order_by("-effective_date", "-pk")
+    )
+    latest_event_id = next(
+        (
+            event.pk
+            for event in events
+            if event.event_kind != TransactionKind.REVERSAL.value
+            and not hasattr(event, "reversed_by_event")
+        ),
+        None,
+    )
     rows = []
-    for event in loan.accounting_events.all():
+    for event in events:
         outbox = event.outbox
         try:
             reversed_event = event.reversed_by_event
         except PawnLoanAccountingEvent.DoesNotExist:
             reversed_event = None
+        readiness = assess_pawn_loan_event_reversal(
+            event, latest_event_id=latest_event_id
+        )
         rows.append(
             {
                 "event": event,
                 "outbox": outbox,
                 "can_retry": can_administer and outbox.status == LoanOutboxStatus.FAILED.value,
-                "can_reverse": (
-                    can_administer
-                    and outbox.status == LoanOutboxStatus.POSTED.value
-                    and event.event_kind
-                    not in {
-                        TransactionKind.REVERSAL.value,
-                        TransactionKind.AUCTION_RECOVERY.value,
-                        TransactionKind.RENEWAL_SETTLEMENT.value,
-                        TransactionKind.RENEWAL_OPENING.value,
-                    }
-                    and reversed_event is None
-                ),
+                "can_reverse": can_administer and readiness.can_reverse,
+                "reversal_blocker": readiness.blocker,
+                "reversed_event": reversed_event,
+                "accounting_mode": readiness.accounting_mode,
             }
         )
     return rows

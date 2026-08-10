@@ -942,7 +942,15 @@ class PawnFullReleaseForm(forms.Form):
 
 class PawnReversalForm(forms.Form):
     reason = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"})
+        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+        help_text="This reason becomes immutable correction evidence.",
+    )
+    confirm_reversal = forms.BooleanField(
+        label=(
+            "I confirm this is the newest unreversed event and understand that "
+            "the correction is compensating evidence, not an edit or deletion."
+        ),
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
 
 
