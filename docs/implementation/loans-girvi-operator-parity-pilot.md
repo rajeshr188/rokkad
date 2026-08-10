@@ -130,7 +130,7 @@ Do not use database/admin shortcuts.
 | P9 | Verify physical inventory | frozen expectation, found/misplaced observation, blocked transfer/release, reasoned correction, discrepancy notice | PORT | **Accepted 2026-08-10** |
 | P10 | Correct an operator mistake | later-dependency rejection, reverse chronological compensation, immutable reason and resulting balance/custody | REPLACE | **Accepted 2026-08-10** |
 | P11 | Produce daily/regulatory outputs | active, daily, interest, overdue, release/renewal, storage, license, Party reports plus required PDFs | PORT | **Accepted 2026-08-10** |
-| P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | REPLACE | **Active** |
+| P12 | Test permissions and isolation | ordinary staff denied Owner actions; unknown/cross-workspace source is not exposed | REPLACE | **Accepted 2026-08-10** |
 
 For each scenario record:
 
@@ -486,6 +486,13 @@ license sources all return the same `404` outcome as unknown identifiers. The
 complete nine-test collateral media/storage/verification gate remains green,
 along with the focused role-boundary and foreign-source tests. P12 awaits Owner
 acceptance of the role matrix; no schema migration is required.
+
+### P12 Acceptance
+
+The workspace Owner accepted P12 on 2026-08-10. All twelve Loans capability
+scenarios are accepted. Physical printer completion, backup/restore rehearsal,
+and the separate Girvi-retirement decision remain exit gates rather than
+unimplemented PawnLoan capability scenarios.
 
 ## Physical Document Matrix
 

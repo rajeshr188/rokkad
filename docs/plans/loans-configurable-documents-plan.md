@@ -434,7 +434,9 @@ byte-identical reprint matrix.
 
 ### LPD7: Versioned print profiles
 
-Status: accepted architecture; not implemented.
+Status: LPD7.1 runtime foundation implemented 2026-08-10; renderer cutover,
+issue provenance, UI, compatibility migration, diagnostics, and physical
+printer acceptance remain pending.
 
 Pre-pilot compatibility guard completed 2026-08-09: existing integrity
 diagnostics now reject active loan-ticket assignments that omit either the
@@ -454,6 +456,17 @@ partially migrate the LPD7 print-profile runtime.
   page-size, page-order, copy-label, background, and mandatory-content parity.
 - Extend integrity diagnostics, previews, issue detail, and the physical
   printer matrix for the resolved profile.
+
+LPD7.1 result: schema-v1 physical profile contracts now validate the six
+accepted A5/A4 simplex/duplex compositions, paper/orientation agreement,
+scaling policy, flip-edge guidance, and deterministic canonical hash. Tenant
+models and audited services provide immutable draft/publish/clone/retire
+revisions, workspace/Series assignment, and `Series -> Workspace -> built-in`
+resolution. Active pilot loan-ticket assignment still requires both Original
+and Duplicate fronts. Migration `loans.0037` adds this persistence. The current
+migration is applied across all six local tenant schemas and the seven focused
+tests pass. The current renderer deliberately continues using embedded layout
+composition until the compatibility and parity gate is implemented.
 
 Gate: one logical ticket layout can be issued through A5 and A4 profiles
 without cloning legal content; profile changes affect only future issues;

@@ -24,9 +24,11 @@ packaging, included copies, simplex/duplex ordering, orientation, scaling, and
 printer guidance. Every issue must record both immutable revision hashes and
 retain exact artifact bytes.
 
-This architecture is approved but not yet implemented. Existing `copy_mode`
-and `sheet` settings remain authoritative for published layouts until
-compatibility migration and parity tests pass.
+LPD7.1 now provides validated versioned profile persistence and deterministic
+`Series -> Workspace -> built-in` resolution. It does not yet drive rendering
+or official issue provenance. Existing `copy_mode` and `sheet` settings remain
+authoritative for published layouts until compatibility migration, parity
+tests, issue-profile evidence, and the physical printer gate pass.
 
 ## Integrity Gate
 

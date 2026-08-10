@@ -173,6 +173,165 @@ class LoanDocumentLayoutAssignment(models.Model):
         return super().save(*args, **kwargs)
 
 
+class LoanDocumentPrintProfile(models.Model):
+    workspace = models.ForeignKey(
+        "orgs.Company", on_delete=models.PROTECT,
+        related_name="loan_document_print_profiles",
+    )
+    document_type = models.CharField(max_length=32, choices=DOCUMENT_KIND_CHOICES)
+    name = models.CharField(max_length=100)
+    is_retired = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL,
+        related_name="loan_document_print_profiles_created",
+    )
+
+    class Meta:
+        ordering = ("document_type", "name", "pk")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "document_type", "name"),
+                name="loans_print_profile_name_uniq",
+            )
+        ]
+
+    def clean(self):
+        active = current_tenant_workspace_id()
+        if active and self.workspace_id != active:
+            raise ValidationError(
+                {"workspace": "Print profile workspace must match the active tenant."}
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class LoanDocumentPrintProfileRevision(models.Model):
+    class State(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        PUBLISHED = "PUBLISHED", "Published"
+        RETIRED = "RETIRED", "Retired"
+
+    profile = models.ForeignKey(
+        LoanDocumentPrintProfile, on_delete=models.PROTECT, related_name="revisions"
+    )
+    version = models.PositiveIntegerField()
+    state = models.CharField(
+        max_length=12, choices=State.choices, default=State.DRAFT, db_index=True
+    )
+    definition = models.JSONField(default=dict)
+    content_hash = models.CharField(max_length=64, blank=True)
+    validation_result = models.JSONField(default=dict, blank=True)
+    validated_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    retired_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL,
+        related_name="loan_document_print_profile_revisions_created",
+    )
+
+    class Meta:
+        ordering = ("profile_id", "version")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("profile", "version"), name="loans_print_rev_version_uniq"
+            ),
+            models.CheckConstraint(
+                condition=Q(version__gt=0), name="loans_print_rev_version_pos"
+            ),
+        ]
+
+    @property
+    def workspace_id(self):
+        return self.profile.workspace_id
+
+    def clean(self):
+        active = current_tenant_workspace_id()
+        if active and self.profile_id and self.profile.workspace_id != active:
+            raise ValidationError("Print profile revision must belong to the active tenant.")
+        if self.definition and self.profile_id:
+            if self.definition.get("document_type") != self.profile.document_type:
+                raise ValidationError(
+                    {"definition": "Print profile definition document type does not match."}
+                )
+        if self.pk:
+            previous = type(self).objects.filter(pk=self.pk).values(
+                "state", "definition", "content_hash"
+            ).first()
+            if previous and previous["state"] != self.State.DRAFT:
+                if (
+                    self.definition != previous["definition"]
+                    or self.content_hash != previous["content_hash"]
+                ):
+                    raise ValidationError("Published print profile revisions are immutable.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class LoanDocumentPrintProfileAssignment(models.Model):
+    workspace = models.ForeignKey(
+        "orgs.Company", on_delete=models.PROTECT,
+        related_name="loan_document_print_profile_assignments",
+    )
+    document_type = models.CharField(max_length=32, choices=DOCUMENT_KIND_CHOICES)
+    revision = models.ForeignKey(
+        LoanDocumentPrintProfileRevision,
+        on_delete=models.PROTECT,
+        related_name="assignments",
+    )
+    series = models.ForeignKey(
+        LoanSeries, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="document_print_profile_assignments",
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL,
+        related_name="loan_document_print_profile_assignments_created",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "document_type"),
+                condition=Q(is_active=True, series__isnull=True),
+                name="loans_print_assign_ws_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("workspace", "document_type", "series"),
+                condition=Q(is_active=True, series__isnull=False),
+                name="loans_print_assign_series_uniq",
+            ),
+        ]
+
+    def clean(self):
+        errors = {}
+        active = current_tenant_workspace_id()
+        if active and self.workspace_id != active:
+            errors["workspace"] = "Print profile assignment must match the active tenant."
+        if self.revision_id:
+            if self.revision.state != LoanDocumentPrintProfileRevision.State.PUBLISHED:
+                errors["revision"] = "Only published print profile revisions can be assigned."
+            elif (
+                self.revision.profile.workspace_id != self.workspace_id
+                or self.revision.profile.document_type != self.document_type
+            ):
+                errors["revision"] = "Assigned print profile scope does not match."
+        if self.series_id and self.series.license.workspace_id != self.workspace_id:
+            errors["series"] = "Assigned Series belongs to another workspace."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
 class LoanDocumentIssue(models.Model):
     class Kind(models.TextChoices):
         OFFICIAL = "OFFICIAL", "Official"

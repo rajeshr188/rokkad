@@ -99,6 +99,11 @@ from .documents import (
     PawnLoanDocumentService,
 )
 from .document_layouts import DocumentLayoutServiceError, LoanDocumentLayoutService
+from .print_profiles import (
+    LoanDocumentPrintProfileService,
+    PrintProfileServiceError,
+    ResolvedPrintProfile,
+)
 from .borrower_accounting import (
     PawnBorrowerAccountingSetupError,
     PawnBorrowerAccountingSetupResult,
@@ -335,6 +340,9 @@ __all__ = (
     "PawnLoanDocumentService",
     "DocumentLayoutServiceError",
     "LoanDocumentLayoutService",
+    "LoanDocumentPrintProfileService",
+    "PrintProfileServiceError",
+    "ResolvedPrintProfile",
     "PawnBorrowerAccountingSetupError",
     "PawnBorrowerAccountingSetupResult",
     "ensure_pawn_borrower_accounting",

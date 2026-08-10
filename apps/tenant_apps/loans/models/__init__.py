@@ -38,6 +38,9 @@ from .documents import (
     LoanDocumentLayout,
     LoanDocumentLayoutAssignment,
     LoanDocumentLayoutRevision,
+    LoanDocumentPrintProfile,
+    LoanDocumentPrintProfileAssignment,
+    LoanDocumentPrintProfileRevision,
 )
 from .funding import (
     FundingLoan,
@@ -101,6 +104,9 @@ __all__ = [
     "LoanDocumentLayout",
     "LoanDocumentLayoutAssignment",
     "LoanDocumentLayoutRevision",
+    "LoanDocumentPrintProfile",
+    "LoanDocumentPrintProfileAssignment",
+    "LoanDocumentPrintProfileRevision",
     "FundingLoan",
     "FundingLoanCancellation",
     "FundingLoanDraftCollateral",

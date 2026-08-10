@@ -8,8 +8,19 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
-P11 was accepted by the workspace Owner on 2026-08-10. P12 permission and
-isolation verification is active. Ordinary workspace members may perform the
+P12 was accepted by the workspace Owner on 2026-08-10. All twelve Loans
+capability scenarios are accepted. LPD7.1 is active: physical print profiles
+are versioned tenant evidence with immutable published revisions and `Series
+-> Workspace -> built-in` resolution. The six schema-v1 compositions cover A5
+and A4 Original/Duplicate simplex/duplex packaging. Active pilot ticket
+assignment must include both fronts. The existing layout `copy_mode`/`sheet`
+renderer remains authoritative until compatibility parity, issue profile
+provenance, diagnostics, UI, and physical printing pass; do not silently mix
+the new resolver into official issuance before those gates. Migration
+`loans.0037` is applied across all six local tenant schemas; the focused seven-
+test gate passes and `jcl1` retains zero document-integrity findings.
+
+Under P12, ordinary workspace members may perform the
 normal PawnLoan lifecycle but must be rejected before administrator-only
 auction/correction identifiers are resolved. Setup and corrections permit
 Owner/Admin; manual storage and physical verification remain Owner-only for
@@ -359,10 +370,11 @@ defines the target extraction: layouts retain logical copy identity, content,
 backgrounds, signatures, and mandatory evidence; immutable workspace print
 profiles own physical copy bundles, paper, imposition, page order,
 simplex/duplex, orientation, scaling, and printer guidance. Issues must snapshot
-the resolved profile revision/hash and exact PDF bytes. This is not implemented
-yet. Existing published layouts and embedded `copy_mode`/`sheet` settings remain
-authoritative and renderable until deterministic migration and parity checks
-pass; OP3 remains the next operational-parity slice.
+the resolved profile revision/hash and exact PDF bytes. LPD7.1 implements the
+validated contracts, immutable profile revisions, assignment, and resolver;
+issue provenance and renderer composition are still pending. Existing
+published layouts and embedded `copy_mode`/`sheet` settings remain authoritative
+and renderable until deterministic migration and parity checks pass.
 
 This document stores durable project context for AI agents. The root [AGENTS.md](../AGENTS.md) defines the operating rules; this file explains what the system is and how to reason about it.
 
@@ -1583,7 +1595,15 @@ DEA Phase 7 cleanup readiness audit has started, expense-post characterization i
 
 Loans operational parity OP6 is complete. All eight pilot report/statement projections use the canonical PawnLoan selector/balance fold, and CSV/XLSX/PDF exports only format those results. The Loans Party statement combines current positions with immutable PawnLoan events and excludes Girvi rows. Fixed loan-ticket recovery produces Original and Duplicate signed pages with one verification identity; configurable pilot layouts must select their existing Original/Duplicate composition. The next Loans step is the operator parity pilot, not another report-count parity build.
 
-LPD7 is accepted and committed as architecture only; there are no print-profile models, migrations, resolver, UI, renderer stage, or issue provenance yet. Until it ships, embedded layout `copy_mode`/`sheet` composition remains authoritative. Document integrity now treats any active loan-ticket assignment that omits Original or Duplicate as a pilot blocker; no assignment is compliant because the fixed fallback emits both. `jcl1` currently has no active ticket assignment and passes with zero findings after canonical revalidation of an unassigned draft. The real physical printer matrix remains an operator gate.
+LPD7.1 adds print-profile models, tenant migration `loans.0037`, validated
+schema-v1 contracts, immutable publication, audited assignment, and `Series ->
+Workspace -> built-in` resolution. There is still no UI, renderer-stage
+integration, compatibility materialization, integrity extension, or issue
+profile provenance. Until those ship and parity passes, embedded layout
+`copy_mode`/`sheet` composition remains authoritative. Active loan-ticket
+profile assignment must include Original and Duplicate, matching the existing
+layout guard and fixed fallback. The real physical printer matrix remains an
+operator gate.
 
 Operator parity-pilot preparation is documented in `docs/implementation/loans-girvi-operator-parity-pilot.md`. `jcl1` starts with 8 Loans PawnLoans and 8 Girvi GivenLoans, explicit `DEFERRED` accounting, zero document-integrity findings, and no Loans storage hierarchy, verification session, or operational notice. The official clock is stopped while accounting/Girvi runtime work is uncommitted. A combined 191-test preflight did not complete within ten minutes and exposed a stale implicit-DEA test; its focused scenario passes when DEA is explicit. DEA/Loans/Girvi migration drift checks are clean. Do not claim a cross-product pass until smaller suites finish on a reproducible checkpoint.
 
