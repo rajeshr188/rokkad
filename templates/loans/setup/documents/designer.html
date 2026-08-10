@@ -6,7 +6,7 @@
   <div class="d-flex gap-2">{% if sample_loan %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_detail' revision.pk %}">Advanced JSON and publishing</a></div>
 </div>
 {% if not sample_loan %}<div class="alert alert-warning">Create and approve a PawnLoan to enable PDF preview and test print.</div>{% endif %}
-<div class="alert alert-info">This editor changes the same validated schema-v2 JSON shown on the revision page. It does not create a separate template format.</div>
+<div class="alert alert-info">This editor changes the same validated layout JSON shown on the revision page. It does not create a separate template format.</div>
 <div class="row g-4">
   <div class="col-lg-8">
     <div class="card mb-4"><div class="card-header"><strong>Body blocks</strong></div><div class="list-group list-group-flush">

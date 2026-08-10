@@ -35,6 +35,11 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
   printing guide now describes the LPD7 layout/profile boundary, both
   resolution orders, preview/test-print workflow, immutable issue evidence,
   and explicit audited recovery paths.
+  New layout creation now emits logical-surface schema v3: physical
+  `copy_mode` and `sheet` composition are rejected, visual authoring exposes
+  only logical page/surface settings, and schema-v3 loan tickets require an
+  explicit resolved print profile. Advanced JSON cannot downgrade a new draft.
+  Existing schema-v1/v2 revisions and audited legacy recovery remain intact.
 
 - P12's accepted boundary rejects Members
   before administrator-only auction/correction identifiers are looked up and

@@ -505,6 +505,15 @@ mutation. The issued-documents ledger shows immutable layout/profile/hash
 provenance and serves exact stored artifact bytes. Member access is rejected.
 No migration was required.
 
+LPD7.5 result: newly created layouts now use schema v3 and own logical
+surfaces only. Loan-ticket surface backgrounds are represented independently
+from physical packaging; `copy_mode` and `sheet` are invalid in schema v3.
+Flow/overlay authoring no longer exposes physical composition for new drafts,
+and advanced JSON cannot downgrade them. Schema-v3 tickets fail closed without
+an explicit print profile. Existing schema-v1/v2 revisions retain their
+embedded composition, correction UI, renderer, and audited legacy recovery.
+No data migration was required.
+
 Gate: one logical ticket layout can be issued through A5 and A4 profiles
 without cloning legal content; profile changes affect only future issues;
 historical reprints remain exact stored bytes; legacy layouts remain renderable.

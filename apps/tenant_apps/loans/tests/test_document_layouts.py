@@ -9,6 +9,7 @@ from apps.tenant_apps.loans.documents import (
     DocumentAssetValidator,
     DocumentLayoutValidator,
     LayoutValidationError,
+    PrintProfileValidationError,
     PrintProfileValidator,
     built_in_print_profile,
     legacy_print_profile,
@@ -19,7 +20,10 @@ from apps.tenant_apps.loans.documents.payloads import (
     DocumentPayload,
     DocumentSection,
 )
-from apps.tenant_apps.loans.forms import LoanDocumentOverlaySettingsForm
+from apps.tenant_apps.loans.forms import (
+    LoanDocumentOverlayLogicalSettingsForm,
+    LoanDocumentOverlaySettingsForm,
+)
 from apps.tenant_apps.loans.views import _fit_overlay_geometry
 
 
@@ -168,6 +172,99 @@ class ConfigurableDocumentLayoutTests(SimpleTestCase):
         self.assertEqual(current.schema_version, 2)
         self.assertEqual(current.layout_mode, "FLOW")
         self.assertIn("theme", current.canonical_dict())
+
+    def test_schema_v3_owns_logical_surfaces_without_physical_composition(self):
+        layout = starter_layout("loan_ticket", schema_version=3)
+        definition = layout.canonical_dict()
+
+        self.assertEqual(layout.schema_version, 3)
+        self.assertNotIn("copy_mode", definition)
+        self.assertNotIn("sheet", definition)
+        self.assertIn("surfaces", definition)
+        with self.assertRaisesMessage(ValueError, "require an explicit print profile"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+        result = ConfigurableDocumentRenderer.render_with_print_profile(
+            self.payload, layout, built_in_print_profile("A5_BOTH_SIMPLEX")
+        )
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 2)
+        pdf.close()
+        with self.assertRaisesMessage(
+            LayoutValidationError, "Unknown layout properties: copy_mode"
+        ):
+            DocumentLayoutValidator.load({**definition, "copy_mode": "SINGLE"})
+        with self.assertRaisesMessage(
+            PrintProfileValidationError,
+            "no embedded physical composition",
+        ):
+            legacy_print_profile(layout)
+
+    def test_schema_v3_logical_surface_form_has_no_packaging_controls(self):
+        form = LoanDocumentOverlayLogicalSettingsForm(
+            {
+                "page_size": "A5",
+                "background_asset_key": "shared.background",
+                "original_front": "original.front",
+                "duplicate_front": "duplicate.front",
+                "original_back": "",
+                "duplicate_back": "",
+            },
+            background_keys=(
+                "shared.background", "original.front", "duplicate.front",
+            ),
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertNotIn("copy_mode", form.fields)
+        self.assertNotIn("sheet_composition", form.fields)
+        self.assertEqual(form.surface_backgrounds(), {
+            "original_front": "original.front",
+            "duplicate_front": "duplicate.front",
+        })
+
+    def test_schema_v3_surface_backgrounds_render_through_profile_imposition(self):
+        definition = starter_layout(
+            "loan_ticket", schema_version=3, layout_mode="ABSOLUTE_OVERLAY"
+        ).canonical_dict()
+        definition["background_asset_key"] = ""
+        definition["surfaces"] = {"backgrounds": {
+            "original_front": "original.front",
+            "duplicate_front": "duplicate.front",
+        }}
+        layout = DocumentLayoutValidator.load(definition)
+        assets = (
+            DocumentAssetValidator.validate(
+                key="original.front", kind="BACKGROUND",
+                content=self._pdf_bytes("ORIGINAL LOGICAL SURFACE"), workspace_id=7,
+            ),
+            DocumentAssetValidator.validate(
+                key="duplicate.front", kind="BACKGROUND",
+                content=self._pdf_bytes("DUPLICATE LOGICAL SURFACE"), workspace_id=7,
+            ),
+        )
+
+        result = ConfigurableDocumentRenderer.render_with_print_profile(
+            self.payload, layout, built_in_print_profile("A4_SIDE_BY_SIDE"),
+            assets=assets,
+        )
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = pdf[0].get_text()
+        pdf.close()
+        self.assertIn("ORIGINAL LOGICAL SURFACE", text)
+        self.assertIn("DUPLICATE LOGICAL SURFACE", text)
+
+    def test_schema_v3_overlay_rejects_empty_surface_background_configuration(self):
+        definition = starter_layout(
+            "loan_ticket", schema_version=3, layout_mode="ABSOLUTE_OVERLAY"
+        ).canonical_dict()
+        definition["background_asset_key"] = ""
+        definition["surfaces"] = {"backgrounds": {}}
+
+        with self.assertRaisesMessage(
+            LayoutValidationError, "require a background asset key"
+        ):
+            DocumentLayoutValidator.load(definition)
 
     def test_schema_v2_rejects_unsafe_theme_values(self):
         definition = starter_layout("loan_ticket").canonical_dict()

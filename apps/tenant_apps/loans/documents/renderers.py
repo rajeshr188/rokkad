@@ -76,6 +76,10 @@ class ConfigurableDocumentRenderer:
     def render(cls, payload, layout, *, preview=False, assets=()):
         if payload.document_type != layout.document_type:
             raise ValueError("Layout document type does not match the payload.")
+        if layout.schema_version >= 3 and layout.document_type == "loan_ticket":
+            raise ValueError(
+                "Schema-v3 loan-ticket layouts require an explicit print profile."
+            )
         fields = {field.key: field for field in payload.fields}
         sections = {section.key: section for section in payload.sections}
         workspace_field = fields.get("workspace.source_id")
@@ -205,7 +209,8 @@ class ConfigurableDocumentRenderer:
                 "DUPLICATE_D3": "duplicate_back",
             }[surface]
             has_background = bool(
-                layout.sheet and layout.sheet.background(surface_key)
+                (layout.surfaces and layout.surfaces.background(surface_key))
+                or (layout.sheet and layout.sheet.background(surface_key))
             )
             if not layout.back_blocks and not has_background:
                 raise ValueError(
@@ -229,16 +234,7 @@ class ConfigurableDocumentRenderer:
                 payload, layout, fields, sections, assets, preview,
                 blocks=blocks, copy_scope=copy_scope,
             )
-        background_key = ""
-        if layout.sheet is not None:
-            background_key = layout.sheet.background({
-                "ORIGINAL_FRONT": "original_front",
-                "ORIGINAL_TERMS": "original_back",
-                "DUPLICATE_FRONT": "duplicate_front",
-                "DUPLICATE_D3": "duplicate_back",
-            }[surface])
-        elif layout.background_asset_key:
-            background_key = layout.background_asset_key
+        background_key = layout.surface_background(surface)
         return cls._apply_background(pdf, assets[background_key]) if background_key else pdf
 
     @classmethod

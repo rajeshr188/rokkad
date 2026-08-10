@@ -46,6 +46,7 @@ from apps.tenant_apps.loans.forms import (
     LoanDocumentFlowBlockForm,
     LoanDocumentFlowSettingsForm,
     LoanDocumentOverlayBlockForm,
+    LoanDocumentOverlayLogicalSettingsForm,
     LoanDocumentOverlaySettingsForm,
     LoanDocumentLayoutPackImportForm,
     LoanDocumentPrintProfileAssignmentForm,
@@ -294,6 +295,7 @@ from apps.tenant_apps.loans.documents import (
     DocumentLayoutValidator,
     PawnLoanDocumentProjectionBuilder,
     PrintProfileValidator,
+    built_in_print_profile,
     legacy_print_profile,
     starter_layout,
 )
@@ -710,7 +712,7 @@ def document_layout_create(request):
             revision = LoanDocumentLayoutService.create_layout(
                 workspace=request.loans_workspace, document_type=document_type,
                 name=form.cleaned_data["name"], definition=starter_layout(
-                    document_type, schema_version=2,
+                    document_type, schema_version=3,
                     layout_mode=form.cleaned_data["layout_mode"] or "FLOW",
                 ).canonical_dict(),
                 actor=request.user, request=request,
@@ -750,8 +752,8 @@ def document_layout_designer(request, revision_pk):
     except ValueError as exc:
         messages.error(request, str(exc))
         return redirect("loans:document_layout_detail", revision_pk=revision.pk)
-    if layout.schema_version != 2 or layout.layout_mode != "FLOW":
-        messages.error(request, "The visual editor supports Flow schema-v2 drafts only.")
+    if layout.schema_version < 2 or layout.layout_mode != "FLOW":
+        messages.error(request, "The visual editor supports Flow schema-v2+ drafts only.")
         return redirect("loans:document_layout_detail", revision_pk=revision.pk)
     if request.method == "POST":
         if revision.state != revision.State.DRAFT:
@@ -818,10 +820,7 @@ def document_layout_overlay_background(request, revision_pk):
     layout = DocumentLayoutValidator.load(revision.definition)
     if layout.layout_mode != "ABSOLUTE_OVERLAY":
         return HttpResponseGone("This revision is not an absolute overlay layout.")
-    background_key = (
-        layout.sheet.background("original_front") if layout.sheet
-        else layout.background_asset_key
-    )
+    background_key = layout.surface_background("ORIGINAL_FRONT")
     asset = get_object_or_404(revision.assets, key=background_key, kind="BACKGROUND")
     asset.file.open("rb")
     content = asset.file.read()
@@ -845,8 +844,8 @@ def document_layout_overlay_designer(request, revision_pk):
     except ValueError as exc:
         messages.error(request, str(exc))
         return redirect("loans:document_layout_detail", revision_pk=revision.pk)
-    if layout.schema_version != 2 or layout.layout_mode != "ABSOLUTE_OVERLAY":
-        messages.error(request, "The overlay editor supports absolute-overlay schema-v2 drafts only.")
+    if layout.schema_version < 2 or layout.layout_mode != "ABSOLUTE_OVERLAY":
+        messages.error(request, "The overlay editor supports absolute-overlay schema-v2+ drafts only.")
         return redirect("loans:document_layout_detail", revision_pk=revision.pk)
     background_keys = tuple(revision.assets.filter(kind="BACKGROUND").values_list("key", flat=True))
     image_keys = tuple(revision.assets.filter(kind="IMAGE").values_list("key", flat=True))
@@ -858,10 +857,17 @@ def document_layout_overlay_designer(request, revision_pk):
         operation = request.POST.get("operation")
         try:
             if operation == "save_settings":
-                form = LoanDocumentOverlaySettingsForm(
-                    request.POST, background_keys=background_keys,
-                    sheet_composition_enabled=layout.document_type == "loan_ticket",
-                )
+                if layout.schema_version >= 3:
+                    form = LoanDocumentOverlayLogicalSettingsForm(
+                        request.POST,
+                        background_keys=background_keys,
+                        loan_ticket=layout.document_type == "loan_ticket",
+                    )
+                else:
+                    form = LoanDocumentOverlaySettingsForm(
+                        request.POST, background_keys=background_keys,
+                        sheet_composition_enabled=layout.document_type == "loan_ticket",
+                    )
                 if not form.is_valid():
                     errors = "; ".join(
                         f"{form.fields.get(field).label if field in form.fields else 'Settings'}: {message}"
@@ -869,30 +875,42 @@ def document_layout_overlay_designer(request, revision_pk):
                         for message in (error["message"] for error in field_errors)
                     )
                     raise ValueError(errors or "Overlay page settings are invalid.")
-                composition = form.cleaned_data.get("sheet_composition")
-                if composition and definition.get("page_size", "A4") != "A5":
-                    _fit_overlay_geometry(definition, "A5")
-                else:
+                if layout.schema_version >= 3:
                     definition["page_size"] = form.cleaned_data["page_size"]
-                if composition:
-                    # Compact A5 ticket fields should reduce type before
-                    # rejecting realistic values that wrap by one line.
-                    for block in definition.get("blocks", []):
-                        if block.get("type") in {"title", "field", "verification", "signature"}:
-                            block["overflow_policy"] = "SHRINK"
-                definition["copy_mode"] = form.cleaned_data["copy_mode"]
-                if composition:
-                    definition["background_asset_key"] = ""
-                    definition["sheet"] = {
-                        "composition": composition,
-                        "backgrounds": {
-                            surface: form.cleaned_data[surface]
-                            for surface in ("original_front", "duplicate_front", "original_back", "duplicate_back")
-                        },
-                    }
+                    definition["background_asset_key"] = form.cleaned_data[
+                        "background_asset_key"
+                    ]
+                    backgrounds = form.surface_backgrounds()
+                    definition["surfaces"] = (
+                        {"backgrounds": backgrounds} if backgrounds else None
+                    )
+                    definition.pop("copy_mode", None)
+                    definition.pop("sheet", None)
                 else:
-                    definition["sheet"] = None
-                    definition["background_asset_key"] = form.cleaned_data["background_asset_key"]
+                    composition = form.cleaned_data.get("sheet_composition")
+                    if composition and definition.get("page_size", "A4") != "A5":
+                        _fit_overlay_geometry(definition, "A5")
+                    else:
+                        definition["page_size"] = form.cleaned_data["page_size"]
+                    if composition:
+                        # Compact A5 ticket fields should reduce type before
+                        # rejecting realistic values that wrap by one line.
+                        for block in definition.get("blocks", []):
+                            if block.get("type") in {"title", "field", "verification", "signature"}:
+                                block["overflow_policy"] = "SHRINK"
+                    definition["copy_mode"] = form.cleaned_data["copy_mode"]
+                    if composition:
+                        definition["background_asset_key"] = ""
+                        definition["sheet"] = {
+                            "composition": composition,
+                            "backgrounds": {
+                                surface: form.cleaned_data[surface]
+                                for surface in ("original_front", "duplicate_front", "original_back", "duplicate_back")
+                            },
+                        }
+                    else:
+                        definition["sheet"] = None
+                        definition["background_asset_key"] = form.cleaned_data["background_asset_key"]
             elif operation in {"add_block", "save_block"}:
                 form = LoanDocumentOverlayBlockForm(request.POST, asset_keys=image_keys)
                 if not form.is_valid():
@@ -925,30 +943,37 @@ def document_layout_overlay_designer(request, revision_pk):
             messages.success(request, "Overlay draft updated and validated.")
         return redirect("loans:document_layout_overlay_designer", revision_pk=revision.pk)
     page_width_mm, page_height_mm = _OVERLAY_PAGE_DIMENSIONS_MM[layout.page_size]
-    settings_form = LoanDocumentOverlaySettingsForm(
-        background_keys=background_keys,
-        sheet_composition_enabled=layout.document_type == "loan_ticket",
-        initial={"page_size": layout.page_size, "copy_mode": layout.copy_mode,
-                 "background_asset_key": layout.background_asset_key,
-                 "sheet_composition": layout.sheet.composition if layout.sheet else "",
-                 **({surface: layout.sheet.background(surface) for surface in (
-                     "original_front", "duplicate_front", "original_back", "duplicate_back",
-                 )} if layout.sheet else {})},
-    )
+    if layout.schema_version >= 3:
+        settings_form = LoanDocumentOverlayLogicalSettingsForm(
+            background_keys=background_keys,
+            loan_ticket=layout.document_type == "loan_ticket",
+            initial={
+                "page_size": layout.page_size,
+                "background_asset_key": layout.background_asset_key,
+                **({surface: layout.surfaces.background(surface) for surface in (
+                    "original_front", "duplicate_front", "original_back", "duplicate_back",
+                )} if layout.surfaces else {}),
+            },
+        )
+    else:
+        settings_form = LoanDocumentOverlaySettingsForm(
+            background_keys=background_keys,
+            sheet_composition_enabled=layout.document_type == "loan_ticket",
+            initial={"page_size": layout.page_size, "copy_mode": layout.copy_mode,
+                     "background_asset_key": layout.background_asset_key,
+                     "sheet_composition": layout.sheet.composition if layout.sheet else "",
+                     **({surface: layout.sheet.background(surface) for surface in (
+                         "original_front", "duplicate_front", "original_back", "duplicate_back",
+                     )} if layout.sheet else {})},
+        )
     return render(request, "loans/setup/documents/overlay_designer.html", {
         "revision": revision, "layout": layout, "settings_form": settings_form,
         "add_form": LoanDocumentOverlayBlockForm(asset_keys=image_keys),
         "image_keys": image_keys, "page_width_mm": page_width_mm,
         "page_height_mm": page_height_mm,
-        "sheet_composition_enabled": layout.document_type == "loan_ticket",
-        "preview_background_key": (
-            layout.sheet.background("original_front") if layout.sheet
-            else layout.background_asset_key
-        ),
-        "has_background": (
-            layout.sheet.background("original_front") if layout.sheet
-            else layout.background_asset_key
-        ) in background_keys,
+        "legacy_composition_controls": layout.schema_version <= 2,
+        "preview_background_key": layout.surface_background("ORIGINAL_FRONT"),
+        "has_background": layout.surface_background("ORIGINAL_FRONT") in background_keys,
         "sample_loan": PawnLoan.objects.filter(
             workspace=request.loans_workspace, approval_snapshots__isnull=False,
         ).order_by("-pk").first(),
@@ -1067,7 +1092,15 @@ def document_layout_preview(request, revision_pk):
         if payload is None:
             return HttpResponse("Create an eligible source document before previewing this layout.", status=409, content_type="text/plain")
         layout = DocumentLayoutValidator.load(revision.definition)
-        result = ConfigurableDocumentRenderer.render(payload, layout, preview=True, assets=_revision_assets(revision))
+        if layout.schema_version >= 3 and payload.document_type == "loan_ticket":
+            result = ConfigurableDocumentRenderer.render_with_print_profile(
+                payload, layout, built_in_print_profile(), preview=True,
+                assets=_revision_assets(revision),
+            )
+        else:
+            result = ConfigurableDocumentRenderer.render(
+                payload, layout, preview=True, assets=_revision_assets(revision)
+            )
     except (ValueError, ValidationError) as exc:
         return HttpResponse(str(exc), status=409, content_type="text/plain")
     response = HttpResponse(result.pdf, content_type="application/pdf")

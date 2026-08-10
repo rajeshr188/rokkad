@@ -206,6 +206,10 @@ def legacy_print_profile(layout):
         raise PrintProfileValidationError(
             "Legacy print-profile provenance supports loan tickets only."
         )
+    if getattr(layout, "schema_version", 2) >= 3:
+        raise PrintProfileValidationError(
+            "This layout has no embedded physical composition; use a published print profile."
+        )
     if layout.sheet is not None:
         composition = layout.sheet.composition
         expected = _COMPOSITIONS.get(composition)

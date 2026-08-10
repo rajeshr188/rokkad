@@ -24,6 +24,13 @@ packaging, included copies, simplex/duplex ordering, orientation, scaling, and
 printer guidance. Every issue must record both immutable revision hashes and
 retain exact artifact bytes.
 
+New authoring uses layout schema v3. Its optional `surfaces.backgrounds`
+object names only logical `original_front`, `duplicate_front`, `original_back`
+(Terms), and `duplicate_back` (D3) assets. It contains no `copy_mode` or
+physical `sheet` composition. A schema-v3 loan ticket must be rendered with an
+explicit resolved profile. Existing schema-v1/v2 layouts retain embedded
+composition exclusively for compatibility and audited legacy recovery.
+
 LPD7.1 provides validated versioned profile persistence and deterministic
 `Series -> Workspace -> built-in` resolution. LPD7.2 maps every embedded
 loan-ticket sheet/copy composition to an equivalent compatibility profile and

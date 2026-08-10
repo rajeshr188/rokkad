@@ -62,7 +62,11 @@ class LoanDocumentLayoutDefinitionForm(forms.Form):
 
 
 class LoanDocumentFlowSettingsForm(forms.Form):
-    page_size = forms.ChoiceField(choices=(("A4", "A4"), ("A5", "A5"), ("LETTER", "Letter")))
+    page_size = forms.ChoiceField(
+        label="Logical page size",
+        choices=(("A4", "A4"), ("A5", "A5"), ("LETTER", "Letter")),
+        help_text="The print profile controls physical paper and imposition.",
+    )
     margin_mm = forms.IntegerField(min_value=5, max_value=30)
     primary_color = forms.RegexField(regex=r"^#[0-9a-fA-F]{6}$", max_length=7)
     border_color = forms.RegexField(regex=r"^#[0-9a-fA-F]{6}$", max_length=7)
@@ -173,6 +177,59 @@ class LoanDocumentOverlaySettingsForm(forms.Form):
         if not cleaned.get("sheet_composition") and not cleaned.get("background_asset_key"):
             self.add_error("background_asset_key", "Choose a shared background for legacy composition.")
         return cleaned
+
+
+class LoanDocumentOverlayLogicalSettingsForm(forms.Form):
+    page_size = forms.ChoiceField(
+        label="Logical surface size",
+        choices=(("A4", "A4"), ("A5", "A5"), ("LETTER", "Letter")),
+        help_text="The print profile controls physical paper and imposition.",
+    )
+    background_asset_key = forms.ChoiceField(
+        required=False,
+        label="Shared logical background",
+        help_text="Used when a surface-specific background is not selected.",
+    )
+    original_front = forms.ChoiceField(required=False, label="Original front background")
+    duplicate_front = forms.ChoiceField(required=False, label="Duplicate front background")
+    original_back = forms.ChoiceField(required=False, label="Original Terms background")
+    duplicate_back = forms.ChoiceField(required=False, label="Duplicate D3 background")
+
+    def __init__(self, *args, background_keys=(), loan_ticket=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = [("", "Not used")] + [
+            (key, key) for key in sorted(set(background_keys) | {"form.background"})
+        ]
+        for name in (
+            "background_asset_key", "original_front", "duplicate_front",
+            "original_back", "duplicate_back",
+        ):
+            self.fields[name].choices = choices
+        if not loan_ticket:
+            for name in (
+                "original_front", "duplicate_front", "original_back", "duplicate_back",
+            ):
+                self.fields.pop(name)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-select"
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("background_asset_key") and not cleaned.get("original_front"):
+            self.add_error(
+                "background_asset_key",
+                "Choose a shared background or an Original front background.",
+            )
+        return cleaned
+
+    def surface_backgrounds(self):
+        return {
+            name: self.cleaned_data.get(name, "")
+            for name in (
+                "original_front", "duplicate_front", "original_back", "duplicate_back",
+            )
+            if self.cleaned_data.get(name)
+        }
 
 
 class LoanDocumentOverlayBlockForm(forms.Form):

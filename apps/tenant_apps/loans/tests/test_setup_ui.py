@@ -1034,8 +1034,10 @@ class LoansSetupUiTests(TenantTestCase):
         revision = LoanDocumentLayoutRevision.objects.select_related("layout").get(
             layout__name="Counter ticket"
         )
-        self.assertEqual(revision.definition["schema_version"], 2)
+        self.assertEqual(revision.definition["schema_version"], 3)
         self.assertEqual(revision.definition["layout_mode"], "FLOW")
+        self.assertNotIn("copy_mode", revision.definition)
+        self.assertNotIn("sheet", revision.definition)
         self.assertRedirects(
             response,
             reverse("loans:document_layout_detail", args=[revision.pk]),
@@ -1047,6 +1049,16 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertContains(detail, "Structured layout definition")
         self.assertContains(detail, "Publish and freeze")
         self.assertContains(detail, "Visual Flow editor")
+
+        downgrade = self.tenant_post(
+            reverse("loans:document_layout_update", args=[revision.pk]),
+            {"definition": json.dumps(
+                starter_layout("loan_ticket", schema_version=2).canonical_dict()
+            )},
+        )
+        self.assertEqual(downgrade.status_code, 302)
+        revision.refresh_from_db()
+        self.assertEqual(revision.definition["schema_version"], 3)
 
         designer = self.tenant_get(
             reverse("loans:document_layout_designer", args=[revision.pk])
@@ -1077,7 +1089,7 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(revision.definition["page_size"], "A5")
         self.assertEqual(revision.definition["page"]["margin_mm"], 10)
 
-        definition = starter_layout("loan_ticket").canonical_dict()
+        definition = starter_layout("loan_ticket", schema_version=3).canonical_dict()
         definition["name"] = "Updated counter ticket"
         update = self.tenant_post(
             reverse("loans:document_layout_update", args=[revision.pk]),
@@ -1151,6 +1163,9 @@ class LoansSetupUiTests(TenantTestCase):
         editor = self.tenant_get(editor_url)
         self.assertEqual(editor.status_code, 200)
         self.assertContains(editor, "Drag a rectangle")
+        self.assertContains(editor, "Physical paper, imposition, sequence, and duplex behavior belong to Print profiles")
+        self.assertNotContains(editor, "Legacy copy mode")
+        self.assertNotContains(editor, "Sheet composition")
         background = self.tenant_get(
             reverse("loans:document_layout_overlay_background", args=[revision.pk])
         )
@@ -1328,6 +1343,61 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(retire_response.status_code, 302)
         revision.refresh_from_db()
         self.assertEqual(revision.state, "RETIRED")
+
+    def test_schema_v3_ticket_issue_requires_and_records_resolved_profile(self):
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-DOC-V3-00001", state="APPROVED")
+        PawnLoanApprovalSnapshot.objects.create(
+            loan=loan,
+            version=1,
+            payload={
+                "loan_number": loan.loan_number,
+                "loan_date": str(loan.loan_date),
+                "principal_amount": str(loan.principal_amount),
+                "monthly_interest_rate": str(loan.monthly_interest_rate),
+                "tenure_months": loan.tenure_months,
+                "borrower_id": loan.borrower_id,
+                "collateral": [],
+            },
+            fingerprint="schema-v3-approval-fingerprint",
+            approved_by=self.owner,
+        )
+        revision = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name=f"Logical ticket {uuid.uuid4().hex[:6]}",
+            definition=starter_layout(
+                "loan_ticket", schema_version=3
+            ).canonical_dict(),
+            actor=self.owner,
+        )
+        revision = LoanDocumentLayoutService.publish(
+            revision=revision, actor=self.owner
+        )
+        LoanDocumentLayoutService.assign(
+            revision=revision,
+            workspace=self.tenant,
+            license=license,
+            series=series,
+            actor=self.owner,
+        )
+
+        ticket_url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
+        blocked_legacy = self.tenant_get(f"{ticket_url}?print_profile=legacy")
+        self.assertEqual(blocked_legacy.status_code, 409)
+        self.assertContains(
+            blocked_legacy, "no embedded physical composition", status_code=409
+        )
+        self.assertFalse(LoanDocumentIssue.objects.filter(source_id=str(loan.pk)).exists())
+
+        response = self.tenant_get(ticket_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["X-Rokkad-Print-Profile"], "Built-in A5 Both Simplex")
+        issue = LoanDocumentIssue.objects.get(source_id=str(loan.pk))
+        self.assertEqual(issue.revision_id, revision.pk)
+        self.assertEqual(issue.print_profile_source_scope, "BUILT_IN")
+        self.assertTrue(issue.print_profile_hash)
 
     def test_owner_can_manage_assign_preview_and_retire_print_profile(self):
         license, series = self._configured_setup()

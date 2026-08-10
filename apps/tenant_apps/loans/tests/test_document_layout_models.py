@@ -291,6 +291,25 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
 
         self.assertEqual(get_document_integrity_findings(), ())
 
+    def test_integrity_accepts_schema_v3_logical_fronts_with_profile_owned_bundle(self):
+        revision = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant,
+            document_type="loan_ticket",
+            name=f"Logical fronts {uuid.uuid4().hex[:6]}",
+            definition=starter_layout(
+                "loan_ticket", schema_version=3
+            ).canonical_dict(),
+            actor=self.actor,
+        )
+        revision = LoanDocumentLayoutService.publish(
+            revision=revision, actor=self.actor
+        )
+        LoanDocumentLayoutService.assign(
+            revision=revision, workspace=self.tenant, actor=self.actor
+        )
+
+        self.assertEqual(get_document_integrity_findings(), ())
+
     def test_integrity_selector_requires_both_signature_roles_on_each_ticket_copy(self):
         definition = starter_layout("loan_ticket").canonical_dict()
         definition["copy_mode"] = "ORIGINAL_DUPLICATE"

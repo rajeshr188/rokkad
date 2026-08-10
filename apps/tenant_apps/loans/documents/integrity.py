@@ -191,7 +191,7 @@ def get_document_integrity_findings():
                 "PILOT_TICKET_COPY_BUNDLE",
                 "assignment",
                 assignment.pk,
-                "The active pilot loan-ticket layout must issue both Original and Duplicate copies. Choose a BOTH or A4 side-by-side sheet preset, or Original/Duplicate copy mode.",
+                "The active pilot loan-ticket layout must provide both Original and Duplicate logical fronts. Legacy layouts require a BOTH/side-by-side preset or Original/Duplicate copy mode.",
             ))
         if assignment.document_type == "loan_ticket" and not _includes_required_ticket_signatures(layout):
             findings.append(DocumentIntegrityFinding(
@@ -211,6 +211,10 @@ def get_document_integrity_findings():
 
 
 def _includes_original_and_duplicate(layout):
+    if layout.schema_version >= 3:
+        # Schema-v3 layouts define both logical fronts; the independently
+        # resolved pilot print profile owns the physical copy bundle.
+        return True
     if layout.sheet is not None:
         return layout.sheet.composition in {
             "A5_BOTH_SIMPLEX",

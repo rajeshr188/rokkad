@@ -98,7 +98,7 @@
 
 <div class="card card-body mb-3">
   <h2 class="h5">Visual Flow editor</h2>
-  <p>Open any Flow schema-v2 draft and select <strong>Visual Flow editor</strong>. You can change page/theme settings, reorder or remove top-level blocks, and add common field, grid, section, field-plus-QR, spacer, page-break, and signature blocks.</p>
+  <p>Open any Flow schema-v2 or schema-v3 draft and select <strong>Visual Flow editor</strong>. You can change logical page/theme settings, reorder or remove top-level blocks, and add common field, grid, section, field-plus-QR, spacer, page-break, and signature blocks.</p>
   <p class="mb-0">Preview and test-print directly from the editor. Advanced JSON remains available for detailed tables, page regions, conditions, overflow, and deeply nested composition; both surfaces update the same validated draft.</p>
 </div>
 
@@ -125,7 +125,7 @@
   <ol class="mb-0">
     <li>Open <a href="{% url 'loans:document_layout_diagnostics' %}">Integrity diagnostics</a>.</li>
     <li>Clone and correct the defective layout or profile revision; do not alter stored issue files.</li>
-    <li>For a loan-ticket packaging problem, an Owner/Admin can explicitly add <code>?print_profile=legacy</code> to use the published layout's embedded composition. Runtime never selects this silently.</li>
+    <li>For a schema-v1/v2 loan-ticket packaging problem, an Owner/Admin can explicitly add <code>?print_profile=legacy</code> to use the published layout's embedded composition. Schema-v3 layouts have no embedded packaging, and runtime never selects legacy recovery silently.</li>
     <li>For urgent fixed-renderer recovery, an Owner/Admin can add <code>?renderer=fixed</code> to the normal PDF URL. Both recovery paths are audited.</li>
     <li>Before production use, physically test A4/A5, simplex/duplex, long names and tables, regional text, backgrounds, margins, signatures, and QR scanning.</li>
   </ol>

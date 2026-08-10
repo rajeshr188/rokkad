@@ -25,6 +25,13 @@ assignment itself rejects incompatible current layout/profile pairs. Migrations
 has zero findings. Only the physical printer matrix remains open; embedded
 composition must stay readable for compatibility.
 
+New document-layout authoring uses schema v3. It stores logical loan-ticket
+surface backgrounds separately and rejects embedded `copy_mode`/`sheet`
+physical packaging; schema-v3 tickets must render through an explicit print
+profile. Visual and advanced authoring cannot downgrade a new schema-v3 draft.
+Existing schema-v1/v2 layouts keep their embedded composition and explicit
+audited legacy recovery indefinitely.
+
 Under P12, ordinary workspace members may perform the
 normal PawnLoan lifecycle but must be rejected before administrator-only
 auction/correction identifiers are resolved. Setup and corrections permit
@@ -1617,6 +1624,9 @@ contracts through Owner/Admin list/create/edit/clone/publish/assign/retire and
 resolved preview/test-print screens. Assignment validates every affected
 Series before changing workspace or Series scope. The issued-document ledger
 shows immutable layout/profile provenance and returns exact stored PDF bytes.
+The subsequent new-authoring cleanup adds layout schema v3 with neutral logical
+surfaces, removes physical composition controls from new Flow/overlay drafts,
+and preserves schema-v1/v2 compatibility without mutation.
 
 Operator parity-pilot preparation is documented in `docs/implementation/loans-girvi-operator-parity-pilot.md`. `jcl1` starts with 8 Loans PawnLoans and 8 Girvi GivenLoans, explicit `DEFERRED` accounting, zero document-integrity findings, and no Loans storage hierarchy, verification session, or operational notice. The official clock is stopped while accounting/Girvi runtime work is uncommitted. A combined 191-test preflight did not complete within ten minutes and exposed a stale implicit-DEA test; its focused scenario passes when DEA is explicit. DEA/Loans/Girvi migration drift checks are clean. Do not claim a cross-product pass until smaller suites finish on a reproducible checkpoint.
 

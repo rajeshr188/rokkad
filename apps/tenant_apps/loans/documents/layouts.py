@@ -113,6 +113,14 @@ class SheetComposition:
 
 
 @dataclass(frozen=True)
+class LogicalSurfaces:
+    backgrounds: tuple[tuple[str, str], ...]
+
+    def background(self, surface):
+        return dict(self.backgrounds).get(surface, "")
+
+
+@dataclass(frozen=True)
 class DocumentLayout:
     schema_version: int
     document_type: str
@@ -132,6 +140,7 @@ class DocumentLayout:
     header: PageRegion | None = None
     footer: PageRegion | None = None
     sheet: SheetComposition | None = None
+    surfaces: LogicalSurfaces | None = None
 
     def canonical_dict(self):
         def block_dict(block):
@@ -178,11 +187,13 @@ class DocumentLayout:
             return value
         value = {
             "schema_version": self.schema_version, "document_type": self.document_type,
-            "name": self.name, "page_size": self.page_size, "copy_mode": self.copy_mode,
+            "name": self.name, "page_size": self.page_size,
             "blocks": [block_dict(block) for block in self.blocks],
             "back_blocks": [block_dict(block) for block in self.back_blocks],
             "background_asset_key": self.background_asset_key,
         }
+        if self.schema_version <= 2:
+            value["copy_mode"] = self.copy_mode
         if self.schema_version >= 2:
             value.update({
                 "layout_mode": self.layout_mode,
@@ -196,12 +207,18 @@ class DocumentLayout:
                 },
                 "header": self._region_dict(self.header, block_dict),
                 "footer": self._region_dict(self.footer, block_dict),
-                "sheet": (
+            })
+            if self.schema_version <= 2:
+                value["sheet"] = (
                     {"composition": self.sheet.composition,
                      "backgrounds": dict(self.sheet.backgrounds)}
                     if self.sheet else None
-                ),
-            })
+                )
+            else:
+                value["surfaces"] = (
+                    {"backgrounds": dict(self.surfaces.backgrounds)}
+                    if self.surfaces else None
+                )
         return value
 
     @staticmethod
@@ -224,7 +241,26 @@ class DocumentLayout:
         keys = {self.background_asset_key} if self.background_asset_key else set()
         if self.sheet:
             keys.update(key for _, key in self.sheet.backgrounds if key)
+        if self.surfaces:
+            keys.update(key for _, key in self.surfaces.backgrounds if key)
         return frozenset(keys)
+
+    def surface_background(self, surface):
+        key = {
+            "ORIGINAL_FRONT": "original_front",
+            "ORIGINAL_TERMS": "original_back",
+            "DUPLICATE_FRONT": "duplicate_front",
+            "DUPLICATE_D3": "duplicate_back",
+        }.get(surface, surface.lower())
+        if self.surfaces:
+            specific = self.surfaces.background(key)
+            if specific:
+                return specific
+        if self.sheet:
+            specific = self.sheet.background(key)
+            if specific:
+                return specific
+        return self.background_asset_key
 
     @property
     def content_hash(self):
@@ -233,8 +269,8 @@ class DocumentLayout:
 
 
 class DocumentLayoutValidator:
-    SCHEMA_VERSION = 2
-    SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2})
+    SCHEMA_VERSION = 3
+    SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2, 3})
 
     @classmethod
     def load(cls, definition):
@@ -243,9 +279,15 @@ class DocumentLayoutValidator:
         schema_version = definition.get("schema_version")
         if schema_version not in cls.SUPPORTED_SCHEMA_VERSIONS:
             raise LayoutValidationError("Unsupported layout schema version.")
-        allowed_keys = {"schema_version", "document_type", "name", "page_size", "copy_mode", "blocks", "back_blocks", "background_asset_key"}
+        allowed_keys = {"schema_version", "document_type", "name", "page_size", "blocks", "back_blocks", "background_asset_key"}
+        if schema_version <= 2:
+            allowed_keys.add("copy_mode")
         if schema_version >= 2:
-            allowed_keys.update({"layout_mode", "page", "theme", "header", "footer", "sheet"})
+            allowed_keys.update({"layout_mode", "page", "theme", "header", "footer"})
+        if schema_version == 2:
+            allowed_keys.add("sheet")
+        if schema_version >= 3:
+            allowed_keys.add("surfaces")
         unknown = set(definition) - allowed_keys
         if unknown:
             raise LayoutValidationError(f"Unknown layout properties: {', '.join(sorted(unknown))}.")
@@ -253,7 +295,7 @@ class DocumentLayoutValidator:
         if document_type not in REQUIRED_BINDINGS:
             raise LayoutValidationError("Unsupported document type.")
         page_size = definition.get("page_size", "A4")
-        copy_mode = definition.get("copy_mode", "SINGLE")
+        copy_mode = definition.get("copy_mode", "SINGLE") if schema_version <= 2 else "SINGLE"
         if page_size not in ALLOWED_PAGE_SIZES:
             raise LayoutValidationError("Unsupported page size.")
         if copy_mode not in ALLOWED_COPY_MODES:
@@ -266,7 +308,8 @@ class DocumentLayoutValidator:
         sheet = cls._sheet(
             definition.get("sheet"), schema_version, layout_mode, page_size,
             document_type,
-        )
+        ) if schema_version <= 2 else None
+        surfaces = cls._surfaces(definition.get("surfaces"), schema_version, document_type)
         if not blocks:
             raise LayoutValidationError("A layout requires at least one front-page block.")
         if copy_mode == "ORIGINAL_DUPLICATE_DUPLEX" and not back_blocks and not definition.get("sheet"):
@@ -293,20 +336,43 @@ class DocumentLayoutValidator:
         if background and not background.replace(".", "").replace("-", "").replace("_", "").isalnum():
             raise LayoutValidationError("Background asset key is invalid.")
         if layout_mode == "ABSOLUTE_OVERLAY":
-            if not background and sheet is None:
+            has_surface_background = bool(
+                surfaces and any(key for _, key in surfaces.backgrounds)
+            )
+            if not background and sheet is None and not has_surface_background:
                 raise LayoutValidationError("Absolute overlay layouts require a background asset key.")
             if header or footer:
                 raise LayoutValidationError("Absolute overlay layouts do not use Flow page regions.")
             cls._validate_overlay_geometry(blocks + back_blocks, page_size)
             if sheet:
                 cls._validate_sheet_copy_evidence(sheet, blocks, document_type)
+        if schema_version >= 3 and document_type == "loan_ticket":
+            cls._validate_logical_copy_evidence(blocks, document_type)
         return DocumentLayout(
             schema_version, document_type, name, page_size, copy_mode, blocks,
             back_blocks, background, layout_mode, margin_mm,
             theme["primary_color"], theme["border_color"], theme["font_family"],
             theme["body_font_size_pt"], theme["heading_font_size_pt"],
-            header, footer, sheet,
+            header, footer, sheet, surfaces,
         )
+
+    @classmethod
+    def _surfaces(cls, value, schema_version, document_type):
+        if schema_version < 3 or value is None:
+            return None
+        if document_type != "loan_ticket":
+            raise LayoutValidationError("Logical surfaces are available only for loan ticket documents.")
+        if not isinstance(value, dict) or set(value) != {"backgrounds"}:
+            raise LayoutValidationError("Logical surfaces require a backgrounds object.")
+        backgrounds = value["backgrounds"]
+        allowed = {"original_front", "duplicate_front", "original_back", "duplicate_back"}
+        if not isinstance(backgrounds, dict) or set(backgrounds) - allowed:
+            raise LayoutValidationError("Logical surface backgrounds contain unsupported surfaces.")
+        normalized = {surface: str(key or "") for surface, key in backgrounds.items()}
+        for key in normalized.values():
+            if key and not key.replace(".", "").replace("-", "").replace("_", "").isalnum():
+                raise LayoutValidationError("Logical surface background asset key is invalid.")
+        return LogicalSurfaces(tuple(sorted(normalized.items())))
 
     @classmethod
     def _sheet(cls, value, schema_version, layout_mode, page_size, document_type):
@@ -361,6 +427,21 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError(f"{copy_scope.title()} front is missing mandatory bindings: {', '.join(sorted(missing))}.")
             if not cls._has_unconditional_type_for_scope(blocks, "verification", copy_scope):
                 raise LayoutValidationError(f"{copy_scope.title()} front requires an unconditional verification block.")
+
+    @classmethod
+    def _validate_logical_copy_evidence(cls, blocks, document_type):
+        required = REQUIRED_BINDINGS[document_type] | REQUIRED_SECTIONS[document_type]
+        for copy_scope in ("ORIGINAL", "DUPLICATE"):
+            present = cls._unconditional_bindings_for_scope(blocks, copy_scope)
+            missing = required - present
+            if missing:
+                raise LayoutValidationError(
+                    f"{copy_scope.title()} front is missing mandatory bindings: {', '.join(sorted(missing))}."
+                )
+            if not cls._has_unconditional_type_for_scope(blocks, "verification", copy_scope):
+                raise LayoutValidationError(
+                    f"{copy_scope.title()} front requires an unconditional verification block."
+                )
 
     @classmethod
     def _region(cls, value, document_type, schema_version, label):
@@ -718,9 +799,11 @@ def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
     definition = {
         "schema_version": schema_version, "document_type": document_type,
         "name": names[document_type],
-        "page_size": "A4", "copy_mode": "SINGLE",
+        "page_size": "A4",
         "blocks": blocks,
     }
+    if schema_version <= 2:
+        definition["copy_mode"] = "SINGLE"
     if schema_version >= 2:
         definition.update({
             "layout_mode": layout_mode,
@@ -731,6 +814,8 @@ def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
                 "heading_font_size_pt": 14,
             },
         })
+    if schema_version >= 3 and document_type == "loan_ticket":
+        definition["surfaces"] = None
     if layout_mode == "ABSOLUTE_OVERLAY":
         definition["background_asset_key"] = "form.background"
     return DocumentLayoutValidator.load(definition)

@@ -89,6 +89,13 @@ assignment wins over the workspace assignment. The assignment screen refuses
 an incompatible effective layout/profile pair. To change a published profile,
 clone it and publish the clone; never edit historical evidence.
 
+Newly created layouts use logical-surface schema v3. Their editors show
+logical page size plus shared or Original/Duplicate/Terms/D3 backgrounds; they
+do not offer A5/A4 imposition, simplex/duplex sequence, or copy bundle. Those
+choices exist only in Print profiles. A cloned older schema-v1/v2 layout may
+still show clearly labelled legacy composition controls so it can be corrected
+without changing historical interpretation.
+
 Use **Loans setup > Issued documents** to inspect which layout and profile
 produced an official document. Downloading the exact artifact from that page
 returns the immutable stored PDF even after assignments change.
@@ -117,7 +124,7 @@ work while it is still a draft.
 
 ## Use The Visual Flow Editor
 
-Open a schema-v2 draft and select **Visual Flow editor**. The editor changes
+Open a schema-v2 or schema-v3 draft and select **Visual Flow editor**. The editor changes
 the same validated JSON used by Advanced JSON; it is not a second template
 format.
 
@@ -475,9 +482,15 @@ areas that have been physically test-printed.
 Only registered bindings and block properties are accepted. Python, model
 paths, Django/Jinja expressions, HTML, and JavaScript are prohibited.
 
-## Original, Duplicate, And Duplex Printing
+## Logical Copies And Physical Packaging
 
-Set `copy_mode` to one of:
+New schema-v3 loan-ticket layouts use block `copy_scope`, front/back content,
+and optional `surfaces.backgrounds` to define Original, Duplicate, Terms, and
+D3 logical surfaces. Select A5/A4, simplex/duplex, surface sequence, and
+imposition in **Print profiles**, not in the layout JSON.
+
+The following `copy_mode` values apply only when correcting an older
+schema-v1/v2 layout:
 
 ```json
 "copy_mode": "SINGLE"
@@ -491,8 +504,10 @@ Set `copy_mode` to one of:
 "copy_mode": "ORIGINAL_DUPLICATE_DUPLEX"
 ```
 
-Duplex mode also requires `back_blocks`. Test duplex orientation and printer
-edge binding physically; browser preview cannot prove the printer driver setup.
+Legacy duplex mode also requires `back_blocks`. Do not add these keys to a
+schema-v3 layout; validation rejects them. Test duplex orientation and printer
+edge binding physically through the assigned print profile because browser
+preview cannot prove the printer driver setup.
 
 ## Configure Other Document Types
 

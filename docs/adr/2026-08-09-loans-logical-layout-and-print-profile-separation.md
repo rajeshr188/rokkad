@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: loans
-updated: 2026-08-09
+updated: 2026-08-10
 tags: [adr, loans, documents, printing, profiles]
 related:
   - 2026-08-06-loans-versioned-configurable-documents.md
@@ -140,3 +140,18 @@ Do not change runtime rendering from this ADR alone. Implementation is complete
 only when profile models/services/UI, compatibility migration, issue
 provenance, integrity diagnostics, focused renderer tests, and the physical
 printer matrix all pass.
+
+## Implementation Update: Logical-Surface Schema V3
+
+Implemented 2026-08-10. Newly created layouts use schema v3. Loan-ticket
+layouts may define logical Original front, Duplicate front, Original Terms,
+and Duplicate D3 background overrides through `surfaces.backgrounds`, but the
+schema rejects embedded `copy_mode` and `sheet` physical-composition keys.
+Flow and overlay authoring expose logical page geometry and surface backgrounds
+only. Schema-v3 loan tickets fail closed if invoked without an explicit print
+profile, and new drafts cannot be downgraded through advanced JSON editing.
+
+Schema-v1/v2 revisions remain readable, cloneable, renderable, and eligible
+for explicit audited legacy recovery. Their embedded fields were not migrated,
+mutated, or deleted. This completes the new-authoring separation while
+preserving historical compatibility.

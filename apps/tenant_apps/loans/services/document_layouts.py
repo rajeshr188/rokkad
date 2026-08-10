@@ -122,7 +122,12 @@ class LoanDocumentLayoutService:
         _require_workspace(revision.layout.workspace_id)
         if revision.state != revision.State.DRAFT:
             raise DocumentLayoutServiceError("Only draft revisions can be edited.")
+        current = DocumentLayoutValidator.load(revision.definition)
         parsed = DocumentLayoutValidator.load(definition)
+        if current.schema_version >= 3 and parsed.schema_version < 3:
+            raise DocumentLayoutServiceError(
+                "New logical-surface layouts cannot be downgraded to a legacy physical-composition schema."
+            )
         if parsed.document_type != revision.layout.document_type:
             raise DocumentLayoutServiceError("Definition document type does not match the layout.")
         revision.definition = parsed.canonical_dict()
