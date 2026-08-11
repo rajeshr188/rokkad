@@ -18,5 +18,8 @@ related: [../ROADMAP.md, ../STATUS.md]
 - Review normalized catalog attribute design before expanding product variants.
 - Continue notification V2 batching and workflow polish.
 - Review invitation and allauth hardening plans before reviving them.
+- Define and accept the separate-appraiser and dynamic PawnLoan collateral-risk
+  workflow in [pawn-collateral-risk-and-appraisal.md](pawn-collateral-risk-and-appraisal.md)
+  before implementing margin-breach alerts or changing overdue authority.
 
 Archived source plans are under [archive](../archive/).

@@ -6,6 +6,7 @@ tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
   - ../adr/2026-08-09-loans-effective-dated-calculation-policy.md
+  - ../implementation/pawn-loan-interest-calculation.md
   - ../implementation/loans-girvi-operator-parity-pilot.md
 ---
 
@@ -41,6 +42,10 @@ The calculation policy includes simple/compound interest, full-month/slab
 part-month treatment, slab cutoff and lower fraction, capitalization interval,
 cash/accrual recognition, valuation method, maximum LTV, advance-interest
 periods, per-period currency rounding, and currency quantum.
+
+See [PawnLoan Interest Calculation Internals](../implementation/pawn-loan-interest-calculation.md)
+for the implemented period, tranche, advance-interest, finalization,
+capitalization, repayment, balance, and overdue rules.
 
 ## Freeze Boundary
 

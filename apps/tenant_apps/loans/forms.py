@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django import forms
+from django_select2 import forms as s2forms
 
 from apps.tenant_apps.loans.domain import (
     AccountingRecognition,
@@ -26,6 +27,7 @@ from apps.tenant_apps.loans.models import (
 )
 from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
 from apps.tenant_apps.loans.documents.print_profiles import built_in_print_profile
+from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
 
 
 class LoanDocumentLayoutCreateForm(forms.Form):
@@ -637,9 +639,24 @@ class FundingCollateralReturnForm(forms.Form):
 
 
 class PawnDraftForm(forms.Form):
-    borrower = forms.ModelChoiceField(queryset=Party.objects.none())
-    license = forms.ModelChoiceField(queryset=LoanLicense.objects.none())
-    series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
+    borrower = forms.ModelChoiceField(
+        queryset=Party.objects.none(),
+        widget=PartyAutocompleteWidget(
+            attrs={
+                "autofocus": True,
+                "data-placeholder": "Search by name, party code, phone, relation, or email",
+            },
+            select2_options={"width": "100%"},
+        ),
+    )
+    series = forms.ModelChoiceField(
+        label="Series (license / register)",
+        help_text="The selected series determines the regulatory license and loan-number sequence.",
+        queryset=LoanSeries.objects.none(),
+        widget=s2forms.Select2Widget(
+            attrs={"data-placeholder": "Search by license number or series"},
+        ),
+    )
     loan_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     tenure_months = forms.IntegerField(min_value=1, initial=3)
 
@@ -648,9 +665,6 @@ class PawnDraftForm(forms.Form):
         self.fields["borrower"].queryset = Party.objects.filter(
             status=Party.PartyStatus.ACTIVE
         ).order_by("display_name", "party_code")
-        self.fields["license"].queryset = LoanLicense.objects.filter(
-            workspace=workspace
-        ).order_by("license_number")
         self.fields["series"].queryset = LoanSeries.objects.filter(
             license__workspace=workspace
         ).select_related("license").order_by("license__license_number", "code")
@@ -658,25 +672,14 @@ class PawnDraftForm(forms.Form):
             self.initial.update(
                 {
                     "borrower": instance.borrower_id,
-                    "license": instance.license_id,
                     "series": instance.series_id,
                     "loan_date": instance.loan_date,
                     "tenure_months": instance.tenure_months,
                 }
             )
-            self.fields["license"].disabled = True
             self.fields["series"].disabled = True
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-select" if isinstance(field, forms.ModelChoiceField) else "form-control")
-
-    def clean(self):
-        cleaned = super().clean()
-        license = cleaned.get("license")
-        series = cleaned.get("series")
-        if license and series and series.license_id != license.pk:
-            self.add_error("series", "Series must belong to the selected license.")
-        return cleaned
-
 
 class PawnCollateralDraftForm(forms.ModelForm):
     collateral_item_id = forms.IntegerField(required=False, widget=forms.HiddenInput())

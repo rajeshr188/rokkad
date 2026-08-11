@@ -1425,6 +1425,7 @@ def pawn_loan_update(request, pk):
         messages.error(request, "Only draft PawnLoans can be edited.")
         return redirect("loans:pawn_loan_detail", pk=loan.pk)
     form = PawnDraftForm(request.POST or None, workspace=request.loans_workspace, instance=loan)
+    existing_items = tuple(loan.collateral_items.all())
     initial = [
         {
             "description": item.description,
@@ -1436,7 +1437,7 @@ def pawn_loan_update(request, pk):
             "latest_appraised_value": item.latest_appraised_value,
             "allocated_principal": item.allocated_principal,
         }
-        for item in loan.collateral_items.all()
+        for item in existing_items
     ]
     formset = PawnCollateralDraftFormSet(
         request.POST or None,
@@ -1444,6 +1445,7 @@ def pawn_loan_update(request, pk):
         prefix="collateral",
         initial=None if request.method == "POST" else initial,
     )
+    _attach_existing_collateral(formset, existing_items)
     economics_preview = None
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         command = _update_command(form, formset)
@@ -1558,7 +1560,8 @@ def pawn_collateral_photo_document(request, pk, item_pk, photo_pk):
     photo.file.open("rb")
     response = HttpResponse(photo.file.read(), content_type=photo.mime_type)
     response["Content-Disposition"] = content_disposition_header(
-        True, photo.original_filename
+        request.GET.get("inline") != "1",
+        photo.original_filename,
     )
     response["X-Content-Type-Options"] = "nosniff"
     return response
@@ -3848,12 +3851,22 @@ def _persist_formset_photos(loan, formset, *, actor, workflow_source):
             )
 
 
+def _attach_existing_collateral(formset, items):
+    """Attach trusted persisted items to their draft forms for photo display."""
+
+    items_by_id = {str(item.pk): item for item in items}
+    for item_form in formset.forms:
+        item_form.existing_collateral_item = items_by_id.get(
+            str(item_form["collateral_item_id"].value() or "")
+        )
+
+
 def _create_command(workspace_id, form, formset):
     data = form.cleaned_data
     return CreatePawnDraftCommand(
         workspace_id=workspace_id,
         borrower_id=data["borrower"].pk,
-        license_id=data["license"].pk,
+        license_id=data["series"].license_id,
         series_id=data["series"].pk,
         principal_amount=Decimal("0.01"),
         monthly_interest_rate=Decimal("0"),

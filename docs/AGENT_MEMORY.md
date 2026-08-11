@@ -8,6 +8,38 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+The Loan Products, Obligations, Exposure, and Risk architecture was accepted by
+the Owner on 2026-08-11. Canonical decision:
+`docs/adr/2026-08-11-loans-product-obligation-and-risk-architecture.md`.
+Execution roadmap: `docs/architecture/loan-risk/implementation/roadmap.md`.
+Implement Phase 0 first and do not skip phase invariants or acceptance gates.
+The four initial PawnLoan products are single-payment bullet, periodic-interest
+bullet, flexible partial-payment bullet, and installment with EMI/equal
+principal. Follow the applicable RBI lender/purpose/date compliance profile;
+exact due dates drive DPD and the three-day grace is operational only.
+
+`docs/implementation/pawn-loan-interest-calculation.md` is the canonical
+technical explanation of current PawnLoan interest. Preserve its key boundary:
+recorded balances fold finalized immutable events, while projected exposure may
+add read-only unfinalized accrual previews but must label them separately and
+must not create accounting evidence.
+
+PawnLoan collateral images are visible as thumbnails on draft correction and
+loan detail through the authenticated, tenant-scoped photo endpoint using
+`?inline=1`. The ordinary endpoint remains an attachment download. Never expose
+storage URLs directly or replace/delete immutable photograph evidence.
+
+PawnLoan draft create/edit uses the shared Party autocomplete widget. Borrower
+search is server-side across name, party code, phone, relation name, and email;
+both autocomplete results and form validation remain active-Party-only within
+the current tenant schema. Keep this widget owned by Party rather than importing
+Girvi UI classes into Loans.
+
+PawnLoan draft create/edit exposes only Series as the operator's setup choice;
+Series determines its owning License and number sequence. The server derives
+`license_id` from the validated Series, while PawnLoan continues storing both
+foreign keys plus the immutable license revision for regulatory evidence.
+
 Loans usability UP2.4 completes the primary bounded-worklist scope. The
 Owner/Admin customer-notice ledger pages 50 Loans-owned intents at a time and
 hydrates/filter delivery status only through the Loans-to-Notify adapter;

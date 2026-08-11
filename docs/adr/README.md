@@ -26,5 +26,6 @@ Accepted and historical architecture decisions live here.
 - [Pawn-loan release-and-renew-only boundary](2026-08-05-pawn-loan-release-and-renew-only.md)
 - [Loans versioned configurable documents](2026-08-06-loans-versioned-configurable-documents.md)
 - [Loans logical-layout and print-profile separation](2026-08-09-loans-logical-layout-and-print-profile-separation.md)
+- [Loans product, obligation, exposure, and risk architecture](2026-08-11-loans-product-obligation-and-risk-architecture.md)
 
 Older decision index files were preserved as [old decisions README](old-decisions-readme.md) and [decision log](decision-log.md).

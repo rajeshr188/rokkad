@@ -31,6 +31,7 @@ from apps.tenant_apps.loans.models import (
     PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
 from apps.tenant_apps.loans.services import record_loan_accounting_event
 
 
@@ -175,6 +176,54 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(response, "Open Economic Setup")
         self.assertContains(response, reverse("loans:pawn_economics_setup"))
 
+    def test_create_uses_active_party_autocomplete_and_supports_preselection(self):
+        self._configured_setup()
+        self.party.primary_phone = "+919876543210"
+        self.party.primary_email = "draft@example.com"
+        self.party.relation_label = Party.RelationLabel.SON_OF
+        self.party.relation_name = "Mohan Lal"
+        self.party.save()
+        inactive_party = Party.objects.create(
+            display_name="Inactive Borrower",
+            status=Party.PartyStatus.INACTIVE,
+        )
+
+        response = self.client.get(
+            reverse("loans:pawn_loan_create"),
+            {"party": self.party.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        field = response.context["form"].fields["borrower"]
+        self.assertIsInstance(field.widget, PartyAutocompleteWidget)
+        self.assertEqual(
+            response.context["form"].initial["borrower"],
+            str(self.party.pk),
+        )
+        self.assertEqual(list(field.queryset), [self.party])
+        self.assertEqual(list(field.widget.get_queryset()), [self.party])
+        self.assertNotIn(inactive_party, field.widget.get_queryset())
+        self.assertContains(response, "django-select2")
+        self.assertContains(
+            response,
+            "Search by name, party code, phone, relation, or email",
+        )
+        label = field.widget.label_from_instance(self.party)
+        self.assertIn("Draft Borrower", label)
+        self.assertIn("Mohan Lal", label)
+        self.assertIn("+919876543210", label)
+        self.assertIn(self.party.party_code, label)
+
+        form = response.context["form"]
+        self.assertNotIn("license", form.fields)
+        self.assertIn("series", form.fields)
+        self.assertContains(response, "Series (license / register)")
+        self.assertContains(
+            response,
+            "The selected series determines the regulatory license",
+        )
+        self.assertContains(response, "django-select2")
+
     def test_staff_can_create_view_and_correct_a_draft_only(self):
         license, series = self._configured_setup()
         response = self.client.post(
@@ -189,9 +238,16 @@ class PawnDraftUiTests(TenantTestCase):
             fetch_redirect_response=False,
         )
         self.assertEqual(loan.state, "DRAFT")
+        self.assertEqual(loan.license_id, series.license_id)
+        self.assertEqual(loan.series_id, series.pk)
         self.assertEqual(loan.collateral_items.count(), 1)
         original_item = loan.collateral_items.get()
         original_public_id = original_item.public_id
+        original_photo = original_item.photos.get()
+        photo_url = reverse(
+            "loans:pawn_collateral_photo_document",
+            args=[loan.pk, original_item.pk, original_photo.pk],
+        )
 
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
         self.assertContains(detail, loan.loan_number)
@@ -199,6 +255,8 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(detail, "Approve loan")
         self.assertContains(detail, "Capture collateral photograph")
         self.assertContains(detail, 'capture="environment"')
+        self.assertContains(detail, f'{photo_url}?inline=1')
+        self.assertContains(detail, "Gold chain photograph captured")
         self.assertNotContains(detail, "Loan ticket PDF")
         ticket = self.client.get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]))
         self.assertEqual(ticket.status_code, 409)
@@ -209,6 +267,14 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(edit, "Use camera/webcam")
         self.assertContains(edit, "loans/collateral_camera.js")
         self.assertContains(edit, 'capture="environment"')
+        self.assertContains(edit, "Existing photograph evidence")
+        self.assertContains(edit, f'{photo_url}?inline=1')
+
+        inline_photo = self.client.get(f"{photo_url}?inline=1")
+        self.assertEqual(inline_photo.status_code, 200)
+        self.assertTrue(inline_photo["Content-Disposition"].startswith("inline"))
+        download_photo = self.client.get(photo_url)
+        self.assertTrue(download_photo["Content-Disposition"].startswith("attachment"))
 
         payload = self._payload(license, series)
         payload["collateral-0-allocated_principal"] = "12500.00"
@@ -1243,7 +1309,6 @@ class PawnDraftUiTests(TenantTestCase):
     def _payload(self, license, series):
         return {
             "borrower": self.party.pk,
-            "license": license.pk,
             "series": series.pk,
             "loan_date": "2026-07-18",
             "tenure_months": "3",

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-08-10
+updated: 2026-08-11
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -9,6 +9,50 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 # Status
 
 ## Latest Update
+
+- The Owner accepted the Loan Products, Obligations, Exposure, and Risk
+  architecture with RBI-aligned gold-loan defaults. Canonical ADR
+  `docs/adr/2026-08-11-loans-product-obligation-and-risk-architecture.md`
+  records the decision. The execution roadmap now defines Phases 0-11 with
+  explicit invariants, models/migrations, service changes, tests, dependencies,
+  exclusions, and acceptance gates. Implementation has not started.
+
+- The Loan Exposure, Risk Assessment, and Portfolio Monitoring blueprint is now
+  organized under `docs/architecture/loan-risk/`. The full canonical plan is
+  preserved, while focused concept documents, proposed decision briefs, a
+  phased roadmap, and a review-status page make it digestible. The old plan
+  path remains as a compatibility pointer. Implementation stays blocked until
+  the Owner reviews its open business decisions.
+
+- PawnLoan interest internals now have a durable implementation reference at
+  `docs/implementation/pawn-loan-interest-calculation.md`, covering frozen
+  tranche/policy evidence, calendar periods, slab fractions, opening-period
+  principal bases, item rounding, advance-interest consumption, finalization,
+  recognition, repayment, capitalization, release catch-up, event-folded
+  balances, overdue semantics, and the recorded-versus-projected exposure gap.
+
+- Future PawnLoan appraisal and collateral-risk work is now explicitly scoped
+  in `docs/plans/pawn-collateral-risk-and-appraisal.md`. It separates contractual
+  maturity overdue from LTV margin breach and full market-value shortfall,
+  proposes a non-writing current-exposure projection plus rate/appraisal
+  valuation, and records the unresolved authority and performance decisions.
+
+- PawnLoan collateral photographs now render as secured thumbnails on both the
+  draft-correction form and loan detail. Thumbnail requests reuse the
+  tenant-scoped media endpoint in inline mode; clicking still downloads the
+  original immutable evidence, and appending a new capture never replaces an
+  earlier photograph.
+
+- PawnLoan borrower selection now uses the shared Party autocomplete instead
+  of rendering every active Party in a plain dropdown. Operators can search by
+  name, party code, phone, relation name, or email; results and submitted
+  values remain restricted to active tenant Parties, and create/edit
+  preselection behavior is preserved.
+
+- PawnLoan draft create/edit now asks for one searchable Series selection
+  instead of independent License and Series values. The Series label includes
+  its owning license, the server derives that license for policy and regulatory
+  evidence, and the model/service consistency guards remain in force.
 
 - Loans usability UP2.4 is complete, closing the primary UP2 scope. A new
   Owner/Admin customer-notice ledger provides 50-row pages and composable

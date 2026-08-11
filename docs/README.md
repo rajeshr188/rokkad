@@ -34,6 +34,7 @@ This folder is the living documentation system. Historical notes, audits, and su
 
 ## App Internals
 
+- [Loan exposure and risk architecture](architecture/loan-risk/README.md)
 - [Loans architecture and Girvi parity review](apps/loans/architecture-and-girvi-parity.md)
 - [Girvi app overview](apps/girvi/README.md)
 - [Girvi architecture](apps/girvi/architecture.md)
