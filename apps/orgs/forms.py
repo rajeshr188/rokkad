@@ -19,6 +19,33 @@ from .services.role_policy import allowed_invitation_roles
 Invitation = get_invitation_model()
 
 
+class ArchiveWorkspaceForm(forms.Form):
+    confirmation_name = forms.CharField(
+        label=_("Workspace name"),
+        help_text=_("Enter the workspace name exactly to confirm archiving."),
+        strip=True,
+    )
+
+    def __init__(self, *args, workspace, **kwargs):
+        self.workspace = workspace
+        super().__init__(*args, **kwargs)
+        self.fields["confirmation_name"].widget.attrs.update(
+            {
+                "class": "form-control",
+                "autocomplete": "off",
+                "placeholder": workspace.name,
+            }
+        )
+
+    def clean_confirmation_name(self):
+        value = self.cleaned_data["confirmation_name"]
+        if value != self.workspace.name:
+            raise forms.ValidationError(
+                _("Enter the workspace name exactly as shown."),
+            )
+        return value
+
+
 class CustomCleanEmailMixin:
     def validate_invitation(self, email):
         if (

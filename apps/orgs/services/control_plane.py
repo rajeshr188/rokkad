@@ -124,6 +124,22 @@ def archive_workspace(*, company, actor, request):
     )
 
 
+def restore_workspace(*, company, actor, request):
+    """Restore an archived workspace without recreating or changing its schema."""
+    with _public_schema_context():
+        company.restore()
+
+    AuditLog.log(
+        "COMPANY_RESTORE",
+        user=actor,
+        company=company,
+        description=f"Restored workspace: {company.name}",
+        request=request,
+        success=True,
+    )
+    return company
+
+
 def create_membership(*, user, company, role, request, actor=None, invite_reason=""):
     """Create membership in public schema."""
     ensure_workspace_has_member_capacity(

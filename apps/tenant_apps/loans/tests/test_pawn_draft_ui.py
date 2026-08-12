@@ -36,6 +36,10 @@ from apps.tenant_apps.loans.services import (
     record_loan_accounting_event,
     seed_default_loan_products,
 )
+from apps.tenant_apps.loans.services.pawn_draft_split import (
+    preview_pawn_draft_split,
+    split_pawn_draft,
+)
 
 
 @override_settings(
@@ -175,6 +179,61 @@ class PawnDraftUiTests(TenantTestCase):
             {license.pk, second_license.pk},
         )
 
+    def test_detail_navigates_to_adjacent_loans_in_the_same_series(self):
+        license, series = self._configured_setup()
+        other_series = LoanSeries.objects.create(license=license, name="Other", code="B")
+        common = {
+            "workspace": self.tenant,
+            "product_version": self.product_version,
+            "license": license,
+            "borrower": self.party,
+            "state": "DRAFT",
+            "principal_amount": Decimal("1000.00"),
+            "monthly_interest_rate": Decimal("2.000000"),
+            "created_by": self.owner,
+        }
+        previous = PawnLoan.objects.create(
+            **common, series=series, loan_number="PL-A-00001", loan_date=date(2026, 7, 17)
+        )
+        current = PawnLoan.objects.create(
+            **common, series=series, loan_number="PL-A-00002", loan_date=date(2026, 7, 18)
+        )
+        following = PawnLoan.objects.create(
+            **common, series=series, loan_number="PL-A-00003", loan_date=date(2026, 7, 18)
+        )
+        PawnLoan.objects.create(
+            **common, series=other_series, loan_number="PL-B-00001", loan_date=date(2026, 7, 18)
+        )
+
+        detail = self.client.get(reverse("loans:pawn_loan_detail", args=[current.pk]))
+
+        self.assertEqual(detail.context["previous_loan"], previous)
+        self.assertEqual(detail.context["next_loan"], following)
+        self.assertContains(detail, reverse("loans:pawn_loan_detail", args=[previous.pk]))
+        self.assertContains(detail, reverse("loans:pawn_loan_detail", args=[following.pk]))
+
+    def test_detail_disables_series_navigation_at_the_boundaries(self):
+        license, series = self._configured_setup()
+        only_loan = PawnLoan.objects.create(
+            workspace=self.tenant,
+            product_version=self.product_version,
+            license=license,
+            series=series,
+            borrower=self.party,
+            loan_number="PL-A-00001",
+            state="DRAFT",
+            principal_amount=Decimal("1000.00"),
+            monthly_interest_rate=Decimal("2.000000"),
+            loan_date=date(2026, 7, 18),
+            created_by=self.owner,
+        )
+
+        detail = self.client.get(reverse("loans:pawn_loan_detail", args=[only_loan.pk]))
+
+        self.assertIsNone(detail.context["previous_loan"])
+        self.assertIsNone(detail.context["next_loan"])
+        self.assertContains(detail, 'aria-disabled="true"', count=2)
+
     def test_create_is_blocked_with_clear_setup_action(self):
         response = self.client.get(reverse("loans:pawn_loan_create"))
 
@@ -276,6 +335,12 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(edit, 'capture="environment"')
         self.assertContains(edit, "Existing photograph evidence")
         self.assertContains(edit, f'{photo_url}?inline=1')
+        self.assertContains(edit, "Existing collateral: Gold chain")
+        self.assertContains(edit, "+ Add collateral")
+        self.assertContains(edit, "New collateral")
+        self.assertContains(edit, "Remove collateral")
+        self.assertContains(edit, 'id="empty-collateral-form"')
+        self.assertContains(edit, "__prefix__")
 
         inline_photo = self.client.get(f"{photo_url}?inline=1")
         self.assertEqual(inline_photo.status_code, 200)
@@ -303,6 +368,107 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertEqual(loan.collateral_items.get().public_id, original_public_id)
         self.assertEqual(loan.collateral_items.get().photos.count(), 2)
         self.assertEqual(loan.change_log.count(), 2)
+
+    def test_staff_can_add_another_collateral_item_to_a_draft(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        existing = loan.collateral_items.get()
+        payload = self._payload(license, series)
+        payload.update(
+            {
+                "collateral-TOTAL_FORMS": "2",
+                "collateral-0-collateral_item_id": str(existing.pk),
+                "collateral-0-allocated_principal": "10000.00",
+                "collateral-1-description": "Silver anklet",
+                "collateral-1-metal": "SILVER",
+                "collateral-1-gross_weight": "25.0000",
+                "collateral-1-net_weight": "24.0000",
+                "collateral-1-purity_percentage": "80.0000",
+                "collateral-1-latest_appraised_value": "15000.00",
+                "collateral-1-allocated_principal": "5000.00",
+                "collateral-1-photograph": SimpleUploadedFile(
+                    "silver-anklet.jpg",
+                    b"\xff\xd8\xff\xe0additional-evidence",
+                    content_type="image/jpeg",
+                ),
+            }
+        )
+
+        response = self.client.post(
+            reverse("loans:pawn_loan_update", args=[loan.pk]), payload
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("loans:pawn_loan_detail", args=[loan.pk]),
+            fetch_redirect_response=False,
+        )
+        loan.refresh_from_db()
+        self.assertEqual(loan.collateral_items.count(), 2)
+        added = loan.collateral_items.get(description="Silver anklet")
+        self.assertEqual(added.photos.count(), 1)
+        self.assertEqual(loan.principal_amount, Decimal("15000.00"))
+
+        removed_item_id = added.pk
+        removed_photo = added.photos.get()
+        removal_payload = self._payload(license, series)
+        removal_payload["collateral-0-collateral_item_id"] = str(existing.pk)
+        removal = self.client.post(
+            reverse("loans:pawn_loan_update", args=[loan.pk]), removal_payload
+        )
+
+        self.assertRedirects(
+            removal,
+            reverse("loans:pawn_loan_detail", args=[loan.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(PawnLoan.objects.get(pk=loan.pk).collateral_items.filter(pk=removed_item_id).exists())
+        self.assertFalse(type(removed_photo).objects.filter(pk=removed_photo.pk).exists())
+
+    def test_draft_split_moves_selected_identity_and_keeps_source_number(self):
+        license, series = self._configured_setup()
+        payload = self._payload(license, series)
+        payload.update({
+            "collateral-TOTAL_FORMS": "2",
+            "collateral-0-allocated_principal": "10000.00",
+            "collateral-1-description": "Gold ring",
+            "collateral-1-metal": "GOLD",
+            "collateral-1-gross_weight": "5.0000",
+            "collateral-1-net_weight": "4.5000",
+            "collateral-1-purity_percentage": "91.6000",
+            "collateral-1-latest_appraised_value": "25000.00",
+            "collateral-1-allocated_principal": "5000.00",
+            "collateral-1-photograph": SimpleUploadedFile("ring.jpg", b"\xff\xd8\xff\xe0ring", content_type="image/jpeg"),
+        })
+        self.client.post(reverse("loans:pawn_loan_create"), payload)
+        source = PawnLoan.objects.get()
+        source_number = source.loan_number
+        selected = source.collateral_items.get(description="Gold ring")
+        selected_public_id = selected.public_id
+        selected_photo_id = selected.photos.get().pk
+        preview = preview_pawn_draft_split(
+            source.pk, collateral_item_ids=(selected.pk,), series=series,
+            product_version=self.product_version, loan_date=source.loan_date,
+            tenure_months=source.tenure_months,
+        )
+
+        new_loan = split_pawn_draft(
+            source.pk, collateral_item_ids=(selected.pk,), series=series,
+            product_version=self.product_version, loan_date=source.loan_date,
+            tenure_months=source.tenure_months,
+            expected_fingerprint=preview.fingerprint, actor=self.owner,
+        )
+
+        source.refresh_from_db()
+        selected.refresh_from_db()
+        self.assertEqual(source.loan_number, source_number)
+        self.assertEqual(source.collateral_items.count(), 1)
+        self.assertEqual(new_loan.collateral_items.count(), 1)
+        self.assertEqual(selected.loan_id, new_loan.pk)
+        self.assertEqual(selected.public_id, selected_public_id)
+        self.assertTrue(selected.photos.filter(pk=selected_photo_id).exists())
+        self.assertEqual(new_loan.accounting_events.count(), 0)
 
     def test_invalid_create_rerenders_without_consuming_number(self):
         license, series = self._configured_setup()

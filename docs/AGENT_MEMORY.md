@@ -8,6 +8,13 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Workspace removal in the ordinary UI means recoverable archive. Owner must
+type the exact workspace name; `is_deleted=True` blocks selection and tenant
+access while preserving the schema and all business/accounting evidence.
+Archived workspaces are restorable only by their Owner or a platform admin.
+Never describe this operation as permanent deletion or expose
+`Company.hard_delete()` through normal workspace settings.
+
 Loan monitoring policy is explicitly configured under Loans Setup -> Economic
 policies. It is immutable, effective-dated, tenant-scoped, and may be a
 workspace default or license override. Never silently invent compliance
@@ -38,7 +45,17 @@ must not create accounting evidence.
 PawnLoan collateral images are visible as thumbnails on draft correction and
 loan detail through the authenticated, tenant-scoped photo endpoint using
 `?inline=1`. The ordinary endpoint remains an attachment download. Never expose
-storage URLs directly or replace/delete immutable photograph evidence.
+storage URLs directly. Controlled draft correction may delete a mistaken
+collateral item together with its pre-contract photographs and draft label
+issues; retained photograph evidence becomes immutable when the loan leaves
+`DRAFT`.
+
+Saved PawnLoan drafts also support a deliberately smaller split workflow.
+Selected collateral identities and photographs move atomically into one new
+draft while at least one item remains on the source. The source keeps its
+number; the destination alone consumes one number on successful confirmation.
+Both drafts are independently re-resolved and no accounting event is created.
+This is the supported bulk-item workflow; Collateral Intake Batch was removed.
 
 PawnLoan draft create/edit uses the shared Party autocomplete widget. Borrower
 search is server-side across name, party code, phone, relation name, and email;

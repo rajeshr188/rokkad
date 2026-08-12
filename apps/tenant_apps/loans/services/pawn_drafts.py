@@ -207,12 +207,8 @@ def update_pawn_draft(
     ):
         raise PawnDraftError("Collateral identity does not belong to this draft.")
     removed = [item for item_id, item in existing.items() if item_id not in supplied_ids]
-    if any(item.photos.exists() for item in removed):
-        raise PawnDraftError(
-            "Collateral with photograph evidence cannot be removed; cancel this draft and start again."
-        )
     for item in removed:
-        item.delete()
+        _delete_draft_collateral(item)
     persisted = []
     editable_fields = (
         "description",
@@ -247,6 +243,22 @@ def update_pawn_draft(
         metadata={"before": before, "after": after},
     )
     return loan
+
+
+def _delete_draft_collateral(item):
+    """Physically remove collateral evidence while its contract is still a draft."""
+    if item.loan.state != PawnLoanState.DRAFT.value:
+        raise PawnDraftError("Only draft collateral can be deleted.")
+    stored_files = tuple(
+        (photo.file.storage, photo.file.name)
+        for photo in item.photos.all()
+        if photo.file.name
+    )
+    item.label_issues.all().delete()
+    item.photos.all().delete()
+    item.delete()
+    for storage, name in stored_files:
+        transaction.on_commit(lambda storage=storage, name=name: storage.delete(name))
 
 
 def _require_active_workspace(expected_workspace_id=None) -> int:

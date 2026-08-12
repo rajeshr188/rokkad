@@ -79,6 +79,7 @@ from .exposure import (
     PawnLoanExposureError,
     get_pawn_loan_exposure,
 )
+from .navigation import PawnLoanSeriesNavigation, get_pawn_loan_series_navigation
 
 __all__ = [
     "PawnLoanBalance",
@@ -140,6 +141,8 @@ __all__ = [
     "LoanLicenseRegisterError",
     "LoanLicenseRegisterRow",
     "get_loan_license_register",
+    "PawnLoanSeriesNavigation",
+    "get_pawn_loan_series_navigation",
 ]
 from .delinquency import PawnLoanDelinquency, get_pawn_loan_delinquency
 from .collateral_valuation import PawnLoanCollateralValuation, get_pawn_loan_collateral_valuation

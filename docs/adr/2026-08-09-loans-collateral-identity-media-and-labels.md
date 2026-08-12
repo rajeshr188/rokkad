@@ -21,14 +21,15 @@ unstable.
 1. Every `PawnCollateralItem` receives a unique immutable UUID `public_id`.
    Tenant-scoped routes remain the authorization boundary; the UUID is the
    durable external identity used by labels and scans.
-2. Draft editing reconciles existing item IDs instead of deleting and
-   recreating them. An item carrying photograph evidence cannot be removed from
-   a draft; the operator must cancel and replace the draft if its identity was
-   wrong.
+2. Draft editing reconciles retained item IDs instead of deleting and
+   recreating them. While the PawnLoan remains `DRAFT`, an operator may remove
+   a mistaken item together with its draft photographs and draft label issues.
+   This controlled deletion is atomic and unavailable after approval.
 3. New collateral entered through the UI requires one JPEG or PNG photograph,
    limited to 10 MB. The approval command independently blocks every item with
    no photograph, so service callers cannot bypass the rule.
-4. Photographs are append-only immutable evidence. Each row freezes original
+4. Photographs become append-only immutable evidence when the PawnLoan leaves
+   `DRAFT`. Each retained row freezes original
    filename, detected MIME type, SHA-256, byte size, actor, time, and workflow
    source. PostgreSQL rejects update and delete.
 5. Approval snapshots freeze the IDs and hashes of all photographs present at
@@ -50,6 +51,8 @@ unstable.
   content and not appraisal evidence.
 - Correcting descriptive or economic draft fields preserves physical identity
   and prior photographs.
+- Removing mistaken draft collateral physically removes its pre-contract media
+  and labels; PostgreSQL continues to reject updates and all post-draft deletes.
 - Label generation is intentionally separate from the configurable legal
   document renderer; it is a small operational artifact with its own audit.
 - OP3 storage can use the same `public_id` without inventing another item code.

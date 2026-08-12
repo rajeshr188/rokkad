@@ -14,6 +14,11 @@ related:
 
 ## P3 Boundary
 
+Draft capture is pre-contract working data: a mistaken collateral item and its
+draft media/label evidence may be deleted only while the PawnLoan remains
+`DRAFT`. Approval is the immutability boundary for retained collateral identity
+and photographs.
+
 P3 preserves the mature physical identity outcome without copying Girvi's
 document internals:
 

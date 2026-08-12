@@ -43,6 +43,13 @@ related:
    actual gross/deduction/net calculation and creates the configured accounting
    event disposition.
 
+For a saved draft containing several items, the operator may select one or
+more collateral items and preview **Split to new loan**. At least one item must
+remain on the source. Confirmation moves the selected item identities and
+photographs to one newly numbered draft, recalculates both drafts independently,
+and leaves the source number unchanged. The split is atomic and creates no
+accounting event.
+
 ## Invariants
 
 - Item allocated principals sum exactly to gross loan principal.

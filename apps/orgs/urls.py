@@ -19,6 +19,11 @@ WORKSPACE_MANAGER_URLPATTERNS = [
     path("workspace/create/", views.workspace_create, name="workspace_create"),
     path("workspace/list/", views.workspace_list, name="workspace_list"),
     path(
+        "workspace/archived/",
+        views.archived_workspaces,
+        name="archived_workspaces",
+    ),
+    path(
         "workspace/<int:workspace_id>/", views.workspace_detail, name="workspace_detail"
     ),
     path(
@@ -40,6 +45,11 @@ WORKSPACE_MANAGER_URLPATTERNS = [
         "workspace/<int:workspace_id>/delete/",
         views.workspace_delete,
         name="workspace_delete",
+    ),
+    path(
+        "workspace/<int:workspace_id>/restore/",
+        views.workspace_restore,
+        name="workspace_restore",
     ),
     path(
         "workspace/<int:workspace_id>/preferences/",

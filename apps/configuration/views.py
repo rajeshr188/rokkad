@@ -54,7 +54,7 @@ class WorkspacePreferenceBuilder(PreferenceFormView):
         base_url = reverse(
             "workspace_settings_preferences",
             kwargs={"workspace_id": self.workspace.id},
-        ).url
+        )
         if section:
             return f"{base_url}?section={section}"
         return base_url

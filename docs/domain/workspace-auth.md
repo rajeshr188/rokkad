@@ -34,4 +34,17 @@ The orgs dashboard owns control-plane status only: team count, pending invitatio
 
 Orgs must not create accounting postings, mutate inventory, or directly own tenant-business calculations.
 
+## Workspace lifecycle
+
+Ordinary Owner-facing removal is a recoverable archive, never a tenant-schema
+drop. Archiving requires the Owner to enter the exact workspace name, sets
+`is_deleted=True`, removes the workspace from normal selection and tenant
+access, and preserves all business, document, loan, accounting, membership,
+and configuration records. The Owner or a platform administrator may restore
+the same workspace and schema from the archived-workspaces screen.
+
+Permanent deletion remains an explicitly guarded platform operation through
+`Company.hard_delete()` and must not be exposed as an ordinary workspace
+settings action.
+
 Archived workspace/auth sources are preserved in [archive/orgs](../archive/orgs/), [archive/django-project](../archive/django-project/), and [archive/multi-tenant](../archive/multi-tenant/).

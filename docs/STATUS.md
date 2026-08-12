@@ -10,6 +10,24 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 ## Latest Update
 
+- Workspace Preferences now redirects correctly after saving a section. The
+  view returns Django's reversed URL string directly instead of treating it as
+  an object with a `.url` attribute, so changing Accounting integration mode
+  between `DEFERRED` and `DEA` no longer raises an `AttributeError`.
+
+- Workspace lifecycle is now visible and truthful. Owner-only Workspace
+  Settings exposes a Danger Zone archive action requiring exact-name
+  confirmation; archive preserves the tenant schema and all business evidence,
+  removes the workspace from active selection, and clears the actor's stale
+  active-workspace pointer. A global archived-workspaces screen allows only the
+  original Owner or platform administrator to restore the same schema. Normal
+  UI never invokes permanent `hard_delete`. The archive view authorizes against
+  the workspace ID in the URL rather than the public/previous `request.tenant`,
+  so a legitimate Owner is not rejected before target-aware checks run. The
+  shared Owner guard also accepts its documented platform-admin override instead
+  of rejecting the `Superuser` role label. Ten focused lifecycle tests and all
+  104 existing orgs tests pass; no migration is required.
+
 - Loans reports no longer crash when reconciling posted DEA references. The
   DEA facade's inspection return path was restored from unreachable code, and
   Loans now categorizes an unexpected null adapter result as
@@ -1441,6 +1459,25 @@ Rokkad is moving toward a layered architecture:
 - Phase 7.5 global workspace selector polish is implemented: `templates/company/workspace_home.html` now presents a clearer workspace manager with summary tiles, active workspace state, canonical create/invitations/settings links, and preserved `workspace_select` switching plus invitation accept/decline POST behavior.
 
 ## Recently Stabilized
+
+- PawnLoan draft detail now offers a compact collateral split workflow: select
+  one or more items, choose destination Series/product/date/tenure, preview the
+  destination number and both loans' economics, then confirm atomically. The
+  source retains its number and at least one item; the destination consumes one
+  new number, while moved item/photo identities are preserved and no accounting
+  event is created. This is now the supported bulk-item workflow; the more
+  complex Collateral Intake Batch UI, services, and active model state were
+  removed. Migration `0052` preserves any previously captured database rows as
+  inaccessible historical evidence instead of destructively dropping tables.
+- PawnLoan draft correction now clearly labels existing and new collateral,
+  supports adding multiple photographed collateral rows in the browser, and
+  permits controlled removal of mistaken collateral and its pre-contract
+  photographs/label issues while the loan remains `DRAFT`. Approval remains
+  the database-enforced evidence immutability boundary.
+- PawnLoan detail now provides Previous/Next controls scoped to the current
+  `LoanSeries`. Navigation follows canonical loan order (`loan_date`, official
+  `loan_number`, stable primary-key tie-breaker), excludes every other series,
+  and renders disabled controls at either boundary.
 
 - Loans rewrite E6.2 is complete: tenant command `compare_loan_coexistence` validates Girvi and Loans source projections against the unified coexistence contract without writes or dual ownership. It compares source and lifecycle counts, principal/interest/total balances, collateral and custody summaries, release state, and DEA-reference visibility; findings are categorized as count, lifecycle, money, custody, release, or DEA visibility with source-key evidence. Text and JSON output are supported, and `--fail-on-mismatch` makes the check usable as a pilot/deployment gate. Seven focused pure/tenant/command tests pass, including zero-mismatch and deliberately altered fixtures, and the complete then-current 143-test tenant-aware Loans suite passed; no migration was required. E6.3 subsequently completed the workspace cutover gate.
 - Loans rewrite E6.3 is complete: audited central preference `loan__new_module_enabled` defaults each workspace to Girvi and can be changed only by Owner/Admin through `/loans/setup/cutover/`. When enabled, canonical navigation and known origination links route to Loans, Legacy Girvi stays visible for servicing existing Girvi-owned records, and Girvi create/preview/customer-create GET, POST, and HTMX routes enforce the boundary server-side while preserving Party handoff. Disabling restores Girvi origination without deleting or transferring PawnLoan records. Five focused tenant tests cover rollback, retained records, direct-URL enforcement, routing, Party handoff, coexistence navigation, and authorization; the complete 148-test tenant-aware Loans suite, ten central-preference tests, and 48 route/navigation intent tests pass. Django, migration-drift, compile, and whitespace checks are clean, and no migration is required. E6.4 production hardening and pilot acceptance is next.

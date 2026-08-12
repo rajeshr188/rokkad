@@ -17,6 +17,7 @@ urlpatterns = [
     path("internal/<int:pk>/kfs-schedule.pdf", views.pawn_loan_kfs_schedule_pdf, name="pawn_loan_kfs_schedule_pdf"),
     path("internal/<int:pk>/events/<int:event_pk>/receipt.pdf", views.pawn_repayment_receipt_pdf, name="pawn_repayment_receipt_pdf"),
     path("internal/<int:pk>/edit/", views.pawn_loan_update, name="pawn_loan_update"),
+    path("internal/<int:pk>/split/", views.pawn_loan_split, name="pawn_loan_split"),
     path("internal/<int:pk>/collateral/<int:item_pk>/photos/add/", views.pawn_collateral_photo_add, name="pawn_collateral_photo_add"),
     path("internal/<int:pk>/collateral/<int:item_pk>/photos/<int:photo_pk>/", views.pawn_collateral_photo_document, name="pawn_collateral_photo_document"),
     path("internal/<int:pk>/collateral/<int:item_pk>/label.pdf", views.pawn_collateral_label_pdf, name="pawn_collateral_label_pdf"),

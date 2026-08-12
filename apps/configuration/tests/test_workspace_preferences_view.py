@@ -85,6 +85,28 @@ class WorkspacePreferencesViewTests(TestCase):
         with self.assertRaises(Http404):
             WorkspacePreferenceBuilder.as_view()(request, workspace_id=self.workspace.id)
 
+    def test_success_url_is_a_string_and_preserves_the_selected_section(self):
+        request = self.factory.post(
+            reverse(
+                "workspace_settings_preferences",
+                kwargs={"workspace_id": self.workspace.id},
+            )
+            + "?section=accounting"
+        )
+        request.user = self.owner
+        view = WorkspacePreferenceBuilder()
+        view.request = request
+        view.workspace = self.workspace
+
+        self.assertEqual(
+            view.get_success_url(),
+            reverse(
+                "workspace_settings_preferences",
+                kwargs={"workspace_id": self.workspace.id},
+            )
+            + "?section=accounting",
+        )
+
     def test_legacy_girvi_preferences_route_remains_reachable_for_owner(self):
         request = self.factory.get(
             reverse("workspace_preferences", kwargs={"workspace_id": self.workspace.id})

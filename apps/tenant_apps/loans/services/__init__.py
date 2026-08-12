@@ -29,6 +29,12 @@ from .pawn_drafts import (
     create_pawn_draft,
     update_pawn_draft,
 )
+from .pawn_draft_split import (
+    PawnDraftSplitError,
+    PawnDraftSplitPreview,
+    preview_pawn_draft_split,
+    split_pawn_draft,
+)
 from .product_catalog import (
     DEFAULT_PRODUCTS,
     LoanProductCatalogError,

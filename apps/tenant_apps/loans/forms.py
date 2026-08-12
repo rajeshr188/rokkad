@@ -761,6 +761,32 @@ class PawnCollateralDraftForm(forms.ModelForm):
         return cleaned
 
 
+class PawnDraftSplitForm(forms.Form):
+    collateral_items = forms.ModelMultipleChoiceField(
+        queryset=PawnCollateralItem.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Selected items move to one new draft. At least one item stays here.",
+    )
+    series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
+    product_version = forms.ModelChoiceField(queryset=LoanProductVersion.objects.none(), label="Loan product")
+    loan_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    tenure_months = forms.IntegerField(min_value=1, initial=3)
+
+    def __init__(self, *args, workspace, source, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["collateral_items"].queryset = source.collateral_items.order_by("pk")
+        self.fields["series"].queryset = LoanSeries.objects.filter(license__workspace=workspace, is_active=True).select_related("license")
+        self.fields["product_version"].queryset = LoanProductVersion.objects.filter(product__workspace=workspace, product__is_active=True, status=LoanProductVersionStatus.ACTIVE.value).select_related("product")
+        for field in ("series", "product_version", "loan_date", "tenure_months"):
+            self.fields[field].widget.attrs.setdefault("class", "form-select" if field in {"series", "product_version"} else "form-control")
+
+    def clean_collateral_items(self):
+        selected = self.cleaned_data["collateral_items"]
+        if selected.count() >= self.fields["collateral_items"].queryset.count():
+            raise forms.ValidationError("At least one collateral item must remain on the source draft.")
+        return selected
+
+
 class PawnCollateralPhotoForm(forms.Form):
     photograph = forms.FileField(help_text="JPEG or PNG, up to 10 MB.")
 

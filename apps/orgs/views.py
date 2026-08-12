@@ -27,6 +27,7 @@ from apps.onboarding.services import (
 from .audit import AuditLog, audit_log
 from .decorators_v2 import permission_required
 from .forms import (
+    ArchiveWorkspaceForm,
     CompanyForm,
     CompanyInvitationForm,
     MembershipForm,
@@ -955,6 +956,8 @@ def _assert_owner_access(request, workspace, allow_platform_admin=True):
         required_permissions=set(),
         allow_platform_admin=allow_platform_admin,
     )
+    if allow_platform_admin and is_platform_admin(request.user):
+        return access
     if access["role_name"].lower() != "owner":
         raise PermissionDenied("Only workspace owners can access this page")
     return access
@@ -1023,7 +1026,15 @@ def workspace_detail(request, workspace_id=None, company_id=None):
 
     roles = Role.objects.all()
     return render(
-        request, "company/company_detail.html", {"company": company, "roles": roles, "workspace": company}
+        request,
+        "company/company_detail.html",
+        {
+            "company": company,
+            "roles": roles,
+            "workspace": company,
+            "can_archive_workspace": request.user == company.owner
+            or is_platform_admin(request.user),
+        },
     )
 
 
@@ -1210,11 +1221,12 @@ def workspace_update(request, workspace_id=None, company_id=None):
 
 
 @login_required
-@permission_required("workspace_delete")
 def workspace_delete(request, workspace_id=None, company_id=None):
     """
-    Delete workspace (Owner only).
-    Requires workspace_delete permission.
+    Archive a workspace while preserving its tenant schema and all business data.
+
+    The legacy route name is retained for compatibility. Requires the
+    workspace_delete permission and Owner access.
     """
     workspace_id = workspace_id or company_id
     if workspace_id is None:
@@ -1228,37 +1240,73 @@ def workspace_delete(request, workspace_id=None, company_id=None):
         allow_platform_admin=True,
     )
 
-    if request.method == "GET":
-        return render(
-            request, "company/company_delete_confirm.html", {"company": company, "workspace": company}
-        )
-
-    elif request.method == "POST":
-        if request.user != company.owner and not is_platform_admin(request.user):
-            AuditLog.log(
-                "COMPANY_DELETE",
-                user=request.user,
-                company=company,
-                description=f"Unauthorized delete attempt: {company.name}",
-                request=request,
-                success=False,
-            )
-            return redirect("error_page")  # Redirect to an error page
-
+    _assert_owner_access(request, company, allow_platform_admin=True)
+    form = ArchiveWorkspaceForm(
+        request.POST if request.method == "POST" else None,
+        workspace=company,
+    )
+    if request.method == "POST" and form.is_valid():
         control_plane.archive_workspace(
             company=company,
             actor=request.user,
             request=request,
         )
 
-        # Reset the user's workspace to the public schema if needed
+        # Do not leave the actor's profile pointing at an inaccessible tenant.
         if getattr(request.user.profile, "workspace", None) == company:
             request.user.profile.workspace = Company.objects.get(
                 schema_name=get_public_schema_name()
             )
             request.user.profile.save(update_fields=["workspace"])
 
-        return redirect("workspace_list")
+        messages.success(
+            request,
+            f"{company.name} was archived. Its schema and business records were preserved.",
+        )
+        return redirect("archived_workspaces")
+
+    return render(
+        request,
+        "company/company_delete_confirm.html",
+        {"company": company, "workspace": company, "form": form},
+    )
+
+
+@login_required
+def archived_workspaces(request):
+    """List archived workspaces that the actor is allowed to restore."""
+    workspaces = Company.all_objects.filter(is_deleted=True).exclude(
+        schema_name=get_public_schema_name()
+    )
+    if not is_platform_admin(request.user):
+        workspaces = workspaces.filter(owner=request.user)
+    workspaces = workspaces.select_related("owner").order_by("-updated_at", "name")
+    return render(
+        request,
+        "company/archived_workspaces.html",
+        {"archived_workspaces": workspaces},
+    )
+
+
+@require_POST
+@login_required
+def workspace_restore(request, workspace_id):
+    """Restore one archived workspace; only its Owner or platform admin may act."""
+    company = get_object_or_404(
+        Company.all_objects,
+        id=workspace_id,
+        is_deleted=True,
+    )
+    if request.user != company.owner and not is_platform_admin(request.user):
+        raise PermissionDenied("Only the workspace owner can restore this workspace")
+
+    control_plane.restore_workspace(
+        company=company,
+        actor=request.user,
+        request=request,
+    )
+    messages.success(request, f"{company.name} was restored.")
+    return redirect("archived_workspaces")
 
 
 @login_required

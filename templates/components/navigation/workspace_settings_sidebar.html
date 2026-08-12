@@ -33,6 +33,12 @@
    href="{% url 'workspace_slug_settings_security' workspace_slug=ew.schema_name %}">
     <i class="bi bi-shield-check"></i> Security
 </a>
+{% if role_name == 'Owner' or role_name == 'Superuser' %}
+<a class="nav-link mgmt-nav-link text-danger {% if request.resolver_match.url_name == 'workspace_delete' %}active{% endif %}"
+   href="{% url 'workspace_delete' workspace_id=ew.id %}">
+    <i class="bi bi-archive"></i> Archive Workspace
+</a>
+{% endif %}
 {% elif workspace_settings_sidebar_variant == "mobile" %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
    href="{% url 'workspace_slug_settings' workspace_slug=ew.schema_name %}">
@@ -68,4 +74,10 @@
    href="{% url 'workspace_slug_settings_security' workspace_slug=ew.schema_name %}">
     <i class="bi bi-shield-check"></i> Security
 </a>
+{% if role_name == 'Owner' or role_name == 'Superuser' %}
+<a class="nav-link mgmt-nav-link text-danger {% if request.resolver_match.url_name == 'workspace_delete' %}active{% endif %}"
+   href="{% url 'workspace_delete' workspace_id=ew.id %}">
+    <i class="bi bi-archive"></i> Archive Workspace
+</a>
+{% endif %}
 {% endif %}
