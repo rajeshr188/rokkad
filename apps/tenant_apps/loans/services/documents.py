@@ -44,6 +44,10 @@ class PawnLoanDocumentService:
         )
 
     @classmethod
+    def render_loan_kfs_schedule(cls, loan):
+        return cls._project_and_render(PawnLoanDocumentProjectionBuilder.loan_kfs_schedule, loan)
+
+    @classmethod
     def render_repayment_receipt(cls, event):
         return cls._project_and_render(
             PawnLoanDocumentProjectionBuilder.repayment_receipt, event

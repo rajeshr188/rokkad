@@ -83,6 +83,11 @@ class PawnLoanDocumentProjectionBuilder:
         "Successor advance interest": "renewal.successor_advance_interest",
         "Successor deducted fees": "renewal.successor_deducted_fees",
         "Net cash handoff": "renewal.net_cash_handoff",
+        "Product": "contract.product", "Product version": "contract.product_version",
+        "Repayment structure": "contract.repayment_structure",
+        "Schedule fingerprint": "contract.schedule_fingerprint",
+        "Maturity date": "contract.maturity_date", "Contractual interest": "contract.interest",
+        "Total contractual repayment": "contract.total_repayment",
     }
     SECTION_KEYS = {
         "Collateral": "collateral.items", "Collateral principal allocation": "repayment.principal_allocations",
@@ -90,6 +95,7 @@ class PawnLoanDocumentProjectionBuilder:
         "Collateral disposed": "auction.collateral_disposed", "Collateral movement": "renewal.collateral_movement",
         "Source item principal settled": "renewal.source_principal_settled",
         "Successor item principal opened": "renewal.successor_principal_opened",
+        "Repayment schedule": "contract.repayment_schedule",
     }
 
     @classmethod
@@ -138,6 +144,31 @@ class PawnLoanDocumentProjectionBuilder:
             f"pawn_loan_ticket_{source['loan_number']}.pdf", verification, details,
             (("Collateral", rows),),
         )
+
+    @classmethod
+    def loan_kfs_schedule(cls, loan):
+        schedule = loan.repayment_schedules.order_by("-version").first()
+        if schedule is None:
+            raise DocumentProjectionError("A key-facts schedule requires a persisted repayment schedule.")
+        product_version = loan.product_version
+        verification = cls._verification(loan, f"schedule:{schedule.pk}:{schedule.fingerprint}")
+        total = schedule.principal + schedule.contractual_interest + schedule.rounding_adjustment
+        details = cls._identity_rows(loan) + (
+            ("Document", "Key facts and repayment schedule"),
+            ("Official loan number", loan.loan_number),
+            ("Borrower", f"{loan.borrower.display_name} ({loan.borrower.party_code})"),
+            ("Product", product_version.product.name),
+            ("Product version", f"{product_version.product.code} v{product_version.version}"),
+            ("Repayment structure", product_version.get_repayment_structure_display()),
+            ("Principal", cls._money(schedule.principal)),
+            ("Contractual interest", cls._money(schedule.contractual_interest)),
+            ("Total contractual repayment", cls._money(total)),
+            ("Maturity date", schedule.maturity_date),
+            ("Schedule fingerprint", schedule.fingerprint),
+        )
+        rows = [("Sequence", "Due date", "Opening principal", "Principal due", "Interest due", "Closing principal")]
+        rows.extend((row.sequence, row.due_date, cls._money(row.opening_principal), cls._money(row.principal_due), cls._money(row.interest_due), cls._money(row.closing_principal)) for row in schedule.obligations.order_by("sequence"))
+        return cls._payload("loan_kfs_schedule", "Key Facts and Repayment Schedule", f"pawn_loan_kfs_{loan.loan_number}.pdf", verification, details, (("Repayment schedule", rows),))
 
     @classmethod
     def repayment_receipt(cls, event):

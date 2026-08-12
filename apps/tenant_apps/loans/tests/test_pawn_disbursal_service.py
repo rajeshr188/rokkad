@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -48,9 +48,11 @@ from apps.tenant_apps.dea.models import (
     VoucherStatus,
 )
 from apps.tenant_apps.loans.models import (
+    CollateralAppraisal,
     LoanLicense,
     LoanNumberSequence,
     LoanPolicySnapshot,
+    LoanProductVersion,
     LoanSeries,
     PawnCollateralItem,
     PawnLoanAccountingEvent,
@@ -63,7 +65,11 @@ from apps.tenant_apps.loans.models import (
     PawnLoanRenewal,
     PawnLoanRenewalReversal,
     PawnLoanPrincipalOpeningLine,
+    RepaymentObligation,
+    RepaymentScheduleVersion,
+    ObligationAllocation,
 )
+from apps.tenant_apps.loans.selectors import get_pawn_loan_collateral_valuation
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
     CreatePawnDraftCommand,
@@ -88,6 +94,7 @@ from apps.tenant_apps.loans.services import (
     preview_pawn_loan_repayment,
     reverse_pawn_loan_event,
     record_pawn_loan_repayment,
+    reconcile_loan_obligations,
     release_pawn_loan_in_full,
     release_pawn_loan_partially,
     PawnReleaseError,
@@ -103,10 +110,12 @@ from apps.tenant_apps.loans.services import (
     renew_pawn_loan,
     reverse_pawn_loan_renewal,
     reverse_pawn_loan_auction,
+    seed_default_loan_products,
     start_pawn_loan_auction,
 )
 from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
+    get_pawn_loan_exposure,
     get_pawn_loan_release_readiness,
     get_pawn_loan_reports,
 )
@@ -196,12 +205,15 @@ class PawnDisbursalServiceTests(TenantTestCase):
             monthly_interest_rate=Decimal("2.00"),
             effective_from=date(2026, 1, 1),
         )
+        product_version = seed_default_loan_products()[0]
+        type(product_version).objects.filter(pk=product_version.pk).update(status="ACTIVE")
         self.loan = create_pawn_draft(
             CreatePawnDraftCommand(
                 workspace_id=self.tenant.pk,
                 borrower_id=borrower.pk,
                 license_id=license.pk,
                 series_id=series.pk,
+                product_version_id=product_version.pk,
                 principal_amount=Decimal("50000.00"),
                 monthly_interest_rate=Decimal("2.000000"),
                 loan_date=date(2026, 8, 3),
@@ -250,10 +262,30 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(result.accounting_event.event_kind, TransactionKind.DISBURSAL.value)
         self.assertEqual(result.accounting_event.payload["values"]["principal"], "50000")
         self.assertEqual(LoanPolicySnapshot.objects.filter(loan=self.loan).count(), 1)
+        appraisal = CollateralAppraisal.objects.get(
+            collateral_item__loan=self.loan
+        )
+        self.assertEqual(appraisal.method, "ORIGINATION_CAPTURE")
+        self.assertEqual(appraisal.appraised_value, Decimal("50000.0000"))
         self.assertEqual(result.policy_snapshot.accounting_recognition, "CASH")
         self.assertEqual(result.policy_snapshot.interest_method, "SIMPLE")
         self.assertEqual(result.policy_snapshot.partial_month_method, "FULL_MONTH")
         self.assertEqual(result.outbox.status, LoanOutboxStatus.PENDING.value)
+        schedule = RepaymentScheduleVersion.objects.get(loan=self.loan)
+        obligation = RepaymentObligation.objects.get(schedule_version=schedule)
+        self.assertEqual(schedule.source_event, result.accounting_event)
+        self.assertEqual(schedule.principal, Decimal("50000.0000"))
+        self.assertEqual(schedule.contractual_interest, Decimal("3000.0000"))
+        self.assertEqual(obligation.principal_due, Decimal("50000.0000"))
+        self.assertEqual(obligation.interest_due, Decimal("3000.0000"))
+        self.assertEqual(obligation.due_date, date(2026, 11, 3))
+        valuation = get_pawn_loan_collateral_valuation(
+            self.loan.pk, as_of_date=date(2026, 8, 3)
+        )
+        self.assertEqual(
+            valuation.compliance_profile,
+            f"loan-policy-snapshot:{result.policy_snapshot.pk}",
+        )
         audit = self.loan.change_log.get(event_kind=PawnLoanEventKind.DISBURSED.value)
         self.assertEqual(audit.metadata["accounting_event_id"], result.accounting_event.pk)
         readiness.assert_called_once()
@@ -309,6 +341,8 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(first.accounting_event.pk, repeat.accounting_event.pk)
         self.assertEqual(PawnLoanAccountingEvent.objects.filter(loan=self.loan).count(), 1)
         self.assertEqual(LoanPolicySnapshot.objects.filter(loan=self.loan).count(), 1)
+        self.assertEqual(RepaymentScheduleVersion.objects.filter(loan=self.loan).count(), 1)
+        self.assertEqual(RepaymentObligation.objects.filter(loan=self.loan).count(), 1)
 
     @patch("apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness")
     def test_expired_license_blocks_disbursal_before_any_financial_record(self, _readiness):
@@ -631,6 +665,10 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(repayment.allocation.principal, Decimal("1000.00"))
         self.assertEqual(repayment.allocation.interest, Decimal("0.00"))
         self.assertEqual(repayment.allocation.fees, Decimal("0.00"))
+        obligation_allocation = ObligationAllocation.objects.get(source_event=repayment.accounting_event)
+        self.assertEqual(obligation_allocation.component, "PRINCIPAL")
+        self.assertEqual(obligation_allocation.amount, Decimal("1000.0000"))
+        self.assertEqual(obligation_allocation.obligation.sequence, 1)
         voucher = Voucher.objects.get(pk=repayment.outbox.dea_voucher_id)
         self.assertEqual(voucher.voucher_type.name, "PAWN_LOAN_REPAYMENT")
         journal_entry = voucher.journal_entries.get(
@@ -769,6 +807,27 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )
         self.assertEqual([item.period_number for item in previews], [1, 2])
         self.assertEqual(previews[0].recognized_interest, Decimal("1000.00"))
+        event_count = PawnLoanAccountingEvent.objects.filter(loan=self.loan).count()
+        accrual_count = PawnLoanInterestAccrual.objects.filter(loan=self.loan).count()
+        exposure = get_pawn_loan_exposure(
+            self.loan.pk,
+            as_of_date=date(2026, 9, 2),
+        )
+        self.assertEqual(exposure.principal_outstanding, Decimal("40000.00"))
+        self.assertEqual(exposure.recorded_interest, Decimal("0.00"))
+        self.assertEqual(exposure.projected_interest, Decimal("877.4194"))
+        self.assertEqual(exposure.recorded_total_due, Decimal("40000.00"))
+        self.assertEqual(exposure.total_economic_exposure, Decimal("40877.4194"))
+        self.assertEqual(exposure.maturity_payoff, Decimal("43000.0000"))
+        self.assertEqual(exposure.ltv_exposure_basis, Decimal("43000.0000"))
+        self.assertEqual(exposure.due_now.total, Decimal("0"))
+        self.assertEqual(exposure.integrity_findings, ())
+        self.assertEqual(
+            PawnLoanAccountingEvent.objects.filter(loan=self.loan).count(), event_count
+        )
+        self.assertEqual(
+            PawnLoanInterestAccrual.objects.filter(loan=self.loan).count(), accrual_count
+        )
         self.assertEqual(previews[1].period_fraction, Decimal("0.5"))
         self.assertEqual(previews[1].recognized_interest, Decimal("500.00"))
         self.assertTrue(previews[1].is_partial)
@@ -820,6 +879,104 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertIsNone(reversed_accrual.outbox.dea_voucher_id)
         balance = get_pawn_loan_balance(self.loan.pk, as_of_date=date(2026, 9, 10))
         self.assertEqual(balance.interest_outstanding, Decimal("0.00"))
+
+    def test_mid_period_principal_repayment_does_not_reduce_current_period_accrual_base(self):
+        """Characterize the legacy period-opening balance calculation."""
+        self._activate_loan()
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 15),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                repayment = record_pawn_loan_repayment(
+                    self.loan.pk,
+                    amount=Decimal("10000.00"),
+                    request_key="phase-0-mid-period-principal",
+                    actor=self.actor,
+                )
+
+        self.assertEqual(repayment.allocation.principal, Decimal("10000.00"))
+        self.assertEqual(
+            repayment.accounting_event.payload["values"]["principal"],
+            "10000",
+        )
+        self.assertEqual(
+            repayment.accounting_event.payload["effective_date"],
+            "2026-08-15",
+        )
+        previews = preview_pawn_loan_accruals(
+            self.loan.pk,
+            as_of_date=date(2026, 9, 2),
+        )
+
+        self.assertEqual(len(previews), 1)
+        self.assertEqual(previews[0].period_start, date(2026, 8, 3))
+        self.assertEqual(previews[0].period_end, date(2026, 9, 2))
+        self.assertEqual(previews[0].calculation_base, Decimal("50000.00"))
+        self.assertEqual(previews[0].recognized_interest, Decimal("1000.00"))
+
+    def test_installment_extra_principal_supersedes_schedule_and_reversal_restores_prior_version(self):
+        installment = LoanProductVersion.objects.get(
+            product__code="GOLD-INSTALLMENT-EMI", version=1
+        )
+        LoanProductVersion.objects.filter(pk=installment.pk).update(status="ACTIVE")
+        type(self.loan).objects.filter(pk=self.loan.pk).update(
+            product_version=installment,
+            tenure_months=12,
+        )
+        self.loan.refresh_from_db()
+        self._activate_loan()
+        original = RepaymentScheduleVersion.objects.get(loan=self.loan, version=1)
+        due_date = original.obligations.first().due_date
+        due_exposure = get_pawn_loan_exposure(self.loan.pk, as_of_date=due_date)
+        overdue_exposure = get_pawn_loan_exposure(
+            self.loan.pk, as_of_date=due_date + timedelta(days=1)
+        )
+        self.assertEqual(
+            due_exposure.due_now.total,
+            original.obligations.first().principal_due
+            + original.obligations.first().interest_due,
+        )
+        self.assertEqual(due_exposure.overdue.total, Decimal("0"))
+        self.assertEqual(overdue_exposure.overdue.total, due_exposure.due_now.total)
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), self.captureOnCommitCallbacks(execute=True):
+            repayment = record_pawn_loan_repayment(
+                self.loan.pk,
+                amount=Decimal("10000.00"),
+                request_key="installment-extra-principal",
+                actor=self.actor,
+            )
+
+        replacement = RepaymentScheduleVersion.objects.get(loan=self.loan, version=2)
+        self.assertEqual(replacement.supersedes, original)
+        self.assertEqual(replacement.source_event, repayment.accounting_event)
+        self.assertEqual(replacement.principal, Decimal("40000.0000"))
+        self.assertLess(replacement.obligations.count(), original.obligations.count())
+        self.assertEqual(
+            replacement.obligations.first().principal_due
+            + replacement.obligations.first().interest_due,
+            original.obligations.first().principal_due
+            + original.obligations.first().interest_due,
+        )
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_reversal.timezone.localdate",
+            return_value=date(2026, 8, 3),
+        ), self.captureOnCommitCallbacks(execute=True):
+            reverse_pawn_loan_event(
+                repayment.accounting_event.pk,
+                reason="Installment payment was voided",
+                actor=self.tenant.owner,
+            )
+
+        restored = reconcile_loan_obligations(self.loan)
+        self.assertEqual(restored.principal_remaining, Decimal("50000.0000"))
+        self.assertEqual(restored.integrity_findings, ())
 
     def test_accrual_policy_posts_receivable_income_and_capitalization(self):
         policy = resolve_policy(
@@ -1294,6 +1451,17 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )
         self.assertEqual(result.outbox.status, LoanOutboxStatus.POSTED.value)
         self.assertEqual(PawnLoanRelease.objects.filter(loan=self.loan).count(), 1)
+        release_allocations = tuple(
+            result.accounting_event.obligation_allocations.order_by("allocation_order")
+        )
+        self.assertEqual(
+            [(row.component, row.amount) for row in release_allocations],
+            [("INTEREST", Decimal("1000.0000")), ("PRINCIPAL", Decimal("50000.0000"))],
+        )
+        release_reconciliation = reconcile_loan_obligations(self.loan)
+        self.assertEqual(release_reconciliation.principal_remaining, Decimal("0.0000"))
+        self.assertEqual(release_reconciliation.interest_remaining, Decimal("0.0000"))
+        self.assertEqual(release_reconciliation.integrity_findings, ())
         self.assertEqual(
             PawnCollateralCustodyEvent.objects.filter(
                 collateral_item=collateral,
@@ -1583,6 +1751,9 @@ class PawnDisbursalServiceTests(TenantTestCase):
         collateral.refresh_from_db()
         self.assertEqual(completed.outbox.status, LoanOutboxStatus.POSTED.value)
         self.assertEqual(completed.accounting_event.event_kind, TransactionKind.AUCTION_RECOVERY.value)
+        recovery_allocation = completed.accounting_event.obligation_allocations.get()
+        self.assertEqual(recovery_allocation.component, "PRINCIPAL")
+        self.assertEqual(recovery_allocation.amount, Decimal("50000.0000"))
         self.assertEqual(self.loan.state, PawnLoanState.CLOSED.value)
         self.assertEqual(collateral.custody_state, CollateralCustodyState.AUCTION_DISPOSED.value)
         self.assertEqual(completed.auction.items.count(), 1)
@@ -1614,6 +1785,12 @@ class PawnDisbursalServiceTests(TenantTestCase):
         )
         self.assertEqual(self.loan.state, PawnLoanState.ACTIVE.value)
         self.assertEqual(collateral.custody_state, CollateralCustodyState.IN_VAULT.value)
+        inverse = reversed_auction.recovery_reversal_event.obligation_allocations.get()
+        self.assertEqual(inverse.reversal_of, recovery_allocation)
+        self.assertEqual(inverse.amount, Decimal("-50000.0000"))
+        restored = reconcile_loan_obligations(self.loan)
+        self.assertEqual(restored.principal_remaining, Decimal("50000.0000"))
+        self.assertEqual(restored.integrity_findings, ())
         self.assertTrue(PawnLoanAuctionReversal.objects.filter(auction=auction).exists())
 
     def test_in_progress_auction_can_be_cancelled_but_requires_admin_reason(self):
@@ -1960,6 +2137,16 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertTrue(second.already_renewed)
         self.assertEqual(first.renewal.pk, second.renewal.pk)
         self.assertEqual(PawnLoanRenewal.objects.filter(source_loan=self.loan).count(), 1)
+        successor_schedule = RepaymentScheduleVersion.objects.get(
+            loan=first.successor_loan
+        )
+        self.assertEqual(successor_schedule.source_event, first.opening_event)
+        self.assertEqual(
+            first.settlement_event.obligation_allocations.get(
+                component="PRINCIPAL"
+            ).amount,
+            Decimal("50000.0000"),
+        )
 
     def test_top_up_renewal_rejects_principal_above_snapshot_ltv(self):
         self._activate_loan()

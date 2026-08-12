@@ -9,6 +9,7 @@ from apps.tenant_apps.loans.domain import (
     CollateralMetal,
     FeeCalculationType,
     InterestMethod,
+    LoanProductVersionStatus,
     PartialMonthMethod,
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
@@ -19,7 +20,9 @@ from apps.tenant_apps.loans.domain import (
 from apps.tenant_apps.loans.models import (
     FundingPledgeItem,
     LoanLicense,
+    LoanMonitoringPolicy,
     LoanSeries,
+    LoanProductVersion,
     PawnCollateralItem,
     PawnPhysicalVerificationObservation,
     PawnPhysicalVerificationResolution,
@@ -638,6 +641,26 @@ class FundingCollateralReturnForm(forms.Form):
         )
 
 
+class LoanProductVersionDraftForm(forms.ModelForm):
+    class Meta:
+        model = LoanProductVersion
+        fields = (
+            "available_from", "available_until", "repayment_structure",
+            "amortisation_method", "payment_frequency", "minimum_tenor_months",
+            "maximum_tenor_months", "operational_grace_days",
+            "extra_payment_rule", "calculation_contract_version",
+        )
+        widgets = {
+            "available_from": forms.DateInput(attrs={"type": "date"}),
+            "available_until": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-select" if isinstance(field.widget, forms.Select) else "form-control")
+
+
 class PawnDraftForm(forms.Form):
     borrower = forms.ModelChoiceField(
         queryset=Party.objects.none(),
@@ -657,6 +680,10 @@ class PawnDraftForm(forms.Form):
             attrs={"data-placeholder": "Search by license number or series"},
         ),
     )
+    product_version = forms.ModelChoiceField(
+        label="Loan product",
+        queryset=LoanProductVersion.objects.none(),
+    )
     loan_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     tenure_months = forms.IntegerField(min_value=1, initial=3)
 
@@ -668,16 +695,23 @@ class PawnDraftForm(forms.Form):
         self.fields["series"].queryset = LoanSeries.objects.filter(
             license__workspace=workspace
         ).select_related("license").order_by("license__license_number", "code")
+        self.fields["product_version"].queryset = LoanProductVersion.objects.filter(
+            product__workspace=workspace,
+            product__is_active=True,
+            status=LoanProductVersionStatus.ACTIVE.value,
+        ).select_related("product").order_by("product__name", "version")
         if instance is not None and not self.is_bound:
             self.initial.update(
                 {
                     "borrower": instance.borrower_id,
                     "series": instance.series_id,
+                    "product_version": instance.product_version_id,
                     "loan_date": instance.loan_date,
                     "tenure_months": instance.tenure_months,
                 }
             )
             self.fields["series"].disabled = True
+            self.fields["product_version"].disabled = True
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-select" if isinstance(field, forms.ModelChoiceField) else "form-control")
 
@@ -945,6 +979,37 @@ class PawnEconomicConfigurationForm(forms.Form):
         self.fields["license"].queryset = LoanLicense.objects.filter(
             workspace=workspace
         ).order_by("license_number")
+        for field in self.fields.values():
+            field.widget.attrs.setdefault(
+                "class",
+                "form-select"
+                if isinstance(field, (forms.ModelChoiceField, forms.ChoiceField))
+                else "form-control",
+            )
+
+
+class LoanMonitoringPolicyForm(forms.ModelForm):
+    class Meta:
+        model = LoanMonitoringPolicy
+        fields = (
+            "license", "effective_from", "compliance_profile",
+            "maturity_warning_days", "operational_grace_days",
+            "dpd_watch_threshold", "dpd_substandard_threshold",
+            "ltv_warning_ratio", "ltv_breach_ratio", "ltv_critical_ratio",
+            "rate_freshness_days", "appraisal_freshness_days",
+        )
+        widgets = {"effective_from": forms.DateInput(attrs={"type": "date"})}
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.workspace = workspace
+        self.instance.eligible_custody_states = ["IN_VAULT", "WITH_FUNDING_LENDER"]
+        self.instance.severity_mapping = {"strategy": "derived-v1"}
+        self.fields["license"].required = False
+        self.fields["license"].queryset = LoanLicense.objects.filter(
+            workspace=workspace
+        ).order_by("license_number")
+        self.fields["license"].help_text = "Leave blank for the workspace default."
         for field in self.fields.values():
             field.widget.attrs.setdefault(
                 "class",

@@ -15,6 +15,7 @@ DOCUMENT_KIND_CHOICES = (
     ("auction_notice", "Auction notice"),
     ("auction_recovery", "Auction recovery memo"),
     ("renewal", "Renewal agreement"),
+    ("loan_kfs_schedule", "Key facts and repayment schedule"),
 )
 
 

@@ -30,6 +30,7 @@ from apps.tenant_apps.loans.models import (
     PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
 class LoansCoreModelTests(TenantTestCase):
@@ -99,6 +100,7 @@ class LoansCoreModelTests(TenantTestCase):
             name="Main",
             code="B",
         )
+        self.product_version = ensure_test_product_version(self.workspace_a)
 
     def _create_workspace(self, name, schema_name):
         workspace = Company(
@@ -118,6 +120,7 @@ class LoansCoreModelTests(TenantTestCase):
             "license": self.license_a,
             "series": self.series_a,
             "borrower": self.party,
+            "product_version": self.product_version,
             "loan_number": "A00001",
             "state": PawnLoanState.DRAFT.value,
             "principal_amount": Decimal("10000.00"),

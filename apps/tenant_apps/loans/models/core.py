@@ -551,6 +551,11 @@ class PawnLoan(models.Model):
         on_delete=models.PROTECT,
         related_name="pawn_loans",
     )
+    product_version = models.ForeignKey(
+        "loans.LoanProductVersion",
+        on_delete=models.PROTECT,
+        related_name="pawn_loans",
+    )
     loan_number = models.CharField(max_length=64)
     state = models.CharField(
         max_length=16,
@@ -629,10 +634,26 @@ class PawnLoan(models.Model):
                 errors["license_revision"] = (
                     "License revision must belong to the selected license."
                 )
+        if self.product_version_id and self.workspace_id:
+            if self.product_version.product.workspace_id != self.workspace_id:
+                errors["product_version"] = (
+                    "Product version must belong to the loan workspace."
+                )
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
+        if self.pk:
+            original_product_version_id = type(self).objects.filter(pk=self.pk).values_list(
+                "product_version_id", flat=True
+            ).first()
+            if (
+                original_product_version_id is not None
+                and self.product_version_id != original_product_version_id
+            ):
+                raise ValidationError(
+                    {"product_version": "A loan's product version is immutable."}
+                )
         self.clean()
         return super().save(*args, **kwargs)
 

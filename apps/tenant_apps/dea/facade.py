@@ -32,6 +32,8 @@ from apps.tenant_apps.dea.facades.loan_events import (
 )
 from apps.tenant_apps.dea.facades.loan_reconciliation import (
     LoanAccountingReference,
+    PawnLoanReceivableBalance,
+    get_pawn_loan_receivable_balance,
     inspect_pawn_loan_accounting_reference,
 )
 from apps.tenant_apps.dea.facades.payments import (
@@ -54,6 +56,8 @@ __all__ = [
     "LoanPostingPrerequisites",
     "LoanEventPostingReceipt",
     "LoanAccountingReference",
+    "PawnLoanReceivableBalance",
+    "get_pawn_loan_receivable_balance",
     "create_and_post_payment",
     "ensure_customer_account",
     "find_payment_by_marker",

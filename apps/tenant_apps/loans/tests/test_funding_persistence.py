@@ -34,6 +34,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
 )
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
 class FundingLoanPersistenceTests(TenantTestCase):
@@ -91,6 +92,7 @@ class FundingLoanPersistenceTests(TenantTestCase):
             workspace=self.tenant,
             license=self.license,
             series=self.series,
+            product_version=ensure_test_product_version(self.tenant),
             borrower=self.borrower,
             loan_number=f"PL-{uuid.uuid4().hex[:8]}",
             state=PawnLoanState.ACTIVE.value,

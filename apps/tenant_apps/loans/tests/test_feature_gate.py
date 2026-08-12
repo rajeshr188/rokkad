@@ -22,6 +22,7 @@ from apps.tenant_apps.loans.feature_flags import (
 )
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnLoan
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
 @override_settings(
@@ -260,6 +261,7 @@ class LoansFeatureGateTests(TenantTestCase):
         )
         return PawnLoan.objects.create(
             workspace=self.tenant,
+            product_version=ensure_test_product_version(self.tenant),
             license=license,
             series=series,
             borrower=self.party,

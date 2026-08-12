@@ -50,6 +50,7 @@ from apps.tenant_apps.loans.services import (
 )
 from apps.tenant_apps.notify_v2.models import NotificationJob
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
 TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="rokkad-collateral-media-")
@@ -118,6 +119,7 @@ class PawnCollateralMediaTests(TenantTestCase):
             workspace=self.tenant,
             license=license,
             series=series,
+            product_version=ensure_test_product_version(self.tenant),
             borrower=borrower,
             loan_number="PL-M-1",
             principal_amount=Decimal("5000.00"),

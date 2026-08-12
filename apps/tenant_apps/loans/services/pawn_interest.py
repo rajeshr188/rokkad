@@ -3,7 +3,7 @@
 import calendar
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Sum
@@ -16,6 +16,10 @@ from apps.tenant_apps.loans.domain import (
     PawnLoanEventKind,
     PawnLoanState,
     TransactionKind,
+)
+from apps.tenant_apps.loans.domain.interest import (
+    InterestCalculationError,
+    calculate_period_interest,
 )
 from apps.tenant_apps.loans.integrations import accrual_payload, capitalization_payload
 from apps.tenant_apps.loans.models import (
@@ -219,14 +223,15 @@ def calculate_accrual_interest(
     currency_quantum,
 ):
     """Retain calculation precision and round only the finalized period amount."""
-    base = Decimal(str(calculation_base))
-    rate = Decimal(str(monthly_interest_rate))
-    fraction = Decimal(str(period_fraction))
-    quantum = Decimal(str(currency_quantum))
-    if base < 0 or rate < 0 or not Decimal("0") < fraction <= Decimal("1"):
-        raise PawnInterestError("Accrual calculation inputs are outside policy bounds.")
-    unrounded = base * rate / Decimal("100") * fraction
-    return unrounded, unrounded.quantize(quantum, rounding=ROUND_HALF_UP)
+    try:
+        return calculate_period_interest(
+            calculation_base=calculation_base,
+            monthly_interest_rate=monthly_interest_rate,
+            period_fraction=period_fraction,
+            currency_quantum=currency_quantum,
+        )
+    except InterestCalculationError as exc:
+        raise PawnInterestError(str(exc)) from exc
 
 
 def _itemized_accrual_lines(

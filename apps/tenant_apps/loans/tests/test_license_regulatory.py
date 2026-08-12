@@ -24,6 +24,7 @@ from apps.tenant_apps.loans.services import (
     update_license,
 )
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
 TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="rokkad-license-regulatory-")
@@ -184,6 +185,7 @@ class LoanLicenseRegulatoryTests(TenantTestCase):
         )
         loan = PawnLoan.objects.create(
             workspace=self.tenant,
+            product_version=ensure_test_product_version(self.tenant),
             license=license,
             license_revision=initial,
             series=series,

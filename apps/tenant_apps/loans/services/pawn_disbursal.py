@@ -1,11 +1,12 @@
 """Atomic PawnLoan disbursal source-event workflow."""
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, time
 from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
     AccountingRecognition,
@@ -23,6 +24,7 @@ from apps.tenant_apps.loans.domain import (
 from apps.tenant_apps.loans.integrations import disbursal_payload
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
+    CollateralAppraisal,
     LoanPolicySnapshot,
     PawnLoan,
     PawnLoanAccountingEvent,
@@ -36,6 +38,9 @@ from apps.tenant_apps.loans.services.accounting_outbox import (
 )
 from apps.tenant_apps.loans.services.accounting_readiness import (
     require_pawn_loan_accounting_readiness,
+)
+from apps.tenant_apps.loans.services.obligations import (
+    persist_disbursal_repayment_schedule,
 )
 from apps.tenant_apps.loans.services.license_series import assert_series_can_issue
 
@@ -102,6 +107,9 @@ def disburse_pawn_loan(
         raise PawnDisbursalError(str(exc)) from exc
 
     policy_snapshot = _persist_policy_snapshot(loan, resolved_policy)
+    _persist_origination_appraisals(
+        loan, effective_date=effective_date, actor=actor
+    )
     if economics is None:
         payload = disbursal_payload(
             loan,
@@ -133,6 +141,13 @@ def disburse_pawn_loan(
         payload=payload,
         actor=actor,
         delivery_handler=delivery_handler,
+    )
+    repayment_schedule = persist_disbursal_repayment_schedule(
+        loan,
+        source_event=event,
+        disbursed_on=effective_date,
+        currency_quantum=policy_snapshot.currency_quantum,
+        actor=actor,
     )
     disbursal_snapshot = None
     if economics is not None:
@@ -169,11 +184,33 @@ def disburse_pawn_loan(
             "disbursal_snapshot_id": (
                 disbursal_snapshot.pk if disbursal_snapshot is not None else None
             ),
+            "repayment_schedule_version_id": repayment_schedule.pk,
         },
     )
     return PawnDisbursalResult(
         loan, policy_snapshot, event, outbox, disbursal_snapshot
     )
+
+
+def _persist_origination_appraisals(loan, *, effective_date, actor):
+    """Promote captured item values into immutable disbursal evidence."""
+
+    effective_at = timezone.make_aware(datetime.combine(effective_date, time.min))
+    for item in loan.collateral_items.all():
+        if item.latest_appraised_value is None or item.appraisals.exists():
+            continue
+        CollateralAppraisal.objects.create(
+            workspace=loan.workspace,
+            collateral_item=item,
+            version=1,
+            effective_at=effective_at,
+            appraised_value=item.latest_appraised_value,
+            status=CollateralAppraisal.Status.APPROVED,
+            method="ORIGINATION_CAPTURE",
+            evidence_reference=f"PawnLoan:{loan.pk}:disbursal",
+            review_notes="Appraisal value frozen from approved origination collateral.",
+            created_by=actor,
+        )
 
 
 def assert_pawn_loan_financial_actions_allowed(

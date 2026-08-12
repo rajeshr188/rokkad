@@ -32,7 +32,10 @@ from apps.tenant_apps.loans.models import (
 )
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
-from apps.tenant_apps.loans.services import record_loan_accounting_event
+from apps.tenant_apps.loans.services import (
+    record_loan_accounting_event,
+    seed_default_loan_products,
+)
 
 
 @override_settings(
@@ -86,12 +89,15 @@ class PawnDraftUiTests(TenantTestCase):
         self.client = TenantClient(self.tenant)
         self.client.force_login(self.owner)
         self.party = Party.objects.create(display_name="Draft Borrower")
+        self.product_version = seed_default_loan_products()[0]
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
 
     def test_list_filters_workspace_loans_and_preserves_filters_while_paging(self):
         license, series = self._configured_setup()
         for sequence in range(26):
             PawnLoan.objects.create(
                 workspace=self.tenant,
+                product_version=self.product_version,
                 license=license,
                 series=series,
                 borrower=self.party,
@@ -119,6 +125,7 @@ class PawnDraftUiTests(TenantTestCase):
         )
         special_loan = PawnLoan.objects.create(
             workspace=self.tenant,
+            product_version=self.product_version,
             license=second_license,
             series=second_series,
             borrower=special_party,
@@ -281,7 +288,15 @@ class PawnDraftUiTests(TenantTestCase):
         payload["collateral-0-description"] = "Corrected gold chain"
         payload["collateral-0-collateral_item_id"] = str(loan.collateral_items.get().pk)
         response = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.status_code,
+            302,
+            msg=(
+                response.context["form"].errors.as_json()
+                if response.context
+                else response.content.decode(errors="replace")[:1000]
+            ),
+        )
         loan.refresh_from_db()
         self.assertEqual(str(loan.principal_amount), "12500.00")
         self.assertEqual(loan.collateral_items.get().description, "Corrected gold chain")
@@ -296,11 +311,23 @@ class PawnDraftUiTests(TenantTestCase):
         response = self.client.post(reverse("loans:pawn_loan_create"), payload)
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The draft was not saved.")
         self.assertEqual(PawnLoan.objects.count(), 0)
         sequence = LoanNumberSequence.objects.get(
             series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value
         )
         self.assertEqual(sequence.next_number, 1)
+
+    def test_save_is_the_default_submit_action(self):
+        license, series = self._configured_setup()
+
+        response = self.client.get(reverse("loans:pawn_loan_create"))
+
+        content = response.content.decode()
+        self.assertLess(
+            content.index('name="action" value="save"'),
+            content.index('name="action" value="preview"'),
+        )
 
     def test_economic_preview_does_not_create_or_consume_a_draft(self):
         license, series = self._configured_setup()
@@ -1310,6 +1337,7 @@ class PawnDraftUiTests(TenantTestCase):
         return {
             "borrower": self.party.pk,
             "series": series.pk,
+            "product_version": self.product_version.pk,
             "loan_date": "2026-07-18",
             "tenure_months": "3",
             "collateral-TOTAL_FORMS": "1",

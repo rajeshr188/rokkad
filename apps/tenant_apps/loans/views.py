@@ -1,5 +1,6 @@
 import hashlib
 import uuid
+from types import SimpleNamespace
 from copy import deepcopy
 from decimal import Decimal
 
@@ -62,6 +63,7 @@ from apps.tenant_apps.loans.forms import (
     LoanDocumentPrintProfileCreateForm,
     LoanDocumentPrintProfileDefinitionForm,
     LoanModuleFeatureGateForm,
+    LoanProductVersionDraftForm,
     LoanSeriesSetupForm,
     FundingLoanActivationForm,
     FundingLoanCancellationForm,
@@ -72,6 +74,7 @@ from apps.tenant_apps.loans.forms import (
     FundingLoanDraftInputsForm,
     FundingLoanRepaymentForm,
     PawnEconomicConfigurationForm,
+    LoanMonitoringPolicyForm,
     PawnFeePolicyForm,
     PawnAccrualForm,
     PawnAdditionalCollateralFormSet,
@@ -155,6 +158,7 @@ from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanOperationalNotice,
     LoanLicenseRevision,
+    LoanProduct,
     LoanSeries,
     PawnLoan,
     PawnCollateralItem,
@@ -166,6 +170,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoanAccountingOutbox,
     PawnLoanAuction,
     PawnLoanEconomicPolicy,
+    LoanMonitoringPolicy,
     PawnLoanFeePolicy,
     PawnLoanNotice,
     PawnLoanRelease,
@@ -182,6 +187,11 @@ from apps.tenant_apps.loans.selectors import (
     get_funding_loan_summaries,
     get_loan_license_register,
     get_pawn_loan_balance,
+    get_pawn_loan_exposure,
+    get_pawn_loan_delinquency,
+    get_pawn_loan_collateral_valuation,
+    get_pawn_loan_risk_assessment,
+    reconcile_pawn_loan_receivable,
     get_pawn_loan_notice_rows,
     get_physical_verification_detail,
     get_pawn_loan_operations_snapshot,
@@ -221,6 +231,8 @@ from apps.tenant_apps.loans.services import (
     SaveFundingLoanDraftInputs,
     UpdatePawnDraftCommand,
     activate_license,
+    activate_product_version,
+    create_product_version_draft,
     activate_saved_funding_loan_draft,
     begin_funding_settlement,
     close_funding_loan,
@@ -235,6 +247,7 @@ from apps.tenant_apps.loans.services import (
     create_pawn_draft,
     append_collateral_photo,
     create_pawn_loan_economic_policy,
+    create_loan_monitoring_policy,
     create_pawn_loan_fee_policy,
     create_pawn_metal_interest_rate_policy,
     create_pawn_loan_notice,
@@ -276,6 +289,8 @@ from apps.tenant_apps.loans.services import (
     release_pawn_loan_in_full,
     reopen_pawn_loan,
     retry_failed_outbox_event,
+    retire_product_version,
+    seed_default_loan_products,
     assess_pawn_loan_event_reversal,
     reverse_pawn_loan_event,
     set_series_active,
@@ -451,6 +466,70 @@ def loan_module_feature_gate(request):
         "loans/setup/feature_gate.html",
         {"form": form, "feature_state": state},
     )
+
+
+@loans_setup_required
+def loan_product_list(request):
+    products = LoanProduct.objects.filter(workspace=request.loans_workspace).prefetch_related("versions", "versions__pawn_loans").order_by("code")
+    return render(request, "loans/setup/products/list.html", {"products": products})
+
+
+@require_POST
+@loans_setup_required
+def loan_product_seed_defaults(request):
+    try:
+        versions = seed_default_loan_products(actor=request.user, request=request)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f"Default product catalog is ready with {len(versions)} version(s). Review and activate each approved draft.")
+    return redirect("loans:loan_product_list")
+
+
+@require_POST
+@loans_setup_required
+def loan_product_version_activate(request, version_pk):
+    try:
+        version = activate_product_version(version_pk, actor=request.user, request=request)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f"{version.product.name} v{version.version} is active for new loans.")
+    return redirect("loans:loan_product_list")
+
+
+@require_POST
+@loans_setup_required
+def loan_product_version_retire(request, version_pk):
+    try:
+        version = retire_product_version(version_pk, actor=request.user, request=request)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f"{version.product.name} v{version.version} is retired from new origination. Existing loans are unchanged.")
+    return redirect("loans:loan_product_list")
+
+
+@loans_setup_required
+def loan_product_version_create(request, product_pk):
+    product = get_object_or_404(LoanProduct, pk=product_pk, workspace=request.loans_workspace)
+    active = product.versions.filter(status="ACTIVE").first()
+    initial = {}
+    if active:
+        for name in LoanProductVersionDraftForm.Meta.fields:
+            initial[name] = getattr(active, name)
+    form = LoanProductVersionDraftForm(request.POST or None, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        try:
+            version = create_product_version_draft(
+                product.pk, actor=request.user, request=request, **form.cleaned_data
+            )
+        except ValueError as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, f"Created {product.name} v{version.version} as a draft. Review it before activation.")
+            return redirect("loans:loan_product_list")
+    return render(request, "loans/setup/products/version_form.html", {"form": form, "product": product, "active_version": active})
 
 
 @loans_setup_required
@@ -1314,6 +1393,37 @@ def pawn_loan_ticket_pdf(request, pk):
 
 
 @loans_workspace_required
+def pawn_loan_kfs_schedule_pdf(request, pk):
+    loan = _pawn_loan_for_workspace(request, pk)
+    try:
+        payload = PawnLoanDocumentProjectionBuilder.loan_kfs_schedule(loan)
+        schedule = loan.repayment_schedules.order_by("-version").first()
+        existing = LoanDocumentLayoutService.find_official_issue(
+            workspace=request.loans_workspace, document_type=payload.document_type,
+            source_type="RepaymentScheduleVersion", source_id=schedule.pk,
+            source_fingerprint=schedule.fingerprint,
+        )
+        if existing:
+            return _issued_document_response(existing, payload)
+        result = PawnLoanDocumentService.render_loan_kfs_schedule(loan)
+        render_result = SimpleNamespace(
+            pdf=result.pdf, renderer_version="fixed-kfs-v1",
+            payload_hash=hashlib.sha256(repr(payload).encode()).hexdigest(),
+            layout_hash="", asset_hashes={},
+        )
+        issue = LoanDocumentLayoutService.issue(
+            workspace=request.loans_workspace, document_type=payload.document_type,
+            source_type="RepaymentScheduleVersion", source_id=schedule.pk,
+            source_fingerprint=schedule.fingerprint,
+            payload_schema_version=payload.schema_version, render_result=render_result,
+            filename=payload.file_name, actor=request.user,
+        )
+        return _issued_document_response(issue, payload)
+    except (PawnLoanDocumentError, ValueError, ValidationError) as exc:
+        return HttpResponse(str(exc), status=409, content_type="text/plain")
+
+
+@loans_workspace_required
 def pawn_repayment_receipt_pdf(request, pk, event_pk):
     event = get_object_or_404(
         PawnLoanAccountingEvent.objects.select_related(
@@ -1507,8 +1617,25 @@ def pawn_loan_detail(request, pk):
                 loan.pk,
                 as_of_date=context["today"],
             )
-        except (ValidationError, ValueError) as exc:
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["balance_error"] = str(exc)
+        try:
+            context["exposure"] = get_pawn_loan_exposure(
+                loan.pk,
+                as_of_date=context["today"],
+            )
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+            context["exposure_error"] = str(exc)
+        try:
+            context["delinquency"] = get_pawn_loan_delinquency(loan.pk, as_of_date=context["today"])
+            context["collateral_valuation"] = get_pawn_loan_collateral_valuation(loan.pk, as_of_date=context["today"])
+            context["risk_assessment"] = get_pawn_loan_risk_assessment(loan.pk, as_of_date=context["today"])
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+            context["risk_error"] = str(exc)
+        try:
+            context["receivable_reconciliation"] = reconcile_pawn_loan_receivable(loan.pk, as_of_date=context["today"])
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+            context["reconciliation_error"] = str(exc)
     if loan.state == PawnLoanState.ACTIVE.value:
         try:
             context["accrual_previews"] = preview_pawn_loan_accruals(
@@ -1516,7 +1643,7 @@ def pawn_loan_detail(request, pk):
                 as_of_date=context["today"],
                 include_partial=True,
             )
-        except (ValidationError, ValueError) as exc:
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["accrual_error"] = str(exc)
     context["accounting_rows"] = _accounting_rows(
         loan,
@@ -3324,6 +3451,18 @@ def pawn_economics_setup(request):
         initial={"effective_from": timezone.localdate()},
         prefix="fee",
     )
+    monitoring_form = LoanMonitoringPolicyForm(
+        request.POST if action == "monitoring" else None,
+        workspace=request.loans_workspace,
+        initial={
+            "effective_from": timezone.localdate(),
+            "compliance_profile": "Workspace monitoring v1",
+            "ltv_warning_ratio": Decimal("0.70"),
+            "ltv_breach_ratio": Decimal("0.80"),
+            "ltv_critical_ratio": Decimal("0.90"),
+        },
+        prefix="monitoring",
+    )
     if action == "configuration" and configuration_form.is_valid():
         data = configuration_form.cleaned_data
         try:
@@ -3378,9 +3517,22 @@ def pawn_economics_setup(request):
         else:
             messages.success(request, "PawnLoan fee policy added.")
             return redirect("loans:pawn_economics_setup")
+    if action == "monitoring" and monitoring_form.is_valid():
+        try:
+            create_loan_monitoring_policy(
+                workspace=request.loans_workspace,
+                actor=request.user,
+                **monitoring_form.cleaned_data,
+            )
+        except (ValidationError, ValueError) as exc:
+            monitoring_form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Loan monitoring policy added.")
+            return redirect("loans:pawn_economics_setup")
     context = {
         "configuration_form": configuration_form,
         "fee_form": fee_form,
+        "monitoring_form": monitoring_form,
         "economic_policies": PawnLoanEconomicPolicy.objects.filter(
             workspace=request.loans_workspace
         ).select_related("license"),
@@ -3388,6 +3540,9 @@ def pawn_economics_setup(request):
             workspace=request.loans_workspace
         ).select_related("license"),
         "fee_policies": PawnLoanFeePolicy.objects.filter(
+            workspace=request.loans_workspace
+        ).select_related("license"),
+        "monitoring_policies": LoanMonitoringPolicy.objects.filter(
             workspace=request.loans_workspace
         ).select_related("license"),
     }
@@ -3868,6 +4023,7 @@ def _create_command(workspace_id, form, formset):
         borrower_id=data["borrower"].pk,
         license_id=data["series"].license_id,
         series_id=data["series"].pk,
+        product_version_id=data["product_version"].pk,
         principal_amount=Decimal("0.01"),
         monthly_interest_rate=Decimal("0"),
         loan_date=data["loan_date"],

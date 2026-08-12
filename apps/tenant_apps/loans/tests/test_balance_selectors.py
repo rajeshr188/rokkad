@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
 
@@ -11,9 +12,11 @@ from apps.tenant_apps.loans.domain import (
     LoanOutboxStatus,
     TransactionKind,
 )
+from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.selectors import (
     PawnLoanBalanceSelectorError,
     calculate_pawn_loan_balance,
+    get_pawn_loan_balance,
 )
 
 
@@ -64,6 +67,34 @@ class PawnLoanBalanceSelectorTests(SimpleTestCase):
         self.assertEqual(balance.accounting_recognition, AccountingRecognition.CASH.value)
         self.assertTrue(balance.is_overdue)
         self.assertTrue(balance.posting_ready)
+
+    def test_contractual_due_date_drives_overdue_without_a_grace_shift(self):
+        events = (self._event(1, TransactionKind.DISBURSAL, principal="10000"),)
+        common = {
+            "events": events,
+            "collateral_items": (
+                self._collateral(CollateralCustodyState.IN_VAULT),
+            ),
+            "policy_snapshot": self._policy(
+                InterestMethod.SIMPLE,
+                AccountingRecognition.CASH,
+            ),
+        }
+
+        on_due_date = calculate_pawn_loan_balance(
+            self.loan,
+            as_of_date=date(2026, 4, 30),
+            **common,
+        )
+        next_day = calculate_pawn_loan_balance(
+            self.loan,
+            as_of_date=date(2026, 5, 1),
+            **common,
+        )
+
+        self.assertEqual(on_due_date.due_date, date(2026, 4, 30))
+        self.assertFalse(on_due_date.is_overdue)
+        self.assertTrue(next_day.is_overdue)
 
     def test_compound_accrual_policy_moves_capitalized_interest_into_principal(self):
         events = (
@@ -227,6 +258,35 @@ class PawnLoanBalanceSelectorTests(SimpleTestCase):
                 ),
                 as_of_date=date(2026, 3, 1),
             )
+
+    def test_balance_lookup_scopes_same_loan_identifier_to_each_active_workspace(self):
+        queryset = MagicMock()
+        queryset.select_related.return_value.prefetch_related.return_value = queryset
+        queryset.get.side_effect = [
+            # A tenant schema may contain the same local primary key as another.
+            # Each lookup must therefore include the active workspace as well.
+            PawnLoan.DoesNotExist,
+            PawnLoan.DoesNotExist,
+        ]
+
+        with patch(
+            "apps.tenant_apps.loans.selectors.balances.current_tenant_workspace_id",
+            side_effect=[101, 202],
+        ), patch(
+            "apps.tenant_apps.loans.selectors.balances.PawnLoan.objects",
+            queryset,
+        ):
+            for _ in range(2):
+                with self.assertRaises(PawnLoanBalanceSelectorError):
+                    get_pawn_loan_balance(7, as_of_date=date(2026, 3, 1))
+
+        self.assertEqual(
+            [call.kwargs for call in queryset.get.call_args_list],
+            [
+                {"pk": 7, "workspace_id": 101},
+                {"pk": 7, "workspace_id": 202},
+            ],
+        )
 
     def _event(
         self,

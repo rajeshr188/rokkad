@@ -51,6 +51,10 @@ from apps.tenant_apps.loans.services.pawn_interest import (
     should_record_pawn_accrual_event,
 )
 from apps.tenant_apps.loans.services.pawn_notices import create_pawn_loan_notice
+from apps.tenant_apps.loans.services.obligations import (
+    allocate_event_to_obligations,
+    terminate_active_repayment_schedule,
+)
 from apps.tenant_apps.loans.services.storage_operations import (
     remove_collateral_from_storage,
 )
@@ -301,6 +305,18 @@ def complete_pawn_loan_auction(
         payload=payload,
         actor=actor,
         delivery_handler=delivery_handler,
+    )
+    allocate_event_to_obligations(
+        source_event=event,
+        principal_amount=balance.principal_outstanding,
+        interest_amount=balance.interest_outstanding,
+        actor=actor,
+    )
+    terminate_active_repayment_schedule(
+        loan=loan,
+        source_event=event,
+        reason="AUCTION_RECOVERY",
+        actor=actor,
     )
     now = timezone.now()
     auction.state = PawnLoanAuctionState.COMPLETED.value

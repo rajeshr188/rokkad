@@ -18,6 +18,7 @@ from apps.tenant_apps.loans.services import (
     deliver_outbox_event,
     record_loan_accounting_event,
     retry_failed_outbox_event,
+    seed_default_loan_products,
 )
 from apps.tenant_apps.party.models import Party
 
@@ -61,10 +62,13 @@ class AccountingOutboxServiceTests(TenantTestCase):
         )
         series = LoanSeries.objects.create(license=license, name="Main", code="A")
         LoanNumberSequence.objects.create(series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value, prefix="PL-A-", width=5, maximum_number=10000)
+        product_version = seed_default_loan_products()[0]
+        type(product_version).objects.filter(pk=product_version.pk).update(status="ACTIVE")
         self.loan = create_pawn_draft(
             CreatePawnDraftCommand(
                 workspace_id=self.tenant.pk, borrower_id=borrower.pk,
                 license_id=license.pk, series_id=series.pk,
+                product_version_id=product_version.pk,
                 principal_amount=Decimal("50000.00"), monthly_interest_rate=Decimal("2.000000"),
                 loan_date=date(2026, 7, 30), tenure_months=3,
                 collateral=(CollateralDraftInput(description="Gold", metal=CollateralMetal.GOLD, gross_weight=Decimal("10"), net_weight=Decimal("9"), purity_percentage=Decimal("91.6"), latest_appraised_value=Decimal("50000")),),

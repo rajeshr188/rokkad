@@ -33,6 +33,21 @@ from .policies import (
     WorkspacePolicyDefaults,
     resolve_policy,
 )
+from .products import (
+    LoanAmortisationMethod,
+    LoanExtraPaymentRule,
+    LoanPaymentFrequency,
+    LoanProductVersionStatus,
+    LoanRepaymentStructure,
+)
+from .schedules import (
+    ObligationComponent,
+    RepaymentSchedule,
+    RepaymentScheduleContract,
+    RepaymentScheduleInput,
+    ScheduleRateTranche,
+    ScheduledRepayment,
+)
 from .vocabulary import (
     ALLOWED_PAWN_LOAN_TRANSITIONS,
     DERIVED_PAWN_LOAN_STATES,
@@ -65,6 +80,17 @@ __all__ = [
     "LicensePolicyOverrides",
     "LoanDocumentKind",
     "LoanOutboxStatus",
+    "LoanAmortisationMethod",
+    "LoanExtraPaymentRule",
+    "LoanPaymentFrequency",
+    "LoanProductVersionStatus",
+    "LoanRepaymentStructure",
+    "ObligationComponent",
+    "RepaymentSchedule",
+    "RepaymentScheduleContract",
+    "RepaymentScheduleInput",
+    "ScheduleRateTranche",
+    "ScheduledRepayment",
     "PartialMonthMethod",
     "PawnLoanNoticeChannel",
     "PawnLoanAuctionState",
@@ -94,3 +120,7 @@ __all__ = [
     "can_transition",
     "resolve_policy",
 ]
+from .delinquency import DelinquencyResult, UnpaidObligation, calculate_delinquency
+from .ltv import LtvAssessment, calculate_ltv
+from .risk import PawnLoanRiskAssessment, RiskPolicy, assess_pawn_loan_risk
+from .risk_transitions import RiskTransition, detect_risk_transitions

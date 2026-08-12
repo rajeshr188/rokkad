@@ -61,6 +61,7 @@ from apps.tenant_apps.loans.services import (
     save_funding_loan_draft_inputs,
 )
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 from apps.tenant_apps.loans.selectors import (
     FundingLoanSelectorError,
     get_funding_loan_detail,
@@ -130,6 +131,7 @@ class FundingLoanServiceTests(TenantTestCase):
     def _pawn_loan(self, suffix, appraisal):
         loan = PawnLoan.objects.create(
             workspace=self.tenant,
+            product_version=ensure_test_product_version(self.tenant),
             license=self.license,
             series=self.series,
             borrower=self.borrower,
@@ -997,6 +999,7 @@ class FundingLoanConcurrencyTests(TransactionTestCase):
         series = LoanSeries.objects.create(license=license, name="Race", code="FR")
         pawn_loan = PawnLoan.objects.create(
             workspace=self.tenant,
+            product_version=ensure_test_product_version(self.tenant),
             license=license,
             series=series,
             borrower=borrower,

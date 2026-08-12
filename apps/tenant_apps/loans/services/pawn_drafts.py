@@ -9,6 +9,7 @@ from django.db import transaction
 
 from apps.tenant_apps.loans.domain import (
     CollateralMetal,
+    LoanProductVersionStatus,
     PawnLoanEventKind,
     PawnLoanState,
 )
@@ -16,6 +17,7 @@ from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     LoanLicense,
     LoanSeries,
+    LoanProductVersion,
     PawnCollateralItem,
     PawnLoan,
     current_tenant_workspace_id,
@@ -52,6 +54,7 @@ class CreatePawnDraftCommand:
     borrower_id: int
     license_id: int
     series_id: int
+    product_version_id: int
     principal_amount: Decimal
     monthly_interest_rate: Decimal
     loan_date: date
@@ -78,6 +81,9 @@ def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None) -> PawnLoa
         license_id=command.license_id,
         series_id=command.series_id,
     )
+    product_version = _active_product_version(
+        workspace_id, command.product_version_id, command.loan_date, command.tenure_months
+    )
     assert_series_can_issue(series)
     license_revision = license.revisions.order_by("-revision_number").first()
 
@@ -94,6 +100,7 @@ def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None) -> PawnLoa
         license_revision=license_revision,
         series=series,
         borrower=borrower,
+        product_version=product_version,
         loan_number="PENDING-ALLOCATION",
         state=PawnLoanState.DRAFT.value,
         principal_amount=principal_amount,
@@ -158,6 +165,7 @@ def update_pawn_draft(
         license_revision=loan.license_revision,
         series=loan.series,
         borrower=borrower,
+        product_version=loan.product_version,
         loan_number=loan.loan_number,
         state=loan.state,
         principal_amount=principal_amount,
@@ -270,6 +278,27 @@ def _setup_for_workspace(*, workspace_id, license_id, series_id):
     except LoanSeries.DoesNotExist as exc:
         raise PawnDraftError("Series must belong to the selected license.") from exc
     return license, series
+
+
+def _active_product_version(workspace_id, product_version_id, loan_date, tenure_months):
+    try:
+        version = LoanProductVersion.objects.select_related("product").get(
+            pk=product_version_id,
+            product__workspace_id=workspace_id,
+            product__is_active=True,
+            status=LoanProductVersionStatus.ACTIVE.value,
+        )
+    except LoanProductVersion.DoesNotExist as exc:
+        raise PawnDraftError(
+            "Product version must be active in the current workspace."
+        ) from exc
+    if version.available_from and loan_date < version.available_from:
+        raise PawnDraftError("Product version is not yet available on the loan date.")
+    if version.available_until and loan_date > version.available_until:
+        raise PawnDraftError("Product version is no longer available on the loan date.")
+    if not version.minimum_tenor_months <= int(tenure_months) <= version.maximum_tenor_months:
+        raise PawnDraftError("Loan tenor is outside the selected product version limits.")
+    return version
 
 
 def _validated_collateral(loan, inputs, *, resolved=None):

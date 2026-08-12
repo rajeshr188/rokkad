@@ -20,6 +20,7 @@ from apps.tenant_apps.loans.services import (
     create_pawn_draft,
     reopen_pawn_loan,
     transfer_expired_draft_setup,
+    seed_default_loan_products,
 )
 from apps.tenant_apps.party.models import Party
 
@@ -55,12 +56,15 @@ class PawnLifecycleServiceTests(TenantTestCase):
         )
         self.borrower = Party.objects.create(display_name="Lifecycle Borrower")
         self.license, self.series = self._setup("A", "PL-A-")
+        product_version = seed_default_loan_products()[0]
+        type(product_version).objects.filter(pk=product_version.pk).update(status="ACTIVE")
         self.loan = create_pawn_draft(
             CreatePawnDraftCommand(
                 workspace_id=self.tenant.pk,
                 borrower_id=self.borrower.pk,
                 license_id=self.license.pk,
                 series_id=self.series.pk,
+                product_version_id=product_version.pk,
                 principal_amount=Decimal("50000.00"),
                 monthly_interest_rate=Decimal("2.000000"),
                 loan_date=date(2026, 7, 18),

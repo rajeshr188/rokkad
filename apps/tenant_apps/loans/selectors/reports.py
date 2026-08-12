@@ -477,6 +477,17 @@ def _event_issues(loan, event, dea_inspector):
         journal_entry_id=outbox.dea_journal_entry_id,
         source_event_id=source_event_id,
     )
+    if evidence is None:
+        return [
+            _issue(
+                "DEA_INSPECTION_UNAVAILABLE",
+                loan,
+                "DEA returned no accounting-reference inspection result.",
+                event=event,
+                outbox=outbox,
+                action="Inspect the Loans-to-DEA reconciliation adapter.",
+            )
+        ]
     issues = []
     checks = (
         (not evidence.voucher_exists, "DEA_VOUCHER_MISSING", "Referenced DEA voucher does not exist."),

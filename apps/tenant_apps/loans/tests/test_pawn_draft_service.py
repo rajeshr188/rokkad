@@ -42,6 +42,7 @@ from apps.tenant_apps.loans.services import (
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
+    seed_default_loan_products,
     release_pawn_loan_in_full,
     reverse_pawn_loan_event,
     update_pawn_draft,
@@ -102,6 +103,9 @@ class PawnDraftServiceTests(TenantTestCase):
             width=5,
             maximum_number=10000,
         )
+        self.product_version = seed_default_loan_products()[0]
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
+        self.product_version.refresh_from_db()
 
     def collateral(self, **changes):
         values = {
@@ -121,6 +125,7 @@ class PawnDraftServiceTests(TenantTestCase):
             "borrower_id": self.borrower.pk,
             "license_id": self.license.pk,
             "series_id": self.series.pk,
+            "product_version_id": self.product_version.pk,
             "principal_amount": Decimal("50000.00"),
             "monthly_interest_rate": Decimal("2.000000"),
             "loan_date": date(2026, 7, 18),
@@ -148,6 +153,7 @@ class PawnDraftServiceTests(TenantTestCase):
         self.assertEqual(loan.loan_number, "PL-A-00001")
         self.assertEqual(loan.state, PawnLoanState.DRAFT.value)
         self.assertEqual(loan.borrower, self.borrower)
+        self.assertEqual(loan.product_version, self.product_version)
         self.assertEqual(loan.collateral_items.count(), 1)
         self.sequence.refresh_from_db()
         self.assertEqual(self.sequence.next_number, 2)
@@ -179,6 +185,7 @@ class PawnDraftServiceTests(TenantTestCase):
             self.command(principal_amount=Decimal("0")),
             self.command(monthly_interest_rate=Decimal("-1")),
             self.command(tenure_months=0),
+            self.command(product_version_id=999999),
         )
 
         for command in cases:

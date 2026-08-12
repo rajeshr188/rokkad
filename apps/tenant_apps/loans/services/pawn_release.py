@@ -52,6 +52,10 @@ from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
     get_pawn_principal_tranche_balances,
 )
+from apps.tenant_apps.loans.services.obligations import (
+    allocate_event_to_obligations,
+    terminate_active_repayment_schedule,
+)
 from apps.tenant_apps.loans.services.storage_operations import (
     remove_collateral_from_storage,
 )
@@ -263,6 +267,18 @@ def release_pawn_loan_in_full(
         payload=payload,
         actor=actor,
         delivery_handler=delivery_handler,
+    )
+    allocate_event_to_obligations(
+        source_event=event,
+        principal_amount=principal_amount,
+        interest_amount=interest_amount,
+        actor=actor,
+    )
+    terminate_active_repayment_schedule(
+        loan=loan,
+        source_event=event,
+        reason="FULL_RELEASE",
+        actor=actor,
     )
     for order, row in enumerate(
         sorted(

@@ -8,6 +8,11 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Loan monitoring policy is explicitly configured under Loans Setup -> Economic
+policies. It is immutable, effective-dated, tenant-scoped, and may be a
+workspace default or license override. Never silently invent compliance
+thresholds; PawnLoan detail links administrators to setup when none applies.
+
 The Loan Products, Obligations, Exposure, and Risk architecture was accepted by
 the Owner on 2026-08-11. Canonical decision:
 `docs/adr/2026-08-11-loans-product-obligation-and-risk-architecture.md`.
@@ -17,6 +22,12 @@ The four initial PawnLoan products are single-payment bullet, periodic-interest
 bullet, flexible partial-payment bullet, and installment with EMI/equal
 principal. Follow the applicable RBI lender/purpose/date compliance profile;
 exact due dates drive DPD and the three-day grace is operational only.
+
+Loan products are operated through Loans Setup -> Loan products. Seeding is
+tenant-scoped and idempotent and creates reviewed drafts; Owner/Admin explicitly
+activates a version before it appears in PawnLoan creation. Contract fields are
+immutable, lifecycle is restricted to DRAFT -> ACTIVE -> RETIRED, only one
+version per product may be active, and retirement never changes existing loans.
 
 `docs/implementation/pawn-loan-interest-calculation.md` is the canonical
 technical explanation of current PawnLoan interest. Preserve its key boundary:

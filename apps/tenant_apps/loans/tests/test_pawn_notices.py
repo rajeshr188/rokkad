@@ -46,6 +46,7 @@ from apps.tenant_apps.loans.services import (
 )
 from apps.tenant_apps.notify_v2.models import NotificationEvent, NotificationJob
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
 class PawnLoanNoticeTests(TenantTestCase):
@@ -94,6 +95,7 @@ class PawnLoanNoticeTests(TenantTestCase):
             workspace=self.tenant,
             license=license,
             series=series,
+            product_version=ensure_test_product_version(self.tenant),
             borrower=borrower,
             loan_number=f"PL-N-{uuid.uuid4().hex[:6]}",
             state=PawnLoanState.ACTIVE.value,

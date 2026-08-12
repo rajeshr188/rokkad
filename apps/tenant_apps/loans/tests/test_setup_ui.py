@@ -28,12 +28,15 @@ from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     LoanLicense,
     LoanLicenseRevision,
+    LoanMonitoringPolicy,
     LoanDocumentIssue,
     LoanDocumentLayout,
     LoanDocumentLayoutRevision,
     LoanDocumentPrintProfile,
     LoanDocumentPrintProfileRevision,
     LoanNumberSequence,
+    LoanProduct,
+    LoanProductVersion,
     LoanSeries,
     PawnLoan,
     PawnCollateralItem,
@@ -48,6 +51,7 @@ from apps.tenant_apps.loans.models import (
 )
 from apps.tenant_apps.loans.views import _license_for_workspace
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 from apps.orgs.models import Membership, Role
 from PIL import Image as PillowImage
 from apps.tenant_apps.loans.documents import built_in_print_profile, starter_layout
@@ -114,6 +118,25 @@ class LoansSetupUiTests(TenantTestCase):
 
     def tenant_post(self, url, data=None):
         return self.client.post(url, data or {})
+
+    def test_owner_can_seed_review_activate_and_retire_loan_products(self):
+        response = self.tenant_post(reverse("loans:loan_product_seed_defaults"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(LoanProduct.objects.filter(workspace=self.tenant).count(), 4)
+        version = LoanProductVersion.objects.get(product__workspace=self.tenant, product__code="GOLD-BULLET")
+        page = self.tenant_get(reverse("loans:loan_product_list"))
+        self.assertContains(page, "Single-payment bullet")
+        self.assertContains(page, "Operational only; DPD date unchanged")
+
+        response = self.tenant_post(reverse("loans:loan_product_version_activate", args=[version.pk]))
+        self.assertEqual(response.status_code, 302)
+        version.refresh_from_db()
+        self.assertEqual(version.status, "ACTIVE")
+
+        response = self.tenant_post(reverse("loans:loan_product_version_retire", args=[version.pk]))
+        self.assertEqual(response.status_code, 302)
+        version.refresh_from_db()
+        self.assertEqual(version.status, "RETIRED")
 
     def test_document_issue_list_filters_and_paginates_immutable_evidence(self):
         def create_issue(sequence, **overrides):
@@ -414,6 +437,37 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertContains(page, "Silver")
         self.assertContains(page, "Compound")
         self.assertContains(page, "Slab")
+
+    def test_owner_can_add_workspace_monitoring_policy(self):
+        response = self.tenant_post(
+            reverse("loans:pawn_economics_setup"),
+            {
+                "action": "monitoring",
+                "monitoring-license": "",
+                "monitoring-effective_from": "2026-08-01",
+                "monitoring-compliance_profile": "Owner-approved pilot",
+                "monitoring-maturity_warning_days": "30",
+                "monitoring-operational_grace_days": "3",
+                "monitoring-dpd_watch_threshold": "1",
+                "monitoring-dpd_substandard_threshold": "90",
+                "monitoring-ltv_warning_ratio": "0.70",
+                "monitoring-ltv_breach_ratio": "0.80",
+                "monitoring-ltv_critical_ratio": "0.90",
+                "monitoring-rate_freshness_days": "7",
+                "monitoring-appraisal_freshness_days": "90",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("loans:pawn_economics_setup"),
+            fetch_redirect_response=False,
+        )
+        policy = LoanMonitoringPolicy.objects.get()
+        self.assertEqual(policy.version, 1)
+        self.assertEqual(policy.compliance_profile, "Owner-approved pilot")
+        page = self.tenant_get(reverse("loans:pawn_economics_setup"))
+        self.assertContains(page, "Owner-approved pilot")
 
     def test_expiry_is_post_only_and_blocks_readiness_without_deleting_license(self):
         license, _ = self._configured_setup()
@@ -1884,6 +1938,7 @@ class LoansSetupUiTests(TenantTestCase):
     def _loan(self, license, series, number, *, state="DRAFT"):
         return PawnLoan.objects.create(
             workspace=self.tenant,
+            product_version=ensure_test_product_version(self.tenant),
             license=license,
             series=series,
             borrower=Party.objects.create(display_name=f"Borrower {number}"),

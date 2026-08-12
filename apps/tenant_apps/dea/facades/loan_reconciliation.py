@@ -21,6 +21,15 @@ class LoanAccountingReference:
     credit_total: Decimal
 
 
+@dataclass(frozen=True)
+class PawnLoanReceivableBalance:
+    principal: Decimal
+    interest: Decimal
+    total: Decimal
+    voucher_count: int
+    status: str
+
+
 def inspect_pawn_loan_accounting_reference(
     *,
     voucher_id: int,
@@ -75,6 +84,24 @@ def inspect_pawn_loan_accounting_reference(
     )
 
 
+def get_pawn_loan_receivable_balance(*, source_event_ids, as_of_date):
+    """Aggregate posted DEA control-ledger balances for Loans-owned events."""
+    event_type = ContentType.objects.filter(app_label="loans", model="pawnloanaccountingevent").first()
+    if event_type is None:
+        return PawnLoanReceivableBalance(Decimal("0"), Decimal("0"), Decimal("0"), 0, "MISSING_SOURCE_TYPE")
+    vouchers = Voucher.objects.filter(
+        doc_content_type=event_type, doc_object_id__in=tuple(source_event_ids),
+        voucher_date__lte=as_of_date, status=VoucherStatus.POSTED,
+    )
+    principal = interest = Decimal("0")
+    for line in VoucherLine.objects.filter(voucher__in=vouchers, ledger__name__in=("LOAN_PRINCIPAL_CTRL", "INTEREST_RECEIVABLE")).select_related("ledger"):
+        amount = Decimal(str(line.amount.amount))
+        signed = amount if line.side == VoucherLine.LineSide.DR else -amount
+        if line.ledger.name == "LOAN_PRINCIPAL_CTRL": principal += signed
+        else: interest += signed
+    return PawnLoanReceivableBalance(principal, interest, principal + interest, vouchers.count(), "OK")
+
+
 def _lines_are_balanced(lines):
     if not lines:
         return False
@@ -89,4 +116,4 @@ def _lines_are_balanced(lines):
     return debit_total > 0 and credit_total > 0 and abs(debit_total - credit_total) <= Decimal("0.01")
 
 
-__all__ = ["LoanAccountingReference", "inspect_pawn_loan_accounting_reference"]
+__all__ = ["LoanAccountingReference", "PawnLoanReceivableBalance", "get_pawn_loan_receivable_balance", "inspect_pawn_loan_accounting_reference"]

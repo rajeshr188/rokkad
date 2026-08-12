@@ -67,6 +67,14 @@ from .verification import (
     PawnPhysicalVerificationSession,
 )
 from .operational_notices import LoanOperationalNotice
+from .products import LoanProduct, LoanProductVersion
+from .obligations import (
+    ObligationAllocation,
+    RepaymentObligation,
+    RepaymentScheduleChange,
+    RepaymentScheduleChangeKind,
+    RepaymentScheduleVersion,
+)
 
 __all__ = [
     "LoanChangeLog",
@@ -130,4 +138,14 @@ __all__ = [
     "PawnPhysicalVerificationResolution",
     "PawnPhysicalVerificationSession",
     "LoanOperationalNotice",
+    "LoanProduct",
+    "LoanProductVersion",
+    "ObligationAllocation",
+    "RepaymentObligation",
+    "RepaymentScheduleChange",
+    "RepaymentScheduleChangeKind",
+    "RepaymentScheduleVersion",
 ]
+from .appraisals import CollateralAppraisal
+from .monitoring import LoanMonitoringPolicy
+from .risk import LoanRiskEvent, LoanRiskSnapshot

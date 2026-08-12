@@ -36,6 +36,11 @@ from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
     get_pawn_principal_tranche_balances,
 )
+from apps.tenant_apps.loans.services.obligations import (
+    allocate_event_to_obligations,
+    installment_extra_principal_amount,
+    supersede_installment_schedule,
+)
 
 
 class PawnRepaymentError(ValueError):
@@ -192,6 +197,25 @@ def record_pawn_loan_repayment(
         payload=payload,
         actor=actor,
         delivery_handler=delivery_handler,
+    )
+    extra_principal = installment_extra_principal_amount(
+        loan=loan,
+        effective_date=effective_date,
+        principal_amount=allocation.principal,
+    )
+    allocate_event_to_obligations(
+        source_event=event,
+        principal_amount=allocation.principal,
+        interest_amount=allocation.interest,
+        actor=actor,
+    )
+    supersede_installment_schedule(
+        loan=loan,
+        source_event=event,
+        remaining_principal=balance.principal_outstanding - allocation.principal,
+        extra_principal=extra_principal,
+        currency_quantum=loan.policy_snapshot.currency_quantum,
+        actor=actor,
     )
     for item in item_allocations:
         PawnLoanRepaymentAllocationLine.objects.create(

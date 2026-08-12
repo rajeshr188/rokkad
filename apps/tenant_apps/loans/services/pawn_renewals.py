@@ -83,6 +83,12 @@ from apps.tenant_apps.loans.services.pawn_tranches import (
     PawnTrancheBalanceError,
     get_pawn_principal_tranche_balances,
 )
+from apps.tenant_apps.loans.services.obligations import (
+    allocate_event_to_obligations,
+    persist_disbursal_repayment_schedule,
+    reverse_event_obligation_allocations,
+    terminate_active_repayment_schedule,
+)
 
 
 class PawnRenewalError(ValueError):
@@ -576,6 +582,7 @@ def renew_pawn_loan(
             borrower_id=source.borrower_id,
             license_id=successor_license_id,
             series_id=successor_series_id,
+            product_version_id=source.product_version_id,
             principal_amount=successor_principal,
             monthly_interest_rate=monthly_interest_rate or Decimal("0"),
             loan_date=renewal_date,
@@ -744,6 +751,18 @@ def renew_pawn_loan(
         actor=actor,
         delivery_handler=delivery_handler,
     )
+    allocate_event_to_obligations(
+        source_event=settlement_event,
+        principal_amount=balance.principal_outstanding,
+        interest_amount=balance.interest_outstanding,
+        actor=actor,
+    )
+    terminate_active_repayment_schedule(
+        loan=source,
+        source_event=settlement_event,
+        reason="RENEWAL_SETTLEMENT",
+        actor=actor,
+    )
     for order, row in enumerate(
         sorted(
             source_tranches,
@@ -796,6 +815,13 @@ def renew_pawn_loan(
         payload=opening_payload,
         actor=actor,
         delivery_handler=delivery_handler,
+    )
+    persist_disbursal_repayment_schedule(
+        successor,
+        source_event=opening_event,
+        disbursed_on=renewal_date,
+        currency_quantum=successor_policy.currency_quantum,
+        actor=actor,
     )
     if sum(
         (item.allocated_principal for item in successor_items), Decimal("0")
@@ -1208,6 +1234,11 @@ def _reverse_catch_up(renewal, *, reason, actor, delivery_handler):
         actor=actor,
         delivery_handler=delivery_handler,
         reversal_of=original,
+    )
+    reverse_event_obligation_allocations(
+        original_event=original,
+        reversal_event=event,
+        actor=actor,
     )
     return event
 

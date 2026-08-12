@@ -73,6 +73,12 @@ from .regulatory import (
     LoanLicenseRegisterRow,
     get_loan_license_register,
 )
+from .exposure import (
+    ExposureComponent,
+    PawnLoanExposure,
+    PawnLoanExposureError,
+    get_pawn_loan_exposure,
+)
 
 __all__ = [
     "PawnLoanBalance",
@@ -80,6 +86,10 @@ __all__ = [
     "PostingBlocker",
     "calculate_pawn_loan_balance",
     "get_pawn_loan_balance",
+    "ExposureComponent",
+    "PawnLoanExposure",
+    "PawnLoanExposureError",
+    "get_pawn_loan_exposure",
     "CollateralValuationSnapshot",
     "PawnLoanReleaseReadiness",
     "PawnLoanReleaseReadinessError",
@@ -131,3 +141,8 @@ __all__ = [
     "LoanLicenseRegisterRow",
     "get_loan_license_register",
 ]
+from .delinquency import PawnLoanDelinquency, get_pawn_loan_delinquency
+from .collateral_valuation import PawnLoanCollateralValuation, get_pawn_loan_collateral_valuation
+from .risk import get_pawn_loan_risk_assessment, resolve_monitoring_policy
+from .risk_portfolio import get_risk_portfolio, get_risk_portfolio_summary
+from .accounting_reconciliation import reconcile_pawn_loan_receivable

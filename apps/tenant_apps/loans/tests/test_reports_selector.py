@@ -169,6 +169,19 @@ class PawnLoanReportsSelectorTests(SimpleTestCase):
             {issue.code for issue in report.issues},
         )
 
+    def test_missing_dea_inspection_result_is_categorized_without_crashing(self):
+        event = self._event(1, TransactionKind.DISBURSAL, principal="1000")
+        loan = self._loan(events=(event,))
+
+        report = build_pawn_loan_reports(
+            (loan,), as_of_date=self.as_of, dea_inspector=lambda **kwargs: None
+        )
+
+        self.assertIn(
+            "DEA_INSPECTION_UNAVAILABLE",
+            {issue.code for issue in report.issues},
+        )
+
     def test_cash_accrual_without_dea_reference_is_valid_operational_history(self):
         disbursal = self._event(1, TransactionKind.DISBURSAL, principal="1000")
         accrual = self._event(

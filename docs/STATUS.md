@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-08-11
+updated: 2026-08-12
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
@@ -9,6 +9,152 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 # Status
 
 ## Latest Update
+
+- Loans reports no longer crash when reconciling posted DEA references. The
+  DEA facade's inspection return path was restored from unreachable code, and
+  Loans now categorizes an unexpected null adapter result as
+  `DEA_INSPECTION_UNAVAILABLE` rather than dereferencing it.
+
+- Collateral monitoring continues to fetch Gold/Silver valuation rates only
+  through the Rates facade. Disbursal now promotes approved origination item
+  values into immutable `CollateralAppraisal` evidence; loans created during
+  the pre-fix gap retain an explicit compatibility read from the documented
+  legacy item value, so lower-of valuation no longer becomes unknown solely
+  because that appraisal row was absent.
+
+- PawnLoan risk assessment now gets contractual maturity from the active
+  repayment schedule, with the existing balance-derived maturity as legacy
+  compatibility. Risk fingerprinting and portfolio maturity filters no longer
+  assume a nonexistent `PawnLoan.due_date` database field.
+
+- Loans Setup now exposes explicit immutable monitoring-policy configuration
+  for workspace defaults or license overrides. PawnLoan risk warnings link
+  administrators directly to it; no compliance thresholds are silently
+  invented when configuration is absent.
+
+- PawnLoan detail valuation no longer reads the nonexistent reverse-relation
+  attribute `PawnLoan.policy_snapshot_id`; compliance provenance now uses the
+  actual `LoanPolicySnapshot.pk`. Detail projections also degrade to visible
+  diagnostic errors instead of HTTP 500 for legacy/incomplete active loans
+  lacking a policy snapshot.
+
+- PawnLoan draft submission now defaults to Save when the operator presses
+  Enter; Preview remains an explicit secondary action. Invalid submissions
+  show and focus a prominent "draft was not saved" summary while retaining
+  the existing field-specific loan and collateral errors.
+
+- Loan product catalog operations are implemented under Loans Setup. Owner/Admin
+  can idempotently seed the four standard drafts, review every contractual
+  term, activate one version per product, retire it from new origination, and
+  create the next immutable draft from active terms. Activation/retirement are
+  audited, existing loans retain their version, and migration `0047` enforces
+  one active version per product.
+
+- Loan product migration portability was corrected after the first
+  `migrate_schemas` acceptance run: the product-version readiness index now
+  uses the <=30-character name `loans_product_ready_idx` in current model
+  state. Historical migration `0039` remains immutable; migration `0048`
+  safely renames the old index and also tolerates development schemas that
+  already contain the corrected name. No business data is changed.
+
+- Loan architecture Phase 11 implementation is ready for acceptance. Migration
+  `0046` registers immutable Key Facts/repayment-schedule issues; loan detail
+  exposes due, DPD, exposure, collateral, LTV, flags, severity, explanations,
+  and read-only Loans/DEA receivable variance. Existing workflow authority is
+  deliberately unchanged. Four-product browser/document/accounting
+  walkthroughs, parity review, and Owner acceptance remain before declaring
+  the architecture complete. Migrations through `0048` were applied to all
+  seven configured development schemas on 2026-08-12; a follow-up migration
+  plan reported no pending Loans operations.
+
+- Loan architecture Phase 10 application work is complete. The explicit-
+  tenant `reassess_pawn_loans` command claims bounded batches with
+  `skip_locked`, source commits invalidate affected snapshots, and daily dates
+  capture time-only transitions. Portfolio selectors now filter and paginate
+  typed risk projections and aggregate exposure by severity/product in SQL;
+  stale and error rows remain visible. Pilot-scale timings remain a deployment
+  measurement.
+
+- Loan architecture Phase 9 is complete. Migration `0045` adds immutable,
+  deduplicated risk-transition evidence. Snapshot publication now appends
+  explainable maturity, delinquency, LTV, valuation, performance, severity,
+  policy, assessment-error, and recovery events in the same transaction while
+  repeated rebuilds produce no duplicate history.
+
+- Loan architecture Phase 8 is complete. Migration `0044` adds a unique typed
+  current-risk projection per workspace/loan. Refresh and rebuild services
+  expose stale/error diagnostics, remain idempotent, and compare comprehensive
+  source fingerprints under lock before publishing calculated assessments.
+  The projection is explicitly rebuildable and cannot authorize workflows.
+
+- Loan architecture Phase 7 is complete. Migration `0043` adds immutable,
+  effective-dated workspace monitoring policies with optional license
+  overrides and overlap protection. Pure risk assessment now produces
+  explainable maturity, DPD, valuation, LTV, performance, severity, action,
+  policy identity, and deterministic fingerprint results without workflow or
+  accounting side effects.
+
+- Loan architecture Phase 6 valuation foundation is complete. Migration `0042`
+  adds immutable effective-dated collateral appraisals and preserves legacy
+  appraised values as labelled backfill evidence. The new read-only valuation
+  selector resolves historical rates/appraisals and eligible custody, while a
+  pure LTV result separates policy breach, headroom, unknown evidence, and full
+  economic shortfall using the Phase 4 exposure basis.
+
+- Loan architecture Phase 5 is complete. Obligation-derived delinquency now
+  distinguishes due-today from overdue, derives DPD from the oldest unpaid due
+  date, keeps three-day operational grace separate from regulatory DPD, and
+  reports variance against the unchanged legacy maturity-overdue rule.
+
+- Loan architecture Phase 4 is complete. `get_pawn_loan_exposure()` now
+  separates recorded event-fold balances, unfinalized actual-outstanding
+  interest, obligation-based due/overdue amounts, accounting receivable,
+  maturity payoff, total economic exposure, and product-aware LTV basis. The
+  projection segments periods at effective repayment dates and frozen tranche
+  balances, fixing the legacy period-opening behavior without rewriting
+  finalized evidence. Loan detail explicitly labels recorded versus projected
+  values and warns that projections are neither finalized nor posted.
+
+- Loan architecture Phase 3 is complete. Extra principal on an installment now
+  appends a new schedule version using the unchanged EMI (or unchanged equal-
+  principal component), shortening tenure and regenerating only the remaining
+  contract. Prior schedules and allocations stay immutable. Reversing the
+  prepayment terminates the replacement and automatically restores the earlier
+  schedule as active. Allocation row locks, event/order uniqueness, idempotent
+  request keys, and the reconciliation fold close the concurrency and integrity
+  boundary for persisted obligations. Migrations `0040` and `0041` provide the
+  tenant-scoped obligation ledger and append-only termination/reactivation
+  evidence. Disbursal, repayment, release, renewal, auction, and reversal paths
+  participate without moving posting ownership away from DEA.
+
+- Loan architecture Phase 2 is complete. A pure, versioned repayment schedule
+  engine now generates single-payment bullet, periodic-interest bullet,
+  flexible partial-payment, EMI, and equal-principal schedules. It supports
+  mixed collateral rates, original-day month-end recovery, explicit rounding
+  residue, zero-rate installments, exact principal reconciliation, and stable
+  fingerprints. Previewing performs no loan, outbox, DEA voucher, or journal
+  write; persisted obligations remain Phase 3 work.
+
+- Loan architecture Phase 1 is complete. Workspace-owned `LoanProduct` and
+  immutable `LoanProductVersion` foundations now represent repayment structure,
+  amortisation, frequency, tenor bounds, operational grace, extra-payment rule,
+  availability, status, and calculation-contract version. An idempotent tenant
+  command seeds the four accepted products as drafts so they cannot become
+  lending policy merely by running the command. New drafts require an active,
+  in-date, tenor-compatible version; edits and renewals preserve it. Migration
+  `0039` labels historical loans with a retired legacy/unspecified version and
+  then enforces a non-null product contract on every PawnLoan.
+
+- Loan Products, Exposure, and Risk Phase 0 is complete. The new conformance
+  baseline inventories current contracts, event-folded balances, repayment
+  allocation, accounting ownership, and tenant boundaries. Golden tests now
+  make two important behaviors explicit: maturity becomes overdue the next day
+  without moving for operational grace, while the legacy interest engine keeps
+  a period-opening principal base after a mid-period repayment. The latter is
+  recorded as a required calculation-contract change for new RBI-aligned
+  contracts. Four-product schedule fixtures, workspace-scoped selector/command
+  regressions, and event-to-DEA reconciliation complete the gate; no runtime
+  behavior or schema changed in Phase 0.
 
 - The Owner accepted the Loan Products, Obligations, Exposure, and Risk
   architecture with RBI-aligned gold-loan defaults. Canonical ADR

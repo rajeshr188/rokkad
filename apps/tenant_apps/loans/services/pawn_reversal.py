@@ -28,6 +28,10 @@ from apps.tenant_apps.loans.services.accounting_outbox import (
     DeliveryHandler,
     record_loan_accounting_event,
 )
+from apps.tenant_apps.loans.services.obligations import (
+    reverse_event_obligation_allocations,
+    reverse_event_schedule_change,
+)
 from apps.tenant_apps.loans.services.pawn_disbursal import (
     assert_pawn_loan_financial_actions_allowed,
 )
@@ -217,6 +221,16 @@ def reverse_pawn_loan_event(
         actor=actor,
         delivery_handler=delivery_handler,
         reversal_of=original,
+    )
+    reverse_event_obligation_allocations(
+        original_event=original,
+        reversal_event=reversal,
+        actor=actor,
+    )
+    reverse_event_schedule_change(
+        original_event=original,
+        reversal_event=reversal,
+        actor=actor,
     )
 
     release_reversal = None
