@@ -1,0 +1,114 @@
+{% extends 'layouts/base.html' %}
+{% load static orgs_tags %}
+
+{# Control-plane layout for account and workspace management. #}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/management.css' %}">
+{% block mgmt_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block main_wrapper_class %}container-fluid p-0 mt-0{% endblock %}
+
+{% block content %}
+<div class="mgmt-accent-bar">
+    <span>
+        <i class="bi bi-person-workspace me-1"></i>
+        <span class="plane-label">Account &amp; Workspace Management</span>
+    </span>
+    <span class="d-flex align-items-center gap-3">
+        {% if request.user.is_authenticated %}
+        <span><i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}</span>
+        {% endif %}
+        {% with ws=request.user.profile.workspace %}
+        {% if ws %}
+        <a href="{% url 'workspace_dashboard' workspace_id=ws.id %}">
+            <i class="bi bi-arrow-right-circle me-1"></i>Enter {{ ws.name }}
+        </a>
+        {% endif %}
+        {% endwith %}
+    </span>
+</div>
+
+{% if messages %}
+<div class="px-3 pt-2">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show py-2 mb-2" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="mgmt-shell">
+    <aside class="mgmt-sidebar d-none d-lg-flex flex-column">
+        <span class="mgmt-section-title">Workspaces</span>
+        {% block workspace_manager_sidebar %}
+            {% include 'components/navigation/workspace_manager_sidebar.html' with workspace_manager_sidebar_variant="desktop" %}
+        {% endblock %}
+
+        {% with ew=workspace|default:user_workspace %}
+        {% firstof user_role "Member" as role_name %}
+        {% if ew %}
+        <hr>
+        <span class="mgmt-section-title workspace-name">{{ ew.name|truncatechars:20 }}</span>
+        {% block workspace_settings_sidebar %}
+            {% include 'components/navigation/workspace_settings_sidebar.html' with workspace_settings_sidebar_variant="desktop" %}
+        {% endblock %}
+        {% endif %}
+        {% endwith %}
+
+        <hr>
+        <span class="mgmt-section-title">Account</span>
+        {% block account_sidebar %}
+            {% include 'components/navigation/account_sidebar.html' with account_sidebar_variant="desktop" %}
+        {% endblock %}
+    </aside>
+
+    <div class="mgmt-content">
+        {% block breadcrumbs %}{% endblock %}
+        {% block page_header %}{% endblock %}
+        {% block mgmt_content %}{% endblock %}
+    </div>
+</div>
+
+<div class="d-lg-none position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
+    <button class="btn btn-primary shadow mgmt-mobile-toggle"
+            type="button" data-bs-toggle="offcanvas" data-bs-target="#mgmtOffcanvas">
+        <i class="bi bi-list fs-5"></i>
+    </button>
+</div>
+
+<div class="offcanvas offcanvas-start mgmt-offcanvas" tabindex="-1" id="mgmtOffcanvas">
+    <div class="offcanvas-header border-bottom">
+        <h6 class="offcanvas-title fw-bold">
+            <i class="bi bi-person-workspace me-1"></i> Management
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="p-3">
+            <div class="mgmt-section-title px-0">Workspaces</div>
+            {% block mobile_workspace_manager_sidebar %}
+                {% include 'components/navigation/workspace_manager_sidebar.html' with workspace_manager_sidebar_variant="mobile" %}
+            {% endblock %}
+            {% with ew=workspace|default:user_workspace %}
+            {% firstof user_role "Member" as role_name %}
+            {% if ew %}
+            <hr>
+            <div class="mgmt-section-title workspace-name px-0">{{ ew.name|truncatechars:20 }}</div>
+            {% block mobile_workspace_settings_sidebar %}
+                {% include 'components/navigation/workspace_settings_sidebar.html' with workspace_settings_sidebar_variant="mobile" %}
+            {% endblock %}
+            {% endif %}
+            {% endwith %}
+            <hr>
+            <div class="mgmt-section-title px-0">Account</div>
+            {% block mobile_account_sidebar %}
+                {% include 'components/navigation/account_sidebar.html' with account_sidebar_variant="mobile" %}
+            {% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}

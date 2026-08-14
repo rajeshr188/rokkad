@@ -1,0 +1,84 @@
+{% extends 'base_global.html' %}
+{% load static %}
+
+{% block title %}{{ step_title }} - Onboarding{% endblock %}
+
+{% block mgmt_content %}
+<div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light">
+    <div class="row w-100">
+        <div class="col-lg-8 col-xl-6 mx-auto">
+            <!-- Progress Bar -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">Setup Progress</small>
+                        <small class="text-muted">{{ progress.progress_percentage }}%</small>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             style="width: {{ progress.progress_percentage }}%"
+                             aria-valuenow="{{ progress.progress_percentage }}"
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                    
+                    <!-- Step Indicators -->
+                    <div class="d-flex justify-content-between mt-3">
+                        <div class="text-center" style="flex: 1;">
+                            <div class="rounded-circle {% if progress.current_step >= 1 %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                {% if progress.profile_completed %}<i class="bi bi-check"></i>{% else %}1{% endif %}
+                            </div>
+                            <div><small class="text-muted">Profile</small></div>
+                        </div>
+                        <div class="text-center" style="flex: 1;">
+                            <div class="rounded-circle {% if progress.current_step >= 2 %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                {% if progress.company_created %}<i class="bi bi-check"></i>{% else %}2{% endif %}
+                            </div>
+                            <div><small class="text-muted">Workspace</small></div>
+                        </div>
+                        <div class="text-center" style="flex: 1;">
+                            <div class="rounded-circle {% if progress.current_step >= 3 %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                {% if progress.team_setup_completed or progress.skipped_team %}<i class="bi bi-check"></i>{% else %}3{% endif %}
+                            </div>
+                            <div><small class="text-muted">Team</small></div>
+                        </div>
+                        <div class="text-center" style="flex: 1;">
+                            <div class="rounded-circle {% if progress.current_step >= 4 %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                {% if progress.tour_completed or progress.skipped_tour %}<i class="bi bi-check"></i>{% else %}4{% endif %}
+                            </div>
+                            <div><small class="text-muted">Tour</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Card -->
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h2 class="card-title mb-2">{{ step_title }}</h2>
+                    <p class="text-muted mb-4">{{ step_description }}</p>
+                    
+                    {% block onboarding_content %}
+                    <!-- Step-specific content goes here -->
+                    {% endblock %}
+                </div>
+            </div>
+
+            <!-- Skip/Help Links -->
+            <div class="text-center mt-3">
+                <a href="{% url 'onboarding_skip' %}" class="text-muted small">
+                    Skip setup for now
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bi {
+        font-size: 16px;
+    }
+</style>
+{% endblock %}

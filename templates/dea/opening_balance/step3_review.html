@@ -1,0 +1,79 @@
+{% extends 'base_tenant.html' %}
+
+{% block title %}Review Opening Balances{% endblock %}
+
+{% block workspace_content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Review Opening Balances</h5>
+        <small class="text-muted">Step 3 of 3 · {{ period.name }}</small>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card bg-light"><div class="card-body text-center"><strong>Total Debit</strong><br>{{ total_debit }}</div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light"><div class="card-body text-center"><strong>Total Credit</strong><br>{{ total_credit }}</div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card {% if is_balanced %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}"><div class="card-body text-center"><strong>Status</strong><br>{% if is_balanced %}Balanced{% else %}Needs correction{% endif %}</div></div>
+            </div>
+        </div>
+
+        {% if errors %}
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <h6>Ledger Entries</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-sm">
+                <thead><tr><th>Ledger</th><th>Type</th><th class="text-end">Amount</th></tr></thead>
+                <tbody>
+                    {% for item in ledger_balances %}
+                    <tr>
+                        <td>{{ item.ledger.name }}</td>
+                        <td>{{ item.type }}</td>
+                        <td class="text-end">{{ item.amount }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-muted text-center">No ledger opening balances entered.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <h6>Account Entries</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-sm">
+                <thead><tr><th>Account</th><th>Type</th><th class="text-end">Amount</th></tr></thead>
+                <tbody>
+                    {% for item in account_balances %}
+                    <tr>
+                        <td>{{ item.account.account_number }} — {{ item.account.contact }}</td>
+                        <td>{{ item.type }}</td>
+                        <td class="text-end">{{ item.amount }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-muted text-center">No account opening balances entered.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'dea_opening_balance_wizard' %}?step=2" class="btn btn-outline-secondary">Back to Edit</a>
+            <form method="post" action="{% url 'dea_opening_balance_wizard' %}?step=4">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary" {% if not is_balanced %}disabled{% endif %}>Confirm Opening Balances</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

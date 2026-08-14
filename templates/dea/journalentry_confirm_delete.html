@@ -1,0 +1,14 @@
+{% extends 'base_tenant.html' %}
+
+{% block workspace_content %}
+
+<h1>Delete Journal</h1>
+
+<p>Are you sure you want to delete the {{journal.type}} Journal: {{ journal }}?</p>
+
+<form action="" method="POST">
+    {% csrf_token %}
+    <input type="submit" action="" value="Yes, delete." />
+</form>
+
+{% endblock %}

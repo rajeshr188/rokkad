@@ -1,0 +1,439 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Business Events{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">Business Events</h4>
+        <small class="text-muted">Workflow entry points are scaffolded as read-only until document screens are wired.</small>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'dea_dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+        <a href="{% url 'dea_reports_hub' %}" class="btn btn-sm btn-outline-secondary">Reports Hub</a>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    Business event posting forms are not enabled in this slice. Use backend services only through tested service paths.
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Fixed Purchases</h5>
+        <a href="{% url 'dea_fixed_purchase_preview' %}" class="btn btn-sm btn-outline-primary">New preview</a>
+    </div>
+    {% if fixed_purchase_drafts %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Draft</th>
+                    <th>Posting</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Fine weight</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in fixed_purchase_drafts %}
+                <tr>
+                    <td>{{ row.reference }}</td>
+                    <td>{{ row.event_date }}</td>
+                    <td>{{ row.draft_status }}</td>
+                    <td>
+                        {% if row.is_posted %}
+                        <span class="badge bg-success">{{ row.posting_status }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ row.posting_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.currency }} {{ row.amount }}</td>
+                    <td class="text-end">{{ row.fine_weight }} {{ row.commodity }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'dea_fixed_purchase_detail' row.draft.id %}" class="btn btn-sm btn-outline-secondary">Open result</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">No fixed purchase drafts yet.</div>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Unfixed Purchases</h5>
+        <a href="{% url 'dea_unfixed_purchase_preview' %}" class="btn btn-sm btn-outline-primary">New preview</a>
+    </div>
+    {% if unfixed_purchase_drafts %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Party</th>
+                    <th>Draft</th>
+                    <th>Posting</th>
+                    <th class="text-end">Fine weight</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in unfixed_purchase_drafts %}
+                <tr>
+                    <td>{{ row.reference }}</td>
+                    <td>{{ row.event_date }}</td>
+                    <td>{{ row.party }}</td>
+                    <td>{{ row.draft_status }}</td>
+                    <td>
+                        {% if row.is_posted %}
+                        <span class="badge bg-success">{{ row.posting_status }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ row.posting_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.fine_weight }} {{ row.commodity }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'dea_unfixed_purchase_detail' row.draft.id %}" class="btn btn-sm btn-outline-secondary">Open result</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">No unfixed purchase drafts yet.</div>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Purchase Rate Fixings</h5>
+        <a href="{% url 'dea_purchase_rate_fixing_preview' %}" class="btn btn-sm btn-outline-primary">New preview</a>
+    </div>
+    {% if purchase_rate_fixing_drafts %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Party</th>
+                    <th>Draft</th>
+                    <th>Posting</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Fine weight</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in purchase_rate_fixing_drafts %}
+                <tr>
+                    <td>{{ row.reference }}</td>
+                    <td>{{ row.event_date }}</td>
+                    <td>{{ row.party }}</td>
+                    <td>{{ row.draft_status }}</td>
+                    <td>
+                        {% if row.is_posted %}
+                        <span class="badge bg-success">{{ row.posting_status }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ row.posting_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.currency }} {{ row.amount }}</td>
+                    <td class="text-end">{{ row.fine_weight }} {{ row.commodity }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'dea_purchase_rate_fixing_detail' row.draft.id %}" class="btn btn-sm btn-outline-secondary">Open result</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">No purchase rate-fixing drafts yet.</div>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Sale Rate Fixings</h5>
+        <a href="{% url 'dea_sale_rate_fixing_preview' %}" class="btn btn-sm btn-outline-primary">New preview</a>
+    </div>
+    {% if sale_rate_fixing_drafts %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Party</th>
+                    <th>Draft</th>
+                    <th>Posting</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Fine weight</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in sale_rate_fixing_drafts %}
+                <tr>
+                    <td>{{ row.reference }}</td>
+                    <td>{{ row.event_date }}</td>
+                    <td>{{ row.party }}</td>
+                    <td>{{ row.draft_status }}</td>
+                    <td>
+                        {% if row.is_posted %}
+                        <span class="badge bg-success">{{ row.posting_status }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ row.posting_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.currency }} {{ row.amount }}</td>
+                    <td class="text-end">{{ row.fine_weight }} {{ row.commodity }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'dea_sale_rate_fixing_detail' row.draft.id %}" class="btn btn-sm btn-outline-secondary">Open result</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">No sale rate-fixing drafts yet.</div>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Receipts / Payments</h5>
+        <a href="{% url 'dea_monetary_settlement_preview' %}" class="btn btn-sm btn-outline-primary">New preview</a>
+    </div>
+    {% if monetary_settlement_drafts %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Draft</th>
+                    <th>Posting</th>
+                    <th>Party account</th>
+                    <th>Method</th>
+                    <th class="text-end">Amount</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in monetary_settlement_drafts %}
+                <tr>
+                    <td>{{ row.reference }}</td>
+                    <td>{{ row.event_date }}</td>
+                    <td>{{ row.event_type }}</td>
+                    <td>{{ row.draft_status }}</td>
+                    <td>
+                        {% if row.is_posted %}
+                        <span class="badge bg-success">{{ row.posting_status }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ row.posting_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ row.party_account }}</td>
+                    <td>{{ row.payment_method }}</td>
+                    <td class="text-end">{{ row.currency }} {{ row.amount }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'dea_monetary_settlement_detail' row.draft.id %}" class="btn btn-sm btn-outline-secondary">Open result</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">No receipt/payment drafts yet.</div>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Karigar Custody</h5>
+        <a href="{% url 'dea_karigar_movement_preview' %}" class="btn btn-sm btn-outline-primary">New preview</a>
+    </div>
+    {% if karigar_movement_drafts %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Karigar</th>
+                    <th>Draft</th>
+                    <th>Posting</th>
+                    <th class="text-end">Fine weight</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in karigar_movement_drafts %}
+                <tr>
+                    <td>{{ row.reference }}</td>
+                    <td>{{ row.event_date }}</td>
+                    <td>{{ row.event_type }}</td>
+                    <td>{{ row.karigar }}</td>
+                    <td>{{ row.draft_status }}</td>
+                    <td>
+                        {% if row.is_posted %}
+                        <span class="badge bg-success">{{ row.posting_status }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ row.posting_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.fine_weight }} {{ row.commodity }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'dea_karigar_movement_detail' row.draft.id %}" class="btn btn-sm btn-outline-secondary">Open result</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">No karigar custody drafts yet.</div>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Fixed Sales</h5>
+        <a href="{% url 'dea_fixed_sale_preview' %}" class="btn btn-sm btn-outline-primary">New preview</a>
+    </div>
+    {% if fixed_sale_drafts %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Draft</th>
+                    <th>Posting</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Fine weight</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in fixed_sale_drafts %}
+                <tr>
+                    <td>{{ row.reference }}</td>
+                    <td>{{ row.event_date }}</td>
+                    <td>{{ row.draft_status }}</td>
+                    <td>
+                        {% if row.is_posted %}
+                        <span class="badge bg-success">{{ row.posting_status }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ row.posting_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.currency }} {{ row.amount }}</td>
+                    <td class="text-end">{{ row.fine_weight }} {{ row.commodity }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'dea_fixed_sale_detail' row.draft.id %}" class="btn btn-sm btn-outline-secondary">Open result</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">No fixed sale drafts yet.</div>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Unfixed Sales</h5>
+        <a href="{% url 'dea_unfixed_sale_preview' %}" class="btn btn-sm btn-outline-primary">New preview</a>
+    </div>
+    {% if unfixed_sale_drafts %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Party</th>
+                    <th>Draft</th>
+                    <th>Posting</th>
+                    <th class="text-end">Fine weight</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in unfixed_sale_drafts %}
+                <tr>
+                    <td>{{ row.reference }}</td>
+                    <td>{{ row.event_date }}</td>
+                    <td>{{ row.party }}</td>
+                    <td>{{ row.draft_status }}</td>
+                    <td>
+                        {% if row.is_posted %}
+                        <span class="badge bg-success">{{ row.posting_status }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ row.posting_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.fine_weight }} {{ row.commodity }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'dea_unfixed_sale_detail' row.draft.id %}" class="btn btn-sm btn-outline-secondary">Open result</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted">No unfixed sale drafts yet.</div>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    {% for group in event_groups %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">{{ group.title }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for event in group.events %}
+                    <div class="col-md-6 col-xl-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="d-flex justify-content-between gap-2 mb-2">
+                                <strong>{{ event.name }}</strong>
+                                <span class="badge bg-secondary">{{ event.ui_status }}</span>
+                            </div>
+                            <div class="small text-muted mb-3">{{ event.backend_status }}</div>
+                            {% if event.action_url %}
+                            <a href="{{ event.action_url }}" class="btn btn-sm btn-outline-primary">{{ event.action_label }}</a>
+                            {% elif event.report_url %}
+                            <a href="{{ event.report_url }}" class="btn btn-sm btn-outline-primary">Open report</a>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Not wired</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

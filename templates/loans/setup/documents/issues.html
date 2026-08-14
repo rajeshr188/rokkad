@@ -1,0 +1,27 @@
+{% extends "base_tenant.html" %}
+{% block title %}Issued loan documents{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h3 mb-1">Issued loan documents</h1><p class="text-muted mb-0">Immutable evidence for official and regenerated PDFs. This screen never rerenders an artifact.</p></div><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document setup</a></div>
+<div class="card mb-3"><div class="card-body">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-xl-4"><label class="form-label" for="{{ issue_filter.form.q.id_for_label }}">{{ issue_filter.form.q.label }}</label>{{ issue_filter.form.q }}</div>
+    <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="{{ issue_filter.form.document_type.id_for_label }}">{{ issue_filter.form.document_type.label }}</label>{{ issue_filter.form.document_type }}</div>
+    <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="{{ issue_filter.form.issue_kind.id_for_label }}">{{ issue_filter.form.issue_kind.label }}</label>{{ issue_filter.form.issue_kind }}</div>
+    <div class="col-6 col-md-4 col-xl-3"><label class="form-label" for="{{ issue_filter.form.profile_scope.id_for_label }}">{{ issue_filter.form.profile_scope.label }}</label>{{ issue_filter.form.profile_scope }}</div>
+    <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="{{ issue_filter.form.issued_date_from.id_for_label }}">{{ issue_filter.form.issued_date_from.label }}</label>{{ issue_filter.form.issued_date_from }}</div>
+    <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="{{ issue_filter.form.issued_date_to.id_for_label }}">{{ issue_filter.form.issued_date_to.label }}</label>{{ issue_filter.form.issued_date_to }}</div>
+    <div class="col-12 col-md-auto d-flex gap-2"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-outline-secondary" href="{% url 'loans:document_issue_list' %}">Clear</a></div>
+  </form>
+  {% if issue_filter.form.errors %}<div class="text-danger small mt-3">Check the highlighted filters and try again.</div>{% endif %}
+</div></div>
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Issued</th><th>Document</th><th>Source</th><th>Layout</th><th>Print profile</th><th></th></tr></thead><tbody>
+{% for issue in issues %}<tr>
+  <td>{{ issue.issued_at }}<div class="small text-muted">{{ issue.get_issue_kind_display }}</div></td>
+  <td>{{ issue.get_document_type_display }}</td>
+  <td>{{ issue.source_type }}:{{ issue.source_id }}</td>
+  <td>{% if issue.revision %}{{ issue.revision.layout.name }} v{{ issue.revision.version }}{% else %}Fixed {{ issue.fixed_renderer_version }}{% endif %}</td>
+  <td>{% if issue.print_profile_hash %}{{ issue.print_profile_name }}<div class="small text-muted">{{ issue.get_print_profile_source_scope_display }} · {{ issue.print_profile_hash|slice:':12' }}</div>{% else %}<span class="text-muted">Historical / not recorded</span>{% endif %}</td>
+  <td><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:document_issue_detail' issue.pk %}">Evidence</a></td>
+</tr>{% empty %}<tr><td colspan="6" class="text-center py-5 text-muted">No issued documents match the current filters.</td></tr>{% endfor %}
+</tbody></table></div>{% include "loans/_pagination.html" with page_obj=page_obj %}</div>
+{% endblock %}

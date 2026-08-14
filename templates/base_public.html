@@ -1,0 +1,9 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/public.css' %}">
+{% endblock %}
+
+{% block main_wrapper_class %}container-fluid p-0 mt-0 public-shell{% endblock %}

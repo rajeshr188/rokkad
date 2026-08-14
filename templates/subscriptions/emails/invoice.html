@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .email-container {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .content {
+            color: #555;
+        }
+        
+        .invoice-section {
+            background-color: #f0f7ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .invoice-section h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        
+        .invoice-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .invoice-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .invoice-table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .invoice-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .invoice-table tr:last-child td {
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .amount-table {
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        .amount-table td {
+            padding: 8px;
+        }
+        
+        .amount-row {
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .total-row {
+            border-top: 2px solid #333;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        
+        .cta-button:hover {
+            background-color: #0056b3;
+        }
+        
+        .footer {
+            border-top: 1px solid #e0e0e0;
+            margin-top: 30px;
+            padding-top: 20px;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Invoice #{{ invoice.invoice_number }}</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hi {{ user.first_name|default:user.username }},</p>
+            
+            <p>Your invoice for {{ invoice.invoce_date|date:"B Y" }} is ready. Please find the details below:</p>
+            
+            <!-- Invoice Summary -->
+            <div class="invoice-section">
+                <h3>Invoice Summary</h3>
+                <p><strong>Invoice #:</strong> {{ invoice.invoice_number }}</p>
+                <p><strong>Period:</strong> {{ invoice.period_start|date:"M d, Y" }} - {{ invoice.period_end|date:"M d, Y" }}</p>
+                <p><strong>Invoice Date:</strong> {{ invoice.invoice_date|date:"M d, Y" }}</p>
+                <p><strong>Due Date:</strong> {{ invoice.due_date|date:"M d, Y" }}</p>
+            </div>
+            
+            <!-- Itemized Details -->
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th style="width: 150px;" class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <strong>{{ subscription.plan.name }}</strong>
+                            <br>
+                            <small style="color: #999;">Monthly subscription</small>
+                        </td>
+                        <td class="text-right">₹{{ invoice.subtotal }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- Amount Summary -->
+            <table class="amount-table">
+                <tbody>
+                    <tr class="amount-row">
+                        <td><strong>Subtotal:</strong></td>
+                        <td class="text-right">₹{{ invoice.subtotal }}</td>
+                    </tr>
+                    <tr class="amount-row">
+                        <td><strong>GST ({{ invoice.gst_rate }}%):</strong></td>
+                        <td class="text-right">₹{{ invoice.gst_amount }}</td>
+                    </tr>
+                    {% if invoice.discount_amount > 0 %}
+                    <tr class="amount-row">
+                        <td><strong>Discount:</strong></td>
+                        <td class="text-right" style="color: #28a745;">-₹{{ invoice.discount_amount }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr class="total-row">
+                        <td><strong>Total Amount Due:</strong></td>
+                        <td class="text-right"><span class="invoice-amount">₹{{ invoice.total_amount }}</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- Payment Status -->
+            {% if invoice.is_paid %}
+            <div style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; padding: 15px; margin: 20px 0; color: #155724;">
+                <strong>✓ Payment Received</strong><br>
+                Thank you for your payment on {{ invoice.paid_date|date:"M d, Y" }}. Your account is in good standing.
+            </div>
+            {% else %}
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 15px; margin: 20px 0; color: #856404;">
+                <strong>Payment Due</strong><br>
+                Please complete payment by <span class="highlight">{{ invoice.due_date|date:"M d, Y" }}</span>
+            </div>
+            
+            <!-- Payment Link -->
+            <center>
+                <a href="{{ payment_url|default:"https://rokkad.com/subscriptions/dashboard/" }}" class="cta-button">
+                    Pay Now
+                </a>
+            </center>
+            {% endif %}
+            
+            <!-- Download Invoice -->
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="{{ invoice_pdf_url|default:"https://rokkad.com/subscriptions/invoices/" }}{{ invoice.id }}/pdf/" style="color: #007bff; text-decoration: none;">
+                    📥 Download Full Invoice (PDF)
+                </a>
+            </div>
+            
+            <!-- Account Information -->
+            <div style="background-color: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #333;">Account Information</h3>
+                <p><strong>Billed To:</strong> {{ user.get_full_name }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Organization:</strong> {{ subscription.company.name }}</p>
+                <p><strong>Plan:</strong> {{ subscription.plan.name }}</p>
+            </div>
+            
+            <p>If you have any questions regarding this invoice or your subscription, please contact us at <a href="mailto:billing@rokkad.com">billing@rokkad.com</a>.</p>
+            
+            <p>Thank you for your business!<br>The Rokkad Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated email. Please do not reply directly to this message.</p>
+            <p>&copy; 2025 Rokkad. All rights reserved.</p>
+            <p><a href="https://rokkad.com/">Website</a> | <a href="https://rokkad.com/privacy/">Privacy Policy</a> | <a href="https://rokkad.com/terms/">Terms of Service</a></p>
+        </div>
+    </div>
+</body>
+</html>

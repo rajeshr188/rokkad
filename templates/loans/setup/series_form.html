@@ -1,0 +1,27 @@
+{% extends "base_tenant.html" %}
+
+{% block title %}{% if series %}Configure series{% else %}Add series{% endif %}{% endblock %}
+
+{% block workspace_content %}
+<div class="mb-4">
+  <a class="small text-decoration-none" href="{% url 'loans:license_detail' license.pk %}">← {{ license.name }}</a>
+  <h1 class="h3 mt-2">{% if series %}Configure {{ series.code }}{% else %}Add numbering series{% endif %}</h1>
+  <p class="text-muted">Each series has separate bounded sequences for pawn loans and releases.</p>
+</div>
+<div class="card"><div class="card-body">
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="row g-3">
+    {% for field in form %}
+      <div class="{% if field.name == 'is_active' %}col-12{% else %}col-md-6{% endif %}">
+        {% if field.name == 'is_active' %}<div class="form-check">{{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+        {% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+      </div>
+    {% endfor %}
+    </div>
+    <div class="alert alert-info mt-4 mb-0">The maximum is final for this series. Once exhausted, create another series; numbers never wrap or recycle.</div>
+    <div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit">Save series setup</button><a class="btn btn-outline-secondary" href="{% url 'loans:license_detail' license.pk %}">Cancel</a></div>
+  </form>
+</div></div>
+{% endblock %}

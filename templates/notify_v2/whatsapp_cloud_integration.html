@@ -1,0 +1,21 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Workspace WhatsApp Cloud{% endblock %}
+{% block workspace_content %}
+<div class="row justify-content-center"><div class="col-xl-8">
+  <a class="small text-decoration-none" href="{% url 'notify_v2_settings' %}">&larr; Notify settings</a>
+  <h1 class="h3 mt-2">Workspace WhatsApp Cloud</h1>
+  <div class="alert alert-info">Credentials belong only to this workspace. Stored secrets are encrypted and are never displayed again.</div>
+  <div class="card mb-3"><div class="card-body"><div class="small text-muted">Meta webhook callback URL</div><code>{{ webhook_url }}</code></div></div>
+  <form method="post" class="card"><div class="card-body">{% csrf_token %}{{ form.non_field_errors }}
+    <div class="row g-3">
+      <div class="col-md-4"><label class="form-label">API version</label>{{ form.api_version }}{{ form.api_version.errors }}</div>
+      <div class="col-md-8"><label class="form-label">Phone-number ID</label>{{ form.phone_number_id }}{{ form.phone_number_id.errors }}</div>
+      <div class="col-12"><label class="form-label">Access token</label>{{ form.access_token }}<div class="form-text">{{ form.access_token.help_text }}</div>{{ form.access_token.errors }}</div>
+      <div class="col-md-6"><label class="form-label">Webhook verify token</label>{{ form.webhook_verify_token }}<div class="form-text">{{ form.webhook_verify_token.help_text }}</div>{{ form.webhook_verify_token.errors }}</div>
+      <div class="col-md-6"><label class="form-label">Meta app secret</label>{{ form.app_secret }}<div class="form-text">{{ form.app_secret.help_text }}</div>{{ form.app_secret.errors }}</div>
+      <div class="col-12"><div class="form-check">{{ form.is_enabled }} <label class="form-check-label" for="{{ form.is_enabled.id_for_label }}">Enable sending and webhook verification for this workspace</label></div></div>
+    </div>
+    <button class="btn btn-primary mt-4" type="submit">Save workspace integration</button>
+  </div></form>
+</div></div>
+{% endblock %}

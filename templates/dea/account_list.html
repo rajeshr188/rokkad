@@ -1,0 +1,99 @@
+{% extends 'base_tenant.html' %}
+{%load django_tables2%}
+{% load render_table from django_tables2 %}
+{% load crispy_forms_tags %}
+{% block title %}Account List{% endblock %}
+
+{% block workspace_content %}
+{{filter.form.media}}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">Accounts</h1>
+        <div class="btn-group">
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'dea_transaction_list' %}">Transactions</a>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'ar_aging' %}">A/R Aging</a>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'ap_aging' %}">A/P Aging</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        {% for item in enhanced_accounts %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="{{ item.account.get_absolute_url }}" class="text-decoration-none">{{ item.account.contact }}</a>
+                            </h6>
+                            <div class="small text-muted">{{ item.account.account_number }} | {{ item.account.AccountType_Ext }}</div>
+                        </div>
+                        <span class="badge bg-{{ item.status_class }}">{{ item.account.get_status_display }}</span>
+                    </div>
+
+                    <div class="small text-muted">Current Balance</div>
+                    <div class="fw-semibold mb-2">{{ item.balance }}</div>
+
+                    <div class="small text-muted">Credit</div>
+                    {% if item.account.credit_limit %}
+                    <div class="mb-2">
+                        Limit: {{ item.account.credit_limit }}
+                        <br>
+                        <span class="{% if item.is_over_limit %}text-danger{% else %}text-success{% endif %}">
+                            Available: {{ item.available_credit }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div class="mb-2 text-muted">No credit limit set</div>
+                    {% endif %}
+
+                    <div class="small text-muted mb-2">Transactions: {{ item.txn_count }}</div>
+
+                    <div class="d-flex flex-wrap gap-1">
+                        <a href="{{ item.account.get_absolute_url }}" class="btn btn-sm btn-outline-secondary">View</a>
+                        <a href="{% url 'dea_sales_invoice_create' %}" class="btn btn-sm btn-outline-primary">Invoice</a>
+                        <a href="{% url 'dea_payment_create' %}" class="btn btn-sm btn-outline-primary">Payment</a>
+                        <a href="{% url 'dea_expense_create' %}" class="btn btn-sm btn-outline-primary">Expense</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info mb-0">No accounts found for current filters.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get">
+                        {{ filter.form|crispy }}
+                        <p>
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                            <a class="btn btn-primary" hx-boost="false" href="{% export_url 'ods' %}" 
+                            role="button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                            </svg>
+                          </a></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Detailed Account Table</h6>
+                </div>
+                <div class="card-body table-responsive">
+                    {% render_table table  %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

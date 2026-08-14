@@ -1,0 +1,95 @@
+{% extends 'base_tenant.html' %}
+
+{% block workspace_content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">Loan Operational Controls Report</h2>
+      <div class="text-muted small">Aging, custody, release readiness, and rate exceptions.</div>
+    </div>
+    <a href="{% url 'girvi:girvi_dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
+  </div>
+
+  {% if data_unavailable_count %}
+    <div class="alert alert-warning" role="alert">
+      <div class="fw-semibold mb-1">Some non-financial report data is unavailable.</div>
+      <div class="small mb-0">{{ data_unavailable_count }} section(s) could not be evaluated and are listed below.</div>
+    </div>
+  {% endif %}
+
+  {% if selector_warnings %}
+    <div class="alert alert-light border" role="alert">
+      <div class="fw-semibold mb-1">Selector Warnings</div>
+      <div class="small mb-0">
+        {% for warning in selector_warnings %}
+          <div>- {{ warning }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-2 col-md-4 col-6"><div class="card"><div class="card-body py-2 text-center"><div class="small text-muted">Current</div><div class="h5 mb-0">{{ aging_bucket_counts.current }}</div></div></div></div>
+    <div class="col-lg-2 col-md-4 col-6"><div class="card"><div class="card-body py-2 text-center"><div class="small text-muted">1-30</div><div class="h5 mb-0">{{ aging_bucket_counts.b1_30 }}</div></div></div></div>
+    <div class="col-lg-2 col-md-4 col-6"><div class="card"><div class="card-body py-2 text-center"><div class="small text-muted">31-60</div><div class="h5 mb-0">{{ aging_bucket_counts.b31_60 }}</div></div></div></div>
+    <div class="col-lg-2 col-md-4 col-6"><div class="card"><div class="card-body py-2 text-center"><div class="small text-muted">61-90</div><div class="h5 mb-0">{{ aging_bucket_counts.b61_90 }}</div></div></div></div>
+    <div class="col-lg-2 col-md-4 col-6"><div class="card"><div class="card-body py-2 text-center"><div class="small text-muted">90+</div><div class="h5 mb-0">{{ aging_bucket_counts.b90_plus }}</div></div></div></div>
+    <div class="col-lg-2 col-md-4 col-6"><div class="card border-warning"><div class="card-body py-2 text-center"><div class="small text-muted">Rate Exceptions</div><div class="h5 mb-0">{{ rate_exception_total }}</div></div></div></div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Outstanding Aging</h5></div>
+    <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>Loan</th><th>Borrower</th><th>Maturity</th><th>Days</th><th>Bucket</th><th>Outstanding</th><th></th></tr></thead><tbody>{% for row in aging_rows %}<tr><td>{{ row.loan_id }}</td><td>{{ row.borrower_name }}</td><td>{{ row.maturity_date|default:'-' }}</td><td>{{ row.days_overdue }}</td><td>{{ row.bucket }}</td><td>{{ row.outstanding }}</td><td class="text-end"><a href="{{ row.detail_url }}" class="btn btn-sm btn-outline-primary">Open</a></td></tr>{% empty %}<tr><td colspan="7" class="text-center text-muted py-3">No rows.</td></tr>{% endfor %}</tbody></table></div></div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Collateral Custody</h5></div>
+    <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>Loan</th><th>Borrower</th><th>Vault</th><th>With Lender</th><th>With Customer</th><th>Total</th><th></th></tr></thead><tbody>{% for row in custody_rows %}<tr><td>{{ row.loan_id }}</td><td>{{ row.borrower_name }}</td><td>{{ row.in_vault }}</td><td>{{ row.with_lender }}</td><td>{{ row.with_customer }}</td><td>{{ row.total_items }}</td><td class="text-end"><a href="{{ row.detail_url }}" class="btn btn-sm btn-outline-primary">Open</a></td></tr>{% empty %}<tr><td colspan="7" class="text-center text-muted py-3">No rows.</td></tr>{% endfor %}</tbody></table></div></div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0">Release Ready</h5><span class="badge bg-success">{{ release_ready_count }} ready</span></div>
+    <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>Loan</th><th>Borrower</th><th>Outstanding</th><th>With Lender</th><th>Ready</th><th></th></tr></thead><tbody>{% for row in release_ready_rows %}<tr><td>{{ row.loan_id }}</td><td>{{ row.borrower_name }}</td><td>{{ row.outstanding }}</td><td>{{ row.with_lender }}</td><td>{% if row.can_release %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td><td class="text-end"><a href="{{ row.detail_url }}" class="btn btn-sm btn-outline-primary">Open</a></td></tr>{% empty %}<tr><td colspan="6" class="text-center text-muted py-3">No rows.</td></tr>{% endfor %}</tbody></table></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h5 class="mb-0">Rate Exceptions</h5></div>
+    <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>Loan</th><th>Item</th><th>Type</th><th>Issue</th><th>Interest Rate</th><th>Market Rate</th><th></th></tr></thead><tbody>{% for row in rate_exception_rows %}<tr><td>{{ row.loan_id }}</td><td>{{ row.item_desc|default:'-' }}</td><td>{{ row.item_type }}</td><td>{{ row.issue }}</td><td>{{ row.configured_interest_rate }}</td><td>{{ row.market_rate|default:'-' }}</td><td class="text-end"><a href="{{ row.detail_url }}" class="btn btn-sm btn-outline-primary">Open</a></td></tr>{% empty %}<tr><td colspan="7" class="text-center text-muted py-3">No rate exceptions found.</td></tr>{% endfor %}</tbody></table></div></div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Data Unavailable</h5>
+      <span class="badge bg-warning text-dark">{{ data_unavailable_count }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-striped mb-0">
+          <thead>
+            <tr>
+              <th>Loan</th>
+              <th>Borrower</th>
+              <th>Section</th>
+              <th>Reason</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in data_unavailable_rows %}
+              <tr>
+                <td>{{ row.loan_id }}</td>
+                <td>{{ row.borrower_name }}</td>
+                <td>{{ row.section }}</td>
+                <td>{{ row.reason }}</td>
+                <td class="text-end"><a href="{{ row.detail_url }}" class="btn btn-sm btn-outline-primary">Open</a></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-center text-muted py-3">No unavailable rows.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

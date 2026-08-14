@@ -1,0 +1,7 @@
+{% extends "base_tenant.html" %}
+{% block title %}Create loan document layout{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Create starter loan document layout</h1>
+<p class="text-muted">This creates a safe schema-v1 draft with all mandatory regulatory bindings.</p>
+<form method="post" class="card card-body" style="max-width:42rem">{% csrf_token %}{{ form.as_p }}<div><button class="btn btn-primary">Create draft</button> <a class="btn btn-link" href="{% url 'loans:document_layout_list' %}">Cancel</a></div></form>
+{% endblock %}

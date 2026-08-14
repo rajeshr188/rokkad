@@ -1,0 +1,361 @@
+{% extends "base_tenant.html" %}
+{% load static %}
+
+{% block title %}Reconciliation - {{ bank_account.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .reconciliation-container {
+        display: flex;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .bank-column, .gl-column {
+        flex: 1;
+        max-height: 600px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .bank-column {
+        background: #f8f9fa;
+    }
+    .statement-line {
+        padding: 10px;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .statement-line:hover {
+        background-color: #e8f4f8;
+    }
+    .statement-line.matched {
+        background-color: #d4edda;
+    }
+    .statement-line.unmatched {
+        background-color: #fff3cd;
+    }
+    .gl-line {
+        padding: 10px;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .gl-line:hover {
+        background-color: #e8f4f8;
+    }
+    .gl-line.matched {
+        background-color: #d4edda;
+        opacity: 0.6;
+    }
+    .amount {
+        font-weight: bold;
+        float: right;
+    }
+    .summary-card {
+        background: white;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-left: 4px solid #007bff;
+    }
+    .summary-stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+    }
+    .summary-stat-label {
+        font-weight: 500;
+    }
+    .summary-stat-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #007bff;
+    }
+    .progress-high {
+        background-color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="container-fluid mt-4">
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="fas fa-university"></i> {{ bank_account.name }}
+                        <small class="text-muted">{{ bank_account.bank_name }} • {{ bank_account.account_number }}</small>
+                    </h4>
+                    <div class="card-tools float-right">
+                        <a href="{% url 'dea:bank-accounts-list' %}" class="btn btn-default btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </a>
+                        <button class="btn btn-success btn-sm" onclick="autoMatch()">
+                            <i class="fas fa-magic"></i> Auto-Match
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Summary Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="summary-card">
+                                <div class="summary-stat">
+                                    <span class="summary-stat-label">Total Lines</span>
+                                    <span class="summary-stat-value">{{ summary.total_lines }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-card">
+                                <div class="summary-stat">
+                                    <span class="summary-stat-label">Matched</span>
+                                    <span class="summary-stat-value text-success">{{ summary.reconciled_lines }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-card">
+                                <div class="summary-stat">
+                                    <span class="summary-stat-label">Unmatched</span>
+                                    <span class="summary-stat-value text-warning">{{ summary.unmatched_lines }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-card">
+                                <div class="summary-stat">
+                                    <span class="summary-stat-label">Reconciliation %</span>
+                                    <span class="summary-stat-value">{{ summary.reconciliation_percentage|floatformat:1 }}%</span>
+                                </div>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar progress-high" role="progressbar" 
+                                         style="width: {{ summary.reconciliation_percentage }}%;" 
+                                         aria-valuenow="{{ summary.reconciliation_percentage }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reconciliation Container -->
+                    <div class="reconciliation-container">
+                        <!-- Bank Statement Lines -->
+                        <div>
+                            <h5 class="mb-3">
+                                <i class="fas fa-file-csv"></i> Bank Statement
+                                <span class="badge badge-secondary">{{ bank_lines|length }}</span>
+                            </h5>
+                            <div class="bank-column">
+                                {% for line in bank_lines %}
+                                <div class="statement-line {% if line.is_reconciled %}matched{% else %}unmatched{% endif %}" 
+                                     data-bank-line-id="{{ line.id }}">
+                                    <div>
+                                        <strong>{{ line.statement_date|date:"M d, Y" }}</strong>
+                                        <span class="amount">₹{{ line.amount }}</span>
+                                    </div>
+                                    <small class="text-muted">{{ line.description }}</small>
+                                    {% if line.is_reconciled %}
+                                    <div class="mt-1">
+                                        <span class="badge badge-success">Matched</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% empty %}
+                                <div class="alert alert-info m-2">
+                                    <small>No bank statement lines for this period.</small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- GL Transactions -->
+                        <div>
+                            <h5 class="mb-3">
+                                <i class="fas fa-book"></i> GL Transactions
+                                <span class="badge badge-secondary">{{ gl_lines|length }}</span>
+                            </h5>
+                            <div class="gl-column">
+                                {% for line in gl_lines %}
+                                <div class="gl-line {% if line.reconciliation_matches %}matched{% endif %}" 
+                                     data-ledger-transaction-id="{{ line.id }}">
+                                    <div>
+                                        <strong>{{ line.journal_entry.created|date:"M d, Y" }}</strong>
+                                        <span class="amount">₹{{ line.amount.amount }}</span>
+                                    </div>
+                                    <small class="text-muted">
+                                        {{ line.journal_entry.voucher.get_voucher_type_display|default:"Manual" }}
+                                    </small>
+                                    {% if line.reconciliation_matches %}
+                                    <div class="mt-1">
+                                        <span class="badge badge-success">Matched</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% empty %}
+                                <div class="alert alert-info m-2">
+                                    <small>No GL transactions for this period.</small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Match Form -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="card-title">Manual Match</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="form-group col-md-5">
+                                    <label for="bank-line-select">Select Bank Line:</label>
+                                    <select id="bank-line-select" class="form-control">
+                                        <option value="">-- Choose a bank line --</option>
+                                        {% for line in unmatched_bank_lines %}
+                                        <option value="{{ line.id }}">
+                                            {{ line.statement_date|date:"M d, Y" }} - ₹{{ line.amount }} - {{ line.description }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-5">
+                                    <label for="gl-transaction-select">Select GL Transaction:</label>
+                                    <select id="gl-transaction-select" class="form-control">
+                                        <option value="">-- Choose a GL transaction --</option>
+                                        {% for line in unmatched_gl_lines %}
+                                        <option value="{{ line.id }}">
+                                            {{ line.journal_entry.created|date:"M d, Y" }} - ₹{{ line.amount.amount }} - 
+                                            {{ line.journal_entry.voucher.get_voucher_type_display|default:"Manual" }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>&nbsp;</label>
+                                    <button class="btn btn-primary form-control" onclick="manualMatch()">
+                                        <i class="fas fa-link"></i> Match
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function autoMatch() {
+    if (!confirm('Auto-match will match bank lines to GL transactions by date and amount. Continue?')) {
+        return;
+    }
+
+    const bankAccountId = {{ bank_account.id }};
+    const tolerance = prompt('Enter amount tolerance (default 0):', '0');
+
+    if (tolerance === null) return;
+
+    fetch(`/dea/reconciliation/auto-match/${bankAccountId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: `tolerance=${tolerance}`,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+function manualMatch() {
+    const bankLineId = document.getElementById('bank-line-select').value;
+    const glTransactionId = document.getElementById('gl-transaction-select').value;
+
+    if (!bankLineId || !glTransactionId) {
+        alert('Please select both a bank line and a GL transaction');
+        return;
+    }
+
+    fetch('/dea/reconciliation/manual-match/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: `bank_line_id=${bankLineId}&ledger_transaction_id=${glTransactionId}`,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+function unmatchLine(bankLineId) {
+    if (!confirm('Remove this match?')) {
+        return;
+    }
+
+    fetch('/dea/reconciliation/unmatch/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: `bank_line_id=${bankLineId}`,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

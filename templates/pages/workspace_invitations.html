@@ -1,0 +1,134 @@
+{% extends 'base_global.html' %}
+{% load i18n %}
+{% block title %}Invitations{% endblock title %}
+
+{% block mgmt_content %}
+<div class="container mt-5">
+    <div class="page-inner">
+        <!-- Header -->
+        <div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pb-4 border-bottom">
+            <div>
+                <h3 class="fw-bold mb-2">
+                    <i class="fas fa-envelope me-2"></i>Invitations
+                </h3>
+                <h5 class="text-muted">Manage your workspace invitations</h5>
+            </div>
+            <div class="ms-md-auto py-2 py-md-0">
+                <a href="{% url 'user_workspaces' %}" class="btn btn-outline-secondary btn-round">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Workspaces
+                </a>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-lg-8 offset-lg-2">
+                {% if invitations %}
+                    <div class="invitations-list">
+                        {% for item in invitations %}
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <!-- Workspace Info -->
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center mb-3">
+                                            {% if item.invitation.company.logo %}
+                                                <img src="{{ item.invitation.company.logo.url }}" 
+                                                     alt="{{ item.invitation.company.name }}"
+                                                     class="rounded me-3" 
+                                                     style="width: 64px; height: 64px; object-fit: cover;">
+                                            {% else %}
+                                                <div class="avatar-placeholder rounded me-3"
+                                                     style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; background-color: {{ item.invitation.company.theme }}; color: white; font-weight: bold; font-size: 24px;">
+                                                    {{ item.invitation.company.name|first|upper }}
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <h5 class="mb-1">{{ item.invitation.company.name }}</h5>
+                                                <small class="text-muted">
+                                                    Invited on {{ item.invitation.created|date:"M d, Y" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Role & Status -->
+                                    <div class="col-md-6">
+                                        <div class="text-end">
+                                            <p class="mb-2">
+                                                Role: <span class="badge bg-info">{{ item.invitation.role.name }}</span>
+                                            </p>
+                                            
+                                            {% if item.is_expired %}
+                                                <p class="mb-0">
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-times me-1"></i> Expired
+                                                    </span>
+                                                </p>
+                                            {% else %}
+                                                <p class="mb-0 small text-muted">
+                                                    Expires in {{ item.invitation.created|add:604800000|date:"M d" }}
+                                                </p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                {% if not item.is_expired %}
+                                <div class="row mt-4 pt-4 border-top">
+                                    <div class="col-12">
+                                        <div class="d-flex gap-2">
+                                            <form method="post" style="flex: 1;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="accept">
+                                                <input type="hidden" name="invitation_id" value="{{ item.invitation.id }}">
+                                                <button type="submit" class="btn btn-success w-100">
+                                                    <i class="fas fa-check me-2"></i> Accept Invitation
+                                                </button>
+                                            </form>
+                                            <form method="post" style="flex: 1;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="decline">
+                                                <input type="hidden" name="invitation_id" value="{{ item.invitation.id }}">
+                                                <button type="submit" class="btn btn-outline-danger w-100">
+                                                    <i class="fas fa-times me-2"></i> Decline
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>All caught up!</strong> You have no pending invitations.
+                        <a href="{% url 'user_workspaces' %}" class="alert-link">
+                            View your workspaces →
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.invitations-list .card {
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+.invitations-list .card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
+
+.avatar-placeholder {
+    font-size: 28px;
+}
+</style>
+{% endblock mgmt_content %}

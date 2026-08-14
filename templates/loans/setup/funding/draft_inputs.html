@@ -1,0 +1,27 @@
+{% extends "base_tenant.html" %}
+{% block title %}Complete FundingLoan draft{% endblock %}
+{% block workspace_content %}
+<div class="mb-4">
+  <a class="small text-decoration-none" href="{% url 'loans:funding_loan_read_detail' funding_loan_id %}">&larr; FundingLoan detail</a>
+  <h1 class="h3 mt-2 mb-1">Complete FundingLoan draft</h1>
+  <p class="text-muted mb-0">Capture proposed terms and eligible branch-vault collateral for review.</p>
+</div>
+
+<div class="alert alert-secondary" role="status">Saving validates the proposal but does not activate funding, move collateral, or post accounting.</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="row g-3 mb-4">
+    {% for field in form %}
+    <div class="{% if field.name == 'collateral' %}col-12{% else %}col-md-6{% endif %}">
+      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  <button class="btn btn-primary" type="submit">Save for review</button>
+  <a class="btn btn-outline-secondary" href="{% url 'loans:funding_loan_read_detail' funding_loan_id %}">Back</a>
+</form>
+{% endblock %}

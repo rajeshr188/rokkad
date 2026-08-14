@@ -1,0 +1,85 @@
+{% extends 'layouts/base.html' %}
+{% load orgs_tags %}
+
+{% block navbar %}
+    {% include 'components/navigation/main_nav.html' %}
+{% endblock %}
+
+{% block main_class %}d-flex flex-column min-vh-100 workspace-shell{% endblock %}
+
+{% block content %}
+{# ── Workspace context banner (data-plane indicator) ── #}
+{% if in_tenant and workspace %}
+<div class="workspace-context-bar">
+    <span>
+        <i class="bi bi-database-fill-check me-1"></i>
+        <strong>Workspace:</strong> {{ workspace.name }}
+        {% if user_role %}<span class="workspace-role-pill">{{ user_role }}</span>{% endif %}
+    </span>
+    <a href="{% url 'workspace_selector' %}?show_all=1" class="workspace-switch-link">
+        <i class="bi bi-arrow-left-right me-1"></i>Switch workspace
+    </a>
+</div>
+{% endif %}
+<div class="container-fluid flex-grow-1 workspace-page">
+    <div class="row h-100">
+        <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
+        <nav class="col-lg-2 workspace-sidebar
+                    {% if not show_sidebar %}d-none{% endif %} d-lg-block" 
+             id="workspaceSidebar">
+            {% block sidebar %}
+                {% include 'components/navigation/sidebar.html' %}
+            {% endblock %}
+        </nav>
+        
+        <!-- Mobile Sidebar Toggle Button -->
+        <div class="d-lg-none position-fixed bottom-0 end-0 p-3 z-3">
+            <button class="btn btn-primary rounded-circle workspace-sidebar-toggle"
+                    type="button" 
+                    id="sidebarToggleBtn" 
+                    data-bs-toggle="offcanvas" 
+                    data-bs-target="#sidebarOffcanvas"
+                    aria-controls="sidebarOffcanvas"
+                    title="Toggle Navigation">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Offcanvas Sidebar -->
+        <div class="offcanvas offcanvas-start bg-light workspace-offcanvas"
+             tabindex="-1" 
+             id="sidebarOffcanvas"
+             aria-labelledby="sidebarOffcanvasLabel">
+            <div class="offcanvas-header border-bottom">
+                <h5 class="offcanvas-title" id="sidebarOffcanvasLabel">
+                    <i class="bi bi-list"></i> Navigation
+                </h5>
+                <button type="button" 
+                        class="btn-close" 
+                        data-bs-dismiss="offcanvas" 
+                        aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body p-0">
+                <div class="p-3">
+                    {% block mobile_sidebar %}
+                        {% include 'components/navigation/sidebar.html' %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Area -->
+        <main class="col-lg-10 px-3 px-md-4 py-3 workspace-content" id="content">
+            <!-- Breadcrumb Navigation -->
+            {% block breadcrumbs %}{% endblock %}
+            
+            <!-- Page Header -->
+            {% block page_header %}{% endblock %}
+            
+            <!-- Workspace Content -->
+            {% block workspace_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+{% endblock %}

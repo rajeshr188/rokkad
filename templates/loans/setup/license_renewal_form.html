@@ -1,0 +1,31 @@
+{% extends "base_tenant.html" %}
+
+{% block title %}Renew {{ license.name }}{% endblock %}
+
+{% block workspace_content %}
+<div class="mb-4">
+  <a class="small text-decoration-none" href="{% url 'loans:license_detail' license.pk %}">&larr; License detail</a>
+  <h1 class="h3 mt-2">Record license renewal</h1>
+  <p class="text-muted">The prior license revision remains immutable. This creates a new current revision.</p>
+</div>
+<div class="card"><div class="card-body">
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="row g-3">
+    {% for field in form %}
+      <div class="{% if field.name == 'notes' or field.name == 'supporting_document' %}col-12{% else %}col-md-6{% endif %}">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+      </div>
+    {% endfor %}
+    </div>
+    <div class="d-flex gap-2 mt-4">
+      <button class="btn btn-primary" type="submit">Record renewal</button>
+      <a class="btn btn-outline-secondary" href="{% url 'loans:license_detail' license.pk %}">Cancel</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

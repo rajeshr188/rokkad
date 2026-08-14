@@ -1,0 +1,75 @@
+{% load crispy_forms_tags %}
+
+<div class="d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom">
+  <h1 class="h2">{{ transition_ui.heading }}</h1>
+  <span class="badge {{ status_badge_class }} fs-6">{{ transition_ui.icon }} {{ status_label }}</span>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-md-9">
+
+    {# Loan context card #}
+    <div class="card mb-3 border-0 bg-light">
+      <div class="card-body py-2">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <span class="fw-bold text-primary fs-5">{{ loan.loan_id }}</span>
+            <span class="text-muted ms-2">
+              {% if loan.borrower %}{{ loan.borrower.name }}{% endif %}
+            </span>
+          </div>
+          <div class="text-muted small">
+            {{ loan.loan_date|date:"d M Y" }}
+            &nbsp;·&nbsp;
+            ₹{{ loan.get_loan_amount|floatformat:0 }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Transition form card #}
+    <div class="card shadow-sm">
+      <div class="card-header {{ transition_ui.badge_class }} text-white fw-semibold py-2">
+        {{ transition_ui.icon }} {{ transition_ui.heading }}
+      </div>
+      <div class="card-body">
+        {% if disbursal_preview %}
+          <div class="alert alert-secondary">
+            <div class="fw-semibold mb-1">Disbursal Preview (Policy Slice)</div>
+            <div class="small text-muted mb-2">
+              Deductions policy: {% if disbursal_preview.deductions_enabled %}enabled{% else %}disabled{% endif %}
+              · Interest deduction policy: {% if disbursal_preview.interest_deduction_enabled %}enabled{% else %}disabled{% endif %}
+            </div>
+            <div class="row g-2 small">
+              <div class="col-6">Gross loan amount</div>
+              <div class="col-6 text-end">₹{{ disbursal_preview.gross_amount|floatformat:2 }}</div>
+              <div class="col-6">Upfront interest deduction</div>
+              <div class="col-6 text-end">₹{{ disbursal_preview.upfront_interest_deduction|floatformat:2 }}</div>
+              <div class="col-6">Document charge</div>
+              <div class="col-6 text-end">₹{{ disbursal_preview.document_charge|floatformat:2 }}</div>
+              <div class="col-6">Minimum document charge policy</div>
+              <div class="col-6 text-end">₹{{ disbursal_preview.minimum_document_charge|floatformat:2 }}</div>
+              <div class="col-6 fw-semibold">Net borrower payout (preview)</div>
+              <div class="col-6 text-end fw-semibold">₹{{ disbursal_preview.net_disbursal_amount|floatformat:2 }}</div>
+            </div>
+            <div class="small text-muted mt-2">
+              Note: This slice validates and previews deductions only. Accounting posting remains unchanged.
+            </div>
+          </div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          {% crispy form %}
+          <input type="hidden" name="transition" value="{{ transition_name }}">
+          <div class="d-flex gap-2 mt-3">
+            <a href="{{ loan.get_absolute_url }}"
+               class="btn btn-outline-secondary">
+              ← Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>

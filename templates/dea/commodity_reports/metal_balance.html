@@ -1,0 +1,123 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Metal Balance{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">Metal Balance</h4>
+        <small class="text-muted">Commodity quantity balances by account, party, location, and fixed status.</small>
+    </div>
+    <a href="{% url 'dea_reports_hub' %}" class="btn btn-sm btn-outline-secondary">Reports Hub</a>
+</div>
+
+<form method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">As of</label>
+                <input type="date" name="as_of" value="{{ selected_as_of }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Commodity</label>
+                <select name="commodity" class="form-select">
+                    <option value="">All commodities</option>
+                    {% for commodity in commodities %}
+                    <option value="{{ commodity.pk }}" {% if selected_commodity == commodity.pk|stringformat:"s" %}selected{% endif %}>{{ commodity.code }} - {{ commodity.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Party</label>
+                <select name="party" class="form-select">
+                    <option value="">All parties</option>
+                    {% for party in parties %}
+                    <option value="{{ party.pk }}" {% if selected_party == party.pk|stringformat:"s" %}selected{% endif %}>{{ party.display_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Fixed status</label>
+                <select name="fixed_status" class="form-select">
+                    <option value="">All statuses</option>
+                    {% for value, label in fixed_statuses %}
+                    <option value="{{ value }}" {% if selected_fixed_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">Apply</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="card mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Totals</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Commodity</th>
+                    <th>UOM</th>
+                    <th class="text-end">Gross weight</th>
+                    <th class="text-end">Fine weight</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for total in report.totals_by_commodity %}
+                <tr>
+                    <td>{{ total.commodity_code }} - {{ total.commodity_name }}</td>
+                    <td>{{ total.uom }}</td>
+                    <td class="text-end">{{ total.gross_weight }}</td>
+                    <td class="text-end">{{ total.fine_weight }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted">No metal balances found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Account Balances</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Account</th>
+                    <th>Commodity</th>
+                    <th>Purpose</th>
+                    <th>Party</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th class="text-end">Gross</th>
+                    <th class="text-end">Fine</th>
+                    <th>UOM</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.rows %}
+                <tr>
+                    <td>{{ row.account_code }}</td>
+                    <td>{{ row.commodity_code }}</td>
+                    <td>{{ row.account_purpose }}</td>
+                    <td>{{ row.party_name }}</td>
+                    <td>{{ row.location_label }}</td>
+                    <td>{{ row.fixed_status }}</td>
+                    <td class="text-end">{{ row.gross_weight }}</td>
+                    <td class="text-end">{{ row.fine_weight }}</td>
+                    <td>{{ row.uom }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center text-muted">No account balances found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

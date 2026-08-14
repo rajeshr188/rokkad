@@ -1,0 +1,68 @@
+{% extends 'base_tenant.html' %}
+
+{% block workspace_content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Trial Balance</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Account</th>
+                    <th class="text-end">Debit</th>
+                    <th class="text-end">Credit</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Assets -->
+                <tr><td colspan="3" class="table-secondary"><strong>Assets</strong></td></tr>
+                {% for entry in trial_balance.assets.entries %}
+                <tr>
+                    <td>{{ entry.ledger }}</td>
+                    <td class="text-end">{{ entry.debit }}</td>
+                    <td class="text-end">{{ entry.credit }}</td>
+                </tr>
+                {% endfor %}
+
+                <!-- Liabilities -->
+                <tr><td colspan="3" class="table-secondary"><strong>Liabilities</strong></td></tr>
+                {% for entry in trial_balance.liabilities.entries %}
+                <tr>
+                    <td>{{ entry.ledger }}</td>
+                    <td class="text-end">{{ entry.debit }}</td>
+                    <td class="text-end">{{ entry.credit }}</td>
+                </tr>
+                {% endfor %}
+
+                <!-- Income -->
+                <tr><td colspan="3" class="table-secondary"><strong>Income</strong></td></tr>
+                {% for entry in trial_balance.income.entries %}
+                <tr>
+                    <td>{{ entry.ledger }}</td>
+                    <td class="text-end">{{ entry.debit }}</td>
+                    <td class="text-end">{{ entry.credit }}</td>
+                </tr>
+                {% endfor %}
+
+                <!-- Expenses -->
+                <tr><td colspan="3" class="table-secondary"><strong>Expenses</strong></td></tr>
+                {% for entry in trial_balance.expenses.entries %}
+                <tr>
+                    <td>{{ entry.ledger }}</td>
+                    <td class="text-end">{{ entry.debit }}</td>
+                    <td class="text-end">{{ entry.credit }}</td>
+                </tr>
+                {% endfor %}
+
+                <!-- Totals -->
+                <tr class="table-dark">
+                    <td><strong>Total</strong></td>
+                    <td class="text-end"><strong>{{ trial_balance.totals.debit }}</strong></td>
+                    <td class="text-end"><strong>{{ trial_balance.totals.credit }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

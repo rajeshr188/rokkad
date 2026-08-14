@@ -1,0 +1,406 @@
+.mgmt-accent-bar {
+    background: #1f2937;
+    color: #f9fafb;
+    font-size: 0.78rem;
+    padding: 0.45rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #111827;
+}
+
+.mgmt-accent-bar .plane-label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.95;
+}
+
+.mgmt-accent-bar a {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+}
+
+.mgmt-accent-bar a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.mgmt-shell {
+    display: flex;
+    min-height: calc(100vh - 56px - 36px);
+    background: #f9fafb;
+}
+
+.mgmt-sidebar {
+    width: 248px;
+    min-width: 248px;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    padding: 1rem 0;
+    position: sticky;
+    top: 92px;
+    max-height: calc(100vh - 92px);
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.mgmt-section-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    padding: 0.85rem 1rem 0.35rem;
+    line-height: 1.2;
+}
+
+.mgmt-section-title.workspace-name {
+    color: #0f766e;
+    letter-spacing: 0.04em;
+}
+
+.mgmt-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 2.35rem;
+    padding: 0.45rem 1rem;
+    font-size: 0.875rem;
+    color: #374151;
+    border-radius: 0.375rem;
+    margin: 0.05rem 0.5rem;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    white-space: normal;
+}
+
+.mgmt-nav-link i {
+    width: 1.1rem;
+    flex: 0 0 1.1rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.mgmt-nav-link:hover {
+    background: #eef2f7;
+    color: #111827;
+}
+
+.mgmt-nav-link:hover i {
+    color: #0f766e;
+}
+
+.mgmt-nav-link.active {
+    background: #e7f5f2;
+    color: #0f513f;
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 #0f766e;
+}
+
+.mgmt-nav-link.active i {
+    color: #0f766e;
+}
+
+.mgmt-nav-link .badge {
+    margin-left: auto;
+}
+
+.mgmt-sidebar hr,
+.mgmt-offcanvas hr {
+    border-color: #e5e7eb;
+    margin: 0.75rem 1rem;
+}
+
+.mgmt-content {
+    flex: 1;
+    min-width: 0;
+    padding: 1.75rem 2rem;
+    background: #f9fafb;
+}
+
+.mgmt-kicker {
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.mgmt-setup-hero {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    padding: 1.25rem;
+}
+
+.mgmt-setup-hero h1,
+.mgmt-setup-hero h2 {
+    color: #111827;
+}
+
+.mgmt-setup-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+}
+
+.mgmt-progress-value {
+    color: #0f766e;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.mgmt-progress-track {
+    background: #e5e7eb;
+    border-radius: 999px;
+    height: 0.625rem;
+    overflow: hidden;
+}
+
+.mgmt-progress-bar {
+    background: #0f766e;
+}
+
+.mgmt-setup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.mgmt-state-alert {
+    border-radius: 0.5rem;
+    border-width: 1px;
+}
+
+.mgmt-setup-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.mgmt-setup-task {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.045);
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 1rem;
+}
+
+.mgmt-setup-task-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+}
+
+.mgmt-setup-task-title {
+    color: #111827;
+    font-size: 0.98rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 0.25rem;
+}
+
+.mgmt-status-badge {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    gap: 0.25rem;
+    line-height: 1;
+    padding: 0.35rem 0.55rem;
+}
+
+.mgmt-status-badge.done {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.mgmt-status-badge.check {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.mgmt-status-badge.todo {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.mgmt-setup-task-action {
+    margin-top: auto;
+    padding-top: 1rem;
+}
+
+.mgmt-workspace-hero {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+}
+
+.mgmt-workspace-summary {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 1.5rem;
+}
+
+.mgmt-summary-tile {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.mgmt-summary-value {
+    color: #111827;
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.mgmt-workspace-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mgmt-workspace-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.045);
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 1rem;
+}
+
+.mgmt-workspace-card.current {
+    border-color: #99f6e4;
+    box-shadow: 0 8px 22px rgba(15, 118, 110, 0.12);
+}
+
+.mgmt-workspace-avatar {
+    align-items: center;
+    background: #0f766e;
+    border-radius: 50%;
+    color: #ffffff;
+    display: inline-flex;
+    flex: 0 0 2.75rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+    height: 2.75rem;
+    justify-content: center;
+    width: 2.75rem;
+}
+
+.mgmt-workspace-logo {
+    border-radius: 50%;
+    flex: 0 0 2.75rem;
+    height: 2.75rem;
+    object-fit: cover;
+    width: 2.75rem;
+}
+
+.mgmt-workspace-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.75rem 0 1rem;
+}
+
+.mgmt-workspace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto;
+}
+
+.mgmt-side-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.045);
+}
+
+.mgmt-empty-state {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 3rem 1.5rem;
+    text-align: center;
+}
+
+.mgmt-mobile-toggle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+}
+
+.mgmt-offcanvas {
+    background: #ffffff;
+}
+
+.mgmt-offcanvas .offcanvas-title {
+    color: #111827;
+}
+
+@media (max-width: 991.98px) {
+    .mgmt-sidebar {
+        display: none;
+    }
+
+    .mgmt-accent-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .mgmt-content {
+        padding: 1rem;
+    }
+
+    .mgmt-setup-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .mgmt-setup-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mgmt-workspace-hero {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .mgmt-workspace-summary,
+    .mgmt-workspace-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mgmt-nav-link {
+        margin-left: 0;
+        margin-right: 0;
+    }
+}

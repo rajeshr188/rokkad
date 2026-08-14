@@ -1,0 +1,19 @@
+{% extends "base_customer_portal.html" %}
+{% load i18n %}
+
+{% block portal_content %}
+<div class="portal-page-header">
+    <h1>{% trans "My invoices" %}</h1>
+</div>
+<div class="portal-list">
+    {% for invoice in summary.items %}
+        <div class="portal-list-row">
+            <strong>{{ invoice.invoice_number }}</strong>
+            <span>{{ invoice.invoice_date }}</span>
+            <span>{{ invoice.outstanding_balance.amount }} {{ invoice.outstanding_balance.currency }}</span>
+        </div>
+    {% empty %}
+        <p class="portal-empty">{% trans "No invoices are available for your portal access." %}</p>
+    {% endfor %}
+</div>
+{% endblock %}

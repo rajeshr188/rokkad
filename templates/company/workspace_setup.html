@@ -1,0 +1,96 @@
+{% extends 'base_workspace_settings.html' %}
+
+{% block title %}{{ company.name }} - Setup - Rokkad{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'app_workspaces' %}">My Workspaces</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'workspace_settings_home' workspace_id=company.id %}">{{ company.name }}</a></li>
+        <li class="breadcrumb-item active">Setup</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_header %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-1">Workspace setup</h1>
+        <p class="text-muted mb-0">Track the core setup tasks needed before routine operations.</p>
+    </div>
+    <a href="{% url 'workspace_dashboard' workspace_id=company.id %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-speedometer2 me-1"></i>Dashboard
+    </a>
+</div>
+{% endblock %}
+
+{% block mgmt_content %}
+{% if setup_state.is_complete %}
+<div class="alert alert-success mgmt-state-alert d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+    <div>
+        <div class="fw-semibold">Workspace setup is marked complete.</div>
+        <div class="small">The checklist remains available for review and future adjustments.</div>
+    </div>
+    <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reopen">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn btn-sm btn-outline-success">Reopen setup</button>
+    </form>
+</div>
+{% elif setup_state.is_dismissed %}
+<div class="alert alert-secondary mgmt-state-alert d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+    <div>
+        <div class="fw-semibold">Setup card is dismissed from the dashboard.</div>
+        <div class="small">You can reopen it or continue using this setup page.</div>
+    </div>
+    <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reopen">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn btn-sm btn-outline-secondary">Show on dashboard</button>
+    </form>
+</div>
+{% endif %}
+
+<section class="mgmt-setup-hero mb-4" aria-labelledby="setup-progress-title">
+    <div class="mgmt-setup-summary">
+        <div>
+            <div class="mgmt-kicker mb-1">Progress</div>
+            <h2 id="setup-progress-title" class="h4 fw-bold mb-1">{{ setup_checklist.completed_count }}/{{ setup_checklist.total_count }} complete</h2>
+            <p class="text-muted mb-0">Complete the essentials for accounting, stock, rates, team access, and first operations.</p>
+        </div>
+        <div class="text-lg-end">
+            <div class="mgmt-progress-value">{{ setup_checklist.completion_percentage }}%</div>
+            <div class="small text-muted">workspace readiness</div>
+        </div>
+    </div>
+    <div class="mgmt-progress-track mt-3">
+        <div class="progress-bar mgmt-progress-bar" role="progressbar" style="width: {{ setup_checklist.completion_percentage }}%;" aria-valuenow="{{ setup_checklist.completion_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <div class="mgmt-setup-actions">
+        {% if not setup_state.is_complete %}
+        <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="complete">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-sm btn-primary">Mark setup complete</button>
+        </form>
+        {% endif %}
+        {% if not setup_state.is_dismissed and not setup_state.is_complete %}
+        <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="dismiss">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss dashboard card</button>
+        </form>
+        {% endif %}
+    </div>
+</section>
+
+<div class="mgmt-setup-grid">
+    {% for item in setup_checklist.items %}
+    {% include "components/setup/setup_checklist_task.html" with item=item workspace_id=company.id workspace_slug=company.schema_name task_id_prefix="setup-task" heading_level="h2" %}
+    {% endfor %}
+</div>
+{% endblock %}

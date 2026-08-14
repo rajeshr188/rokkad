@@ -1,0 +1,19 @@
+{% load static %}
+<dialog id="collateral-camera-dialog" class="border-0 rounded shadow p-0" aria-labelledby="collateral-camera-title">
+  <div class="card border-0" style="max-width: 42rem;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong id="collateral-camera-title">Capture collateral photograph</strong>
+      <button type="button" class="btn-close js-camera-close" aria-label="Close camera"></button>
+    </div>
+    <div class="card-body">
+      <video class="w-100 rounded bg-dark" data-camera-video autoplay playsinline muted></video>
+      <canvas data-camera-canvas hidden></canvas>
+      <p class="small text-muted mt-2 mb-0" data-camera-status>Allow camera access, position the collateral clearly, then capture.</p>
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-outline-secondary js-camera-close">Cancel</button>
+      <button type="button" class="btn btn-primary" data-camera-capture>Capture photograph</button>
+    </div>
+  </div>
+</dialog>
+<script src="{% static 'loans/collateral_camera.js' %}" defer></script>

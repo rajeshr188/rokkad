@@ -1,0 +1,40 @@
+{% extends "base_tenant.html" %}
+{% block title %}Visual Flow editor · {{ revision.layout.name }}{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div><h1 class="h3 mb-1">Visual Flow editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · revision {{ revision.version }} · draft</p></div>
+  <div class="d-flex gap-2">{% if sample_loan %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_detail' revision.pk %}">Advanced JSON and publishing</a></div>
+</div>
+{% if not sample_loan %}<div class="alert alert-warning">Create and approve a PawnLoan to enable PDF preview and test print.</div>{% endif %}
+<div class="alert alert-info">This editor changes the same validated layout JSON shown on the revision page. It does not create a separate template format.</div>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card mb-4"><div class="card-header"><strong>Body blocks</strong></div><div class="list-group list-group-flush">
+      {% for block in layout.blocks %}
+      <div class="list-group-item d-flex justify-content-between align-items-start gap-3">
+        <div><span class="badge text-bg-light">{{ forloop.counter }}</span> <strong>{{ block.type|title }}</strong>
+          {% if block.binding %}<div class="small text-muted">{{ block.binding }}</div>{% endif %}
+          {% if block.bindings %}<div class="small text-muted">{{ block.bindings|join:', ' }}</div>{% endif %}
+          {% if block.text %}<div class="small">{{ block.text }}</div>{% endif %}
+          {% if block.blocks %}<div class="small text-muted">{{ block.blocks|length }} nested block{{ block.blocks|length|pluralize }}</div>{% endif %}
+          {% if block.columns %}<div class="small text-muted">{{ block.columns|length }} columns</div>{% endif %}
+        </div>
+        <div class="d-flex gap-1">
+          <form method="post">{% csrf_token %}<input type="hidden" name="operation" value="move_up"><input type="hidden" name="index" value="{{ forloop.counter0 }}"><button class="btn btn-sm btn-outline-secondary" aria-label="Move up">↑</button></form>
+          <form method="post">{% csrf_token %}<input type="hidden" name="operation" value="move_down"><input type="hidden" name="index" value="{{ forloop.counter0 }}"><button class="btn btn-sm btn-outline-secondary" aria-label="Move down">↓</button></form>
+          <form method="post">{% csrf_token %}<input type="hidden" name="operation" value="remove"><input type="hidden" name="index" value="{{ forloop.counter0 }}"><button class="btn btn-sm btn-outline-danger">Remove</button></form>
+        </div>
+      </div>
+      {% endfor %}
+    </div></div>
+    <div class="card"><div class="card-header"><strong>Add a validated block</strong></div><div class="card-body">
+      <form method="post">{% csrf_token %}<input type="hidden" name="operation" value="add_block">{{ block_form.as_p }}<button class="btn btn-primary">Add to end</button></form>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header"><strong>Page and theme</strong></div><div class="card-body">
+      <form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_settings">{{ settings_form.as_p }}<button class="btn btn-primary">Save settings</button></form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

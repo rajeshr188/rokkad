@@ -1,0 +1,100 @@
+from decimal import Decimal
+
+from dynamic_preferences.registries import global_preferences_registry
+
+from apps.configuration.services import PreferenceService
+from .models import CompanyPreferenceModel
+from .registries import company_preference_registry
+
+
+class CompanyPreferences:
+    DEFAULTS = {
+        "Loan__Default_Date": "N",
+        "Loan__Interest_Deduction": False,
+        "Loan__Haircut": Decimal("75.00"),
+        "Interest_Rate__gold": Decimal("2.00"),
+        "Interest_Rate__silver": Decimal("4.00"),
+        "Interest_Rate__other": Decimal("8.00"),
+        "Loan__Accrual_Timing": "EOM",
+        "Loan__Auto_Post_Accruals": True,
+        "Loan__Catchup_On_Receipt": True,
+        "Loan__Catchup_On_Release": True,
+        "Loan__Release_Fail_Closed_On_Accrual_Error": False,
+        "Loan__Catchup_On_Renewal": True,
+        "Loan__Allow_Backfill_Posting": False,
+        "Loan__Disbursal_Deductions_Enabled": False,
+        "Loan__Minimum_Document_Charge": Decimal("0.00"),
+    }
+
+    def __init__(self, company=None):
+        self.company = company
+
+    def _get(self, key):
+        return PreferenceService.get_workspace_from_registry(
+            workspace=self.company,
+            key=key,
+            workspace_registry=company_preference_registry,
+            workspace_preference_model=CompanyPreferenceModel,
+            global_registry=global_preferences_registry,
+            default=self.DEFAULTS.get(key),
+        )
+
+    @property
+    def loan_default_date(self):
+        return self._get("Loan__Default_Date")
+
+    @property
+    def loan_interest_deduction(self):
+        return self._get("Loan__Interest_Deduction")
+
+    @property
+    def loan_haircut(self):
+        return self._get("Loan__Haircut")
+
+    @property
+    def interest_rate_gold(self):
+        return self._get("Interest_Rate__gold")
+
+    @property
+    def interest_rate_silver(self):
+        return self._get("Interest_Rate__silver")
+
+    @property
+    def interest_rate_other(self):
+        return self._get("Interest_Rate__other")
+
+    @property
+    def loan_accrual_timing(self):
+        return self._get("Loan__Accrual_Timing")
+
+    @property
+    def loan_auto_post_accruals(self):
+        return self._get("Loan__Auto_Post_Accruals")
+
+    @property
+    def loan_catchup_on_receipt(self):
+        return self._get("Loan__Catchup_On_Receipt")
+
+    @property
+    def loan_catchup_on_release(self):
+        return self._get("Loan__Catchup_On_Release")
+
+    @property
+    def loan_release_fail_closed_on_accrual_error(self):
+        return self._get("Loan__Release_Fail_Closed_On_Accrual_Error")
+
+    @property
+    def loan_catchup_on_renewal(self):
+        return self._get("Loan__Catchup_On_Renewal")
+
+    @property
+    def loan_allow_backfill_posting(self):
+        return self._get("Loan__Allow_Backfill_Posting")
+
+    @property
+    def loan_disbursal_deductions_enabled(self):
+        return self._get("Loan__Disbursal_Deductions_Enabled")
+
+    @property
+    def loan_minimum_document_charge(self):
+        return self._get("Loan__Minimum_Document_Charge")

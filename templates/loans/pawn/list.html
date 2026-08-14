@@ -1,0 +1,32 @@
+{% extends "base_tenant.html" %}
+{% block title %}PawnLoan drafts{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+  <div><h1 class="h3 mb-1">PawnLoans</h1><p class="text-muted mb-0">Find and continue loans in this workspace.</p></div>
+  <div class="d-flex gap-2"><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reports' %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% else %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>
+</div>
+{% if not readiness.ready %}<div class="alert alert-warning"><strong>Setup required.</strong> {{ readiness.message }}</div>{% endif %}
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-12 col-xl-4"><label class="form-label" for="{{ loan_filter.form.q.id_for_label }}">{{ loan_filter.form.q.label }}</label>{{ loan_filter.form.q }}</div>
+      <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="{{ loan_filter.form.state.id_for_label }}">{{ loan_filter.form.state.label }}</label>{{ loan_filter.form.state }}</div>
+      <div class="col-6 col-md-4 col-xl-3"><label class="form-label" for="{{ loan_filter.form.license.id_for_label }}">{{ loan_filter.form.license.label }}</label>{{ loan_filter.form.license }}</div>
+      <div class="col-6 col-md-4 col-xl-3"><label class="form-label" for="{{ loan_filter.form.series.id_for_label }}">{{ loan_filter.form.series.label }}</label>{{ loan_filter.form.series }}</div>
+      <div class="col-6 col-md-4 col-xl-3"><label class="form-label" for="{{ loan_filter.form.loan_date_from.id_for_label }}">{{ loan_filter.form.loan_date_from.label }}</label>{{ loan_filter.form.loan_date_from }}</div>
+      <div class="col-6 col-md-4 col-xl-3"><label class="form-label" for="{{ loan_filter.form.loan_date_to.id_for_label }}">{{ loan_filter.form.loan_date_to.label }}</label>{{ loan_filter.form.loan_date_to }}</div>
+      <div class="col-12 col-md-auto d-flex gap-2"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_list' %}">Clear</a></div>
+    </form>
+    {% if loan_filter.form.errors %}<div class="text-danger small mt-3">Check the highlighted filters and try again.</div>{% endif %}
+  </div>
+</div>
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>Loan</th><th>Borrower</th><th>Principal</th><th>State</th><th>Date</th><th></th></tr></thead>
+  <tbody>{% for loan in loans %}<tr>
+    <td><strong>{{ loan.loan_number }}</strong><div class="small text-muted">{{ loan.license.license_number }}/{{ loan.series.code }}</div></td>
+    <td>{{ loan.borrower.display_name }}<div class="small text-muted">{{ loan.borrower.party_code }}</div></td>
+    <td>{{ loan.principal_amount }}</td><td><span class="badge text-bg-secondary">{{ loan.get_state_display }}</span></td><td>{{ loan.loan_date }}</td>
+    <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Open</a></td>
+  </tr>{% empty %}<tr><td colspan="6" class="text-center py-5 text-muted">No PawnLoans match the current filters.</td></tr>{% endfor %}</tbody>
+</table></div>{% include "loans/_pagination.html" with page_obj=page_obj %}</div>
+{% endblock %}

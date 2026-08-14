@@ -1,0 +1,150 @@
+{% extends 'base_tenant.html' %}
+
+{% block workspace_content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">Loan and Accounting Reconciliation</h2>
+      <div class="text-muted small">Generated at {{ report.generated_at|date:"Y-m-d H:i" }} | Scanned loans: {{ report.scanned_loans }}</div>
+    </div>
+    <a href="{% url 'girvi:girvi_dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Missing disbursal vouchers</div>
+          <div class="h4 mb-0">{{ report_counts.missing_disbursal_voucher }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Failed payment posting</div>
+          <div class="h4 mb-0">{{ report_counts.failed_payment_posting }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Release without voucher</div>
+          <div class="h4 mb-0">{{ report_counts.release_without_voucher }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-warning h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Voucher state mismatch</div>
+          <div class="h4 mb-0">{{ report_counts.posted_voucher_state_mismatch }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Closed without release</div>
+          <div class="h4 mb-0">{{ report_counts.closed_without_release }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Release custody mismatch</div>
+          <div class="h4 mb-0">{{ report_counts.release_custody_mismatch }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Release interest mismatch</div>
+          <div class="h4 mb-0">{{ report_counts.release_receipt_interest_mismatch }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-warning h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Interest basis variance</div>
+          <div class="h4 mb-0">{{ report_counts.release_interest_basis_variance }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-warning h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small">Compatibility settlements</div>
+          <div class="h4 mb-0">{{ report_counts.release_selector_compatibility_basis }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-danger h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Duplicate repayment references</div>
+          <div class="h4 mb-0">{{ report_counts.duplicate_repayment_reference }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-warning h-100">
+        <div class="card-body py-3">
+          <div class="small text-muted">Repayments without markers</div>
+          <div class="h4 mb-0">{{ report_counts.repayment_missing_idempotency_marker }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Mismatch Rows</h5>
+      <span class="badge bg-secondary">{{ report.total_issues }} total issues</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Loan</th>
+              <th>Status</th>
+              <th>Issue</th>
+              <th>Details</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report_rows %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ row.loan_id }}</div>
+                  <div class="small text-muted">{{ row.borrower_name }}</div>
+                </td>
+                <td><span class="badge {{ row.status_badge_class }}">{{ row.status_label }}</span></td>
+                <td>
+                  <span class="badge {% if row.severity == 'high' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                    {{ row.issue_label }}
+                  </span>
+                </td>
+                <td class="small">{{ row.details }}</td>
+                <td class="text-end">
+                  <a href="{{ row.loan_detail_url }}" class="btn btn-sm btn-outline-primary">Open Loan</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">No reconciliation mismatches found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

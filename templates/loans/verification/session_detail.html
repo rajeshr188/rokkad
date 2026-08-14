@@ -1,0 +1,143 @@
+{% extends "base_tenant.html" %}
+{% block title %}Verification {{ session.public_id }}{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <a class="small text-decoration-none" href="{% url 'loans:pawn_physical_verification_list' %}">&larr; Verification sessions</a>
+    <h1 class="h3 mt-2 mb-1">{{ session.scope_location.path_label }}</h1>
+    <p class="text-muted mb-0">{{ session.get_status_display }} &middot; {{ session.public_id }}</p>
+  </div>
+  {% if session.status == 'OPEN' %}
+    <form method="post" action="{% url 'loans:pawn_physical_verification_complete' session.pk %}">
+      {% csrf_token %}
+      <button class="btn btn-success" {% if not detail.can_complete %}disabled{% endif %}>Complete and freeze</button>
+      {% if detail.pending_count %}<div class="small text-danger mt-1">Observe {{ detail.pending_count }} pending item{{ detail.pending_count|pluralize }} first.</div>{% endif %}
+    </form>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Frozen items</div><div class="h4 mb-0">{{ detail.expected_count }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Observed</div><div class="h4 mb-0">{{ detail.observed_expected_count }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Pending</div><div class="h4 mb-0">{{ detail.pending_count }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Operational blockers</div><div class="h4 mb-0">{{ detail.unresolved_count }}</div></div></div></div>
+</div>
+
+{% if detail.unresolved_count %}
+<div class="alert alert-danger">
+  {{ detail.unresolved_count }} unresolved discrepancy{{ detail.unresolved_count|pluralize }} block storage transfer, full release, release and renew, and funding pledge for the affected collateral.
+</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="card-header"><strong>Frozen expectations</strong></div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Loan / item</th><th>Expected location</th><th>Observation</th><th></th></tr></thead>
+      <tbody>
+      {% for expectation in detail.expectations %}
+        <tr>
+          <td>{{ expectation.loan_number_snapshot }} &middot; {{ expectation.item_description_snapshot }}</td>
+          <td>{{ expectation.expected_location.path_label }}</td>
+          <td>
+            {% if expectation.observation %}
+              {{ expectation.observation.get_classification_display }}
+            {% else %}
+              <span class="badge text-bg-warning">Pending</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            {% if session.status == 'OPEN' and not expectation.observation %}
+              <a class="btn btn-sm btn-outline-primary" href="?item={{ expectation.collateral_item_id }}&classification=FOUND&location={{ expectation.expected_location_id }}#record-observation">Record found here</a>
+              <a class="btn btn-sm btn-outline-secondary" href="?item={{ expectation.collateral_item_id }}#record-observation">Record another result</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if session.status == 'OPEN' %}
+<div class="card mb-4" id="record-observation">
+  <div class="card-body">
+    <h2 class="h5">Record observation</h2>
+    <p class="small text-muted">An item or location QR scan can preselect these fields. Submitting creates immutable evidence; it does not move collateral.</p>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {{ field.errors }}
+        </div>
+      {% endfor %}
+      <button class="btn btn-primary">Record immutable observation</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><strong>Observations, resolutions and alerts</strong></div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Item</th><th>Result</th><th>Observed / expected</th><th>Resolution and alert evidence</th></tr></thead>
+      <tbody>
+      {% for row in detail.observation_rows %}
+        {% with observation=row.observation %}
+        <tr>
+          <td>{{ observation.collateral_item.loan.loan_number }} &middot; {{ observation.collateral_item.description }}</td>
+          <td>
+            {{ observation.get_classification_display }}
+            {% if row.blocks_operations %}<div><span class="badge text-bg-danger">Blocks operations</span></div>{% endif %}
+            {% if observation.notes %}<div class="small text-muted">{{ observation.notes }}</div>{% endif %}
+          </td>
+          <td>
+            <div>Observed: {{ observation.observed_location.path_label|default:'—' }}</div>
+            {% if observation.expectation_id %}<div class="small text-muted">Expected: {{ observation.expectation.expected_location.path_label }}</div>{% endif %}
+          </td>
+          <td>
+            {% if observation.resolution %}
+              <strong>{{ observation.resolution.get_outcome_display }}</strong>
+              <div class="small">{{ observation.resolution.reason }}</div>
+              {% if observation.resolution.compensation_reference %}<div class="small text-muted">Settlement {{ observation.resolution.compensation_reference }} &middot; market {{ observation.resolution.current_market_value }} &middot; agreed {{ observation.resolution.agreed_compensation }}</div>{% endif %}
+            {% elif session.status == 'COMPLETED' and observation.classification != 'FOUND' %}
+              <a class="btn btn-sm btn-outline-danger" href="{% url 'loans:pawn_physical_verification_resolve' observation.pk %}">Resolve discrepancy</a>
+            {% else %}
+              <span class="text-muted">No resolution required</span>
+            {% endif %}
+
+            {% if session.status == 'COMPLETED' and observation.classification != 'FOUND' and not row.notices %}
+              <form class="d-inline" method="post" action="{% url 'loans:pawn_physical_verification_discrepancy_notice' observation.pk %}">
+                {% csrf_token %}<button class="btn btn-sm btn-outline-warning">Alert Owner</button>
+              </form>
+            {% endif %}
+
+            {% for notice_row in row.notices %}
+              <div class="border rounded p-2 mt-2 small">
+                <div><strong>Owner alert {{ notice_row.status }}</strong> &middot; intent {{ notice_row.notice.pk }} &middot; job {{ notice_row.notice.notification_job_id|default:'missing' }}</div>
+                <div>Attempts {{ notice_row.attempt_count }}{% if notice_row.last_attempt_at %} &middot; last {{ notice_row.last_attempt_at }}{% endif %}</div>
+                {% if notice_row.external_reference %}<div>Provider reference {{ notice_row.external_reference }}</div>{% endif %}
+                {% if notice_row.failure_reason %}<div class="text-danger">{{ notice_row.failure_reason }}</div>{% endif %}
+                {% if notice_row.status == 'FAILED' %}
+                  <form method="post" action="{% url 'loans:operational_notice_retry' notice_row.notice.pk %}">
+                    {% csrf_token %}<button class="btn btn-sm btn-link px-0">Retry failed alert</button>
+                  </form>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endwith %}
+      {% empty %}
+        <tr><td colspan="4" class="text-center text-muted py-4">No observations recorded.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

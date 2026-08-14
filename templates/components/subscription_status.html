@@ -1,0 +1,54 @@
+{% comment %}
+Subscription status component.
+Shows subscription status alerts and important billing information.
+
+Context:
+  - has_active_subscription: Boolean
+  - subscription_plan: Current plan name
+  - days_until_renewal: Number of days
+  - subscription_expired: Boolean if past due
+  - workspace_name: Current workspace name (for context)
+{% endcomment %}
+
+{% if not has_active_subscription %}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-circle"></i>
+    <strong>No Active Subscription</strong>
+    <p class="mb-0 mt-2">
+      Your workspace "{{ workspace_name }}" does not have an active subscription.
+      {% if user_role == 'Owner' %}
+      <a href="{% url 'subscriptions:plan-list' %}" class="alert-link">
+        Choose a plan to continue.
+      </a>
+      {% endif %}
+    </p>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+{% elif subscription_expired %}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle"></i>
+    <strong>Payment Overdue</strong>
+    <p class="mb-0 mt-2">
+      Your payment is overdue. Please update your billing information to continue.
+      {% if user_role == 'Owner' %}
+      <a href="{% url 'subscriptions:dashboard' %}" class="alert-link">
+        Manage billing
+      </a>
+      {% endif %}
+    </p>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+{% elif days_until_renewal %}
+  {% if days_until_renewal <= 7 and days_until_renewal > 0 %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+      <i class="bi bi-info-circle"></i>
+      <strong>Subscription Renews Soon</strong>
+      <p class="mb-0 mt-2">
+        Your {{ subscription_plan }} subscription renews in <strong>{{ days_until_renewal }} days</strong>.
+      </p>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endif %}
+{% endif %}

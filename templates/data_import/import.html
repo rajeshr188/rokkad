@@ -1,0 +1,49 @@
+{% extends "base_tenant.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Import Data{% endblock %}
+
+{% block workspace_content %}
+<div class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h1 class="h4 mb-1">Import Data</h1>
+            <p class="text-muted mb-0">Upload CSV, XLS, or JSON data into a tenant model.</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'data_import:export_form' %}">
+            <i class="bi bi-download me-1"></i> Export
+        </a>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-upload me-1"></i> Import
+                            </button>
+                            <a class="btn btn-outline-secondary" href="{% url 'workspace_selector' %}">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div id="model-fields"
+                 class="alert alert-primary"
+                 role="alert"
+                 hx-get="{% url 'data_import:get_model_fields' %}"
+                 hx-trigger="change from:select[name='model_name']"
+                 hx-target="#model-fields"
+                 hx-include="[name='model_name']"
+                 hx-swap="innerHTML">
+                Select a model to see required database fields.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

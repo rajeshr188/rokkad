@@ -1,0 +1,30 @@
+{% extends "base_tenant.html" %}
+{% block title %}{{ revision.layout.name }} revision {{ revision.version }}{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div><h1 class="h3 mb-1">{{ revision.layout.name }}</h1><p class="text-muted mb-0">Revision {{ revision.version }} · {{ revision.get_state_display }} · {{ revision.content_hash|slice:':16' }}</p></div>
+  <a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">All layouts</a>
+</div>
+<div class="d-flex flex-wrap gap-2 mb-4">
+  {% if revision.state == 'DRAFT' and revision.definition.schema_version >= 2 and revision.definition.layout_mode == 'FLOW' %}<a class="btn btn-primary" href="{% url 'loans:document_layout_designer' revision.pk %}">Visual Flow editor</a>{% endif %}
+  {% if revision.state == 'DRAFT' and revision.definition.schema_version >= 2 and revision.definition.layout_mode == 'ABSOLUTE_OVERLAY' %}<a class="btn btn-primary" href="{% url 'loans:document_layout_overlay_designer' revision.pk %}">Visual overlay editor</a>{% endif %}
+  {% if sample_loan %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_export' revision.pk %}">Export sanitized pack</a>
+  <form method="post" action="{% url 'loans:document_layout_clone' revision.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary">Clone to new draft</button></form>
+  {% if revision.state == 'DRAFT' %}<form method="post" action="{% url 'loans:document_layout_publish' revision.pk %}">{% csrf_token %}<button class="btn btn-success">Publish and freeze</button></form>{% endif %}
+  {% if revision.state == 'PUBLISHED' %}<form method="post" action="{% url 'loans:document_layout_retire' revision.pk %}">{% csrf_token %}<button class="btn btn-outline-danger">Retire revision</button></form>{% endif %}
+</div>
+{% if not sample_loan %}<div class="alert alert-warning">Create and approve a PawnLoan to enable preview and test print.</div>{% endif %}
+<div class="row g-4">
+  <div class="col-lg-8"><div class="card"><div class="card-header">Structured layout definition</div><div class="card-body">
+    {% if revision.state == 'DRAFT' %}<form method="post" action="{% url 'loans:document_layout_update' revision.pk %}">{% csrf_token %}{{ definition_form.as_p }}<button class="btn btn-primary">Validate and save draft</button></form>
+    {% else %}<pre class="small bg-light p-3 rounded overflow-auto">{{ revision.definition }}</pre>{% endif %}
+  </div></div></div>
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-header">Assets</div><div class="card-body">
+      <ul>{% for asset in revision.assets.all %}<li>{{ asset.key }} · {{ asset.mime_type }} · {{ asset.sha256|slice:':10' }}</li>{% empty %}<li class="text-muted">No assets</li>{% endfor %}</ul>
+      {% if revision.state == 'DRAFT' %}<form method="post" enctype="multipart/form-data" action="{% url 'loans:document_layout_asset_add' revision.pk %}">{% csrf_token %}{{ asset_form.as_p }}<button class="btn btn-outline-primary">Validate and upload</button></form>{% endif %}
+    </div></div>
+    {% if revision.state == 'PUBLISHED' %}<div class="card"><div class="card-header">Assign default scope</div><div class="card-body"><p class="small text-muted">Leave both blank for workspace default. Series is most specific.</p><form method="post" action="{% url 'loans:document_layout_assign' revision.pk %}">{% csrf_token %}{{ assignment_form.as_p }}<button class="btn btn-primary">Assign layout</button></form><hr><ul>{% for assignment in revision.assignments.all %}{% if assignment.is_active %}<li>{% if assignment.series %}Series {{ assignment.series.code }}{% elif assignment.license %}{{ assignment.license.license_number }}{% else %}Workspace default{% endif %}</li>{% endif %}{% empty %}<li class="text-muted">Not assigned</li>{% endfor %}</ul></div></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

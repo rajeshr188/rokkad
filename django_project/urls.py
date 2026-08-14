@@ -1,19 +1,26 @@
+import environ
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
-from django.conf.urls import i18n
+from django.urls import include, path
 
-urlpatterns = [
-    path('i18n/', include(i18n)),
-    path("admin/", admin.site.urls),
-    path("accounts/", include("allauth.urls")),
-    path("", include("pages.urls")),
-    path("invitations/", include("invitations.urls")),
-    path("orgs/", include("apps.orgs.urls")),
-    path("profile/", include("accounts.urls")),
+from django_project.shared_urlpatterns import shared_urlpatterns
+
+env = environ.Env()
+environ.Env.read_env()
+
+secret_admin_url = env("SECRET_ADMIN_URL", default="admin")
+
+# Active public-schema URLConf. Keep this control-plane only: public pages,
+# auth/invitations, and global workspace management come from shared_urlpatterns.
+PLATFORM_ADMIN_URLPATTERNS = [
+    path(secret_admin_url + "/", admin.site.urls),
 ]
 
+urlpatterns = PLATFORM_ADMIN_URLPATTERNS + shared_urlpatterns
+
 if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     import debug_toolbar
 
     urlpatterns = [

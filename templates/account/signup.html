@@ -1,13 +1,53 @@
-{% extends '_base.html' %}
+{% extends 'base_auth.html' %}
 {% load crispy_forms_tags %}
-
+{% load socialaccount %}
 {% block title %}Sign up{% endblock %}
 
 {% block content %}
-<h2>Sign up</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form|crispy }}
-  <button class="btn btn-success" type="submit">Sign up</button>
-</form>
+<div class="auth-panel">
+    <section class="auth-story">
+        <div class="auth-story-kicker">Start with one workspace</div>
+        <h1 class="auth-story-title">Create your SaaS ERP account for serious small-business operations.</h1>
+        <p class="auth-story-copy">
+            Set up a workspace, invite your team, and connect accounting with parties, inventory, commodity, loans, sales, and purchase workflows.
+        </p>
+        <div class="auth-check-list">
+            <div class="auth-check-item"><i class="bi bi-check-circle-fill"></i><span>Owner-led workspace setup</span></div>
+            <div class="auth-check-item"><i class="bi bi-check-circle-fill"></i><span>Role-aware team access</span></div>
+            <div class="auth-check-item"><i class="bi bi-check-circle-fill"></i><span>Accounting-first operating model</span></div>
+        </div>
+    </section>
+
+    <section class="auth-form-wrap">
+        <div class="auth-card">
+            <h2 class="auth-card-title">Create account</h2>
+            <p class="auth-card-copy">Start with your user account, then create or join a workspace.</p>
+
+            <form method="post" class="mb-0">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button class="btn btn-success w-100" type="submit">Sign up</button>
+            </form>
+
+            {% if GOOGLE_OAUTH_ENABLED %}
+                <div class="auth-divider">or</div>
+
+                <a class="btn btn-outline-dark w-100" href="{% provider_login_url 'google' %}">
+                    <i class="bi bi-google me-2"></i>Continue with Google
+                </a>
+            {% endif %}
+
+            <div class="auth-link-row">
+                Already have an account? <a href="{% url 'account_login' %}">Log in</a>
+            </div>
+        </div>
+    </section>
+</div>
+
+{% if GOOGLE_OAUTH_ENABLED %}
+    <script src="//accounts.google.com/gsi/client" async></script>
+    <div id="g_id_onload"
+         data-client_id="{{ GOOGLE_CLIENT_ID }}"
+         data-login_uri="{% url 'google_login_by_token' %}"></div>
+{% endif %}
 {% endblock content %}

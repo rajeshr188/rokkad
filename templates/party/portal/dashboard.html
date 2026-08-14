@@ -1,0 +1,32 @@
+{% extends "base_customer_portal.html" %}
+{% load i18n %}
+
+{% block portal_content %}
+<div class="portal-page-header">
+    <div>
+        <h1>{% trans "Overview" %}</h1>
+        <p>{% trans "Your current records with this workspace." %}</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="portal-summary-tile">
+            <span>{% trans "Active loans" %}</span>
+            <strong>{{ summary.loans.active_count }}</strong>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="portal-summary-tile">
+            <span>{% trans "Unpaid invoices" %}</span>
+            <strong>{{ summary.invoices.unpaid_count }}</strong>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="portal-summary-tile">
+            <span>{% trans "Documents" %}</span>
+            <strong>{{ summary.documents.total_count }}</strong>
+        </div>
+    </div>
+</div>
+{% endblock %}

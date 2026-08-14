@@ -1,0 +1,333 @@
+{% extends 'base_workspace_settings.html' %}
+{% load static %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} - Rokkad{% endblock %}
+
+{% block mgmt_extra_css %}
+<style>
+    .invoice-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        max-width: 800px;
+        margin: 2rem auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #e0e0e0;
+        margin-bottom: 2rem;
+    }
+    
+    .invoice-title {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .invoice-status {
+        text-align: right;
+    }
+    
+    .invoice-number {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    .status-paid {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-pending {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .invoice-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+    }
+    
+    .info-section h5 {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+    
+    .info-section p {
+        margin-bottom: 0.5rem;
+        color: #666;
+    }
+    
+    .items-table {
+        width: 100%;
+        margin-bottom: 2rem;
+    }
+    
+    .items-table thead {
+        background-color: #f8f9fa;
+    }
+    
+    .items-table th {
+        padding: 1rem;
+        font-weight: 600;
+        text-align: left;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .items-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .items-table tbody tr:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .text-right {
+        text-align: right;
+    }
+    
+    .amount-table {
+        margin: 2rem 0;
+        width: 100%;
+    }
+    
+    .amount-table td {
+        padding: 0.75rem 0;
+    }
+    
+    .amount-table .label {
+        text-align: right;
+        color: #666;
+        font-weight: 600;
+    }
+    
+    .amount-table .amount {
+        text-align: right;
+        padding-left: 2rem;
+    }
+    
+    .amount-table .subtotal, 
+    .amount-table .tax,
+    .amount-table .discount {
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .amount-table .total {
+        border-top: 2px solid #333;
+        font-weight: bold;
+        font-size: 1.2rem;
+        color: #333;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid #e0e0e0;
+    }
+    
+    .notes-section {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+    }
+    
+    .notes-section h5 {
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .payment-status-info {
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .payment-status-info.paid {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .payment-status-info.pending {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+    
+    @media print {
+        .action-buttons {
+            display: none;
+        }
+        
+        .invoice-container {
+            box-shadow: none;
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block mgmt_content %}
+<div class="container py-5">
+    <div class="invoice-container">
+        <!-- Invoice Header -->
+        <div class="invoice-header">
+            <div>
+                <div class="invoice-title">INVOICE</div>
+            </div>
+            <div class="invoice-status">
+                <div class="invoice-number">Invoice #{{ invoice.invoice_number }}</div>
+                <span class="status-badge {% if invoice.is_paid %}status-paid{% else %}status-pending{% endif %}">
+                    {% if invoice.is_paid %}Paid{% else %}Pending Payment{% endif %}
+                </span>
+            </div>
+        </div>
+        
+        <!-- Payment Status Info -->
+        {% if invoice.is_paid %}
+        <div class="payment-status-info paid">
+            <strong>✓ Payment Received</strong>
+            <br>
+            <small>Paid on {{ invoice.paid_date|date:"M d, Y" }}</small>
+        </div>
+        {% else %}
+        <div class="payment-status-info pending">
+            <strong>Payment Pending</strong>
+            <br>
+            <small>Please complete payment by {{ invoice.due_date|date:"M d, Y" }}</small>
+        </div>
+        {% endif %}
+        
+        <!-- Invoice Information -->
+        <div class="invoice-info">
+            <div class="info-section">
+                <h5>Bill To</h5>
+                <p><strong>{{ subscription.user.get_full_name }}</strong></p>
+                <p>{{ subscription.user.email }}</p>
+                <p>{{ subscription.company.name }}</p>
+            </div>
+            <div class="info-section">
+                <h5>Invoice Details</h5>
+                <p>
+                    <strong>Invoice Date:</strong><br>
+                    {{ invoice.invoice_date|date:"M d, Y" }}
+                </p>
+                <p>
+                    <strong>Due Date:</strong><br>
+                    {{ invoice.due_date|date:"M d, Y" }}
+                </p>
+                <p>
+                    <strong>Invoice Period:</strong><br>
+                    {{ invoice.period_start|date:"M d, Y" }} - {{ invoice.period_end|date:"M d, Y" }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Subscription Details -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th style="width: 150px;" class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <strong>{{ subscription.plan.name }}</strong>
+                        <br>
+                        <small class="text-muted">Monthly subscription for {{ invoice.period_start|date:"M Y" }}</small>
+                    </td>
+                    <td class="text-right">₹{{ invoice.subtotal }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Amount Summary -->
+        <table class="amount-table">
+            <tbody>
+                <tr class="subtotal">
+                    <td class="label">Subtotal:</td>
+                    <td class="amount">₹{{ invoice.subtotal }}</td>
+                </tr>
+                <tr class="tax">
+                    <td class="label">GST ({{ gst_percentage }}%):</td>
+                    <td class="amount">₹{{ invoice.gst_amount }}</td>
+                </tr>
+                {% if invoice.discount_amount > 0 %}
+                <tr class="discount">
+                    <td class="label">Discount:</td>
+                    <td class="amount text-success">-₹{{ invoice.discount_amount }}</td>
+                </tr>
+                {% endif %}
+                <tr class="total">
+                    <td class="label">Total Amount Due:</td>
+                    <td class="amount">₹{{ invoice.total_amount }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Payment Instructions -->
+        {% if not invoice.is_paid %}
+        <div class="notes-section">
+            <h5>Payment Instructions</h5>
+            <p>To complete payment for this invoice, please visit your <a href="{% url 'subscriptions:dashboard' %}">billing dashboard</a> and proceed with checkout.</p>
+            <p class="small text-muted mb-0">Accepted payment methods: Credit Card, Debit Card, UPI, Bank Transfer</p>
+        </div>
+        {% endif %}
+        
+        <!-- Notes Section -->
+        {% if invoice.notes %}
+        <div class="notes-section">
+            <h5>Notes</h5>
+            <p>{{ invoice.notes|linebreaks }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Footer -->
+        <div class="notes-section mt-4" style="background-color: white; border: none;">
+            <p class="text-muted small mb-0 text-center">
+                Thank you for choosing Rokkad. If you have any questions regarding this invoice, 
+                please contact us at <strong>billing@rokkad.com</strong>
+            </p>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="{% url 'subscriptions:invoice-pdf' pk=invoice.id %}" class="btn btn-primary">
+                <i class="fas fa-download"></i> Download PDF
+            </a>
+            <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <button class="btn btn-outline-secondary" onclick="window.print()">
+                <i class="fas fa-print"></i> Print
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base_tenant.html" %}
+{% block title %}Standalone Accounting{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+  <div><h1 class="h3 mb-1">Standalone Accounting</h1><p class="text-muted mb-0">The new double-entry book, currently running beside DEA.</p></div>
+  <div class="d-flex gap-2"><a class="btn btn-primary {% if not activation.enabled %}disabled{% endif %}" href="{% url 'accounting:transaction_create' %}">New transaction</a><a class="btn btn-outline-primary" href="{% url 'accounting:reports' %}">Financial reports</a></div>
+</div>
+<div class="alert {% if activation.enabled %}alert-success{% elif activation.ready %}alert-warning{% else %}alert-danger{% endif %}">
+  <strong>{% if activation.enabled %}Enabled{% elif activation.ready %}Ready but disabled{% else %}Not ready{% endif %}</strong>
+  {% if activation.blockers %}<ul class="mb-0 mt-2">{% for blocker in activation.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% else %}<span> — activation checks are clear.</span>{% endif %}
+</div>
+{% if book %}<p class="small text-muted">Workflow: {% if workflow_mode == "OWNER" %}Owner-operated{% else %}Team approval{% endif %}</p>{% endif %}
+{% if "accounting_period_manage" in permissions and book %}<div class="mb-3"><a class="btn btn-sm btn-outline-secondary" href="{% url 'accounting:activation' %}">Manage activation</a></div>{% endif %}
+{% if evidence %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Posted vouchers</div><div class="h3 mb-0">{{ evidence.vouchers|length }}</div></div></div></div>
+  <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Current result (INR)</div><div class="h3 mb-0">{{ evidence.current_period_result }}</div></div></div></div>
+  <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Open items</div><div class="h3 mb-0">{{ evidence.open_items|length }}</div></div></div></div>
+  <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Integrity findings</div><div class="h3 mb-0">{{ evidence.integrity_findings|length }}</div></div></div></div>
+</div>
+<h2 class="h5">Recent posted vouchers</h2>
+<div class="card"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Number</th><th>Date</th><th>Source</th><th>Status</th></tr></thead><tbody>
+{% for voucher in recent_vouchers %}<tr><td><a href="{% url 'accounting:voucher_detail' voucher.pk %}">{{ voucher.voucher_number }}</a></td><td>{{ voucher.effective_date }}</td><td>{{ voucher.source_type }} / {{ voucher.source_id }} / v{{ voucher.source_version }}</td><td><span class="badge text-bg-success">{{ voucher.state }}</span></td></tr>{% empty %}<tr><td colspan="4" class="text-center py-4 text-muted">No posted vouchers yet.</td></tr>{% endfor %}
+</tbody></table></div></div>
+<h2 class="h5 mt-4">Pending workflow</h2><div class="card"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Number</th><th>Document</th><th>State</th></tr></thead><tbody>{% for voucher in pending_vouchers %}<tr><td><a href="{% url 'accounting:voucher_detail' voucher.pk %}">{{ voucher.voucher_number }}</a></td><td>{{ voucher.source_type }} / {{ voucher.source_id }}</td><td>{{ voucher.state }}</td></tr>{% empty %}<tr><td colspan="3" class="text-center text-muted py-3">No drafts awaiting action.</td></tr>{% endfor %}</tbody></table></div></div>
+{% else %}<div class="card"><div class="card-body"><h2 class="h5">Accounting setup required</h2><p class="text-muted">The PRIMARY accounting book has not been initialized for this workspace.</p>{% if "accounting_period_manage" in permissions %}<a class="btn btn-primary" href="{% url 'accounting:setup' %}">Initialize accounting</a>{% else %}<p class="mb-0">Ask an Owner or Admin to initialize it.</p>{% endif %}</div></div>{% endif %}
+{% endblock %}

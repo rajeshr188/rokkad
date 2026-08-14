@@ -1,0 +1,95 @@
+{% extends 'base_tenant.html' %}
+
+{% block workspace_content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <h5 class="card-title">Balance Sheet</h5>
+        <small class="text-muted">As of {{ as_of|default:today }}</small>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- Assets -->
+            <div class="col-6">
+                <h6 class="border-bottom">Assets</h6>
+                
+                <h6 class="ms-2">Current Assets</h6>
+                {% for entry in statement.assets.current.entries %}
+                <div class="row mx-3">
+                    <div class="col">{{ entry.ledger }}</div>
+                    <div class="col text-end">{{ entry.balance }}</div>
+                </div>
+                {% endfor %}
+                <div class="row border-top mx-2">
+                    <div class="col"><em>Total Current Assets</em></div>
+                    <div class="col text-end">{{ statement.assets.current.total }}</div>
+                </div>
+
+                <h6 class="ms-2 mt-3">Fixed Assets</h6>
+                {% for entry in statement.assets.fixed.entries %}
+                <div class="row mx-3">
+                    <div class="col">{{ entry.ledger }}</div>
+                    <div class="col text-end">{{ entry.balance }}</div>
+                </div>
+                {% endfor %}
+                <div class="row border-top mx-2">
+                    <div class="col"><em>Total Fixed Assets</em></div>
+                    <div class="col text-end">{{ statement.assets.fixed.total }}</div>
+                </div>
+
+                <div class="row border-top border-dark mx-2 mt-3">
+                    <div class="col"><strong>Total Assets</strong></div>
+                    <div class="col text-end"><strong>{{ statement.assets.total }}</strong></div>
+                </div>
+            </div>
+
+            <!-- Liabilities & Equity -->
+            <div class="col-6">
+                <h6 class="border-bottom">Liabilities & Equity</h6>
+                
+                <h6 class="ms-2">Current Liabilities</h6>
+                {% for entry in statement.liabilities.current.entries %}
+                <div class="row mx-3">
+                    <div class="col">{{ entry.ledger }}</div>
+                    <div class="col text-end">{{ entry.balance }}</div>
+                </div>
+                {% endfor %}
+                <div class="row border-top mx-2">
+                    <div class="col"><em>Total Current Liabilities</em></div>
+                    <div class="col text-end">{{ statement.liabilities.current.total }}</div>
+                </div>
+
+                <h6 class="ms-2 mt-3">Long-term Liabilities</h6>
+                {% for entry in statement.liabilities.long_term.entries %}
+                <div class="row mx-3">
+                    <div class="col">{{ entry.ledger }}</div>
+                    <div class="col text-end">{{ entry.balance }}</div>
+                </div>
+                {% endfor %}
+                <div class="row border-top mx-2">
+                    <div class="col"><em>Total Long-term Liabilities</em></div>
+                    <div class="col text-end">{{ statement.liabilities.long_term.total }}</div>
+                </div>
+
+                <h6 class="ms-2 mt-3">Equity</h6>
+                {% for entry in statement.equity.entries %}
+                <div class="row mx-3">
+                    <div class="col">{{ entry.ledger }}</div>
+                    <div class="col text-end">{{ entry.balance }}</div>
+                </div>
+                {% endfor %}
+                <div class="row border-top mx-2">
+                    <div class="col"><em>Total Equity</em></div>
+                    <div class="col text-end">{{ statement.equity.total }}</div>
+                </div>
+
+                <div class="row border-top border-dark mx-2 mt-3">
+                    <div class="col"><strong>Total Liabilities & Equity</strong></div>
+                    <div class="col text-end">
+                        <strong>{{ statement.liabilities.total|add:statement.equity.total }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

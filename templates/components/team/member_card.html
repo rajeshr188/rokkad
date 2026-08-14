@@ -1,0 +1,140 @@
+{% load orgs_tags %}
+<!-- Team Member Card Component -->
+<!-- Usage: include 'components/team/member_card.html' with member=membership -->
+
+{% if member %}
+<div class="member-card card">
+    <div class="card-body">
+        <div class="member-card__header">
+            <!-- Avatar -->
+            <div class="member-card__avatar">
+                {% if member.user.profile.avatar %}
+                    <img src="{{ member.user.profile.avatar.url }}" alt="{{ member.user.get_full_name }}" class="rounded-circle">
+                {% else %}
+                    <div class="avatar-placeholder rounded-circle">
+                        {{ member.user.first_name|slice:":1" }}{{ member.user.last_name|slice:":1" }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- User Info -->
+            <div class="member-card__info">
+                <h6 class="mb-1">{{ member.user.get_full_name }}</h6>
+                <small class="text-muted">{{ member.user.email }}</small>
+            </div>
+            
+            <!-- Role Badge -->
+            <div class="member-card__role">
+                {% include 'components/team/role_badge.html' with role=member.role %}
+            </div>
+        </div>
+        
+        {% if member.status %}
+        <div class="member-card__status">
+            {% if member.status == 'pending' %}
+                <span class="badge bg-warning text-dark">Invitation Pending</span>
+                <small class="d-block text-muted mt-1">
+                    Invited {{ member.created_at|date:"M d, Y" }}
+                </small>
+            {% elif member.status == 'active' %}
+                <span class="badge bg-success">Active</span>
+                <small class="d-block text-muted mt-1">
+                    Joined {{ member.created_at|date:"M d, Y" }}
+                </small>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Actions (if user has permission) -->
+        {% if request.user|has_permission:"company.manage_members" and member.user != request.user %}
+        <div class="member-card__actions mt-3">
+            <div class="btn-group w-100" role="group">
+                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#editRoleModal-{{ member.id }}">
+                    <i class="bi bi-pencil"></i> Change Role
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" 
+                        onclick="if(confirm('Remove this member?')) window.location='{% url 'team_remove_member' workspace_id=member.company.id membership_id=member.id %}';">
+                    <i class="bi bi-trash"></i> Remove
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<style>
+.member-card {
+    transition: all 0.3s ease;
+}
+
+.member-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.member-card__header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.member-card__avatar {
+    flex-shrink: 0;
+}
+
+.member-card__avatar img,
+.avatar-placeholder {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border: 3px solid #f0f0f0;
+}
+
+.avatar-placeholder {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.member-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.member-card__info h6 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.member-card__role {
+    flex-shrink: 0;
+}
+
+.member-card__status {
+    padding-top: 0.75rem;
+    border-top: 1px solid #dee2e6;
+    padding-bottom: 0;
+}
+
+.member-card__actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.member-card__actions .btn {
+    flex: 1;
+    font-size: 0.85rem;
+}
+</style>

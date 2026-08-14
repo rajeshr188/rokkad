@@ -1,0 +1,59 @@
+{% extends 'base_tenant.html' %}
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Product' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="container mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="h5 mb-1">Pricing Tier: {{ obj.name }}</h2>
+            <div class="text-muted small">
+                Parent: {{ obj.parent|default:"-" }} | Minimum quantity: {{ obj.minimum_quantity }}
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'product_pricingtier_update' obj.id %}" class="btn btn-outline-secondary">Edit Tier</a>
+            <a href="{% url 'product_pricingtier_productprice_create' obj.id %}" class="btn btn-primary">Add Product Price</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Product Variant</th>
+                    <th>Purchase Price</th>
+                    <th>Selling Price</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in price_rows %}
+                <tr>
+                    <td>{{ i.product }}</td>
+                    <td>{{ i.purchase_price }}</td>
+                    <td>{{ i.selling_price }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'product_pricingtier_productprice_update' i.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <form method="post" action="{% url 'product_pricingtier_productprice_delete' i.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted">No product prices for this tier.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,217 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Sale Rate Fixing Preview{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">Sale Rate Fixing</h4>
+        <small class="text-muted">Preview monetary receivable/revenue and exposure reduction for an open sale exposure.</small>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'dea_business_events_dashboard' %}" class="btn btn-sm btn-outline-secondary">Business Events</a>
+        <a href="{% url 'dea_exposure_report' %}" class="btn btn-sm btn-outline-secondary">Exposure Report</a>
+    </div>
+</div>
+
+{% if confirm_attempted %}
+<div class="alert alert-warning">
+    Confirm posting is disabled for this preview-only slice.
+</div>
+{% endif %}
+
+<div class="alert alert-info">
+    This screen validates and previews sale rate fixing only. Preview does not create rate fixings, vouchers, voucher lines, journals, ledger rows, account rows, commodity movements, exposures, or payment vouchers.
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-5">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Fixing Facts</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="col-12{% if field.name == 'fixing_date' or field.name == 'fine_weight' or field.name == 'rate' or field.name == 'currency' %} col-md-6{% endif %}">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% for error in field.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" name="action" value="preview" class="btn btn-primary">Preview</button>
+                        <button type="submit" name="action" value="confirm" class="btn btn-outline-secondary" {% if confirm_disabled %}disabled{% endif %}>Confirm posting</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        {% if preview %}
+        <div class="card mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Preview</h5>
+                <span class="badge {% if preview.status == 'valid' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ preview.status }}</span>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    {% if draft %}
+                    <dt class="col-sm-4">Draft source</dt>
+                    <dd class="col-sm-8">#{{ draft.id }} {{ draft.get_status_display }}</dd>
+                    {% endif %}
+                    <dt class="col-sm-4">Source reference</dt>
+                    <dd class="col-sm-8">{{ preview.business_facts.source_reference }}</dd>
+                    <dt class="col-sm-4">Exposure</dt>
+                    <dd class="col-sm-8">{{ preview.business_facts.exposure_no }}</dd>
+                    <dt class="col-sm-4">Fixing date</dt>
+                    <dd class="col-sm-8">{{ preview.business_facts.fixing_date }}</dd>
+                    <dt class="col-sm-4">Party</dt>
+                    <dd class="col-sm-8">{{ preview.business_facts.party }}</dd>
+                    <dt class="col-sm-4">Commodity</dt>
+                    <dd class="col-sm-8">{{ preview.business_facts.commodity }}</dd>
+                    <dt class="col-sm-4">Fixing weight</dt>
+                    <dd class="col-sm-8">{{ preview.business_facts.fine_weight }}</dd>
+                    <dt class="col-sm-4">Rate</dt>
+                    <dd class="col-sm-8">{{ preview.business_facts.currency }} {{ preview.business_facts.rate }}</dd>
+                    <dt class="col-sm-4">Fixing amount</dt>
+                    <dd class="col-sm-8">{{ preview.business_facts.currency }} {{ preview.business_facts.amount }}</dd>
+                    <dt class="col-sm-4">Preview key</dt>
+                    <dd class="col-sm-8">{{ preview.idempotency_key_preview }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        {% if preview.warnings %}
+        <div class="alert alert-warning">
+            {% for warning in preview.warnings %}
+            <div>{{ warning }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if readiness %}
+        <div class="card mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Posting Readiness</h5>
+                <span class="badge {% if readiness.ready %}bg-success{% else %}bg-danger{% endif %}">
+                    {% if readiness.ready %}Ready for future confirm{% else %}Blocked{% endif %}
+                </span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Check</th>
+                            <th>Status</th>
+                            <th>Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for check in readiness.checks %}
+                        <tr>
+                            <td>{{ check.label }}</td>
+                            <td>{% if check.passed %}<span class="badge bg-success">Pass</span>{% else %}<span class="badge bg-danger">Block</span>{% endif %}</td>
+                            <td>{{ check.detail }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-0">
+                    This checklist is read-only on the preview page. Open the saved draft to confirm posting after review.
+                </p>
+                {% if draft %}
+                <a href="{% url 'dea_sale_rate_fixing_detail' draft.id %}" class="btn btn-sm btn-outline-primary mt-3">Open draft result</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Accounting Impact</h5>
+            </div>
+            <div class="card-body">
+                <p>{{ preview.accounting_impact.message }}</p>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Side</th>
+                                <th>Ledger</th>
+                                <th>Account</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in preview.accounting_impact.debits %}
+                            <tr>
+                                <td>Dr</td>
+                                <td>{{ row.ledger }}</td>
+                                <td>{{ row.account }}</td>
+                                <td>{{ row.currency }} {{ row.amount }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% for row in preview.accounting_impact.credits %}
+                            <tr>
+                                <td>Cr</td>
+                                <td>{{ row.ledger }}</td>
+                                <td></td>
+                                <td>{{ row.currency }} {{ row.amount }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Exposure Impact</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Side</dt>
+                    <dd class="col-sm-7">{{ preview.exposure_impact.side }}</dd>
+                    <dt class="col-sm-5">Open before</dt>
+                    <dd class="col-sm-7">{{ preview.exposure_impact.open_fine_weight_before }}</dd>
+                    <dt class="col-sm-5">Fixing weight</dt>
+                    <dd class="col-sm-7">{{ preview.exposure_impact.fixing_fine_weight }}</dd>
+                    <dt class="col-sm-5">Open after</dt>
+                    <dd class="col-sm-7">{{ preview.exposure_impact.open_fine_weight_after }}</dd>
+                    <dt class="col-sm-5">Fixed status after</dt>
+                    <dd class="col-sm-7">{{ preview.exposure_impact.fixed_status_after }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Commodity Impact</h5>
+            </div>
+            <div class="card-body text-muted">{{ preview.commodity_impact.message }}</div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-muted">
+                Submit the form to generate a read-only sale rate-fixing preview.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base_tenant.html" %}
+{% block title %}Loan-ticket print profiles{% endblock %}
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1 class="h3 mb-1">Loan-ticket print profiles</h1>
+    <p class="text-muted mb-0">Profiles package one immutable logical ticket as A5 or A4 output. Published revisions are frozen.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'loans:document_issue_list' %}">Issued documents</a>
+    <a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document layouts</a>
+    <a class="btn btn-primary" href="{% url 'loans:document_print_profile_create' %}">Create print profile</a>
+  </div>
+</div>
+<div class="alert alert-info">Resolution order is Series, then workspace default, then the built-in A5 Original + Duplicate profile.</div>
+{% for item in profiles %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between"><strong>{{ item.name }}</strong>{% if item.is_retired %}<span class="badge text-bg-secondary">Retired profile</span>{% endif %}</div>
+  <div class="list-group list-group-flush">
+    {% for revision in item.revisions.all %}
+    <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{% url 'loans:document_print_profile_detail' revision.pk %}">
+      <span>Revision {{ revision.version }} <span class="small text-muted">{{ revision.definition.composition }} · {{ revision.content_hash|slice:':12' }}</span></span>
+      <span class="badge {% if revision.state == 'PUBLISHED' %}text-bg-success{% elif revision.state == 'DRAFT' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">{{ revision.get_state_display }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% empty %}<div class="alert alert-secondary">No custom print profiles. New tickets currently use the built-in A5 Original + Duplicate profile.</div>{% endfor %}
+{% endblock %}

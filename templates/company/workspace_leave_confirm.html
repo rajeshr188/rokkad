@@ -1,0 +1,60 @@
+{% extends 'base_workspace_settings.html' %}
+{% load orgs_tags %}
+
+{% block title %}Leave {{ company.name }} - Rokkad{% endblock %}
+
+{% block mgmt_content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-5">
+            <div class="card border-warning">
+                <div class="card-header bg-warning bg-opacity-10 border-warning">
+                    <h5 class="mb-0 text-warning">
+                        <i class="bi bi-box-arrow-left"></i> Leave Workspace
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        {% if company.logo %}
+                            <img src="{{ company.logo.url }}" alt="{{ company.name }}"
+                                 class="rounded-circle" style="width: 56px; height: 56px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; font-size: 22px; flex-shrink: 0;">
+                                {{ company.name|first|upper }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h5 class="mb-0">{{ company.name }}</h5>
+                            <small class="text-muted">
+                                Your role: {% render_role_badge role=membership.role.name %}
+                            </small>
+                        </div>
+                    </div>
+
+                    <p class="mb-3">
+                        Are you sure you want to leave <strong>{{ company.name }}</strong>?
+                    </p>
+                    <ul class="text-muted small mb-4">
+                        <li>You will immediately lose access to this workspace.</li>
+                        <li>Your data within the workspace will remain intact.</li>
+                        <li>You can be re-invited by a workspace admin or owner.</li>
+                    </ul>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-box-arrow-left"></i> Leave Workspace
+                            </button>
+                            <a href="{% url 'workspace_selector' %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

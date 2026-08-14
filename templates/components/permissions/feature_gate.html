@@ -1,0 +1,22 @@
+{% comment %}
+Feature gating component - shows when a feature is unavailable.
+
+Context:
+  - feature_name: Name of the feature (e.g., "Advanced Reporting")
+  - required_plan: Required plan tier (e.g., "Pro")
+  - button_text: Text for upgrade button (default: "Upgrade your plan")
+{% endcomment %}
+
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+  <i class="bi bi-lock"></i>
+  <strong>{{ feature_name }} is not available</strong>
+
+  <p class="mb-0 mt-2">
+    This feature requires a <strong>{{ required_plan }}</strong> plan or higher.
+    <a href="{% url 'subscriptions:plan-list' %}" class="alert-link">
+      {{ button_text|default:"Upgrade your plan" }}
+    </a>
+  </p>
+
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>

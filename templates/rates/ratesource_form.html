@@ -1,0 +1,16 @@
+{% extends 'base_tenant.html' %}
+{% load crispy_forms_tags %}
+{% block workspace_content %}
+<div class="container mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h1 class="h3 mb-0">Rate Source Form</h1>
+        <a class="btn btn-outline-secondary" href="{% url 'ratesource_list' %}">Rate Sources</a>
+    </div>
+    <div class="card">
+        <div class="card-body">
+        {% crispy form %}
+        </div>
+    </div>
+</div>
+{%endblock%}
+

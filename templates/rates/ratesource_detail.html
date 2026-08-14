@@ -1,0 +1,21 @@
+{% extends 'base_tenant.html' %}
+
+{% block workspace_content %}
+  <div class="container card mt-4">
+    <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <h1 class="h3 mb-0">Rate Source Detail</h1>
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'ratesource_list' %}">Back to list</a>
+        <a class="btn btn-primary" href="{% url 'rate_create' %}">Add Rate</a>
+      </div>
+    </div>
+    <ul>
+      <li><strong>ID:</strong> {{ ratesource.id }}</li>
+      <li><strong>Name:</strong> {{ ratesource.name }}</li>
+      <li><strong>Location:</strong> {{ ratesource.location }}</li>
+      <li><strong>Taxed?:</strong> {{ ratesource.tax_included }}</li>
+    </ul>
+    </div>
+  </div>
+{% endblock %}

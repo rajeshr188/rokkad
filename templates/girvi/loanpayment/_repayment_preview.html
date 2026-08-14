@@ -1,0 +1,59 @@
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+      <div>
+        <h6 class="mb-1">Settlement Preview</h6>
+        <div class="text-muted small">Current split before this payment is recorded.</div>
+      </div>
+      {% if repayment_preview.is_settled %}
+        <span class="badge text-bg-success">Settled</span>
+      {% else %}
+        <span class="badge text-bg-warning">Outstanding</span>
+      {% endif %}
+    </div>
+
+    <div class="row g-3">
+      <div class="col-6 col-md-3">
+        <div class="small text-muted">Principal Due</div>
+        <div class="fw-semibold">{{ settlement.principal_due }}</div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="small text-muted">Interest Due</div>
+        <div class="fw-semibold">{{ settlement.interest_due }}</div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="small text-muted">Already Paid</div>
+        <div class="fw-semibold">{{ settlement.total_paid }}</div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="small text-muted">Outstanding</div>
+        <div class="fw-semibold">{{ settlement.total_outstanding }}</div>
+      </div>
+    </div>
+
+    {% if not repayment_preview.is_settled %}
+      <div class="border-top pt-3 mt-3">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="small text-muted">Exact Payment</div>
+            <div class="fw-semibold">{{ repayment_preview.suggested_total_amount }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted">Interest Portion</div>
+            <div>{{ repayment_preview.suggested_interest_amount }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted">Principal Portion</div>
+            <div>{{ repayment_preview.suggested_principal_amount }}</div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if settlement.overpayment > 0 %}
+      <div class="alert alert-warning mt-3 mb-0">
+        Overpayment recorded: {{ settlement.overpayment }}
+      </div>
+    {% endif %}
+  </div>
+</div>

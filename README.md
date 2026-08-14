@@ -1,118 +1,261 @@
-> A batteries-included Django starter project. To learn more visit [LearnDjango.com](https://learndjango.com).
+﻿---
+status: active
+owner: project
+updated: 2026-06-17
+tags: []
+related: []
+---
+
+# Rokkad
+
+Living project documentation now starts at [docs/README.md](docs/README.md).
+
+Rokkad is a schema-per-tenant Django application for finance/inventory workflows, including Girvi (loan) flows, accounting (DEA), product/inventory, notifications, purchasing, and sales.
+
+The project is built on `django-tenants`, with explicit tenant bootstrap and seeding commands for deterministic tenant provisioning.
+
+Yes, I can access the project files. This project is **Rokkad**, a multi-tenant Django business application for finance, pawn/girvi lending, inventory, accounting, purchases, sales, notifications, and workspace management.
+
+At a high level, it is a **schema-per-tenant SaaS-style Django app** using `django-tenants`. Each company/workspace gets its own PostgreSQL schema, while shared/public apps handle users, companies, onboarding, subscriptions, invitations, and permissions.
+
+The main business domain appears to be **Girvi**, meaning pawn/gold-loan style workflows. The app tracks:
+
+- Loans given to customers against pledged items
+- Loans taken/repledged against existing collateral
+- Gold/silver item weights, purity, valuation, custody, release, renewal, split/merge flows
+- Loan lifecycle states, interest accrual, payments, notices, labels, PDFs, statements, and inventory checks
+
+The project also includes a substantial accounting system under **DEA**. That handles:
+
+- Chart of accounts
+- Ledgers and accounts
+- Journal entries
+- Payment vouchers
+- Expense vouchers
+- Sales/purchase invoice vouchers
+- Trial balance, balance sheet, P&L, income statement, cash flow
+- Accounting periods, opening balances, reconciliation, audit trails
+
+There is also a product/inventory system for jewelry-like stock:
+
+- Categories such as gold/silver
+- Product types and variants
+- Attributes and attribute values
+- Stock, stock lots, stock items
+- Purchase posting into inventory
+- Weight/touch/net weight calculations
+
+The shared/platform side includes:
+
+- `apps/orgs`: company/tenant model, domains, memberships, roles, invitations
+- `apps/onboarding`: workspace creation/provisioning
+- `apps/subscriptions`: Razorpay-backed subscriptions/billing
+- `accounts`: custom user/account handling
+- `django_project/settings`: tenant-aware Django configuration
+- `templates`, `static`, HTMX, Bootstrap/crispy forms for the UI
+
+So the shortest description is:
+
+**Rokkad is a multi-tenant Django ERP/finance platform, specialized for Indian jewelry/girvi businesses, combining pawn-loan management, gold/silver inventory, double-entry accounting, purchases/sales, customer workflows, notifications, and subscription-based workspace management.**
 
 
-https://github.com/wsvincent/djangox/assets/766418/a73ea730-a7b4-4e53-bf51-aa68f6816d6a
+## What This Project Includes
 
+- Multi-tenant architecture with PostgreSQL schemas (`public` + per-tenant schemas)
+- Workspace/company onboarding with optional template-schema cloning
+- Explicit and idempotent seeding for public and tenant defaults
+- Tenant parity validation command to detect seed drift
+- Invitation and membership flows (`django-invitations` + custom org models)
+- Auth and social auth via `django-allauth`
+- Object-level permissions via `django-guardian`
+- HTMX-enabled UI paths and dynamic preferences
 
+## Tech Stack
 
+- Python (project currently uses Django `6.0.3`)
+- PostgreSQL (`django_tenants.postgresql_backend`)
+- Django apps: orgs, onboarding, subscriptions, accounts, tenant domain apps
+- Frontend tooling: Django templates, HTMX, crispy forms, select2
+- Infra/runtime: WhiteNoise, Redis cache support, Docker files, GitHub Actions CI smoke workflow
 
-## 🚀 Features
+## Repository Highlights
 
-- Django 5.0 & Python 3.11
-- Install via [Pip](https://pypi.org/project/pip/) or [Docker](https://www.docker.com/)
-- User log in/out, sign up, password reset via [django-allauth](https://github.com/pennersr/django-allauth)
-- Static files configured with [Whitenoise](http://whitenoise.evans.io/en/stable/index.html)
-- Styling with [Bootstrap v5](https://getbootstrap.com/)
-- Debugging with [django-debug-toolbar](https://github.com/jazzband/django-debug-toolbar)
-- DRY forms with [django-crispy-forms](https://github.com/django-crispy-forms/django-crispy-forms)
-- Custom 404, 500, and 403 error pages
-----
+- `apps/orgs`: tenant model (`Company`), domains, memberships, roles, permissions, seed commands
+- `apps/onboarding`: workspace onboarding and provisioning flow
+- `apps/tenant_apps/*`: tenant-scoped business apps (`girvi`, `dea`, `product`, `rates`, `terms`, `notify`, etc.)
+- `django_project/settings`: environment-based settings (`base`, `dev`)
+- `django_project/docs`: architecture and operations documentation
+- `.github/workflows/tenant-seed-smoke.yml`: CI smoke for tenant bootstrap + seeding parity
 
-## Table of Contents
-* **[Installation](#installation)**
-  * [Pip](#pip)
-  * [Docker](#docker)
-* [Next Steps](#next-steps)
-* [Contributing](#contributing)
-* [Support](#support)
-* [License](#license)
+## Quick Start (Local)
 
-----
+### 1) Clone and create virtual environment
 
-## 📖 Installation
-DjangoX can be installed via Pip or Docker. To start, clone the repo to your local computer and change into the proper directory.
+```bash
+git clone https://github.com/rajeshr188/rokkad.git
+cd rokkad
 
+python -m venv .venv
 ```
-$ git clone https://github.com/wsvincent/djangox.git
-$ cd djangox
+
+Windows PowerShell:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+.venv\Scripts\Activate.ps1
 ```
 
-### Pip
+macOS/Linux:
 
-```
-$ python -m venv .venv
-
-# Windows
-$ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-$ .venv\Scripts\Activate.ps1
-
-# macOS
-$ source .venv/bin/activate
-
-(.venv) $ pip install -r requirements.txt
-(.venv) $ python manage.py migrate
-(.venv) $ python manage.py createsuperuser
-(.venv) $ python manage.py runserver
-# Load the site at http://127.0.0.1:8000
+```bash
+source .venv/bin/activate
 ```
 
-### Docker
+Install dependencies:
 
-To use Docker with PostgreSQL as the database update the `DATABASES` section of `django_project/settings.py` to reflect the following:
-
-```python
-# django_project/settings.py
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "postgres",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "db",  # set in docker-compose.yml
-        "PORT": 5432,  # default postgres port
-    }
-}
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-The `INTERNAL_IPS` configuration in `django_project/settings.py` must be also be updated:
+### 2) Configure environment variables
 
-```python
-# config/settings.py
-# django-debug-toolbar
-import socket
-hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-INTERNAL_IPS = [ip[:-1] + "1" for ip in ips]
+`manage.py` defaults to `django_project.settings.dev`, and settings are loaded from `.env`.
+
+At minimum, define:
+
+```env
+DEBUG=True
+SECRET_KEY=replace-me
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+
+DB_NAME=dea-kiss-v2
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=127.0.0.1
+DB_PORT=5432
+
+EMAIL_HOST=localhost
+EMAIL_PORT=1025
+EMAIL_USE_TLS=False
+EMAIL_HOST_USER=test@example.com
+EMAIL_HOST_PASSWORD=test
+DEFAULT_FROM_EMAIL=test@example.com
+ADMINS=Local Admin <admin@example.com>
+
+GOOGLE_CLIENT_ID=
+
+CLOUDFLARE_R2_BUCKET=dev-bucket
+CLOUDFLARE_R2_ACCESS_KEY=dev-access-key
+CLOUDFLARE_R2_SECRET_KEY=dev-secret-key
+CLOUDFLARE_R2_BUCKET_ENDPOINT=http://localhost:9000
 ```
 
-And then proceed to build the Docker image, run the container, and execute the standard commands within Docker.
+### 3) Prepare database
 
+Create PostgreSQL database and run shared migrations:
+
+```bash
+python manage.py migrate_schemas --shared --noinput
 ```
-$ docker-compose up -d --build
-$ docker-compose exec web python manage.py migrate
-$ docker-compose exec web python manage.py createsuperuser
-# Load the site at http://127.0.0.1:8000
+
+Create superuser:
+
+```bash
+python manage.py createsuperuser
 ```
 
-## Next Steps
+### 4) Seed baseline data
 
-- Add environment variables. There are multiple packages but I personally prefer [environs](https://pypi.org/project/environs/).
-- Add [gunicorn](https://pypi.org/project/gunicorn/) as the production web server.
-- Update the [EMAIL_BACKEND](https://docs.djangoproject.com/en/4.0/topics/email/#module-django.core.mail) and connect with a mail provider.
-- Make the [admin more secure](https://opensource.com/article/18/1/10-tips-making-django-admin-more-secure).
-- `django-allauth` supports [social authentication](https://django-allauth.readthedocs.io/en/latest/providers.html) if you need that.
+Public/shared defaults:
 
-I cover all of these steps in tutorials and premium courses over at [LearnDjango.com](https://learndjango.com).
+```bash
+python manage.py seed_public_defaults
+```
 
-----
+Tenant defaults for one schema:
 
-## 🤝 Contributing
+```bash
+python manage.py seed_tenant_defaults --schema <tenant_schema>
+```
 
-Contributions, issues and feature requests are welcome! See [CONTRIBUTING.md](https://github.com/wsvincent/djangox/blob/master/CONTRIBUTING.md).
+All tenant schemas:
 
-## ⭐️ Support
+```bash
+python manage.py seed_all_tenants
+```
 
-Give a ⭐️  if this project helped you!
+### 5) Run the app
+
+```bash
+python manage.py runserver
+```
+
+Open `http://127.0.0.1:8000`.
+
+## Tenant Provisioning And Seeding Flow
+
+The project uses explicit, command-driven seeding rather than migration side effects.
+
+At a high level:
+
+1. Create/clone tenant schema during onboarding.
+2. Run `seed_tenant_defaults` immediately after provisioning.
+3. Validate expected canonical seed records via parity checks.
+
+Primary docs:
+
+- `django_project/docs/TENANT_PROVISIONING_AND_SEEDING_GUIDE.md`
+- `django_project/docs/TENANT_SEEDING_EXECUTION_RUNBOOK.md`
+
+## Important Management Commands
+
+- `python manage.py seed_public_defaults`
+- `python manage.py seed_tenant_defaults --schema <schema_name>`
+- `python manage.py seed_all_tenants --dry-run`
+- `python manage.py seed_all_tenants --continue-on-error`
+- `python manage.py check_tenant_seed_parity --baseline-schema <schema_name> --fail-on-drift`
+- `python manage.py setup_permissions`
+
+## Testing (django-tenants)
+
+`manage.py test` is configured with a tenant-aware test runner:
+
+- `TEST_RUNNER = "django_project.test_runner.TenantAwareDiscoverRunner"`
+
+This runner prepares test schemas using `migrate_schemas` semantics (schema-aware setup for `public` and tenant apps), rather than relying on plain non-tenant migration behavior.
+
+Example:
+
+- `python manage.py test apps.tenant_apps.girvi.tests -v 2`
+
+Note: seeing migration lines during tests is expected. The important part is that migrations run in tenant schema context (for example, log lines prefixed with `[standard:public]`).
+
+## CI Smoke Validation
+
+GitHub Actions workflow:
+
+- `.github/workflows/tenant-seed-smoke.yml`
+
+It runs:
+
+- PR fast smoke: migrate + seed target tenant
+- Push full smoke: migrate baseline + target, seed both, enforce parity
+
+## Additional Documentation
+
+- `apps/tenant_apps/girvi/docs/loan/interest_accrual_guide.md` â€” current Girvi interest accrual behavior, trigger paths, and future improvements
+- `django_project/docs/INVITATION_FLOW_REFERENCE.md`
+- `django_project/docs/ALLAUTH_HARDENING_PLAN.md`
+- `django_project/docs/INVITATIONS_HARDENING_PLAN.md`
+- `PERMISSION_MATRIX_GUIDE.md`
+- `TROUBLESHOOTING_COMMON_GOTCHAS.md`
+
+## Contributing
+
+See `CONTRIBUTING.md`.
 
 ## License
 
-[The MIT License](LICENSE)
+MIT License. See `LICENSE`.
+

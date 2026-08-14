@@ -1,11 +1,184 @@
-{% extends '_base.html' %}
-{% load static %}
-
-{% block title %}Home page{% endblock title %}
+{% extends 'base_public.html' %}
+{% load i18n %}
+{% block title %}Rokkad - Accounting-First SaaS ERP{% endblock title %}
 
 {% block content %}
-<div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-  <img src="{% static 'images/logo.png' %}" class="img-fluid" alt="DjangoX logo"/>
-  <p class="lead">A Django starter project with batteries.</p>
-</div>
+<section class="public-hero">
+    <div class="container-lg">
+        <div class="public-hero-grid">
+            <div>
+                <div class="public-kicker">SaaS ERP for finance-led small businesses</div>
+                <h1 class="public-title">Run loans, inventory, commodity, and accounting in one workspace.</h1>
+                <p class="public-lede">
+                    Rokkad gives jewellery, gold-loan, trading, and operations teams a clear ERP workspace where every major document stays connected to accounting, inventory, commodity movement, and audit impact.
+                </p>
+                <div class="public-actions">
+                    <a href="{% url 'account_signup' %}" class="btn btn-success btn-lg">
+                        <i class="bi bi-arrow-right-circle"></i>Start workspace setup
+                    </a>
+                    <a href="#operations" class="btn btn-outline-dark btn-lg">
+                        <i class="bi bi-grid-1x2"></i>View product areas
+                    </a>
+                </div>
+
+                <div class="public-proof-row">
+                    <div>
+                        <div class="public-proof-label">Core model</div>
+                        <div class="public-proof-value">Accounting first</div>
+                    </div>
+                    <div>
+                        <div class="public-proof-label">Workspace access</div>
+                        <div class="public-proof-value">Role scoped</div>
+                    </div>
+                    <div>
+                        <div class="public-proof-label">Business fit</div>
+                        <div class="public-proof-value">Gold + ERP</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="public-product-preview" aria-label="Rokkad product preview">
+                <div class="public-preview-topbar">
+                    <div class="public-preview-title">Workspace dashboard</div>
+                    <div class="public-preview-status">Live controls</div>
+                </div>
+                <div class="public-preview-body">
+                    <div class="public-metric-grid">
+                        <div class="public-metric">
+                            <div class="public-metric-label">Receivable</div>
+                            <div class="public-metric-value">INR 18.4L</div>
+                        </div>
+                        <div class="public-metric">
+                            <div class="public-metric-label">Gold stock</div>
+                            <div class="public-metric-value">2.8kg</div>
+                        </div>
+                        <div class="public-metric">
+                            <div class="public-metric-label">Open loans</div>
+                            <div class="public-metric-value">126</div>
+                        </div>
+                    </div>
+
+                    <div class="public-flow-list">
+                        <div class="public-flow-item">
+                            <div class="public-flow-icon"><i class="bi bi-receipt"></i></div>
+                            <div class="public-flow-copy">
+                                <div class="public-flow-name">Gold loan disbursal</div>
+                                <div class="public-flow-note">Loan, party, collateral, and voucher linked</div>
+                            </div>
+                            <div class="public-flow-impact">Posted</div>
+                        </div>
+                        <div class="public-flow-item">
+                            <div class="public-flow-icon"><i class="bi bi-box-seam"></i></div>
+                            <div class="public-flow-copy">
+                                <div class="public-flow-name">Inventory purchase</div>
+                                <div class="public-flow-note">Stock, supplier payable, commodity impact</div>
+                            </div>
+                            <div class="public-flow-impact">Checked</div>
+                        </div>
+                        <div class="public-flow-item">
+                            <div class="public-flow-icon"><i class="bi bi-journal-check"></i></div>
+                            <div class="public-flow-copy">
+                                <div class="public-flow-name">Accounting period</div>
+                                <div class="public-flow-note">Reports and audit trail ready</div>
+                            </div>
+                            <div class="public-flow-impact">Open</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="public-section alt" id="operations">
+    <div class="container-lg">
+        <div class="public-section-header">
+            <h2 class="public-section-title">Built around the workflows that create books.</h2>
+            <p class="public-section-copy">
+                Operational teams can work in familiar business areas while the system keeps accounting, stock, commodity, and audit context close to every document.
+            </p>
+        </div>
+
+        <div class="public-card-grid">
+            <div class="public-card">
+                <div class="public-card-icon"><i class="bi bi-person-vcard"></i></div>
+                <h3 class="public-card-title">Parties and loans</h3>
+                <p class="public-card-copy">Manage customers, suppliers, borrowers, collateral, dues, receipts, and statements with clear workspace ownership.</p>
+            </div>
+            <div class="public-card">
+                <div class="public-card-icon"><i class="bi bi-boxes"></i></div>
+                <h3 class="public-card-title">Inventory and commodity</h3>
+                <p class="public-card-copy">Track products, stock movement, gold and silver positions, rate fixing, and custody workflows from one operating surface.</p>
+            </div>
+            <div class="public-card">
+                <div class="public-card-icon"><i class="bi bi-calculator"></i></div>
+                <h3 class="public-card-title">Accounting core</h3>
+                <p class="public-card-copy">Keep vouchers, journals, ledgers, trial balance, reports, and audit trails connected to source business events.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="public-impact-band">
+    <div class="container-lg">
+        <div class="public-impact-grid">
+            <div>
+                <h2 class="public-section-title text-white">Designed for controlled growth, not spreadsheet drift.</h2>
+                <p class="public-impact-copy">
+                    Start with one workspace, invite the team, configure accounting, and expand into business modules without losing tenant boundaries or source-document traceability.
+                </p>
+            </div>
+            <div>
+                <div class="public-impact-number">1</div>
+                <div class="public-impact-label">Workspace setup checklist</div>
+            </div>
+            <div>
+                <div class="public-impact-number">4</div>
+                <div class="public-impact-label">Core impact tracks</div>
+            </div>
+            <div>
+                <div class="public-impact-number">24/7</div>
+                <div class="public-impact-label">Cloud access target</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="public-section">
+    <div class="container-lg">
+        <div class="public-section-header">
+            <h2 class="public-section-title">A serious control plane for owners and finance teams.</h2>
+            <p class="public-section-copy">
+                Rokkad separates public marketing, account management, workspace settings, and tenant ERP screens so users know where they are and what data they are touching.
+            </p>
+        </div>
+
+        <div class="public-card-grid">
+            <div class="public-card alt">
+                <div class="public-card-icon"><i class="bi bi-buildings"></i></div>
+                <h3 class="public-card-title">Workspace manager</h3>
+                <p class="public-card-copy">Create workspaces, switch between companies, review pending invitations, and manage account settings outside tenant ERP data.</p>
+            </div>
+            <div class="public-card alt">
+                <div class="public-card-icon"><i class="bi bi-shield-check"></i></div>
+                <h3 class="public-card-title">Roles and permissions</h3>
+                <p class="public-card-copy">Keep owner, admin, accountant, and member access explicit as the business adds workflows and people.</p>
+            </div>
+            <div class="public-card alt">
+                <div class="public-card-icon"><i class="bi bi-clipboard2-check"></i></div>
+                <h3 class="public-card-title">Setup guidance</h3>
+                <p class="public-card-copy">Use a practical checklist for business profile, accounting setup, parties, products, stock, rates, team, and first transactions.</p>
+            </div>
+        </div>
+
+        <div class="public-actions mt-4">
+            <a href="{% url 'account_signup' %}" class="btn btn-success btn-lg">
+                <i class="bi bi-check-circle"></i>Create your account
+            </a>
+            <a href="{% url 'account_login' %}" class="btn btn-outline-dark btn-lg">
+                <i class="bi bi-box-arrow-in-right"></i>Log in
+            </a>
+        </div>
+    </div>
+</section>
 {% endblock content %}

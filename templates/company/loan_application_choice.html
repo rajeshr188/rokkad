@@ -1,0 +1,18 @@
+{% extends "base_tenant.html" %}
+{% block title %}Loan applications{% endblock %}
+{% block workspace_content %}
+<div class="mb-4">
+  <h1 class="h3 mb-1">Loan applications</h1>
+  <p class="text-muted mb-0">Choose the application that owns the loan. Girvi and PawnLoan remain independent.</p>
+</div>
+<div class="row g-3">
+  <div class="col-md-6"><div class="card h-100"><div class="card-body">
+    <h2 class="h5">PawnLoans</h2><p>Use the current Loans workflow for new pawn contracts and Loans-owned records.</p>
+    <div class="d-flex gap-2"><a class="btn btn-primary" href="{% url 'loans:pawn_loan_list' %}">Open PawnLoans</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_create' %}">New PawnLoan</a></div>
+  </div></div></div>
+  <div class="col-md-6"><div class="card h-100"><div class="card-body">
+    <h2 class="h5">Girvi</h2><p>Use Girvi for Girvi-owned records and established workflow reference during extraction.</p>
+    <div class="d-flex gap-2"><a class="btn btn-secondary" href="{% url 'girvi:girvi_dashboard' %}">Open Girvi</a><a class="btn btn-outline-secondary" href="{% url 'girvi:girvi_loan_create' %}">New Girvi loan</a></div>
+  </div></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Commodity {{ commodity.code }}{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">{{ commodity.code }} - {{ commodity.name }}</h4>
+        <small class="text-muted">Commodity master details and linked commodity accounts.</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dea_commodity_list' %}" class="btn btn-outline-secondary">Back</a>
+        <a href="{% url 'dea_commodity_update' commodity_id=commodity.pk %}" class="btn btn-primary">Edit</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white"><h5 class="mb-0">Commodity</h5></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Code</dt>
+                    <dd class="col-sm-7">{{ commodity.code }}</dd>
+                    <dt class="col-sm-5">Name</dt>
+                    <dd class="col-sm-7">{{ commodity.name }}</dd>
+                    <dt class="col-sm-5">Type</dt>
+                    <dd class="col-sm-7">{{ commodity.get_commodity_type_display }}</dd>
+                    <dt class="col-sm-5">UOM</dt>
+                    <dd class="col-sm-7">{{ commodity.get_default_uom_display }}</dd>
+                    <dt class="col-sm-5">Status</dt>
+                    <dd class="col-sm-7">
+                        {% if commodity.is_active %}
+                        <span class="badge text-bg-success">Active</span>
+                        {% else %}
+                        <span class="badge text-bg-secondary">Inactive</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mt-3 border-info">
+            <div class="card-body">
+                <h6 class="card-title">Quick Setup Accounts</h6>
+                <p class="text-muted mb-2">Create the standard owned-stock and vault accounts for this commodity in one step.</p>
+                <form method="post" action="{% url 'dea_commodity_quick_setup_accounts' commodity_id=commodity.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-primary">Create Standard Accounts</button>
+                </form>
+                <div class="form-text mt-2">Karigar custody remains party-specific and is not auto-created.</div>
+            </div>
+        </div>
+
+        <div class="card mt-3 border-info-subtle">
+            <div class="card-body">
+                <h6 class="card-title">Create Karigar Custody Account</h6>
+                <p class="text-muted mb-3">Create a party-specific custody account for a selected karigar so issue/receipt workflows can target that party directly.</p>
+                <form method="post" action="{% url 'dea_commodity_create_karigar_custody_account' commodity_id=commodity.pk %}">
+                    {% csrf_token %}
+                    {% if karigar_form.non_field_errors %}
+                    <div class="alert alert-danger py-2">
+                        {% for error in karigar_form.non_field_errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <label class="form-label" for="{{ karigar_form.party.id_for_label }}">Karigar Party</label>
+                        {{ karigar_form.party }}
+                        {% for error in karigar_form.party.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="{{ karigar_form.code.id_for_label }}">Account Code</label>
+                        {{ karigar_form.code }}
+                        <div class="form-text">Leave blank to auto-generate a code from commodity and party code.</div>
+                        {% for error in karigar_form.code.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="{{ karigar_form.name.id_for_label }}">Account Name</label>
+                        {{ karigar_form.name }}
+                        <div class="form-text">Leave blank to use a default commodity-plus-party name.</div>
+                        {% for error in karigar_form.name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ karigar_form.location_label.id_for_label }}">Location Label</label>
+                        {{ karigar_form.location_label }}
+                        {% for error in karigar_form.location_label.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary">Create Karigar Custody Account</button>
+                </form>
+            </div>
+        </div>
+
+        {% if commodity.is_active %}
+        <div class="card mt-3 border-warning">
+            <div class="card-body">
+                <h6 class="card-title">Deactivate Commodity</h6>
+                <p class="text-muted mb-2">Only allowed when there are no active commodity accounts linked to this commodity.</p>
+                <form method="post" action="{% url 'dea_commodity_deactivate' commodity_id=commodity.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">Deactivate</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header bg-white"><h5 class="mb-0">Active Commodity Accounts</h5></div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Purpose</th>
+                            <th>Party</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in active_accounts %}
+                        <tr>
+                            <td>{{ account.code }}</td>
+                            <td>{{ account.name }}</td>
+                            <td>{{ account.get_purpose_display }}</td>
+                            <td>{% if account.party %}{{ account.party.display_name }}{% else %}-{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No active accounts.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white"><h5 class="mb-0">Inactive Commodity Accounts</h5></div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Purpose</th>
+                            <th>Party</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in inactive_accounts %}
+                        <tr>
+                            <td>{{ account.code }}</td>
+                            <td>{{ account.name }}</td>
+                            <td>{{ account.get_purpose_display }}</td>
+                            <td>{% if account.party %}{{ account.party.display_name }}{% else %}-{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No inactive accounts.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

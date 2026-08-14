@@ -1,0 +1,97 @@
+{% extends 'base_workspace_settings.html' %}
+
+{% block title %}{{ company.name }} - Security - Rokkad{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'workspace_selector' %}">My Workspaces</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'workspace_settings_home' workspace_id=company.id %}">{{ company.name }}</a></li>
+        <li class="breadcrumb-item active">Security</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block mgmt_content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1 class="h3 mb-1">Security</h1>
+        <p class="text-muted mb-0">Workspace audit activity and security-sensitive events.</p>
+    </div>
+    <a href="{% url 'workspace_settings_team' workspace_id=company.id %}" class="btn btn-outline-primary">
+        <i class="bi bi-people"></i> Manage team
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Recent events shown</div>
+                <div class="h3 mb-0">{{ audit_events|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Security events</div>
+                <div class="h3 mb-0">{{ security_event_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Failed events</div>
+                <div class="h3 mb-0">{{ failed_event_count }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h2 class="h5 mb-0">Audit trail</h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Time</th>
+                    <th>Action</th>
+                    <th>User</th>
+                    <th>Result</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in audit_events %}
+                <tr>
+                    <td class="text-nowrap">{{ event.timestamp|date:"M d, Y H:i" }}</td>
+                    <td>{{ event.get_action_display }}</td>
+                    <td>{{ event.user|default:"System" }}</td>
+                    <td>
+                        {% if event.success %}
+                        <span class="badge bg-success">Success</span>
+                        {% else %}
+                        <span class="badge bg-danger">Failed</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ event.description|default:"-" }}
+                        {% if event.error_message %}
+                        <div class="text-danger small">{{ event.error_message }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No workspace audit events recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

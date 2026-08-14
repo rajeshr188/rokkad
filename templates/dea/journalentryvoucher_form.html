@@ -1,0 +1,237 @@
+{% extends 'base_tenant.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Manual Journal Entry{% endblock %}
+
+{% block workspace_content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-6">
+                <i class="bi bi-journal-text"></i> 
+                {% if form.instance.pk %}Edit Manual Journal Entry{% else %}Create Manual Journal Entry{% endif %}
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dea_journal_entry_voucher_list' %}">Manual Journals (Advanced)</a></li>
+                    <li class="breadcrumb-item active">{% if form.instance.pk %}Edit{% else %}Create{% endif %}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'dea_journal_entry_voucher_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+        </div>
+    </div>
+
+    <form method="post" id="journalEntryForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Journal Entry Details</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form|crispy }}
+                    </div>
+                </div>
+
+                <!-- Posting Pairs Section -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-shuffle"></i> Posting Pairs</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle"></i>
+                            Enter one <strong>complete debit/credit pair</strong> per row. This keeps the voucher aligned with DEA's double-entry posting engine.
+                        </div>
+
+                        {{ pair_formset.management_form }}
+
+                        {% if pair_formset.non_form_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ pair_formset.non_form_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle" id="pairLinesTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="25%">Debit ledger</th>
+                                        <th width="25%">Credit ledger</th>
+                                        <th width="18%">Amount</th>
+                                        <th width="22%">Description</th>
+                                        <th width="10%">Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pairLinesBody">
+                                    {% for pair_form in pair_formset %}
+                                    <tr class="pair-row">
+                                        <td>
+                                            {{ pair_form.debit_ledger }}
+                                            {% if pair_form.debit_ledger.errors %}
+                                            <div class="text-danger small">{{ pair_form.debit_ledger.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ pair_form.credit_ledger }}
+                                            {% if pair_form.credit_ledger.errors %}
+                                            <div class="text-danger small">{{ pair_form.credit_ledger.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ pair_form.amount }}
+                                            {% if pair_form.amount.errors %}
+                                            <div class="text-danger small">{{ pair_form.amount.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ pair_form.description }}
+                                            {% if pair_form.description.errors %}
+                                            <div class="text-danger small">{{ pair_form.description.errors }}</div>
+                                            {% endif %}
+                                            {% if pair_form.non_field_errors %}
+                                            <div class="text-danger small mt-1">{{ pair_form.non_field_errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if pair_formset.can_delete %}
+                                                {{ pair_form.DELETE }}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="addPairLine">
+                            <i class="bi bi-plus-circle"></i> Add Posting Pair
+                        </button>
+                    </div>
+                </div>
+
+                <template id="emptyPairRowTemplate">
+                    <tr class="pair-row">
+                        <td>{{ pair_formset.empty_form.debit_ledger }}</td>
+                        <td>{{ pair_formset.empty_form.credit_ledger }}</td>
+                        <td>{{ pair_formset.empty_form.amount }}</td>
+                        <td>{{ pair_formset.empty_form.description }}</td>
+                        <td class="text-center">
+                            {% if pair_formset.can_delete %}
+                                {{ pair_formset.empty_form.DELETE }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                </template>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-save"></i> {% if form.instance.pk %}Update{% else %}Create{% endif %} Journal Entry
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Sidebar -->
+            <div class="col-md-4">
+                <div class="card sticky-top" style="top: 20px;">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-calculator"></i> Pair Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Active pairs:</strong></td>
+                                <td class="text-end"><span id="pairCount" class="fs-5">0</span></td>
+                            </tr>
+                            <tr class="table-success">
+                                <td><strong>Total debit:</strong></td>
+                                <td class="text-end"><span id="totalDebit" class="fs-5 text-success">₹0.00</span></td>
+                            </tr>
+                            <tr class="table-danger">
+                                <td><strong>Total credit:</strong></td>
+                                <td class="text-end"><span id="totalCredit" class="fs-5 text-danger">₹0.00</span></td>
+                            </tr>
+                        </table>
+
+                        <div id="balanceStatus" class="alert alert-info mt-3" role="alert">
+                            <i class="bi bi-check-circle"></i> Each row posts as a matched double-entry pair.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const totalFormsInput = document.getElementById('id_pairs-TOTAL_FORMS');
+    const pairBody = document.getElementById('pairLinesBody');
+    const template = document.getElementById('emptyPairRowTemplate');
+
+    function wireRow(row) {
+        row.querySelectorAll('input[name$="-amount_0"], input[name$="-DELETE"], select[name$="-debit_ledger"], select[name$="-credit_ledger"]').forEach((field) => {
+            field.addEventListener('input', calculateBalances);
+            field.addEventListener('change', calculateBalances);
+        });
+    }
+
+    function calculateBalances() {
+        let total = 0;
+        let pairCount = 0;
+
+        document.querySelectorAll('#pairLinesBody tr.pair-row').forEach((row) => {
+            const deleteBox = row.querySelector('input[name$="-DELETE"]');
+            const amountInput = row.querySelector('input[name$="-amount_0"]');
+            const debitSelect = row.querySelector('select[name$="-debit_ledger"]');
+            const creditSelect = row.querySelector('select[name$="-credit_ledger"]');
+            const deleted = deleteBox && deleteBox.checked;
+
+            if (deleted) {
+                return;
+            }
+
+            const amount = parseFloat(amountInput?.value || '0') || 0;
+            const hasPair = debitSelect?.value && creditSelect?.value && amount > 0;
+
+            if (hasPair) {
+                pairCount += 1;
+                total += amount;
+            }
+        });
+
+        document.getElementById('pairCount').textContent = pairCount;
+        document.getElementById('totalDebit').textContent = '₹' + total.toFixed(2);
+        document.getElementById('totalCredit').textContent = '₹' + total.toFixed(2);
+
+        const statusDiv = document.getElementById('balanceStatus');
+        if (pairCount > 0) {
+            statusDiv.className = 'alert alert-success mt-3';
+            statusDiv.innerHTML = '<i class="bi bi-check-circle"></i> Each completed row is balanced by design.';
+        } else {
+            statusDiv.className = 'alert alert-warning mt-3';
+            statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Add at least one complete posting pair.';
+        }
+    }
+
+    document.querySelectorAll('#pairLinesBody tr.pair-row').forEach(wireRow);
+    calculateBalances();
+
+    document.getElementById('addPairLine').addEventListener('click', function() {
+        const formIdx = parseInt(totalFormsInput.value, 10);
+        const newRowHtml = template.innerHTML.replace(/__prefix__/g, formIdx);
+        pairBody.insertAdjacentHTML('beforeend', newRowHtml);
+        totalFormsInput.value = formIdx + 1;
+        wireRow(pairBody.lastElementChild);
+        calculateBalances();
+    });
+});
+</script>
+{% endblock %}

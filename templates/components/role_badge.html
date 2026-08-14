@@ -1,0 +1,25 @@
+{% comment %}
+Role badge component for displaying user's workspace role.
+
+Context:
+  - role: The role name (Owner, Admin, Member)
+  - size: Badge size (small, normal, large) - default: normal
+  - show_icon: Show role icon (default: true)
+{% endcomment %}
+
+{% if role %}
+  <span class="badge 
+    {% if role|lower == 'owner' %}bg-danger{% endif %}
+    {% if role|lower == 'admin' %}bg-primary{% endif %}
+    {% if role|lower == 'member' %}bg-secondary{% endif %}
+    {% if size == 'small' %}badge-sm{% endif %}
+    {% if size == 'large' %}badge-lg{% endif %}
+  " title="{{ role }} - Full administrative access">
+    {% if show_icon|default:True %}
+      {% if role|lower == 'owner' %}<i class="bi bi-crown"></i>{% endif %}
+      {% if role|lower == 'admin' %}<i class="bi bi-shield-check"></i>{% endif %}
+      {% if role|lower == 'member' %}<i class="bi bi-person-check"></i>{% endif %}
+    {% endif %}
+    {{ role }}
+  </span>
+{% endif %}

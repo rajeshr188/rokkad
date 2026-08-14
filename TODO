@@ -1,16 +1,98 @@
-permissions:
-subscriptions:
-tenants:
-    public:
-        to create companies,
-        manage memberships,
-        send invites,
-        change wotkspace
-    tenant:
-        work with tenant apps
-        can choose to clear workspace toreturn to public
-logging:
+subscriptions:mostly stripe handles this
+    stripe
+    razorpay
+
+user tracking:
+    with django-channels ,daphne,redis,celery,flower,apache-kafka
+    Google Analytics: For basic user tracking and analytics.
+    Mixpanel: For more advanced user tracking and analytics.
 testing:
-user type:
-    client:
-    customer:
+    pytest: A simpler and more powerful alternative to Django's default testing framework.
+member-specific landing page in tenant
+
+move postgres to managed gcloud postgres or neon postgres Heroku Postgres: A managed PostgreSQL service that's easy to set up and use.
+Amazon RDS: AWS's managed database service.
+
+🔐 3. Authentication vs Authorization (CRITICAL DESIGN)
+Authentication → PUBLIC
+
+Handled globally:
+
+User (global)
+Authorization → TENANT
+
+Inside tenant:
+
+Membership
+Role
+Permission
+Why this split?
+
+Because:
+
+A user belongs to multiple companies
+Each company has different permissions
+Example
+User: Rajesh
+
+Company A → Admin
+Company B → Accountant
+Company C → Viewer
+
+👉 This MUST live in tenant context.
+
+pixelview or similar for loan status tracking per series
+
+archived views of dea on/as dashboard
+
+
+improve stock merge if possible venture out django-mptt in stock and django-taggit
+
+should the charges(hallmark,making,stone) be further normalized from invoiceitem
+
+fetch rates and store from where paisa app is getting
+
+then show purchase,sales,receipt,payment total
+
+import opening balance stock_list
+
+creating opening balances to accounts must balance the ledgers(assets=liabilities+equity)
+
+if possible create abstract voucher from which sales,purchase,receipt,payment will inherit
+
+account baalnce of debtor is shown as dr if +ve else cr,balance of creditor is shown as cr if +ve else dr (its better to KISS)
+
+check receipt and payment allocation management and report
+
+set opening balances for accounts
+
+products:public
+stock:private
+
+using cups or win32print
+
+
+backup of database is a task handled by celery
+
+when storage backend is r2 cloudflare image.path will break so use image.url
+
+# Follow logs in real-time (like tail -f)
+journalctl -fu gunicorn
+
+# Show last 100 lines and follow
+journalctl -u gunicorn -n 100 -f
+
+# Show logs since last boot
+journalctl -u gunicorn -b
+
+# Show logs with timestamps
+journalctl -u gunicorn --output=short-precise
+
+# Filter by log level (error logs only)
+journalctl -u gunicorn -p err
+
+
+
+ask chat gpt to device a solid way to use htmx withdjango models crud
+
+Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force

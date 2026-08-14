@@ -1,0 +1,107 @@
+---
+status: active
+owner: loans
+updated: 2026-08-10
+tags: [loans, usability, pagination, filtering, urls, camera]
+related:
+  - loans-rewrite-roadmap.md
+  - loans-configurable-documents-plan.md
+  - ../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md
+---
+
+# Loans Usability And URL Consistency
+
+## Outcome
+
+Make the mature Loans domain comfortable for daily counter use without
+weakening immutable evidence, tenant isolation, or temporary Girvi coexistence.
+
+## UP1: Capture-First Collateral Photographs
+
+Status: implemented 2026-08-10.
+
+- Mobile photo inputs request the environment-facing camera while retaining the
+  normal photograph chooser.
+- Draft/edit, post-draft append, and release-and-renew additional collateral
+  expose an in-page camera/webcam capture action.
+- Browser capture produces a JPEG `File` and submits through the existing form;
+  server-side JPEG/PNG content, size, tenant, lifecycle, hash, and immutability
+  rules remain authoritative.
+- Denied/unsupported camera access falls back to the normal file chooser.
+- `getUserMedia` requires HTTPS or localhost and explicit browser permission.
+
+## UP2: Bounded Tables And Contextual Filters
+
+Status: implemented 2026-08-10; UP2.1-UP2.4 complete.
+
+Use `django-filter`, already installed, plus Django `Paginator`. Preserve active
+filter query parameters in page links and apply tenant scope before filters.
+
+Priority order:
+
+1. PawnLoan list: implemented. Text search covers loan number, borrower, party
+   code, license number, and Series code; state, tenant-bound license/Series,
+   and inclusive loan-date filters compose with it. Results are capped at 25
+   rows and filter state survives pagination.
+2. Issued documents: implemented. Source/issue/profile search, document kind,
+   issue kind, profile source (including historical evidence without recorded
+   LPD7 provenance), and inclusive issued-date filters compose across 50-row
+   pages. The former silent newest-200 cutoff is removed.
+3. Storage hierarchy/inventory and physical verification: implemented. The
+   location directory supports code/name/path search, descendant-aware
+   hierarchy scope, level, and active state. Verification sessions support
+   session/scope/operator search, the same descendant-aware hierarchy scope,
+   status, and inclusive start dates. Both use deterministic 50-row pages;
+   location item counts and session expectation counts are annotated instead
+   of queried once per displayed row.
+4. Notices and operational diagnostics: implemented. The new Owner/Admin
+   customer-notice ledger supports loan/recipient/notice search, notice kind,
+   channel, Notify-owned delivery state (including missing-job evidence), and
+   inclusive scheduled dates. The operations console now exposes every
+   accounting outbox row through loan/key/error search, delivery status, event
+   kind, and inclusive effective dates. Both use 50-row pages. Source-specific
+   license-expiry and verification-discrepancy alerts remain embedded with
+   their source evidence because those collections are small.
+5. License, profile, and layout administration only when realistic workspace
+   volume justifies it.
+
+Do not paginate small evidence tables embedded inside one loan detail. Those
+are a single aggregate history and need a separate usability decision if they
+become large.
+
+## UP3: Canonical Workspace Loans URLs
+
+Status: architecture slice pending; add an ADR before implementation.
+
+Current route planes conflict:
+
+- `/w/<workspace>/loans/` conditionally enters Loans or Girvi;
+- several sibling workspace-slug detail/report aliases still call Girvi
+  directly;
+- new Loans operations live under `/loans/internal/`;
+- Loans administration lives under `/loans/setup/`.
+
+Target route policy:
+
+- daily operations: `/w/<workspace>/loans/...`;
+- administration: `/w/<workspace>/settings/loans/...`;
+- stable scanned collateral/storage identifiers may retain dedicated tenant
+  routes, but generated QR targets must use one documented canonical form;
+- `/loans/internal/...` and `/loans/setup/...` remain temporary compatibility
+  aliases, using safe redirects for GET and preserving POST semantics until
+  every form/action is migrated;
+- workspace-slug aliases must resolve Loans versus Girvi consistently from the
+  same feature/cutover policy rather than mixing identifiers between domains.
+
+The URL migration must inventory every reverse call, form action, PDF link, QR
+target, test, and bookmarked GET route. Do not globally redirect POST actions
+or assume a Girvi primary key identifies a PawnLoan.
+
+## Acceptance
+
+- A counter operator can photograph each item directly from mobile or webcam.
+- Primary tables stay bounded and preserve filter state while paging.
+- Every normal Loans navigation path remains within the canonical workspace
+  route family.
+- Compatibility routes have explicit removal criteria and no ambiguous
+  Girvi/PawnLoan identifier dispatch.

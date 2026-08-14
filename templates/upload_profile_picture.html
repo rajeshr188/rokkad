@@ -1,0 +1,9 @@
+{% extends 'base_global.html' %}
+{%block title%}Upload Profile Picture{%endblock%}
+{%block mgmt_content%}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+</form>
+{%endblock%}

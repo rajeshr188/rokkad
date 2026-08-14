@@ -1,0 +1,34 @@
+{% extends 'base_tenant.html' %}
+{% load django_tables2 %}
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Product' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+  <h1 class="h2">Inventory List ({{ inventory_mode|title }})</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group mr-2">
+        <a class="btn btn-primary mr-2" href="{% url 'stock_in_direct' %}" role="button">Add Stock</a>
+        <a class="btn btn-primary mr-2" href="{% url 'stock_opening_balance_import' %}" role="button">Import Opening CSV</a>
+        <a class="btn btn-primary" href="{% url 'stock_journalentry' %}" role="button">Remove stock</a>
+        <a class="btn btn-primary" href="{% export_url 'ods' %}" role="button">export</a>
+    </div>
+  </div>
+</div>
+<div class="purchase-content mb-2">
+  <div class="row">
+      <div class="col-sm-3" id="filter">
+          {%include 'filter.html'%}
+      </div>
+      <div class="col-sm-9 table-responsive" id="table">
+        {% render_table table %}
+      </div>
+  </div>
+{% endblock %}
+
+

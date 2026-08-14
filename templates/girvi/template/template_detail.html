@@ -1,0 +1,261 @@
+{% extends 'base_tenant.html' %}
+
+{% block extra_css %}
+<style>
+  .preview-grid-stage {
+    position: relative;
+    isolation: isolate;
+    background-color: #fff;
+  }
+
+  .preview-grid-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(13, 110, 253, 0.16) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(13, 110, 253, 0.16) 1px, transparent 1px),
+      linear-gradient(to right, rgba(13, 110, 253, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(13, 110, 253, 0.08) 1px, transparent 1px);
+    background-size: 1cm 1cm, 1cm 1cm, 0.5cm 0.5cm, 0.5cm 0.5cm;
+  }
+
+  .preview-frame-box {
+    position: absolute;
+    border: 1px dashed #0d6efd;
+    background: rgba(13, 110, 253, 0.10);
+    z-index: 2;
+    overflow: hidden;
+  }
+
+  .preview-frame-label {
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 2px 4px;
+  }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="container-fluid mt-3 mb-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3 border-bottom pb-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h1 class="h3 mb-0">{{ template_obj.name }}</h1>
+        {% if template_obj.is_default %}
+        <span class="badge bg-primary">Default</span>
+        {% endif %}
+        {% if template_obj.is_active %}
+        <span class="badge bg-success">Active</span>
+        {% else %}
+        <span class="badge bg-secondary">Inactive</span>
+        {% endif %}
+      </div>
+      <p class="text-muted mb-0">{{ template_obj.get_print_option_display }} on {{ template_obj.page_width }} cm × {{ template_obj.page_height }} cm</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:girvi_template_list' %}">Back</a>
+      <a class="btn btn-outline-primary" href="{{ template_obj.get_preview_url }}">Preview</a>
+      <a class="btn btn-primary" href="{{ template_obj.get_update_url }}">Edit Template</a>
+      <a class="btn btn-success" href="{% url 'girvi:girvi_template_frame_create' template_obj.pk %}">Add Frame</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Assets</h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Base PDF</span>
+              {% if template_obj.base_template %}<a href="{{ template_obj.base_template.url }}" target="_blank">Open</a>{% else %}<span class="text-muted">Missing</span>{% endif %}
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Duplicate PDF</span>
+              {% if template_obj.dup_template %}<a href="{{ template_obj.dup_template.url }}" target="_blank">Open</a>{% else %}<span class="text-muted">Missing</span>{% endif %}
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Terms PDF</span>
+              {% if template_obj.terms_template %}<a href="{{ template_obj.terms_template.url }}" target="_blank">Open</a>{% else %}<span class="text-muted">Optional</span>{% endif %}
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Form D3 PDF</span>
+              {% if template_obj.form_d3_template %}<a href="{{ template_obj.form_d3_template.url }}" target="_blank">Open</a>{% else %}<span class="text-muted">Optional</span>{% endif %}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Actions</h5>
+        </div>
+        <div class="card-body d-grid gap-2">
+          <form method="post" action="{% url 'girvi:girvi_template_set_default' template_obj.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-primary w-100" {% if template_obj.is_default %}disabled{% endif %}>Set As Default</button>
+          </form>
+          <form method="post" action="{% url 'girvi:girvi_template_toggle_active' template_obj.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-warning w-100">{% if template_obj.is_active %}Deactivate{% else %}Activate{% endif %}</button>
+          </form>
+          <form method="post" action="{% url 'girvi:girvi_template_create_starter_frames' template_obj.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-info w-100">Create Starter Frames</button>
+          </form>
+          <form method="post" action="{% url 'girvi:girvi_template_clone' template_obj.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary w-100">Clone Template</button>
+          </form>
+          <a class="btn btn-outline-success w-100" href="{% url 'girvi:girvi_template_frame_create' template_obj.pk %}">Create Frame</a>
+          <a class="btn btn-outline-secondary w-100" href="{{ template_obj.get_preview_url }}">Open Full Preview</a>
+          <a class="btn btn-outline-dark w-100" href="{% url 'girvi:girvi_template_test_print' template_obj.pk %}">Test Print With Latest Loan</a>
+          <a class="btn btn-outline-danger w-100" href="{% url 'girvi:girvi_template_delete' template_obj.pk %}">Delete Template</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Coordinate Guide</h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-2">Stored frame coordinates use PDF space with origin at the bottom-left.</p>
+          <p class="mb-2">Browser previews convert them to top-left origin using:</p>
+          <code>top = page_height - y_pos - height</code>
+          <p class="text-muted small mt-2 mb-0">Use preview before marking a template default, especially when moving customer, amount, or table regions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-{{ readiness.status_class }} border mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <h5 class="alert-heading mb-1">Print Readiness</h5>
+        <p class="mb-1">{{ readiness.summary }}</p>
+        <p class="small mb-0 text-muted">Configured frames: {{ readiness.configured_frame_count }}</p>
+      </div>
+      <span class="badge text-bg-{{ readiness.status_class }}">{{ readiness.status_label }}</span>
+    </div>
+
+    {% if readiness.blocking_issues %}
+    <hr>
+    <div><strong>Blocking issues</strong></div>
+    <ul class="mb-0 mt-1">
+      {% for issue in readiness.blocking_issues %}
+      <li>{{ issue }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if readiness.warnings %}
+    <hr>
+    <div><strong>Warnings</strong></div>
+    <ul class="mb-0 mt-1">
+      {% for warning in readiness.warnings %}
+      <li>{{ warning }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+
+  <div class="card mb-4 border-primary-subtle">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <h5 class="card-title mb-1">Starter Base Pack</h5>
+        <p class="text-muted mb-0">Need to redesign the background PDFs again? Download the starter pack, update the source files externally, export them to PDF, and upload the refreshed assets back into this template.</p>
+      </div>
+      <a class="btn btn-outline-primary" href="{% url 'girvi:girvi_template_download_pack' %}">Download Starter Pack</a>
+    </div>
+  </div>
+
+  <div class="alert alert-light border mb-4">
+    If frames are hard to position from scratch, use <strong>Create Starter Frames</strong> first. It seeds a required baseline (loan id/date, customer info, description, amount, amount words, QR) with visible boundaries so you can adjust instead of placing everything manually.
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0">Frames</h5>
+      <span class="badge bg-secondary">{{ frames|length }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Frame</th>
+              <th>Copy</th>
+              <th>Type</th>
+              <th>Geometry</th>
+              <th>Font</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for frame in frames %}
+            <tr>
+              <td>{{ frame.get_frame_name_display }}</td>
+              <td>{{ frame.get_template_type_display }}</td>
+              <td>{{ frame.get_field_type_display }}</td>
+              <td>
+                x={{ frame.x_pos }}, y={{ frame.y_pos }}, w={{ frame.width }}, h={{ frame.height }}
+              </td>
+              <td>{{ frame.font_name }} / {{ frame.font_size }}</td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a class="btn btn-outline-primary" href="{% url 'girvi:girvi_template_frame_update' template_obj.pk frame.pk %}">Edit</a>
+                  <form method="post" action="{% url 'girvi:girvi_template_frame_delete' template_obj.pk frame.pk %}" onsubmit="return confirm('Delete this frame?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">No frames configured yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0">Preview Snapshot</h5>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ template_obj.get_preview_url }}">Expand</a>
+    </div>
+    <div class="card-body overflow-auto">
+      <div class="d-flex justify-content-end mb-2">
+        <span class="badge text-bg-light border">Grid: major lines = 1 cm, minor lines = 0.5 cm</span>
+      </div>
+      <div class="preview-stage preview-grid-stage border bg-white" style="width: {{ template_obj.page_width }}cm; height: {{ template_obj.page_height }}cm; min-width: 320px;">
+        {% if template_obj.base_template %}
+        <object data="{{ template_obj.base_template.url }}" type="application/pdf" width="100%" height="100%" style="position:absolute; inset:0; z-index:0;">
+          <p class="p-3">Unable to display PDF preview. <a href="{{ template_obj.base_template.url }}" target="_blank">Download the asset</a>.</p>
+        </object>
+        {% endif %}
+
+        <div class="preview-grid-overlay"></div>
+
+        {% for preview in preview_frames %}
+        <div class="preview-frame-box" style="left: {{ preview.left_offset }}cm; top: {{ preview.top_offset }}cm; width: {{ preview.width }}cm; height: {{ preview.height }}cm;">
+          <div class="preview-frame-label">{{ preview.frame.frame_name }} <span class="text-muted">({{ preview.frame.x_pos }}, {{ preview.frame.y_pos }})</span></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

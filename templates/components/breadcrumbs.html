@@ -1,0 +1,44 @@
+{% comment %}
+Breadcrumb navigation component.
+Shows current page location in the app hierarchy.
+
+Context:
+  - breadcrumbs: List of dicts with 'label' and 'url' keys
+    Example: [
+      {'label': 'Dashboard', 'url': '/dashboard/'},
+      {'label': 'Contacts', 'url': '/contacts/'},
+      {'label': 'Detail', 'url': None}  # Current page (no link)
+    ]
+{% endcomment %}
+
+{% if breadcrumbs %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'dashboard' %}">
+        <i class="bi bi-house-door"></i> Home
+      </a>
+    </li>
+    
+    {% if in_tenant and workspace_name %}
+      <li class="breadcrumb-item">
+        <a href="{% url 'workspace_dashboard' workspace_id=user.profile.workspace.id %}">
+          📦 {{ workspace_name }}
+        </a>
+      </li>
+    {% endif %}
+    
+    {% for breadcrumb in breadcrumbs %}
+      {% if breadcrumb.url %}
+        <li class="breadcrumb-item">
+          <a href="{{ breadcrumb.url }}">{{ breadcrumb.label }}</a>
+        </li>
+      {% else %}
+        <li class="breadcrumb-item active" aria-current="page">
+          {{ breadcrumb.label }}
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}

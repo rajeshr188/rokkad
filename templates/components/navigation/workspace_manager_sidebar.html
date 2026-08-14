@@ -1,0 +1,19 @@
+{% if workspace_manager_sidebar_variant == "desktop" %}
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_selector' or request.resolver_match.url_name == 'app_workspaces' or request.resolver_match.url_name == 'app_dashboard' %}active{% endif %}"
+   href="{% url 'app_workspaces' %}">
+    <i class="bi bi-grid-3x3-gap"></i> My Workspaces
+</a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_create' or request.resolver_match.url_name == 'app_workspace_create' %}active{% endif %}"
+   href="{% url 'app_workspace_create' %}">
+    <i class="bi bi-plus-circle"></i> New Workspace
+</a>
+{% elif workspace_manager_sidebar_variant == "mobile" %}
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_selector' or request.resolver_match.url_name == 'app_workspaces' or request.resolver_match.url_name == 'app_dashboard' %}active{% endif %}"
+   href="{% url 'app_workspaces' %}">
+    <i class="bi bi-grid-3x3-gap"></i> My Workspaces
+</a>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_create' or request.resolver_match.url_name == 'app_workspace_create' %}active{% endif %}"
+   href="{% url 'app_workspace_create' %}">
+    <i class="bi bi-plus-circle"></i> New Workspace
+</a>
+{% endif %}

@@ -1,0 +1,47 @@
+{% extends 'base_tenant.html' %}
+{% block workspace_content %}
+<div class="container mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1">Rate Sources</h1>
+            <div class="text-muted">Sources identify where each metal rate was obtained.</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="{% url 'rate_list' %}">Rates</a>
+            <a class="btn btn-primary" href="{% url 'ratesource_create' %}">Add Source</a>
+        </div>
+    </div>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Location</th>
+                <th>Taxed?</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ratesource in ratesources %}
+            <tr>
+                <td>{{ ratesource.id }}</td>
+                <td>{{ ratesource.name }}</td>
+                <td>{{ ratesource.location }}</td>
+                <td>{{ratesource.tax_included}}</td>
+                <td>
+                    <a href="{% url 'ratesource_detail' ratesource.id %}">View</a>
+                    <span class="text-muted mx-1">|</span>
+                    <a href="{% url 'ratesource_update' ratesource.id %}">Edit</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                    No rate sources yet. <a href="{% url 'ratesource_create' %}">Add the first source</a>.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{%endblock%}

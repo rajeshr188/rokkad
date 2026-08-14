@@ -1,0 +1,898 @@
+from django.test import SimpleTestCase
+import fitz
+import io
+from PIL import Image as PillowImage
+
+from apps.tenant_apps.loans.documents import (
+    ConfigurableDocumentRenderer,
+    DocumentAssetError,
+    DocumentAssetValidator,
+    DocumentLayoutValidator,
+    LayoutValidationError,
+    PrintProfileValidationError,
+    PrintProfileValidator,
+    built_in_print_profile,
+    legacy_print_profile,
+    starter_layout,
+)
+from apps.tenant_apps.loans.documents.payloads import (
+    DocumentField,
+    DocumentPayload,
+    DocumentSection,
+)
+from apps.tenant_apps.loans.forms import (
+    LoanDocumentOverlayLogicalSettingsForm,
+    LoanDocumentOverlaySettingsForm,
+)
+from apps.tenant_apps.loans.views import _fit_overlay_geometry
+
+
+class ConfigurableDocumentLayoutTests(SimpleTestCase):
+    def setUp(self):
+        values = {
+            "workspace.name": "Rokkad Test Workspace",
+            "workspace.source_id": "Workspace:7",
+            "license.display": "Pawnbroker License (PBL-77)",
+            "license.source_id": "LoanLicense:11",
+            "loan.source_id": "PawnLoan:19",
+            "loan.number": "PL-A-00019",
+            "loan.date": "2026-07-18",
+            "loan.principal": "INR 10000.00",
+            "loan.monthly_interest_rate": "2%",
+            "loan.tenure": "3 months",
+            "borrower.display": "Asha Devi (P-000013)",
+            "borrower.source_id": "Party:13",
+            "approval.source_id": "PawnLoanApprovalSnapshot:21",
+            "approval.fingerprint": "approval-fingerprint-1",
+        }
+        self.payload = DocumentPayload(
+            schema_version=1,
+            document_type="loan_ticket",
+            title="Pawn Loan Ticket",
+            file_name="pawn_loan_ticket_PL-A-00019.pdf",
+            verification_id="ROKKAD|workspace:7|loan:19|approval:21",
+            fields=tuple(DocumentField(key, key, value) for key, value in values.items()),
+            sections=(
+                DocumentSection(
+                    "collateral.items",
+                    "Collateral",
+                    (("Item", "Description"), ("17", "Gold chain")),
+                ),
+            ),
+        )
+
+    @staticmethod
+    def _png_bytes(color="red"):
+        buffer = io.BytesIO()
+        PillowImage.new("RGB", (80, 40), color=color).save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    @staticmethod
+    def _pdf_bytes(text="BACKGROUND"):
+        document = fitz.open()
+        page = document.new_page()
+        page.insert_text((30, 30), text)
+        value = document.tobytes()
+        document.close()
+        return value
+
+    def _sheet_definition(self, composition):
+        definition = starter_layout(
+            "loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY"
+        ).canonical_dict()
+        definition["page_size"] = "A5"
+        definition["background_asset_key"] = ""
+        field_index = 0
+        for block in definition["blocks"]:
+            if block["type"] == "title":
+                block.update({"x_mm": 5, "y_mm": 4, "width_mm": 138, "height_mm": 10})
+            elif block["type"] == "field":
+                block.update({
+                    "x_mm": 5 if field_index % 2 == 0 else 75,
+                    "y_mm": 18 + (field_index // 2) * 9,
+                    "width_mm": 68, "height_mm": 7, "font_size_pt": 6,
+                })
+                field_index += 1
+            elif block["type"] == "table":
+                block.update({
+                    "x_mm": 5, "y_mm": 90, "width_mm": 138, "height_mm": 55, "font_size_pt": 7,
+                    "table_columns": [
+                        {"index": 0, "label": "Item", "width_percent": 20, "align": "LEFT"},
+                        {"index": 1, "label": "Description", "width_percent": 80, "align": "LEFT"},
+                    ],
+                })
+            elif block["type"] == "verification":
+                block.update({"x_mm": 5, "y_mm": 150, "width_mm": 138, "height_mm": 12, "font_size_pt": 7})
+            elif block["type"] == "signature":
+                block.update({"x_mm": 5, "y_mm": 170, "width_mm": 138, "height_mm": 25, "font_size_pt": 8})
+        definition["blocks"].extend([
+            {"type": "title", "text": "ORIGINAL MARK", "copy_scope": "ORIGINAL", "x_mm": 5, "y_mm": 198, "width_mm": 65, "height_mm": 8, "font_size_pt": 7},
+            {"type": "title", "text": "DUPLICATE MARK", "copy_scope": "DUPLICATE", "x_mm": 75, "y_mm": 198, "width_mm": 68, "height_mm": 8, "font_size_pt": 7},
+        ])
+        definition["back_blocks"] = []
+        definition["sheet"] = {
+            "composition": composition,
+            "backgrounds": {
+                "original_front": "original.front", "duplicate_front": "duplicate.front",
+                "original_back": "original.terms", "duplicate_back": "duplicate.d3",
+            },
+        }
+        return definition
+
+    def test_starter_layout_renders_with_deterministic_evidence(self):
+        layout = starter_layout("loan_ticket")
+
+        first = ConfigurableDocumentRenderer.render(self.payload, layout)
+        second = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        self.assertTrue(first.pdf.startswith(b"%PDF"))
+        self.assertEqual(first.layout_hash, second.layout_hash)
+        self.assertEqual(first.payload_hash, second.payload_hash)
+        self.assertEqual(first.renderer_version, "layout-reportlab-v1")
+        self.assertIn(b"Gold chain", first.pdf)
+
+    def test_schema_v1_remains_canonical_and_uses_v1_renderer(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        self.assertEqual(layout.schema_version, 1)
+        self.assertNotIn("layout_mode", layout.canonical_dict())
+        self.assertEqual(result.renderer_version, "layout-reportlab-v1")
+
+    def test_schema_v2_flow_theme_and_margin_are_validated_and_rendered(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition.update({
+            "schema_version": 2,
+            "layout_mode": "FLOW",
+            "page": {"margin_mm": 10},
+            "theme": {
+                "primary_color": "#7c2d12",
+                "border_color": "#d6d3d1",
+                "font_family": "HELVETICA",
+                "body_font_size_pt": 9,
+                "heading_font_size_pt": 16,
+            },
+        })
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        self.assertEqual(layout.layout_mode, "FLOW")
+        self.assertEqual(layout.margin_mm, 10)
+        self.assertEqual(layout.primary_color, "#7c2d12")
+        self.assertEqual(result.renderer_version, "layout-reportlab-v2")
+
+    def test_schema_v2_starter_is_available_without_changing_v1_default(self):
+        legacy = starter_layout("loan_ticket")
+        current = starter_layout("loan_ticket", schema_version=2)
+
+        self.assertEqual(legacy.schema_version, 1)
+        self.assertEqual(current.schema_version, 2)
+        self.assertEqual(current.layout_mode, "FLOW")
+        self.assertIn("theme", current.canonical_dict())
+
+    def test_schema_v3_owns_logical_surfaces_without_physical_composition(self):
+        layout = starter_layout("loan_ticket", schema_version=3)
+        definition = layout.canonical_dict()
+
+        self.assertEqual(layout.schema_version, 3)
+        self.assertNotIn("copy_mode", definition)
+        self.assertNotIn("sheet", definition)
+        self.assertIn("surfaces", definition)
+        with self.assertRaisesMessage(ValueError, "require an explicit print profile"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+        result = ConfigurableDocumentRenderer.render_with_print_profile(
+            self.payload, layout, built_in_print_profile("A5_BOTH_SIMPLEX")
+        )
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 2)
+        pdf.close()
+        with self.assertRaisesMessage(
+            LayoutValidationError, "Unknown layout properties: copy_mode"
+        ):
+            DocumentLayoutValidator.load({**definition, "copy_mode": "SINGLE"})
+        with self.assertRaisesMessage(
+            PrintProfileValidationError,
+            "no embedded physical composition",
+        ):
+            legacy_print_profile(layout)
+
+    def test_schema_v3_logical_surface_form_has_no_packaging_controls(self):
+        form = LoanDocumentOverlayLogicalSettingsForm(
+            {
+                "page_size": "A5",
+                "background_asset_key": "shared.background",
+                "original_front": "original.front",
+                "duplicate_front": "duplicate.front",
+                "original_back": "",
+                "duplicate_back": "",
+            },
+            background_keys=(
+                "shared.background", "original.front", "duplicate.front",
+            ),
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertNotIn("copy_mode", form.fields)
+        self.assertNotIn("sheet_composition", form.fields)
+        self.assertEqual(form.surface_backgrounds(), {
+            "original_front": "original.front",
+            "duplicate_front": "duplicate.front",
+        })
+
+    def test_schema_v3_surface_backgrounds_render_through_profile_imposition(self):
+        definition = starter_layout(
+            "loan_ticket", schema_version=3, layout_mode="ABSOLUTE_OVERLAY"
+        ).canonical_dict()
+        definition["background_asset_key"] = ""
+        definition["surfaces"] = {"backgrounds": {
+            "original_front": "original.front",
+            "duplicate_front": "duplicate.front",
+        }}
+        layout = DocumentLayoutValidator.load(definition)
+        assets = (
+            DocumentAssetValidator.validate(
+                key="original.front", kind="BACKGROUND",
+                content=self._pdf_bytes("ORIGINAL LOGICAL SURFACE"), workspace_id=7,
+            ),
+            DocumentAssetValidator.validate(
+                key="duplicate.front", kind="BACKGROUND",
+                content=self._pdf_bytes("DUPLICATE LOGICAL SURFACE"), workspace_id=7,
+            ),
+        )
+
+        result = ConfigurableDocumentRenderer.render_with_print_profile(
+            self.payload, layout, built_in_print_profile("A4_SIDE_BY_SIDE"),
+            assets=assets,
+        )
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = pdf[0].get_text()
+        pdf.close()
+        self.assertIn("ORIGINAL LOGICAL SURFACE", text)
+        self.assertIn("DUPLICATE LOGICAL SURFACE", text)
+
+    def test_schema_v3_overlay_rejects_empty_surface_background_configuration(self):
+        definition = starter_layout(
+            "loan_ticket", schema_version=3, layout_mode="ABSOLUTE_OVERLAY"
+        ).canonical_dict()
+        definition["background_asset_key"] = ""
+        definition["surfaces"] = {"backgrounds": {}}
+
+        with self.assertRaisesMessage(
+            LayoutValidationError, "require a background asset key"
+        ):
+            DocumentLayoutValidator.load(definition)
+
+    def test_schema_v2_rejects_unsafe_theme_values(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition.update({"schema_version": 2, "theme": {"font_family": "../../evil.ttf"}})
+        with self.assertRaisesMessage(LayoutValidationError, "not approved"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_absolute_overlay_renders_bounded_content_over_pdf_background(self):
+        background = DocumentAssetValidator.validate(
+            key="form.background", kind="BACKGROUND", content=self._pdf_bytes(), workspace_id=7,
+        )
+        layout = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY")
+
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, layout, assets=(background,), preview=True,
+        )
+
+        self.assertEqual(result.renderer_version, "layout-reportlab-overlay-v1")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = pdf[0].get_text()
+        self.assertIn("BACKGROUND", text)
+        self.assertIn("PL-A-00019", text)
+        self.assertIn("PREVIEW / NOT AN OFFICIAL ISSUE", text)
+        loan_rect = pdf[0].search_for("PL-A-00019")[0]
+        self.assertGreater(loan_rect.x0, 25)
+        self.assertGreater(loan_rect.y0, 150)
+        self.assertLess(loan_rect.y0, 220)
+        pdf.close()
+
+    def test_absolute_overlay_duplicate_and_duplex_page_counts(self):
+        background = DocumentAssetValidator.validate(
+            key="form.background", kind="BACKGROUND", content=self._pdf_bytes(), workspace_id=7,
+        )
+        definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["copy_mode"] = "ORIGINAL_DUPLICATE_DUPLEX"
+        definition["back_blocks"] = [
+            {"type": "verification", "x_mm": 10, "y_mm": 20, "width_mm": 190, "height_mm": 12},
+        ]
+        layout = DocumentLayoutValidator.load(definition)
+
+        result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=(background,))
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 4)
+        for page in pdf:
+            self.assertIn("BACKGROUND", page.get_text())
+        pdf.close()
+
+    def test_absolute_overlay_geometry_and_background_requirements_fail_closed(self):
+        definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["background_asset_key"] = ""
+        with self.assertRaisesMessage(LayoutValidationError, "require a background asset key"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["blocks"][0].update({"x_mm": 200, "width_mm": 20})
+        with self.assertRaisesMessage(LayoutValidationError, "beyond the A4 page boundary"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["blocks"].insert(1, {"type": "spacer", "x_mm": 1, "y_mm": 1, "width_mm": 10, "height_mm": 10})
+        with self.assertRaisesMessage(LayoutValidationError, "not supported in absolute overlay"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_a5_both_duplex_sheet_composition_has_four_ordered_pages(self):
+        assets = tuple(
+            DocumentAssetValidator.validate(key=key, kind="BACKGROUND", content=self._pdf_bytes(text), workspace_id=7)
+            for key, text in (
+                ("original.front", "ORIGINAL BACKGROUND"), ("duplicate.front", "DUPLICATE BACKGROUND"),
+                ("original.terms", "ORIGINAL TERMS"), ("duplicate.d3", "FORM D3"),
+            )
+        )
+        layout = DocumentLayoutValidator.load(self._sheet_definition("A5_BOTH_DUPLEX"))
+
+        result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=assets)
+
+        self.assertEqual(result.renderer_version, "layout-reportlab-sheet-v1")
+        self.assertEqual(result.page_size, "A5")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 4)
+        self.assertIn("ORIGINAL BACKGROUND", pdf[0].get_text())
+        self.assertIn("ORIGINAL MARK", pdf[0].get_text())
+        self.assertNotIn("DUPLICATE MARK", pdf[0].get_text())
+        self.assertIn("ORIGINAL TERMS", pdf[1].get_text())
+        self.assertIn("DUPLICATE BACKGROUND", pdf[2].get_text())
+        self.assertIn("DUPLICATE MARK", pdf[2].get_text())
+        self.assertIn("FORM D3", pdf[3].get_text())
+        pdf.close()
+
+    def test_a4_side_by_side_duplex_imposes_fronts_and_backs(self):
+        assets = tuple(
+            DocumentAssetValidator.validate(key=key, kind="BACKGROUND", content=self._pdf_bytes(text), workspace_id=7)
+            for key, text in (
+                ("original.front", "ORIGINAL BACKGROUND"), ("duplicate.front", "DUPLICATE BACKGROUND"),
+                ("original.terms", "ORIGINAL TERMS"), ("duplicate.d3", "FORM D3"),
+            )
+        )
+        layout = DocumentLayoutValidator.load(self._sheet_definition("A4_SIDE_BY_SIDE_DUPLEX"))
+
+        result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=assets)
+
+        self.assertEqual(result.page_size, "A4_LANDSCAPE")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 2)
+        self.assertGreater(pdf[0].rect.width, pdf[0].rect.height)
+        front = pdf[0].get_text()
+        back = pdf[1].get_text()
+        self.assertIn("ORIGINAL BACKGROUND", front)
+        self.assertIn("DUPLICATE BACKGROUND", front)
+        self.assertIn("ORIGINAL MARK", front)
+        self.assertIn("DUPLICATE MARK", front)
+        self.assertIn("ORIGINAL TERMS", back)
+        self.assertIn("FORM D3", back)
+        pdf.close()
+
+    def test_legacy_sheet_profiles_match_renderer_page_packaging(self):
+        assets = tuple(
+            DocumentAssetValidator.validate(
+                key=key, kind="BACKGROUND", content=self._pdf_bytes(text),
+                workspace_id=7,
+            )
+            for key, text in (
+                ("original.front", "ORIGINAL BACKGROUND"),
+                ("duplicate.front", "DUPLICATE BACKGROUND"),
+                ("original.terms", "ORIGINAL TERMS"),
+                ("duplicate.d3", "FORM D3"),
+            )
+        )
+        compositions = (
+            "A5_ORIGINAL", "A5_ORIGINAL_TERMS_DUPLEX",
+            "A5_DUPLICATE", "A5_DUPLICATE_D3_DUPLEX",
+            "A5_BOTH_SIMPLEX", "A5_BOTH_DUPLEX",
+            "A4_SIDE_BY_SIDE", "A4_SIDE_BY_SIDE_DUPLEX",
+        )
+        for composition in compositions:
+            with self.subTest(composition=composition):
+                layout = DocumentLayoutValidator.load(
+                    self._sheet_definition(composition)
+                )
+                profile = legacy_print_profile(layout)
+                result = ConfigurableDocumentRenderer.render(
+                    self.payload, layout, assets=assets
+                )
+                pdf = fitz.open(stream=result.pdf, filetype="pdf")
+                self.assertEqual(result.copy_mode, profile.composition)
+                self.assertEqual(len(pdf), len(profile.sheets))
+                self.assertEqual(
+                    result.page_size,
+                    "A4_LANDSCAPE" if profile.orientation == "LANDSCAPE"
+                    else profile.paper_size,
+                )
+                pdf.close()
+
+    def test_profile_renderer_repackages_one_flow_layout_as_a5_both(self):
+        layout = starter_layout("loan_ticket")
+        profile = built_in_print_profile("A5_BOTH_SIMPLEX")
+
+        result = ConfigurableDocumentRenderer.render_with_print_profile(
+            self.payload, layout, profile
+        )
+
+        self.assertEqual(result.renderer_version, "layout-reportlab-profile-v1")
+        self.assertEqual(result.page_size, "A5")
+        self.assertEqual(result.copy_mode, "A5_BOTH_SIMPLEX")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 2)
+        self.assertIn("ORIGINAL", pdf[0].get_text())
+        self.assertIn("DUPLICATE", pdf[1].get_text())
+        pdf.close()
+
+    def test_profile_renderer_can_override_legacy_sheet_packaging(self):
+        assets = tuple(
+            DocumentAssetValidator.validate(
+                key=key, kind="BACKGROUND", content=self._pdf_bytes(text),
+                workspace_id=7,
+            )
+            for key, text in (
+                ("original.front", "ORIGINAL BACKGROUND"),
+                ("duplicate.front", "DUPLICATE BACKGROUND"),
+                ("original.terms", "ORIGINAL TERMS"),
+                ("duplicate.d3", "FORM D3"),
+            )
+        )
+        layout = DocumentLayoutValidator.load(
+            self._sheet_definition("A5_BOTH_DUPLEX")
+        )
+        profile = built_in_print_profile("A4_SIDE_BY_SIDE")
+
+        result = ConfigurableDocumentRenderer.render_with_print_profile(
+            self.payload, layout, profile, assets=assets
+        )
+
+        self.assertEqual(result.page_size, "A4_LANDSCAPE")
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 1)
+        text = pdf[0].get_text()
+        self.assertIn("ORIGINAL BACKGROUND", text)
+        self.assertIn("DUPLICATE BACKGROUND", text)
+        pdf.close()
+
+    def test_profile_renderer_rejects_a_missing_logical_back_surface(self):
+        with self.assertRaisesMessage(ValueError, "no logical back surface"):
+            ConfigurableDocumentRenderer.render_with_print_profile(
+                self.payload,
+                starter_layout("loan_ticket"),
+                built_in_print_profile("A5_BOTH_DUPLEX"),
+            )
+
+    def test_actual_size_profile_rejects_mismatched_logical_page(self):
+        definition = built_in_print_profile("A5_BOTH_SIMPLEX").canonical_dict()
+        definition["scaling_policy"] = "ACTUAL_SIZE"
+        profile = PrintProfileValidator.load(definition)
+
+        with self.assertRaisesMessage(ValueError, "Actual-size print profile"):
+            ConfigurableDocumentRenderer.render_with_print_profile(
+                self.payload, starter_layout("loan_ticket"), profile
+            )
+
+    def test_sheet_composition_requires_assets_and_copy_complete_evidence(self):
+        definition = self._sheet_definition("A4_SIDE_BY_SIDE")
+        definition["sheet"]["backgrounds"]["duplicate_front"] = ""
+        with self.assertRaisesMessage(LayoutValidationError, "duplicate_front"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = self._sheet_definition("A4_SIDE_BY_SIDE")
+        required_field = next(block for block in definition["blocks"] if block.get("binding") == "loan.number")
+        required_field["copy_scope"] = "ORIGINAL"
+        with self.assertRaisesMessage(LayoutValidationError, "Duplicate front is missing mandatory bindings: loan.number"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_sheet_composition_is_restricted_to_loan_ticket_documents(self):
+        definition = self._sheet_definition("A5_ORIGINAL")
+        definition["document_type"] = "release_memo"
+        with self.assertRaisesMessage(LayoutValidationError, "only for loan ticket documents"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_sheet_settings_automatically_use_a5_logical_pages(self):
+        form = LoanDocumentOverlaySettingsForm(
+            {
+                "page_size": "A4",
+                "copy_mode": "SINGLE",
+                "sheet_composition": "A4_SIDE_BY_SIDE",
+                "original_front": "original",
+                "duplicate_front": "duplicate",
+                "original_back": "",
+                "duplicate_back": "",
+            },
+            background_keys=("original", "duplicate"),
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["page_size"], "A5")
+
+    def test_existing_a4_overlay_geometry_is_fitted_to_a5_for_sheet_mode(self):
+        definition = starter_layout(
+            "loan_ticket", schema_version=2, layout_mode="ABSOLUTE_OVERLAY"
+        ).canonical_dict()
+        _fit_overlay_geometry(definition, "A5")
+        self.assertEqual(definition["page_size"], "A5")
+        for block in definition["blocks"]:
+            self.assertLessEqual(block["x_mm"] + block["width_mm"], 148)
+            self.assertLessEqual(block["y_mm"] + block["height_mm"], 210)
+        field = next(block for block in definition["blocks"] if block["type"] == "field")
+        self.assertEqual(field["height_mm"], 8)
+
+    def test_schema_v2_sections_columns_and_field_grids_render(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "section",
+            "text": "Ticket summary",
+            "style_variant": "OUTLINED",
+            "blocks": [{
+                "type": "field_grid", "grid_columns": 2,
+                "bindings": ["loan.number", "loan.date", "loan.principal", "borrower.display"],
+            }],
+        })
+        definition["blocks"].insert(2, {
+            "type": "columns",
+            "columns": [
+                {"width_percent": 65, "blocks": [{"type": "field", "binding": "license.display"}]},
+                {"width_percent": 35, "blocks": [{"type": "qr", "binding": "document.verification_id", "width_mm": 18}]},
+            ],
+        })
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        self.assertIn("Ticket summary", text)
+        self.assertIn("PL-A-00019", text)
+        self.assertEqual(layout.canonical_dict()["blocks"][1]["type"], "section")
+
+    def test_schema_v2_container_geometry_and_v1_use_fail_closed(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "columns",
+            "columns": [
+                {"width_percent": 60, "blocks": [{"type": "field", "binding": "loan.number"}]},
+                {"width_percent": 30, "blocks": [{"type": "field", "binding": "loan.date"}]},
+            ],
+        })
+        with self.assertRaisesMessage(LayoutValidationError, "must total 100"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "field_grid",
+            "bindings": ["loan.number", "loan.date"],
+        })
+        with self.assertRaisesMessage(LayoutValidationError, "require layout schema version 2"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_nested_assets_are_discovered_and_rendered(self):
+        logo = DocumentAssetValidator.validate(
+            key="business.logo", kind="IMAGE", content=self._png_bytes("blue"), workspace_id=7
+        )
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "columns",
+            "columns": [
+                {"width_percent": 50, "blocks": [{"type": "image", "asset_key": logo.key, "width_mm": 20}]},
+                {"width_percent": 50, "blocks": [{"type": "field", "binding": "loan.number"}]},
+            ],
+        })
+        layout = DocumentLayoutValidator.load(definition)
+
+        with self.assertRaisesMessage(DocumentAssetError, "assets are missing"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=(logo,))
+        self.assertEqual(dict(result.asset_hashes)[logo.key], logo.sha256)
+
+    def test_configurable_table_columns_render_selected_labels_and_widths(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        table = next(block for block in definition["blocks"] if block["type"] == "table")
+        table.update({
+            "style_variant": "STRIPED",
+            "repeat_header": True,
+            "table_columns": [
+                {"index": 0, "label": "Line", "width_percent": 25, "align": "CENTER"},
+                {"index": 1, "label": "Pledged article", "width_percent": 75, "align": "LEFT"},
+            ],
+        })
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        self.assertIn("Pledged article", text)
+        self.assertIn("Gold chain", text)
+        self.assertEqual(layout.canonical_dict()["blocks"][2]["table_columns"][1]["width_percent"], 75)
+
+    def test_header_and_footer_repeat_on_every_flow_page(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["header"] = {"height_mm": 15, "blocks": [{"type": "title", "text": "REPEATING HEADER"}]}
+        definition["footer"] = {"height_mm": 12, "blocks": [{"type": "field", "binding": "loan.number"}]}
+        rows = (("Item", "Description"),) + tuple(
+            (str(index), f"Long collateral row {index}") for index in range(1, 90)
+        )
+        payload = DocumentPayload(
+            self.payload.schema_version, self.payload.document_type, self.payload.title,
+            self.payload.file_name, self.payload.verification_id, self.payload.fields,
+            (DocumentSection("collateral.items", "Collateral", rows),),
+        )
+
+        layout = DocumentLayoutValidator.load(definition)
+        result = ConfigurableDocumentRenderer.render(payload, layout)
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertGreater(len(pdf), 1)
+        for page in pdf:
+            text = page.get_text()
+            self.assertIn("REPEATING HEADER", text)
+            self.assertIn("PL-A-00019", text)
+        pdf.close()
+
+    def test_table_and_page_region_constraints_fail_closed(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        table = next(block for block in definition["blocks"] if block["type"] == "table")
+        table["table_columns"] = [
+            {"index": 0, "label": "A", "width_percent": 40, "align": "LEFT"},
+            {"index": 1, "label": "B", "width_percent": 40, "align": "LEFT"},
+        ]
+        with self.assertRaisesMessage(LayoutValidationError, "must total 100"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["header"] = {"height_mm": 20, "blocks": [{"type": "table", "binding": "collateral.items"}]}
+        with self.assertRaisesMessage(LayoutValidationError, "compact, non-repeating"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        table = next(block for block in definition["blocks"] if block["type"] == "table")
+        table["table_columns"] = [
+            {"index": 0, "label": "A", "width_percent": 50, "align": "LEFT"},
+            {"index": 2, "label": "Missing", "width_percent": 50, "align": "LEFT"},
+        ]
+        layout = DocumentLayoutValidator.load(definition)
+        with self.assertRaisesMessage(ValueError, "does not contain every configured column index"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+
+    def test_safe_value_formats_and_visibility_conditions_render(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "field", "binding": "loan.date", "value_format": "DATE_DMY",
+        })
+        definition["blocks"].insert(2, {
+            "type": "section", "text": "MATCHED CONDITION", "style_variant": "TINTED",
+            "visible_when": {"binding": "loan.number", "operator": "EQUALS", "value": "PL-A-00019"},
+            "blocks": [{"type": "field", "binding": "loan.number", "value_format": "UPPER"}],
+        })
+        definition["blocks"].insert(3, {
+            "type": "title", "text": "HIDDEN CONDITION",
+            "visible_when": {"binding": "loan.number", "operator": "EQUALS", "value": "OTHER"},
+        })
+
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, DocumentLayoutValidator.load(definition)
+        )
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        text = "".join(page.get_text() for page in pdf)
+        pdf.close()
+        self.assertIn("18/07/2026", text)
+        self.assertIn("MATCHED CONDITION", text)
+        self.assertNotIn("HIDDEN CONDITION", text)
+
+    def test_mandatory_bindings_cannot_exist_only_in_conditional_blocks(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        required_group = next(block for block in definition["blocks"] if block["type"] == "field_group")
+        required_group["visible_when"] = {
+            "binding": "loan.number", "operator": "PRESENT", "value": "",
+        }
+
+        with self.assertRaisesMessage(LayoutValidationError, "must have an unconditional occurrence"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_overflow_error_and_shrink_policies_are_explicit(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "field", "binding": "borrower.display",
+            "overflow_policy": "ERROR", "max_characters": 10,
+        })
+        layout = DocumentLayoutValidator.load(definition)
+        with self.assertRaisesMessage(ValueError, "10-character overflow limit"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        definition["blocks"][1]["overflow_policy"] = "SHRINK"
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, DocumentLayoutValidator.load(definition)
+        )
+        self.assertTrue(result.pdf.startswith(b"%PDF"))
+
+    def test_invalid_format_condition_and_overflow_configuration_fail_closed(self):
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "field", "binding": "loan.date", "value_format": "PYTHON_FORMAT",
+        })
+        with self.assertRaisesMessage(LayoutValidationError, "Value format is unsupported"):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket", schema_version=2).canonical_dict()
+        definition["blocks"].insert(1, {
+            "type": "title", "text": "Unsafe",
+            "visible_when": {"binding": "loan.__class__", "operator": "EQUALS", "value": "x"},
+        })
+        with self.assertRaisesMessage(LayoutValidationError, "binding is not registered"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_every_document_kind_has_a_valid_mandatory_starter(self):
+        for kind in (
+            "loan_ticket", "repayment_receipt", "release_memo",
+            "auction_notice", "auction_recovery", "renewal",
+        ):
+            layout = starter_layout(kind)
+            self.assertEqual(layout.document_type, kind)
+            self.assertTrue(layout.content_hash)
+
+    def test_preview_is_visibly_non_official(self):
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, starter_layout("loan_ticket"), preview=True
+        )
+
+        self.assertIn(b"PREVIEW / NOT AN OFFICIAL ISSUE", result.pdf)
+
+    def test_unknown_and_executable_bindings_fail_closed(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["blocks"][1]["bindings"].append("loan.__class__")
+
+        with self.assertRaisesMessage(
+            LayoutValidationError,
+            "Field groups require only registered field bindings",
+        ):
+            DocumentLayoutValidator.load(definition)
+
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["python"] = "import os"
+        with self.assertRaisesMessage(LayoutValidationError, "Unknown layout properties"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_required_regulatory_binding_cannot_be_removed(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["blocks"][1]["bindings"].remove("approval.fingerprint")
+
+        with self.assertRaisesMessage(LayoutValidationError, "Required bindings are missing"):
+            DocumentLayoutValidator.load(definition)
+
+    def test_long_table_flows_across_pages(self):
+        rows = (("Item", "Description"),) + tuple(
+            (str(index), f"Collateral item {index} with a deliberately long description")
+            for index in range(1, 90)
+        )
+        payload = DocumentPayload(
+            schema_version=self.payload.schema_version,
+            document_type=self.payload.document_type,
+            title=self.payload.title,
+            file_name=self.payload.file_name,
+            verification_id=self.payload.verification_id,
+            fields=self.payload.fields,
+            sections=(DocumentSection("collateral.items", "Collateral", rows),),
+        )
+
+        result = ConfigurableDocumentRenderer.render(payload, starter_layout("loan_ticket"))
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertGreater(len(pdf), 1)
+        self.assertIn("Collateral item 89", "".join(page.get_text() for page in pdf))
+        pdf.close()
+
+    def test_original_duplicate_and_duplex_modes_have_expected_pages(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["copy_mode"] = "ORIGINAL_DUPLICATE_DUPLEX"
+        definition["back_blocks"] = [
+            {"type": "field_group", "bindings": sorted(definition["blocks"][1]["bindings"])},
+            {"type": "verification"},
+        ]
+        layout = DocumentLayoutValidator.load(definition)
+
+        result = ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 4)
+        pdf.close()
+
+    def test_validated_logo_qr_and_background_render_with_asset_evidence(self):
+        logo = DocumentAssetValidator.validate(
+            key="business.logo", kind="IMAGE", content=self._png_bytes("blue"), workspace_id=7
+        )
+        background = DocumentAssetValidator.validate(
+            key="ticket.background", kind="BACKGROUND", content=self._png_bytes("white"), workspace_id=7
+        )
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["background_asset_key"] = background.key
+        definition["blocks"].insert(1, {"type": "image", "asset_key": logo.key, "width_mm": 25})
+        definition["blocks"].insert(2, {"type": "qr", "binding": "document.verification_id", "width_mm": 22})
+        layout = DocumentLayoutValidator.load(definition)
+
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, layout, assets=(logo, background)
+        )
+
+        self.assertTrue(result.pdf.startswith(b"%PDF"))
+        self.assertEqual(dict(result.asset_hashes)[logo.key], logo.sha256)
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertGreaterEqual(len(pdf[0].get_images(full=True)), 2)
+        pdf.close()
+
+    def test_missing_cross_workspace_and_corrupt_assets_fail_closed(self):
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["blocks"].insert(1, {"type": "image", "asset_key": "business.logo"})
+        layout = DocumentLayoutValidator.load(definition)
+
+        with self.assertRaisesMessage(DocumentAssetError, "assets are missing"):
+            ConfigurableDocumentRenderer.render(self.payload, layout)
+
+        foreign_logo = DocumentAssetValidator.validate(
+            key="business.logo", kind="IMAGE", content=self._png_bytes(), workspace_id=8
+        )
+        with self.assertRaisesMessage(DocumentAssetError, "another workspace"):
+            ConfigurableDocumentRenderer.render(self.payload, layout, assets=(foreign_logo,))
+
+        with self.assertRaisesMessage(DocumentAssetError, "corrupt or unsupported"):
+            DocumentAssetValidator.validate(
+                key="business.logo", kind="IMAGE", content=b"not-an-image", workspace_id=7
+            )
+
+        with self.assertRaisesMessage(DocumentAssetError, "corrupt or unreadable"):
+            DocumentAssetValidator.validate(
+                key="ticket.background", kind="BACKGROUND",
+                content=b"%PDF-corrupt", workspace_id=7,
+            )
+
+    def test_pdf_background_is_applied_to_every_duplex_copy_page(self):
+        background = DocumentAssetValidator.validate(
+            key="ticket.background", kind="BACKGROUND",
+            content=self._pdf_bytes(), workspace_id=7,
+        )
+        definition = starter_layout("loan_ticket").canonical_dict()
+        definition["copy_mode"] = "ORIGINAL_DUPLICATE_DUPLEX"
+        definition["background_asset_key"] = background.key
+        definition["back_blocks"] = [
+            {"type": "field_group", "bindings": sorted(definition["blocks"][1]["bindings"])},
+            {"type": "verification"},
+        ]
+        layout = DocumentLayoutValidator.load(definition)
+
+        result = ConfigurableDocumentRenderer.render(
+            self.payload, layout, assets=(background,)
+        )
+
+        pdf = fitz.open(stream=result.pdf, filetype="pdf")
+        self.assertEqual(len(pdf), 4)
+        for page in pdf:
+            self.assertIn("BACKGROUND", page.get_text())
+        pdf.close()
+
+    def test_bundled_unicode_font_renders_regional_text(self):
+        fields = list(self.payload.fields)
+        fields[3] = type(fields[3])(fields[3].key, "கடன் எண்", "கடன்-௧௯")
+        payload = DocumentPayload(
+            self.payload.schema_version, self.payload.document_type,
+            "அடகு கடன் சீட்டு", self.payload.file_name,
+            self.payload.verification_id, tuple(fields), self.payload.sections,
+        )
+
+        result = ConfigurableDocumentRenderer.render(payload, starter_layout("loan_ticket"))
+
+        self.assertTrue(result.pdf.startswith(b"%PDF"))
+        self.assertGreater(len(result.pdf), 1000)

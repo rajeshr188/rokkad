@@ -1,0 +1,11 @@
+{% extends 'base_global.html' %}
+{% block mgmt_content %}
+  <div class="container col-md-6">
+    <h2>Upload File</h2>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-success" type="submit">Upload</button>
+  </form>
+  </div>
+{% endblock %}

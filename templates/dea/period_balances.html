@@ -1,0 +1,98 @@
+{% extends 'base_tenant.html' %}
+{% load static %}
+
+{% block title %}{{ period.name }} - Period Balances{% endblock %}
+
+{% block workspace_content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            Period Balances: {{ period.name }}
+            {% if period.status == 'OPEN' %}
+                <span class="badge bg-info">Current (Period Still Open)</span>
+            {% else %}
+                <span class="badge bg-success">Final</span>
+            {% endif %}
+        </h5>
+        <div>
+            <a href="{% url 'dea_period_report' period.pk %}?format=pdf" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-file-pdf"></i> Export PDF
+            </a>
+            <a href="{% url 'dea_period_report' period.pk %}?format=excel" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-excel"></i> Export Excel
+            </a>
+            <a href="{% url 'dea_period_detail' period.pk %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <!-- Ledger Balances by Account Type -->
+        <h6 class="border-bottom pb-2 mb-3">Ledger Balances by Account Type</h6>
+        
+        {% for account_type, statements in ledgers_by_type.items %}
+        <div class="mb-4">
+            <h6 class="text-primary">{{ account_type }}</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Ledger</th>
+                            <th class="text-end">Closing Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stmt in statements %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'dea_ledger_detail' stmt.ledgerno.pk %}">
+                                    {{ stmt.ledgerno.name }}
+                                </a>
+                            </td>
+                            <td class="text-end">
+                                {{ stmt.ClosingBalance }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-muted">No ledger statements found for this period.</p>
+        {% endfor %}
+
+        <!-- Account Balances -->
+        {% if account_statements %}
+        <h6 class="border-bottom pb-2 mb-3 mt-4">Account Balances</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Account</th>
+                        <th>Type</th>
+                        <th class="text-end">Closing Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stmt in account_statements %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'dea_account_detail' stmt.AccountNo.pk %}">
+                                {{ stmt.AccountNo.contact.name }}
+                            </a>
+                        </td>
+                        <td>{{ stmt.AccountNo.AccountType_Ext }}</td>
+                        <td class="text-end">
+                            {{ stmt.ClosingBalance }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

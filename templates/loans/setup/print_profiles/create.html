@@ -1,0 +1,7 @@
+{% extends "base_tenant.html" %}
+{% block title %}Create loan-ticket print profile{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Create loan-ticket print profile</h1>
+<p class="text-muted">Choose physical packaging only. Legal content, backgrounds, signatures, and copy identity remain in the document layout.</p>
+<form method="post" class="card card-body" style="max-width:48rem">{% csrf_token %}{{ form.as_p }}<div><button class="btn btn-primary">Create validated draft</button> <a class="btn btn-link" href="{% url 'loans:document_print_profile_list' %}">Cancel</a></div></form>
+{% endblock %}

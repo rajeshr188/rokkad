@@ -1,0 +1,27 @@
+{% extends "onboarding/base_onboarding.html" %}
+{% load crispy_forms_tags %}
+
+{% block onboarding_content %}
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="mb-4">
+        <p class="lead">Help us customize your experience.</p>
+    </div>
+
+    {{ form|crispy }}
+
+    <div class="row g-2 mt-4">
+        <div class="col">
+            <button type="submit" name="skip" class="btn btn-outline-secondary btn-lg w-100">
+                Skip Tour
+            </button>
+        </div>
+        <div class="col">
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+                Complete Setup <i class="bi bi-check-circle"></i>
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}

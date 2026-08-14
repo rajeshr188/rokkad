@@ -1,0 +1,35 @@
+{% extends 'base_tenant.html' %}
+{% load crispy_forms_tags %}
+
+{% block breadcrumbs %}
+{% include 'components/navigation/breadcrumbs.html' with show_home=True current_page=page_title|default:'Product' %}
+{% endblock %}
+
+{% block page_header %}
+<h1 class='h4 mb-3'>{{ page_title|default:'Import Opening Balances' }}</h1>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="container col-md-8 mt-3">
+  <div class="card">
+    <div class="card-body">
+      <h2 class="h5">Opening Balance CSV Import</h2>
+      <p class="text-muted mb-2">
+        Upload a UTF-8 CSV with required columns: <strong>variant_id, quantity, weight</strong>.
+      </p>
+      <p class="text-muted">
+        Optional columns: <strong>touch, rate, lot_no, description</strong>. Each row creates a lot and records an <strong>OB</strong> movement.
+      </p>
+      <div class="mb-3">
+        <a class="btn btn-outline-primary" href="{% url 'stock_opening_balance_template_csv' %}">Download CSV Template</a>
+      </div>
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button class="btn btn-success" type="submit">Import CSV</button>
+        <a class="btn btn-outline-secondary" href="{% url 'product_stock_list' %}">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

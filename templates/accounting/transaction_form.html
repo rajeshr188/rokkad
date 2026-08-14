@@ -1,0 +1,6 @@
+{% extends "base_tenant.html" %}
+{% block title %}New accounting transaction{% endblock %}
+{% block workspace_content %}
+<div class="mb-4"><a class="small text-decoration-none" href="{% url 'accounting:dashboard' %}">&larr; Accounting</a><h1 class="h3 mt-2">New sale or receipt</h1>{% if workflow_mode == "OWNER" and is_owner %}<p class="text-muted">Owner-operated mode: confirmation records and posts the transaction immediately.</p>{% else %}<p class="text-muted">Team mode: this creates a draft for separate authorization and posting.</p>{% endif %}</div>
+<div class="card"><div class="card-body"><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">{% if workflow_mode == "OWNER" and is_owner %}Confirm and post{% else %}Create draft{% endif %}</button></form></div></div>
+{% endblock %}

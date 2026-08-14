@@ -1,0 +1,36 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Reports Hub{% endblock %}
+
+{% block workspace_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Reports Hub</h4>
+    <div class="btn-group">
+        <a href="{% url 'dea_dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+        <a href="{% url 'dea_transaction_list' %}" class="btn btn-sm btn-primary">Unified Transactions</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% for group in report_groups %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-1">{{ group.title }}</h5>
+                <small class="text-muted">{{ group.description }}</small>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% for item in group.items %}
+                    <div class="col-md-6 col-lg-3">
+                        <a href="{{ item.url }}" class="btn btn-outline-secondary w-100 text-start">
+                            <i class="fa {{ item.icon }} me-2"></i>{{ item.name }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

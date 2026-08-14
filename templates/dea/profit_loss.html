@@ -1,0 +1,91 @@
+{% extends 'base_tenant.html' %}
+
+{% block workspace_content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <h5 class="card-title">Profit & Loss Statement</h5>
+        <small class="text-muted">Period: {{ from_date|default:'All time' }} to {{ to_date|default:'Present' }}</small>
+    </div>
+    <div class="card-body">
+        <!-- Operating Revenue -->
+        <h6 class="border-bottom">Operating Revenue</h6>
+        {% for entry in statement.revenue.operating.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.ledger }}</div>
+            <div class="col text-end">{{ entry.amount }}</div>
+        </div>
+        {% endfor %}
+        <div class="row border-top mx-2">
+            <div class="col"><em>Total Operating Revenue</em></div>
+            <div class="col text-end">{{ statement.revenue.operating.total }}</div>
+        </div>
+
+        <!-- Direct Expenses (COGS) -->
+        <h6 class="border-bottom mt-3">Direct Expenses</h6>
+        {% for entry in statement.expenses.direct.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.ledger }}</div>
+            <div class="col text-end">{{ entry.amount }}</div>
+        </div>
+        {% endfor %}
+        <div class="row border-top mx-2">
+            <div class="col"><em>Total Direct Expenses</em></div>
+            <div class="col text-end">{{ statement.expenses.direct.total }}</div>
+        </div>
+
+        <!-- Gross Profit -->
+        <div class="row border-top border-dark mx-2 mt-3">
+            <div class="col"><strong>Gross Profit</strong></div>
+            <div class="col text-end {% if statement.gross_profit.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                <strong>{{ statement.gross_profit }}</strong>
+            </div>
+        </div>
+
+        <!-- Operating Expenses -->
+        <h6 class="border-bottom mt-3">Operating Expenses</h6>
+        {% for entry in statement.expenses.operating.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.ledger }}</div>
+            <div class="col text-end">{{ entry.amount }}</div>
+        </div>
+        {% endfor %}
+        <div class="row border-top mx-2">
+            <div class="col"><em>Total Operating Expenses</em></div>
+            <div class="col text-end">{{ statement.expenses.operating.total }}</div>
+        </div>
+
+        <!-- Operating Profit -->
+        <div class="row border-top border-dark mx-2 mt-3">
+            <div class="col"><strong>Operating Profit</strong></div>
+            <div class="col text-end {% if statement.operating_profit.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                <strong>{{ statement.operating_profit }}</strong>
+            </div>
+        </div>
+
+        <!-- Other Income & Expenses -->
+        <h6 class="border-bottom mt-3">Other Income</h6>
+        {% for entry in statement.revenue.other.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.ledger }}</div>
+            <div class="col text-end">{{ entry.amount }}</div>
+        </div>
+        {% endfor %}
+        
+        <h6 class="border-bottom mt-3">Other Expenses</h6>
+        {% for entry in statement.expenses.other.entries %}
+        <div class="row mx-3">
+            <div class="col">{{ entry.ledger }}</div>
+            <div class="col text-end">{{ entry.amount }}</div>
+        </div>
+        {% endfor %}
+
+        <!-- Net Profit -->
+        <div class="row border-top border-dark mx-2 mt-4">
+            <div class="col"><strong>Net Profit</strong></div>
+            <div class="col text-end {% if statement.net_profit.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                <strong>{{ statement.net_profit }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

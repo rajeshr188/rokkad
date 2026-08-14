@@ -1,0 +1,19 @@
+{% extends "base_customer_portal.html" %}
+{% load i18n %}
+
+{% block portal_content %}
+<div class="portal-page-header">
+    <h1>{% trans "My loans" %}</h1>
+</div>
+<div class="portal-list">
+    {% for row in summary.items %}
+        <div class="portal-list-row">
+            <strong>{{ row.loan_id }}</strong>
+            <span>{{ row.loan_type }} · {{ row.status }}</span>
+            <span>{{ row.total_outstanding|default:"" }}</span>
+        </div>
+    {% empty %}
+        <p class="portal-empty">{% trans "No loans are available for your portal access." %}</p>
+    {% endfor %}
+</div>
+{% endblock %}

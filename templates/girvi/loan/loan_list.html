@@ -1,0 +1,283 @@
+{% extends 'base_tenant.html' %}
+{% load static %}
+{% load i18n static django_tables2 %}
+{% load crispy_forms_tags %}
+
+{% block workspace_content %}
+{% partialdef loan-content inline %}
+<div id="loan-content" class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-2 mb-3 border-bottom">
+    <h1 class="h3 mb-0">{% trans "Loans" %}</h1>
+    <div class="btn-group btn-group-sm" role="group">
+      <a class="btn btn-success" href="{% url 'girvi:girvi_loan_create' %}">
+        {% trans "New Girvi Loan" %}
+      </a>
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:bulk_release' %}">{% trans "Bulk Release" %}</a>
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:girvi_ledger' %}">{% trans "Ledger" %}</a>
+      <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#exportPanel" aria-expanded="false" aria-controls="exportPanel">
+        {% trans "Export" %}
+      </button>
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:girvi_storage_boxes' %}">{% trans "Storage" %}</a>
+      <a class="btn btn-outline-secondary" href="{% url 'girvi:loanitem_list' %}">{% trans "Items" %}</a>
+    </div>
+  </div>
+
+  <ul class="nav nav-pills nav-fill mb-3">
+    <li class="nav-item">
+      <a class="nav-link {% if loan_kind == 'given' %}active{% endif %}" href="{% url 'girvi:girvi_loan_list' %}?loan_kind=given">{% trans "Given" %}</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if loan_kind == 'taken' %}active{% endif %}" href="{% url 'girvi:girvi_loan_list' %}?loan_kind=taken">{% trans "Taken" %}</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if loan_kind == 'all' %}active{% endif %}" href="{% url 'girvi:girvi_loan_list' %}?loan_kind=all">{% trans "All" %}</a>
+    </li>
+  </ul>
+
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form id="quick-filter-form" class="row g-2 align-items-end" hx-get="{% url 'girvi:loan_table_partial' %}" hx-target="#loan-table-container" hx-push-url="true" hx-trigger="change,submit">
+        <input type="hidden" name="loan_kind" value="{{ loan_kind }}">
+        <div class="col-12 col-md-5">
+          <label class="form-label small text-muted mb-1">{% trans "Search" %}</label>
+          <input type="text" class="form-control form-control-sm" name="query" value="{{ request.GET.query|default:'' }}" placeholder="{% trans 'Loan ID / party name' %}">
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="loan-status-filter" class="form-label small text-muted mb-1">{% trans "Status" %}</label>
+          <select id="loan-status-filter" name="status" class="form-select form-select-sm" title="Loan status filter" aria-label="Loan status filter">
+            <option value="All" {% if request.GET.status == 'All' or not request.GET.status %}selected{% endif %}>{% trans "All" %}</option>
+            <option value="Released" {% if request.GET.status == 'Released' %}selected{% endif %}>{% trans "Released" %}</option>
+            <option value="UnReleased" {% if request.GET.status == 'UnReleased' %}selected{% endif %}>{% trans "Not Released" %}</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <button class="btn btn-sm btn-primary w-100" type="submit">{% trans "Apply" %}</button>
+        </div>
+        <div class="col-12 col-md-2 text-md-end">
+          <button class="btn btn-sm btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilterPanel" aria-expanded="false" aria-controls="advancedFilterPanel">
+            {% trans "Advanced" %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="collapse mb-3" id="advancedFilterPanel">
+    <div class="card card-body">
+      {% if filter %}
+      <form id="advanced-filter-form" hx-get="{% url 'girvi:loan_table_partial' %}" hx-target="#loan-table-container" hx-swap="outerHTML" hx-push-url="true" hx-trigger="submit">
+        <input type="hidden" name="loan_kind" value="{{ loan_kind }}">
+        {{ filter.form|crispy }}
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-sm btn-primary">{% trans "Apply Advanced Filters" %}</button>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'girvi:girvi_loan_list' %}?loan_kind={{ loan_kind }}">{% trans "Reset" %}</a>
+        </div>
+      </form>
+      {% else %}
+      <div class="alert alert-info mb-0">{% trans "Advanced filters are not available in All mode. Use Given or Taken tab for full filters." %}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="collapse mb-3" id="exportPanel">
+    <div class="card card-body">
+      <form class="row g-2 align-items-end">
+        <div class="col-12 col-md-3">
+          <label for="export-from-date" class="form-label small text-muted mb-1">{% trans "From Date" %}</label>
+          <input id="export-from-date" type="date" class="form-control form-control-sm" name="from_date" title="Export from date" value="{{ request.GET.from_date|default:'' }}">
+        </div>
+        <div class="col-12 col-md-3">
+          <label for="export-to-date" class="form-label small text-muted mb-1">{% trans "To Date" %}</label>
+          <input id="export-to-date" type="date" class="form-control form-control-sm" name="to_date" title="Export to date" value="{{ request.GET.to_date|default:'' }}">
+        </div>
+        <div class="col-12 col-md-3">
+          <label for="export-scope" class="form-label small text-muted mb-1">{% trans "Scope" %}</label>
+          <select id="export-scope" name="scope" class="form-select form-select-sm" title="Export scope filter" aria-label="Export scope filter">
+            <option value="all" {% if request.GET.scope == 'all' or not request.GET.scope %}selected{% endif %}>{% trans "All Loans" %}</option>
+            <option value="released" {% if request.GET.scope == 'released' %}selected{% endif %}>{% trans "Released Only" %}</option>
+            <option value="unreleased" {% if request.GET.scope == 'unreleased' %}selected{% endif %}>{% trans "Unreleased Only" %}</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-1">
+          <a id="export-xlsx-btn" class="btn btn-sm btn-primary w-100" href="#">{% trans "XLSX" %}</a>
+        </div>
+        <div class="col-6 col-md-1">
+          <a id="export-pdf-btn" class="btn btn-sm btn-primary w-100" href="#">{% trans "PDF" %}</a>
+        </div>
+      </form>
+      <script>
+        document.getElementById('export-xlsx-btn').addEventListener('click', function(e) {
+          e.preventDefault();
+          const form = this.closest('form');
+          const fromDate = form.querySelector('input[name="from_date"]').value;
+          const toDate = form.querySelector('input[name="to_date"]').value;
+          const scope = form.querySelector('select[name="scope"]').value;
+          const url = new URL('{% url "girvi:girvi_inventory_audit_export" %}', window.location.origin);
+          url.searchParams.set('format', 'xlsx');
+          url.searchParams.set('scope', scope);
+          if (fromDate) url.searchParams.set('from_date', fromDate);
+          if (toDate) url.searchParams.set('to_date', toDate);
+          window.location.href = url.toString();
+        });
+        document.getElementById('export-pdf-btn').addEventListener('click', function(e) {
+          e.preventDefault();
+          const form = this.closest('form');
+          const fromDate = form.querySelector('input[name="from_date"]').value;
+          const toDate = form.querySelector('input[name="to_date"]').value;
+          const scope = form.querySelector('select[name="scope"]').value;
+          const url = new URL('{% url "girvi:girvi_inventory_audit_export" %}', window.location.origin);
+          url.searchParams.set('format', 'pdf');
+          url.searchParams.set('scope', scope);
+          if (fromDate) url.searchParams.set('from_date', fromDate);
+          if (toDate) url.searchParams.set('to_date', toDate);
+          window.location.href = url.toString();
+        });
+      </script>
+    </div>
+  </div>
+
+  <div id="loan-table-container" hx-get="{% url 'girvi:loan_table_partial' %}?{{ request.GET.urlencode }}" hx-trigger="load" hx-swap="outerHTML">
+  </div>
+</div>
+{% endpartialdef %}
+
+{% partialdef loan-table %}
+<div id="loan-table-container">
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+      <div class="d-flex align-items-center gap-3">
+        <div class="form-check m-0">
+          <input class="form-check-input" type="checkbox" value="selected" id="selectall" name="selectall" onclick="toggle(this)">
+          <label class="form-check-label" for="selectall">{% trans "Select all on page" %}</label>
+        </div>
+        <small class="text-muted">{% trans "Selected" %}: <span id="selected-count">0</span></small>
+      </div>
+
+      {% if loan_kind == 'given' %}
+      <div class="btn-group btn-group-sm" role="group" id="bulk-action-group">
+        <input type="hidden" id="loan-kind-hidden" name="loan_kind" value="{{ loan_kind }}">
+        <button id="bulk-action-toggle" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" disabled>
+          {% trans "Bulk Actions" %}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" hx-post="{% url 'girvi:print_labels' %}?{{ request.GET.urlencode }}"
+               hx-include="#loan-table-container input[name='selection']:checked,#selectall,#loan-kind-hidden">
+              {% trans "Print Labels" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" hx-get="{% url 'girvi:bulk_release' %}"
+               hx-include="#loan-table-container input[name='selection']:checked"
+               hx-target="#content" hx-swap="innerHTML transition:true"
+               hx-push-url="true">
+              {% trans "Release Selected" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" hx-post="{% url 'girvi:girvi_create_notice_v2' %}?{{ request.GET.urlencode }}"
+               hx-include="#loan-table-container input[name='selection']:checked,#selectall,#loan-kind-hidden">
+              {% trans "Create Reminder Batch" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" hx-post="{% url 'girvi:merge_loans' %}" hx-confirm="Are you sure you want to merge selected loans?"
+               hx-include="#loan-table-container input[name='selection']:checked,#loan-kind-hidden" hx-target="#loan-content">
+              {% trans "Merge Selected" %}
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item text-danger" hx-post="{% url 'girvi:girvi_loan_deletemultiple' %}" hx-confirm="Are you sure you want to delete selected loans?"
+               hx-include="#loan-table-container input[name='selection']:checked,#loan-kind-hidden" hx-target="#loan-content">
+              {% trans "Delete Selected" %}
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% elif loan_kind == 'taken' %}
+      <div class="btn-group btn-group-sm" role="group" id="bulk-action-group">
+        <input type="hidden" id="loan-kind-hidden" name="loan_kind" value="{{ loan_kind }}">
+        <button id="bulk-action-toggle" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" disabled>
+          {% trans "Bulk Actions" %}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item text-danger" hx-post="{% url 'girvi:girvi_loan_deletemultiple' %}" hx-confirm="Are you sure you want to delete selected taken loans?"
+               hx-include="#loan-table-container input[name='selection']:checked,#loan-kind-hidden" hx-target="#loan-content">
+              {% trans "Delete Selected Taken Loans" %}
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% else %}
+      <small class="text-muted">{% trans "Bulk actions are disabled in All mode. Switch to Given or Taken tab." %}</small>
+      {% endif %}
+    </div>
+
+    <div id="table" class="table-responsive">
+      {% render_table table %}
+    </div>
+
+    <details class="mt-2">
+      <summary>{% trans "Stats" %}</summary>
+      <ul class="mb-0">
+        <li>{% trans "Total Loan Amount" %}: {{ total_loan_amount.total|default:0 }}</li>
+        <li>{% trans "Total Interest" %}: {{ total_interest.total|default:0 }}</li>
+        <li>{% trans "Results" %}: {{ table.paginator.count|default:0 }}</li>
+      </ul>
+    </details>
+  </div>
+</div>
+</div>
+{% endpartialdef %}
+
+<script>
+  function getSelectionCheckboxes() {
+    return Array.from(document.querySelectorAll('#loan-table-container input[name="selection"]'));
+  }
+
+  function updateSelectionSummary() {
+    const checkboxes = getSelectionCheckboxes();
+    const selectedCount = checkboxes.filter((cb) => cb.checked).length;
+    const selectedNode = document.getElementById('selected-count');
+    const actionButton = document.getElementById('bulk-action-toggle');
+    const selectAll = document.getElementById('selectall');
+
+    if (selectedNode) {
+      selectedNode.textContent = selectedCount;
+    }
+
+    if (actionButton) {
+      actionButton.disabled = selectedCount === 0;
+    }
+
+    if (selectAll) {
+      selectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+    }
+  }
+
+  function toggle(source) {
+    const checkboxes = getSelectionCheckboxes();
+    checkboxes.forEach((cb) => {
+      cb.checked = source.checked;
+    });
+    updateSelectionSummary();
+  }
+
+  document.addEventListener('change', function (event) {
+    if (event.target && (event.target.name === 'selection' || event.target.id === 'selectall')) {
+      if (event.target.id !== 'selectall') {
+        updateSelectionSummary();
+      }
+    }
+  });
+
+  document.addEventListener('htmx:afterSwap', function (event) {
+    if (event.target && event.target.id === 'loan-table-container') {
+      updateSelectionSummary();
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends 'base_tenant.html' %}
+{% load crispy_forms_tags %}
+
+{% block workspace_content %}
+{{ form.media.js }}
+{% if item_formset %}{{ item_formset.media.js }}{% endif %}
+
+<div class="container-fluid py-3">
+  <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-1">{% if loan %}Update Loan{% else %}Create Loan{% endif %}</h1>
+      <div class="text-muted small">Girvi</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% if loan %}{{ loan.get_absolute_url }}{% else %}{% url 'girvi:girvi_loan_list' %}{% endif %}">Back</a>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header py-2 fw-semibold">Loan Terms</div>
+          <div class="card-body">
+            {% crispy form %}
+          </div>
+        </div>
+
+        {% if item_formset and not loan %}
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header py-2 fw-semibold">Initial Collateral</div>
+          <div class="card-body">
+            {{ item_formset.management_form }}
+            {% for item_form in item_formset %}
+            <div class="border rounded p-3 mb-3 bg-light-subtle">
+              <div class="small fw-semibold mb-2">Item {{ forloop.counter }}</div>
+              {% if item_form.non_field_errors %}
+              <div class="alert alert-danger py-1 px-2 small">{{ item_form.non_field_errors }}</div>
+              {% endif %}
+              <div class="row g-2">
+                <div class="col-md-6">{{ item_form.item|as_crispy_field }}</div>
+                <div class="col-md-3">{{ item_form.itemtype|as_crispy_field }}</div>
+                <div class="col-md-3">{{ item_form.interestrate|as_crispy_field }}</div>
+                <div class="col-12">{{ item_form.itemdesc|as_crispy_field }}</div>
+                <div class="col-md-3">{{ item_form.quantity|as_crispy_field }}</div>
+                <div class="col-md-3">{{ item_form.weight|as_crispy_field }}</div>
+                <div class="col-md-3">{{ item_form.purity|as_crispy_field }}</div>
+                <div class="col-md-3">{{ item_form.loanamount|as_crispy_field }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-end gap-2">
+          <a class="btn btn-outline-secondary" href="{% if loan %}{{ loan.get_absolute_url }}{% else %}{% url 'girvi:girvi_loan_list' %}{% endif %}">Cancel</a>
+          <button type="submit" class="btn btn-primary">{% if loan %}Save Changes{% else %}Create Draft Loan{% endif %}</button>
+        </div>
+      </form>
+    </div>
+
+    {% if not loan %}
+    <div class="col-lg-4">
+      <div class="position-sticky" style="top: 1rem;">
+        {% include "girvi/loan/_creation_preview.html" %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  (function () {
+    const jq = window.jQuery || window.$;
+
+    function initSelect2Triggers() {
+      if (!jq) return;
+
+      jq('#id_series').off('select2:select.loanform').on('select2:select.loanform', function () {
+        this.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      jq('select[name="borrower_party"]').off('change.loanform').on('change.loanform', function () {
+        this.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
+    if (jq) {
+      jq(document).ready(initSelect2Triggers);
+    }
+  })();
+</script>
+{% endblock %}

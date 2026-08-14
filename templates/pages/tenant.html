@@ -1,0 +1,35 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Workspaces{% endblock %}
+
+{% block content %}
+<section class="public-section alt">
+    <div class="container">
+        <div class="public-section-header">
+            <div class="public-kicker">Workspaces</div>
+            <h1 class="public-section-title">Each business runs in its own workspace.</h1>
+            <p class="public-section-copy">
+                Rokkad separates platform account management from tenant ERP workspaces. Users can belong to multiple workspaces, switch intentionally, and keep business data scoped to the active company.
+            </p>
+        </div>
+
+        <div class="public-card-grid">
+            <article class="public-card">
+                <div class="public-card-icon"><i class="bi bi-shield-lock"></i></div>
+                <h2 class="public-card-title">Tenant isolation</h2>
+                <p class="public-card-copy">Workspace data is kept separate so one business cannot accidentally see another business's loans, inventory, accounting, or team records.</p>
+            </article>
+            <article class="public-card">
+                <div class="public-card-icon"><i class="bi bi-people"></i></div>
+                <h2 class="public-card-title">Team controls</h2>
+                <p class="public-card-copy">Owners can invite members, assign roles, and keep settings separate from daily ERP operations.</p>
+            </article>
+            <article class="public-card">
+                <div class="public-card-icon"><i class="bi bi-arrow-left-right"></i></div>
+                <h2 class="public-card-title">Clear switching</h2>
+                <p class="public-card-copy">The product direction keeps workspace identity visible so users always know which business context they are inside.</p>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock content %}

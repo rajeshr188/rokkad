@@ -1,0 +1,7 @@
+{% extends "base_tenant.html" %}
+{% block title %}Initialize accounting{% endblock %}
+{% block workspace_content %}
+<div class="mb-4"><a class="small text-decoration-none" href="{% url 'accounting:dashboard' %}">&larr; Accounting</a><h1 class="h3 mt-2">Initialize standalone accounting</h1><p class="text-muted">This creates one tenant-bound INR book, an open financial period, and the Cash, Accounts Receivable, and Sales ledgers. It does not import DEA data or enable posting.</p></div>
+<div class="alert alert-info">Use the financial-year dates that contain the transactions you intend to enter. These dates become an accounting control, not merely a display preference.</div>
+<div class="card"><div class="card-body"><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Initialize book</button></form></div></div>
+{% endblock %}

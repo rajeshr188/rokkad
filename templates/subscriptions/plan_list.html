@@ -1,0 +1,237 @@
+{% extends 'base_workspace_settings.html' %}
+{% load static %}
+
+{% block title %}Subscription Plans - Rokkad{% endblock %}
+
+{% block mgmt_extra_css %}
+<style>
+    .plan-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .plan-card:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        transform: translateY(-4px);
+    }
+    
+    .plan-card.featured {
+        border: 2px solid #007bff;
+        transform: scale(1.05);
+    }
+    
+    .plan-price {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #333;
+        margin: 1rem 0;
+    }
+    
+    .plan-period {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .plan-features {
+        list-style: none;
+        padding: 0;
+        margin: 1.5rem 0;
+    }
+    
+    .plan-features li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .plan-features li:before {
+        content: "✓ ";
+        color: #28a745;
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+    
+    .plan-features li.unavailable {
+        color: #ccc;
+    }
+    
+    .plan-features li.unavailable:before {
+        content: "✗ ";
+        color: #dc3545;
+    }
+    
+    .current-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background-color: #28a745;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+    
+    .btn-action {
+        width: 100%;
+        padding: 0.75rem;
+        font-weight: 600;
+        margin-top: 1rem;
+    }
+    
+    .comparison-table {
+        margin-top: 3rem;
+    }
+    
+    .comparison-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block mgmt_content %}
+<div class="container py-5">
+    <div class="row mb-5">
+        <div class="col-12">
+            <h1 class="mb-2">Choose Your Plan</h1>
+            <p class="text-muted">Flexible pricing for businesses of all sizes</p>
+        </div>
+    </div>
+    
+    <!-- Plans Display -->
+    <div class="row">
+        {% for plan in plans %}
+        <div class="col-md-6 col-lg-4">
+            <div class="plan-card {% if current_plan.id == plan.id %}featured{% endif %}">
+                {% if current_plan.id == plan.id %}
+                <span class="current-badge">Current Plan</span>
+                {% endif %}
+                
+                <h3 class="plan-name">{{ plan.name }}</h3>
+                <p class="text-muted small">{{ plan.get_tier_display }}</p>
+                
+                <div class="plan-price">
+                    ₹{{ plan.price }}<span class="plan-period">/month</span>
+                </div>
+                
+                {% if plan.yearly_price %}
+                <p class="text-muted small">
+                    or ₹{{ plan.yearly_price }}/year <span class="badge badge-success">Save 20%</span>
+                </p>
+                {% endif %}
+                
+                <p class="card-text text-muted small mt-3">{{ plan.description }}</p>
+                
+                <h5 class="mt-4 mb-3">Features</h5>
+                <ul class="plan-features">
+                    <li>{{ plan.max_users }} Users</li>
+                    <li>{{ plan.max_products }} Products</li>
+                    <li>{{ plan.max_warehouses }} Warehouse{% if plan.max_warehouses > 1 %}s{% endif %}</li>
+                    <li>{{ plan.max_transactions_per_month }} Monthly Transactions</li>
+                    <li>{{ plan.max_invoices_per_month }} Monthly Invoices</li>
+                    <li {% if not plan.has_advanced_reporting %}class="unavailable"{% endif %}>
+                        Advanced Reporting
+                    </li>
+                    <li {% if not plan.has_multi_warehouse %}class="unavailable"{% endif %}>
+                        Multi-Warehouse Support
+                    </li>
+                    <li {% if not plan.has_approvals_workflow %}class="unavailable"{% endif %}>
+                        Approval Workflow
+                    </li>
+                    <li {% if not plan.has_api_access %}class="unavailable"{% endif %}>
+                        API Access
+                    </li>
+                    <li {% if not plan.has_custom_fields %}class="unavailable"{% endif %}>
+                        Custom Fields
+                    </li>
+                </ul>
+                
+                {% if current_plan.id != plan.id %}
+                <a href="{% url 'subscriptions:checkout' plan_id=plan.id %}" class="btn btn-primary btn-action">
+                    Upgrade to {{ plan.name }}
+                </a>
+                {% else %}
+                <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-secondary btn-action">
+                    View Dashboard
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Features Comparison Table -->
+    {% if plans.count > 1 %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4">Detailed Feature Comparison</h3>
+            <div class="table-responsive">
+                <table class="table table-hover comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            {% for plan in plans %}
+                            <th class="text-center">{{ plan.name }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Max Users</strong></td>
+                            {% for plan in plans %}
+                            <td class="text-center">{{ plan.max_users }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Advanced Reporting</strong></td>
+                            {% for plan in plans %}
+                            <td class="text-center">
+                                {% if plan.has_advanced_reporting %}
+                                    <span class="text-success">✓</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>API Access</strong></td>
+                            {% for plan in plans %}
+                            <td class="text-center">
+                                {% if plan.has_api_access %}
+                                    <span class="text-success">✓</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td><strong>Priority Support</strong></td>
+                            {% for plan in plans %}
+                            <td class="text-center">
+                                {% if plan.tier == 'enterprise' %}
+                                    <span class="text-success">✓</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Trial Info -->
+    <div class="alert alert-info mt-5">
+        <strong>Free Trial:</strong> All plans come with a 14-day free trial. No credit card required.
+    </div>
+</div>
+{% endblock %}

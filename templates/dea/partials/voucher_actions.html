@@ -1,0 +1,41 @@
+<!-- Voucher Actions for Table Row -->
+<div class="btn-group btn-group-sm" role="group">
+    <!-- View -->
+    <a href="{{ record.get_absolute_url }}" class="btn btn-outline-primary" title="View">
+        <i class="bi bi-eye"></i>
+    </a>
+    
+    <!-- Edit (Draft only) -->
+    {% if record.status == 'DRAFT' %}
+    <a href="{% url 'dea_voucher_update' record.pk %}" class="btn btn-outline-warning" title="Edit">
+        <i class="bi bi-pencil"></i>
+    </a>
+    {% endif %}
+    
+    <!-- Post (Draft + Balanced only) -->
+    {% if record.status == 'DRAFT' %}
+    <form method="post" action="{% url 'dea_voucher_post' record.pk %}" style="display: inline;" title="Post to Journal">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-success btn-sm" onclick="return confirm('Post this voucher?')">
+            <i class="bi bi-check-circle"></i>
+        </button>
+    </form>
+    {% endif %}
+    
+    <!-- Reverse (Posted only) -->
+    {% if record.status == 'POSTED' %}
+    <form method="post" action="{% url 'dea_voucher_reverse' record.pk %}" style="display: inline;" title="Reverse">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Reverse this voucher?')">
+            <i class="bi bi-arrow-counterclockwise"></i>
+        </button>
+    </form>
+    {% endif %}
+    
+    <!-- Delete (Draft only) -->
+    {% if record.status == 'DRAFT' %}
+    <a href="{% url 'dea_voucher_delete' record.pk %}" class="btn btn-outline-danger" title="Delete">
+        <i class="bi bi-trash"></i>
+    </a>
+    {% endif %}
+</div>
