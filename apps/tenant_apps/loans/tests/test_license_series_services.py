@@ -8,16 +8,18 @@ from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import LoanDocumentKind
-from apps.tenant_apps.loans.models import LoanLicense
+from apps.tenant_apps.loans.models import LoanLicense, LoanNumberSequence
 from apps.tenant_apps.loans.services import (
     LicenseSeriesError,
     activate_license,
     assert_series_can_issue,
     configure_sequence,
+    create_configured_series,
     create_license,
     create_series,
     expire_license,
     update_license,
+    update_configured_series,
 )
 
 
@@ -72,6 +74,107 @@ class LicenseSeriesServiceTests(TenantTestCase):
         self.assertTrue(second.is_active)
         self.assertEqual(first_series.workspace_id, self.tenant.pk)
         self.assertEqual(second_series.workspace_id, self.tenant.pk)
+
+    @patch("apps.tenant_apps.loans.services.license_series.AuditLog.log")
+    def test_configured_series_owns_both_required_sequences(self, _audit_log):
+        license = self._create_license()
+
+        series = create_configured_series(
+            license=license,
+            name="Counter A",
+            code="A",
+            is_active=True,
+            pawn_loan_prefix="PL-A-",
+            release_prefix="RL-A-",
+            number_width=6,
+            maximum_number=5000,
+            actor=self.user,
+        )
+
+        sequences = {row.document_kind: row for row in series.number_sequences.all()}
+        self.assertEqual(
+            set(sequences),
+            {LoanDocumentKind.PAWN_LOAN.value, LoanDocumentKind.PAWN_LOAN_RELEASE.value},
+        )
+        self.assertEqual(sequences[LoanDocumentKind.PAWN_LOAN.value].prefix, "PL-A-")
+        self.assertEqual(sequences[LoanDocumentKind.PAWN_LOAN_RELEASE.value].prefix, "RL-A-")
+        self.assertTrue(all(row.width == 6 for row in sequences.values()))
+
+    @patch("apps.tenant_apps.loans.services.license_series.AuditLog.log")
+    def test_configured_series_update_preserves_consumed_numbers(self, _audit_log):
+        license = self._create_license()
+        series = create_configured_series(
+            license=license,
+            name="Counter A",
+            code="A",
+            is_active=True,
+            pawn_loan_prefix="PL-A-",
+            release_prefix="RL-A-",
+            number_width=5,
+            maximum_number=100,
+            actor=self.user,
+        )
+        LoanNumberSequence.objects.filter(series=series).update(next_number=8)
+
+        update_configured_series(
+            series,
+            name="Main Counter",
+            code="M",
+            is_active=False,
+            pawn_loan_prefix="PL-M-",
+            release_prefix="RL-M-",
+            number_width=7,
+            maximum_number=200,
+            actor=self.user,
+        )
+
+        series.refresh_from_db()
+        self.assertEqual((series.name, series.code, series.is_active), ("Main Counter", "M", False))
+        self.assertEqual(
+            set(series.number_sequences.values_list("next_number", flat=True)), {8}
+        )
+
+    @patch("apps.tenant_apps.loans.services.license_series.AuditLog.log")
+    def test_configured_series_update_rolls_back_if_either_sequence_is_invalid(
+        self, _audit_log
+    ):
+        license = self._create_license()
+        series = create_configured_series(
+            license=license,
+            name="Counter A",
+            code="A",
+            is_active=True,
+            pawn_loan_prefix="PL-A-",
+            release_prefix="RL-A-",
+            number_width=5,
+            maximum_number=100,
+            actor=self.user,
+        )
+        release = series.number_sequences.get(
+            document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE.value
+        )
+        release.next_number = 8
+        release.save(update_fields=["next_number"])
+
+        with self.assertRaises(ValidationError):
+            update_configured_series(
+                series,
+                name="Should Roll Back",
+                code="R",
+                is_active=False,
+                pawn_loan_prefix="TEMP-",
+                release_prefix="BAD-",
+                number_width=6,
+                maximum_number=5,
+                actor=self.user,
+            )
+
+        series.refresh_from_db()
+        loan_sequence = series.number_sequences.get(
+            document_kind=LoanDocumentKind.PAWN_LOAN.value
+        )
+        self.assertEqual((series.name, series.code, series.is_active), ("Counter A", "A", True))
+        self.assertEqual((loan_sequence.prefix, loan_sequence.maximum_number), ("PL-A-", 100))
 
     def test_license_updates_are_guarded_and_track_actor(self):
         license = self._create_license()

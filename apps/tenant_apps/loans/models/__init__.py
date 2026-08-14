@@ -140,6 +140,7 @@ __all__ = [
     "LoanOperationalNotice",
     "LoanProduct",
     "LoanProductVersion",
+    "LoanRiskAlert",
     "ObligationAllocation",
     "RepaymentObligation",
     "RepaymentScheduleChange",
@@ -147,5 +148,9 @@ __all__ = [
     "RepaymentScheduleVersion",
 ]
 from .appraisals import CollateralAppraisal
+from .communication import PawnLoanCommunicationConsent, PawnLoanCommunicationPolicy
 from .monitoring import LoanMonitoringPolicy
-from .risk import LoanRiskEvent, LoanRiskSnapshot
+from .risk import LoanRiskAlert, LoanRiskEvent, LoanRiskSnapshot
+
+__all__.append("PawnLoanCommunicationConsent")
+__all__.append("PawnLoanCommunicationPolicy")

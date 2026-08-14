@@ -6,10 +6,11 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
+from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import CollateralMetal, LoanDocumentKind, PawnLoanEventKind, PawnLoanState
-from apps.tenant_apps.loans.models import LoanLicense, LoanNumberSequence, LoanSeries, PawnLoanApprovalSnapshot
+from apps.tenant_apps.loans.models import CollateralAppraisal, LoanLicense, LoanNumberSequence, LoanSeries, PawnLoanApprovalSnapshot
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
     CreatePawnDraftCommand,
@@ -96,6 +97,12 @@ class PawnLifecycleServiceTests(TenantTestCase):
         self.assertEqual(snapshot.version, 1)
         self.assertEqual(snapshot.payload["principal_amount"], "50000.00")
         self.assertEqual(snapshot.payload["collateral"][0]["purity_percentage"], "91.6000")
+        appraisal = CollateralAppraisal.objects.get(collateral_item__loan=self.loan)
+        self.assertEqual(appraisal.method, "ORIGINATION_APPROVAL")
+        self.assertEqual(timezone.localdate(appraisal.effective_at), self.loan.loan_date)
+        self.assertEqual(
+            snapshot.payload["collateral"][0]["approved_appraisal_id"], appraisal.pk
+        )
         self.assertEqual(len(snapshot.fingerprint), 64)
         event = self.loan.change_log.get(event_kind=PawnLoanEventKind.APPROVED.value)
         self.assertEqual(event.metadata["approval_snapshot_id"], snapshot.pk)
@@ -114,6 +121,12 @@ class PawnLifecycleServiceTests(TenantTestCase):
 
         self.assertEqual((first.version, second.version), (1, 2))
         self.assertEqual(PawnLoanApprovalSnapshot.objects.filter(loan=self.loan).count(), 2)
+        appraisals = list(
+            CollateralAppraisal.objects.filter(collateral_item__loan=self.loan)
+            .order_by("version")
+        )
+        self.assertEqual([value.version for value in appraisals], [1, 2])
+        self.assertEqual(appraisals[1].supersedes, appraisals[0])
         event = self.loan.change_log.get(event_kind=PawnLoanEventKind.RETURNED_TO_DRAFT.value)
         self.assertEqual(event.reason, "Correct valuation")
 

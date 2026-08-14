@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -28,6 +30,51 @@ from apps.tenant_apps.loans.models import (
 
 class PawnEconomicPolicyError(ValueError):
     """Raised when configuration is missing or crosses a tenant boundary."""
+
+
+@dataclass(frozen=True)
+class PawnEconomicConfiguration:
+    economic_policy: PawnLoanEconomicPolicy
+    gold_rate_policy: PawnMetalInterestRatePolicy
+    silver_rate_policy: PawnMetalInterestRatePolicy
+
+
+@transaction.atomic
+def create_pawn_economic_configuration(
+    *,
+    workspace,
+    gold_monthly_interest_rate: Decimal,
+    silver_monthly_interest_rate: Decimal,
+    actor=None,
+    **policy_values,
+) -> PawnEconomicConfiguration:
+    """Append one complete operator configuration as an atomic policy set."""
+
+    economic_policy = create_pawn_loan_economic_policy(
+        workspace=workspace, actor=actor, **policy_values
+    )
+    rate_scope = {
+        "workspace": workspace,
+        "license": policy_values.get("license"),
+        "effective_from": policy_values.get("effective_from"),
+        "effective_until": policy_values.get("effective_until"),
+        "actor": actor,
+    }
+    gold_rate_policy = create_pawn_metal_interest_rate_policy(
+        metal=CollateralMetal.GOLD,
+        monthly_interest_rate=gold_monthly_interest_rate,
+        **rate_scope,
+    )
+    silver_rate_policy = create_pawn_metal_interest_rate_policy(
+        metal=CollateralMetal.SILVER,
+        monthly_interest_rate=silver_monthly_interest_rate,
+        **rate_scope,
+    )
+    return PawnEconomicConfiguration(
+        economic_policy=economic_policy,
+        gold_rate_policy=gold_rate_policy,
+        silver_rate_policy=silver_rate_policy,
+    )
 
 
 def create_pawn_loan_economic_policy(
@@ -215,7 +262,9 @@ def _require_scope_ids(workspace_id, license_id):
 
 
 __all__ = [
+    "PawnEconomicConfiguration",
     "PawnEconomicPolicyError",
+    "create_pawn_economic_configuration",
     "create_pawn_loan_economic_policy",
     "create_pawn_loan_fee_policy",
     "create_pawn_metal_interest_rate_policy",

@@ -60,22 +60,6 @@ def export_table(export_format, query_params):
     return exporter.response(f"table.{export_format}")
 
 
-# import datetime
-# @shared_task(name="twilio status")
-# def notify(name="twilio_up"):
-
-#     client = Client(env('TWILIO_ACCOUNT_SID'), env('TWILIO_AUTH_TOKEN'))
-
-#     message = client.messages.create(
-#                                 body=f'J Champalal PawnBroker:\
-#                                          {datetime.datetime.now()}you have loans that are overdue,pls contact: 7904286981',
-#                                 from_=env('TWILIO_NUMBER'),
-#                                 to='+917598260045'
-#                             )
-
-#     return message.sid
-
-
 # this runs at the start of everymonth
 @shared_task(name="pending_loans")
 def notify_pending_loans():

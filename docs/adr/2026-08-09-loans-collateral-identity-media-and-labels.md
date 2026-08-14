@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-08-09
+updated: 2026-08-13
 tags: [loans, collateral, media, labels, qr, pilot]
 related: [../plans/loan-operational-parity-pilot.md, 2026-08-08-temporary-girvi-loans-coexistence-and-parity-selection.md]
 ---
@@ -44,6 +44,11 @@ unstable.
 8. The QR resolves through a tenant-scoped stable scan route and opens the
    owning loan detail anchored to the item. Later storage, release, and
    verification screens may consume the same identity.
+9. Draft create/update plus form-supplied photographs is one service-owned
+   command. Every upload is signature-validated before number allocation or
+   draft mutation, the service maps retained and newly created item identities,
+   and database changes commit atomically. If a later media write fails, files
+   already written by that command are removed after rollback.
 
 ## Consequences
 
@@ -56,3 +61,5 @@ unstable.
 - Label generation is intentionally separate from the configurable legal
   document renderer; it is a small operational artifact with its own audit.
 - OP3 storage can use the same `public_id` without inventing another item code.
+- HTTP views do not infer how newly persisted collateral rows correspond to
+  uploaded evidence.

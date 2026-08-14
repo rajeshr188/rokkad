@@ -25,6 +25,7 @@ class LoanRiskSnapshot(models.Model):
     flags = models.JSONField(default=list)
     explanations = models.JSONField(default=list)
     policy_identity = models.CharField(max_length=255, blank=True)
+    source_provenance = models.JSONField(default=dict)
     assessment_fingerprint = models.CharField(max_length=64, blank=True)
     input_fingerprint = models.CharField(max_length=64, blank=True)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.STALE, db_index=True)
@@ -70,3 +71,58 @@ class LoanRiskEvent(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("LoanRiskEvent is immutable.")
+
+
+class LoanRiskAlert(models.Model):
+    class Kind(models.TextChoices):
+        DPD_WORSENING = "DPD_WORSENING", "Worsening delinquency"
+        LTV_BREACH = "LTV_BREACH", "LTV breach"
+        MATURITY = "MATURITY", "Maturity attention"
+        ASSESSMENT_FAILURE = "ASSESSMENT_FAILURE", "Assessment failure"
+
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Open"
+        RESOLVED = "RESOLVED", "Resolved"
+
+    workspace = models.ForeignKey(
+        "orgs.Company", on_delete=models.PROTECT, related_name="loan_risk_alerts"
+    )
+    loan = models.ForeignKey(
+        "loans.PawnLoan", on_delete=models.PROTECT, related_name="risk_alerts"
+    )
+    source_event = models.ForeignKey(
+        LoanRiskEvent, on_delete=models.PROTECT, related_name="operational_alerts"
+    )
+    resolved_by_event = models.ForeignKey(
+        LoanRiskEvent, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="resolved_operational_alerts",
+    )
+    alert_kind = models.CharField(max_length=24, choices=Kind.choices)
+    severity = models.CharField(max_length=16)
+    message = models.CharField(max_length=500)
+    recommended_action = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.OPEN, db_index=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at", "-pk")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("source_event", "alert_kind"),
+                name="loans_risk_alert_event_kind_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("workspace", "loan", "alert_kind"),
+                condition=Q(status="OPEN"),
+                name="loans_risk_alert_one_open_kind",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("workspace", "status", "severity"),
+                name="loans_risk_alert_work_idx",
+            )
+        ]

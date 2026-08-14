@@ -1,4 +1,4 @@
-"""Persistence for the disabled FundingLoan Gate B prototype."""
+"""Persistence for the supported FundingLoan aggregate."""
 
 from decimal import Decimal
 

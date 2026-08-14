@@ -44,15 +44,7 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date):
         if lookup.status == RATE_FOUND:
             calculated = (lookup.rate.buying_rate * item.net_weight * item.purity_percentage / Decimal("100")).quantize(quantum, rounding=ROUND_DOWN)
         appraisal = CollateralAppraisal.objects.filter(collateral_item=item, effective_at__date__lte=as_of_date, status=CollateralAppraisal.Status.APPROVED).order_by("-effective_at", "-version").first()
-        # Compatibility for collateral captured after the appraisal schema was
-        # introduced but before origination began persisting immutable rows.
-        # The item field remains documented legacy evidence and is never
-        # preferred over an approved appraisal record.
-        appraisal_value = (
-            appraisal.appraised_value
-            if appraisal
-            else item.latest_appraised_value
-        )
+        appraisal_value = appraisal.appraised_value if appraisal else None
         if method == ValuationMethod.CALCULATED_METAL_VALUE:
             selected = calculated
             if selected is None: blockers.append(lookup.status)

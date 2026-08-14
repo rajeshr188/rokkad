@@ -1,4 +1,4 @@
-"""Fail-closed production cutover readiness for the PawnLoan MVP."""
+"""Fail-closed operational readiness for PawnLoan."""
 
 from dataclasses import asdict, dataclass
 from datetime import date
@@ -7,7 +7,6 @@ from django.db import connection
 from django.db.migrations.loader import MigrationLoader
 from django.db.migrations.recorder import MigrationRecorder
 
-from apps.tenant_apps.loans.feature_flags import is_new_loans_enabled
 from apps.tenant_apps.loans.models import current_tenant_workspace_id
 from apps.tenant_apps.loans.selectors.operations import (
     get_pawn_loan_operations_snapshot,
@@ -17,7 +16,7 @@ from apps.tenant_apps.loans.selectors.reports import get_pawn_loan_reports
 
 MANUAL_ACKNOWLEDGEMENTS = (
     ("BACKUP_REHEARSED", "A current backup and restore procedure was verified."),
-    ("ROLLBACK_REHEARSED", "Feature-flag rollback and record ownership were rehearsed."),
+    ("RECOVERY_REHEARSED", "Operational recovery and record ownership were rehearsed."),
     ("SUPPORT_READY", "Support ownership and escalation evidence were confirmed."),
     ("MONITORING_READY", "Outbox, reconciliation, and stale-processing monitoring were confirmed."),
     ("PERMISSIONS_REVIEWED", "Owner/Admin/member permissions were reviewed."),
@@ -37,7 +36,6 @@ class PawnLoanCutoverCheck:
 class PawnLoanCutoverReadiness:
     workspace_id: int
     as_of_date: date
-    feature_enabled: bool
     checks: tuple[PawnLoanCutoverCheck, ...]
 
     @property
@@ -52,7 +50,6 @@ class PawnLoanCutoverReadiness:
         return {
             "workspace_id": self.workspace_id,
             "as_of_date": self.as_of_date.isoformat(),
-            "feature_enabled": self.feature_enabled,
             "is_ready": self.is_ready,
             "blocker_count": self.blocker_count,
             "checks": [asdict(check) for check in self.checks],
@@ -64,13 +61,11 @@ def get_pawn_loan_cutover_readiness(*, as_of_date, acknowledgements=None):
     if workspace_id is None:
         raise ValueError("PawnLoan cutover readiness requires an active tenant schema.")
 
-    workspace = getattr(connection, "tenant", None)
     operations = get_pawn_loan_operations_snapshot()
     reports = get_pawn_loan_reports(as_of_date=as_of_date)
     return build_pawn_loan_cutover_readiness(
         workspace_id=workspace_id,
         as_of_date=as_of_date,
-        feature_enabled=is_new_loans_enabled(workspace),
         pending_migrations=_pending_loans_migrations(),
         operations=operations,
         reports=reports,
@@ -82,7 +77,6 @@ def build_pawn_loan_cutover_readiness(
     *,
     workspace_id,
     as_of_date,
-    feature_enabled,
     pending_migrations,
     operations,
     reports,
@@ -156,7 +150,6 @@ def build_pawn_loan_cutover_readiness(
     return PawnLoanCutoverReadiness(
         workspace_id=workspace_id,
         as_of_date=as_of_date,
-        feature_enabled=feature_enabled,
         checks=tuple(checks),
     )
 

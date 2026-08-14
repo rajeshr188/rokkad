@@ -205,6 +205,96 @@ def set_series_active(series: LoanSeries, *, is_active: bool) -> LoanSeries:
     return series
 
 
+@transaction.atomic
+def create_configured_series(
+    *,
+    license: LoanLicense,
+    name: str,
+    code: str,
+    is_active: bool,
+    pawn_loan_prefix: str,
+    release_prefix: str,
+    number_width: int,
+    maximum_number: int,
+    actor=None,
+    request=None,
+) -> LoanSeries:
+    """Create a series and both required document sequences atomically."""
+
+    series = create_series(
+        license=license, name=name, code=code, is_active=is_active
+    )
+    _configure_required_sequences(
+        series,
+        pawn_loan_prefix=pawn_loan_prefix,
+        release_prefix=release_prefix,
+        number_width=number_width,
+        maximum_number=maximum_number,
+        actor=actor,
+        request=request,
+    )
+    return series
+
+
+@transaction.atomic
+def update_configured_series(
+    series: LoanSeries,
+    *,
+    name: str,
+    code: str,
+    is_active: bool,
+    pawn_loan_prefix: str,
+    release_prefix: str,
+    number_width: int,
+    maximum_number: int,
+    actor=None,
+    request=None,
+) -> LoanSeries:
+    """Update series identity, availability, and both sequences atomically."""
+
+    update_series(series, name=name, code=code)
+    set_series_active(series, is_active=is_active)
+    _configure_required_sequences(
+        series,
+        pawn_loan_prefix=pawn_loan_prefix,
+        release_prefix=release_prefix,
+        number_width=number_width,
+        maximum_number=maximum_number,
+        actor=actor,
+        request=request,
+    )
+    return series
+
+
+def _configure_required_sequences(
+    series,
+    *,
+    pawn_loan_prefix,
+    release_prefix,
+    number_width,
+    maximum_number,
+    actor,
+    request,
+):
+    common = {
+        "series": series,
+        "width": number_width,
+        "maximum_number": maximum_number,
+        "actor": actor,
+        "request": request,
+    }
+    configure_sequence(
+        document_kind=LoanDocumentKind.PAWN_LOAN,
+        prefix=pawn_loan_prefix,
+        **common,
+    )
+    configure_sequence(
+        document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE,
+        prefix=release_prefix,
+        **common,
+    )
+
+
 def configure_sequence(
     *,
     series: LoanSeries,

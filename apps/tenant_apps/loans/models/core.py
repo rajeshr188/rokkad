@@ -2002,6 +2002,17 @@ class PawnLoanNotice(models.Model):
         on_delete=models.PROTECT,
         related_name="notice",
     )
+    source_risk_alert = models.ForeignKey(
+        "loans.LoanRiskAlert", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="borrower_notices",
+    )
+    source_risk_event = models.ForeignKey(
+        "loans.LoanRiskEvent", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="borrower_notices",
+    )
+    notification_template_id = models.PositiveBigIntegerField(null=True, blank=True)
+    notification_template_version = models.PositiveIntegerField(null=True, blank=True)
+    notification_template_locale = models.CharField(max_length=10, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -2018,6 +2029,11 @@ class PawnLoanNotice(models.Model):
             models.UniqueConstraint(
                 fields=("loan", "request_key"),
                 name="loans_notice_loan_request_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("source_risk_event", "notice_kind", "channel", "notification_template_version"),
+                condition=Q(source_risk_event__isnull=False),
+                name="loans_risk_notice_intent_uniq",
             ),
         ]
         indexes = [
@@ -2054,6 +2070,15 @@ class PawnLoanNotice(models.Model):
                 errors["source_auction"] = "Auction notice must reference the same loan."
         elif self.notice_kind == PawnLoanNoticeKind.AUCTION_NOTICE.value:
             errors["source_auction"] = "Auction notice requires its source auction."
+        if self.source_risk_alert_id or self.source_risk_event_id:
+            if not self.source_risk_alert_id or not self.source_risk_event_id:
+                errors["source_risk_alert"] = "Risk communication requires both alert and event evidence."
+            elif self.source_risk_alert.loan_id != self.loan_id:
+                errors["source_risk_alert"] = "Risk alert must reference the same loan."
+            elif self.source_risk_alert.source_event_id != self.source_risk_event_id:
+                errors["source_risk_event"] = "Risk event must be the alert source event."
+            elif not self.notification_template_id or not self.notification_template_version:
+                errors["notification_template_id"] = "Risk communication requires template identity and version."
         if errors:
             raise ValidationError(errors)
 

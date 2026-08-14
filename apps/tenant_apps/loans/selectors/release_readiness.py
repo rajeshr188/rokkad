@@ -13,7 +13,11 @@ from apps.tenant_apps.loans.domain import (
     PawnLoanState,
     ValuationMethod,
 )
-from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
+from apps.tenant_apps.loans.models import (
+    CollateralAppraisal,
+    PawnLoan,
+    current_tenant_workspace_id,
+)
 from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
 
 
@@ -96,13 +100,25 @@ def get_pawn_loan_release_readiness(
             "PawnLoan was not found in the active workspace."
         ) from exc
     balance = get_pawn_loan_balance(loan.pk, as_of_date=as_of_date)
+    collateral_items = tuple(loan.collateral_items.all())
+    appraisal_values = {}
+    appraisals = CollateralAppraisal.objects.filter(
+        collateral_item_id__in=[item.pk for item in collateral_items],
+        effective_at__date__lte=as_of_date,
+        status=CollateralAppraisal.Status.APPROVED,
+    ).order_by("collateral_item_id", "-effective_at", "-version")
+    for appraisal in appraisals:
+        appraisal_values.setdefault(
+            appraisal.collateral_item_id, appraisal.appraised_value
+        )
     return calculate_pawn_loan_release_readiness(
         loan,
-        collateral_items=tuple(loan.collateral_items.all()),
+        collateral_items=collateral_items,
         balance=balance,
         policy_snapshot=loan.policy_snapshot,
         selected_item_ids=selected_item_ids,
         as_of_date=as_of_date,
+        appraisal_values=appraisal_values,
     )
 
 
@@ -115,11 +131,15 @@ def calculate_pawn_loan_release_readiness(
     selected_item_ids,
     as_of_date: date,
     rate_resolver=get_latest_commodity_valuation_rate,
+    appraisal_values=None,
 ) -> PawnLoanReleaseReadiness:
     """Pure release quote except for its injected, public-facade rate lookup."""
     selected_ids = tuple(dict.fromkeys(int(value) for value in selected_item_ids))
     selected_set = set(selected_ids)
     items = tuple(collateral_items)
+    appraisal_values = appraisal_values or {
+        item.pk: getattr(item, "approved_appraisal_value", None) for item in items
+    }
     item_ids = {item.pk for item in items}
     blockers = []
     if loan.state != PawnLoanState.ACTIVE.value:
@@ -191,6 +211,7 @@ def calculate_pawn_loan_release_readiness(
             quantum=quantum,
             rate_cache=rate_cache,
             rate_resolver=rate_resolver,
+            appraisal_value=appraisal_values.get(item.pk),
         )
         valuations.append(snapshot)
         blockers.extend(item_blockers)
@@ -292,15 +313,16 @@ def _value_item(
     quantum,
     rate_cache,
     rate_resolver,
+    appraisal_value,
 ):
     blockers = []
     rate = None
     calculated = None
-    needs_calculated = requires_valuation and method in {
+    needs_calculated = method in {
         ValuationMethod.CALCULATED_METAL_VALUE.value,
         ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL.value,
     }
-    if needs_calculated:
+    if requires_valuation:
         if item.metal not in rate_cache:
             rate_cache[item.metal] = rate_resolver(
                 commodity_code=item.metal,
@@ -318,7 +340,7 @@ def _value_item(
                 / Decimal("100"),
                 quantum,
             )
-        else:
+        elif needs_calculated:
             blockers.append(
                 ReleaseReadinessBlocker(
                     f"METAL_RATE_{lookup.status}",
@@ -328,8 +350,8 @@ def _value_item(
             )
 
     appraisal = (
-        _money(Decimal(str(item.latest_appraised_value)), quantum)
-        if item.latest_appraised_value is not None
+        _money(Decimal(str(appraisal_value)), quantum)
+        if appraisal_value is not None
         else None
     )
     if requires_valuation and method in {

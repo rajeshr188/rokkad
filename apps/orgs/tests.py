@@ -1814,6 +1814,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		fake_membership_filter = SimpleNamespace(exists=lambda: True)
 
 		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()), \
+			 patch("apps.orgs.services.control_plane.assert_verified_invitation_identity"), \
 			 patch.object(control_plane.Membership.objects, "filter", return_value=fake_membership_filter), \
 			 patch("apps.orgs.services.control_plane.AuditLog.log") as mock_audit:
 			control_plane.accept_invitation(invitation=invitation, user=user, request=SimpleNamespace())
@@ -1838,6 +1839,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		fake_membership_filter = SimpleNamespace(exists=lambda: False)
 
 		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()), \
+			 patch("apps.orgs.services.control_plane.assert_verified_invitation_identity"), \
 			 patch.object(control_plane.Membership.objects, "filter", return_value=fake_membership_filter), \
 			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity", side_effect=ValidationError("limit reached")), \
 			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create, \

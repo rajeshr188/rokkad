@@ -247,7 +247,7 @@ class Notification(models.Model):
     TODO: Add scheduled_for field for delayed sending
     TODO: Add failed_reason for error tracking
     TODO: Add retry_count for failed delivery attempts
-    TODO: Add external_id for tracking with third-party services (Twilio, etc.)
+    TODO: Add external_id for tracking with third-party delivery services.
     TODO: Add created_by field to track who created the notification
     """
 
@@ -562,14 +562,13 @@ class Notification(models.Model):
 
     def send_sms(self):
         """
-        Send notification via SMS using configured gateway (Twilio, etc.).
+        Send notification via a configured SMS gateway.
 
         TODO: Implement SMS sending logic
         TODO: Update status to Sent on success
         TODO: Handle errors and update failed_reason
         """
         # Example implementation:
-        # from twilio.rest import Client
         # client = Client(account_sid, auth_token)
         # for contact in self.customer.contactno.filter(is_mobile=True):
         #     message = client.messages.create(

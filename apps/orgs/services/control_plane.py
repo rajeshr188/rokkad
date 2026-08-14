@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from allauth.account.models import EmailAddress
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 from django_tenants.utils import get_public_schema_name, remove_www, schema_context
@@ -15,6 +16,24 @@ from apps.orgs.services import role_policy
 
 def _public_schema_context():
     return schema_context(get_public_schema_name())
+
+
+def assert_verified_invitation_identity(*, invitation, user):
+    """Require proof that the accepting user controls the invited email."""
+    invited_email = (invitation.email or "").strip().casefold()
+    user_email = (getattr(user, "email", "") or "").strip().casefold()
+
+    if not invited_email or invited_email != user_email:
+        raise ValidationError("This invitation was sent to a different email address.")
+
+    if not EmailAddress.objects.filter(
+        user=user,
+        email__iexact=invitation.email,
+        verified=True,
+    ).exists():
+        raise ValidationError(
+            "Verify the invited email address before accepting this invitation."
+        )
 
 
 def create_workspace_from_form(*, form, user, request):
@@ -304,6 +323,7 @@ def send_onboarding_team_invitations(
 def accept_invitation(*, invitation, user, request):
     """Accept invitation in public schema and ensure membership exists."""
     with _public_schema_context():
+        assert_verified_invitation_identity(invitation=invitation, user=user)
         existing = Membership.objects.filter(user=user, company=invitation.company).exists()
         if not existing:
             ensure_workspace_has_member_capacity(

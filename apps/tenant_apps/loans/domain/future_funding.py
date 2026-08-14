@@ -1,9 +1,4 @@
-"""Database-free FundingLoan vocabulary and collateral-pledge policy.
-
-The policy objects in this module are an architecture probe. They must not be
-used to expose FundingLoan persistence, services, routes, or UI before the
-complete vertical slice and its architecture decision are approved.
-"""
+"""FundingLoan vocabulary and collateral-pledge policy."""
 
 from dataclasses import dataclass
 from datetime import date
@@ -11,9 +6,6 @@ from decimal import Decimal, InvalidOperation
 from enum import Enum
 
 from .vocabulary import CollateralCustodyState, PawnLoanState
-
-
-FUNDING_LOAN_RUNTIME_SUPPORTED = False
 
 
 class FundingLoanState(str, Enum):

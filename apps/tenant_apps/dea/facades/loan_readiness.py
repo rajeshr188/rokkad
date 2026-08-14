@@ -3,7 +3,10 @@
 from dataclasses import dataclass
 from datetime import date
 
+from django.core.exceptions import ValidationError
+
 from apps.tenant_apps.dea.models import AccountingPeriod, Ledger
+from apps.tenant_apps.dea.posting.resolver import get_ledger_id_by_key
 from apps.tenant_apps.dea.services.account_resolution import resolve_party_account
 
 
@@ -54,9 +57,7 @@ def get_loan_posting_prerequisites(
         ),
         interest_income_ledger=Ledger.objects.filter(name="INTEREST_INCOME").first(),
         fee_income_ledger=(
-            Ledger.objects.filter(name="DOCUMENT_CHARGE_INCOME").first()
-            if requires_fee_income
-            else True
+            _ledger_by_key("DOCUMENT_CHARGE_INCOME") if requires_fee_income else True
         ),
         principal_control_ledger=Ledger.objects.filter(
             name="LOAN_PRINCIPAL_CTRL"
@@ -69,3 +70,12 @@ def get_loan_posting_prerequisites(
         ).first(),
         unearned_interest_ledger=Ledger.objects.filter(name="Unearned Revenue").first(),
     )
+
+
+def _ledger_by_key(key: str):
+    """Resolve readiness through the same canonical key aliases as posting."""
+    try:
+        ledger_id = get_ledger_id_by_key(key)
+    except ValidationError:
+        return None
+    return Ledger.objects.filter(pk=ledger_id).first()

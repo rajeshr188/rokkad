@@ -235,7 +235,8 @@ class PawnLoanReleaseReadinessTests(SimpleTestCase):
             metal="GOLD",
             net_weight=Decimal(net_weight),
             purity_percentage=Decimal(purity),
-            latest_appraised_value=(Decimal(appraisal) if appraisal is not None else None),
+            latest_appraised_value=Decimal("999999"),
+            approved_appraisal_value=(Decimal(appraisal) if appraisal is not None else None),
             custody_state=custody.value,
         )
 

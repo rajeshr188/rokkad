@@ -26,6 +26,10 @@ from apps.tenant_apps.loans.services.license_series import assert_series_can_iss
 from apps.tenant_apps.loans.services.number_allocation import (
     allocate_pawn_loan_number,
 )
+from apps.tenant_apps.loans.services.collateral_media import (
+    append_collateral_photo,
+    validate_collateral_photo,
+)
 from apps.tenant_apps.loans.services.pawn_economics import (
     resolve_pawn_draft_economics,
 )
@@ -70,6 +74,85 @@ class UpdatePawnDraftCommand:
     loan_date: date
     tenure_months: int
     collateral: tuple[CollateralDraftInput, ...]
+
+
+@dataclass(frozen=True)
+class DraftCollateralPhotoInput:
+    collateral_item_id: int | None
+    upload: object
+
+
+def create_pawn_draft_with_photos(
+    command: CreatePawnDraftCommand,
+    *,
+    photos: tuple[DraftCollateralPhotoInput, ...] = (),
+    actor=None,
+) -> PawnLoan:
+    return _save_draft_with_photos(
+        lambda: create_pawn_draft(command, actor=actor),
+        photos=photos,
+        actor=actor,
+    )
+
+
+def update_pawn_draft_with_photos(
+    loan_id: int,
+    command: UpdatePawnDraftCommand,
+    *,
+    photos: tuple[DraftCollateralPhotoInput, ...] = (),
+    actor=None,
+) -> PawnLoan:
+    return _save_draft_with_photos(
+        lambda: update_pawn_draft(loan_id, command, actor=actor),
+        photos=photos,
+        actor=actor,
+    )
+
+
+def _save_draft_with_photos(save_draft, *, photos, actor):
+    photos = tuple(photo for photo in photos if photo.upload)
+    for photo in photos:
+        validate_collateral_photo(photo.upload)
+    stored_files = []
+    try:
+        with transaction.atomic():
+            loan = save_draft()
+            supplied_ids = {
+                photo.collateral_item_id
+                for photo in photos
+                if photo.collateral_item_id is not None
+            }
+            new_items = iter(
+                loan.collateral_items.exclude(pk__in=supplied_ids).order_by("pk")
+            )
+            for photo in photos:
+                if photo.collateral_item_id is None:
+                    try:
+                        item = next(new_items)
+                    except StopIteration as exc:
+                        raise PawnDraftError(
+                            "A collateral photograph could not be matched to its item."
+                        ) from exc
+                else:
+                    try:
+                        item = loan.collateral_items.get(pk=photo.collateral_item_id)
+                    except PawnCollateralItem.DoesNotExist as exc:
+                        raise PawnDraftError(
+                            "Collateral photograph identity does not belong to this draft."
+                        ) from exc
+                persisted = append_collateral_photo(
+                    item.pk,
+                    upload=photo.upload,
+                    actor=actor,
+                    workflow_source="DRAFT",
+                )
+                stored_files.append((persisted.file.storage, persisted.file.name))
+            return loan
+    except Exception:
+        for storage, name in stored_files:
+            if name:
+                storage.delete(name)
+        raise
 
 
 @transaction.atomic

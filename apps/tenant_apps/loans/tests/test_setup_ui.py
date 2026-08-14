@@ -18,7 +18,7 @@ from django_tenants.test.client import TenantClient
 
 from apps.tenant_apps.loans.access import assert_loans_setup_access
 from apps.tenant_apps.loans.domain import CollateralCustodyState, CollateralMetal, LoanDocumentKind
-from apps.tenant_apps.loans.domain.future_funding import FUNDING_LOAN_RUNTIME_SUPPORTED, FundingLoanState
+from apps.tenant_apps.loans.domain.future_funding import FundingLoanState
 from apps.tenant_apps.loans.models import (
     FundingLoan,
     FundingLoanCancellation,
@@ -137,6 +137,81 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(response.status_code, 302)
         version.refresh_from_db()
         self.assertEqual(version.status, "RETIRED")
+
+    @patch("apps.tenant_apps.loans.views.refresh_loan_risk_snapshot")
+    def test_owner_can_refresh_one_risk_snapshot_with_htmx_redirect(self, refresh):
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-RISK-00001", state="ACTIVE")
+
+        response = self.client.post(
+            reverse("loans:pawn_risk_refresh_one", args=[loan.pk]),
+            {"as_of": "2026-08-13"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response["HX-Redirect"], reverse("loans:pawn_risk_portfolio"))
+        refresh.assert_called_once_with(loan.pk, as_of_date=date(2026, 8, 13))
+
+    @patch("apps.tenant_apps.loans.views.reassess_pawn_loans_batch")
+    def test_owner_can_refresh_bounded_due_risk_batch(self, reassess):
+        reassess.return_value = {"selected": 2, "current": 2, "errors": []}
+
+        response = self.tenant_post(
+            reverse("loans:pawn_risk_refresh_batch"),
+            {"as_of": "2026-08-13"},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("loans:pawn_risk_portfolio"),
+            fetch_redirect_response=False,
+        )
+        reassess.assert_called_once_with(
+            workspace_id=self.tenant.pk,
+            as_of_date=date(2026, 8, 13),
+            batch_size=50,
+        )
+
+    @patch("apps.tenant_apps.loans.views.reassess_pawn_loans_batch")
+    def test_owner_batch_risk_refresh_uses_htmx_redirect_response(self, reassess):
+        reassess.return_value = {"selected": 1, "current": 1, "errors": []}
+
+        response = self.client.post(
+            reverse("loans:pawn_risk_refresh_batch"),
+            {"as_of": "2026-08-13"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(
+            response["HX-Redirect"],
+            reverse("loans:pawn_risk_portfolio"),
+        )
+
+    @patch("apps.tenant_apps.loans.views.reassess_pawn_loans_batch")
+    def test_member_cannot_refresh_risk_monitoring(self, reassess):
+        User = get_user_model()
+        member = User.objects.create_user(
+            username=f"risk-member-{uuid.uuid4().hex[:8]}",
+            email=f"risk-member-{uuid.uuid4().hex[:8]}@example.com",
+        )
+        member_role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.create(
+            user=member,
+            company=self.tenant,
+            role=member_role,
+        )
+        member_client = TenantClient(self.tenant)
+        member_client.force_login(member)
+
+        response = member_client.post(
+            reverse("loans:pawn_risk_refresh_batch"),
+            {"as_of": "2026-08-13"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        reassess.assert_not_called()
 
     def test_document_issue_list_filters_and_paginates_immutable_evidence(self):
         def create_issue(sequence, **overrides):
@@ -384,7 +459,7 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertContains(detail, "PL-A-00001")
         self.assertContains(detail, "RL-A-00001")
         self.assertContains(detail, "Ready")
-        self.assertContains(detail, "New Loans Setup")
+        self.assertContains(detail, "Loans Setup")
 
     def test_detail_preview_does_not_consume_a_number(self):
         license, series = self._configured_setup()
@@ -623,6 +698,12 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertContains(response, reverse("loans:pawn_outbox_retry", args=[outbox.pk]))
         self.assertContains(response, reverse("loans:pawn_operations_runbook"))
 
+        runbook = self.tenant_get(reverse("loans:pawn_operations_runbook"))
+        self.assertContains(runbook, "Scheduled risk reassessment")
+        self.assertContains(runbook, "tenant_command reassess_pawn_loans")
+        self.assertContains(runbook, "selected=0")
+        self.assertContains(runbook, "non-zero process exit")
+
     def test_notice_and_delivery_diagnostics_filter_and_paginate(self):
         license, series = self._configured_setup()
         loan = self._loan(license, series, "PL-UP2-00001")
@@ -775,6 +856,10 @@ class LoansSetupUiTests(TenantTestCase):
         )
         self.assertEqual(
             self.tenant_get(reverse("loans:pawn_operations_runbook")).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.tenant_get(reverse("loans:pawn_risk_portfolio")).status_code,
             403,
         )
         self.assertEqual(
@@ -965,7 +1050,6 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(funding_loan.lender, active_lender)
         self.assertEqual(funding_loan.workspace, self.tenant)
         self.assertEqual(funding_loan.created_by, self.owner)
-        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
 
     def test_owner_can_complete_and_cancel_funding_draft_without_activation(self):
         lender = Party.objects.create(
@@ -1049,7 +1133,6 @@ class LoansSetupUiTests(TenantTestCase):
         cancellation = FundingLoanCancellation.objects.get(funding_loan=funding_loan)
         self.assertEqual(cancellation.reason, "Lender withdrew the proposal")
         self.assertEqual(cancellation.actor, self.owner)
-        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
 
     def test_owner_can_activate_saved_funding_draft_with_exact_confirmation(self):
         lender = Party.objects.create(
@@ -1301,7 +1384,6 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertNotContains(closed_detail, "Begin settlement review")
         self.assertNotContains(closed_detail, "Return selected collateral")
         self.assertNotContains(closed_detail, "Close FundingLoan")
-        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
 
     def test_owner_can_open_read_only_funding_console_and_detail(self):
         summary = type(
@@ -1345,10 +1427,10 @@ class LoansSetupUiTests(TenantTestCase):
         )()
 
         with patch(
-            "apps.tenant_apps.loans.views.get_funding_loan_summaries",
+            "apps.tenant_apps.loans.web.funding.get_funding_loan_summaries",
             return_value=(summary,),
         ), patch(
-            "apps.tenant_apps.loans.views.get_funding_loan_integrity_findings",
+            "apps.tenant_apps.loans.web.funding.get_funding_loan_integrity_findings",
             return_value=(finding,),
         ):
             response = self.tenant_get(reverse("loans:funding_loan_read_console"))
@@ -1360,7 +1442,7 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertContains(response, "Controlled MVP preview")
 
         with patch(
-            "apps.tenant_apps.loans.views.get_funding_loan_detail",
+            "apps.tenant_apps.loans.web.funding.get_funding_loan_detail",
             return_value=detail,
         ):
             response = self.tenant_get(
@@ -1370,7 +1452,6 @@ class LoansSetupUiTests(TenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Funding lender")
         self.assertContains(response, "Operational balance")
-        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
 
     def test_funding_read_detail_returns_404_for_unknown_workspace_loan(self):
         response = self.tenant_get(

@@ -96,19 +96,29 @@ def create_pawn_notice_job(notice) -> PawnNoticeJobReference:
         channel=notice.channel,
         defaults={"priority": 100, "is_active": True},
     )
-    template, _ = NotificationTemplate.objects.get_or_create(
-        event_type=event_type,
-        channel=notice.channel,
-        locale="en",
-        version=1,
-        defaults={
-            "renderer_type": NotificationTemplate.RendererType.DJANGO,
-            "name": name,
-            "subject_template": name,
-            "body_template": body,
-            "is_active": True,
-        },
-    )
+    if notice.notification_template_id:
+        template = NotificationTemplate.objects.get(
+            pk=notice.notification_template_id,
+            event_type=event_type,
+            channel=notice.channel,
+            locale=notice.notification_template_locale,
+            version=notice.notification_template_version,
+            is_active=True,
+        )
+    else:
+        template, _ = NotificationTemplate.objects.get_or_create(
+            event_type=event_type,
+            channel=notice.channel,
+            locale="en",
+            version=1,
+            defaults={
+                "renderer_type": NotificationTemplate.RendererType.DJANGO,
+                "name": name,
+                "subject_template": name,
+                "body_template": body,
+                "is_active": True,
+            },
+        )
     recipient = NotificationRecipient.objects.create(
         party=notice.loan.borrower,
         name_snapshot=notice.recipient_name,

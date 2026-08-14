@@ -76,6 +76,55 @@ NO-GO until backup, rollback, support, monitoring, permissions, and a real pilot
 workflow have each been performed and explicitly acknowledged with the matching
 `--ack-...` option. Retain `--format=json` output as release evidence.
 
+## Risk borrower-email pilot
+
+Configure the email backend through deployment secrets/settings; never store
+SMTP or API credentials in Loans or a workspace row. Console, dummy, in-memory,
+and file backends are development-only and deliberately fail readiness.
+
+Before an operator sends a real risk notice, run the tenant-scoped gate:
+
+```powershell
+.\.venv314\Scripts\python.exe manage.py tenant_command check_pawn_risk_email_pilot --schema=TENANT_SCHEMA --fail-on-blocker
+```
+
+Use `--format=json` when retaining deployment evidence. Then perform one
+Owner/Admin-approved notice from a current DPD or maturity alert using a Party
+and inbox controlled for the pilot. Confirm the exact preview, recipient,
+consent evidence, template version, and due amounts before submission.
+
+Acceptance requires all of the following:
+
+1. Operations Console reports a real backend/sender and zero evidence issues.
+2. Customer Notices shows one intent and one Notify job for the risk event.
+3. The delivered message exactly matches the retained rendered artifact and
+   confirmed preview; independently verify arrival in the recipient inbox.
+4. Repeating confirmation does not create another intent or job.
+5. For the failure exercise, use a deliberately invalid pilot recipient or
+   controlled provider rejection, confirm `FAILED`, correct the cause, and use
+   **Retry** on the same notice. Do not create a replacement notice.
+6. Sending or delivery does not resolve the risk alert. Only refreshed loan
+   risk state can resolve it.
+
+Run the gate again after the success and failure/retry exercises and retain its
+JSON output with the operator/date/provider evidence. Django email submission
+proves backend handoff only; inbox arrival must be recorded by the pilot
+operator because the current email adapter has no delivery/bounce webhook.
+
+For the WhatsApp pilot, first pass `check_whatsapp_cloud_readiness`, then send
+one manually approved DPD or maturity notice to a controlled consented number.
+Open **Operations Console -> WhatsApp pilot** and confirm the provider ID and an
+authenticated `delivered` or `read` receipt. A replay must increment duplicate
+evidence without changing the job twice; a mismatched provider ID must remain
+an unknown receipt and block acceptance. Retain the final gate output:
+
+```powershell
+.\.venv314\Scripts\python.exe manage.py tenant_command check_pawn_risk_whatsapp_pilot --schema=TENANT_SCHEMA --fail-on-blocker --format=json
+```
+
+Do not accept on API submission or `sent` alone. Correct a failure and retry the
+same notice/job rather than creating a replacement.
+
 ## Failed outbox delivery
 
 1. Open the Operations Console and the linked loan.
@@ -122,6 +171,46 @@ DEA account, and active `BORROWER / BORROWER_LOAN_RECEIVABLE` mapping. This is
 setup only and creates no voucher or journal. Re-run the Operations Console
 after setup. An approved/active loan is ready only when its current-date DEA
 prerequisites pass; accrual-policy loans also require interest receivable setup.
+
+## Scheduled risk reassessment
+
+Run risk reassessment once per business day after applicable valuation rates and
+the prior accounting work are available. Invoke the command through
+`tenant_command`, because PawnLoan data lives in a tenant schema:
+
+```powershell
+.\.venv314\Scripts\python.exe manage.py tenant_command reassess_pawn_loans --schema=TENANT_SCHEMA --workspace-id=WORKSPACE_ID --batch-size=100
+```
+
+The schema and workspace ID must refer to the same workspace. The command fails
+closed if they do not match. `--batch-size` accepts 1 through 1,000. Add an
+explicit `--as-of=YYYY-MM-DD` for controlled reruns or end-of-day processing;
+otherwise the application server's current date is used.
+
+Each invocation prints:
+
+- `selected`: due active loans claimed by this worker;
+- `current`: snapshots refreshed successfully;
+- `errors`: assessments persisted as Error and requiring review.
+
+Run additional invocations until `selected=0` when the active portfolio exceeds
+the batch size. Concurrent workers are supported through `SKIP LOCKED`, but a
+single daily worker is the simplest default until measured volume requires more.
+The command exits non-zero if any selected loan fails, so the scheduler must
+alert on process exit status. Successful rows are not rolled back by another
+loan's calculation failure. Error snapshots retain the diagnostic and are
+retried by the next run.
+
+After a run, open the PawnLoan Operations Console and confirm:
+
+1. **Unassessed active loans** is zero.
+2. **Last risk assessment** is recent for the intended business date.
+3. The Risk portfolio has no unexplained Error or Stale rows.
+
+Resolve missing monitoring policy, approved appraisal, valuation rate, schedule,
+or accounting evidence at its owning setup/workflow boundary. Never edit a risk
+snapshot directly. The in-page **Refresh up to 50 due assessments** action is a
+controlled operator recovery tool, not a substitute for scheduled reassessment.
 
 ## Reversal or custody blocker
 

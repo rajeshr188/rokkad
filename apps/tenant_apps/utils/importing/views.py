@@ -21,7 +21,7 @@ from apps.orgs.models import Membership
 from apps.orgs.permissions import is_platform_admin
 from apps.orgs.tenant_context import resolve_request_workspace
 
-from .forms import ExportForm, ImportForm
+from .forms import ExportForm, ImportForm, tenant_app_configs
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +69,9 @@ def _valid_export_formats():
 
 
 def _find_tenant_model(model_name):
-    for app_path in settings.TENANT_APPS:
-        app_label = app_path.split(".")[-1]
+    for app_config in tenant_app_configs():
         try:
-            return apps.get_model(app_label, model_name), app_path
+            return apps.get_model(app_config.label, model_name), app_config.name
         except LookupError:
             continue
     return None, None

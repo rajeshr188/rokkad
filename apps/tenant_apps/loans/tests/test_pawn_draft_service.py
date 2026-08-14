@@ -31,11 +31,13 @@ from apps.tenant_apps.loans.models import (
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
     CreatePawnDraftCommand,
+    DraftCollateralPhotoInput,
     PawnDraftError,
     UpdatePawnDraftCommand,
     approve_pawn_loan,
     append_collateral_photo,
     create_pawn_draft,
+    create_pawn_draft_with_photos,
     create_pawn_loan_economic_policy,
     create_pawn_metal_interest_rate_policy,
     disburse_pawn_loan,
@@ -46,6 +48,7 @@ from apps.tenant_apps.loans.services import (
     release_pawn_loan_in_full,
     reverse_pawn_loan_event,
     update_pawn_draft,
+    update_pawn_draft_with_photos,
 )
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.rates.models import Rate, RateSource
@@ -162,6 +165,88 @@ class PawnDraftServiceTests(TenantTestCase):
         self.assertEqual(event.actor, self.actor)
         self.assertEqual(event.metadata["collateral_count"], 1)
 
+    def test_create_with_photos_maps_media_to_created_collateral(self):
+        upload = SimpleUploadedFile(
+            "gold-bangles.jpg",
+            b"\xff\xd8\xff\xe0draft-evidence",
+            content_type="image/jpeg",
+        )
+
+        loan = create_pawn_draft_with_photos(
+            self.command(),
+            photos=(DraftCollateralPhotoInput(None, upload),),
+            actor=self.actor,
+        )
+
+        photo = loan.collateral_items.get().photos.get()
+        self.assertEqual(photo.original_filename, "gold-bangles.jpg")
+        self.assertEqual(photo.workflow_source, "DRAFT")
+
+    def test_invalid_photo_fails_before_number_allocation(self):
+        upload = SimpleUploadedFile(
+            "not-an-image.txt", b"invalid", content_type="text/plain"
+        )
+
+        with self.assertRaisesRegex(ValueError, "JPEG or PNG"):
+            create_pawn_draft_with_photos(
+                self.command(),
+                photos=(DraftCollateralPhotoInput(None, upload),),
+                actor=self.actor,
+            )
+
+        self.assertFalse(PawnLoan.objects.exists())
+        self.sequence.refresh_from_db()
+        self.assertEqual(self.sequence.next_number, 1)
+
+    def test_later_photo_failure_rolls_back_draft_number_and_written_file(self):
+        command = self.command(
+            collateral=(
+                self.collateral(description="Gold bangles"),
+                self.collateral(description="Gold ring"),
+            )
+        )
+        written = []
+
+        def persist_then_fail(item_id, **kwargs):
+            if written:
+                raise RuntimeError("second photo failed")
+            photo = append_collateral_photo(item_id, **kwargs)
+            written.append((photo.file.storage, photo.file.name))
+            return photo
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_drafts.append_collateral_photo",
+            side_effect=persist_then_fail,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "second photo failed"):
+                create_pawn_draft_with_photos(
+                    command,
+                    photos=(
+                        DraftCollateralPhotoInput(
+                            None,
+                            SimpleUploadedFile(
+                                "first.jpg",
+                                b"\xff\xd8\xfffirst",
+                                content_type="image/jpeg",
+                            ),
+                        ),
+                        DraftCollateralPhotoInput(
+                            None,
+                            SimpleUploadedFile(
+                                "second.jpg",
+                                b"\xff\xd8\xffsecond",
+                                content_type="image/jpeg",
+                            ),
+                        ),
+                    ),
+                    actor=self.actor,
+                )
+
+        self.assertFalse(PawnLoan.objects.exists())
+        self.sequence.refresh_from_db()
+        self.assertEqual(self.sequence.next_number, 1)
+        self.assertFalse(written[0][0].exists(written[0][1]))
+
     def test_invalid_party_setup_and_economics_fail_before_number_allocation(self):
         inactive = Party.objects.create(
             display_name="Inactive Borrower",
@@ -272,6 +357,47 @@ class PawnDraftServiceTests(TenantTestCase):
         self.assertEqual(events[-1].metadata["before"]["collateral"][0]["description"], "Gold bangles")
         self.assertEqual(events[-1].metadata["after"]["collateral"][0]["description"], "Gold chain")
         self.assertEqual(updated.loan_number, "PL-A-00001")
+
+    def test_update_with_photos_maps_existing_and_new_collateral(self):
+        loan = create_pawn_draft(self.command(), actor=self.actor)
+        existing = loan.collateral_items.get()
+        command = UpdatePawnDraftCommand(
+            borrower_id=self.borrower.pk,
+            principal_amount=Decimal("60000.00"),
+            monthly_interest_rate=Decimal("2.000000"),
+            loan_date=loan.loan_date,
+            tenure_months=loan.tenure_months,
+            collateral=(
+                self.collateral(collateral_item_id=existing.pk),
+                self.collateral(description="Gold ring"),
+            ),
+        )
+
+        update_pawn_draft_with_photos(
+            loan.pk,
+            command,
+            photos=(
+                DraftCollateralPhotoInput(
+                    existing.pk,
+                    SimpleUploadedFile(
+                        "existing.jpg", b"\xff\xd8\xffexisting", content_type="image/jpeg"
+                    ),
+                ),
+                DraftCollateralPhotoInput(
+                    None,
+                    SimpleUploadedFile(
+                        "new.jpg", b"\xff\xd8\xffnew", content_type="image/jpeg"
+                    ),
+                ),
+            ),
+            actor=self.actor,
+        )
+
+        self.assertEqual(existing.photos.get().original_filename, "existing.jpg")
+        self.assertEqual(
+            loan.collateral_items.get(description="Gold ring").photos.get().original_filename,
+            "new.jpg",
+        )
 
     def test_invalid_update_preserves_existing_draft_and_collateral(self):
         loan = create_pawn_draft(self.command(), actor=self.actor)

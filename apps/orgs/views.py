@@ -359,16 +359,8 @@ def workspace_slug_party_merge(request, workspace_slug, pk):
 
 @login_required
 def workspace_slug_loans(request, workspace_slug):
-    workspace = _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.loans.facade import is_new_loans_enabled
-
-    if is_new_loans_enabled(workspace):
-        from apps.tenant_apps.loans.views import pawn_loan_list
-
-        return pawn_loan_list(request)
-    from apps.tenant_apps.girvi.views.dashboard import girvi_dashboard
-
-    return girvi_dashboard(request)
+    _get_workspace_from_slug(workspace_slug)
+    return render(request, "company/loan_application_choice.html")
 
 
 @login_required
@@ -1464,7 +1456,7 @@ def team_accept_invitation(request, key):
         messages.error(request, "Invitation not found.")
         return redirect("team_invitations")
 
-    if invitation.email.lower() != request.user.email.lower():
+    if invitation.email.casefold() != request.user.email.casefold():
         messages.error(request, "This invitation was sent to a different email address.")
         return redirect("team_invitations")
 
@@ -2009,7 +2001,7 @@ def team_invitations(request):
 
         try:
             invitation = CompanyInvitation.objects.get(
-                id=invitation_id, email=user.email
+                id=invitation_id, email__iexact=user.email
             )
 
             current_state = invitation.lifecycle_state()
@@ -2028,11 +2020,15 @@ def team_invitations(request):
                 return redirect("team_invitations")
 
             if action == "accept":
-                control_plane.accept_invitation(
-                    invitation=invitation,
-                    user=user,
-                    request=request,
-                )
+                try:
+                    control_plane.accept_invitation(
+                        invitation=invitation,
+                        user=user,
+                        request=request,
+                    )
+                except ValidationError as exc:
+                    messages.error(request, str(exc))
+                    return redirect("team_invitations")
 
                 # Set as active workspace
                 user.profile.workspace = invitation.company

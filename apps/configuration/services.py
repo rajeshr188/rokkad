@@ -37,7 +37,6 @@ class PreferenceService:
             "accounting__rounding_policy",
             "loan__notice_timing_days",
             "loan__auction_timing_days",
-            "loan__new_module_enabled",
             "accounting__successor_enabled",
             "accounting__workflow_mode",
             "accounting__integration_mode",

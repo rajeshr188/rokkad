@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-08-09
+updated: 2026-08-13
 tags: [loans, policy, interest, accounting, disbursal]
 related:
   - 2026-07-15-loans-rewrite-domain-and-cutover-architecture.md
@@ -33,6 +33,10 @@ configure all business rules that later controlled accrual and accounting.
    evidence. Later configuration cannot change an approved or active loan.
 6. Workspace defaults apply unless an effective license-specific policy exists.
 7. The current rounding contract remains currency rounding per accrual period.
+8. The setup screen's economic policy plus Gold and Silver rate inputs are one
+   operator command and one transaction. All three effective-dated rows commit
+   together or none do. Their separate models and independent resolution rules
+   remain unchanged after creation.
 
 ## Consequences
 
@@ -41,6 +45,7 @@ configure all business rules that later controlled accrual and accounting.
   in the source event and policy snapshot.
 - New configurations are appended by effective date; existing approval and
   disbursal evidence is not rewritten.
+- A failed metal-rate validation cannot leave a partially usable economic
+  configuration behind.
 - Migration `loans.0034` adds the calculation-policy fields and database value
   constraints without changing existing policy defaults.
-

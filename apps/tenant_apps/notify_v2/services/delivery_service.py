@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 from dataclasses import dataclass, field
 
 import requests
@@ -8,13 +10,11 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template import Context, Template
 from django.utils import timezone
+from django.db import connection, transaction
+from django.db.models import F
 
-from apps.tenant_apps.notify_v2.models import NotificationArtifact, NotificationAttemptLog, NotificationJob
-
-try:
-	from twilio.rest import Client
-except Exception:  # pragma: no cover - handled at runtime when integration is enabled
-	Client = None
+from apps.tenant_apps.notify_v2.models import NotificationArtifact, NotificationAttemptLog, NotificationJob, WhatsAppCloudWebhookReceipt
+from apps.tenant_apps.notify_v2.services.whatsapp_integration import get_whatsapp_cloud_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -35,33 +35,13 @@ def _normalize_phone(value: str) -> str:
 	return f"+{digits}" if digits else ""
 
 
-def _as_whatsapp_address(value: str) -> str:
-	normalized = value.strip()
-	if normalized.startswith("whatsapp:"):
-		return normalized
-	return f"whatsapp:{normalized}"
-
-
-def _twilio_settings() -> dict:
-	return {
-		"sid": (getattr(settings, "TWILIO_ACCOUNT_SID", "") or "").strip(),
-		"token": (getattr(settings, "TWILIO_AUTH_TOKEN", "") or "").strip(),
-		"from_number": (getattr(settings, "TWILIO_FROM_NUMBER", "") or "").strip(),
-		"whatsapp_from": (getattr(settings, "TWILIO_WHATSAPP_FROM_NUMBER", "") or "").strip(),
-		"stub_fallback": bool(getattr(settings, "NOTIFY_V2_TWILIO_STUB_FALLBACK", True)),
-	}
-
-
-def _whatsapp_provider() -> str:
-	provider = (getattr(settings, "NOTIFY_V2_WHATSAPP_PROVIDER", "twilio") or "twilio").strip().lower()
-	return provider if provider in {"twilio", "cloud"} else "twilio"
-
-
 def _whatsapp_cloud_settings() -> dict:
+	workspace_id = getattr(getattr(connection, "tenant", None), "pk", None)
+	credentials = get_whatsapp_cloud_credentials(workspace_id) if workspace_id else None
 	return {
-		"api_version": (getattr(settings, "WHATSAPP_CLOUD_API_VERSION", "v20.0") or "v20.0").strip(),
-		"phone_number_id": (getattr(settings, "WHATSAPP_CLOUD_PHONE_NUMBER_ID", "") or "").strip(),
-		"access_token": (getattr(settings, "WHATSAPP_CLOUD_ACCESS_TOKEN", "") or "").strip(),
+		"api_version": credentials.api_version if credentials else "",
+		"phone_number_id": credentials.phone_number_id if credentials else "",
+		"access_token": credentials.access_token if credentials else "",
 	}
 
 
@@ -75,7 +55,7 @@ def _render_structured_value(value, context: dict):
 	return value
 
 
-def _build_whatsapp_cloud_payload(*, job: NotificationJob, recipient_phone: str, body: str) -> tuple[dict, str]:
+def build_whatsapp_cloud_payload(*, job: NotificationJob, recipient_phone: str, body: str) -> tuple[dict, str]:
 	normalized_to = _normalize_phone(recipient_phone)
 	if not normalized_to:
 		raise RuntimeError("Recipient phone is invalid.")
@@ -99,6 +79,8 @@ def _build_whatsapp_cloud_payload(*, job: NotificationJob, recipient_phone: str,
 		template_name = (rendered_template_config.get("name") or "").strip()
 	if not template_name:
 		template_name = (getattr(template, "layout_key", "") or "").strip()
+	if not template_name:
+		raise RuntimeError("WhatsApp Cloud delivery requires an approved provider template name.")
 
 	payload = {
 		"messaging_product": "whatsapp",
@@ -121,21 +103,17 @@ def _build_whatsapp_cloud_payload(*, job: NotificationJob, recipient_phone: str,
 		})
 		return payload, "template"
 
-	payload.update({
-		"type": "text",
-		"text": {"preview_url": False, "body": body},
-	})
-	return payload, "text"
+	raise RuntimeError("WhatsApp Cloud delivery requires template-mode dispatch.")
 
 
 def _send_via_whatsapp_cloud(*, job: NotificationJob, recipient_phone: str, body: str) -> tuple[str, str]:
 	config = _whatsapp_cloud_settings()
 	if not config["phone_number_id"] or not config["access_token"]:
 		raise RuntimeError(
-			"WhatsApp Cloud API is not configured (WHATSAPP_CLOUD_PHONE_NUMBER_ID / WHATSAPP_CLOUD_ACCESS_TOKEN)."
+			"WhatsApp Cloud API is not enabled for this workspace."
 		)
 
-	request_payload, message_mode = _build_whatsapp_cloud_payload(job=job, recipient_phone=recipient_phone, body=body)
+	request_payload, message_mode = build_whatsapp_cloud_payload(job=job, recipient_phone=recipient_phone, body=body)
 	url = f"https://graph.facebook.com/{config['api_version']}/{config['phone_number_id']}/messages"
 	response = requests.post(
 		url,
@@ -159,45 +137,6 @@ def _send_via_whatsapp_cloud(*, job: NotificationJob, recipient_phone: str, body
 	messages = payload.get("messages") or []
 	message_id = messages[0].get("id") if messages and isinstance(messages[0], dict) else ""
 	return str(message_id or ""), message_mode
-
-
-def _get_twilio_client():
-	if Client is None:
-		raise RuntimeError("Twilio SDK is not installed. Add the 'twilio' package to enable SMS/WhatsApp delivery.")
-
-	config = _twilio_settings()
-	if not config["sid"] or not config["token"]:
-		raise RuntimeError("Twilio credentials are missing (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN).")
-
-	return Client(config["sid"], config["token"])
-
-
-def _send_via_twilio(*, channel: str, recipient_phone: str, body: str) -> str:
-	config = _twilio_settings()
-	from_number = config["from_number"]
-	if not from_number:
-		raise RuntimeError("TWILIO_FROM_NUMBER is not configured.")
-
-	normalized_to = _normalize_phone(recipient_phone)
-	if not normalized_to:
-		raise RuntimeError("Recipient phone is invalid.")
-
-	client = _get_twilio_client()
-	if channel == NotificationJob.Channel.WHATSAPP:
-		whatsapp_from = config["whatsapp_from"] or from_number
-		message = client.messages.create(
-			body=body,
-			from_=_as_whatsapp_address(whatsapp_from),
-			to=_as_whatsapp_address(normalized_to),
-		)
-	else:
-		message = client.messages.create(
-			body=body,
-			from_=from_number,
-			to=normalized_to,
-		)
-
-	return str(getattr(message, "sid", "") or "")
 
 
 @dataclass(slots=True)
@@ -332,12 +271,14 @@ def _record_webhook_status(job: NotificationJob, *, provider: str, external_stat
 	return job
 
 
-def process_whatsapp_cloud_webhook(payload: dict) -> dict:
+@transaction.atomic
+def process_whatsapp_cloud_webhook(payload: dict, *, phone_number_id: str, signature_digest: str) -> dict:
 	summary = {
 		"received_statuses": 0,
 		"matched_jobs": 0,
 		"failed_jobs": 0,
 		"unknown_message_ids": [],
+		"duplicate_statuses": 0,
 	}
 	if not isinstance(payload, dict):
 		return summary
@@ -350,7 +291,38 @@ def process_whatsapp_cloud_webhook(payload: dict) -> dict:
 				message_id = ((status_event or {}).get("id") or "").strip()
 				if not message_id:
 					continue
-				job = NotificationJob.objects.filter(provider_message_id=message_id).first()
+				canonical = json.dumps(
+					{"phone_number_id": phone_number_id, "status": status_event},
+					sort_keys=True,
+					separators=(",", ":"),
+					default=str,
+				).encode()
+				payload_hash = hashlib.sha256(canonical).hexdigest()
+				receipt, created = WhatsAppCloudWebhookReceipt.objects.get_or_create(
+					event_key=payload_hash,
+					defaults={
+						"payload_hash": payload_hash,
+						"tenant_schema": connection.schema_name,
+						"phone_number_id": phone_number_id,
+						"provider_message_id": message_id,
+						"external_status": (status_event.get("status") or "unknown").strip().lower(),
+						"provider_timestamp": str(status_event.get("timestamp") or ""),
+						"signature_digest": signature_digest,
+						"payload": status_event,
+						"processing_status": WhatsAppCloudWebhookReceipt.ProcessingStatus.UNKNOWN_JOB,
+					},
+				)
+				if not created:
+					WhatsAppCloudWebhookReceipt.objects.filter(pk=receipt.pk).update(
+						duplicate_count=F("duplicate_count") + 1,
+						last_received_at=timezone.now(),
+					)
+					summary["duplicate_statuses"] += 1
+					continue
+				job = NotificationJob.objects.select_for_update().filter(
+					provider_message_id=message_id,
+					channel=NotificationJob.Channel.WHATSAPP,
+				).first()
 				if job is None:
 					summary["unknown_message_ids"].append(message_id)
 					continue
@@ -367,6 +339,9 @@ def process_whatsapp_cloud_webhook(payload: dict) -> dict:
 					raw_payload=status_event,
 					error_message=error_text,
 				)
+				receipt.job = job
+				receipt.processing_status = WhatsAppCloudWebhookReceipt.ProcessingStatus.PROCESSED
+				receipt.save(update_fields=["job", "processing_status", "last_received_at"])
 				summary["matched_jobs"] += 1
 				if (status_event.get("status") or "").strip().lower() == "failed":
 					summary["failed_jobs"] += 1
@@ -412,32 +387,23 @@ def dispatch_job(job: NotificationJob) -> bool:
 		job.mark_failed(reason=f"Recipient phone is missing for {job.channel.lower()} delivery.")
 		return False
 
-	provider_name = "twilio"
+	provider_name = "whatsapp_cloud"
 	provider_payload = {
 		"recipient": phone,
 		"channel": job.channel,
 		"preview": body[:160],
 	}
 	try:
-		if job.channel == NotificationJob.Channel.WHATSAPP and _whatsapp_provider() == "cloud":
+		if job.channel == NotificationJob.Channel.WHATSAPP:
 			sid, delivery_mode = _send_via_whatsapp_cloud(job=job, recipient_phone=phone, body=body)
-			provider_name = "whatsapp_cloud"
 			job.provider_message_id = sid or f"whatsapp_cloud:{job.channel.lower()}:{getattr(job, 'pk', 'preview')}"
 			provider_payload["delivery_mode"] = delivery_mode
 		else:
-			sid = _send_via_twilio(channel=job.channel, recipient_phone=phone, body=body)
-			provider_name = "twilio"
-			job.provider_message_id = sid or f"twilio:{job.channel.lower()}:{getattr(job, 'pk', 'preview')}"
+			raise RuntimeError("SMS delivery has no configured provider.")
 		provider_payload["provider"] = provider_name
 	except Exception as exc:
-		if not _twilio_settings()["stub_fallback"]:
-			job.mark_failed(reason=f"{job.get_channel_display()} delivery failed: {exc}")
-			return False
-
-		provider_name = "stub_adapter"
-		job.provider_message_id = f"stub:{job.channel.lower()}:{getattr(job, 'pk', 'preview')}"
-		provider_payload["provider"] = provider_name
-		provider_payload["fallback_reason"] = str(exc)
+		job.mark_failed(reason=f"{job.get_channel_display()} delivery failed: {exc}")
+		return False
 
 	_persist_digital_artifact(job, subject=subject, body=body)
 	job.mark_sent(

@@ -1,4 +1,6 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import connection
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
@@ -47,6 +49,36 @@ class NotificationChannel(models.TextChoices):
     LETTER = "LETTER", "Letter"
     POST = "POST", "Post"
     IN_APP = "IN_APP", "In-App"
+
+
+class WhatsAppCloudIntegration(TimestampedModel):
+    """Workspace-owned Meta WhatsApp Cloud API configuration."""
+
+    workspace = models.OneToOneField(
+        "orgs.Company", on_delete=models.PROTECT, related_name="whatsapp_cloud_integration"
+    )
+    api_version = models.CharField(max_length=16, default="v20.0")
+    phone_number_id = models.CharField(max_length=64)
+    access_token_ciphertext = models.TextField()
+    webhook_verify_token_ciphertext = models.TextField()
+    app_secret_ciphertext = models.TextField()
+    is_enabled = models.BooleanField(default=False)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="whatsapp_cloud_integrations_updated",
+    )
+
+    def __str__(self):
+        return f"WhatsApp Cloud for workspace {self.workspace_id}"
+
+    def clean(self):
+        tenant_id = getattr(getattr(connection, "tenant", None), "pk", None)
+        if tenant_id and self.workspace_id != tenant_id:
+            raise ValidationError("WhatsApp Cloud integration must belong to the active workspace.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class NotificationRenderer(models.TextChoices):
@@ -319,7 +351,12 @@ class NotificationJob(TimestampedModel):
             models.UniqueConstraint(
                 fields=["event", "channel"],
                 name="notify_v2_unique_job_per_event_channel",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["provider_message_id"],
+                condition=models.Q(channel="WHATSAPP") & ~models.Q(provider_message_id=""),
+                name="notify_v2_unique_whatsapp_provider_id",
+            ),
         ]
         indexes = [
             models.Index(fields=["status", "scheduled_for"]),
@@ -426,3 +463,38 @@ class NotificationAttemptLog(models.Model):
 
     def __str__(self):
         return f"Attempt {self.attempt_number} for job {self.job_id}"
+
+
+class WhatsAppCloudWebhookReceipt(models.Model):
+    """Replay-safe tenant evidence for one authenticated Cloud API status event."""
+
+    class ProcessingStatus(models.TextChoices):
+        PROCESSED = "PROCESSED", "Processed"
+        UNKNOWN_JOB = "UNKNOWN_JOB", "Unknown job"
+
+    event_key = models.CharField(max_length=64, unique=True)
+    payload_hash = models.CharField(max_length=64)
+    tenant_schema = models.CharField(max_length=63)
+    phone_number_id = models.CharField(max_length=64)
+    provider_message_id = models.CharField(max_length=150, db_index=True)
+    external_status = models.CharField(max_length=32)
+    provider_timestamp = models.CharField(max_length=32, blank=True)
+    signature_digest = models.CharField(max_length=64)
+    payload = models.JSONField(default=dict)
+    job = models.ForeignKey(
+        NotificationJob,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="whatsapp_webhook_receipts",
+    )
+    processing_status = models.CharField(max_length=16, choices=ProcessingStatus.choices)
+    duplicate_count = models.PositiveIntegerField(default=0)
+    received_at = models.DateTimeField(auto_now_add=True)
+    last_received_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-received_at", "-pk")
+        indexes = [
+            models.Index(fields=("processing_status", "received_at"), name="notify_wa_receipt_status_idx"),
+        ]

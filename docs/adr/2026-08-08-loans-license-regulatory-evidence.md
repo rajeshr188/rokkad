@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-08-08
+updated: 2026-08-13
 tags: [loans, license, regulatory, evidence, documents]
 related: [2026-07-15-loans-rewrite-domain-and-cutover-architecture.md, ../plans/loan-operational-parity-pilot.md]
 ---
@@ -34,12 +34,17 @@ existing PawnLoan and its documents claim to have used.
    as a PDF.
 8. External expiry delivery remains part of OP5's Notify v2 audit. License
    models do not duplicate provider or delivery state.
+9. Series setup is one service-owned transaction: Series identity and active
+   state plus its required PawnLoan and release number sequences either all
+   commit or all roll back. Reconfiguration may change formatting and the
+   maximum but never resets or reuses an already-consumed counter.
 
 ## Consequences
 
 - Renewal cannot rewrite historical loan or document identity.
 - Existing loans remain serviceable after license expiry or renewal.
 - Operators can inspect and download the complete regulatory evidence chain.
+- A partially configured Series cannot escape from the operator setup workflow.
 - Missing legacy evidence is explicit rather than fabricated.
 - Tenant migrations `loans.0027` through `loans.0029` carry the evidence,
   portable index rename, backfill, and immutable loan-to-revision link.

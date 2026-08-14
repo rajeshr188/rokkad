@@ -552,9 +552,10 @@ class PawnDraftUiTests(TenantTestCase):
         )
         self.assertEqual(sequence.next_number, 1)
 
-    def test_internal_routes_are_not_added_to_primary_navigation(self):
+    def test_authorized_primary_navigation_exposes_pawnloans_and_setup(self):
         response = self.client.get(reverse("loans:license_list"))
-        self.assertNotContains(response, reverse("loans:pawn_loan_list"))
+        self.assertContains(response, reverse("loans:pawn_loan_list"))
+        self.assertContains(response, reverse("loans:license_list"))
 
     def test_internal_reports_render_all_operational_sections(self):
         license, series = self._configured_setup()
@@ -742,7 +743,10 @@ class PawnDraftUiTests(TenantTestCase):
         Membership.objects.create(user=member, company=self.tenant, role=member_role)
         self.client.force_login(member)
 
-        self.assertEqual(self.client.get(reverse("loans:pawn_loan_list")).status_code, 200)
+        response = self.client.get(reverse("loans:pawn_loan_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("loans:pawn_loan_list"))
+        self.assertNotContains(response, reverse("loans:license_list"))
         self.assertEqual(self.client.get(reverse("loans:license_list")).status_code, 403)
         self.assertEqual(
             self.client.get(
@@ -854,7 +858,7 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(detail, "Disburse loan")
         self.assertContains(detail, reverse("loans:pawn_loan_disburse", args=[loan.pk]))
 
-        with patch("apps.tenant_apps.loans.views.disburse_pawn_loan") as command:
+        with patch("apps.tenant_apps.loans.web.pawn_financial_actions.disburse_pawn_loan") as command:
             response = self.client.post(
                 reverse("loans:pawn_loan_disburse", args=[loan.pk]),
                 {"effective_date": "2026-08-03"},
@@ -895,7 +899,7 @@ class PawnDraftUiTests(TenantTestCase):
             account="DR0001 | Draft Borrower",
         )
         with patch(
-            "apps.tenant_apps.loans.views.ensure_pawn_borrower_accounting",
+            "apps.tenant_apps.loans.web.pawn_financial_actions.ensure_pawn_borrower_accounting",
             return_value=result,
         ) as command:
             response = self.client.post(setup_url)
@@ -926,7 +930,7 @@ class PawnDraftUiTests(TenantTestCase):
         )
         with (
             patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
-            patch("apps.tenant_apps.loans.views.preview_pawn_loan_accruals", return_value=()),
+            patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
         ):
             detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
 
@@ -963,7 +967,7 @@ class PawnDraftUiTests(TenantTestCase):
             lines=(accrual_line,),
         )
         with patch(
-            "apps.tenant_apps.loans.views.preview_pawn_loan_accruals",
+            "apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals",
             return_value=(accrual_preview,),
         ):
             accrual_page = self.client.get(
@@ -998,7 +1002,7 @@ class PawnDraftUiTests(TenantTestCase):
         )
         with (
             patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
-            patch("apps.tenant_apps.loans.views.preview_pawn_loan_accruals", return_value=()),
+            patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
         ):
             finalized_detail = self.client.get(
                 reverse("loans:pawn_loan_detail", args=[loan.pk])
@@ -1026,10 +1030,10 @@ class PawnDraftUiTests(TenantTestCase):
         )
         with (
             patch(
-                "apps.tenant_apps.loans.views.preview_pawn_loan_repayment",
+                "apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_repayment",
                 return_value=preview,
             ) as preview_command,
-            patch("apps.tenant_apps.loans.views.record_pawn_loan_repayment") as record_command,
+            patch("apps.tenant_apps.loans.web.pawn_financial_actions.record_pawn_loan_repayment") as record_command,
         ):
             response = self.client.post(
                 reverse("loans:pawn_loan_repay", args=[loan.pk]),
@@ -1052,7 +1056,7 @@ class PawnDraftUiTests(TenantTestCase):
             outbox=SimpleNamespace(get_status_display=lambda: "Pending"),
         )
         with patch(
-            "apps.tenant_apps.loans.views.record_pawn_loan_repayment",
+            "apps.tenant_apps.loans.web.pawn_financial_actions.record_pawn_loan_repayment",
             return_value=result,
         ) as command:
             response = self.client.post(
@@ -1107,7 +1111,7 @@ class PawnDraftUiTests(TenantTestCase):
         )
         with (
             patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
-            patch("apps.tenant_apps.loans.views.preview_pawn_loan_accruals", return_value=()),
+            patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
         ):
             detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
             action = self.client.get(
@@ -1177,7 +1181,7 @@ class PawnDraftUiTests(TenantTestCase):
             "scheduled_for": "",
             "request_key": "ui-notice-1",
         }
-        with patch("apps.tenant_apps.loans.views.create_pawn_loan_notice") as command:
+        with patch("apps.tenant_apps.loans.web.pawn_notice_actions.create_pawn_loan_notice") as command:
             rejected = self.client.post(
                 reverse("loans:pawn_loan_notice_create", args=[loan.pk]),
                 unconfirmed_payload,
@@ -1187,7 +1191,7 @@ class PawnDraftUiTests(TenantTestCase):
         command.assert_not_called()
 
         with patch(
-            "apps.tenant_apps.loans.views.create_pawn_loan_notice",
+            "apps.tenant_apps.loans.web.pawn_notice_actions.create_pawn_loan_notice",
             return_value=notice,
         ) as command:
             response = self.client.post(
@@ -1245,7 +1249,7 @@ class PawnDraftUiTests(TenantTestCase):
         )
         url = reverse("loans:pawn_loan_release_full", args=[loan.pk])
         with patch(
-            "apps.tenant_apps.loans.views.preview_pawn_loan_full_release",
+            "apps.tenant_apps.loans.web.pawn_release_actions.preview_pawn_loan_full_release",
             return_value=quote,
         ):
             page = self.client.get(url)
@@ -1262,10 +1266,10 @@ class PawnDraftUiTests(TenantTestCase):
         }
         with (
             patch(
-                "apps.tenant_apps.loans.views.preview_pawn_loan_full_release",
+                "apps.tenant_apps.loans.web.pawn_release_actions.preview_pawn_loan_full_release",
                 return_value=quote,
             ),
-            patch("apps.tenant_apps.loans.views.release_pawn_loan_in_full") as command,
+            patch("apps.tenant_apps.loans.web.pawn_release_actions.release_pawn_loan_in_full") as command,
         ):
             rejected = self.client.post(url, payload)
         self.assertEqual(rejected.status_code, 200)
@@ -1283,11 +1287,11 @@ class PawnDraftUiTests(TenantTestCase):
         payload["confirm_collateral_handoff"] = "on"
         with (
             patch(
-                "apps.tenant_apps.loans.views.preview_pawn_loan_full_release",
+                "apps.tenant_apps.loans.web.pawn_release_actions.preview_pawn_loan_full_release",
                 return_value=quote,
             ),
             patch(
-                "apps.tenant_apps.loans.views.release_pawn_loan_in_full",
+                "apps.tenant_apps.loans.web.pawn_release_actions.release_pawn_loan_in_full",
                 return_value=result,
             ) as command,
         ):
@@ -1369,10 +1373,10 @@ class PawnDraftUiTests(TenantTestCase):
         }
         with (
             patch(
-                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
+                "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_source",
                 return_value=quote,
             ),
-            patch("apps.tenant_apps.loans.views.renew_pawn_loan") as command,
+            patch("apps.tenant_apps.loans.web.pawn_renewal_actions.renew_pawn_loan") as command,
         ):
             rejected = self.client.post(
                 reverse("loans:pawn_loan_renew", args=[loan.pk]),
@@ -1386,15 +1390,15 @@ class PawnDraftUiTests(TenantTestCase):
         payload["preview_fingerprint"] = exact_plan.fingerprint
         with (
             patch(
-                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
+                "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_source",
                 return_value=quote,
             ),
             patch(
-                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_plan",
+                "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_plan",
                 return_value=exact_plan,
             ),
             patch(
-                "apps.tenant_apps.loans.views.renew_pawn_loan",
+                "apps.tenant_apps.loans.web.pawn_renewal_actions.renew_pawn_loan",
                 return_value=result,
             ) as command,
         ):
@@ -1422,14 +1426,14 @@ class PawnDraftUiTests(TenantTestCase):
         preview_payload["action"] = "preview"
         with (
             patch(
-                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
+                "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_source",
                 return_value=quote,
             ),
             patch(
-                "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_plan",
+                "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_plan",
                 return_value=exact_plan,
             ),
-            patch("apps.tenant_apps.loans.views.renew_pawn_loan") as command,
+            patch("apps.tenant_apps.loans.web.pawn_renewal_actions.renew_pawn_loan") as command,
         ):
             preview_response = self.client.post(
                 reverse("loans:pawn_loan_renew", args=[loan.pk]),
@@ -1445,7 +1449,7 @@ class PawnDraftUiTests(TenantTestCase):
         command.assert_not_called()
 
         with patch(
-            "apps.tenant_apps.loans.views.preview_pawn_loan_renewal_source",
+            "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_source",
             return_value=quote,
         ):
             page = self.client.get(

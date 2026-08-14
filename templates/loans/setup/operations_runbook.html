@@ -2,7 +2,21 @@
 {% block title %}PawnLoan operations runbook{% endblock %}
 {% block workspace_content %}
 <a class="small text-decoration-none" href="{% url 'loans:pawn_operations_console' %}">&larr; Operations console</a><h1 class="h3 mt-2">PawnLoan support runbook</h1>
-<div class="alert alert-info">The new Loans app remains feature-hidden. Girvi continues to own production navigation and every legacy loan until the controlled Phase 6 gate.</div>
+<div class="alert alert-info">Girvi and Loans operate independently during coexistence. Service each loan in the application that owns it; never move or dual-write records between them.</div>
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h5">Scheduled risk reassessment</h2>
+  <p>Run the bounded tenant command daily after the workspace's rates and prior-day accounting work are available. Replace <code>TENANT_SCHEMA</code> and <code>WORKSPACE_ID</code> with the values for the same workspace:</p>
+  <pre class="bg-body-tertiary border rounded p-3"><code>python manage.py tenant_command reassess_pawn_loans --schema=TENANT_SCHEMA --workspace-id=WORKSPACE_ID --batch-size=100</code></pre>
+  <p>For a controlled business date, add <code>--as-of=YYYY-MM-DD</code>. Without it, the command uses the application server's current date. Batch size must be between 1 and 1,000.</p>
+  <ol>
+    <li>Schedule one invocation per tenant workspace. The schema and workspace ID must identify the same workspace or the command fails closed.</li>
+    <li>Repeat the command until it reports <code>selected=0</code> when a workspace can have more active loans than the chosen batch size.</li>
+    <li>Treat a non-zero process exit as a monitoring alert. Successful loans remain refreshed; failed loans retain an <strong>Error</strong> snapshot with the specific blocker.</li>
+    <li>Open the Risk portfolio to review Error or Stale rows. Correct policy, appraisal, valuation-rate, schedule, or accounting evidence rather than editing a snapshot.</li>
+    <li>Confirm the Operations Console shows zero unassessed active loans and a recent last risk assessment.</li>
+  </ol>
+  <p class="mb-0"><strong>Result fields:</strong> <code>selected</code> is the claimed due work, <code>current</code> is successfully refreshed work, and <code>errors</code> is failed work requiring review. Re-running is safe: current snapshots for the same or later assessment date are skipped, while stale and error rows are retried.</p>
+</div></div>
 <div class="card mb-3"><div class="card-body"><h2 class="h5">Failed accounting delivery</h2><ol class="mb-0"><li>Open the reconciliation report and confirm the source event/outbox payloads agree.</li><li>Correct the displayed DEA period, ledger, or Party-account setup blocker.</li><li>Use <strong>Queue retry</strong> once. Never create a voucher or journal manually.</li><li>Confirm the event becomes Posted and its DEA references reconcile.</li></ol></div></div>
 <div class="card mb-3"><div class="card-body"><h2 class="h5">Sequence or license blocker</h2><ol class="mb-0"><li>Open the linked license setup.</li><li>Expired/inactive licenses remain attached to existing loans but cannot issue new loans.</li><li>If a sequence is exhausted, create or select a new active series; never reset or reuse committed numbers.</li><li>Both pawn-loan and release sequences must be ready.</li></ol></div></div>
 <div class="card mb-3"><div class="card-body"><h2 class="h5">Reversal and custody problem</h2><ol class="mb-0"><li>Use the reconciliation report to identify the newest unreversed dependent event.</li><li>Reverse events strictly newest-first with an administrator reason.</li><li>Never edit posted DEA records, immutable releases, accruals, or custody history.</li><li>If physical custody differs from the system, stop servicing and escalate; do not force a reversal.</li></ol></div></div>

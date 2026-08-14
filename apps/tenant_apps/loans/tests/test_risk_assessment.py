@@ -45,7 +45,7 @@ class RiskAssessmentTests(SimpleTestCase):
     @patch("apps.tenant_apps.loans.selectors.risk.get_pawn_loan_collateral_valuation")
     @patch("apps.tenant_apps.loans.selectors.risk.get_pawn_loan_delinquency")
     @patch("apps.tenant_apps.loans.selectors.risk.resolve_monitoring_policy")
-    @patch("apps.tenant_apps.loans.selectors.risk._active_schedule_as_of")
+    @patch("apps.tenant_apps.loans.selectors.risk.get_active_repayment_schedule_as_of")
     @patch("apps.tenant_apps.loans.selectors.risk.PawnLoan.objects.get")
     @patch("apps.tenant_apps.loans.selectors.risk.current_tenant_workspace_id", return_value=7)
     def test_selector_uses_schedule_maturity_not_nonexistent_loan_field(

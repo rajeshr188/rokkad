@@ -25,7 +25,6 @@ class PawnLoanCutoverReadinessTests(SimpleTestCase):
         self.assertTrue(readiness.is_ready)
         self.assertEqual(readiness.blocker_count, 0)
         self.assertEqual(readiness.as_dict()["is_ready"], True)
-        self.assertFalse(readiness.feature_enabled)
 
     def test_every_automated_and_manual_gap_is_fail_closed(self):
         readiness = self._build(
@@ -75,7 +74,7 @@ class PawnLoanCutoverReadinessTests(SimpleTestCase):
             as_of=AS_OF.isoformat(),
             format="json",
             ack_backup=True,
-            ack_rollback=True,
+            ack_recovery=True,
             ack_support=True,
             ack_monitoring=True,
             ack_permissions=True,
@@ -105,7 +104,6 @@ class PawnLoanCutoverReadinessTests(SimpleTestCase):
         values = {
             "workspace_id": 42,
             "as_of_date": AS_OF,
-            "feature_enabled": False,
             "pending_migrations": (),
             "operations": self._operations(),
             "reports": SimpleNamespace(issues=()),

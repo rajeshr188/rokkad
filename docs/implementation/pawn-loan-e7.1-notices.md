@@ -1,7 +1,7 @@
 ---
 status: completed
 owner: loans
-updated: 2026-08-04
+updated: 2026-08-13
 tags: [loans, notices, notify, scheduling, phase-7]
 related: [../plans/loans-rewrite-roadmap.md, ../apps/loans/architecture-and-girvi-parity.md, ../adr/2026-07-15-loans-rewrite-domain-and-cutover-architecture.md]
 ---
@@ -43,6 +43,13 @@ dispatches after commit. Future notices are selected against an explicit clock:
 The scheduler dispatches only Notify jobs still in `QUEUED` state. A failed job
 is visible and retryable from the PawnLoan detail. Provider setup and attempt
 evidence remain in Notify v2.
+
+Customer and internal operational notices intentionally remain separate Loans
+intent aggregates. Their shared `notice_dispatch` coordinator owns only the
+mechanical Notify lifecycle: schedule enforcement, linked-job resolution,
+idempotent SENT handling, cancelled fail-closed behavior, deterministic queued
+selection, batch limits, and sent/failed counts. It does not decide whether a
+notice should exist or who receives it.
 
 ## Verification
 

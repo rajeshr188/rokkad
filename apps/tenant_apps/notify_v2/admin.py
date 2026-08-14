@@ -13,6 +13,7 @@ from .models import (
     NotificationPolicy,
     NotificationRecipient,
     NotificationTemplate,
+    WhatsAppCloudWebhookReceipt,
 )
 
 
@@ -137,3 +138,17 @@ class NotificationAttemptLogAdmin(TenantSchemaAdminGuardMixin, admin.ModelAdmin)
     list_display = ["job", "attempt_number", "status_before", "status_after", "created_at"]
     list_filter = ["status_after"]
     search_fields = ["job__event__event_type__key", "message"]
+
+
+@admin.register(WhatsAppCloudWebhookReceipt)
+class WhatsAppCloudWebhookReceiptAdmin(TenantSchemaAdminGuardMixin, admin.ModelAdmin):
+    list_display = ["received_at", "provider_message_id", "external_status", "processing_status", "duplicate_count", "job"]
+    list_filter = ["processing_status", "external_status"]
+    search_fields = ["provider_message_id", "phone_number_id", "event_key"]
+    readonly_fields = [field.name for field in WhatsAppCloudWebhookReceipt._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

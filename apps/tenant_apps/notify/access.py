@@ -86,6 +86,20 @@ def notify_action_required(action):
     return _decorator
 
 
+def notify_admin_required(view_func):
+    @functools.wraps(view_func)
+    @login_required
+    def _wrapped_view(request, *args, **kwargs):
+        workspace = assert_notify_workspace_access(request)
+        user = request.user
+        if not (is_platform_admin(user) or getattr(workspace, "owner_id", None) == user.pk or
+                get_workspace_role_name(user, workspace) in {"Owner", "Admin"}):
+            raise PermissionDenied("Notify provider setup requires workspace administration access.")
+        request.notify_workspace = workspace
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+
 class NotifyActionRequiredMixin(LoginRequiredMixin):
     required_action = None
 

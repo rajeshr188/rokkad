@@ -54,11 +54,16 @@
 <div class="card mb-3">
   <div class="card-header">Digital Delivery Health</div>
   <div class="card-body">
+    {% if can_manage_whatsapp %}<div class="mb-3"><a class="btn btn-sm btn-primary" href="{% url 'notify_v2_whatsapp_cloud_integration' %}">Configure workspace WhatsApp</a></div>{% endif %}
+    <div class="mb-3"><span class="badge {% if whatsapp_readiness.ready %}bg-success{% else %}bg-danger{% endif %}">{% if whatsapp_readiness.ready %}Ready{% else %}Blocked{% endif %}</span>{% for blocker in whatsapp_readiness.blockers %}<div class="small text-danger mt-1">{{ blocker }}</div>{% endfor %}</div>
     <div class="row g-2 small">
       <div class="col-md-3">
         <strong>WhatsApp Provider:</strong>
         <div class="text-muted">{{ notify_settings.whatsapp_provider|upper }}</div>
       </div>
+      <div class="col-md-3"><strong>Webhook App Secret:</strong><div>{% if notify_settings.has_whatsapp_cloud_app_secret %}<span class="badge bg-success">Set</span>{% else %}<span class="badge bg-danger">Missing</span>{% endif %}</div></div>
+      <div class="col-md-3"><strong>Authenticated Receipts:</strong><div>{{ notify_settings.webhook_receipt_count }}</div></div>
+      <div class="col-md-3"><strong>Unknown Job Receipts:</strong><div>{% if notify_settings.webhook_unknown_count %}<span class="badge bg-danger">{{ notify_settings.webhook_unknown_count }}</span>{% else %}<span class="badge bg-success">0</span>{% endif %}</div></div>
       <div class="col-md-3">
         <strong>Cloud Phone ID:</strong>
         <div>

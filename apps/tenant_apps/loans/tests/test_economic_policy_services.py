@@ -18,6 +18,7 @@ from apps.tenant_apps.loans.domain import (
 from apps.tenant_apps.loans.services import (
     PawnEconomicPolicyError,
     create_license,
+    create_pawn_economic_configuration,
     create_pawn_loan_economic_policy,
     create_pawn_loan_fee_policy,
     create_pawn_metal_interest_rate_policy,
@@ -110,6 +111,47 @@ class PawnEconomicPolicyServiceTests(TenantTestCase):
             AccountingRecognition.ACCRUAL.value,
         )
         self.assertEqual(fallback, workspace_policy)
+
+    def test_complete_configuration_creates_policy_and_both_rates(self):
+        configuration = create_pawn_economic_configuration(
+            workspace=self.tenant,
+            license=self.license,
+            valuation_method=ValuationMethod.LATEST_APPRAISAL,
+            maximum_ltv_ratio=Decimal("0.75"),
+            gold_monthly_interest_rate=Decimal("2.00"),
+            silver_monthly_interest_rate=Decimal("4.00"),
+            effective_from=date(2026, 8, 1),
+            actor=self.user,
+        )
+
+        self.assertEqual(configuration.economic_policy.license, self.license)
+        self.assertEqual(configuration.gold_rate_policy.metal, CollateralMetal.GOLD.value)
+        self.assertEqual(configuration.silver_rate_policy.metal, CollateralMetal.SILVER.value)
+        self.assertEqual(configuration.gold_rate_policy.effective_from, date(2026, 8, 1))
+        self.assertEqual(configuration.silver_rate_policy.created_by, self.user)
+
+    def test_complete_configuration_rolls_back_when_second_rate_is_invalid(self):
+        with self.assertRaises(ValidationError):
+            create_pawn_economic_configuration(
+                workspace=self.tenant,
+                valuation_method=ValuationMethod.LATEST_APPRAISAL,
+                maximum_ltv_ratio=Decimal("0.75"),
+                gold_monthly_interest_rate=Decimal("2.00"),
+                silver_monthly_interest_rate=Decimal("101.00"),
+                effective_from=date(2026, 8, 1),
+                actor=self.user,
+            )
+
+        self.assertFalse(
+            self.tenant.pawn_loan_economic_policies.filter(
+                effective_from=date(2026, 8, 1)
+            ).exists()
+        )
+        self.assertFalse(
+            self.tenant.pawn_metal_interest_rate_policies.filter(
+                effective_from=date(2026, 8, 1)
+            ).exists()
+        )
 
     def test_rate_resolution_is_effective_dated_and_falls_back_to_workspace(self):
         old_rate = create_pawn_metal_interest_rate_policy(

@@ -1,14 +1,342 @@
 ---
 status: active
 owner: project
-updated: 2026-08-12
+updated: 2026-08-14
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
 
 # Status
 
+- 2026-08-14: Workspace invitation acceptance now requires the authenticated
+  account to have a verified allauth `EmailAddress` matching the invited email.
+  The check is service-owned in `control_plane.accept_invitation`, so direct
+  invite links and the invitations dashboard share it; mismatched or unverified
+  identities cannot create membership or mark the invitation accepted. General
+  signup and ordinary tenant access remain optional-verification. The full orgs
+  gate passes 115 tests. No model or migration changed.
+
+- 2026-08-14: SaaS foundation Phase 0A/0B is complete without runtime or
+  schema changes. Eight new characterization/inventory tests pass, and the
+  read-only `check_saas_foundation` public-schema inventory reports zero owner,
+  membership-role, ownership-history, invitation-shadow, or Guardian data
+  findings across six non-public workspaces and eight memberships. All Role
+  rows currently have zero Django permissions, so hard-coded RBAC remains the
+  real authority and cannot yet be removed. A broader 53-test SaaS gate has 49
+  passes and exposes four pre-existing baseline failures: `/accounting/` is
+  missing from middleware workspace-required prefixes, and three intent tests
+  are stale relative to current invitation-service/routes. Details are in
+  `docs/implementation/saas-foundation-phase0-baseline.md`.
+
+- 2026-08-14: The proposed canonical MVP SaaS architecture is documented in
+  `docs/architecture/SAAS_TARGET_ARCHITECTURE.md` for review before any
+  implementation. It keeps the Django monolith and `django-tenants`, assigns
+  every foundation-audit finding a FIX/SIMPLIFY/DELETE/KEEP/DEFER/REJECT
+  disposition, and deliberately rejects a provisioning state machine,
+  membership suspension lifecycle, generic subscription access-mode engine,
+  public email-job subsystem, enterprise billing roles, and append-only audit
+  framework for MVP. No runtime code, migrations, or data changed.
+
+- 2026-08-14: A documentation-only deep SaaS foundation audit is complete in
+  `docs/implementation/saas-foundation-architecture-audit.md`. It consolidates
+  current identity, schema tenancy, workspace lifecycle, membership/RBAC,
+  invitations, subscriptions/entitlements, audit, jobs, data lifecycle, and
+  testing evidence into a launch-focused scorecard, readiness matrix, target
+  architecture, and phased remediation plan. No runtime code or migrations
+  changed. The P0 recommendation is to harden schema deletion, verified email,
+  authoritative tenant resolution, provisioning/lifecycle, ownership,
+  subscription recovery boundaries, and background tenant context before
+  production.
+
+- 2026-08-14: The future legacy Notify retirement plan is now dependency-first.
+  Every consumer will receive an owned boundary and move off direct legacy
+  imports before `notify` is isolated as read-only history. A dependency gate,
+  authorization decoupling, and read-only inventory come first. Runtime and
+  table removal remain blocked on zero writes, parity, tenant reconciliation,
+  retention, and upgrade safety.
+
+- 2026-08-14: Legacy `notify` retirement is documented as future staged work.
+  Notify v2 remains the target, but immediate deletion is prohibited while
+  Girvi producers, printing, Party reporting, tenant seeds, routes, shared
+  authorization, and historical evidence depend on legacy models. The plan
+  starts with access decoupling and a read-only tenant inventory, and requires
+  parity, reconciliation, retention, and upgrade-safety gates before removal.
+
+- 2026-08-14: Fixed `/data-tools/import/` app discovery for tenant apps declared
+  with explicit AppConfig class paths such as `loans.apps.LoansConfig` and
+  `accounting.apps.AccountingConfig`. Import/export now resolves installed
+  AppConfig labels and canonical module paths instead of mistaking class names
+  for Django app labels.
+
+- 2026-08-13: Fixed the workspace Party detail crash caused by Girvi loan
+  history counting the removed `GivenLoan.notifications` reverse relation.
+  Notice totals now use one explicit batch query through the canonical generic
+  `notify.NotificationItem` link. The exact failing `jcl1` Party 5 history now
+  resolves successfully without restoring the obsolete coupling.
+
+- 2026-08-13: The next workspace WhatsApp Cloud slice is documented for future
+  implementation. It will verify Meta identity, preview and send one controlled
+  approved-template test, reconcile an authenticated callback, retain immutable
+  acceptance evidence, and invalidate readiness after credential changes.
+  Saving/enabling credentials remains insufficient for operational acceptance;
+  no runtime behavior was added in this documentation slice.
+
+- 2026-08-13: Meta WhatsApp Cloud credentials are now workspace-owned rather
+  than global Django settings. Owner/Admin has a write-only tenant setup form;
+  access token, verify token, and app secret are Fernet-encrypted using the
+  deployment `WORKSPACE_SECRET_ENCRYPTION_KEY`. Dispatch, readiness, GET webhook
+  verification, POST HMAC verification, and callback phone-ID matching resolve
+  only the active tenant's enabled integration, with no global fallback. Tenant
+  migration `notify_v2.0005` is required.
+
+- 2026-08-13: PawnLoan risk borrower communication now has one KISS,
+  tenant-scoped manual policy per workspace. Owner/Admin can choose the initial
+  email/WhatsApp channel, optional quiet hours, a same-kind/channel borrower
+  cooldown, and an internal DPD escalation threshold. Readiness and confirmation
+  enforce quiet hours and cooldown; policy changes invalidate previews and the
+  confirmed values are frozen as notice evidence. Escalation is guidance only;
+  automation, fallback, bulk sending, and automatic borrower contact remain
+  disabled. Tenant migration `loans.0056` is required.
+
+- 2026-08-13: Owner/Admin can now manage Party-specific PawnLoan service-notice
+  consent for email, SMS, and WhatsApp. Each channel records Allow, Block, or
+  Opt out, mandatory evidence/reason, actor, and timestamp. The blocked risk
+  notice page links directly to consent and Party contact correction. This is
+  service-notice consent only, not a marketing-consent framework.
+
+- 2026-08-13: The manual email-first risk borrower-notice flow is implemented
+  for eligible DPD and maturity alerts. Owner/Admin sees exact recipient,
+  template/version, financial basis, subject, and body before confirmation; the
+  service revalidates under lock, creates one source-linked immutable notice,
+  and queues its Notify job. Blocked readiness creates no intent.
+
+- 2026-08-13: PawnLoan risk communication readiness is implemented without a
+  send action. The tenant-scoped decision boundary revalidates open/current
+  DPD or maturity risk, Party contact, explicit per-channel service consent,
+  active Notify template/version, real provider readiness, and duplicate intent.
+  `PawnLoanNotice` now has nullable risk alert/event and template evidence plus
+  event/kind/channel/template-version uniqueness. LTV and assessment failures
+  remain ineligible. Notify digital stub fallback cannot mark delivery sent
+  outside explicit Django debug mode. Tenant migration `loans.0055` is required.
+
+- 2026-08-13: The proposed PawnLoan risk-alert borrower-communication flow now
+  includes a detailed end-to-end illustration: DPD transition example, current
+  state revalidation, channel/consent/provider eligibility, exact preview and
+  template evidence, immutable notice creation, Notify v2 delivery ownership,
+  retry semantics, risk resolution distinction, and a future configured flow.
+  This remains documentation-only pending the recorded readiness gate.
+
+- 2026-08-13: The proposed PawnLoan risk-alert-to-borrower workflow is documented
+  in `docs/flows/pawn-risk-alert-borrower-communication.md`. Notify v2 receives a
+  conditional-go assessment for a manual approved pilot, but automatic
+  configurable multi-channel delivery is blocked on enforced consent/opt-out,
+  fail-closed real-provider readiness, source/template evidence, dedupe, and
+  WhatsApp callback security/tenant routing. No communication runtime changed.
+
+- 2026-08-13: Material immutable `LoanRiskEvent` transitions now project into
+  risk-specific internal work items shown on the Risk Portfolio. Worsening DPD,
+  LTV breach/critical, maturity attention, and assessment failure create one
+  open alert per loan/category; current snapshot state resolves recovered work.
+  Alerts do not send customer or staff email and do not reuse the outbound
+  `LoanOperationalNotice` delivery-intent model.
+
+- 2026-08-13: The in-app PawnLoan Operations Runbook now documents the canonical
+  tenant-aware scheduled risk invocation, daily timing, batch draining,
+  selected/current/error meanings, non-zero failure monitoring, safe reruns,
+  and operator verification. The detailed operations runbook carries the same
+  deployment guidance and distinguishes manual refresh as a recovery action.
+
+- 2026-08-13: The existing bounded `reassess_pawn_loans` command is now ready
+  for scheduler monitoring: it reports selected/current/error counts and exits
+  unsuccessfully when any assessment fails, while the service retains visible
+  `ERROR` snapshots. The PawnLoan Operations Console now shows active and
+  unassessed loan counts plus the latest successful risk-assessment timestamp.
+
+- 2026-08-13: PawnLoan fee-ledger readiness now uses DEA's canonical ledger-key
+  resolver, matching the posting rules. An existing `Service Income` ledger is
+  therefore accepted as the supported alias for `DOCUMENT_CHARGE_INCOME`; when
+  neither identity exists, readiness still fails closed with the actionable fee
+  ledger blocker. All five PawnLoan posting rules now use that same resolver for
+  disbursal, repayment, interest, release, and renewal, eliminating the
+  readiness/posting mismatch.
+
+- 2026-08-13: The Loans web-boundary consolidation audit is complete. Four dead
+  legacy action helpers and eight obsolete imports were removed after the
+  FundingLoan/PawnLoan extractions. Remaining mutations in `loans.views` are
+  cohesive setup/document administration, mixed verification worklist/detail
+  POSTs, expired-draft setup transfer, outbox retry, and risk refresh; they are
+  not being split merely to minimize file size. Focused modules retain URL
+  compatibility exports, and the current organization satisfies the KISS rule.
+  The broader 30-test PawnLoan UI run exposed and led to correction of one
+  shared draft-readiness wiring regression. Its stale navigation assertion was
+  replaced with the intended contract: authorized operators see PawnLoans,
+  while Loans Setup remains Owner/Admin-only; `/internal/` is naming, not an
+  authorization boundary. The complete 30-test tenant-backed PawnLoan UI module
+  now passes.
+
+- 2026-08-13: The KISS PawnLoan recovery split is complete without a generic
+  recovery framework. Auction lifecycle actions live in
+  `loans.web.pawn_auction_actions`; release-and-renew preview/completion and
+  renewal reversal live in `loans.web.pawn_renewal_actions`. Auction and renewal
+  PDFs remain in document delivery. The tenant-backed renewal contract passes,
+  and existing action URLs remain compatible through `loans.views` exports.
+
+- 2026-08-13: Two further KISS PawnLoan HTTP slices are complete. Standalone
+  storage creation/transfer and verification completion/resolution/alert actions
+  now live in `loans.web.pawn_custody_actions`; verification start and observation
+  intentionally remain in their combined worklist/detail coordinators. Customer
+  notice creation and delivery retry now live in `loans.web.pawn_notice_actions`.
+  Three tenant-backed custody regressions and the notice command regression pass;
+  existing URLs remain compatible through `loans.views` exports.
+
+- 2026-08-13: The KISS PawnLoan release HTTP slice is complete. Full release
+  quote/confirmation and the explicit unsupported partial-release response now
+  live in `loans.web.pawn_release_actions`; release posting and custody mutation
+  remain service-owned, while document delivery stays separate. Existing URLs
+  remain compatible through `loans.views` exports.
+
+- 2026-08-13: The KISS PawnLoan financial HTTP action split is complete.
+  Disbursal/readiness, borrower accounting setup, repayment preview/recording,
+  accrual finalization, capitalization, and financial-event reversal now live
+  in `loans.web.pawn_financial_actions`. Posting and transaction rules remain in
+  existing services and DEA boundaries; `loans.views` preserves URL-compatible
+  exports. Four tenant-backed disbursal, setup, repayment, accrual, and reversal
+  regressions pass.
+
+- 2026-08-13: The first KISS PawnLoan HTTP action split is complete. Draft
+  create/edit, economic preview, collateral split, draft photograph capture,
+  approval, reopen, and cancellation now live with their direct form-mapping
+  helpers in `loans.web.pawn_draft_actions`. Existing services retain domain and
+  transaction ownership, and `loans.views` compatibility exports preserve all
+  URL names. Five tenant-backed origination, split, preview, and lifecycle
+  regressions pass; Django checks pass.
+
+- 2026-08-13: The FundingLoan HTTP split is complete. Console/detail rendering
+  and immutable document delivery live in `loans.web.funding`; ordinary Django
+  mutation adapters live in `loans.web.funding_actions`. Existing services still
+  own all business rules and transactions, while `loans.views` compatibility
+  re-exports preserve every URL name and callable import. The
+  five tenant-backed Funding UI cases pass; the broader 33-test Funding run
+  exceeded the four-minute harness window after those five passes with no
+  reported failure. Django checks and diff hygiene pass.
+
+- 2026-08-13: The second physical Loans view-module split is implemented.
+  Read-only operations console, risk portfolio, customer-notice ledger, and
+  operations runbook coordinators now live in `loans.web.operations` and are
+  compatibility re-exported by `loans.views`. Risk refresh and outbox retry
+  mutations intentionally remain in the legacy module because tests and callers
+  patch their service seams there. Three tenant-backed console, filtering,
+  pagination, and authorization regressions pass, including explicit risk-page
+  authorization; Django checks, Loans migration drift, compatibility exports,
+  and diff hygiene are clean.
+
+- 2026-08-13: The first physical Loans view-module split is implemented.
+  Read-only portfolio reports, section exports, and Party statements now live
+  in `loans.web.reports`; `loans.views` re-exports the same callables so URL
+  names and route behavior remain unchanged. The module retains identical
+  tenant decoration, Party scoping, date parsing, export errors, filenames, and
+  administrator context. Five export-contract tests and two tenant-backed
+  report/Party-statement regressions pass; Django checks, Loans migration drift,
+  and diff hygiene are clean.
+
+- 2026-08-13: The document-issuance views thinning slice is complete. Official
+  issue reuse, layout/print-profile resolution, configurable rendering,
+  fixed/legacy recovery auditing, and immutable issue persistence now live in
+  one application service. Views retain permission checks and HTTP response
+  handling, and both compatibility paths remain supported. The initial
+  75-test document batch exceeded three minutes after 12 passing tests with no
+  reported failure; the narrowed gate passes three orchestration invariants and
+  two tenant-backed official issue/reprint/schema-v3/recovery regressions.
+
+- 2026-08-13: The third Loans views/forms thinning slice is complete. PawnLoan
+  draft create/update and form-supplied photographs now cross one service-owned
+  boundary. Uploads are validated before number allocation or mutation, the
+  service maps evidence to retained and newly created collateral identities,
+  database writes remain atomic, and newly stored files are cleaned up if a
+  later media write fails. Four focused service invariants and two complete
+  tenant-backed create/edit/add/remove UI regressions pass; final project checks
+  pass; Django checks, Loans migration drift, and diff hygiene are clean.
+
+- 2026-08-13: The second Loans views/forms thinning slice is implemented.
+  PawnLoan economic setup now calls one atomic service command for the economic
+  calculation policy and its Gold/Silver rate policies instead of coordinating
+  three writes in the view. Shared scope/effective dates are explicit, and a
+  failure in either rate leaves no partial policy set. Eight focused economic
+  policy tests and the tenant-backed setup POST regression pass; Django checks,
+  Loans migration drift, and diff hygiene are clean.
+
+- 2026-08-13: The first Loans views/forms thinning slice is complete. Series
+  create/update views no longer own the multi-write transaction. New service
+  commands atomically coordinate Series identity/active state with the required
+  PawnLoan and release sequences, preserve consumed counters during formatting
+  changes, and roll back the entire update if either sequence is invalid. Nine
+  focused license/series service tests and the tenant-backed setup-page
+  regression pass; Django checks, Loans migration drift, and diff hygiene are
+  clean.
+
+- 2026-08-13: Loans notice-delivery orchestration is consolidated. Customer
+  `PawnLoanNotice` and internal `LoanOperationalNotice` remain distinct intent
+  aggregates, while one shared coordinator now owns schedule enforcement,
+  linked Notify-state handling, idempotent SENT/cancelled behavior,
+  deterministic queued selection, batch bounds, and delivery counts. Business
+  eligibility, recipient/source snapshots, and idempotency remain in their
+  respective services; Notify v2 remains the provider-evidence authority. Two
+  coordinator invariants and all eight tenant-backed notice workflow tests
+  pass; Django checks, Loans migration drift, and diff hygiene are clean.
+
+- 2026-08-13: The PawnLoan balance -> obligation -> exposure contract is
+  formalized. A canonical obligation-state selector now owns active schedule
+  resolution and the allocation fold for remaining, due, overdue, and unpaid
+  DPD rows. Exposure and delinquency both consume it instead of independently
+  traversing obligations. Exposure reports contractual-versus-recorded principal
+  variance while keeping recorded event balance and projected interest distinct.
+  Fourteen focused obligation/risk and transactional exposure tests pass,
+  including cash-accrual and repayment-schedule regression coverage.
+
+- 2026-08-13: Risk monitoring hardening is implemented. Owner/Admin can refresh
+  one active PawnLoan or a bounded batch of up to 50 missing/stale/error
+  assessments from the snapshot-backed operations portfolio; HTMX and ordinary
+  POST use the same service boundary. Members are forbidden before service
+  execution, foreign/non-active identifiers fail closed, and batch selection
+  retains `select_for_update(skip_locked=True)`. Snapshots now persist source
+  provenance for the calculation contract, monitoring/collateral policy,
+  collateral items, approved appraisals, and applicable valuation rates. Source
+  fingerprinting is narrowed to approved appraisals, applicable policy scope,
+  and relevant INR/24K metal rates. Seven orchestration/invariant tests and three
+  focused HTTP/permission tests pass; Django checks, migration drift, and diff
+  checks are clean. Tenant migration `loans.0053` adds snapshot provenance and
+  has been applied through `migrate_schemas` to all local tenant schemas.
+
+- 2026-08-13: Pawn collateral appraisal authority cleanup is implemented.
+  Draft `latest_appraised_value` remains editable proposal input; approval now
+  appends immutable, loan-date-effective appraisal evidence and reapproval
+  creates a superseding version. Disbursal no longer creates appraisals, and
+  post-approval collateral valuation/release no longer falls back to the draft
+  field. Risk invalidation now limits monitoring-policy changes to their
+  effective scope and valuation-rate changes to applicable INR/24K metal and
+  snapshot dates; irrelevant rate changes do not stale the portfolio. Django
+  checks, migration drift, `git diff --check`, 10 focused release/risk tests,
+  and the database-backed approval-to-release valuation regression pass. The
+  combined lifecycle/disbursal suite exceeds the current four-minute command
+  window because its tenant fixture repeatedly rebuilds the complete schema;
+  its focused release boundary passes after the corrections.
+
+- 2026-08-13: Accepted the loan-application boundary ADR. FundingLoan is now
+  explicitly supported; disabled-prototype declarations and assertions were
+  removed. Girvi and PawnLoan now have independent navigation and origination;
+  the workspace `loan__new_module_enabled` preference, cutover settings screen,
+  conditional context/routing, and feature-gate tests were removed. The generic
+  workspace Loans route presents an explicit application chooser. Snapshot-backed
+  PawnLoan risk portfolio monitoring is available from the operations console.
+  Schema-v1/v2 and explicit legacy print-profile recovery remain supported and
+  now have a documented removal gate. Django checks, Loans migration-drift,
+  26 focused domain/readiness/risk tests, and all 28 Loans setup UI tests pass.
+
 ## Latest Update
+
+- Girvi Operations Console now links to the registered global `rate_list` URL
+  instead of the nonexistent `rates` namespace, preventing its setup-health
+  panel from raising `NoReverseMatch`.
 
 - Workspace Preferences now redirects correctly after saving a section. The
   view returns Django's reversed URL string directly instead of treating it as
@@ -1825,6 +2153,55 @@ Rokkad is moving toward a layered architecture:
 - Girvi/Loans operator parity-pilot preparation has started with a concrete 12-scenario runbook and weighted scorecard. The `jcl1` baseline contains 8 Loans PawnLoans and 8 Girvi GivenLoans, uses explicit `DEFERRED` accounting, has zero document-integrity findings, and has no storage/verification/operational-notice evidence yet. The official score is not running because current accounting/Girvi runtime changes are uncommitted. A 191-test combined gate exceeded both five- and ten-minute limits and exposed an implicit-DEA test assumption; that focused test passes once DEA is selected explicitly. Migration-drift checks for DEA, Loans, and Girvi are clean. Consolidate the runtime checkpoint and run smaller completed product gates before operator scoring.
 
 ## Known Pressure Points
+
+- A deep Loans architecture review is recorded in [docs/implementation/loans-deep-architectural-review.md](implementation/loans-deep-architectural-review.md). The PawnLoan service/selector/outbox architecture is fundamentally sound, but production hardening must database-enforce finalized loan/collateral/accounting-event immutability, gate or account for FundingLoan, prevent accidental production use of DEFERRED accounting, and recover stale PROCESSING outboxes. The recommended next slice is a documentation-and-test-first Loans truth-preservation hardening phase; no runtime behavior changed in this review.
+
+- Settings and configuration architecture has been audited in
+  [docs/implementation/settings-configuration-architecture-audit.md](implementation/settings-configuration-architecture-audit.md).
+  The recommended direction is to narrow `django-dynamic-preferences` to
+  lightweight UI/control-plane use, move business-critical policy to typed
+  tenant-domain models, add public membership-scoped UI preferences, and retire
+  duplicate central/legacy registrations through characterized phased cutovers.
+  No runtime configuration or schema behavior changed in this documentation-only
+  pass.
+
+- PawnLoan risk communication is now operationally auditable for the manual
+  email-first pilot. Risk alerts show email readiness/blockers, Operations
+  Console reports real-versus-simulated provider readiness, and the notice
+  ledger exposes source risk, template, consent snapshot, artifact, attempt,
+  failure, and provider evidence. SMS/WhatsApp and configurable automation remain
+  disabled pending their provider callback and policy controls.
+- The controlled email pilot now has a stale-preview guard and tenant command
+  `check_pawn_risk_email_pilot`. It fails closed for simulated providers or
+  missing/mismatched consent, preview, and rendered-artifact evidence. A real
+  provider and operator inbox success/failure-retry exercise are still external
+  acceptance steps; credentials are intentionally not stored in Loans.
+- Twilio integration is removed from active runtime and configuration. Notify
+  v2 sends WhatsApp only through Meta Cloud API; SMS fails closed with no
+  provider, and archived Twilio documentation remains historical only. WhatsApp
+  production acceptance still requires secure callbacks and reconciliation.
+- WhatsApp Cloud callback safety is implemented: HMAC and phone identity checks,
+  tenant-only routing, replay-safe receipt evidence, unique provider-message
+  routing, template-only dispatch, admin/settings diagnostics, and the
+  `check_whatsapp_cloud_readiness` tenant gate. Real Meta configuration and an
+  operator delivery/callback exercise remain external acceptance work.
+- Manual PawnLoan risk communication now offers WhatsApp beside email for DPD
+  and maturity alerts. It reuses locked revalidation and fingerprinted frozen
+  economics, adds approved structured Cloud-template preview/evidence, enforces
+  WhatsApp consent/contact/provider readiness, and preserves channel-specific
+  dedupe. Automation, fallback, and bulk sending remain disabled.
+- WhatsApp risk pilot acceptance is now visible from the Loans Operations
+  Console and available through `check_pawn_risk_whatsapp_pilot`. It reconciles
+  notice intent, Notify submission, ordered authenticated Meta receipts,
+  delivered/read/failed state, timing, duplicates, unknown callbacks, and
+  unresolved work. Real-message operator acceptance remains pending.
+
+- PawnLoan risk-monitoring refresh now returns a `204 HX-Redirect` response for
+  HTMX requests, so batch and individual refresh actions reliably reload the
+  snapshot portfolio. Ordinary form posts retain their normal `302` redirect.
+- PawnLoan batch risk selection excludes already-current assessments through a
+  snapshot loan-ID subquery. This keeps PostgreSQL's `FOR UPDATE SKIP LOCKED`
+  on PawnLoan rows only and avoids the unsupported nullable-outer-join lock.
 
 - Tenancy architecture review is now documented in [docs/implementation/tenancy-architecture-audit-rls-vs-django-tenants.md](implementation/tenancy-architecture-audit-rls-vs-django-tenants.md). The recommendation is to prepare a hybrid migration and switch to shared-schema PostgreSQL RLS later: keep `django-tenants` operational for now, add explicit workspace ownership to tenant-owned models, separate product workspace slug from `Company.schema_name`, and only remove schema tenancy after constraints, reports, jobs, and isolation tests are RLS-ready.
 - Public, global, and tenant UI boundaries remain mixed at the URL/template level. `shared_urlpatterns` are loaded in both public and tenant URLConfs, selected workspace profile fallback can make global routes behave tenant-aware, and subscription views contain company-vs-user ownership inconsistencies documented in [docs/ui/saas_information_architecture_audit.md](ui/saas_information_architecture_audit.md).

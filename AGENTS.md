@@ -39,6 +39,12 @@ Modules include accounting, loans, inventory, sales, purchase, commodity managem
 
 ## Coding Rules
 
+Rokkad follows the KISS principle: prefer the simplest design that correctly
+enforces the domain rules. Reuse ordinary Django and existing project patterns;
+do not introduce frameworks, indirection, abstraction layers, or configurability
+without a concrete current need. Simplicity must not bypass accounting,
+immutability, authorization, audit, or tenant-isolation requirements.
+
 Before implementing meaningful work:
 
 1. Inspect existing models, URLs, views, templates, services, and tests.

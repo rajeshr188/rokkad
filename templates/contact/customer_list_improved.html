@@ -147,8 +147,11 @@
                 <button class="btn btn-sm btn-primary" hx-get="{% url 'contact_customer_update' customer.id %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal">
                     {% trans "Edit" %}
                 </button>
-                <a class="btn btn-sm btn-success" href="{% if loans_new_module_enabled %}{% url 'loans:pawn_loan_create' %}{% if customer.party_id %}?party={{ customer.party_id }}{% endif %}{% else %}{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}{% endif %}">
-                    {% trans "Loan" %}
+                <a class="btn btn-sm btn-success" href="{% url 'loans:pawn_loan_create' %}{% if customer.party_id %}?party={{ customer.party_id }}{% endif %}">
+                    {% trans "PawnLoan" %}
+                </a>
+                <a class="btn btn-sm btn-outline-success" href="{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}">
+                    {% trans "Girvi" %}
                 </a>
                 <button class="btn btn-sm btn-danger" hx-delete="{% url 'contact_customer_delete' customer.id %}" hx-confirm="{% trans 'Are you sure?' %}" hx-target="closest .customer-card" hx-swap="outerHTML swap:0.5s">
                     {% trans "Delete" %}
@@ -210,9 +213,10 @@
                             <button class="btn btn-sm btn-outline-primary" hx-get="{% url 'contact_customer_update' customer.id %}" hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#modal" title="{% trans 'Edit' %}">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <a class="btn btn-sm btn-outline-success" href="{% if loans_new_module_enabled %}{% url 'loans:pawn_loan_create' %}{% if customer.party_id %}?party={{ customer.party_id }}{% endif %}{% else %}{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}{% endif %}" title="{% trans 'New Loan' %}">
+                            <a class="btn btn-sm btn-outline-success" href="{% url 'loans:pawn_loan_create' %}{% if customer.party_id %}?party={{ customer.party_id }}{% endif %}" title="{% trans 'New PawnLoan' %}">
                                 <i class="bi bi-plus-circle"></i>
                             </a>
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}" title="{% trans 'New Girvi loan' %}">G</a>
                             <button class="btn btn-sm btn-outline-danger" hx-delete="{% url 'contact_customer_delete' customer.id %}" hx-confirm="{% trans 'Are you sure?' %}" hx-target="closest tr" hx-swap="outerHTML swap:0.5s" title="{% trans 'Delete' %}">
                                 <i class="bi bi-trash"></i>
                             </button>

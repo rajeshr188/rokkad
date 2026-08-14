@@ -1,5 +1,5 @@
 ---
-status: accepted-design
+status: historical
 owner: project
 updated: 2026-08-08
 tags: [loans, funding-loan, persistence, application, concurrency]
@@ -10,6 +10,11 @@ related:
 ---
 
 # FundingLoan Gate B Persistence And Application Design
+
+> Historical implementation design. FundingLoan is now a supported runtime
+> workflow under `../adr/2026-08-13-loan-application-boundaries-and-monitoring.md`.
+> Statements below that describe it as a disabled prototype record the staged
+> delivery boundary at the time and are not current product policy.
 
 ## Purpose
 

@@ -8,6 +8,168 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Rokkad follows KISS (Keep It Simple, Stupid). Choose the smallest coherent
+design that meets the current business need, prefer ordinary Django and existing
+services/selectors, and avoid speculative abstractions, generic frameworks, and
+configuration without a concrete use case. KISS never means weakening domain
+invariants, accounting boundaries, audit evidence, authorization, or tenant
+isolation; those constraints are essential behavior, not accidental complexity.
+
+General allauth signup remains optional-verification for the MVP, but workspace
+invitation acceptance is a stricter identity boundary. The authenticated user
+must have a verified allauth `EmailAddress` matching the invitation before
+`control_plane.accept_invitation` may create membership or accept the invite.
+Enforce this in the service so both direct-link and invitation-dashboard flows
+share the rule; never infer mailbox control from matching email strings alone.
+
+Notify v2 is the target notification platform. Legacy `notify` remains a
+supported compatibility and history boundary while Girvi reminders, printed
+notices, Party counts, seeds, routes, and existing tenant evidence depend on it.
+Build no new workflows on legacy Notify. Do not delete its runtime or tables
+until the accepted staged retirement and tenant reconciliation gates pass.
+Retirement is dependency-first: decouple every consumer, permit at most one
+temporary read-only history adapter, isolate legacy Notify from normal runtime,
+then remove it. Never replace direct imports with dual writes.
+Canonical decision: `docs/adr/2026-08-14-legacy-notify-retirement-boundary.md`.
+
+FundingLoan is a supported Loans aggregate and operator workflow; never describe
+it as a disabled prototype. Girvi and Loans coexist independently during
+capability extraction, with no workspace default and no conditional routing
+between their origination screens. Generic entry surfaces offer an explicit
+choice. Girvi remains operational for its own records and as a business-rule
+reference until a separate retirement ADR is accepted.
+
+Persisted `LoanRiskSnapshot` rows are the monitoring/reporting read model. Live
+risk calculation produces or refreshes those snapshots; stale/error rows remain
+visible in the risk portfolio. Owner/Admin may force one active-loan refresh or
+refresh a `skip_locked`, 50-loan due batch from the operations UI. Snapshot
+provenance records the calculation contract plus policy, collateral, approved
+appraisal, and applicable valuation-rate identities. Monitoring copies exposure,
+due, overdue, DPD, collateral value, and LTV from canonical selectors; it must
+not recalculate them independently. Schema-v1/v2 document rendering and the explicit
+Owner/Admin legacy print-profile recovery path remain supported compatibility
+contracts pending the removal gate in
+`docs/implementation/loan-document-rendering-compatibility.md`. Canonical
+decision: `docs/adr/2026-08-13-loan-application-boundaries-and-monitoring.md`.
+The scheduler entrypoint is the bounded `reassess_pawn_loans` management
+command. A partial assessment failure must produce a non-zero command outcome
+for external monitoring while preserving per-loan `ERROR` snapshots for the UI.
+Material risk transitions project into `LoanRiskAlert` staff work items. Keep
+these separate from immutable outbound `LoanOperationalNotice` delivery intents:
+risk alerts are in-app open/resolved work and send no email or customer notice.
+The proposed borrower-communication workflow is documented at
+`docs/flows/pawn-risk-alert-borrower-communication.md`. Treat Notify v2 as a
+conditional foundation, not yet an automatic communications platform: consent,
+real-provider fail-closed behavior, explicit template/source evidence, dedupe,
+and WhatsApp callback security must precede risk-alert messaging.
+The first readiness gate now exists at
+`services.risk_communication_readiness.assess_risk_alert_communication_readiness`.
+Absence of explicit `PawnLoanCommunicationConsent` blocks a channel; simulated
+providers are never readiness-positive, and Notify stub delivery is debug-only.
+Eligible DPD/maturity alerts have a manual Owner/Admin email preview and
+confirmation path. Confirmation re-runs readiness under a locked alert, uses
+the selected Notify template identity, and never resolves the risk alert.
+PawnLoan service-notice consent is product-scoped and tenant-owned, with one
+explicit Allow/Block/Opt-out decision per Party and channel plus evidence,
+actor, and timestamp. Missing consent remains blocked. The email-first pilot is
+operator-visible: eligible risk alerts show concrete readiness/blockers, the
+Operations Console distinguishes real email delivery from simulated backends,
+and the notice ledger joins source risk, template/version, frozen consent
+evidence, rendered artifact, attempts, failures, and provider reference. Notify
+v2 remains the owner of rendering and delivery evidence.
+Manual risk-email confirmation uses a deterministic preview fingerprint and the
+same frozen payload for Notify rendering. The tenant-scoped
+`check_pawn_risk_email_pilot` command reconciles provider readiness, counts, and
+confirmed-preview versus rendered-artifact evidence; `--fail-on-blocker` is the
+deployment/acceptance gate. Real credentials remain deployment configuration.
+Notify v2 has no Twilio runtime. Meta WhatsApp Cloud API is the sole WhatsApp
+provider, with no provider switch or stub-as-sent fallback. SMS remains a domain
+channel but always fails delivery until a separate provider decision is made.
+Canonical decision: `docs/adr/2026-08-14-whatsapp-cloud-api-only.md`.
+WhatsApp Cloud configuration is workspace-owned, never deployment-global. Each
+tenant has at most one integration with write-only encrypted Meta access token,
+verify token, and app secret; the deployment environment holds only the stable
+`WORKSPACE_SECRET_ENCRYPTION_KEY`. Dispatch resolves the active tenant's enabled
+integration. WhatsApp Cloud callbacks require Meta HMAC verification with that
+workspace's app secret, configured phone-number identity, and tenant schema route. Status receipts
+are persisted and content-hash deduplicated before a uniquely identified
+WhatsApp job is locked and updated. Dispatch is approved-template-only. Use the
+tenant `check_whatsapp_cloud_readiness --fail-on-blocker` command for settings,
+unknown-receipt, and 24-hour callback reconciliation.
+Eligible DPD/maturity alerts also support a manual WhatsApp path beside email.
+It requires channel-specific consent/contact, all Cloud/callback settings, and
+an active approved Meta template name. The preview fingerprint includes the
+structured provider payload, and confirmation creates one channel-specific
+notice/job. Never add automatic fallback or bulk sending to this pilot.
+One tenant-scoped `PawnLoanCommunicationPolicy` controls this manual workflow.
+Its preferred channel is only the initial preview choice; quiet hours and the
+same-kind/channel borrower cooldown are hard readiness gates; escalation DPD is
+operator guidance only. Policy values are part of the preview fingerprint and
+frozen notice evidence. Automation and channel fallback remain disabled.
+The Loans Operations Console links to the read-only WhatsApp risk pilot report.
+It joins manual risk notices to Notify jobs and authenticated receipts, exposing
+latest provider state, timing, duplicates, unknown IDs, and unresolved work.
+Acceptance requires at least one notice, no unknown receipts, and every notice
+reaching authenticated delivered/read evidence. Retain JSON output from
+`check_pawn_risk_whatsapp_pilot --fail-on-blocker`.
+
+`PawnCollateralItem.latest_appraised_value` is draft proposal input only.
+Approval appends immutable `CollateralAppraisal` evidence effective from the
+loan date and records its identity in the approval payload; reapproval appends
+a superseding version. Disbursal, release, LTV, exposure, risk, and reporting
+must use approved as-of appraisal evidence and never fall back to the draft
+field. Canonical decision:
+`docs/adr/2026-08-13-pawn-collateral-appraisal-authority.md`.
+
+PawnLoan financial reads are layered: recorded balance folds finalized immutable
+events; contractual obligation state folds the active schedule and allocations;
+exposure composes those with explicitly labelled unfinalized interest preview;
+delinquency consumes the same unpaid obligation rows; risk consumes those
+selectors without recalculating money. Canonical reference:
+`docs/domain/pawn-loan-financial-read-models.md`.
+
+Loans customer notices and internal operational alerts are separate intent
+aggregates with different eligibility, recipient, payload, and source rules.
+They share one delivery coordinator for schedule checks, Notify job-state
+handling, queued batch selection, and result counts. Notify v2 remains the sole
+owner of rendering, provider attempts, and delivery evidence; do not copy that
+state into Loans or duplicate dispatch orchestration in another notice service.
+
+Loan Series operator setup is service-owned and atomic across Series identity,
+active state, and both required official-number sequences (`PAWN_LOAN` and
+`PAWN_LOAN_RELEASE`). Views validate forms and render responses only. Updating
+format or maximum never resets a consumed `next_number`; failure in either
+sequence rolls back the complete setup change.
+
+The PawnLoan economic setup form represents one service-owned configuration
+command: its economic calculation policy and the Gold and Silver monthly-rate
+policies share scope/effective dates and commit atomically. The rows remain
+separate effective-dated policies for later independent resolution. Views must
+not recreate this three-write transaction.
+
+PawnLoan draft create/update with form-supplied photographs is service-owned.
+The command validates every image before consuming a number or mutating the
+draft, maps uploads to retained/new collateral identities, commits database
+changes atomically, and removes files written by the command if a later media
+write fails. Views only translate cleaned form rows into photo inputs.
+
+Configurable official document issuance is an application-service boundary:
+reuse of an existing issue, layout/profile resolution, rendering, compatibility
+recovery auditing, and immutable issue persistence stay together. Views retain
+authorization, fixed/legacy recovery permission checks, error-to-HTTP mapping,
+and response headers. Fixed and legacy paths remain supported until their
+documented removal gate is satisfied.
+
+The legacy `apps.tenant_apps.loans.views` module remains the URL compatibility
+surface while focused HTTP coordinators move under `apps.tenant_apps.loans.web`.
+Extracted callables are re-exported from `loans.views`, preserving URL names and
+external patch/import behavior during the incremental split. Reporting pages,
+exports, and Party statements are owned by `loans.web.reports`.
+Read-only operations console, risk portfolio, notice ledger, and runbook pages
+are owned by `loans.web.operations`. Risk refresh and accounting retry mutation
+handlers remain in `loans.views` until their established patch/import seams can
+be migrated explicitly.
+
 Workspace removal in the ordinary UI means recoverable archive. Owner must
 type the exact workspace name; `is_deleted=True` blocks selection and tenant
 access while preserving the schema and all business/accounting evidence.
@@ -512,10 +674,10 @@ contract is a separate exact compensating row; update/delete is database-
 blocked. Do not generalize this behavior to `GivenLoan` repayment, release,
 accrual, recovery, renewal, write-off, or reversal delivery yet. Real DEA
 TakenLoan posting currently fails in its existing rules because
-`DualLedgerLine.currency` is omitted. The current
-`loan__new_module_enabled` setting is transitional
-default-route behavior and must not be interpreted as an ownership cutover.
-Optional combined reporting must be read-only and source-labelled.
+`DualLedgerLine.currency` is omitted. There is no default loan application or
+cross-application origination routing.
+Generic entry surfaces present explicit choices. Optional combined reporting
+must be read-only and source-labelled.
 
 Girvi destructive cleanup completed on branch `dea-kiss` on 2026-08-08.
 `GivenLoan` and `TakenLoan` are the only runtime loan models in
@@ -593,7 +755,8 @@ discrepancies without mutation. The full 40-test FundingLoan suite passes. Next
 an unlinked Owner/Admin-only read console and detail page were added under Loans
 setup. They render selector output only, expose no write controls, deny ordinary
 members, return not found for unknown/cross-workspace identifiers, and preserve
-`FUNDING_LOAN_RUNTIME_SUPPORTED = False`. The unlinked Owner/Admin draft and
+The console evolved into the supported Owner/Admin FundingLoan workflow. The
+Owner/Admin draft and
 lender-capture flow is now complete: it selects only active Party lenders,
 delegates creation and numbering to `CreateFundingLoanDraft`, records the real
 actor, and redirects to read detail. Invalid/inactive choices consume no
@@ -1226,7 +1389,10 @@ The historical Loans execution order is the `E0-E7` plan in `docs/plans/loans-re
 
 The durable Girvi-versus-Loans architecture explanation and feature-parity register lives in `docs/apps/loans/architecture-and-girvi-parity.md`. Operational parity is now a required evidence gate for selecting one application and retiring the other; it does not predetermine the winner.
 
-Historical Loans E6.1-E6.5 work implemented and piloted temporary unified reads, comparison, cutover readiness, and default routing in disposable workspace `jcl1`. Cleanup checkpoint `01c99f6` retired the unified-read, comparison, and coexistence-readiness implementation. The remaining `loan__new_module_enabled` setting may choose the canonical landing route only; it does not block Girvi origination, transfer ownership, or disable either app. Replace it with independent module-availability settings and a default-module preference before treating the configuration as final product policy.
+Historical Loans E6.1-E6.5 work implemented and piloted temporary unified reads,
+comparison, cutover readiness, and default routing in disposable workspace
+`jcl1`. That routing preference is now removed. Girvi and Loans are independently
+reachable and neither is a workspace default.
 
 Loans rewrite E7.1 is complete. `PawnLoanNotice` owns tenant-scoped, idempotent
 notice intent, schedule, recipient snapshot, financial payload snapshot, and
@@ -1707,7 +1873,74 @@ The active design track is Girvi event-driven DEA posting. See [plans/active](pl
 
 DEA Phase 7 cleanup readiness audit has started, expense-post characterization is complete, dead voucher helper definitions have been removed, and the first accountant permission boundary hardening is complete. The next recommended DEA slice is navigation cleanup: normal staff should be guided to business events and reports, while accountant/admin users retain manual voucher, payment, expense, journal, opening-balance, period, and diagnostic routes.
 
+FundingLoan HTTP ownership is split simply by responsibility. Read-only console,
+detail, and immutable documents live in `loans.web.funding`; draft, activation,
+repayment, settlement, return, closure, and correction HTTP adapters live in
+`loans.web.funding_actions`. They are ordinary Django views over existing
+services—not a command bus or framework. `loans.views` compatibility re-exports
+them so URLs and route names remain unchanged.
+
+PawnLoan draft-origination HTTP actions are owned by
+`loans.web.pawn_draft_actions`: create/edit, economic preview, draft collateral
+split, draft photo capture, approval, reopen, and cancellation. Their small
+form-to-service mapping helpers live beside them. Keep the design as ordinary
+Django adapters over existing services and preserve `loans.views` compatibility
+exports while later PawnLoan action groups are extracted.
+
+PawnLoan financial HTTP actions are owned by
+`loans.web.pawn_financial_actions`: disbursal/readiness, borrower accounting
+setup, repayment preview/recording, accrual finalization, capitalization, and
+financial-event reversal. The module remains a thin Django adapter; existing
+services and DEA boundaries continue to own accounting, posting, idempotency,
+transactions, and reversals. `loans.views` retains compatibility exports.
+
+PawnLoan full-release HTTP confirmation and the deliberately gone partial-release
+route are owned by `loans.web.pawn_release_actions`. Release settlement,
+accounting, custody mutation, numbering, and idempotency stay in the existing
+service; release document delivery remains separate. Preserve the compatibility
+exports in `loans.views`.
+
+Standalone PawnLoan custody mutations live in `loans.web.pawn_custody_actions`:
+storage creation/transfer plus verification completion, discrepancy resolution,
+and discrepancy-alert intent creation. Verification start and observation remain
+inside their combined list/detail coordinators because adding separate endpoints
+would create complexity without user value. PawnLoan customer notice creation
+and retry live in `loans.web.pawn_notice_actions`; Loans owns notice intent while
+Notify owns rendering and provider delivery. Both retain `loans.views` exports.
+
+PawnLoan recovery HTTP actions are separated by actual workflow, not hidden
+behind a generic framework. Auction initiation/start/cancel/complete/reversal
+live in `loans.web.pawn_auction_actions`; release-and-renew preview/completion
+and renewal reversal live in `loans.web.pawn_renewal_actions`. Their immutable
+PDF evidence remains in document delivery. Domain, custody, numbering, DEA, and
+transaction rules remain service-owned, with `loans.views` compatibility exports.
+
+Loans web ownership map: `reports` owns report/statement reads; `operations`
+owns operational read pages; `funding` and `funding_actions` own FundingLoan
+reads/documents and mutations; PawnLoan actions are grouped into `pawn_draft`,
+`pawn_financial`, `pawn_release`, `pawn_custody`, `pawn_notice`, `pawn_auction`,
+and `pawn_renewal` modules. The legacy `loans.views` remains the URL export
+surface and owns cohesive setup/document administration, read/document pages,
+mixed verification list/detail POSTs, expired-draft setup transfer, outbox retry,
+and risk refresh. Do not split those solely to reduce line count; require a clear
+ownership or maintainability benefit.
+
+PawnLoan primary navigation is intentional for authorized workspace users even
+though its compatibility URL currently contains `/loans/internal/`. URL wording
+is not a security boundary. `loans_workspace_required` enforces membership for
+PawnLoan operations, while Loans Setup navigation and endpoints remain limited
+to Owner/Admin through `loans_setup_required`.
+
+PawnLoan accounting readiness and DEA posting must resolve stable ledger keys
+through the same DEA resolver. In particular, `DOCUMENT_CHARGE_INCOME` accepts
+DEA's supported `Service Income` alias. Readiness must still fail closed when no
+canonical key or supported alias exists; Loans must not create global ledgers as
+part of borrower-account setup. Every PawnLoan DEA posting rule must use the same
+canonical resolver rather than querying `Ledger.name` directly.
+
 Loans operational parity OP6 is complete. All eight pilot report/statement projections use the canonical PawnLoan selector/balance fold, and CSV/XLSX/PDF exports only format those results. The Loans Party statement combines current positions with immutable PawnLoan events and excludes Girvi rows. Fixed loan-ticket recovery produces Original and Duplicate signed pages with one verification identity; configurable pilot layouts must select their existing Original/Duplicate composition. The next Loans step is the operator parity pilot, not another report-count parity build.
+
+The 2026-08-14 Loans deep architecture review finds the PawnLoan aggregate/service/selector/outbox design fundamentally sound but not yet unconditionally truth-preserving at the database boundary. Finalized PawnLoan terms, collateral facts, and accounting-event payloads need PostgreSQL immutability guards; FundingLoan needs a DEA/outbox boundary or a production gate; DEFERRED accounting must not be mistaken for production books; and PROCESSING outboxes need lease/reconciliation recovery. The next recommended architecture slice is Loans truth-preservation hardening, beginning with an ADR and database/concurrency safety tests.
 
 LPD7.1 adds print-profile models, tenant migration `loans.0037`, validated
 schema-v1 contracts, immutable publication, audited assignment, and `Series ->
@@ -1733,6 +1966,13 @@ and preserves schema-v1/v2 compatibility without mutation.
 Operator parity-pilot preparation is documented in `docs/implementation/loans-girvi-operator-parity-pilot.md`. `jcl1` starts with 8 Loans PawnLoans and 8 Girvi GivenLoans, explicit `DEFERRED` accounting, zero document-integrity findings, and no Loans storage hierarchy, verification session, or operational notice. The official clock is stopped while accounting/Girvi runtime work is uncommitted. A combined 191-test preflight did not complete within ten minutes and exposed a stale implicit-DEA test; its focused scenario passes when DEA is explicit. DEA/Loans/Girvi migration drift checks are clean. Do not claim a cross-product pass until smaller suites finish on a reproducible checkpoint.
 
 ## Documentation Memory
+
+- PawnLoan risk portfolio mutations use a non-3xx `HX-Redirect` response for
+  HTMX because redirect response headers on HTTP 3xx responses are not exposed
+  reliably to HTMX. Keep ordinary POST redirects as standard HTTP 302.
+- Risk batch candidate locking must not introduce a nullable join to
+  `LoanRiskSnapshot`: PostgreSQL rejects `FOR UPDATE` on that shape. Exclude
+  current snapshot loan IDs with a subquery, then lock only PawnLoan rows.
 
 - Canonical docs live under `docs/`.
 - Historical source docs live under `docs/archive/`.

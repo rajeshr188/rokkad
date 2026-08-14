@@ -1,10 +1,15 @@
 import io
 import json
+import hashlib
+import hmac
 import os
 import re
 import zipfile
 
 from django.conf import settings
+from django import forms
+from django.core.exceptions import ImproperlyConfigured
+from django.db import connection
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,7 +17,8 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from apps.tenant_apps.notify.access import notify_action_required
+from apps.tenant_apps.notify.access import notify_action_required, notify_admin_required
+from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
 
 from .models import (
     NotificationBatch,
@@ -20,9 +26,39 @@ from .models import (
     NotificationPolicy,
     NotificationRecipient,
     NotificationTemplate,
+    WhatsAppCloudWebhookReceipt,
 )
 from .services.delivery_service import DIGITAL_CHANNELS, dispatch_batch_jobs, process_whatsapp_cloud_webhook
 from .services import render_batch_pdf
+from .services.whatsapp_readiness import assess_whatsapp_cloud_readiness
+from .services.whatsapp_integration import (
+    WhatsAppIntegrationError, get_whatsapp_cloud_credentials,
+    get_whatsapp_cloud_integration, set_whatsapp_cloud_integration,
+)
+
+
+class WhatsAppCloudIntegrationForm(forms.Form):
+    api_version = forms.CharField(max_length=16, initial="v20.0")
+    phone_number_id = forms.CharField(max_length=64)
+    access_token = forms.CharField(required=False, widget=forms.PasswordInput(render_value=False))
+    webhook_verify_token = forms.CharField(required=False, widget=forms.PasswordInput(render_value=False))
+    app_secret = forms.CharField(required=False, widget=forms.PasswordInput(render_value=False))
+    is_enabled = forms.BooleanField(required=False)
+
+    def __init__(self, *args, integration=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.integration = integration
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-check-input" if isinstance(field.widget, forms.CheckboxInput) else "form-control"
+        if integration:
+            for name in ("access_token", "webhook_verify_token", "app_secret"):
+                self.fields[name].help_text = "Leave blank to keep the stored secret."
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.integration is None and not all(cleaned.get(name) for name in ("access_token", "webhook_verify_token", "app_secret")):
+            raise forms.ValidationError("All three secrets are required for initial setup.")
+        return cleaned
 
 
 def _flash(request, level, message):
@@ -83,13 +119,19 @@ def _read_artifact_bytes(artifact):
 
 
 def _notify_settings_summary():
+    workspace_id = getattr(getattr(connection, "tenant", None), "pk", None)
+    integration = get_whatsapp_cloud_integration(workspace_id) if workspace_id else None
     return {
-        "whatsapp_provider": getattr(settings, "NOTIFY_V2_WHATSAPP_PROVIDER", "twilio"),
-        "has_whatsapp_cloud_phone_id": bool(getattr(settings, "WHATSAPP_CLOUD_PHONE_NUMBER_ID", "")),
-        "has_whatsapp_cloud_access_token": bool(getattr(settings, "WHATSAPP_CLOUD_ACCESS_TOKEN", "")),
-        "has_whatsapp_cloud_verify_token": bool(
-            getattr(settings, "WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN", "")
-        ),
+        "whatsapp_provider": "cloud",
+        "integration": integration,
+        "has_whatsapp_cloud_phone_id": bool(integration and integration.phone_number_id),
+        "has_whatsapp_cloud_access_token": bool(integration and integration.access_token_ciphertext),
+        "has_whatsapp_cloud_verify_token": bool(integration and integration.webhook_verify_token_ciphertext),
+        "has_whatsapp_cloud_app_secret": bool(integration and integration.app_secret_ciphertext),
+        "webhook_receipt_count": WhatsAppCloudWebhookReceipt.objects.count(),
+        "webhook_unknown_count": WhatsAppCloudWebhookReceipt.objects.filter(
+            processing_status=WhatsAppCloudWebhookReceipt.ProcessingStatus.UNKNOWN_JOB
+        ).count(),
         "webhook_url": reverse("notify_v2_whatsapp_cloud_webhook"),
     }
 
@@ -102,13 +144,19 @@ def index(_request):
 @notify_action_required("view")
 def settings_overview(request):
     settings_summary = _notify_settings_summary()
+    whatsapp_readiness = assess_whatsapp_cloud_readiness()
     tenant = getattr(request, "tenant", None)
     can_manage_admin_models = bool(
         request.user.is_staff and tenant and getattr(tenant, "schema_name", "public") != "public"
     )
     context = {
         "notify_settings": settings_summary,
+        "whatsapp_readiness": whatsapp_readiness,
         "can_manage_admin_models": can_manage_admin_models,
+        "can_manage_whatsapp": bool(
+            tenant and (is_platform_admin(request.user) or tenant.owner_id == request.user.pk or
+                        get_workspace_role_name(request.user, tenant) in {"Owner", "Admin"})
+        ),
         "counts": {
             "event_types": NotificationEventType.objects.filter(is_active=True).count(),
             "policies": NotificationPolicy.objects.filter(is_active=True).count(),
@@ -125,11 +173,42 @@ def settings_overview(request):
     return render(request, "notify_v2/settings.html", context)
 
 
+@notify_admin_required
+def whatsapp_cloud_integration_setup(request):
+    workspace = request.notify_workspace
+    integration = get_whatsapp_cloud_integration(workspace.pk)
+    initial = {
+        "api_version": getattr(integration, "api_version", "v20.0"),
+        "phone_number_id": getattr(integration, "phone_number_id", ""),
+        "is_enabled": getattr(integration, "is_enabled", False),
+    }
+    form = WhatsAppCloudIntegrationForm(request.POST or None, initial=initial, integration=integration)
+    if request.method == "POST" and form.is_valid():
+        try:
+            set_whatsapp_cloud_integration(workspace_id=workspace.pk, actor=request.user, **form.cleaned_data)
+        except (WhatsAppIntegrationError, ImproperlyConfigured) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Workspace WhatsApp Cloud integration updated.")
+            return redirect("notify_v2_settings")
+    return render(request, "notify_v2/whatsapp_cloud_integration.html", {
+        "form": form, "integration": integration,
+        "webhook_url": request.build_absolute_uri(reverse("notify_v2_whatsapp_cloud_webhook")),
+    })
+
+
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def whatsapp_cloud_webhook(request):
+    workspace_id = getattr(getattr(connection, "tenant", None), "pk", None)
+    if getattr(connection, "schema_name", "public") == "public" or not workspace_id:
+        return JsonResponse({"ok": False, "error": "tenant_route_required"}, status=403)
+    try:
+        credentials = get_whatsapp_cloud_credentials(workspace_id, require_enabled=True)
+    except (WhatsAppIntegrationError, ImproperlyConfigured):
+        credentials = None
     if request.method == "GET":
-        verify_token = (getattr(settings, "WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN", "") or "").strip()
+        verify_token = credentials.webhook_verify_token if credentials else ""
         if (
             (request.GET.get("hub.mode") or "").strip() == "subscribe"
             and verify_token
@@ -138,12 +217,36 @@ def whatsapp_cloud_webhook(request):
             return HttpResponse(request.GET.get("hub.challenge", ""), content_type="text/plain")
         return HttpResponse("Webhook verification failed.", status=403)
 
+    app_secret = credentials.app_secret if credentials else ""
+    supplied_signature = (request.headers.get("X-Hub-Signature-256") or "").strip()
+    if not app_secret:
+        return JsonResponse({"ok": False, "error": "webhook_app_secret_missing"}, status=503)
+    expected_signature = "sha256=" + hmac.new(
+        app_secret.encode(), request.body, hashlib.sha256
+    ).hexdigest()
+    if not supplied_signature or not hmac.compare_digest(supplied_signature, expected_signature):
+        return JsonResponse({"ok": False, "error": "invalid_signature"}, status=403)
     try:
         payload = json.loads(request.body or b"{}")
     except json.JSONDecodeError:
         return JsonResponse({"ok": False, "error": "invalid_json"}, status=400)
 
-    summary = process_whatsapp_cloud_webhook(payload)
+    if payload.get("object") != "whatsapp_business_account":
+        return JsonResponse({"ok": False, "error": "invalid_object"}, status=400)
+    configured_phone_id = credentials.phone_number_id if credentials else ""
+    callback_phone_ids = {
+        str(((change or {}).get("value") or {}).get("metadata", {}).get("phone_number_id") or "").strip()
+        for entry in payload.get("entry") or []
+        for change in (entry or {}).get("changes") or []
+    }
+    callback_phone_ids.discard("")
+    if not configured_phone_id or callback_phone_ids != {configured_phone_id}:
+        return JsonResponse({"ok": False, "error": "phone_number_id_mismatch"}, status=403)
+    summary = process_whatsapp_cloud_webhook(
+        payload,
+        phone_number_id=configured_phone_id,
+        signature_digest=supplied_signature.removeprefix("sha256="),
+    )
     return JsonResponse({"ok": True, **summary})
 
 

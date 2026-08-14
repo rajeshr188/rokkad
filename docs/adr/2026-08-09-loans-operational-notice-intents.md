@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-08-09
+updated: 2026-08-13
 tags: [loans, notices, notify-v2, license, verification]
 related: [../plans/loan-operational-parity-pilot.md, 2026-08-09-loans-physical-verification-evidence.md]
 ---
@@ -33,6 +33,10 @@ physical-verification discrepancy. Neither naturally belongs to one PawnLoan.
    payload. Notify v2 exclusively owns event/template/job/provider state.
 7. Delivery creation is idempotent by workspace request key. Scheduled
    operational alerts share the existing tenant notice dispatcher and retry UI.
+   Customer and operational intents share one Loans delivery coordinator for
+   future-date checks, missing/cancelled/SENT handling, queued-job selection,
+   bounded dispatch, and result counts. Their eligibility, payload, recipient,
+   source, and idempotency policies remain aggregate-specific.
 8. PostgreSQL enforces exact source shape, source/workspace agreement, and
    append-only intent data. Only the initial Notify event/job link attachment is
    permitted after insert.
@@ -44,3 +48,5 @@ physical-verification discrepancy. Neither naturally belongs to one PawnLoan.
   without copying provider status into Loans.
 - Broader reminder automation and recipient escalation are post-pilot policy,
   not hidden assumptions in this slice.
+- Adding a new Loans notice-intent aggregate must reuse the shared delivery
+  coordinator rather than reproduce Notify-state orchestration.

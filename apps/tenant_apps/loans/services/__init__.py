@@ -4,12 +4,14 @@ from .license_series import (
     activate_license,
     assert_series_can_issue,
     configure_sequence,
+    create_configured_series,
     create_license,
     create_series,
     expire_license,
     renew_license,
     set_series_active,
     update_license,
+    update_configured_series,
     update_series,
 )
 from .number_allocation import (
@@ -24,10 +26,13 @@ from .number_allocation import (
 from .pawn_drafts import (
     CollateralDraftInput,
     CreatePawnDraftCommand,
+    DraftCollateralPhotoInput,
     PawnDraftError,
     UpdatePawnDraftCommand,
     create_pawn_draft,
+    create_pawn_draft_with_photos,
     update_pawn_draft,
+    update_pawn_draft_with_photos,
 )
 from .pawn_draft_split import (
     PawnDraftSplitError,
@@ -128,6 +133,10 @@ from .documents import (
     PawnLoanDocumentService,
 )
 from .document_layouts import DocumentLayoutServiceError, LoanDocumentLayoutService
+from .document_issuance import (
+    ConfigurableDocumentIssueResult,
+    issue_configurable_document,
+)
 from .print_profiles import (
     LoanDocumentPrintProfileService,
     PrintProfileServiceError,
@@ -194,7 +203,9 @@ from .report_exports import (
     render_report_dataset,
 )
 from .economic_policies import (
+    PawnEconomicConfiguration,
     PawnEconomicPolicyError,
+    create_pawn_economic_configuration,
     create_pawn_loan_economic_policy,
     create_pawn_loan_fee_policy,
     create_pawn_metal_interest_rate_policy,
@@ -265,12 +276,14 @@ __all__ = (
     "activate_license",
     "assert_series_can_issue",
     "configure_sequence",
+    "create_configured_series",
     "create_license",
     "create_series",
     "expire_license",
     "renew_license",
     "set_series_active",
     "update_license",
+    "update_configured_series",
     "update_series",
     "NumberAllocation",
     "NumberAllocationError",
@@ -281,9 +294,11 @@ __all__ = (
     "preview_number",
     "CollateralDraftInput",
     "CreatePawnDraftCommand",
+    "DraftCollateralPhotoInput",
     "PawnDraftError",
     "UpdatePawnDraftCommand",
     "create_pawn_draft",
+    "create_pawn_draft_with_photos",
     "DEFAULT_PRODUCTS",
     "LoanProductCatalogError",
     "seed_default_loan_products",
@@ -301,6 +316,7 @@ __all__ = (
     "installment_extra_principal_amount",
     "supersede_installment_schedule",
     "update_pawn_draft",
+    "update_pawn_draft_with_photos",
     "PawnCollateralLabelResult",
     "PawnCollateralMediaError",
     "append_collateral_photo",
@@ -385,6 +401,8 @@ __all__ = (
     "PawnLoanDocumentService",
     "DocumentLayoutServiceError",
     "LoanDocumentLayoutService",
+    "ConfigurableDocumentIssueResult",
+    "issue_configurable_document",
     "LoanDocumentPrintProfileService",
     "PrintProfileServiceError",
     "ResolvedPrintProfile",
@@ -415,7 +433,9 @@ __all__ = (
     "preview_pawn_loan_renewal_source",
     "renew_pawn_loan",
     "reverse_pawn_loan_renewal",
+    "PawnEconomicConfiguration",
     "PawnEconomicPolicyError",
+    "create_pawn_economic_configuration",
     "create_pawn_loan_economic_policy",
     "create_loan_monitoring_policy",
     "create_pawn_loan_fee_policy",
@@ -461,5 +481,5 @@ __all__ = (
     "save_funding_loan_draft_inputs",
     "render_loan_license_register_pdf",
 )
-from .risk_snapshots import rebuild_current_risk_snapshots, reassess_pawn_loans_batch, refresh_loan_risk_snapshot
+from .risk_snapshots import RiskSnapshotRefreshError, rebuild_current_risk_snapshots, reassess_pawn_loans_batch, refresh_loan_risk_snapshot
 from .product_catalog import activate_product_version, create_product_version_draft, retire_product_version, seed_default_loan_products

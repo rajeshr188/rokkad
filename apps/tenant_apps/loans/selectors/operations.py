@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Max
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
@@ -16,6 +17,7 @@ from apps.tenant_apps.loans.domain import (
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     LoanLicense,
+    LoanRiskSnapshot,
     PawnLoan,
     PawnLoanAccountingEvent,
     PawnLoanAccountingOutbox,
@@ -63,6 +65,9 @@ class PawnLoanOperationsSnapshot:
     accounting_rows: tuple[AccountingSetupRow, ...]
     recent_reversals: tuple[object, ...]
     recent_audit_events: tuple[object, ...]
+    active_loan_count: int
+    unassessed_active_loan_count: int
+    last_successful_risk_assessment_at: object | None
 
     @property
     def failed_count(self):
@@ -121,6 +126,14 @@ def get_pawn_loan_operations_snapshot(
         .select_related("borrower", "license", "policy_snapshot")
         .order_by("loan_number")
     )
+    active_loans = PawnLoan.objects.filter(
+        workspace_id=workspace_id,
+        state=PawnLoanState.ACTIVE.value,
+    )
+    current_risk = LoanRiskSnapshot.objects.filter(
+        workspace_id=workspace_id,
+        status=LoanRiskSnapshot.Status.CURRENT,
+    )
     return PawnLoanOperationsSnapshot(
         generated_at=now,
         outbox_counts=outbox_counts,
@@ -141,6 +154,13 @@ def get_pawn_loan_operations_snapshot(
             .select_related("loan", "actor")
             .order_by("-created_at")[:audit_limit]
         ),
+        active_loan_count=active_loans.count(),
+        unassessed_active_loan_count=active_loans.filter(
+            risk_snapshot__isnull=True,
+        ).count(),
+        last_successful_risk_assessment_at=current_risk.aggregate(
+            latest=Max("assessed_at")
+        )["latest"],
     )
 
 

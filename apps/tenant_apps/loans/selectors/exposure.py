@@ -8,16 +8,16 @@ from apps.tenant_apps.loans.domain import (
     LoanRepaymentStructure,
     PawnLoanState,
 )
-from apps.tenant_apps.loans.models import (
-    PawnLoan,
-    RepaymentScheduleChangeKind,
-    RepaymentScheduleVersion,
-    current_tenant_workspace_id,
-)
+from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
 from apps.tenant_apps.loans.domain.interest import calculate_period_interest
 from apps.tenant_apps.loans.services.pawn_tranches import (
     get_pawn_principal_tranche_balances,
+)
+from .obligation_state import (
+    ObligationAmount,
+    calculate_obligation_state_as_of,
+    get_active_repayment_schedule_as_of,
 )
 
 
@@ -25,15 +25,7 @@ class PawnLoanExposureError(ValueError):
     pass
 
 
-@dataclass(frozen=True)
-class ExposureComponent:
-    principal: Decimal
-    interest: Decimal
-    fees: Decimal
-
-    @property
-    def total(self):
-        return self.principal + self.interest + self.fees
+ExposureComponent = ObligationAmount
 
 
 @dataclass(frozen=True)
@@ -76,10 +68,12 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
     projected_interest = sum(
         (row[2] for row in previews), Decimal("0")
     )
-    active_schedule = _active_schedule_as_of(loan, as_of_date)
-    due_now, overdue, scheduled_remaining, findings = _obligation_components_as_of(
-        active_schedule, as_of_date
-    )
+    active_schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
+    obligation_state = calculate_obligation_state_as_of(active_schedule, as_of_date)
+    due_now = obligation_state.due_now
+    overdue = obligation_state.overdue
+    scheduled_remaining = obligation_state.remaining
+    findings = list(obligation_state.integrity_findings)
     recognition = getattr(loan.policy_snapshot, "accounting_recognition", None)
     accounting_interest = (
         balance.interest_outstanding
@@ -98,12 +92,22 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         LoanRepaymentStructure.FLEXIBLE_PARTIAL_PAYMENT.value,
     }
     ltv_basis = maturity_payoff if is_bullet else total_economic
+    if scheduled_remaining.principal != balance.principal_outstanding:
+        findings.append(
+            "Scheduled remaining principal does not equal recorded principal outstanding."
+        )
+    if recorded_total != (
+        balance.principal_outstanding
+        + balance.interest_outstanding
+        + balance.fees_outstanding
+    ):
+        findings.append("Recorded total due does not equal its balance components.")
     provenance = (
         "recorded:event-fold-v1",
         "projection:actual-outstanding-daily-v1",
         f"contract:{loan.product_version.calculation_contract_version}",
         "due:active-obligation-fold-v1",
-        f"schedule:{active_schedule.fingerprint if active_schedule else 'none'}",
+        f"schedule:{obligation_state.schedule_fingerprint or 'none'}",
     )
     return PawnLoanExposure(
         loan_id=loan.pk,
@@ -123,7 +127,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         ltv_exposure_basis=ltv_basis,
         projection_periods=previews,
         provenance=provenance,
-        integrity_findings=findings,
+        integrity_findings=tuple(findings),
     )
 
 
@@ -184,70 +188,3 @@ def _add_months(value, months):
     year = value.year + month_index // 12
     month = month_index % 12 + 1
     return date(year, month, min(value.day, calendar.monthrange(year, month)[1]))
-
-
-def _active_schedule_as_of(loan, as_of_date):
-    schedules = RepaymentScheduleVersion.objects.filter(
-        loan=loan,
-        source_event__effective_date__lte=as_of_date,
-    ).order_by("-version", "-pk")
-    for schedule in schedules:
-        terminations = schedule.changes.filter(
-            kind=RepaymentScheduleChangeKind.TERMINATE,
-            effective_date__lte=as_of_date,
-        ).select_related("reversal")
-        terminated = any(
-            not hasattr(change, "reversal")
-            or change.reversal.effective_date > as_of_date
-            for change in terminations
-        )
-        if not terminated:
-            return schedule
-    return None
-
-
-def _obligation_components_as_of(schedule, as_of_date):
-    zero = ExposureComponent(Decimal("0"), Decimal("0"), Decimal("0"))
-    if schedule is None:
-        return zero, zero, zero, ()
-    due_principal = due_interest = overdue_principal = overdue_interest = Decimal("0")
-    remaining_principal = remaining_interest = Decimal("0")
-    findings = []
-    for obligation in schedule.obligations.order_by("due_date", "sequence"):
-        principal_allocated = sum(
-            (
-                row.amount
-                for row in obligation.allocations.filter(
-                    component="PRINCIPAL",
-                    source_event__effective_date__lte=as_of_date,
-                )
-            ), Decimal("0")
-        )
-        interest_allocated = sum(
-            (
-                row.amount
-                for row in obligation.allocations.filter(
-                    component="INTEREST",
-                    source_event__effective_date__lte=as_of_date,
-                )
-            ), Decimal("0")
-        )
-        principal = obligation.principal_due - principal_allocated
-        interest = obligation.interest_due - interest_allocated
-        if principal < 0 or interest < 0:
-            findings.append(f"Obligation {obligation.pk} is over-allocated.")
-            continue
-        remaining_principal += principal
-        remaining_interest += interest
-        if obligation.due_date <= as_of_date:
-            due_principal += principal
-            due_interest += interest
-        if obligation.due_date < as_of_date:
-            overdue_principal += principal
-            overdue_interest += interest
-    return (
-        ExposureComponent(due_principal, due_interest, Decimal("0")),
-        ExposureComponent(overdue_principal, overdue_interest, Decimal("0")),
-        ExposureComponent(remaining_principal, remaining_interest, Decimal("0")),
-        tuple(findings),
-    )

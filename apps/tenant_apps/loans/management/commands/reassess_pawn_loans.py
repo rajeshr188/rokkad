@@ -21,3 +21,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"selected={result['selected']} current={result['current']} errors={len(result['errors'])}"))
         for row in result["errors"]:
             self.stderr.write(f"loan={row['loan_id']} error={row['error']}")
+        if result["errors"]:
+            raise CommandError(
+                f"{len(result['errors'])} PawnLoan risk assessment(s) failed."
+            )

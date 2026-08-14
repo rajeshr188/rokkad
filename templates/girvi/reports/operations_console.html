@@ -49,7 +49,7 @@
           <div class="mb-3"><strong>Rates:</strong> {{ rate_summary.rates }} rates from {{ rate_summary.sources }} sources</div>
           <div class="d-flex gap-2 flex-wrap">
             <a href="{% url 'girvi:girvi_series_list' %}" class="btn btn-sm btn-outline-primary">Review Series</a>
-            <a href="{% url 'rates:rate_list' %}" class="btn btn-sm btn-outline-primary">Review Rates</a>
+            <a href="{% url 'rate_list' %}" class="btn btn-sm btn-outline-primary">Review Rates</a>
             <a href="{% url 'girvi:loan_accounting_reconciliation_report' %}" class="btn btn-sm btn-outline-danger">Open Reconciliation</a>
           </div>
         </div>

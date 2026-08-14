@@ -5,7 +5,6 @@ from django.test import SimpleTestCase
 
 from apps.tenant_apps.loans.domain.future_funding import (
     ALLOWED_FUNDING_LOAN_TRANSITIONS,
-    FUNDING_LOAN_RUNTIME_SUPPORTED,
     FundingCollateralCandidate,
     FundingCustodyEvent,
     FundingLoanEvent,
@@ -41,7 +40,6 @@ class FundingCollateralPolicyTests(SimpleTestCase):
             terms=self._terms(principal="1000"),
         )
 
-        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
         self.assertEqual(plan.collateral_item_ids, (11, 12, 13))
         self.assertEqual(plan.source_pawn_loan_ids, (101, 102))
         self.assertTrue(

@@ -1,4 +1,6 @@
 import json
+import hashlib
+import hmac
 from contextlib import nullcontext
 from decimal import Decimal
 from types import SimpleNamespace
@@ -6,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse, HttpResponseRedirect
-from django.test import RequestFactory, SimpleTestCase, override_settings
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 
 import apps.tenant_apps.notify_v2.renderers.pdf.girvi as girvi_renderer
 from django_project.navigation import get_navigation_for_user
@@ -18,6 +20,7 @@ from apps.tenant_apps.notify_v2.models import (
     NotificationJob,
     NotificationRecipient,
     NotificationTemplate,
+    WhatsAppCloudWebhookReceipt,
 )
 from apps.tenant_apps.girvi.views.prints import notify_print_v2
 from apps.tenant_apps.notify_v2.renderers.pdf.girvi import render_girvi_notice_bundle
@@ -27,8 +30,9 @@ from apps.tenant_apps.notify_v2.services.batch_service import (
     render_batch_pdf,
     seed_girvi_batch_defaults,
 )
-from apps.tenant_apps.notify_v2.services.delivery_service import dispatch_batch_jobs
+from apps.tenant_apps.notify_v2.services.delivery_service import dispatch_batch_jobs, process_whatsapp_cloud_webhook
 from apps.tenant_apps.notify_v2.services.event_service import emit_event
+from apps.tenant_apps.notify_v2.services.whatsapp_readiness import assess_whatsapp_cloud_readiness
 from apps.tenant_apps.notify_v2.views import (
     batch_detail,
     batch_download_artifacts,
@@ -202,87 +206,13 @@ class NotifyV2FoundationTests(SimpleTestCase):
         sms_job.mark_failed.assert_called_once()
 
     @override_settings(
-        TWILIO_ACCOUNT_SID="AC123",
-        TWILIO_AUTH_TOKEN="token",
-        TWILIO_FROM_NUMBER="+15550001111",
-        TWILIO_WHATSAPP_FROM_NUMBER="+15550002222",
-        NOTIFY_V2_TWILIO_STUB_FALLBACK=False,
-    )
-    @patch("apps.tenant_apps.notify_v2.services.delivery_service.Client")
-    def test_dispatch_batch_jobs_uses_twilio_for_sms_and_whatsapp(self, mock_client_cls):
-        mock_client = MagicMock()
-        mock_client.messages.create.side_effect = [
-            SimpleNamespace(sid="SM123"),
-            SimpleNamespace(sid="WA123"),
-        ]
-        mock_client_cls.return_value = mock_client
-
-        sms_event = NotificationEvent(
-            event_type=self.event_type,
-            recipient=NotificationRecipient(name_snapshot="Asha", phone="+919999999999"),
-            payload={"customer": {"name": "Asha"}, "loan_count": 1},
-        )
-        wa_event = NotificationEvent(
-            event_type=self.event_type,
-            recipient=NotificationRecipient(name_snapshot="Bina", phone="+918888888888"),
-            payload={"customer": {"name": "Bina"}, "loan_count": 1},
-        )
-        sms_job = NotificationJob(
-            event=sms_event,
-            channel=NotificationJob.Channel.SMS,
-            template=NotificationTemplate(
-                event_type=self.event_type,
-                channel=NotificationTemplate.Channel.SMS,
-                renderer_type=NotificationTemplate.RendererType.TEXT,
-                name="SMS Template",
-                body_template="Hi {{ customer.name }}",
-                version=1,
-            ),
-        )
-        wa_job = NotificationJob(
-            event=wa_event,
-            channel=NotificationJob.Channel.WHATSAPP,
-            template=NotificationTemplate(
-                event_type=self.event_type,
-                channel=NotificationTemplate.Channel.WHATSAPP,
-                renderer_type=NotificationTemplate.RendererType.TEXT,
-                name="WhatsApp Template",
-                body_template="Hi {{ customer.name }}",
-                version=1,
-            ),
-        )
-        sms_job.mark_sent = MagicMock()
-        wa_job.mark_sent = MagicMock()
-        sms_job.mark_failed = MagicMock()
-        wa_job.mark_failed = MagicMock()
-        batch = SimpleNamespace(
-            pk=18,
-            jobs=SimpleNamespace(
-                select_related=MagicMock(
-                    return_value=SimpleNamespace(all=MagicMock(return_value=[sms_job, wa_job]))
-                )
-            ),
-            mark_posted=MagicMock(),
-        )
-
-        result = dispatch_batch_jobs(batch)
-
-        self.assertEqual(result.sent_count, 2)
-        self.assertEqual(result.failed_count, 0)
-        self.assertEqual(mock_client.messages.create.call_count, 2)
-        self.assertEqual(sms_job.provider_message_id, "SM123")
-        self.assertEqual(wa_job.provider_message_id, "WA123")
-        sms_job.mark_sent.assert_called_once()
-        wa_job.mark_sent.assert_called_once()
-
-    @override_settings(
-        NOTIFY_V2_WHATSAPP_PROVIDER="cloud",
         WHATSAPP_CLOUD_PHONE_NUMBER_ID="123456789",
         WHATSAPP_CLOUD_ACCESS_TOKEN="test-token",
-        NOTIFY_V2_TWILIO_STUB_FALLBACK=False,
     )
+    @patch("apps.tenant_apps.notify_v2.services.delivery_service._whatsapp_cloud_settings")
     @patch("apps.tenant_apps.notify_v2.services.delivery_service.requests.post")
-    def test_dispatch_batch_jobs_uses_whatsapp_cloud_when_configured(self, mock_post):
+    def test_dispatch_batch_jobs_uses_whatsapp_cloud_when_configured(self, mock_post, mock_cloud_settings):
+        mock_cloud_settings.return_value = {"api_version": "v20.0", "phone_number_id": "123456789", "access_token": "test-token"}
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"messages": [{"id": "wamid-123"}]}
@@ -302,6 +232,7 @@ class NotifyV2FoundationTests(SimpleTestCase):
                 renderer_type=NotificationTemplate.RendererType.TEXT,
                 name="WhatsApp Template",
                 body_template="Hi {{ customer.name }}",
+                layout_key="approved_notice_v1",
                 version=1,
             ),
         )
@@ -324,13 +255,13 @@ class NotifyV2FoundationTests(SimpleTestCase):
         self.assertIn("graph.facebook.com", mock_post.call_args.args[0])
 
     @override_settings(
-        NOTIFY_V2_WHATSAPP_PROVIDER="cloud",
         WHATSAPP_CLOUD_PHONE_NUMBER_ID="123456789",
         WHATSAPP_CLOUD_ACCESS_TOKEN="test-token",
-        NOTIFY_V2_TWILIO_STUB_FALLBACK=False,
     )
+    @patch("apps.tenant_apps.notify_v2.services.delivery_service._whatsapp_cloud_settings")
     @patch("apps.tenant_apps.notify_v2.services.delivery_service.requests.post")
-    def test_dispatch_batch_jobs_uses_whatsapp_cloud_template_payload_when_layout_key_present(self, mock_post):
+    def test_dispatch_batch_jobs_uses_whatsapp_cloud_template_payload_when_layout_key_present(self, mock_post, mock_cloud_settings):
+        mock_cloud_settings.return_value = {"api_version": "v20.0", "phone_number_id": "123456789", "access_token": "test-token"}
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"messages": [{"id": "wamid-template-123"}]}
@@ -392,10 +323,8 @@ class NotifyV2FoundationTests(SimpleTestCase):
         )
 
     @override_settings(
-        NOTIFY_V2_WHATSAPP_PROVIDER="cloud",
         WHATSAPP_CLOUD_PHONE_NUMBER_ID="",
         WHATSAPP_CLOUD_ACCESS_TOKEN="",
-        NOTIFY_V2_TWILIO_STUB_FALLBACK=False,
     )
     @patch("apps.tenant_apps.notify_v2.services.delivery_service.requests.post")
     def test_dispatch_batch_jobs_fails_whatsapp_cloud_without_config_when_fallback_disabled(self, mock_post):
@@ -432,14 +361,7 @@ class NotifyV2FoundationTests(SimpleTestCase):
         wa_job.mark_sent.assert_not_called()
         mock_post.assert_not_called()
 
-    @override_settings(
-        TWILIO_ACCOUNT_SID="",
-        TWILIO_AUTH_TOKEN="",
-        TWILIO_FROM_NUMBER="",
-        NOTIFY_V2_TWILIO_STUB_FALLBACK=False,
-    )
-    @patch("apps.tenant_apps.notify_v2.services.delivery_service.Client")
-    def test_dispatch_batch_jobs_fails_sms_without_twilio_config_when_fallback_disabled(self, _mock_client_cls):
+    def test_dispatch_batch_jobs_fails_sms_without_a_selected_provider(self):
         sms_event = NotificationEvent(
             event_type=self.event_type,
             recipient=NotificationRecipient(name_snapshot="Asha", phone="+919999999999"),
@@ -500,8 +422,12 @@ class NotifyV2WebhookTests(SimpleTestCase):
             phone="+919999999999",
         )
 
-    @override_settings(WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN="verify-me")
-    def test_whatsapp_cloud_webhook_verification_returns_challenge(self):
+    @patch("apps.tenant_apps.notify_v2.views.get_whatsapp_cloud_credentials")
+    @patch("apps.tenant_apps.notify_v2.views.connection")
+    def test_whatsapp_cloud_webhook_verification_returns_challenge(self, mock_connection, mock_credentials):
+        mock_connection.schema_name = "tenant_one"
+        mock_connection.tenant.pk = 1
+        mock_credentials.return_value = SimpleNamespace(webhook_verify_token="verify-me")
         request = self.factory.get(
             "/notify-v2/webhooks/whatsapp/cloud/",
             {
@@ -516,57 +442,31 @@ class NotifyV2WebhookTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b"challenge-123")
 
-    @patch("apps.tenant_apps.notify_v2.services.delivery_service.NotificationAttemptLog.objects.create")
-    @patch("apps.tenant_apps.notify_v2.services.delivery_service.NotificationJob.objects.filter")
-    def test_whatsapp_cloud_webhook_updates_jobs_from_status_payload(self, mock_filter, mock_log_create):
-        delivered_event = NotificationEvent(
-            event_type=self.event_type,
-            recipient=self.recipient,
-            payload={},
-        )
-        failed_event = NotificationEvent(
-            event_type=self.event_type,
-            recipient=self.recipient,
-            payload={},
-        )
-        delivered_job = NotificationJob(
-            event=delivered_event,
-            channel=NotificationJob.Channel.WHATSAPP,
-            status=NotificationJob.Status.SENT,
-            provider_message_id="wamid-delivered",
-        )
-        delivered_job.pk = 101
-        delivered_job.save = MagicMock()
-        failed_job = NotificationJob(
-            event=failed_event,
-            channel=NotificationJob.Channel.WHATSAPP,
-            status=NotificationJob.Status.SENT,
-            provider_message_id="wamid-failed",
-        )
-        failed_job.pk = 102
-        failed_job.save = MagicMock()
-        mock_filter.side_effect = [
-            SimpleNamespace(first=MagicMock(return_value=delivered_job)),
-            SimpleNamespace(first=MagicMock(return_value=failed_job)),
-        ]
-
+    @override_settings(
+        WHATSAPP_CLOUD_APP_SECRET="app-secret",
+        WHATSAPP_CLOUD_PHONE_NUMBER_ID="phone-123",
+    )
+    @patch("apps.tenant_apps.notify_v2.views.process_whatsapp_cloud_webhook")
+    @patch("apps.tenant_apps.notify_v2.views.get_whatsapp_cloud_credentials")
+    @patch("apps.tenant_apps.notify_v2.views.connection")
+    def test_whatsapp_cloud_webhook_authenticates_and_routes_status_payload(self, mock_connection, mock_credentials, mock_process):
+        mock_connection.schema_name = "tenant_one"
+        mock_connection.tenant.pk = 1
+        mock_credentials.return_value = SimpleNamespace(app_secret="app-secret", phone_number_id="phone-123")
+        mock_process.return_value = {"received_statuses": 1, "matched_jobs": 1}
         payload = {
+            "object": "whatsapp_business_account",
             "entry": [
                 {
                     "changes": [
                         {
                             "value": {
+                                "metadata": {"phone_number_id": "phone-123"},
                                 "statuses": [
                                     {
                                         "id": "wamid-delivered",
                                         "status": "delivered",
                                         "recipient_id": "919999999999",
-                                    },
-                                    {
-                                        "id": "wamid-failed",
-                                        "status": "failed",
-                                        "recipient_id": "919999999999",
-                                        "errors": [{"message": "undeliverable"}],
                                     },
                                 ]
                             }
@@ -575,10 +475,14 @@ class NotifyV2WebhookTests(SimpleTestCase):
                 }
             ]
         }
-        request = self.factory.post(
+        body = json.dumps(payload).encode()
+        signature = "sha256=" + hmac.new(b"app-secret", body, hashlib.sha256).hexdigest()
+        request = self.factory.generic(
+            "POST",
             "/notify-v2/webhooks/whatsapp/cloud/",
-            data=json.dumps(payload),
+            data=body,
             content_type="application/json",
+            HTTP_X_HUB_SIGNATURE_256=signature,
         )
 
         response = whatsapp_cloud_webhook(request)
@@ -586,16 +490,130 @@ class NotifyV2WebhookTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response_payload["ok"])
-        self.assertEqual(response_payload["matched_jobs"], 2)
-        self.assertEqual(delivered_job.status, NotificationJob.Status.SENT)
-        self.assertEqual(delivered_job.attempt_count, 1)
-        self.assertEqual(failed_job.status, NotificationJob.Status.FAILED)
-        self.assertIn("undeliverable", failed_job.failure_reason)
-        self.assertEqual(mock_log_create.call_count, 2)
-        delivered_payload = mock_log_create.call_args_list[0].kwargs["provider_payload"]
-        failed_payload = mock_log_create.call_args_list[1].kwargs["provider_payload"]
-        self.assertEqual(delivered_payload.get("status"), "delivered")
-        self.assertEqual(failed_payload.get("status"), "failed")
+        self.assertEqual(response_payload["matched_jobs"], 1)
+        mock_process.assert_called_once_with(
+            payload,
+            phone_number_id="phone-123",
+            signature_digest=signature.removeprefix("sha256="),
+        )
+
+    @override_settings(
+        WHATSAPP_CLOUD_APP_SECRET="app-secret",
+        WHATSAPP_CLOUD_PHONE_NUMBER_ID="phone-123",
+    )
+    @patch("apps.tenant_apps.notify_v2.views.get_whatsapp_cloud_credentials")
+    @patch("apps.tenant_apps.notify_v2.views.connection")
+    def test_whatsapp_cloud_webhook_rejects_unsigned_post(self, mock_connection, mock_credentials):
+        mock_connection.schema_name = "tenant_one"
+        mock_connection.tenant.pk = 1
+        mock_credentials.return_value = SimpleNamespace(app_secret="app-secret", phone_number_id="phone-123")
+        request = self.factory.post(
+            "/notify-v2/webhooks/whatsapp/cloud/",
+            data="{}",
+            content_type="application/json",
+        )
+        response = whatsapp_cloud_webhook(request)
+        self.assertEqual(response.status_code, 403)
+
+
+class NotifyV2WebhookProcessingTests(TestCase):
+    @patch("apps.tenant_apps.notify_v2.services.delivery_service.NotificationAttemptLog.objects.create")
+    @patch("apps.tenant_apps.notify_v2.services.delivery_service.NotificationJob.objects.select_for_update")
+    @patch("apps.tenant_apps.notify_v2.services.delivery_service.WhatsAppCloudWebhookReceipt.objects.get_or_create")
+    def test_authenticated_status_is_persisted_and_applied_once(self, mock_receipt_create, mock_job_lock, mock_log):
+        receipt = MagicMock(pk=12)
+        mock_receipt_create.return_value = (receipt, True)
+        job = NotificationJob(channel="WHATSAPP", status="SENT", provider_message_id="wamid-1")
+        job.pk = 9
+        job.save = MagicMock()
+        mock_job_lock.return_value.filter.return_value.first.return_value = job
+        payload = {
+            "entry": [{"changes": [{"value": {"statuses": [{
+                "id": "wamid-1", "status": "delivered", "timestamp": "123"
+            }]}}]}]
+        }
+        summary = process_whatsapp_cloud_webhook(
+            payload, phone_number_id="phone-1", signature_digest="a" * 64
+        )
+        self.assertEqual(summary["matched_jobs"], 1)
+        self.assertEqual(summary["duplicate_statuses"], 0)
+        receipt.save.assert_called_once()
+        mock_log.assert_called_once()
+
+    @patch("apps.tenant_apps.notify_v2.services.delivery_service.NotificationJob.objects.select_for_update")
+    @patch("apps.tenant_apps.notify_v2.services.delivery_service.WhatsAppCloudWebhookReceipt.objects.filter")
+    @patch("apps.tenant_apps.notify_v2.services.delivery_service.WhatsAppCloudWebhookReceipt.objects.get_or_create")
+    def test_replayed_status_increments_receipt_without_reapplying_job(self, mock_receipt_create, mock_receipt_filter, mock_job_lock):
+        mock_receipt_create.return_value = (MagicMock(pk=12), False)
+        payload = {"entry": [{"changes": [{"value": {"statuses": [{
+            "id": "wamid-1", "status": "delivered", "timestamp": "123"
+        }]}}]}]}
+        summary = process_whatsapp_cloud_webhook(
+            payload, phone_number_id="phone-1", signature_digest="a" * 64
+        )
+        self.assertEqual(summary["duplicate_statuses"], 1)
+        mock_receipt_filter.return_value.update.assert_called_once()
+        mock_job_lock.assert_not_called()
+
+
+class WhatsAppCloudReadinessTests(SimpleTestCase):
+    @override_settings(
+        WHATSAPP_CLOUD_PHONE_NUMBER_ID="phone",
+        WHATSAPP_CLOUD_ACCESS_TOKEN="token",
+        WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN="verify",
+        WHATSAPP_CLOUD_APP_SECRET="secret",
+    )
+    def test_ready_when_configuration_and_reconciliation_are_clean(self):
+        receipts = MagicMock()
+        receipts.filter.return_value.count.return_value = 0
+        receipts.count.return_value = 3
+        with patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.connection",
+            SimpleNamespace(schema_name="tenant_one", tenant=SimpleNamespace(pk=1)),
+        ), patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.get_whatsapp_cloud_integration",
+            return_value=SimpleNamespace(is_enabled=True),
+        ), patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.get_whatsapp_cloud_credentials",
+            return_value=SimpleNamespace(phone_number_id="phone", access_token="token", webhook_verify_token="verify", app_secret="secret"),
+        ), patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.WhatsAppCloudWebhookReceipt.objects.all",
+            return_value=receipts,
+        ), patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.NotificationJob.objects.filter"
+        ) as jobs:
+            jobs.return_value.count.return_value = 0
+            report = assess_whatsapp_cloud_readiness()
+        self.assertTrue(report.ready)
+        self.assertEqual(report.receipt_count, 3)
+
+    @override_settings(
+        WHATSAPP_CLOUD_PHONE_NUMBER_ID="",
+        WHATSAPP_CLOUD_ACCESS_TOKEN="",
+        WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN="",
+        WHATSAPP_CLOUD_APP_SECRET="",
+    )
+    def test_missing_configuration_and_unknown_receipts_block(self):
+        receipts = MagicMock()
+        receipts.filter.return_value.count.return_value = 2
+        receipts.count.return_value = 2
+        with patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.connection",
+            SimpleNamespace(schema_name="tenant_one", tenant=SimpleNamespace(pk=1)),
+        ), patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.get_whatsapp_cloud_integration",
+            return_value=None,
+        ), patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.WhatsAppCloudWebhookReceipt.objects.all",
+            return_value=receipts,
+        ), patch(
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.NotificationJob.objects.filter"
+        ) as jobs:
+            jobs.return_value.count.return_value = 1
+            report = assess_whatsapp_cloud_readiness()
+        self.assertFalse(report.ready)
+        self.assertEqual(report.unknown_receipt_count, 2)
+        self.assertEqual(report.unreconciled_job_count, 1)
 
 
 class NotifyV2BatchWorkflowTests(SimpleTestCase):
@@ -973,7 +991,6 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
     @patch("apps.tenant_apps.notify_v2.views.NotificationPolicy.objects.filter")
     @patch("apps.tenant_apps.notify_v2.views.NotificationEventType.objects.filter")
     @override_settings(
-        NOTIFY_V2_WHATSAPP_PROVIDER="cloud",
         WHATSAPP_CLOUD_PHONE_NUMBER_ID="123",
         WHATSAPP_CLOUD_ACCESS_TOKEN="token",
         WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN="verify",

@@ -6,7 +6,6 @@ from apps.tenant_apps.loans.integrations.notice_delivery import (
     PawnNoticeDeliveryReceipt,
     create_operational_notice_job,
     deliver_pawn_notice_job,
-    get_pawn_notice_delivery_states,
 )
 from apps.tenant_apps.loans.models import (
     LoanLicense,
@@ -15,6 +14,7 @@ from apps.tenant_apps.loans.models import (
     PawnPhysicalVerificationSession,
     current_tenant_workspace_id,
 )
+from .notice_dispatch import dispatch_due_notices, dispatch_linked_notice
 
 
 class LoanOperationalNoticeError(ValueError):
@@ -123,41 +123,28 @@ def create_verification_discrepancy_notice(
 def dispatch_operational_notice(notice_id, *, delivery_handler=None, as_of=None):
     workspace_id = _workspace_id()
     notice = LoanOperationalNotice.objects.get(pk=notice_id, workspace_id=workspace_id)
-    as_of = as_of or timezone.now()
-    if notice.scheduled_for > as_of:
-        raise LoanOperationalNoticeError("This operational notice is scheduled for later.")
-    state = get_pawn_notice_delivery_states((notice.notification_job_id,)).get(
-        notice.notification_job_id
+    receipt = dispatch_linked_notice(
+        notice,
+        error_type=LoanOperationalNoticeError,
+        as_of=as_of,
+        delivery_handler=delivery_handler or deliver_pawn_notice_job,
+        future_message="This operational notice is scheduled for later.",
     )
-    if state is None:
-        raise LoanOperationalNoticeError("The linked Notify delivery job is missing.")
-    if state.status == "SENT":
-        return LoanOperationalNoticeDispatchResult(notice, state)
-    if state.status == "CANCELLED":
-        raise LoanOperationalNoticeError("A cancelled notice cannot be delivered.")
-    receipt = (delivery_handler or deliver_pawn_notice_job)(notice.notification_job_id)
     return LoanOperationalNoticeDispatchResult(notice, receipt)
 
 
 def dispatch_due_operational_notices(*, as_of=None, limit=100):
     workspace_id = _workspace_id()
     as_of = as_of or timezone.now()
-    candidates = tuple(
-        LoanOperationalNotice.objects.filter(
-            workspace_id=workspace_id, scheduled_for__lte=as_of
-        ).order_by("scheduled_for", "pk").values_list("pk", "notification_job_id")
+    summary = dispatch_due_notices(
+        LoanOperationalNotice.objects.filter(workspace_id=workspace_id),
+        dispatch=lambda notice_id, as_of: dispatch_operational_notice(
+            notice_id, as_of=as_of
+        ).delivery,
+        as_of=as_of,
+        limit=limit,
     )
-    states = get_pawn_notice_delivery_states(job for _, job in candidates)
-    due = tuple(
-        notice_id for notice_id, job_id in candidates
-        if states.get(job_id) and states[job_id].status == "QUEUED"
-    )[:limit]
-    sent = failed = 0
-    for notice_id in due:
-        result = dispatch_operational_notice(notice_id, as_of=as_of)
-        sent += result.delivery.status == "SENT"
-        failed += result.delivery.status == "FAILED"
-    return len(due), sent, failed
+    return summary.due_count, summary.sent_count, summary.failed_count
 
 
 def _create(

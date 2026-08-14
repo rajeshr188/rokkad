@@ -265,7 +265,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
         appraisal = CollateralAppraisal.objects.get(
             collateral_item__loan=self.loan
         )
-        self.assertEqual(appraisal.method, "ORIGINATION_CAPTURE")
+        self.assertEqual(appraisal.method, "ORIGINATION_APPROVAL")
         self.assertEqual(appraisal.appraised_value, Decimal("50000.0000"))
         self.assertEqual(result.policy_snapshot.accounting_recognition, "CASH")
         self.assertEqual(result.policy_snapshot.interest_method, "SIMPLE")
@@ -813,13 +813,13 @@ class PawnDisbursalServiceTests(TenantTestCase):
             self.loan.pk,
             as_of_date=date(2026, 9, 2),
         )
-        self.assertEqual(exposure.principal_outstanding, Decimal("40000.00"))
+        self.assertEqual(exposure.principal_outstanding, Decimal("50000.00"))
         self.assertEqual(exposure.recorded_interest, Decimal("0.00"))
-        self.assertEqual(exposure.projected_interest, Decimal("877.4194"))
-        self.assertEqual(exposure.recorded_total_due, Decimal("40000.00"))
-        self.assertEqual(exposure.total_economic_exposure, Decimal("40877.4194"))
-        self.assertEqual(exposure.maturity_payoff, Decimal("43000.0000"))
-        self.assertEqual(exposure.ltv_exposure_basis, Decimal("43000.0000"))
+        self.assertEqual(exposure.projected_interest, Decimal("1000.0000"))
+        self.assertEqual(exposure.recorded_total_due, Decimal("50000.00"))
+        self.assertEqual(exposure.total_economic_exposure, Decimal("51000.0000"))
+        self.assertEqual(exposure.maturity_payoff, Decimal("53000.0000"))
+        self.assertEqual(exposure.ltv_exposure_basis, Decimal("53000.0000"))
         self.assertEqual(exposure.due_now.total, Decimal("0"))
         self.assertEqual(exposure.integrity_findings, ())
         self.assertEqual(

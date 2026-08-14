@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
-
 from apps.tenant_apps.loans.domain.delinquency import (
     DelinquencyResult,
     UnpaidObligation,
@@ -9,7 +7,10 @@ from apps.tenant_apps.loans.domain.delinquency import (
 )
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
-from apps.tenant_apps.loans.selectors.exposure import _active_schedule_as_of
+from apps.tenant_apps.loans.selectors.obligation_state import (
+    calculate_obligation_state_as_of,
+    get_active_repayment_schedule_as_of,
+)
 
 
 class PawnLoanDelinquencyError(ValueError):
@@ -35,20 +36,16 @@ def get_pawn_loan_delinquency(loan_id: int, *, as_of_date: date):
         )
     except PawnLoan.DoesNotExist as exc:
         raise PawnLoanDelinquencyError("PawnLoan was not found in the active workspace.") from exc
-    schedule = _active_schedule_as_of(loan, as_of_date)
-    rows = []
-    if schedule:
-        for obligation in schedule.obligations.order_by("due_date", "sequence"):
-            allocated = {"PRINCIPAL": Decimal("0"), "INTEREST": Decimal("0")}
-            for allocation in obligation.allocations.filter(
-                source_event__effective_date__lte=as_of_date
-            ):
-                allocated[allocation.component] += allocation.amount
-            rows.append(UnpaidObligation(
-                due_date=obligation.due_date,
-                principal=obligation.principal_due - allocated["PRINCIPAL"],
-                interest=obligation.interest_due - allocated["INTEREST"],
-            ))
+    schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
+    obligation_state = calculate_obligation_state_as_of(schedule, as_of_date)
+    rows = tuple(
+        UnpaidObligation(
+            due_date=row.due_date,
+            principal=row.principal,
+            interest=row.interest,
+        )
+        for row in obligation_state.obligations
+    )
     assessment = calculate_delinquency(
         rows,
         as_of_date=as_of_date,

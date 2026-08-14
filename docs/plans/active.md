@@ -6,6 +6,22 @@ tags: [plans, active, girvi, dea, party, configuration]
 related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, ../flows/dea-posting-flow.md, ../archive/girvi/GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC.md, party-rollout.md, centralized-preferences-architecture-plan.md]
 ---
 
+## Future: workspace WhatsApp Cloud acceptance
+
+The tenant-owned credential boundary is implemented. The next deferred slice is
+the controlled Meta identity, template-send, authenticated-callback, and
+operational-acceptance workflow documented in
+`workspace-whatsapp-cloud-integration-acceptance.md`. It remains future work;
+saving or enabling credentials does not constitute operational acceptance.
+
+## Future: legacy Notify retirement
+
+Notify v2 is the target platform, but legacy `notify` remains supported while
+Girvi and historical evidence depend on it. The staged retirement gates and
+restart point are documented in `legacy-notify-to-notify-v2-retirement.md`.
+Deletion is not authorized until tenant reconciliation, parity, retention, and
+upgrade-safety gates pass.
+
 # Active Plan
 
 ## Girvi Event-Driven DEA Posting

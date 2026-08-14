@@ -17,9 +17,13 @@ Rokkad currently has two notification stacks:
 - `notify`: a legacy tenant app centered on `Notification`, `NoticeGroup`, and template-backed message generation.
 - `notify_v2`: a more structured tenant app with event, policy, template, batch, job, artifact, and webhook handling.
 
-The codebase is already capable of generating Girvi reminder batches, printing PDFs, and sending digital jobs through Twilio or WhatsApp Cloud API settings. However, it is not yet a proper tenant-scoped communications platform:
+The codebase can generate Girvi reminder batches, print PDFs, and send WhatsApp
+digital jobs through Meta WhatsApp Cloud API settings. Twilio support has been
+removed and SMS has no selected provider. It is not yet a complete tenant-scoped
+communications platform:
 
-- WhatsApp provider credentials are still global settings, not workspace integrations.
+- WhatsApp provider credentials are workspace-owned encrypted integrations;
+  global credential settings have been removed.
 - The WhatsApp Cloud webhook exists, but it is only challenge-verified and does not verify provider signatures.
 - The webhook path currently sits inside tenant URL space, so the middleware/auth path can block provider callbacks unless explicitly exempted.
 - Inbound processing is status-only; there is no inbox/conversation model and no raw webhook event table.
@@ -65,8 +69,23 @@ This is the best fit for brand trust, compliance, routing simplicity, and long-t
 
 - Delivery logic lives in [apps/tenant_apps/notify_v2/services/delivery_service.py](../../apps/tenant_apps/notify_v2/services/delivery_service.py).
 - Email goes through Django mail.
-- SMS and WhatsApp go through Twilio by default.
-- WhatsApp can also use WhatsApp Cloud API when `NOTIFY_V2_WHATSAPP_PROVIDER=cloud`.
+- WhatsApp goes through Meta WhatsApp Cloud API exclusively.
+- SMS fails closed until a separate provider is deliberately selected.
+- Callback POSTs require `X-Hub-Signature-256` verified with the active
+  workspace integration's decrypted app secret, its configured phone-number
+  ID, and a tenant schema route. Each status event is persisted by content hash and replays do
+  not reapply job state.
+- Outbound WhatsApp is template-only. Set the approved Meta template name in
+  the Notify template `layout_key` or `sample_payload.whatsapp_template.name`.
+
+Run the tenant readiness and reconciliation gate with:
+
+```powershell
+python manage.py tenant_command check_whatsapp_cloud_readiness --schema=TENANT_SCHEMA --fail-on-blocker --format=json
+```
+
+The gate checks all four Cloud settings, unknown authenticated receipts, and
+sent jobs without a callback after 24 hours.
 - Message rendering uses Django templates and optional `sample_payload["whatsapp_template"]` structure.
 - Status webhooks only update job delivery status by matching `provider_message_id`.
 
@@ -104,7 +123,8 @@ This is the best fit for brand trust, compliance, routing simplicity, and long-t
 - Sending currently happens inside request-driven view paths.
 - There is no Celery-backed outbound queue for notify_v2.
 - There is no conversation/inbox model for replies.
-- Provider credentials are global settings rather than workspace integrations.
+- Provider identity and encrypted credentials are tenant-scoped and configured
+  by Workspace Owner/Admin.
 
 ## Decision
 
@@ -244,7 +264,7 @@ Keep provider-specific code in a narrow adapter service:
 
 - `WhatsAppProvider` interface
 - `MetaCloudProvider`
-- `TwilioProvider` only if still needed for legacy SMS or fallback
+- Add an SMS provider only after a separate explicit provider decision.
 - `WhatsAppMessageService`
 - `WhatsAppConsentService`
 - `WhatsAppWebhookService`

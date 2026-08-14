@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.test import RequestFactory, SimpleTestCase
+from django.template.loader import get_template
 
 from apps.tenant_apps.girvi.models import GirviPostingOutboxStatus
 from apps.tenant_apps.girvi.views.reports import girvi_operations_console
@@ -24,6 +25,12 @@ class GirviOperationsConsoleViewTests(SimpleTestCase):
         )
         request.htmx = False
         return request
+
+    def test_console_template_uses_the_registered_global_rates_route(self):
+        source = get_template("girvi/reports/operations_console.html").template.source
+
+        self.assertIn("{% url 'rate_list' %}", source)
+        self.assertNotIn("{% url 'rates:rate_list' %}", source)
 
     @patch("apps.tenant_apps.girvi.views.reports.render")
     @patch("apps.tenant_apps.girvi.views.reports.build_operations_console_read_model")

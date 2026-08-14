@@ -23,15 +23,6 @@ class PawnLoanState(StringEnum):
     CLOSED = "CLOSED"
 
 
-class PawnLoanDerivedState(StringEnum):
-    PARTIALLY_PAID = "PARTIALLY_PAID"
-    OVERDUE = "OVERDUE"
-    CLOSURE_READY = "CLOSURE_READY"
-    PARTIALLY_RELEASED = "PARTIALLY_RELEASED"
-    ACCOUNTING_PENDING = "ACCOUNTING_PENDING"
-    ACCOUNTING_FAILED = "ACCOUNTING_FAILED"
-
-
 class TransactionKind(StringEnum):
     DISBURSAL = "DISBURSAL"
     REPAYMENT = "REPAYMENT"
@@ -88,14 +79,6 @@ class LoanDocumentKind(StringEnum):
     PAWN_LOAN_RELEASE = "PAWN_LOAN_RELEASE"
 
 
-class PostingState(StringEnum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    POSTED = "POSTED"
-    FAILED = "FAILED"
-    REVERSED = "REVERSED"
-
-
 class LoanOutboxStatus(StringEnum):
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
@@ -103,18 +86,7 @@ class LoanOutboxStatus(StringEnum):
     FAILED = "FAILED"
 
 
-class ReversalType(StringEnum):
-    DISBURSAL = "DISBURSAL"
-    REPAYMENT = "REPAYMENT"
-    INTEREST_ACCRUAL = "INTEREST_ACCRUAL"
-    INTEREST_CAPITALIZATION = "INTEREST_CAPITALIZATION"
-    RELEASE = "RELEASE"
-    AUCTION_RECOVERY = "AUCTION_RECOVERY"
-    RENEWAL = "RENEWAL"
-
-
 STORED_PAWN_LOAN_STATES = frozenset(PawnLoanState)
-DERIVED_PAWN_LOAN_STATES = frozenset(PawnLoanDerivedState)
 
 ALLOWED_PAWN_LOAN_TRANSITIONS = {
     PawnLoanState.DRAFT: frozenset(

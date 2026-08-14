@@ -740,3 +740,10 @@ The blueprint uses these accepted defaults:
 Begin with Phase 0 only. Each later phase starts after the previous phase's
 invariants, migration checks, tests, and acceptance evidence pass. The detailed
 gates live in `implementation/roadmap.md`.
+
+Financial events → balance
+Contract schedule → obligations
+Balance + obligations + projections → exposure
+Exposure + delinquency + valuation + policy → live risk calculation
+Live calculation → persisted risk snapshot
+Snapshot changes → immutable risk transition events

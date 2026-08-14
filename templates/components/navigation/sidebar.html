@@ -94,23 +94,21 @@
                      </a>
                      {% endif %}
 
-                <!-- Girvi / Loans coexistence -->
+                <!-- Independent Girvi and PawnLoan applications -->
                 {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'girvi' or request.resolver_match.url_name == 'workspace_slug_loans' %}active{% endif %}"
-                   href="{% url 'workspace_slug_loans' workspace_slug=effective_workspace.schema_name %}">
-                    <i class="bi bi-cash-coin"></i> {% if loans_new_module_enabled %}Loans{% else %}Girvi{% endif %}
+                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'loans' and '/setup/' not in request.path %}active{% endif %}"
+                   href="{% url 'loans:pawn_loan_list' %}">
+                    <i class="bi bi-cash-coin"></i> PawnLoans
                 </a>
-                {% if loans_new_module_enabled %}
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'girvi' %}active{% endif %}"
                    href="{% url 'girvi:girvi_dashboard' %}">
-                    <i class="bi bi-archive"></i> Legacy Girvi
+                    <i class="bi bi-archive"></i> Girvi
                 </a>
-                {% endif %}
                 {% endif %}
                 {% if role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'loans' %}active{% endif %}"
                    href="{% url 'loans:license_list' %}">
-                    <i class="bi bi-ui-checks-grid"></i> New Loans Setup
+                    <i class="bi bi-ui-checks-grid"></i> Loans Setup
                 </a>
                 {% endif %}
                 <!-- Accounting/DEA -->

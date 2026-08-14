@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 
-from apps.tenant_apps.dea.models import Ledger
+from apps.tenant_apps.dea.posting.resolver import get_ledger_id_by_key
 from apps.tenant_apps.dea.services.account_resolution import resolve_party_account
 
 from ..registry import register_rule
@@ -137,10 +137,7 @@ def _amount(values, key, event_label):
 
 
 def _ledger_id(key):
-    try:
-        return Ledger.objects.only("pk").get(name=key).pk
-    except Ledger.DoesNotExist as exc:
-        raise ValidationError(f"Required ledger {key} was not found.") from exc
+    return get_ledger_id_by_key(key)
 
 
 def _receipt_line(cash_id, credit_id, amount, currency):

@@ -9,9 +9,8 @@ import fitz
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.paginator import Paginator
-from django.db import transaction
 from django.db.models import Count, Q
-from django.http import Http404, HttpResponse, HttpResponseGone, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseGone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -20,7 +19,6 @@ from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 
 from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
-from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.access import (
     assert_loans_owner_access,
     loans_owner_required,
@@ -28,21 +26,14 @@ from apps.tenant_apps.loans.access import (
     loans_workspace_required,
 )
 from apps.tenant_apps.loans.domain import (
-    CollateralEconomicsError,
     LoanDocumentKind,
     LoanOutboxStatus,
     PawnLoanState,
     TransactionKind,
 )
-from apps.tenant_apps.loans.feature_flags import (
-    get_loan_module_feature_state,
-    set_new_loans_enabled,
-)
 from apps.tenant_apps.loans.filters import (
     LoanDocumentIssueFilter,
-    PawnLoanAccountingOutboxFilter,
     PawnLoanFilter,
-    PawnLoanNoticeFilter,
     PawnPhysicalVerificationSessionFilter,
     PawnStorageLocationFilter,
 )
@@ -62,42 +53,14 @@ from apps.tenant_apps.loans.forms import (
     LoanDocumentPrintProfileAssignmentForm,
     LoanDocumentPrintProfileCreateForm,
     LoanDocumentPrintProfileDefinitionForm,
-    LoanModuleFeatureGateForm,
     LoanProductVersionDraftForm,
     LoanSeriesSetupForm,
-    FundingLoanActivationForm,
-    FundingLoanCancellationForm,
-    FundingCollateralReturnForm,
-    FundingCorrectionForm,
-    FundingLoanClosureForm,
-    FundingLoanDraftForm,
-    FundingLoanDraftInputsForm,
-    FundingLoanRepaymentForm,
     PawnEconomicConfigurationForm,
     LoanMonitoringPolicyForm,
     PawnFeePolicyForm,
-    PawnAccrualForm,
-    PawnAdditionalCollateralFormSet,
-    PawnCapitalizationForm,
-    PawnCollateralDraftFormSet,
-    PawnCollateralPhotoForm,
-    PawnStorageLocationForm,
-    PawnStorageTransferForm,
     PawnPhysicalVerificationStartForm,
     PawnPhysicalVerificationObservationForm,
-    PawnPhysicalVerificationResolutionForm,
-    PawnDisbursalForm,
-    PawnDraftForm,
-    PawnFullReleaseForm,
-    PawnLoanNoticeForm,
-    PawnAuctionInitiateForm,
-    PawnAuctionCompletionForm,
-    PawnRenewalForm,
-    PawnRenewalRetainedItemFormSet,
-    PawnRepaymentForm,
-    PawnReversalForm,
     PawnSetupTransferForm,
-    PawnTransitionReasonForm,
 )
 
 
@@ -107,16 +70,29 @@ _OVERLAY_PAGE_DIMENSIONS_MM = {
 
 _PENDING_STORAGE_ITEM_SESSION_KEY = "loans_pending_storage_item"
 
-_PILOT_REPORT_EXPORT_SECTIONS = (
-    ("active", "Active loans"),
-    ("daily", "Daily disbursals / repayments"),
-    ("interest_due", "Interest due"),
-    ("overdue", "Overdue loans"),
-    ("releases_renewals", "Releases / renewals"),
-    ("storage", "Storage inventory"),
-    ("license_expiry", "License expiry"),
+from apps.tenant_apps.loans.web.reports import (
+    pawn_loan_report_export,
+    pawn_loan_reports,
+    pawn_party_statement,
 )
-_PILOT_REPORT_EXPORT_FORMATS = (("csv", "CSV"), ("xlsx", "XLSX"), ("pdf", "PDF"))
+from apps.tenant_apps.loans.web.operations import (
+    pawn_loan_notice_list,
+    pawn_operations_console,
+    pawn_operations_runbook,
+    pawn_risk_whatsapp_pilot,
+    pawn_risk_portfolio,
+)
+from apps.tenant_apps.loans.web.risk_actions import pawn_risk_borrower_notice_create
+from apps.tenant_apps.loans.web.communication_actions import pawn_communication_consent
+from apps.tenant_apps.loans.web.communication_policy_actions import pawn_communication_policy
+from apps.tenant_apps.loans.web.funding import (
+    funding_loan_agreement_pdf,
+    funding_loan_read_console,
+    funding_loan_read_detail,
+    funding_loan_repayment_receipt_pdf,
+    funding_loan_return_receipt_pdf,
+    funding_loan_statement_pdf,
+)
 
 
 def _fit_overlay_geometry(definition, target_page_size):
@@ -147,9 +123,6 @@ def _fit_overlay_geometry(definition, target_page_size):
             )
     definition["page_size"] = target_page_size
 from apps.tenant_apps.loans.models import (
-    FundingLoan,
-    FundingLoanEvent,
-    FundingReturn,
     LoanDocumentLayout,
     LoanDocumentLayoutRevision,
     LoanDocumentIssue,
@@ -172,19 +145,11 @@ from apps.tenant_apps.loans.models import (
     PawnLoanEconomicPolicy,
     LoanMonitoringPolicy,
     PawnLoanFeePolicy,
-    PawnLoanNotice,
     PawnLoanRelease,
     PawnLoanRenewal,
     PawnMetalInterestRatePolicy,
 )
 from apps.tenant_apps.loans.selectors import (
-    FundingLoanSelectorError,
-    build_pawn_loan_notice_rows,
-    get_funding_loan_detail,
-    get_funding_loan_draft_inputs,
-    get_funding_loan_integrity_findings,
-    get_funding_settlement_readiness,
-    get_funding_loan_summaries,
     get_loan_license_register,
     get_pawn_loan_balance,
     get_pawn_loan_exposure,
@@ -194,125 +159,49 @@ from apps.tenant_apps.loans.selectors import (
     reconcile_pawn_loan_receivable,
     get_pawn_loan_notice_rows,
     get_physical_verification_detail,
-    get_pawn_loan_operations_snapshot,
-    get_pawn_loan_reports,
-    get_pawn_party_statement,
     get_pawn_loan_series_navigation,
 )
 from apps.tenant_apps.loans.services import (
-    CollateralDraftInput,
-    ActivateSavedFundingLoanDraft,
-    BeginFundingSettlement,
-    CloseFundingLoan,
-    CancelFundingLoanDraft,
-    CreateFundingLoanDraft,
-    CreatePawnDraftCommand,
-    FundingLoanServiceError,
-    FundingLoanDocumentService,
-    FundingCollateralInput,
-    RecordFundingRepayment,
-    ReverseFundingEvent,
-    ReverseFundingPledge,
-    ReverseFundingReturn,
-    ReturnFundingCollateral,
     LicenseSeriesError,
     LoanAccountingOutboxError,
     NumberAllocationError,
-    PawnBorrowerAccountingSetupError,
-    PawnDraftError,
     PawnLifecycleError,
     PawnLoanDocumentError,
     PawnLoanDocumentService,
+    issue_configurable_document,
     DocumentLayoutServiceError,
     LoanDocumentLayoutService,
-    PawnLoanNoticeError,
-    PawnAuctionError,
-    PawnRenewalError,
-    RetainedCollateralInput,
-    SaveFundingLoanDraftInputs,
-    UpdatePawnDraftCommand,
+    RiskSnapshotRefreshError,
     activate_license,
     activate_product_version,
     create_product_version_draft,
-    activate_saved_funding_loan_draft,
-    begin_funding_settlement,
-    close_funding_loan,
-    approve_pawn_loan,
-    assess_pawn_loan_accounting_readiness,
-    cancel_pawn_loan,
-    cancel_funding_loan_draft,
-    capitalize_pawn_loan_interest,
-    configure_sequence,
+    create_configured_series,
     create_license,
-    create_funding_loan_draft,
-    create_pawn_draft,
-    append_collateral_photo,
-    create_pawn_loan_economic_policy,
+    create_pawn_economic_configuration,
     create_loan_monitoring_policy,
     create_pawn_loan_fee_policy,
-    create_pawn_metal_interest_rate_policy,
-    create_pawn_loan_notice,
-    create_series,
-    record_funding_repayment,
-    reverse_funding_event,
-    reverse_funding_pledge,
-    reverse_funding_return,
-    return_funding_collateral,
-    save_funding_loan_draft_inputs,
-    disburse_pawn_loan,
-    dispatch_pawn_loan_notice,
+    reassess_pawn_loans_batch,
+    refresh_loan_risk_snapshot,
     dispatch_operational_notice,
-    PawnLoanReportExportError,
-    build_party_statement_dataset,
-    build_pawn_loan_report_dataset,
-    render_report_dataset,
-    ensure_pawn_borrower_accounting,
-    initiate_pawn_loan_auction,
-    start_pawn_loan_auction,
-    cancel_pawn_loan_auction,
-    complete_pawn_loan_auction,
-    reverse_pawn_loan_auction,
-    renew_pawn_loan,
     renew_license,
-    reverse_pawn_loan_renewal,
     expire_license,
-    finalize_pawn_loan_accrual,
     preview_number,
-    preview_pawn_loan_full_release,
-    preview_pawn_loan_renewal_plan,
-    preview_pawn_loan_renewal_source,
-    preview_pawn_loan_repayment,
     preview_pawn_loan_accruals,
-    record_pawn_loan_repayment,
-    resolve_pawn_draft_economics,
-    resolve_pawn_loan_economic_policy,
-    resolve_pawn_metal_interest_rate_policy,
-    release_pawn_loan_in_full,
-    reopen_pawn_loan,
     retry_failed_outbox_event,
     retire_product_version,
     seed_default_loan_products,
     assess_pawn_loan_event_reversal,
-    reverse_pawn_loan_event,
-    set_series_active,
     transfer_expired_draft_setup,
     render_collateral_label,
     PawnCollateralMediaError,
-    PawnStorageError,
     PawnPhysicalVerificationError,
     LoanOperationalNoticeError,
-    complete_physical_verification,
     create_license_expiry_notice,
-    create_verification_discrepancy_notice,
-    create_storage_location,
-    place_or_transfer_collateral,
     record_physical_verification_observation,
-    resolve_physical_verification_discrepancy,
     start_physical_verification,
     render_storage_location_label,
     update_license,
-    update_pawn_draft,
-    update_series,
+    update_configured_series,
     render_loan_license_register_pdf,
 )
 from apps.tenant_apps.loans.documents import (
@@ -322,7 +211,6 @@ from apps.tenant_apps.loans.documents import (
     PawnLoanDocumentProjectionBuilder,
     PrintProfileValidator,
     built_in_print_profile,
-    legacy_print_profile,
     starter_layout,
 )
 from apps.tenant_apps.loans.documents.integrity import get_document_integrity_findings
@@ -331,14 +219,9 @@ from apps.tenant_apps.loans.documents.packs import (
     export_layout_pack,
     import_layout_pack,
 )
-from apps.tenant_apps.loans.services.pawn_tranches import (
-    PawnTrancheBalanceError,
-    get_pawn_principal_tranche_balances,
-)
 from apps.tenant_apps.loans.services.print_profiles import (
     LoanDocumentPrintProfileService,
     PrintProfileServiceError,
-    ResolvedPrintProfile,
 )
 
 
@@ -353,7 +236,7 @@ def pawn_loan_list(request):
         workspace=request.loans_workspace,
     )
     page_obj = Paginator(loan_filter.qs, 25).get_page(request.GET.get("page"))
-    readiness = _draft_readiness(request.loans_workspace)
+    readiness = get_pawn_draft_readiness(request.loans_workspace)
     return render(
         request,
         "loans/pawn/list.html",
@@ -363,109 +246,6 @@ def pawn_loan_list(request):
             "page_obj": page_obj,
             "readiness": readiness,
         },
-    )
-
-
-@loans_workspace_required
-def pawn_loan_reports(request):
-    as_of_date = _report_as_of_date(request)
-    report = get_pawn_loan_reports(as_of_date=as_of_date)
-    parties = Party.objects.filter(pawn_loans__workspace=request.loans_workspace).distinct().order_by("display_name")
-    return render(
-        request,
-        "loans/pawn/reports.html",
-        {
-            "report": report,
-            "parties": parties,
-            "can_administer": _can_administer(request),
-            "report_is_current": as_of_date == timezone.localdate(),
-            "report_export_sections": _PILOT_REPORT_EXPORT_SECTIONS,
-            "report_export_formats": _PILOT_REPORT_EXPORT_FORMATS,
-        },
-    )
-
-
-@loans_workspace_required
-def pawn_loan_report_export(request, section, export_format):
-    as_of_date = _report_as_of_date(request)
-    try:
-        dataset = build_pawn_loan_report_dataset(
-            get_pawn_loan_reports(as_of_date=as_of_date), section
-        )
-        content, content_type = render_report_dataset(dataset, export_format)
-    except PawnLoanReportExportError as exc:
-        return HttpResponse(str(exc), status=400)
-    response = HttpResponse(content, content_type=content_type)
-    response["Content-Disposition"] = content_disposition_header(
-        True, f"pawn-loans-{section}-{as_of_date}.{export_format}"
-    )
-    return response
-
-
-@loans_workspace_required
-def pawn_party_statement(request, party_pk, export_format=None):
-    party = get_object_or_404(
-        Party.objects.filter(pawn_loans__workspace=request.loans_workspace).distinct(),
-        pk=party_pk,
-    )
-    statement = get_pawn_party_statement(
-        party_id=party.pk, as_of_date=_report_as_of_date(request)
-    )
-    if export_format:
-        try:
-            content, content_type = render_report_dataset(
-                build_party_statement_dataset(statement), export_format
-            )
-        except PawnLoanReportExportError as exc:
-            return HttpResponse(str(exc), status=400)
-        response = HttpResponse(content, content_type=content_type)
-        response["Content-Disposition"] = content_disposition_header(
-            True, f"party-statement-{party.pk}-{statement.as_of_date}.{export_format}"
-        )
-        return response
-    return render(
-        request, "loans/pawn/party_statement.html", {"statement": statement}
-    )
-
-
-def _report_as_of_date(request):
-    raw = (request.GET.get("as_of") or "").strip()
-    if not raw:
-        return timezone.localdate()
-    value = parse_date(raw)
-    if value is None:
-        raise Http404("Report date must use YYYY-MM-DD.")
-    return value
-
-
-@loans_setup_required
-def loan_module_feature_gate(request):
-    state = get_loan_module_feature_state(request.loans_workspace)
-    form = LoanModuleFeatureGateForm(
-        request.POST if request.method == "POST" else None,
-        initial={"enabled": state.enabled},
-    )
-    if request.method == "POST" and form.is_valid():
-        state = set_new_loans_enabled(
-            request.loans_workspace,
-            enabled=form.cleaned_data["enabled"],
-            actor=request.user,
-        )
-        if state.enabled:
-            messages.success(
-                request,
-                "Loans is now the new-loan entrypoint. Existing Girvi loans remain serviceable in Girvi.",
-            )
-        else:
-            messages.success(
-                request,
-                "Girvi is again the new-loan entrypoint. Existing Loans records were preserved.",
-            )
-        return redirect("loans:loan_module_feature_gate")
-    return render(
-        request,
-        "loans/setup/feature_gate.html",
-        {"form": form, "feature_state": state},
     )
 
 
@@ -1285,21 +1065,6 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
     use_fixed = request.GET.get("renderer") == "fixed"
     if use_fixed and not _can_administer(request):
         return HttpResponse("Fixed-renderer recovery requires workspace administration access.", status=403, content_type="text/plain")
-    if use_fixed:
-        LoanDocumentLayoutService.audit_fixed_recovery(
-            workspace=request.loans_workspace, source_type=source_type,
-            source_id=source_id, actor=request.user, request=request,
-        )
-        return None
-    existing_issue = LoanDocumentLayoutService.find_official_issue(
-        workspace=request.loans_workspace,
-        document_type=payload.document_type,
-        source_type=source_type,
-        source_id=source_id,
-        source_fingerprint=source_fingerprint,
-    )
-    if existing_issue is not None:
-        return _issued_document_response(existing_issue, payload)
     use_legacy_profile = request.GET.get("print_profile") == "legacy"
     if use_legacy_profile and not _can_administer(request):
         return HttpResponse(
@@ -1307,59 +1072,27 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
             status=403,
             content_type="text/plain",
         )
-    revision = LoanDocumentLayoutService.resolve(
-        workspace=request.loans_workspace, document_type=payload.document_type,
-        license=loan.license, series=loan.series,
-    )
-    if revision is None:
-        return None
     try:
-        layout = DocumentLayoutValidator.load(revision.definition)
-        print_profile = None
-        if payload.document_type == "loan_ticket":
-            if use_legacy_profile:
-                LoanDocumentLayoutService.audit_legacy_profile_recovery(
-                    workspace=request.loans_workspace,
-                    source_type=source_type,
-                    source_id=source_id,
-                    actor=request.user,
-                    request=request,
-                )
-                print_profile = ResolvedPrintProfile(
-                    source_scope="LEGACY_LAYOUT",
-                    definition=legacy_print_profile(layout),
-                )
-                rendered = ConfigurableDocumentRenderer.render(
-                    payload, layout, assets=_revision_assets(revision)
-                )
-            else:
-                print_profile = LoanDocumentPrintProfileService.resolve(
-                    workspace=request.loans_workspace,
-                    document_type=payload.document_type,
-                    series=loan.series,
-                )
-                rendered = ConfigurableDocumentRenderer.render_with_print_profile(
-                    payload, layout, print_profile.definition,
-                    assets=_revision_assets(revision),
-                )
-        else:
-            rendered = ConfigurableDocumentRenderer.render(
-                payload, layout, assets=_revision_assets(revision)
-            )
-        issue = LoanDocumentLayoutService.issue(
-            workspace=request.loans_workspace, document_type=payload.document_type,
-            source_type=source_type, source_id=source_id,
+        result = issue_configurable_document(
+            workspace=request.loans_workspace,
+            payload=payload,
+            loan=loan,
+            source_type=source_type,
+            source_id=source_id,
             source_fingerprint=source_fingerprint,
-            payload_schema_version=payload.schema_version, render_result=rendered,
-            filename=payload.file_name, actor=request.user, revision=revision,
-            print_profile=print_profile,
+            actor=request.user,
+            request=request,
+            fixed_recovery=use_fixed,
+            legacy_profile_recovery=use_legacy_profile,
         )
     except (
         ValueError, ValidationError, DocumentLayoutServiceError,
         PrintProfileServiceError,
     ) as exc:
         return HttpResponse(str(exc), status=409, content_type="text/plain")
-    return _issued_document_response(issue, payload)
+    if result.use_fixed_renderer:
+        return None
+    return _issued_document_response(result.issue, payload)
 
 
 def _issued_document_response(issue, payload):
@@ -1478,169 +1211,6 @@ def pawn_release_memo_pdf(request, release_pk):
 
 
 @loans_workspace_required
-def pawn_loan_create(request):
-    readiness = _draft_readiness(request.loans_workspace)
-    if not readiness["ready"]:
-        return render(request, "loans/pawn/blocked.html", {"readiness": readiness})
-    initial = {"loan_date": timezone.localdate()}
-    if request.method == "GET" and request.GET.get("party"):
-        initial["borrower"] = request.GET["party"]
-    form = PawnDraftForm(
-        request.POST or None,
-        workspace=request.loans_workspace,
-        initial=initial,
-    )
-    formset = PawnCollateralDraftFormSet(
-        request.POST or None, request.FILES or None, prefix="collateral"
-    )
-    economics_preview = None
-    if request.method == "POST" and form.is_valid() and formset.is_valid():
-        command = _create_command(request.loans_workspace.pk, form, formset)
-        try:
-            if request.POST.get("action") == "preview":
-                economics_preview = resolve_pawn_draft_economics(
-                    workspace_id=request.loans_workspace.pk,
-                    license_id=command.license_id,
-                    as_of_date=command.loan_date,
-                    collateral=command.collateral,
-                )
-                loan = None
-            else:
-                with transaction.atomic():
-                    loan = create_pawn_draft(command, actor=request.user)
-                    _persist_formset_photos(
-                        loan, formset, actor=request.user, workflow_source="DRAFT"
-                    )
-        except (PawnDraftError, ValidationError, ValueError) as exc:
-            _add_pawn_draft_error(form, formset, exc)
-        else:
-            if loan is not None:
-                messages.success(request, f"Draft {loan.loan_number} created.")
-                return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return render(
-        request,
-        "loans/pawn/form.html",
-        {
-            "form": form,
-            "formset": formset,
-            "economics_preview": economics_preview,
-            "number_preview_rows": _pawn_number_preview_rows(form),
-        },
-    )
-
-
-@loans_workspace_required
-def pawn_loan_update(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    if loan.state != PawnLoanState.DRAFT.value:
-        messages.error(request, "Only draft PawnLoans can be edited.")
-        return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    form = PawnDraftForm(request.POST or None, workspace=request.loans_workspace, instance=loan)
-    existing_items = tuple(loan.collateral_items.all())
-    initial = [
-        {
-            "description": item.description,
-            "collateral_item_id": item.pk,
-            "metal": item.metal,
-            "gross_weight": item.gross_weight,
-            "net_weight": item.net_weight,
-            "purity_percentage": item.purity_percentage,
-            "latest_appraised_value": item.latest_appraised_value,
-            "allocated_principal": item.allocated_principal,
-        }
-        for item in existing_items
-    ]
-    formset = PawnCollateralDraftFormSet(
-        request.POST or None,
-        request.FILES or None,
-        prefix="collateral",
-        initial=None if request.method == "POST" else initial,
-    )
-    _attach_existing_collateral(formset, existing_items)
-    economics_preview = None
-    if request.method == "POST" and form.is_valid() and formset.is_valid():
-        command = _update_command(form, formset)
-        try:
-            if request.POST.get("action") == "preview":
-                economics_preview = resolve_pawn_draft_economics(
-                    workspace_id=request.loans_workspace.pk,
-                    license_id=loan.license_id,
-                    as_of_date=command.loan_date,
-                    collateral=command.collateral,
-                )
-            else:
-                with transaction.atomic():
-                    loan = update_pawn_draft(loan.pk, command, actor=request.user)
-                    _persist_formset_photos(
-                        loan, formset, actor=request.user, workflow_source="DRAFT"
-                    )
-        except (PawnDraftError, ValidationError, ValueError) as exc:
-            _add_pawn_draft_error(form, formset, exc)
-        else:
-            if request.POST.get("action") != "preview":
-                messages.success(request, f"Draft {loan.loan_number} updated.")
-                return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return render(
-        request,
-        "loans/pawn/form.html",
-        {
-            "form": form,
-            "formset": formset,
-            "loan": loan,
-            "economics_preview": economics_preview,
-            "number_preview_rows": _pawn_number_preview_rows(form),
-        },
-    )
-
-
-@loans_workspace_required
-def pawn_loan_split(request, pk):
-    from apps.tenant_apps.loans.forms import PawnDraftSplitForm
-    from apps.tenant_apps.loans.services.pawn_draft_split import (
-        PawnDraftSplitError,
-        preview_pawn_draft_split,
-        split_pawn_draft,
-    )
-    loan = _pawn_loan_for_workspace(request, pk)
-    if loan.state != PawnLoanState.DRAFT.value:
-        messages.error(request, "Only a draft PawnLoan can be split.")
-        return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    initial = {"series": loan.series_id, "product_version": loan.product_version_id, "loan_date": loan.loan_date, "tenure_months": loan.tenure_months}
-    if request.method == "GET" and request.GET.get("item"):
-        initial["collateral_items"] = [request.GET["item"]]
-    form = PawnDraftSplitForm(
-        request.POST or None,
-        workspace=request.loans_workspace,
-        source=loan,
-        initial=initial,
-    )
-    preview = None
-    if request.method == "POST" and form.is_valid():
-        values = form.cleaned_data
-        try:
-            preview = preview_pawn_draft_split(
-                loan.pk,
-                collateral_item_ids=tuple(values["collateral_items"].values_list("pk", flat=True)),
-                series=values["series"], product_version=values["product_version"],
-                loan_date=values["loan_date"], tenure_months=values["tenure_months"],
-            )
-            if request.POST.get("action") == "confirm":
-                new_loan = split_pawn_draft(
-                    loan.pk,
-                    collateral_item_ids=tuple(values["collateral_items"].values_list("pk", flat=True)),
-                    series=values["series"], product_version=values["product_version"],
-                    loan_date=values["loan_date"], tenure_months=values["tenure_months"],
-                    expected_fingerprint=request.POST.get("fingerprint", ""), actor=request.user,
-                )
-                messages.success(request, f"Moved selected collateral into new draft {new_loan.loan_number}.")
-                return redirect("loans:pawn_loan_detail", pk=new_loan.pk)
-        except (PawnDraftSplitError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-    template = "loans/pawn/_split_form.html" if request.headers.get("HX-Request") else "loans/pawn/split.html"
-    return render(request, template, {"loan": loan, "form": form, "preview": preview})
-
-
-@loans_workspace_required
 def pawn_loan_detail(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     series_navigation = get_pawn_loan_series_navigation(loan)
@@ -1702,28 +1272,6 @@ def pawn_loan_detail(request, pk):
     )
     context["primary_action"] = _primary_action(loan, context)
     return render(request, "loans/pawn/detail.html", context)
-
-
-@loans_workspace_required
-@require_POST
-def pawn_collateral_photo_add(request, pk, item_pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
-    form = PawnCollateralPhotoForm(request.POST, request.FILES)
-    if form.is_valid():
-        try:
-            append_collateral_photo(
-                item.pk,
-                upload=form.cleaned_data["photograph"],
-                actor=request.user,
-            )
-        except (PawnCollateralMediaError, ValidationError, ValueError) as exc:
-            messages.error(request, str(exc))
-        else:
-            messages.success(request, f"Photograph appended to {item.description}.")
-    else:
-        messages.error(request, "Select a valid collateral photograph.")
-    return redirect(f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}")
 
 
 @loans_workspace_required
@@ -1832,35 +1380,6 @@ def pawn_storage_location_list(request):
 
 
 @loans_owner_required
-def pawn_storage_location_create(request):
-    form = PawnStorageLocationForm(
-        request.POST or None,
-        workspace=request.loans_workspace,
-    )
-    if request.method == "POST" and form.is_valid():
-        try:
-            location = create_storage_location(
-                workspace=request.loans_workspace,
-                parent=form.cleaned_data.get("parent"),
-                level=form.cleaned_data["level"],
-                code=form.cleaned_data["code"],
-                name=form.cleaned_data["name"],
-                capacity=form.cleaned_data.get("capacity"),
-                actor=request.user,
-            )
-        except (PawnStorageError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"Storage location {location.code} created.")
-            return redirect("loans:pawn_storage_location_list")
-    return render(
-        request,
-        "loans/storage/location_form.html",
-        {"form": form},
-    )
-
-
-@loans_owner_required
 def pawn_storage_location_label(request, pk):
     location = get_object_or_404(
         PawnStorageLocation,
@@ -1938,53 +1457,6 @@ def pawn_storage_location_scan(request, public_id):
         request.session.pop(_PENDING_STORAGE_ITEM_SESSION_KEY, None)
     messages.info(request, "Scan an in-vault collateral item before scanning its destination.")
     return redirect("loans:pawn_storage_location_list")
-
-
-@loans_owner_required
-def pawn_collateral_storage_transfer(request, pk, item_pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
-    initial = {}
-    if request.method == "GET" and request.GET.get("destination"):
-        initial["destination"] = request.GET["destination"]
-    if (
-        request.method == "GET"
-        and _can_manage_storage(request)
-        and item.custody_state == "IN_VAULT"
-    ):
-        request.session[_PENDING_STORAGE_ITEM_SESSION_KEY] = {
-            "workspace_id": request.loans_workspace.pk,
-            "item_public_id": str(item.public_id),
-        }
-    form = PawnStorageTransferForm(
-        request.POST or None,
-        workspace=request.loans_workspace,
-        initial=initial,
-    )
-    if request.method == "POST" and form.is_valid():
-        try:
-            movement = place_or_transfer_collateral(
-                item.pk,
-                destination_id=form.cleaned_data["destination"].pk,
-                reason=form.cleaned_data.get("reason", ""),
-                actor=request.user,
-            )
-        except (PawnStorageError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            request.session.pop(_PENDING_STORAGE_ITEM_SESSION_KEY, None)
-            messages.success(
-                request,
-                f"{item.description} {movement.get_kind_display().lower()} recorded.",
-            )
-            return redirect(
-                f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}"
-            )
-    return render(
-        request,
-        "loans/storage/transfer_form.html",
-        {"loan": loan, "item": item, "form": form},
-    )
 
 
 @loans_owner_required
@@ -2078,588 +1550,6 @@ def pawn_physical_verification_detail(request, pk):
     )
 
 
-@loans_owner_required
-@require_POST
-def pawn_physical_verification_complete(request, pk):
-    try:
-        complete_physical_verification(pk, actor=request.user)
-    except (PawnPhysicalVerificationError, ValidationError, ValueError) as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, "Physical-verification session completed and frozen.")
-    return redirect("loans:pawn_physical_verification_detail", pk=pk)
-
-
-@loans_owner_required
-def pawn_physical_verification_resolve(request, observation_pk):
-    observation = get_object_or_404(
-        PawnPhysicalVerificationObservation.objects.select_related("session", "collateral_item__loan", "observed_location"),
-        pk=observation_pk,
-        session__workspace=request.loans_workspace,
-    )
-    form = PawnPhysicalVerificationResolutionForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            resolve_physical_verification_discrepancy(
-                observation.pk,
-                outcome=form.cleaned_data["outcome"],
-                reason=form.cleaned_data["reason"],
-                current_market_value=form.cleaned_data.get("current_market_value"),
-                agreed_compensation=form.cleaned_data.get("agreed_compensation"),
-                compensation_reference=form.cleaned_data.get("compensation_reference", ""),
-                actor=request.user,
-            )
-        except (PawnPhysicalVerificationError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, "Immutable discrepancy resolution recorded.")
-            return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
-    return render(request, "loans/verification/resolution_form.html", {"observation": observation, "form": form})
-
-
-@loans_owner_required
-@require_POST
-def pawn_physical_verification_discrepancy_notice(request, observation_pk):
-    observation = get_object_or_404(
-        PawnPhysicalVerificationObservation,
-        pk=observation_pk,
-        session__workspace=request.loans_workspace,
-    )
-    try:
-        create_verification_discrepancy_notice(
-            observation.pk,
-            request_key=f"verification-discrepancy:{observation.pk}",
-            actor=request.user,
-        )
-    except (LoanOperationalNoticeError, ValidationError, ValueError) as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(
-            request, "Verification discrepancy alert intent is ready for the workspace Owner."
-        )
-    return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
-
-
-@loans_workspace_required
-@require_POST
-def pawn_loan_approve(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    try:
-        approve_pawn_loan(loan.pk, actor=request.user)
-        messages.success(request, f"{loan.loan_number} approved. Its economic payload is frozen.")
-    except (PawnLifecycleError, ValidationError, ValueError) as exc:
-        messages.error(request, str(exc))
-    return redirect("loans:pawn_loan_detail", pk=loan.pk)
-
-
-@loans_workspace_required
-def pawn_loan_reopen(request, pk):
-    return _reason_transition(request, pk, "reopen")
-
-
-@loans_workspace_required
-def pawn_loan_cancel(request, pk):
-    return _reason_transition(request, pk, "cancel")
-
-
-@loans_workspace_required
-def pawn_loan_disburse(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    form = PawnDisbursalForm(
-        request.POST or None,
-        initial={"effective_date": timezone.localdate()},
-    )
-    if request.method == "POST" and form.is_valid():
-        try:
-            disburse_pawn_loan(
-                loan.pk,
-                effective_date=form.cleaned_data["effective_date"],
-                actor=request.user,
-            )
-        except (ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"{loan.loan_number} disbursed and queued for accounting.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    readiness = None
-    readiness_error = ""
-    effective_date = (
-        form.cleaned_data.get("effective_date")
-        if form.is_bound and form.is_valid()
-        else timezone.localdate()
-    )
-    try:
-        readiness = assess_pawn_loan_accounting_readiness(
-            loan,
-            effective_date=effective_date,
-        )
-    except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
-        readiness_error = str(exc)
-    return _render_action(
-        request,
-        loan,
-        form,
-        "Disburse loan",
-        "This posts the approved principal through DEA and activates the loan.",
-        {
-            "accounting_readiness": readiness,
-            "accounting_readiness_error": readiness_error,
-            "can_administer": _can_administer(request),
-        },
-    )
-
-
-@loans_setup_required
-def pawn_borrower_account_setup(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    if request.method == "POST":
-        try:
-            result = ensure_pawn_borrower_accounting(
-                loan.pk,
-                actor=request.user,
-                request=request,
-            )
-        except PawnBorrowerAccountingSetupError as exc:
-            messages.error(request, str(exc))
-        else:
-            if result.mapping_created:
-                messages.success(
-                    request,
-                    f"Borrower accounting account {result.account} is ready.",
-                )
-            else:
-                messages.info(request, "The borrower accounting mapping was already ready.")
-            return redirect("loans:pawn_loan_disburse", pk=loan.pk)
-    return render(
-        request,
-        "loans/pawn/borrower_account_setup.html",
-        {"loan": loan},
-    )
-
-
-@loans_workspace_required
-def pawn_loan_repay(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    repayment_preview = None
-    form = PawnRepaymentForm(
-        request.POST or None,
-        initial={"request_key": uuid.uuid4().hex},
-    )
-    if request.method == "POST" and form.is_valid():
-        try:
-            if request.POST.get("action") == "preview":
-                repayment_preview = preview_pawn_loan_repayment(
-                    loan.pk,
-                    amount=form.cleaned_data["amount"],
-                )
-            else:
-                result = record_pawn_loan_repayment(
-                    loan.pk,
-                    amount=form.cleaned_data["amount"],
-                    request_key=form.cleaned_data["request_key"],
-                    actor=request.user,
-                )
-        except (ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            if repayment_preview is None:
-                delivery = result.outbox.get_status_display()
-                allocation = result.allocation
-                messages.success(
-                    request,
-                    "Repayment "
-                    f"{allocation.amount_received} recorded: fees {allocation.fees}, "
-                    f"overdue interest {allocation.overdue_interest}, current interest "
-                    f"{allocation.current_interest}, principal {allocation.principal}. "
-                    f"Accounting delivery: {delivery}.",
-                )
-                return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    balance = _safe_balance(loan)
-    item_by_id = {item.pk: item for item in loan.collateral_items.all()}
-    return _render_action(
-        request,
-        loan,
-        form,
-        "Record repayment",
-        "Allocation is fixed: fees, overdue interest, current interest, then principal.",
-        {
-            "balance": balance,
-            "supports_preview": True,
-            "preview_action_label": "Preview allocation",
-            "repayment_preview": repayment_preview,
-            "repayment_item_rows": tuple(
-                {
-                    "allocation": row,
-                    "item": item_by_id.get(row.collateral_item_id),
-                }
-                for row in (
-                    repayment_preview.item_allocations
-                    if repayment_preview is not None
-                    else ()
-                )
-            ),
-        },
-    )
-
-
-@loans_workspace_required
-def pawn_loan_accrue(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    previews = _safe_accrual_previews(loan, include_partial=False)
-    initial = {"period_number": previews[0].period_number} if previews else None
-    form = PawnAccrualForm(request.POST or None, initial=initial)
-    if request.method == "POST" and form.is_valid():
-        try:
-            result = finalize_pawn_loan_accrual(
-                loan.pk,
-                period_number=form.cleaned_data["period_number"],
-                actor=request.user,
-            )
-        except (ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            disposition = (
-                result.outbox.get_status_display()
-                if result.outbox is not None
-                else "No accounting event required by the cash-recognition policy"
-            )
-            messages.success(
-                request,
-                f"Interest accrual finalized. Accounting disposition: {disposition}.",
-            )
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return _render_action(
-        request,
-        loan,
-        form,
-        "Finalize interest accrual",
-        "Only the next eligible completed monthly period can be finalized.",
-        {
-            "previews": previews,
-            "accrual_preview_rows": _accrual_preview_rows(loan, previews),
-        },
-    )
-
-
-@loans_workspace_required
-def pawn_loan_capitalize(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    form = PawnCapitalizationForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            capitalize_pawn_loan_interest(
-                loan.pk,
-                through_period_number=form.cleaned_data["through_period_number"],
-                actor=request.user,
-            )
-        except (ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, "Interest capitalization recorded and queued.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return _render_action(
-        request,
-        loan,
-        form,
-        "Capitalize interest",
-        "Available only at the snapshotted compound-interest boundary.",
-    )
-
-
-@loans_workspace_required
-def pawn_loan_release_full(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    quote = _full_release_quote(loan)
-    initial = {"request_key": uuid.uuid4().hex}
-    minimum_settlement = (
-        quote.get("minimum_settlement")
-        if isinstance(quote, dict)
-        else quote.minimum_settlement
-    )
-    if minimum_settlement is not None:
-        initial["settlement_amount"] = minimum_settlement
-    form = PawnFullReleaseForm(request.POST or None, initial=initial)
-    if request.method == "POST" and form.is_valid():
-        try:
-            result = release_pawn_loan_in_full(
-                loan.pk,
-                settlement_amount=form.cleaned_data["settlement_amount"],
-                request_key=form.cleaned_data["request_key"],
-                actor=request.user,
-            )
-        except (ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(
-                request,
-                f"Release {result.release.release_number} completed: "
-                f"{result.release.settlement_amount} collected, "
-                f"{result.release.items.count()} collateral item(s) returned, "
-                f"loan closed. Accounting delivery: "
-                f"{result.outbox.get_status_display()}.",
-            )
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return _render_action(
-        request,
-        loan,
-        form,
-        "Full release",
-        "Collect the exact displayed settlement before returning all remaining collateral.",
-        {"quote": quote},
-    )
-
-
-@loans_workspace_required
-def pawn_loan_release_partial(request, pk):
-    _pawn_loan_for_workspace(request, pk)
-    return HttpResponseGone(
-        "Partial collateral release is no longer supported. "
-        "Use full release or release and renew into a newly numbered PawnLoan."
-    )
-
-
-@loans_setup_required
-def pawn_loan_reverse_event(request, pk, event_pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    event = get_object_or_404(
-        PawnLoanAccountingEvent.objects.select_related("outbox", "loan__workspace"),
-        pk=event_pk,
-        loan=loan,
-    )
-    readiness = assess_pawn_loan_event_reversal(event)
-    form = PawnReversalForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            result = reverse_pawn_loan_event(
-                event.pk,
-                reason=form.cleaned_data["reason"],
-                actor=request.user,
-            )
-        except (ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            balance = _safe_balance(loan)
-            disposition = (
-                "Accounting delivery is deferred."
-                if readiness.accounting_mode == "DEFERRED"
-                else "The compensating event is queued through DEA."
-            )
-            balance_text = (
-                f" Resulting Loans total due is {balance.total_due}." if balance else ""
-            )
-            messages.success(
-                request,
-                f"Reversal event #{result.reversal_event.pk} recorded.{balance_text} {disposition}",
-            )
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return _render_action(
-        request,
-        loan,
-        form,
-        f"Reverse {event.get_event_kind_display()}",
-        "Administrator-only. Correct events newest-first; the original evidence is never edited.",
-        {
-            "accounting_event": event,
-            "balance": _safe_balance(loan),
-            "reversal_readiness": readiness,
-            "reversal_values": (event.payload.get("values") or {}).items(),
-            "custody_items": loan.collateral_items.all(),
-        },
-    )
-
-
-@loans_workspace_required
-def pawn_loan_notice_create(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    requested_kind = request.GET.get("kind", "")
-    allowed_kinds = {
-        value for value, _label in PawnLoanNoticeForm.base_fields["notice_kind"].choices
-    }
-    form = PawnLoanNoticeForm(
-        request.POST or None,
-        initial={
-            "request_key": uuid.uuid4().hex,
-            "notice_kind": requested_kind if requested_kind in allowed_kinds else "",
-        },
-    )
-    if request.method == "POST" and form.is_valid():
-        try:
-            notice = create_pawn_loan_notice(
-                loan.pk,
-                notice_kind=form.cleaned_data["notice_kind"],
-                channel=form.cleaned_data["channel"],
-                scheduled_for=form.cleaned_data.get("scheduled_for"),
-                request_key=form.cleaned_data["request_key"],
-                actor=request.user,
-            )
-        except (PawnLoanNoticeError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(
-                request,
-                f"{notice.get_notice_kind_display()} queued through Notify.",
-            )
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return _render_action(
-        request,
-        loan,
-        form,
-        "Create loan notice",
-        "Review and confirm the immutable notice source. Loans owns the intent; Notify owns templates, provider delivery, and attempts.",
-        {"balance": _safe_balance(loan), "notice_preview": True},
-    )
-
-
-@loans_workspace_required
-@require_POST
-def pawn_loan_notice_retry(request, pk, notice_pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    notice = get_object_or_404(
-        PawnLoanNotice,
-        pk=notice_pk,
-        loan=loan,
-        workspace=request.loans_workspace,
-    )
-    try:
-        result = dispatch_pawn_loan_notice(notice.pk)
-    except (PawnLoanNoticeError, ValidationError, ValueError) as exc:
-        messages.error(request, str(exc))
-    else:
-        if result.delivery.status == "SENT":
-            messages.success(request, "PawnLoan notice sent.")
-        elif result.delivery.status == "FAILED":
-            messages.error(
-                request,
-                result.delivery.failure_reason or "Notice delivery failed.",
-            )
-        else:
-            messages.info(request, "PawnLoan notice remains queued.")
-    return redirect("loans:pawn_loan_detail", pk=loan.pk)
-
-
-@loans_setup_required
-def pawn_loan_auction_initiate(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    form = PawnAuctionInitiateForm(
-        request.POST or None,
-        initial={"request_key": uuid.uuid4().hex},
-    )
-    if request.method == "POST" and form.is_valid():
-        try:
-            auction = initiate_pawn_loan_auction(
-                loan.pk,
-                scheduled_date=form.cleaned_data["scheduled_date"],
-                channel=form.cleaned_data["channel"],
-                request_key=form.cleaned_data["request_key"],
-                actor=request.user,
-            )
-        except (PawnAuctionError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"Auction {auction.auction_number} initiated and notice queued.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return _render_action(
-        request,
-        loan,
-        form,
-        "Initiate auction recovery",
-        "Administrator-only. The loan must be overdue and all collateral must remain in the vault.",
-    )
-
-
-@loans_setup_required
-@require_POST
-def pawn_loan_auction_start(request, auction_pk):
-    auction = _pawn_auction_for_workspace(request, auction_pk)
-    try:
-        start_pawn_loan_auction(auction.pk, actor=request.user)
-    except (PawnAuctionError, ValidationError, ValueError) as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, f"Auction {auction.auction_number} started.")
-    return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
-
-
-@loans_setup_required
-def pawn_loan_auction_cancel(request, auction_pk):
-    auction = _pawn_auction_for_workspace(request, auction_pk)
-    form = PawnTransitionReasonForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            cancel_pawn_loan_auction(
-                auction.pk,
-                reason=form.cleaned_data["reason"],
-                actor=request.user,
-            )
-        except (PawnAuctionError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"Auction {auction.auction_number} cancelled.")
-            return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
-    return _render_action(
-        request,
-        auction.loan,
-        form,
-        "Cancel auction",
-        "An initiated or in-progress auction can be cancelled. A reason is required.",
-        {"auction": auction},
-    )
-
-
-@loans_setup_required
-def pawn_loan_auction_complete(request, auction_pk):
-    auction = _pawn_auction_for_workspace(request, auction_pk)
-    form = PawnAuctionCompletionForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            complete_pawn_loan_auction(
-                auction.pk,
-                recovery_amount=form.cleaned_data["recovery_amount"],
-                buyer_name=form.cleaned_data["buyer_name"],
-                buyer_reference=form.cleaned_data["buyer_reference"],
-                actor=request.user,
-            )
-        except (PawnAuctionError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"Auction {auction.auction_number} completed and recovery queued through DEA.")
-            return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
-    return _render_action(
-        request,
-        auction.loan,
-        form,
-        "Complete auction recovery",
-        "Recovery must exactly clear the canonical debt. Shortfall and surplus workflows fail closed.",
-        {"auction": auction},
-    )
-
-
-@loans_setup_required
-def pawn_loan_auction_reverse(request, auction_pk):
-    auction = _pawn_auction_for_workspace(request, auction_pk)
-    form = PawnReversalForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            reverse_pawn_loan_auction(
-                auction.pk,
-                reason=form.cleaned_data["reason"],
-                actor=request.user,
-            )
-        except (PawnAuctionError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"Auction {auction.auction_number} reversed.")
-            return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
-    return _render_action(
-        request,
-        auction.loan,
-        form,
-        "Reverse auction recovery",
-        "Administrator-only. Accounting and custody are restored through compensating evidence.",
-        {"auction": auction},
-    )
-
-
 @loans_workspace_required
 def pawn_loan_auction_notice_pdf(request, auction_pk):
     auction = _pawn_auction_for_workspace(request, auction_pk)
@@ -2688,230 +1578,6 @@ def pawn_loan_auction_recovery_pdf(request, auction_pk):
     except (PawnLoanDocumentError, ValueError) as exc:
         return HttpResponse(str(exc), status=409)
     return PawnLoanDocumentService.build_pdf_response(result)
-
-
-@loans_workspace_required
-def pawn_loan_renew(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    is_exact_preview = (
-        request.method == "POST" and request.POST.get("action") == "preview"
-    )
-    form_data = request.POST.copy() if is_exact_preview else (request.POST or None)
-    if is_exact_preview:
-        form_data["confirm_renewal_plan"] = "on"
-    try:
-        renewal_quote = preview_pawn_loan_renewal_source(loan.pk)
-    except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
-        renewal_quote = {"error": str(exc)}
-    source_items = tuple(
-        loan.collateral_items.filter(custody_state="IN_VAULT").order_by("pk")
-    )
-    try:
-        current_tranches = {
-            row.collateral_item_id: row.principal_outstanding
-            for row in get_pawn_principal_tranche_balances(loan)
-        }
-    except PawnTrancheBalanceError:
-        current_tranches = {}
-    retained_initial = [
-        {
-            "collateral_item_id": item.pk,
-            "retain": True,
-            "allocated_principal": current_tranches.get(
-                item.pk, item.allocated_principal
-            ),
-        }
-        for item in source_items
-    ]
-    initial = {
-        "request_key": uuid.uuid4().hex,
-        "successor_license": loan.license_id,
-        "successor_series": loan.series_id,
-        "tenure_months": loan.tenure_months,
-    }
-    form = PawnRenewalForm(
-        form_data,
-        workspace=request.loans_workspace,
-        initial=initial,
-    )
-    retained_formset = PawnRenewalRetainedItemFormSet(
-        form_data,
-        prefix="retained",
-        initial=retained_initial,
-    )
-    additional_formset = PawnAdditionalCollateralFormSet(
-        form_data,
-        request.FILES or None,
-        prefix="additional",
-    )
-    forms_valid = (
-        request.method == "POST"
-        and form.is_valid()
-        and retained_formset.is_valid()
-        and additional_formset.is_valid()
-    )
-    if is_exact_preview and not forms_valid:
-        return JsonResponse(
-            {
-                "ok": False,
-                "message": "Correct the highlighted renewal fields before previewing.",
-                "form_errors": form.errors.get_json_data(),
-                "retained_errors": [
-                    errors.get_json_data() for errors in retained_formset.errors
-                ],
-                "additional_errors": [
-                    errors.get_json_data() for errors in additional_formset.errors
-                ],
-            },
-            status=400,
-        )
-    if forms_valid:
-        retained = tuple(
-            RetainedCollateralInput(
-                collateral_item_id=row["collateral_item_id"],
-                allocated_principal=row["allocated_principal"],
-            )
-            for row in retained_formset.cleaned_data
-            if row and row.get("retain")
-        )
-        additional = _collateral_inputs(additional_formset)
-        try:
-            exact_preview = preview_pawn_loan_renewal_plan(
-                loan.pk,
-                mode=form.cleaned_data["mode"],
-                principal_paid=form.cleaned_data["principal_paid"],
-                top_up_amount=form.cleaned_data["top_up_amount"],
-                successor_license_id=form.cleaned_data["successor_license"].pk,
-                successor_series_id=form.cleaned_data["successor_series"].pk,
-                tenure_months=form.cleaned_data["tenure_months"],
-                retained_collateral=retained,
-                additional_collateral=additional,
-            )
-        except (PawnRenewalError, ValidationError, ValueError) as exc:
-            if is_exact_preview:
-                return JsonResponse(
-                    {"ok": False, "message": str(exc)},
-                    status=409,
-                )
-            form.add_error(None, str(exc))
-            exact_preview = None
-        if is_exact_preview and exact_preview is not None:
-            return JsonResponse(
-                {
-                    "ok": True,
-                    "fingerprint": exact_preview.fingerprint,
-                    "successor_principal": str(exact_preview.successor_principal),
-                    "successor_monthly_interest": str(
-                        exact_preview.successor_monthly_interest
-                    ),
-                    "successor_advance_interest": str(
-                        exact_preview.successor_advance_interest
-                    ),
-                    "successor_deducted_fees": str(
-                        exact_preview.successor_deducted_fees
-                    ),
-                    "source_interest_and_fees": str(
-                        exact_preview.source.base_cash_received
-                    ),
-                    "principal_paid": str(exact_preview.principal_paid),
-                    "top_up_amount": str(exact_preview.top_up_amount),
-                    "total_cash_received": str(exact_preview.total_cash_received),
-                    "net_cash_amount": str(abs(exact_preview.net_cash_amount)),
-                    "net_cash_direction": exact_preview.net_cash_direction,
-                    "retained_count": len(exact_preview.retained_item_ids),
-                    "returned_count": len(exact_preview.returned_item_ids),
-                    "successor_collateral_count": (
-                        exact_preview.successor_collateral_count
-                    ),
-                }
-            )
-        if exact_preview is not None and (
-            form.cleaned_data.get("preview_fingerprint")
-            != exact_preview.fingerprint
-        ):
-            form.add_error(
-                None,
-                "Calculate and review the exact renewal after the latest changes before completing it.",
-            )
-            exact_preview = None
-        if exact_preview is None:
-            pass
-        else:
-            try:
-                result = renew_pawn_loan(
-                    loan.pk,
-                    mode=form.cleaned_data["mode"],
-                    renewal_date=timezone.localdate(),
-                    principal_paid=form.cleaned_data["principal_paid"],
-                    top_up_amount=form.cleaned_data["top_up_amount"],
-                    successor_license_id=form.cleaned_data["successor_license"].pk,
-                    successor_series_id=form.cleaned_data["successor_series"].pk,
-                    tenure_months=form.cleaned_data["tenure_months"],
-                    request_key=form.cleaned_data["request_key"],
-                    retained_collateral=retained,
-                    additional_collateral=additional,
-                    additional_photo_uploads=tuple(
-                        row["photograph"]
-                        for row in additional_formset.cleaned_data
-                        if row and not row.get("DELETE")
-                    ),
-                    expected_preview_fingerprint=exact_preview.fingerprint,
-                    actor=request.user,
-                )
-            except (PawnRenewalError, ValidationError, ValueError) as exc:
-                form.add_error(None, str(exc))
-            else:
-                snapshot = result.renewal.valuation_snapshot
-                messages.success(
-                    request,
-                    f"Release and renew {result.renewal.renewal_number} completed: "
-                    f"source loan closed, successor {result.successor_loan.loan_number} active; "
-                    f"{len(snapshot.get('returned_source_item_ids') or [])} item(s) returned, "
-                    f"{len(snapshot.get('retained_source_item_ids') or [])} retained, "
-                    f"{len(snapshot.get('additional_successor_item_ids') or [])} added. "
-                    f"Accounting delivery: settlement "
-                    f"{result.settlement_outbox.get_status_display()}, successor opening "
-                    f"{result.opening_outbox.get_status_display()}.",
-                )
-                return redirect("loans:pawn_loan_detail", pk=result.successor_loan.pk)
-    return render(
-        request,
-        "loans/pawn/release_and_renew.html",
-        {
-            "loan": loan,
-            "form": form,
-            "retained_formset": retained_formset,
-            "retained_rows": tuple(zip(source_items, retained_formset.forms)),
-            "additional_formset": additional_formset,
-            "renewal_quote": renewal_quote,
-        },
-    )
-
-
-@loans_setup_required
-def pawn_loan_renewal_reverse(request, renewal_pk):
-    renewal = _pawn_renewal_for_workspace(request, renewal_pk)
-    form = PawnReversalForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            reverse_pawn_loan_renewal(
-                renewal.pk,
-                reason=form.cleaned_data["reason"],
-                actor=request.user,
-            )
-        except (PawnRenewalError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"Renewal {renewal.renewal_number} reversed.")
-            return redirect("loans:pawn_loan_detail", pk=renewal.source_loan_id)
-    return _render_action(
-        request,
-        renewal.source_loan,
-        form,
-        "Reverse renewal",
-        "Administrator-only. The successor must have no later activity and both collateral records must remain in compatible custody.",
-        {"renewal": renewal},
-    )
 
 
 @loans_workspace_required
@@ -2966,492 +1632,134 @@ def pawn_outbox_retry(request, pk):
     return redirect("loans:pawn_loan_detail", pk=outbox.event.loan_id)
 
 
+@require_POST
 @loans_setup_required
-def pawn_operations_console(request):
-    outboxes = PawnLoanAccountingOutbox.objects.filter(
-        event__loan__workspace=request.loans_workspace
-    ).select_related(
-        "event",
-        "event__loan",
-    ).order_by("-updated_at", "-pk")
-    outbox_filter = PawnLoanAccountingOutboxFilter(
-        request.GET,
-        queryset=outboxes,
-    )
-    page_obj = Paginator(outbox_filter.qs, 50).get_page(request.GET.get("page"))
-    return render(
-        request,
-        "loans/setup/operations_console.html",
-        {
-            "outbox_filter": outbox_filter,
-            "outboxes": page_obj.object_list,
-            "page_obj": page_obj,
-            "snapshot": get_pawn_loan_operations_snapshot(),
-        },
-    )
-
-
-@loans_setup_required
-def pawn_loan_notice_list(request):
-    notices = PawnLoanNotice.objects.filter(
-        workspace=request.loans_workspace
-    ).select_related(
-        "loan",
-        "loan__borrower",
-        "created_by",
-    ).order_by("-created_at", "-pk")
-    notice_filter = PawnLoanNoticeFilter(request.GET, queryset=notices)
-    page_obj = Paginator(notice_filter.qs, 50).get_page(request.GET.get("page"))
-    return render(
-        request,
-        "loans/setup/notices/list.html",
-        {
-            "notice_filter": notice_filter,
-            "notice_rows": build_pawn_loan_notice_rows(page_obj.object_list),
-            "page_obj": page_obj,
-        },
-    )
-
-
-@loans_setup_required
-def pawn_operations_runbook(request):
-    return render(request, "loans/setup/operations_runbook.html")
-
-
-@loans_setup_required
-def funding_loan_read_console(request):
-    return render(
-        request,
-        "loans/setup/funding/list.html",
-        {
-            "funding_loans": get_funding_loan_summaries(),
-            "findings": get_funding_loan_integrity_findings(),
-        },
-    )
-
-
-@loans_setup_required
-def funding_loan_draft_create(request):
-    form = FundingLoanDraftForm(request.POST if request.method == "POST" else None)
-    if request.method == "POST" and form.is_valid():
+def pawn_risk_refresh_batch(request):
+    as_of_date = _risk_refresh_date(request)
+    if as_of_date is None:
+        messages.error(request, "Risk assessment date must use YYYY-MM-DD.")
+    else:
         try:
-            funding_loan = create_funding_loan_draft(
-                CreateFundingLoanDraft(
-                    workspace_id=request.loans_workspace.pk,
-                    lender_id=form.cleaned_data["lender"].pk,
-                ),
-                actor=request.user,
+            result = reassess_pawn_loans_batch(
+                workspace_id=request.loans_workspace.pk,
+                as_of_date=as_of_date,
+                batch_size=50,
             )
-        except FundingLoanServiceError as exc:
-            form.add_error(None, str(exc))
+        except RiskSnapshotRefreshError as exc:
+            messages.error(request, str(exc))
+        else:
+            if result["errors"]:
+                messages.warning(
+                    request,
+                    f"Refreshed {result['current']} of {result['selected']} selected loans; "
+                    f"{len(result['errors'])} assessment(s) need review.",
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Refreshed {result['current']} of {result['selected']} selected risk assessments.",
+                )
+    return _risk_portfolio_redirect(request)
+
+
+@require_POST
+@loans_setup_required
+def pawn_risk_refresh_one(request, pk):
+    loan = get_object_or_404(
+        PawnLoan.objects.filter(
+            workspace=request.loans_workspace,
+            state=PawnLoanState.ACTIVE.value,
+        ),
+        pk=pk,
+    )
+    as_of_date = _risk_refresh_date(request)
+    if as_of_date is None:
+        messages.error(request, "Risk assessment date must use YYYY-MM-DD.")
+    else:
+        try:
+            refresh_loan_risk_snapshot(loan.pk, as_of_date=as_of_date)
+        except RiskSnapshotRefreshError as exc:
+            messages.error(request, str(exc))
         else:
             messages.success(
                 request,
-                f"FundingLoan draft {funding_loan.funding_number} created.",
+                f"Risk assessment refreshed for {loan.loan_number} as of {as_of_date}.",
             )
-            return redirect("loans:funding_loan_read_detail", pk=funding_loan.pk)
-    return render(
-        request,
-        "loans/setup/funding/form.html",
-        {"form": form},
-    )
+    return _risk_portfolio_redirect(request)
 
 
-@loans_setup_required
-def funding_loan_draft_inputs(request, pk):
-    try:
-        draft = get_funding_loan_draft_inputs(pk)
-    except FundingLoanSelectorError as exc:
-        raise Http404(str(exc)) from exc
-    initial = {
-        "principal_amount": draft.principal_amount,
-        "monthly_interest_rate": draft.monthly_interest_rate,
-        "activated_on": draft.activated_on,
-        "maturity_on": draft.maturity_on,
-        "maximum_funding_ltv_ratio": draft.maximum_funding_ltv_ratio,
-        "currency_quantum": draft.currency_quantum,
-        "collateral": draft.collateral_item_ids,
-    }
-    form = FundingLoanDraftInputsForm(
-        request.POST if request.method == "POST" else None,
-        workspace=request.loans_workspace,
-        initial=initial,
-    )
-    if request.method == "POST" and form.is_valid():
-        collateral = tuple(
-            FundingCollateralInput(item.pk, item.latest_appraised_value)
-            for item in form.cleaned_data["collateral"]
-        )
-        try:
-            save_funding_loan_draft_inputs(
-                SaveFundingLoanDraftInputs(
-                    workspace_id=request.loans_workspace.pk,
-                    funding_loan_id=pk,
-                    principal_amount=form.cleaned_data["principal_amount"],
-                    monthly_interest_rate=form.cleaned_data["monthly_interest_rate"],
-                    activated_on=form.cleaned_data["activated_on"],
-                    maturity_on=form.cleaned_data["maturity_on"],
-                    maximum_funding_ltv_ratio=form.cleaned_data["maximum_funding_ltv_ratio"],
-                    currency_quantum=form.cleaned_data["currency_quantum"],
-                    collateral=collateral,
-                ),
-                actor=request.user,
-            )
-        except FundingLoanServiceError as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, "FundingLoan draft inputs saved and ready for review.")
-            return redirect("loans:funding_loan_read_detail", pk=pk)
-    return render(
-        request,
-        "loans/setup/funding/draft_inputs.html",
-        {"form": form, "funding_loan_id": pk, "draft": draft},
-    )
+def _risk_refresh_date(request):
+    raw = (request.POST.get("as_of") or timezone.localdate().isoformat()).strip()
+    return parse_date(raw)
 
 
-@require_POST
-@loans_setup_required
-def funding_loan_draft_cancel(request, pk):
-    form = FundingLoanCancellationForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, "A cancellation reason is required.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    try:
-        funding_loan = cancel_funding_loan_draft(
-            CancelFundingLoanDraft(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-                reason=form.cleaned_data["reason"],
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, f"FundingLoan draft {funding_loan.funding_number} cancelled.")
-    return redirect("loans:funding_loan_read_detail", pk=pk)
+def _risk_portfolio_redirect(request):
+    if request.headers.get("HX-Request") == "true":
+        response = HttpResponse(status=204)
+        response["HX-Redirect"] = reverse("loans:pawn_risk_portfolio")
+        return response
+    return redirect("loans:pawn_risk_portfolio")
 
 
-@require_POST
-@loans_setup_required
-def funding_loan_draft_activate(request, pk):
-    form = FundingLoanActivationForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, "Enter ACTIVATE exactly to confirm activation.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    try:
-        result = activate_saved_funding_loan_draft(
-            ActivateSavedFundingLoanDraft(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(
-            request,
-            f"FundingLoan {result.funding_loan.funding_number} activated; "
-            f"{result.pledge.items.count()} collateral item(s) handed to the lender.",
-        )
-    return redirect("loans:funding_loan_read_detail", pk=pk)
-
-
-@require_POST
-@loans_setup_required
-def funding_loan_repayment(request, pk):
-    form = FundingLoanRepaymentForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, "Enter a valid repayment amount and effective date.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    try:
-        event = record_funding_repayment(
-            RecordFundingRepayment(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-                amount=form.cleaned_data["amount"],
-                effective_date=form.cleaned_data["effective_date"],
-                request_key=str(form.cleaned_data["request_key"]),
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(
-            request,
-            "Funding repayment recorded: "
-            f"fees {event.fee_amount}, interest {event.interest_amount}, "
-            f"principal {event.principal_amount}.",
-        )
-    return redirect("loans:funding_loan_read_detail", pk=pk)
-
-
-@require_POST
-@loans_setup_required
-def funding_loan_begin_settlement(request, pk):
-    try:
-        funding_loan = begin_funding_settlement(
-            BeginFundingSettlement(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(
-            request,
-            f"FundingLoan {funding_loan.funding_number} entered settlement review.",
-        )
-    return redirect("loans:funding_loan_read_detail", pk=pk)
-
-
-@require_POST
-@loans_setup_required
-def funding_loan_return_collateral(request, pk):
-    try:
-        detail = get_funding_loan_detail(pk)
-    except FundingLoanSelectorError as exc:
-        raise Http404(str(exc)) from exc
-    if detail.summary.state != "SETTLEMENT_PENDING":
-        messages.error(request, "Begin settlement review before returning collateral.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    form = FundingCollateralReturnForm(
-        request.POST,
-        collateral_rows=detail.collateral,
-        include_inactive=True,
-    )
-    if not form.is_valid():
-        messages.error(request, "Select valid active collateral and an effective date.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    try:
-        funding_return = return_funding_collateral(
-            ReturnFundingCollateral(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-                collateral_item_ids=tuple(
-                    int(item_id) for item_id in form.cleaned_data["collateral"]
-                ),
-                effective_date=form.cleaned_data["effective_date"],
-                request_key=str(form.cleaned_data["request_key"]),
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(
-            request,
-            f"Returned {funding_return.items.count()} collateral item(s) to the branch vault.",
-        )
-    return redirect("loans:funding_loan_read_detail", pk=pk)
-
-
-@require_POST
-@loans_setup_required
-def funding_loan_close(request, pk):
-    form = FundingLoanClosureForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, "Enter CLOSE exactly to confirm closure.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    try:
-        funding_loan = close_funding_loan(
-            CloseFundingLoan(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(
-            request,
-            f"FundingLoan {funding_loan.funding_number} closed.",
-        )
-    return redirect("loans:funding_loan_read_detail", pk=pk)
-
-
-@require_POST
-@loans_setup_required
-def funding_loan_reverse_event(request, pk, event_pk):
-    form = FundingCorrectionForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, "Enter a correction date and reason.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    try:
-        reverse_funding_event(
-            ReverseFundingEvent(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-                original_event_id=event_pk,
-                effective_date=form.cleaned_data["effective_date"],
-                reason=form.cleaned_data["reason"],
-                request_key=str(form.cleaned_data["request_key"]),
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, "Funding financial event corrected.")
-    return redirect("loans:funding_loan_read_detail", pk=pk)
-
-
-@require_POST
-@loans_setup_required
-def funding_loan_reverse_return(request, pk, return_pk):
-    form = FundingCorrectionForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, "Enter a correction date and reason.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    try:
-        reverse_funding_return(
-            ReverseFundingReturn(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-                funding_return_id=return_pk,
-                effective_date=form.cleaned_data["effective_date"],
-                reason=form.cleaned_data["reason"],
-                request_key=str(form.cleaned_data["request_key"]),
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, "Funding collateral return corrected.")
-    return redirect("loans:funding_loan_read_detail", pk=pk)
-
-
-@require_POST
-@loans_setup_required
-def funding_loan_reverse_pledge(request, pk):
-    form = FundingCorrectionForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, "Enter a correction date and reason.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
-    try:
-        reverse_funding_pledge(
-            ReverseFundingPledge(
-                workspace_id=request.loans_workspace.pk,
-                funding_loan_id=pk,
-                effective_date=form.cleaned_data["effective_date"],
-                reason=form.cleaned_data["reason"],
-                request_key=str(form.cleaned_data["request_key"]),
-            ),
-            actor=request.user,
-        )
-    except FundingLoanServiceError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, "Funding pledge handoff corrected.")
-    return redirect("loans:funding_loan_read_detail", pk=pk)
-
-
-def _funding_document_loan(request, pk):
-    try:
-        return FundingLoan.objects.select_related(
-            "workspace", "lender", "terms_snapshot", "pledge"
-        ).get(pk=pk, workspace=request.loans_workspace)
-    except FundingLoan.DoesNotExist as exc:
-        raise Http404("FundingLoan was not found in the active workspace.") from exc
-
-
-@loans_setup_required
-def funding_loan_agreement_pdf(request, pk):
-    loan = _funding_document_loan(request, pk)
-    if not hasattr(loan, "terms_snapshot") or not hasattr(loan, "pledge"):
-        raise Http404("Funding agreement is available only after activation.")
-    detail = get_funding_loan_detail(pk)
-    return PawnLoanDocumentService.build_pdf_response(
-        FundingLoanDocumentService.render_agreement(loan, detail)
-    )
-
-
-@loans_setup_required
-def funding_loan_repayment_receipt_pdf(request, pk, event_pk):
-    loan = _funding_document_loan(request, pk)
-    try:
-        event = loan.events.get(pk=event_pk, event_kind="REPAYMENT")
-    except FundingLoanEvent.DoesNotExist as exc:
-        raise Http404("Funding repayment evidence was not found.") from exc
-    return PawnLoanDocumentService.build_pdf_response(
-        FundingLoanDocumentService.render_repayment_receipt(event)
-    )
-
-
-@loans_setup_required
-def funding_loan_return_receipt_pdf(request, pk, return_pk):
-    loan = _funding_document_loan(request, pk)
-    try:
-        funding_return = loan.returns.prefetch_related(
-            "items__pledge_item__collateral_item__loan"
-        ).get(pk=return_pk)
-    except FundingReturn.DoesNotExist as exc:
-        raise Http404("Funding return evidence was not found.") from exc
-    return PawnLoanDocumentService.build_pdf_response(
-        FundingLoanDocumentService.render_return_receipt(funding_return)
-    )
-
-
-@loans_setup_required
-def funding_loan_statement_pdf(request, pk):
-    loan = _funding_document_loan(request, pk)
-    if not hasattr(loan, "terms_snapshot"):
-        raise Http404("Funding statement is available only after activation.")
-    detail = get_funding_loan_detail(pk)
-    return PawnLoanDocumentService.build_pdf_response(
-        FundingLoanDocumentService.render_statement(loan, detail)
-    )
-
-
-@loans_setup_required
-def funding_loan_read_detail(request, pk):
-    try:
-        detail = get_funding_loan_detail(pk)
-    except FundingLoanSelectorError as exc:
-        raise Http404(str(exc)) from exc
-    draft = None
-    if detail.summary.state == "DRAFT":
-        draft = get_funding_loan_draft_inputs(pk)
-    settlement = None
-    if detail.summary.state in {"ACTIVE", "SETTLEMENT_PENDING"}:
-        settlement = get_funding_settlement_readiness(pk, detail=detail)
-    return render(
-        request,
-        "loans/setup/funding/detail.html",
-        {
-            "detail": detail,
-            "draft": draft,
-            "settlement": settlement,
-            "activation_form": FundingLoanActivationForm(),
-            "cancellation_form": FundingLoanCancellationForm(),
-            "closure_form": FundingLoanClosureForm(),
-            "correction_form": FundingCorrectionForm(
-                initial={
-                    "effective_date": timezone.localdate(),
-                    "request_key": uuid.uuid4(),
-                }
-            ),
-            "repayment_form": FundingLoanRepaymentForm(
-                initial={
-                    "effective_date": timezone.localdate(),
-                    "request_key": uuid.uuid4(),
-                }
-            ),
-            "return_form": FundingCollateralReturnForm(
-                collateral_rows=detail.collateral,
-                initial={
-                    "effective_date": timezone.localdate(),
-                    "request_key": uuid.uuid4(),
-                },
-            ),
-        },
-    )
+# Compatibility exports: URLs continue importing ``loans.views`` while the
+# focused module owns FundingLoan mutation handlers.
+from apps.tenant_apps.loans.web.funding_actions import (
+    funding_loan_begin_settlement,
+    funding_loan_close,
+    funding_loan_draft_activate,
+    funding_loan_draft_cancel,
+    funding_loan_draft_create,
+    funding_loan_draft_inputs,
+    funding_loan_repayment,
+    funding_loan_return_collateral,
+    funding_loan_reverse_event,
+    funding_loan_reverse_pledge,
+    funding_loan_reverse_return,
+)
+from apps.tenant_apps.loans.web.pawn_draft_actions import (
+    get_pawn_draft_readiness,
+    pawn_collateral_photo_add,
+    pawn_loan_approve,
+    pawn_loan_cancel,
+    pawn_loan_create,
+    pawn_loan_reopen,
+    pawn_loan_split,
+    pawn_loan_update,
+)
+from apps.tenant_apps.loans.web.pawn_financial_actions import (
+    pawn_borrower_account_setup,
+    pawn_loan_accrue,
+    pawn_loan_capitalize,
+    pawn_loan_disburse,
+    pawn_loan_repay,
+    pawn_loan_reverse_event,
+)
+from apps.tenant_apps.loans.web.pawn_release_actions import (
+    pawn_loan_release_full,
+    pawn_loan_release_partial,
+)
+from apps.tenant_apps.loans.web.pawn_custody_actions import (
+    pawn_collateral_storage_transfer,
+    pawn_physical_verification_complete,
+    pawn_physical_verification_discrepancy_notice,
+    pawn_physical_verification_resolve,
+    pawn_storage_location_create,
+)
+from apps.tenant_apps.loans.web.pawn_notice_actions import (
+    pawn_loan_notice_create,
+    pawn_loan_notice_retry,
+)
+from apps.tenant_apps.loans.web.pawn_auction_actions import (
+    pawn_loan_auction_cancel,
+    pawn_loan_auction_complete,
+    pawn_loan_auction_initiate,
+    pawn_loan_auction_reverse,
+    pawn_loan_auction_start,
+)
+from apps.tenant_apps.loans.web.pawn_renewal_actions import (
+    pawn_loan_renew,
+    pawn_loan_renewal_reverse,
+)
 
 
 @loans_setup_required
@@ -3517,40 +1825,11 @@ def pawn_economics_setup(request):
     if action == "configuration" and configuration_form.is_valid():
         data = configuration_form.cleaned_data
         try:
-            with transaction.atomic():
-                create_pawn_loan_economic_policy(
-                    workspace=request.loans_workspace,
-                    license=data["license"],
-                    valuation_method=data["valuation_method"],
-                    maximum_ltv_ratio=data["maximum_ltv_ratio"],
-                    advance_interest_periods=data["advance_interest_periods"],
-                    interest_method=data["interest_method"],
-                    partial_month_method=data["partial_month_method"],
-                    partial_month_cutoff_days=data["partial_month_cutoff_days"],
-                    partial_month_lower_fraction=data[
-                        "partial_month_lower_fraction"
-                    ],
-                    capitalization_interval_periods=data[
-                        "capitalization_interval_periods"
-                    ],
-                    accounting_recognition=data["accounting_recognition"],
-                    rounding_method=data["rounding_method"],
-                    currency_quantum=data["currency_quantum"],
-                    effective_from=data["effective_from"],
-                    actor=request.user,
-                )
-                for metal, rate in (
-                    ("GOLD", data["gold_monthly_interest_rate"]),
-                    ("SILVER", data["silver_monthly_interest_rate"]),
-                ):
-                    create_pawn_metal_interest_rate_policy(
-                        workspace=request.loans_workspace,
-                        license=data["license"],
-                        metal=metal,
-                        monthly_interest_rate=rate,
-                        effective_from=data["effective_from"],
-                        actor=request.user,
-                    )
+            create_pawn_economic_configuration(
+                workspace=request.loans_workspace,
+                actor=request.user,
+                **data,
+            )
         except (ValidationError, ValueError) as exc:
             configuration_form.add_error(None, str(exc))
         else:
@@ -3792,14 +2071,12 @@ def series_create(request, license_pk):
     license = _license_for_workspace(request, license_pk)
     form = LoanSeriesSetupForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            series = create_series(
-                license=license,
-                name=form.cleaned_data["name"],
-                code=form.cleaned_data["code"],
-                is_active=form.cleaned_data["is_active"],
-            )
-            _configure_both_sequences(series, form.cleaned_data, request)
+        series = create_configured_series(
+            license=license,
+            actor=request.user,
+            request=request,
+            **form.cleaned_data,
+        )
         messages.success(request, "Loan series and numbering sequences created.")
         return redirect("loans:license_detail", pk=license.pk)
     return render(
@@ -3815,14 +2092,12 @@ def series_update(request, pk):
     initial = _series_initial(series)
     form = LoanSeriesSetupForm(request.POST or None, instance=series, initial=initial)
     if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            update_series(
-                series,
-                name=form.cleaned_data["name"],
-                code=form.cleaned_data["code"],
-            )
-            set_series_active(series, is_active=form.cleaned_data["is_active"])
-            _configure_both_sequences(series, form.cleaned_data, request)
+        update_configured_series(
+            series,
+            actor=request.user,
+            request=request,
+            **form.cleaned_data,
+        )
         messages.success(request, "Loan series setup updated.")
         return redirect("loans:license_detail", pk=series.license_id)
     return render(
@@ -3866,26 +2141,6 @@ def _series_initial(series):
         "number_width": baseline.width if baseline else 5,
         "maximum_number": baseline.maximum_number if baseline else 10000,
     }
-
-
-def _configure_both_sequences(series, cleaned_data, request):
-    common = {
-        "series": series,
-        "width": cleaned_data["number_width"],
-        "maximum_number": cleaned_data["maximum_number"],
-        "actor": request.user,
-        "request": request,
-    }
-    configure_sequence(
-        document_kind=LoanDocumentKind.PAWN_LOAN,
-        prefix=cleaned_data["pawn_loan_prefix"],
-        **common,
-    )
-    configure_sequence(
-        document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE,
-        prefix=cleaned_data["release_prefix"],
-        **common,
-    )
 
 
 def _pawn_loan_for_workspace(request, pk):
@@ -3937,241 +2192,6 @@ def _pawn_renewal_for_workspace(request, pk):
         pk=pk,
         workspace=request.loans_workspace,
     )
-
-
-def _draft_readiness(workspace):
-    from apps.tenant_apps.party.models import Party
-
-    if not Party.objects.filter(status=Party.PartyStatus.ACTIVE).exists():
-        return {
-            "ready": False,
-            "message": "Create an active Party before starting a pawn-loan draft.",
-            "action_label": "Create Party",
-            "action_url": reverse("party:party_create"),
-        }
-    candidates = LoanSeries.objects.filter(
-        license__workspace=workspace,
-        license__is_active=True,
-        is_active=True,
-    ).select_related("license")
-    for series in candidates:
-        try:
-            preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN)
-            if series.license.is_expired():
-                continue
-            today = timezone.localdate()
-            resolve_pawn_loan_economic_policy(
-                workspace_id=workspace.pk,
-                license_id=series.license_id,
-                as_of_date=today,
-            )
-            for metal in ("GOLD", "SILVER"):
-                resolve_pawn_metal_interest_rate_policy(
-                    workspace_id=workspace.pk,
-                    license_id=series.license_id,
-                    metal=metal,
-                    as_of_date=today,
-                )
-            return {"ready": True}
-        except (NumberAllocationError, ValueError):
-            continue
-    return {
-        "ready": False,
-        "message": "Configure numbering and current PawnLoan economics before drafting.",
-        "action_label": "Open Economic Setup",
-        "action_url": reverse("loans:pawn_economics_setup"),
-    }
-
-
-def _collateral_inputs(formset):
-    return tuple(
-        CollateralDraftInput(
-            collateral_item_id=row.get("collateral_item_id"),
-            description=row["description"],
-            metal=row["metal"],
-            gross_weight=row["gross_weight"],
-            net_weight=row["net_weight"],
-            purity_percentage=row["purity_percentage"],
-            latest_appraised_value=row.get("latest_appraised_value"),
-            allocated_principal=row["allocated_principal"],
-        )
-        for row in formset.cleaned_data
-        if row and not row.get("DELETE")
-    )
-
-
-def _add_pawn_draft_error(form, formset, exc):
-    """Attach item-specific economic failures to the field an operator can fix."""
-
-    if isinstance(exc, CollateralEconomicsError) and exc.reference and exc.field:
-        try:
-            item_form = formset.forms[int(exc.reference) - 1]
-        except (IndexError, TypeError, ValueError):
-            pass
-        else:
-            if exc.field in item_form.fields:
-                item_form.add_error(exc.field, str(exc))
-                return
-    form.add_error(None, str(exc))
-
-
-def _pawn_number_preview_rows(form):
-    """Expose non-consuming official-number previews for selectable series."""
-
-    return tuple(
-        {
-            "series": series,
-            "preview": _safe_preview(series, LoanDocumentKind.PAWN_LOAN),
-        }
-        for series in form.fields["series"].queryset
-    )
-
-
-def _persist_formset_photos(loan, formset, *, actor, workflow_source):
-    rows = [
-        row
-        for row in formset.cleaned_data
-        if row and not row.get("DELETE")
-    ]
-    supplied_ids = {
-        row["collateral_item_id"]
-        for row in rows
-        if row.get("collateral_item_id")
-    }
-    new_items = iter(
-        loan.collateral_items.exclude(pk__in=supplied_ids).order_by("pk")
-    )
-    for row in rows:
-        item = (
-            loan.collateral_items.get(pk=row["collateral_item_id"])
-            if row.get("collateral_item_id")
-            else next(new_items)
-        )
-        upload = row.get("photograph")
-        if upload:
-            append_collateral_photo(
-                item.pk,
-                upload=upload,
-                actor=actor,
-                workflow_source=workflow_source,
-            )
-
-
-def _attach_existing_collateral(formset, items):
-    """Attach trusted persisted items to their draft forms for photo display."""
-
-    items_by_id = {str(item.pk): item for item in items}
-    for item_form in formset.forms:
-        item_form.existing_collateral_item = items_by_id.get(
-            str(item_form["collateral_item_id"].value() or "")
-        )
-
-
-def _create_command(workspace_id, form, formset):
-    data = form.cleaned_data
-    return CreatePawnDraftCommand(
-        workspace_id=workspace_id,
-        borrower_id=data["borrower"].pk,
-        license_id=data["series"].license_id,
-        series_id=data["series"].pk,
-        product_version_id=data["product_version"].pk,
-        principal_amount=Decimal("0.01"),
-        monthly_interest_rate=Decimal("0"),
-        loan_date=data["loan_date"],
-        tenure_months=data["tenure_months"],
-        collateral=_collateral_inputs(formset),
-    )
-
-
-def _update_command(form, formset):
-    data = form.cleaned_data
-    return UpdatePawnDraftCommand(
-        borrower_id=data["borrower"].pk,
-        principal_amount=Decimal("0.01"),
-        monthly_interest_rate=Decimal("0"),
-        loan_date=data["loan_date"],
-        tenure_months=data["tenure_months"],
-        collateral=_collateral_inputs(formset),
-    )
-
-
-def _reason_transition(request, pk, action):
-    loan = _pawn_loan_for_workspace(request, pk)
-    form = PawnTransitionReasonForm(request.POST or None)
-    labels = {"reopen": "Return to draft", "cancel": "Cancel loan"}
-    if request.method == "POST" and form.is_valid():
-        try:
-            if action == "reopen":
-                reopen_pawn_loan(
-                    loan.pk, reason=form.cleaned_data["reason"], actor=request.user
-                )
-            else:
-                cancel_pawn_loan(
-                    loan.pk, reason=form.cleaned_data["reason"], actor=request.user
-                )
-        except (PawnLifecycleError, ValidationError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"{loan.loan_number}: {labels[action].lower()} completed.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    return render(
-        request,
-        "loans/pawn/transition_form.html",
-        {"loan": loan, "form": form, "action_label": labels[action]},
-    )
-
-
-def _render_action(request, loan, form, title, description, extra_context=None):
-    context = {
-        "loan": loan,
-        "form": form,
-        "action_label": title,
-        "description": description,
-    }
-    context.update(extra_context or {})
-    return render(request, "loans/pawn/action_form.html", context)
-
-
-def _safe_balance(loan):
-    try:
-        return get_pawn_loan_balance(loan.pk, as_of_date=timezone.localdate())
-    except (ObjectDoesNotExist, ValidationError, ValueError):
-        return None
-
-
-def _safe_accrual_previews(loan, *, include_partial):
-    try:
-        return preview_pawn_loan_accruals(
-            loan.pk,
-            as_of_date=timezone.localdate(),
-            include_partial=include_partial,
-        )
-    except (ObjectDoesNotExist, ValidationError, ValueError):
-        return ()
-
-
-def _accrual_preview_rows(loan, previews):
-    item_by_id = {item.pk: item for item in loan.collateral_items.all()}
-    return tuple(
-        {
-            "preview": preview,
-            "lines": tuple(
-                {
-                    "line": line,
-                    "item": item_by_id.get(line.collateral_item_id),
-                }
-                for line in preview.lines
-            ),
-        }
-        for preview in previews
-    )
-
-
-def _full_release_quote(loan):
-    try:
-        return preview_pawn_loan_full_release(loan.pk)
-    except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
-        return {"error": str(exc), "minimum_settlement": None}
 
 
 def _primary_action(loan, context):

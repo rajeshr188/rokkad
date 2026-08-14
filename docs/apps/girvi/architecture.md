@@ -76,12 +76,12 @@ Background and signals:
 - `tasks.py` contains Celery tasks for exports, reminders, and scheduled interest accrual.
 - `signals.py` updates legacy aggregate values when items change and applies series guardrails after loan create/delete.
 
-Cutover boundary:
+Independent application boundary:
 
 - Girvi remains the permanent write owner and servicing UI for every Girvi-owned loan.
-- Central workspace preference `loan__new_module_enabled` decides only where new pawn loans originate; it never transfers record ownership.
-- When enabled, Girvi's independent create, customer-create, and preview routes enforce the boundary server-side for GET, POST, and HTMX requests and redirect to Loans. Existing Girvi detail, repayment, release, renewal, reporting, and other servicing routes remain available.
-- Disabling the flag restores Girvi origination without deleting or importing Loans records.
+- Girvi and PawnLoan are separately reachable and neither is a workspace default.
+- Girvi-local creation stays in Girvi; PawnLoan-local creation stays in Loans.
+- Generic loan entry surfaces present an explicit application choice.
 
 ## Current Dependency Direction
 

@@ -13,7 +13,6 @@ from apps.tenant_apps.loans.domain import (
     PawnLoanState,
 )
 from apps.tenant_apps.loans.domain.future_funding import (
-    FUNDING_LOAN_RUNTIME_SUPPORTED,
     FundingLoanEventKind,
     FundingLoanState,
 )
@@ -168,8 +167,7 @@ class FundingLoanPersistenceTests(TenantTestCase):
             valuation_fingerprint="item-fingerprint",
         )
 
-    def test_runtime_remains_disabled_and_schema_seeds_no_funding_rows(self):
-        self.assertFalse(FUNDING_LOAN_RUNTIME_SUPPORTED)
+    def test_schema_seeds_no_funding_rows(self):
         self.assertEqual(FundingLoan.objects.count(), 0)
 
     def test_database_blocks_evidence_update_and_delete_bypasses(self):

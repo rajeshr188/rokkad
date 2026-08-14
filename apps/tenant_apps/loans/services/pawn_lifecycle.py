@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime, time
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
+from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import PawnLoanEventKind, PawnLoanState, can_transition
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
+    CollateralAppraisal,
     LoanLicense,
     LoanSeries,
     PawnLoan,
@@ -43,8 +46,11 @@ def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
                 f"Collateral {item.description} requires at least one photograph before approval."
             )
     resolved_economics = _validate_collateral_economics(loan, collateral)
+    appraisals = _freeze_approved_appraisals(loan, collateral, actor=actor)
 
-    payload = _approval_payload(loan, collateral, resolved_economics)
+    payload = _approval_payload(
+        loan, collateral, resolved_economics, appraisals=appraisals
+    )
     fingerprint = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -245,7 +251,34 @@ def _validate_collateral_economics(loan, collateral):
     return resolved
 
 
-def _approval_payload(loan, collateral, resolved_economics=None):
+def _freeze_approved_appraisals(loan, collateral, *, actor):
+    """Append the appraisal evidence accepted by this approval."""
+
+    approved = {}
+    effective_at = timezone.make_aware(datetime.combine(loan.loan_date, time.min))
+    for item in collateral:
+        if item.latest_appraised_value is None:
+            continue
+        previous = item.appraisals.order_by("-version").first()
+        appraisal = CollateralAppraisal.objects.create(
+            workspace=loan.workspace,
+            collateral_item=item,
+            version=(previous.version + 1 if previous else 1),
+            effective_at=effective_at,
+            appraised_value=item.latest_appraised_value,
+            status=CollateralAppraisal.Status.APPROVED,
+            method="ORIGINATION_APPROVAL",
+            evidence_reference=f"PawnLoan:{loan.pk}:approval",
+            review_notes="Appraisal value accepted at PawnLoan approval.",
+            supersedes=previous,
+            created_by=actor,
+        )
+        approved[item.pk] = appraisal
+    return approved
+
+
+def _approval_payload(loan, collateral, resolved_economics=None, *, appraisals=None):
+    appraisals = appraisals or {}
     payload = {
         "loan_id": loan.pk,
         "loan_number": loan.loan_number,
@@ -267,6 +300,9 @@ def _approval_payload(loan, collateral, resolved_economics=None):
                 "net_weight": str(item.net_weight),
                 "purity_percentage": str(item.purity_percentage),
                 "latest_appraised_value": str(item.latest_appraised_value) if item.latest_appraised_value is not None else None,
+                "approved_appraisal_id": (
+                    appraisals[item.pk].pk if item.pk in appraisals else None
+                ),
                 "allocated_principal": (
                     str(item.allocated_principal)
                     if item.allocated_principal is not None

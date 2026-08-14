@@ -1085,21 +1085,6 @@ class PawnTransitionReasonForm(forms.Form):
     reason = forms.CharField(widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}))
 
 
-class LoanModuleFeatureGateForm(forms.Form):
-    enabled = forms.BooleanField(
-        required=False,
-        label="Create new pawn loans in Loans",
-        help_text=(
-            "Existing Girvi loans remain in Girvi. Turning this off restores "
-            "Girvi as the new-loan entrypoint without deleting Loans records."
-        ),
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["enabled"].widget.attrs["class"] = "form-check-input"
-
-
 class PawnSetupTransferForm(forms.Form):
     license = forms.ModelChoiceField(queryset=LoanLicense.objects.none())
     series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())

@@ -6,7 +6,7 @@ from apps.tenant_apps.loans.models import LoanMonitoringPolicy, PawnLoan, curren
 from .collateral_valuation import get_pawn_loan_collateral_valuation
 from .delinquency import get_pawn_loan_delinquency
 from .balances import get_pawn_loan_balance
-from .exposure import _active_schedule_as_of
+from .obligation_state import get_active_repayment_schedule_as_of
 
 
 class LoanRiskAssessmentError(ValueError):
@@ -42,7 +42,7 @@ def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date):
     )
     delinquency = get_pawn_loan_delinquency(loan.pk, as_of_date=as_of_date)
     collateral = get_pawn_loan_collateral_valuation(loan.pk, as_of_date=as_of_date)
-    schedule = _active_schedule_as_of(loan, as_of_date)
+    schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
     maturity_date = (
         schedule.maturity_date
         if schedule is not None

@@ -273,7 +273,6 @@ def get_party_loan_history_summary(party, *, limit=20):
                 distinct=True,
             ),
             total_payment_amount=Sum("payments__amount_in_base_currency"),
-            notice_count=Count("notifications", distinct=True),
             collateral_items_count=Count("loanitems", distinct=True),
             collateral_loan_amount=Sum("loanitems__loanamount"),
         )
@@ -296,6 +295,23 @@ def get_party_loan_history_summary(party, *, limit=20):
         )
         .order_by("-loan_date")
     )
+
+    given_loans = tuple(given_qs)
+    notice_counts = {}
+    if given_loans:
+        from django.contrib.contenttypes.models import ContentType
+        from apps.tenant_apps.notify.models import NotificationItem
+
+        given_loan_type = ContentType.objects.get_for_model(GivenLoan)
+        notice_counts = dict(
+            NotificationItem.objects.filter(
+                content_type=given_loan_type,
+                object_id__in=[loan.pk for loan in given_loans],
+            )
+            .values("object_id")
+            .annotate(count=Count("notification_id", distinct=True))
+            .values_list("object_id", "count")
+        )
 
     def _settlement_for_given_loan(loan):
         try:
@@ -336,7 +352,7 @@ def get_party_loan_history_summary(party, *, limit=20):
             "payment_count": getattr(loan, "payment_count", 0) or 0,
             "unposted_payment_count": getattr(loan, "unposted_payment_count", 0) or 0,
             "total_payment_amount": getattr(loan, "total_payment_amount", 0) or 0,
-            "notice_count": getattr(loan, "notice_count", 0) or 0,
+            "notice_count": notice_counts.get(loan.pk, 0),
             "collateral_items_count": getattr(loan, "collateral_items_count", 0) or 0,
             "collateral_loan_amount": getattr(loan, "collateral_loan_amount", 0) or 0,
             "principal_due": getattr(settlement, "principal_due", None),
@@ -385,7 +401,7 @@ def get_party_loan_history_summary(party, *, limit=20):
     active_rows = []
     closed_rows = []
 
-    for loan in given_qs:
+    for loan in given_loans:
         row = _given_row(loan)
         state = canonical_status(loan.status)
         if state in active_given_states:

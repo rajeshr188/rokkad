@@ -17,7 +17,6 @@ from apps.tenant_apps.loans.integrations.notice_delivery import (
     PawnNoticeDeliveryReceipt,
     create_pawn_notice_job,
     deliver_pawn_notice_job,
-    get_pawn_notice_delivery_states,
 )
 from apps.tenant_apps.loans.models import (
     PawnLoan,
@@ -25,6 +24,7 @@ from apps.tenant_apps.loans.models import (
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
+from .notice_dispatch import dispatch_due_notices, dispatch_linked_notice
 
 
 class PawnLoanNoticeError(ValueError):
@@ -55,6 +55,10 @@ def create_pawn_loan_notice(
     actor=None,
     dispatch_due: bool = True,
     source_auction_id: int | None = None,
+    source_risk_alert=None,
+    notification_template=None,
+    communication_evidence=None,
+    payload_snapshot_override=None,
 ) -> PawnLoanNotice:
     loan = _locked_loan(loan_id)
     request_key = str(request_key or "").strip()
@@ -120,6 +124,12 @@ def create_pawn_loan_notice(
         as_of_date=notice_as_of_date,
         source_auction=source_auction,
     )
+    if payload_snapshot_override is not None:
+        if source_risk_alert is None or notification_template is None:
+            raise PawnLoanNoticeError("A frozen payload override is restricted to approved risk communication.")
+        payload = dict(payload_snapshot_override)
+    if communication_evidence:
+        payload["communication_evidence"] = communication_evidence
     notice = PawnLoanNotice.objects.create(
         workspace=loan.workspace,
         loan=loan,
@@ -133,6 +143,11 @@ def create_pawn_loan_notice(
         payload_snapshot=payload,
         created_by=actor,
         source_auction=source_auction,
+        source_risk_alert=source_risk_alert,
+        source_risk_event=(source_risk_alert.source_event if source_risk_alert else None),
+        notification_template_id=getattr(notification_template, "pk", None),
+        notification_template_version=getattr(notification_template, "version", None),
+        notification_template_locale=getattr(notification_template, "locale", ""),
     )
     reference = create_pawn_notice_job(notice)
     notice.notification_event_id = reference.event_id
@@ -156,23 +171,13 @@ def dispatch_pawn_loan_notice(
         notice = PawnLoanNotice.objects.get(pk=notice_id, workspace_id=workspace_id)
     except PawnLoanNotice.DoesNotExist as exc:
         raise PawnLoanNoticeError("PawnLoan notice was not found in the active workspace.") from exc
-    as_of = as_of or timezone.now()
-    if notice.scheduled_for > as_of:
-        raise PawnLoanNoticeError("This notice is scheduled for a future time.")
-    if not notice.notification_job_id:
-        raise PawnLoanNoticeError("PawnLoan notice is missing its Notify delivery job.")
-
-    state = get_pawn_notice_delivery_states([notice.notification_job_id]).get(
-        notice.notification_job_id
+    receipt = dispatch_linked_notice(
+        notice,
+        error_type=PawnLoanNoticeError,
+        as_of=as_of,
+        delivery_handler=delivery_handler or deliver_pawn_notice_job,
+        missing_message="PawnLoan notice delivery job was not found in Notify.",
     )
-    if state is None:
-        raise PawnLoanNoticeError("PawnLoan notice delivery job was not found in Notify.")
-    if state.status == PawnLoanNoticeStatus.SENT.value:
-        return PawnLoanNoticeDispatchResult(notice=notice, delivery=state)
-    if state.status == PawnLoanNoticeStatus.CANCELLED.value:
-        raise PawnLoanNoticeError("A cancelled notice cannot be delivered.")
-
-    receipt = (delivery_handler or deliver_pawn_notice_job)(notice.notification_job_id)
     return PawnLoanNoticeDispatchResult(notice=notice, delivery=receipt)
 
 
@@ -181,40 +186,25 @@ def dispatch_due_pawn_loan_notices(*, as_of=None, limit=100) -> PawnLoanNoticeDi
     if workspace_id is None:
         raise PawnLoanNoticeError("Scheduled notice delivery requires an active tenant schema.")
     as_of = as_of or timezone.now()
-    candidates = tuple(
-        PawnLoanNotice.objects.filter(
-            workspace_id=workspace_id,
-            scheduled_for__lte=as_of,
-        )
-        .order_by("scheduled_for", "pk")
-        .values_list("pk", "notification_job_id")
+    customer = dispatch_due_notices(
+        PawnLoanNotice.objects.filter(workspace_id=workspace_id),
+        dispatch=lambda notice_id, as_of: dispatch_pawn_loan_notice(
+            notice_id, as_of=as_of
+        ).delivery,
+        as_of=as_of,
+        limit=limit,
     )
-    states = get_pawn_notice_delivery_states(job_id for _, job_id in candidates)
-    due_ids = tuple(
-        notice_id
-        for notice_id, job_id in candidates
-        if states.get(job_id)
-        and states[job_id].status == PawnLoanNoticeStatus.QUEUED.value
-    )[:limit]
-    sent = 0
-    failed = 0
-    for notice_id in due_ids:
-        result = dispatch_pawn_loan_notice(notice_id, as_of=as_of)
-        if result.delivery.status == PawnLoanNoticeStatus.SENT.value:
-            sent += 1
-        elif result.delivery.status == PawnLoanNoticeStatus.FAILED.value:
-            failed += 1
     from .operational_notices import dispatch_due_operational_notices
 
-    remaining = max(0, limit - len(due_ids))
+    remaining = max(0, limit - customer.due_count)
     operational_due, operational_sent, operational_failed = (
         dispatch_due_operational_notices(as_of=as_of, limit=remaining)
         if remaining else (0, 0, 0)
     )
     return PawnLoanNoticeDispatchSummary(
-        len(due_ids) + operational_due,
-        sent + operational_sent,
-        failed + operational_failed,
+        customer.due_count + operational_due,
+        customer.sent_count + operational_sent,
+        customer.failed_count + operational_failed,
     )
 
 
