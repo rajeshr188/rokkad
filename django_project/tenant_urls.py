@@ -20,7 +20,6 @@ TENANT_ERP_URLPATTERNS = [
     path("girvi/", include("django_project.legacy_girvi_urls")),
     path("loans/", include("apps.tenant_apps.loans.urls")),
     path("rates/", include("apps.tenant_apps.rates.urls")),
-    path("product/", include("apps.tenant_apps.product.urls")),
     path("notify/", include("django_project.legacy_notify_urls")),
     path("notify-v2/", include("apps.tenant_apps.notify_v2.urls")),
 ]

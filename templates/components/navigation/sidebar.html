@@ -78,14 +78,6 @@
                 </a>
                 {% endif %}
 
-                <!-- Product/Catalog -->
-                {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if 'product_' in request.resolver_match.url_name or request.resolver_match.url_name == 'workspace_slug_inventory' %}active{% endif %}"
-                   href="{% url 'workspace_slug_inventory' workspace_slug=effective_workspace.schema_name %}">
-                    <i class="bi bi-grid-1x2-fill"></i> Product
-                </a>
-                {% endif %}
-
                      <!-- Notifications (V2) -->
                      {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                      <a class="workspace-nav-link {% if 'notify_v2_' in request.resolver_match.url_name %}active{% endif %}"

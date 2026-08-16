@@ -8,6 +8,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: Product, Savings Scheme, and tenant Terms are unregistered and
+  physically removed with their migrations and Product templates. Product
+  setup, navigation, seed operations, and direct route mount are retired; old
+  workspace inventory bookmarks return HTTP 410. The public legal Terms of
+  Service page remains. The surviving tenant business apps are Party, Loans,
+  Notify v2, and Rates.
+
 - 2026-08-17: DEA and tenant/Standalone Accounting are physically removed,
   including their migrations, commands, tests, and dedicated templates. Both
   apps and their top-level URL mounts are unregistered. Party accounting

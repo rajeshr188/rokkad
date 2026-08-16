@@ -470,65 +470,49 @@ def workspace_slug_loan_operational_controls_report(request, workspace_slug):
 @login_required
 def workspace_slug_inventory(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.product.views.home import home as product_home
-
-    return product_home(request)
+    return HttpResponseGone("Product and inventory have been retired from Rokkad.")
 
 
 @login_required
 def workspace_slug_inventory_products(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.product.views.product import product_list
-
-    return product_list(request)
+    return HttpResponseGone("Product and inventory have been retired from Rokkad.")
 
 
 @login_required
 def workspace_slug_inventory_product_detail(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.product.views.product import product_detail
-
-    return product_detail(request, pk=pk)
+    return HttpResponseGone("Product and inventory have been retired from Rokkad.")
 
 
 @login_required
 def workspace_slug_inventory_stock(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.product.views.stock import stock_list
-
-    return stock_list(request)
+    return HttpResponseGone("Product and inventory have been retired from Rokkad.")
 
 
 @login_required
 def workspace_slug_inventory_stock_detail(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.product.views.stock import StockDetailView
-
-    return StockDetailView.as_view()(request, pk=pk)
+    return HttpResponseGone("Product and inventory have been retired from Rokkad.")
 
 
 @login_required
 def workspace_slug_inventory_stock_audit(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.product.views.stock import audit_stock
-
-    return audit_stock(request)
+    return HttpResponseGone("Product and inventory have been retired from Rokkad.")
 
 
 @login_required
 def workspace_slug_inventory_transactions(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.product.views.stock import StockTransactionListView
-
-    return StockTransactionListView.as_view()(request)
+    return HttpResponseGone("Product and inventory have been retired from Rokkad.")
 
 
 @login_required
 def workspace_slug_inventory_statements(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.product.views.stock import StockStatementListView
-
-    return StockStatementListView.as_view()(request)
+    return HttpResponseGone("Product and inventory have been retired from Rokkad.")
 
 
 @login_required

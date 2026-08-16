@@ -68,7 +68,6 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         "/purchase/",
         "/contact/",
         "/data-tools/",
-        "/product/",
         "/rates/",
         "/approval/",
         "/notify/",

@@ -23,8 +23,6 @@ class WorkspaceSetupMetrics:
     member_count: int | None = None
     invitation_count: int | None = None
     party_count: int | None = None
-    product_count: int | None = None
-    stock_count: int | None = None
     rate_count: int | None = None
     transaction_count: int | None = None
 
@@ -112,22 +110,6 @@ def build_workspace_setup_checklist(
             url_name="party_list",
         ),
         SetupChecklistItem(
-            key="products",
-            title="Products",
-            description="Add inventory items or product variants.",
-            status=_status_from_count(metrics.product_count),
-            action_label="Add products",
-            url_name="product_product_list",
-        ),
-        SetupChecklistItem(
-            key="opening_stock",
-            title="Opening stock",
-            description="Record initial stock lots before stock operations.",
-            status=_status_from_count(metrics.stock_count),
-            action_label="Add opening stock",
-            url_name="stock_opening_balance_import",
-        ),
-        SetupChecklistItem(
             key="invite_team",
             title="Invite team",
             description="Invite at least one teammate or keep an invitation pending.",
@@ -159,20 +141,11 @@ def collect_workspace_setup_metrics(*, workspace) -> WorkspaceSetupMetrics:
         member_count=member_count,
         invitation_count=invitation_count,
         party_count=_safe_model_count("party", "Party"),
-        product_count=_sum_known(
-            _safe_model_count("product", "Product"),
-            _safe_model_count("product", "ProductVariant"),
-        ),
-        stock_count=_sum_known(
-            _safe_model_count("product", "Stock"),
-            _safe_model_count("product", "StockItem"),
-        ),
         rate_count=_sum_known(
             _safe_model_count("rates", "Rate"),
             _safe_model_count("rates", "RateSource"),
         ),
         transaction_count=_sum_known(
-            _safe_model_count("product", "StockTransaction"),
             _safe_model_count("loans", "PawnLoanEvent"),
         ),
     )

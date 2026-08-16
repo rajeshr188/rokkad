@@ -79,8 +79,6 @@ SHARED_APPS = [
 TENANT_APPS = [
     "apps.tenant_apps.party",
     "apps.tenant_apps.loans.apps.LoansConfig",
-    "apps.tenant_apps.product",
-    "apps.tenant_apps.terms",
     "apps.tenant_apps.rates",
     "apps.tenant_apps.notify_v2",
 ]

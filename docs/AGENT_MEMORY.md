@@ -25,6 +25,11 @@ workspace-slug accounting/commodity/report bookmarks return HTTP 410 during
 the tenancy URL-baseline transition. Product's obsolete journal-entry FK and
 historical DEA migration dependency are removed. Do not restore either app or
 introduce new accounting route aliases.
+Product, Savings Scheme, and the tenant Terms app are also physically retired.
+The public legal Terms of Service page is project-owned and remains supported;
+it is unrelated to the deleted tenant Terms model. The only supported tenant
+business apps pending the shared-schema conversion are Party, Loans, Notify v2,
+and Rates.
 Phase 1 classifies `PawnLoanAccountingEvent` fields (`event_kind`, effective
 date, frozen payload/fingerprint, idempotency key, reversal link, actor, and
 timestamp) as Loans operational evidence. `PawnLoanAccountingOutbox`, delivery

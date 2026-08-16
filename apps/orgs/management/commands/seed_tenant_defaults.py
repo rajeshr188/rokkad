@@ -6,7 +6,6 @@ from django.db import transaction
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from apps.tenant_apps.party.services import seed_party_roles
-from apps.tenant_apps.product.models import Attribute, Category, Movement, ProductType
 
 
 class Command(BaseCommand):
@@ -24,19 +23,9 @@ class Command(BaseCommand):
             help="Print actions without applying changes.",
         )
         parser.add_argument(
-            "--skip-terms",
-            action="store_true",
-            help="Skip terms fixture seeding.",
-        )
-        parser.add_argument(
             "--skip-rates",
             action="store_true",
             help="Skip rates fixture seeding.",
-        )
-        parser.add_argument(
-            "--skip-product",
-            action="store_true",
-            help="Skip product fixture seeding.",
         )
         parser.add_argument(
             "--skip-party",
@@ -61,17 +50,12 @@ class Command(BaseCommand):
 
         fixtures_dir = Path("apps/tenant_apps")
         fixture_paths = {
-            "terms": fixtures_dir / "terms" / "fixtures" / "data.json",
             "rates": fixtures_dir / "rates" / "fixtures" / "metal_rates.json",
         }
 
         actions = []
-        if not options["skip_terms"]:
-            actions.append("seed_terms")
         if not options["skip_rates"]:
             actions.append("seed_rates")
-        if not options["skip_product"]:
-            actions.append("seed_product")
         if not options["skip_party"]:
             actions.append("seed_party")
         if not options["skip_notify_v2"]:
@@ -89,15 +73,9 @@ class Command(BaseCommand):
 
         with schema_context(schema_name):
             with transaction.atomic():
-                if "seed_terms" in actions:
-                    self._load_fixture_if_exists(fixture_paths["terms"])
-
                 if "seed_rates" in actions:
                     # Keep call compatible with existing migration/fixture name.
                     self._load_fixture_if_exists(fixture_paths["rates"])
-
-                if "seed_product" in actions:
-                    self._seed_product_defaults()
 
                 if "seed_party" in actions:
                     self._seed_party_defaults()

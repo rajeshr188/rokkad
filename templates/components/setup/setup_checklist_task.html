@@ -25,10 +25,6 @@
         {% if workspace_slug %}
         <a href="{% url 'workspace_slug_parties' workspace_slug=workspace_slug %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% endif %}
-        {% elif item.key == "products" %}
-        <a href="{% url 'product_product_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-        {% elif item.key == "opening_stock" %}
-        <a href="{% url 'stock_opening_balance_import' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% elif item.key == "invite_team" %}
         <a href="{% url 'workspace_settings_invite' workspace_id=workspace_id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% elif item.key == "rates" %}
