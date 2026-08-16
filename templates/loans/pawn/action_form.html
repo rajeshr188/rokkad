@@ -50,7 +50,7 @@
             <div class="col-md-3"><div class="small text-muted">Principal settled</div>{{ quote.principal_reduction_required|default_if_none:"Unavailable" }}</div>
           </div>
           {% if quote.item_valuations %}<div class="small fw-semibold mb-2">Collateral that will be returned</div><div class="table-responsive mb-3"><table class="table table-sm mb-0"><thead><tr><th>Item</th><th>Metal</th><th>Net weight</th><th>Release valuation</th></tr></thead><tbody>{% for item in quote.item_valuations %}{% if item.selected_for_release %}<tr><td>{{ item.description }}</td><td>{{ item.metal|title }}</td><td>{{ item.net_weight }}</td><td>{{ item.valuation_amount|default_if_none:"Unavailable" }}</td></tr>{% endif %}{% endfor %}</tbody></table></div>{% endif %}
-          {% for blocker in quote.blockers %}<div class="alert alert-warning py-2 mb-2">{{ blocker.message }}</div>{% empty %}<div class="alert alert-success mb-0">Collateral and accounting checks passed.</div>{% endfor %}
+          {% for blocker in quote.blockers %}<div class="alert alert-warning py-2 mb-2">{{ blocker.message }}</div>{% empty %}<div class="alert alert-success mb-0">Collateral and settlement checks passed.</div>{% endfor %}
         {% endif %}
       </div></div>
     {% endif %}
@@ -69,8 +69,8 @@
       <div class="card mb-3"><div class="card-header">Eligible periods</div><ul class="list-group list-group-flush">{% for preview in previews %}<li class="list-group-item"><strong>Period {{ preview.period_number }}</strong>: {{ preview.period_start }} to {{ preview.period_end }}<br><span class="small text-muted">Calculated {{ preview.calculated_interest }} &middot; Advance interest applied {{ preview.advance_interest_applied }} &middot; Newly due {{ preview.recognized_interest }}</span></li>{% endfor %}</ul></div>
     {% endif %}
 
-    {% if accounting_event %}
-      <div class="alert alert-warning">Event #{{ accounting_event.pk }}: {{ accounting_event.get_event_kind_display }} on {{ accounting_event.effective_date }}</div>
+    {% if loan_event %}
+      <div class="alert alert-warning">Event #{{ loan_event.pk }}: {{ loan_event.get_event_kind_display }} on {{ loan_event.effective_date }}</div>
     {% endif %}
 
     {% if reversal_readiness %}
@@ -78,8 +78,6 @@
         <div class="card-header">Correction preflight</div>
         <div class="card-body">
           <div class="row g-3 mb-3">
-            <div class="col-md-4"><div class="small text-muted">Accounting mode</div><strong>{{ reversal_readiness.accounting_mode }}</strong></div>
-            <div class="col-md-4"><div class="small text-muted">Source delivery</div>{{ accounting_event.outbox.get_status_display }}</div>
             <div class="col-md-4"><div class="small text-muted">Newest unreversed event</div>#{{ reversal_readiness.latest_event_id|default:"None" }}</div>
           </div>
           {% if reversal_readiness.can_reverse %}<div class="alert alert-success py-2">This event is currently the next safe correction target. Confirmation will append an exact compensating event.</div>{% else %}<div class="alert alert-danger py-2">{{ reversal_readiness.blocker }}</div>{% endif %}
@@ -89,22 +87,6 @@
           <div class="small text-muted mt-2">After confirmation, return to the loan detail to verify the resulting balance, lifecycle, custody, original event, compensating event, reason, actor, and delivery state.</div>
         </div>
       </div>
-    {% endif %}
-
-    {% if accounting_readiness_error %}
-      <div class="alert alert-danger"><strong>Accounting readiness could not be checked.</strong> {{ accounting_readiness_error }}</div>
-    {% elif accounting_readiness and not accounting_readiness.ready %}
-      <div class="card border-warning mb-3"><div class="card-header">Accounting setup required</div><div class="card-body">
-        {% for blocker in accounting_readiness.blockers %}
-          <div class="mb-2"><strong>{{ blocker.code }}</strong>: {{ blocker.message }}
-            {% if blocker.action_url %}
-              {% if blocker.code != 'BORROWER_RECEIVABLE_REQUIRED' or can_administer %}<a class="ms-1" href="{{ blocker.action_url }}">{{ blocker.action_label }}</a>{% else %}<span class="text-muted ms-1">Ask an Owner or Admin to configure it.</span>{% endif %}
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div></div>
-    {% elif accounting_readiness.ready %}
-      <div class="alert alert-success">Accounting prerequisites are ready for this effective date.</div>
     {% endif %}
 
     <form method="post" class="card"><div class="card-body">

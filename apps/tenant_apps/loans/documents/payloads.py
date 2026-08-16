@@ -1,7 +1,7 @@
 """Immutable projections used by every PawnLoan document renderer.
 
 Projection builders are the only document layer allowed to read loan models.
-Renderers receive scalar rows and never calculate loan or accounting facts.
+Renderers receive scalar rows and never calculate loan-domain facts.
 """
 
 from dataclasses import dataclass
@@ -63,9 +63,8 @@ class PawnLoanDocumentProjectionBuilder:
         "Effective date": "event.effective_date", "Amount received": "repayment.amount_received",
         "Fees": "amounts.fees", "Overdue interest": "amounts.overdue_interest",
         "Current interest": "amounts.current_interest", "Total interest": "amounts.total_interest",
-        "Accounting delivery": "accounting.delivery", "DEA voucher / journal": "accounting.references",
         "Release source ID": "release.source_id", "Release number": "release.number",
-        "Accounting event ID": "accounting.event_source_id", "Release type": "release.type",
+        "Loan event ID": "loan.event_source_id", "Release type": "release.type",
         "Principal settled": "amounts.principal_settled", "Interest settled": "amounts.interest_settled",
         "Fees settled": "amounts.fees_settled", "Total settlement": "amounts.total_settlement",
         "Auction source ID": "auction.source_id", "Auction number": "auction.number",
@@ -78,8 +77,7 @@ class PawnLoanDocumentProjectionBuilder:
         "Source loan": "renewal.source_loan", "Successor loan": "renewal.successor_loan",
         "Source principal settled": "renewal.source_principal_settled",
         "Principal paid": "renewal.principal_paid", "Top-up disbursed": "renewal.top_up_disbursed",
-        "Successor principal": "renewal.successor_principal", "Settlement accounting": "renewal.settlement_accounting",
-        "Successor opening": "renewal.successor_opening",
+        "Successor principal": "renewal.successor_principal",
         "Successor advance interest": "renewal.successor_advance_interest",
         "Successor deducted fees": "renewal.successor_deducted_fees",
         "Net cash handoff": "renewal.net_cash_handoff",
@@ -179,10 +177,9 @@ class PawnLoanDocumentProjectionBuilder:
         repayment = event.payload.get("repayment") or {}
         reversed_by = cls._related_or_none(event, "reversed_by_event")
         verification = cls._verification(loan, f"repayment:{event.pk}:{event.payload_fingerprint}")
-        outbox = event.outbox
         details = cls._identity_rows(loan) + (
             ("Document", "Repayment receipt"),
-            ("Repayment source ID", f"PawnLoanAccountingEvent:{event.pk}"),
+            ("Repayment source ID", f"PawnLoanEvent:{event.pk}"),
             ("Document status", f"Reversed by event {reversed_by.pk}" if reversed_by else "Recorded"),
             ("Event fingerprint", event.payload_fingerprint),
             ("Effective date", event.effective_date),
@@ -194,8 +191,6 @@ class PawnLoanDocumentProjectionBuilder:
             ("Current interest", cls._money(values.get("current_interest"))),
             ("Total interest", cls._money(values.get("interest"))),
             ("Principal", cls._money(values.get("principal"))),
-            ("Accounting delivery", outbox.get_status_display()),
-            ("DEA voucher / journal", f"{outbox.dea_voucher_id or '—'} / {outbox.dea_journal_entry_id or '—'}"),
         )
         manager = cls._related_or_none(event, "repayment_allocation_lines")
         sections = ()
@@ -217,8 +212,7 @@ class PawnLoanDocumentProjectionBuilder:
 
     @classmethod
     def release_memo(cls, release):
-        loan, event = release.loan, release.accounting_event
-        outbox = cls._related_or_none(event, "outbox")
+        loan, event = release.loan, release.loan_event
         reversal = cls._related_or_none(release, "reversal")
         verification = cls._verification(
             loan, f"release:{release.pk}:{release.release_number}:{event.payload_fingerprint}"
@@ -229,7 +223,7 @@ class PawnLoanDocumentProjectionBuilder:
             ("Document status", f"Reversed by release reversal {reversal.pk}" if reversal else "Completed"),
             ("Release number", release.release_number),
             ("Official loan number", loan.loan_number),
-            ("Accounting event ID", f"PawnLoanAccountingEvent:{event.pk}"),
+            ("Loan event ID", f"PawnLoanEvent:{event.pk}"),
             ("Event fingerprint", event.payload_fingerprint),
             ("Effective date", release.effective_date),
             ("Release type", "Full" if release.is_full_release else "Partial"),
@@ -238,8 +232,6 @@ class PawnLoanDocumentProjectionBuilder:
             ("Interest settled", cls._money(release.interest_amount)),
             ("Fees settled", cls._money(release.fee_amount)),
             ("Total settlement", cls._money(release.settlement_amount)),
-            ("Accounting delivery", outbox.get_status_display() if outbox else "Not required"),
-            ("DEA voucher / journal", f"{outbox.dea_voucher_id or 'Not available'} / {outbox.dea_journal_entry_id or 'Not available'}" if outbox else "Not applicable"),
         )
         item_rows = [("Item ID", "Description", "Value at release", "Returned at")]
         for item in release.items.all():
@@ -282,10 +274,9 @@ class PawnLoanDocumentProjectionBuilder:
 
     @classmethod
     def auction_recovery_memo(cls, auction):
-        if not auction.accounting_event_id:
+        if not auction.loan_event_id:
             raise DocumentProjectionError("Auction recovery memo is available only after completion.")
-        loan, event = auction.loan, auction.accounting_event
-        outbox = event.outbox
+        loan, event = auction.loan, auction.loan_event
         reversal = cls._related_or_none(auction, "reversal")
         verification = cls._verification(loan, f"auction-recovery:{auction.pk}:{event.payload_fingerprint}")
         details = cls._identity_rows(loan) + (
@@ -300,8 +291,6 @@ class PawnLoanDocumentProjectionBuilder:
             ("Interest recovered", cls._money(auction.interest_amount)),
             ("Fees recovered", cls._money(auction.fee_amount)),
             ("Total recovery", cls._money(auction.recovery_amount)),
-            ("Accounting delivery", outbox.get_status_display()),
-            ("DEA voucher / journal", f"{outbox.dea_voucher_id or 'Not available'} / {outbox.dea_journal_entry_id or 'Not available'}"),
         )
         rows = [("Item ID", "Description", "Metal", "Net weight", "Purity")]
         for item in auction.items.select_related("collateral_item"):
@@ -349,8 +338,6 @@ class PawnLoanDocumentProjectionBuilder:
             ("Successor advance interest", cls._money(renewal.successor_advance_interest)),
             ("Successor deducted fees", cls._money(renewal.successor_deducted_fees)),
             ("Net cash handoff", net_cash_handoff),
-            ("Settlement accounting", renewal.settlement_event.outbox.get_status_display()),
-            ("Successor opening", renewal.opening_event.outbox.get_status_display()),
         )
         successor_items = tuple(successor.collateral_items.select_related("renewed_from").order_by("pk"))
         by_source = {item.renewed_from_id: item for item in successor_items if item.renewed_from_id is not None}

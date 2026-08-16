@@ -4,7 +4,6 @@ from django import forms
 from django_select2 import forms as s2forms
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     STAFF_CREATABLE_PAWN_LOAN_NOTICE_KINDS,
     CollateralMetal,
     FeeCalculationType,
@@ -974,10 +973,6 @@ class PawnEconomicConfigurationForm(forms.Form):
         max_value=120,
         initial=12,
         help_text="Compound loans may capitalize after this many monthly periods.",
-    )
-    accounting_recognition = forms.ChoiceField(
-        choices=[(item.value, item.name.title()) for item in AccountingRecognition],
-        initial=AccountingRecognition.CASH.value,
     )
     rounding_method = forms.ChoiceField(
         choices=[

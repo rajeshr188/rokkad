@@ -2,7 +2,7 @@
 
 Only :class:`PawnLoanState` values are candidates for aggregate persistence.
 Operational conditions such as overdue or partially paid are derived from
-transactions, dates, custody, and accounting delivery state.
+transactions, dates, custody, and operational lifecycle state.
 """
 
 from enum import Enum
@@ -77,13 +77,6 @@ class CollateralMetal(StringEnum):
 class LoanDocumentKind(StringEnum):
     PAWN_LOAN = "PAWN_LOAN"
     PAWN_LOAN_RELEASE = "PAWN_LOAN_RELEASE"
-
-
-class LoanOutboxStatus(StringEnum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    POSTED = "POSTED"
-    FAILED = "FAILED"
 
 
 STORED_PAWN_LOAN_STATES = frozenset(PawnLoanState)

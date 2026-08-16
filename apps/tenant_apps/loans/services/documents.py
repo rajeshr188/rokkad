@@ -216,7 +216,6 @@ class FundingLoanDocumentService:
                 ("Principal", terms.principal_amount),
                 ("Monthly interest rate", terms.monthly_interest_rate),
                 ("Maximum LTV", terms.maximum_funding_ltv_ratio),
-                ("Operational accounting", "Not posted"),
             ),
             (("Collateral handed to lender", cls._collateral_rows(detail.collateral)),),
         )
@@ -241,7 +240,6 @@ class FundingLoanDocumentService:
                 ("Fees", event.fee_amount),
                 ("Interest", event.interest_amount),
                 ("Principal", event.principal_amount),
-                ("Operational accounting", "Not posted"),
             ),
         )
 
@@ -268,7 +266,6 @@ class FundingLoanDocumentService:
                 ("Effective date", funding_return.effective_date),
                 ("Principal outstanding", funding_return.principal_outstanding),
                 ("Retained collateral value", funding_return.retained_collateral_value),
-                ("Operational accounting", "Not posted"),
             ),
             (("Collateral returned to branch vault", rows),),
         )
@@ -304,7 +301,6 @@ class FundingLoanDocumentService:
                 ("Lender", loan.lender.display_name),
                 ("Lifecycle state", loan.state),
                 ("Total due", detail.summary.total_due),
-                ("Operational accounting", "Not posted"),
             ),
             (("Event-derived statement", rows),),
         )

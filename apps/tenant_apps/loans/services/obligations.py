@@ -11,7 +11,7 @@ from apps.tenant_apps.loans.domain import (
 )
 from apps.tenant_apps.loans.models import (
     PawnLoan,
-    PawnLoanAccountingEvent,
+    PawnLoanEvent,
     ObligationAllocation,
     RepaymentObligation,
     RepaymentScheduleChange,
@@ -43,7 +43,7 @@ class ObligationReconciliation:
 def persist_disbursal_repayment_schedule(
     loan: PawnLoan,
     *,
-    source_event: PawnLoanAccountingEvent,
+    source_event: PawnLoanEvent,
     disbursed_on,
     currency_quantum=Decimal("0.01"),
     actor=None,

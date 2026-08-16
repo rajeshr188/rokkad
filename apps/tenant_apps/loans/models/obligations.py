@@ -29,7 +29,7 @@ class RepaymentScheduleVersion(ImmutableObligationEvidence):
         "loans.PawnLoan", on_delete=models.PROTECT, related_name="repayment_schedules"
     )
     source_event = models.OneToOneField(
-        "loans.PawnLoanAccountingEvent",
+        "loans.PawnLoanEvent",
         on_delete=models.PROTECT,
         related_name="repayment_schedule",
     )
@@ -141,7 +141,7 @@ class RepaymentScheduleChange(ImmutableObligationEvidence):
         RepaymentScheduleVersion, on_delete=models.PROTECT, related_name="changes"
     )
     source_event = models.OneToOneField(
-        "loans.PawnLoanAccountingEvent",
+        "loans.PawnLoanEvent",
         on_delete=models.PROTECT,
         related_name="repayment_schedule_change",
     )
@@ -200,7 +200,7 @@ class ObligationAllocation(ImmutableObligationEvidence):
         "loans.PawnLoan", on_delete=models.PROTECT, related_name="obligation_allocations"
     )
     source_event = models.ForeignKey(
-        "loans.PawnLoanAccountingEvent", on_delete=models.PROTECT, related_name="obligation_allocations"
+        "loans.PawnLoanEvent", on_delete=models.PROTECT, related_name="obligation_allocations"
     )
     obligation = models.ForeignKey(
         RepaymentObligation, on_delete=models.PROTECT, related_name="allocations"

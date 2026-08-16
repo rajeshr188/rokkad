@@ -7,7 +7,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     PawnLoanEventKind,
     PawnLoanState,
     TransactionKind,
@@ -16,18 +15,13 @@ from apps.tenant_apps.loans.integrations import repayment_payload
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanRepaymentAllocationLine,
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
-from apps.tenant_apps.loans.services.accounting_outbox import (
-    DeliveryHandler,
-    record_loan_accounting_event,
-)
-from apps.tenant_apps.loans.services.accounting_readiness import (
-    require_pawn_loan_accounting_readiness,
+from apps.tenant_apps.loans.services.event_recording import (
+    record_loan_event,
 )
 from apps.tenant_apps.loans.services.pawn_disbursal import (
     assert_pawn_loan_financial_actions_allowed,
@@ -64,8 +58,7 @@ class RepaymentAllocation:
 class PawnRepaymentResult:
     loan: PawnLoan
     allocation: RepaymentAllocation
-    accounting_event: PawnLoanAccountingEvent
-    outbox: PawnLoanAccountingOutbox
+    loan_event: PawnLoanEvent
     already_recorded: bool = False
     item_allocations: tuple["ItemPrincipalAllocation", ...] = ()
 
@@ -118,7 +111,6 @@ def record_pawn_loan_repayment(
     amount,
     request_key: str,
     actor=None,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> PawnRepaymentResult:
     loan = _locked_loan(loan_id)
     request_key = _request_key(request_key)
@@ -134,17 +126,6 @@ def record_pawn_loan_repayment(
         effective_date = timezone.localdate()
         balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
         allocation = allocate_repayment(balance, amount)
-        policy = loan.policy_snapshot
-        recognition = policy.accounting_recognition
-        require_pawn_loan_accounting_readiness(
-            loan,
-            effective_date=effective_date,
-            requires_fee_income=allocation.fees > 0,
-            requires_interest_receivable=(
-                recognition == AccountingRecognition.ACCRUAL.value
-                and allocation.interest > 0
-            ),
-        )
     except PawnRepaymentError:
         raise
     except Exception as exc:
@@ -174,7 +155,6 @@ def record_pawn_loan_repayment(
             "current_interest",
             "principal",
         ],
-        "accounting_recognition": recognition,
         "item_principal_allocation_order": "HIGHEST_MONTHLY_RATE_FIRST",
         "item_principal_allocations": [
             {
@@ -190,13 +170,12 @@ def record_pawn_loan_repayment(
             for item in item_allocations
         ],
     }
-    event, outbox = record_loan_accounting_event(
+    event, _ = record_loan_event(
         loan.pk,
         event_kind=TransactionKind.REPAYMENT,
         effective_date=effective_date,
         payload=payload,
         actor=actor,
-        delivery_handler=delivery_handler,
     )
     extra_principal = installment_extra_principal_amount(
         loan=loan,
@@ -219,7 +198,7 @@ def record_pawn_loan_repayment(
     )
     for item in item_allocations:
         PawnLoanRepaymentAllocationLine.objects.create(
-            accounting_event=event,
+            loan_event=event,
             collateral_item_id=item.collateral_item_id,
             allocation_order=item.allocation_order,
             monthly_interest_rate=item.monthly_interest_rate,
@@ -242,15 +221,13 @@ def record_pawn_loan_repayment(
                 "current_interest": _decimal_string(allocation.current_interest),
                 "principal": _decimal_string(allocation.principal),
             },
-            "accounting_event_id": event.pk,
-            "outbox_id": outbox.pk,
+            "loan_event_id": event.pk,
         },
     )
     return PawnRepaymentResult(
         loan,
         allocation,
         event,
-        outbox,
         item_allocations=item_allocations,
     )
 
@@ -372,7 +349,7 @@ def _tenant_loan(loan_id):
 
 
 def _existing_result(loan, request_key, amount):
-    event = loan.accounting_events.filter(
+    event = loan.loan_events.filter(
         event_kind=TransactionKind.REPAYMENT.value,
         payload__repayment__request_key=request_key,
     ).first()
@@ -406,7 +383,6 @@ def _existing_result(loan, request_key, amount):
         loan,
         allocation,
         event,
-        event.outbox,
         already_recorded=True,
         item_allocations=item_allocations,
     )

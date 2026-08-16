@@ -4,7 +4,6 @@ from decimal import Decimal
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     DisbursalPolicySnapshot,
     InterestMethod,
     LicensePolicyOverrides,
@@ -23,7 +22,6 @@ class LoanPolicyContractTests(SimpleTestCase):
         self.assertEqual(policy.interest_method, InterestMethod.SIMPLE)
         self.assertEqual(policy.partial_month_method, PartialMonthMethod.FULL_MONTH)
         self.assertEqual(policy.capitalization_interval_periods, 12)
-        self.assertEqual(policy.accounting_recognition, AccountingRecognition.CASH)
         self.assertEqual(policy.maximum_ltv_ratio, Decimal("0.80"))
         self.assertEqual(policy.rounding_method, RoundingMethod.PER_ACCRUAL_PERIOD)
 
@@ -49,7 +47,6 @@ class LoanPolicyContractTests(SimpleTestCase):
             ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL,
         )
         self.assertEqual(policy.maximum_ltv_ratio, Decimal("0.75"))
-        self.assertEqual(policy.accounting_recognition, AccountingRecognition.CASH)
 
     def test_invalid_policy_values_fail_closed(self):
         invalid_values = (
@@ -68,7 +65,6 @@ class LoanPolicyContractTests(SimpleTestCase):
         snapshot = resolve_policy(
             license_overrides=LicensePolicyOverrides(
                 interest_method=InterestMethod.COMPOUND,
-                accounting_recognition=AccountingRecognition.ACCRUAL,
                 maximum_ltv_ratio=Decimal("0.70"),
             )
         ).to_disbursal_snapshot()

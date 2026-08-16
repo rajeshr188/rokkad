@@ -11,10 +11,13 @@ from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import (
+    CollateralCustodyState,
     CollateralMetal,
     LoanDocumentKind,
     PawnLoanEventKind,
+    PawnLoanRenewalMode,
     PawnLoanState,
+    TransactionKind,
 )
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
@@ -25,8 +28,11 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanDisbursalSnapshot,
     PawnLoanInterestAccrualLine,
+    PawnLoanAuction,
+    PawnLoanAuctionReversal,
     PawnLoanPrincipalClosingLine,
     PawnLoanRepaymentAllocationLine,
+    PawnLoanRenewal,
 )
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
@@ -41,16 +47,23 @@ from apps.tenant_apps.loans.services import (
     create_pawn_loan_economic_policy,
     create_pawn_metal_interest_rate_policy,
     disburse_pawn_loan,
+    cancel_pawn_loan_auction,
+    complete_pawn_loan_auction,
     finalize_pawn_loan_accrual,
     preview_pawn_loan_accruals,
     record_pawn_loan_repayment,
+    initiate_pawn_loan_auction,
+    renew_pawn_loan,
+    reverse_pawn_loan_auction,
     seed_default_loan_products,
     release_pawn_loan_in_full,
     reverse_pawn_loan_event,
+    start_pawn_loan_auction,
     update_pawn_draft,
     update_pawn_draft_with_photos,
 )
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.notify_v2.models import NotificationJob
 from apps.tenant_apps.rates.models import Rate, RateSource
 
 
@@ -509,10 +522,7 @@ class PawnDraftServiceTests(TenantTestCase):
             "96000.00",
         )
 
-    @patch(
-        "apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness"
-    )
-    def test_disbursal_freezes_approved_gross_net_and_tranche_evidence(self, readiness):
+    def test_disbursal_freezes_approved_gross_net_and_tranche_evidence(self):
         self._economic_setup()
         loan = create_pawn_draft(
             self.command(
@@ -537,18 +547,14 @@ class PawnDraftServiceTests(TenantTestCase):
         self.assertEqual(snapshot.advance_interest, Decimal("1000.0000"))
         self.assertEqual(snapshot.net_disbursed, Decimal("49000.0000"))
         self.assertEqual(snapshot.evidence["tranches"][0]["collateral_item_id"], loan.collateral_items.get().pk)
-        self.assertEqual(result.accounting_event.payload["values"]["net_cash"], "49000")
-        self.assertEqual(result.accounting_event.payload["values"]["advance_interest"], "1000")
+        self.assertEqual(result.loan_event.payload["values"]["net_cash"], "49000")
+        self.assertEqual(result.loan_event.payload["values"]["advance_interest"], "1000")
         with self.assertRaisesRegex(ValidationError, "immutable"):
             snapshot.save()
         with self.assertRaisesRegex(ValidationError, "cannot be deleted"):
             snapshot.delete()
-        readiness.assert_called_once()
 
-    @patch(
-        "apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness"
-    )
-    def test_item_accrual_consumes_advance_interest_once(self, _readiness):
+    def test_item_accrual_consumes_advance_interest_once(self):
         self._economic_setup()
         loan = create_pawn_draft(
             self.command(
@@ -566,15 +572,11 @@ class PawnDraftServiceTests(TenantTestCase):
         )
         self._add_photo(loan)
         approve_pawn_loan(loan.pk, actor=self.actor)
-        posted = lambda _event: type(
-            "Receipt", (), {"dea_voucher_id": None, "dea_journal_entry_id": None}
-        )()
         with self.captureOnCommitCallbacks(execute=True):
             disburse_pawn_loan(
                 loan.pk,
                 effective_date=date(2026, 7, 18),
                 actor=self.actor,
-                delivery_handler=posted,
             )
 
         previews = preview_pawn_loan_accruals(
@@ -594,7 +596,7 @@ class PawnDraftServiceTests(TenantTestCase):
             first = finalize_pawn_loan_accrual(
                 loan.pk, period_number=1, actor=self.actor
             )
-        self.assertIsNone(first.accounting_event)
+        self.assertIsNone(first.loan_event)
         lines = list(first.accrual.lines.order_by("collateral_item_id"))
         self.assertEqual(len(lines), 2)
         self.assertEqual(
@@ -611,8 +613,6 @@ class PawnDraftServiceTests(TenantTestCase):
         with patch(
             "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
             return_value=date(2026, 8, 18),
-        ), patch(
-            "apps.tenant_apps.loans.services.pawn_repayment.require_pawn_loan_accounting_readiness"
         ):
             with self.captureOnCommitCallbacks(execute=True):
                 repayment = record_pawn_loan_repayment(
@@ -620,11 +620,10 @@ class PawnDraftServiceTests(TenantTestCase):
                     amount=Decimal("3000.00"),
                     request_key="mixed-metal-principal-payment",
                     actor=self.actor,
-                    delivery_handler=posted,
                 )
         repayment_lines = list(
             PawnLoanRepaymentAllocationLine.objects.filter(
-                accounting_event=repayment.accounting_event
+                loan_event=repayment.loan_event
             ).order_by("allocation_order")
         )
         silver = loan.collateral_items.get(metal=CollateralMetal.SILVER.value)
@@ -653,7 +652,7 @@ class PawnDraftServiceTests(TenantTestCase):
         self.assertEqual(len(repeated.item_allocations), 2)
         self.assertEqual(
             PawnLoanRepaymentAllocationLine.objects.filter(
-                accounting_event=repayment.accounting_event
+                loan_event=repayment.loan_event
             ).count(),
             2,
         )
@@ -671,10 +670,9 @@ class PawnDraftServiceTests(TenantTestCase):
         ):
             with self.captureOnCommitCallbacks(execute=True):
                 reverse_pawn_loan_event(
-                    repayment.accounting_event.pk,
+                    repayment.loan_event.pk,
                     reason="Correct repayment allocation",
                     actor=self.tenant.owner,
-                    delivery_handler=posted,
                 )
         restored_preview = preview_pawn_loan_accruals(
             loan.pk, as_of_date=date(2026, 9, 17), include_partial=False
@@ -685,8 +683,6 @@ class PawnDraftServiceTests(TenantTestCase):
         with patch(
             "apps.tenant_apps.loans.services.pawn_repayment.timezone.localdate",
             return_value=date(2026, 8, 18),
-        ), patch(
-            "apps.tenant_apps.loans.services.pawn_repayment.require_pawn_loan_accounting_readiness"
         ):
             with self.captureOnCommitCallbacks(execute=True):
                 record_pawn_loan_repayment(
@@ -694,7 +690,6 @@ class PawnDraftServiceTests(TenantTestCase):
                     amount=Decimal("3000.00"),
                     request_key="replacement-principal-payment",
                     actor=self.actor,
-                    delivery_handler=posted,
                 )
 
         with patch(
@@ -706,14 +701,203 @@ class PawnDraftServiceTests(TenantTestCase):
                     loan.pk,
                     period_number=2,
                     actor=self.actor,
-                    delivery_handler=posted,
                 )
-        self.assertEqual(second.accounting_event.payload["values"]["interest"], "2680")
+        self.assertEqual(second.loan_event.payload["values"]["interest"], "2680")
         self.assertEqual(
-            second.accounting_event.payload["values"]["advance_interest_applied"],
+            second.loan_event.payload["values"]["advance_interest_applied"],
             "0",
         )
         self.assertEqual(PawnLoanInterestAccrualLine.objects.filter(accrual=second.accrual).count(), 2)
+
+    def test_renewal_is_idempotent_and_records_successor_events(self):
+        self._economic_setup()
+        rate_source = RateSource.objects.create(name="Renewal", location="Market")
+        rate = Rate.objects.create(
+            metal=Rate.Metal.GOLD,
+            currency=Rate.Currency.INR,
+            purity=Rate.Purity.K24,
+            buying_rate=Decimal("10000.00"),
+            selling_rate=Decimal("10100.00"),
+            rate_source=rate_source,
+        )
+        Rate.objects.filter(pk=rate.pk).update(
+            timestamp=timezone.make_aware(datetime(2026, 7, 18, 12, 0))
+        )
+        loan = create_pawn_draft(self.command(), actor=self.actor)
+        self._add_photo(loan)
+        approve_pawn_loan(loan.pk, actor=self.actor)
+        disburse_pawn_loan(
+            loan.pk,
+            effective_date=date(2026, 7, 18),
+            actor=self.actor,
+        )
+        call = dict(
+            mode=PawnLoanRenewalMode.PAY_AND_RENEW,
+            renewal_date=date(2026, 7, 18),
+            principal_paid=Decimal("11000.00"),
+            top_up_amount=Decimal("0.00"),
+            successor_license_id=self.license.pk,
+            successor_series_id=self.series.pk,
+            monthly_interest_rate=Decimal("2.000000"),
+            tenure_months=3,
+            request_key="loans-only-renewal-idempotency",
+            actor=self.actor,
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
+            return_value=date(2026, 7, 18),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
+            return_value=(),
+        ):
+            first = renew_pawn_loan(loan.pk, **call)
+            second = renew_pawn_loan(loan.pk, **call)
+
+        self.assertFalse(first.already_renewed)
+        self.assertTrue(second.already_renewed)
+        self.assertEqual(first.renewal.pk, second.renewal.pk)
+        self.assertEqual(PawnLoanRenewal.objects.filter(source_loan=loan).count(), 1)
+        self.assertEqual(first.settlement_event.loan_id, loan.pk)
+        self.assertEqual(first.opening_event.loan_id, first.successor_loan.pk)
+        self.assertEqual(first.successor_loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(first.renewal.successor_principal_amount, Decimal("39000.00"))
+
+    def test_auction_initiation_is_idempotent_and_cancellation_is_auditable(self):
+        self._economic_setup()
+        self.borrower.primary_email = "auction-borrower@example.com"
+        self.borrower.save(update_fields=["primary_email"])
+        loan = create_pawn_draft(self.command(), actor=self.actor)
+        self._add_photo(loan)
+        approve_pawn_loan(loan.pk, actor=self.actor)
+        disburse_pawn_loan(
+            loan.pk,
+            effective_date=date(2026, 7, 18),
+            actor=self.actor,
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 4),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_notices.timezone.localdate",
+            return_value=date(2026, 12, 4),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_notices.timezone.now",
+            return_value=timezone.make_aware(datetime(2026, 12, 4, 10, 0)),
+        ):
+            first = initiate_pawn_loan_auction(
+                loan.pk,
+                scheduled_date=date(2026, 12, 10),
+                channel="EMAIL",
+                request_key="loans-only-auction-idempotency",
+                actor=self.tenant.owner,
+            )
+            second = initiate_pawn_loan_auction(
+                loan.pk,
+                scheduled_date=date(2026, 12, 10),
+                channel="EMAIL",
+                request_key="loans-only-auction-idempotency",
+                actor=self.tenant.owner,
+            )
+
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(PawnLoanAuction.objects.filter(loan=loan).count(), 1)
+        self.assertIsNotNone(first.notice.notification_job_id)
+        cancelled = cancel_pawn_loan_auction(
+            first.pk,
+            reason="Borrower settled before auction",
+            actor=self.tenant.owner,
+        )
+        self.assertEqual(cancelled.state, "CANCELLED")
+        self.assertEqual(cancelled.cancellation_reason, "Borrower settled before auction")
+
+    def test_auction_completion_and_reversal_restore_loan_and_custody(self):
+        self._economic_setup()
+        self.borrower.primary_email = "auction-recovery@example.com"
+        self.borrower.save(update_fields=["primary_email"])
+        loan = create_pawn_draft(self.command(), actor=self.actor)
+        self._add_photo(loan)
+        approve_pawn_loan(loan.pk, actor=self.actor)
+        disburse_pawn_loan(
+            loan.pk,
+            effective_date=date(2026, 7, 18),
+            actor=self.actor,
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 4),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_notices.timezone.localdate",
+            return_value=date(2026, 12, 4),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_notices.timezone.now",
+            return_value=timezone.make_aware(datetime(2026, 12, 4, 10, 0)),
+        ):
+            auction = initiate_pawn_loan_auction(
+                loan.pk,
+                scheduled_date=date(2026, 12, 5),
+                channel="EMAIL",
+                request_key="loans-only-auction-recovery",
+                actor=self.tenant.owner,
+            )
+        NotificationJob.objects.filter(
+            pk=auction.notice.notification_job_id
+        ).update(
+            status=NotificationJob.Status.SENT,
+            sent_at=timezone.make_aware(datetime(2026, 12, 4, 10, 5)),
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 5),
+        ), patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.preview_pawn_loan_accruals",
+            return_value=(),
+        ):
+            auction = start_pawn_loan_auction(
+                auction.pk,
+                actor=self.tenant.owner,
+            )
+            completed = complete_pawn_loan_auction(
+                auction.pk,
+                recovery_amount=Decimal("50000.00"),
+                buyer_name="Auction Buyer",
+                buyer_reference="SALE-001",
+                actor=self.tenant.owner,
+            )
+
+        loan.refresh_from_db()
+        collateral = loan.collateral_items.get()
+        collateral.refresh_from_db()
+        self.assertEqual(completed.loan_event.event_kind, TransactionKind.AUCTION_RECOVERY.value)
+        self.assertEqual(loan.state, PawnLoanState.CLOSED.value)
+        self.assertEqual(collateral.custody_state, CollateralCustodyState.AUCTION_DISPOSED.value)
+        self.assertEqual(completed.auction.items.count(), 1)
+        recovery_allocation = completed.loan_event.obligation_allocations.get()
+        self.assertEqual(recovery_allocation.amount, Decimal("50000.0000"))
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+            return_value=date(2026, 12, 5),
+        ):
+            reversed_auction = reverse_pawn_loan_auction(
+                completed.auction.pk,
+                reason="Buyer settlement was voided",
+                actor=self.tenant.owner,
+            )
+
+        loan.refresh_from_db()
+        collateral.refresh_from_db()
+        self.assertEqual(loan.state, PawnLoanState.ACTIVE.value)
+        self.assertEqual(collateral.custody_state, CollateralCustodyState.IN_VAULT.value)
+        self.assertEqual(
+            reversed_auction.recovery_reversal_event.reversal_of_id,
+            completed.loan_event.pk,
+        )
+        inverse = reversed_auction.recovery_reversal_event.obligation_allocations.get()
+        self.assertEqual(inverse.reversal_of_id, recovery_allocation.pk)
+        self.assertEqual(inverse.amount, Decimal("-50000.0000"))
+        self.assertTrue(
+            PawnLoanAuctionReversal.objects.filter(auction=completed.auction).exists()
+        )
 
     def _economic_setup(self):
         create_pawn_loan_economic_policy(
@@ -736,15 +920,7 @@ class PawnDraftServiceTests(TenantTestCase):
                 effective_from=date(2026, 1, 1),
             )
 
-    @patch(
-        "apps.tenant_apps.loans.services.pawn_release.require_pawn_loan_accounting_readiness"
-    )
-    @patch(
-        "apps.tenant_apps.loans.services.pawn_disbursal.require_pawn_loan_accounting_readiness"
-    )
-    def test_full_release_freezes_item_principal_closing_evidence(
-        self, _disbursal_readiness, _release_readiness
-    ):
+    def test_full_release_freezes_item_principal_closing_evidence(self):
         self._economic_setup()
         LoanNumberSequence.objects.create(
             series=self.series,
@@ -785,15 +961,11 @@ class PawnDraftServiceTests(TenantTestCase):
         )
         self._add_photo(loan)
         approve_pawn_loan(loan.pk, actor=self.actor)
-        posted = lambda _event: type(
-            "Receipt", (), {"dea_voucher_id": None, "dea_journal_entry_id": None}
-        )()
         with self.captureOnCommitCallbacks(execute=True):
             disburse_pawn_loan(
                 loan.pk,
                 effective_date=date(2026, 7, 18),
                 actor=self.actor,
-                delivery_handler=posted,
             )
 
         with patch(
@@ -806,12 +978,11 @@ class PawnDraftServiceTests(TenantTestCase):
                     settlement_amount=Decimal("100000.00"),
                     request_key="itemized-full-release",
                     actor=self.actor,
-                    delivery_handler=posted,
                 )
 
         lines = list(
             PawnLoanPrincipalClosingLine.objects.filter(
-                accounting_event=result.accounting_event
+                loan_event=result.loan_event
             ).order_by("allocation_order")
         )
         self.assertEqual(len(lines), 2)

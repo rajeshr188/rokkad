@@ -52,13 +52,13 @@ def build_party_statement_dataset(statement):
             balance.interest_outstanding if balance else loan_row.balance_error,
             balance.fees_outstanding if balance else "",
             balance.total_due if balance else "",
-            "", "", "", "",
+            "", "", "",
         ))
     transaction_rows = getattr(statement, "transaction_rows", None)
     if transaction_rows is None:
         transaction_rows = tuple(
             (
-                event, event.get_event_kind_display(), "CURRENT", None, "",
+                event, event.get_event_kind_display(), "CURRENT", None,
                 (event.payload.get("values") or {}).get("principal", "0"),
                 (event.payload.get("values") or {}).get("interest", "0"),
                 (event.payload.get("values") or {}).get("fees", "0"),
@@ -69,13 +69,13 @@ def build_party_statement_dataset(statement):
         transaction_rows = tuple(
             (
                 row.event, row.activity, row.correction_status,
-                row.correction_event_id, row.delivery_status,
+                row.correction_event_id,
                 row.principal, row.interest, row.fees,
             )
             for row in transaction_rows
         )
     for (
-        event, activity, correction_status, correction_event_id, delivery_status,
+        event, activity, correction_status, correction_event_id,
         principal, interest, fees,
     ) in transaction_rows:
         transaction_total = sum(
@@ -94,7 +94,6 @@ def build_party_statement_dataset(statement):
             getattr(event, "pk", ""),
             correction_status,
             correction_event_id or "",
-            delivery_status,
         ))
     return PawnLoanReportDataset(
         "party_statement",
@@ -102,7 +101,6 @@ def build_party_statement_dataset(statement):
         (
             "Row type", "Loan", "Date", "State / kind", "Principal", "Interest",
             "Fees", "Total", "Event ID", "Correction status", "Correction event",
-            "Delivery",
         ),
         tuple(rows),
     )
@@ -189,7 +187,6 @@ def _daily(report):
             row.event.pk,
             row.correction_status,
             row.correction_event_id or "",
-            row.delivery_status,
         )
         for row in report.daily_activity
     ]
@@ -197,7 +194,7 @@ def _daily(report):
         "daily", f"Daily disbursals and repayments — {report.as_of_date}",
         (
             "Date", "Kind", "Loan", "Party", "Amount", "Event ID",
-            "Correction status", "Correction event", "Delivery",
+            "Correction status", "Correction event",
         ), tuple(rows),
     )
 

@@ -351,9 +351,6 @@ def _approval_payload(loan, collateral, resolved_economics=None, *, appraisals=N
             "capitalization_interval_periods": (
                 resolved_economics.economic_policy.capitalization_interval_periods
             ),
-            "accounting_recognition": (
-                resolved_economics.economic_policy.accounting_recognition
-            ),
             "rounding_method": resolved_economics.economic_policy.rounding_method,
             "currency_quantum": str(
                 resolved_economics.economic_policy.currency_quantum

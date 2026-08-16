@@ -137,11 +137,6 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             payload.title = "Changed"
 
     def test_repayment_receipt_uses_immutable_event_amount_split(self):
-        outbox = SimpleNamespace(
-            dea_voucher_id=31,
-            dea_journal_entry_id=32,
-            get_status_display=lambda: "Posted",
-        )
         event = SimpleNamespace(
             pk=23,
             loan=self.loan,
@@ -158,7 +153,6 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
                 },
                 "repayment": {"amount_received": "500"},
             },
-            outbox=outbox,
             repayment_allocation_lines=_Manager(
                 SimpleNamespace(
                     collateral_item_id=17,
@@ -186,11 +180,6 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
 
     def test_release_memo_uses_immutable_release_and_item_snapshot(self):
         event = SimpleNamespace(pk=29, payload_fingerprint="release-fingerprint-29")
-        event.outbox = SimpleNamespace(
-            dea_voucher_id=41,
-            dea_journal_entry_id=42,
-            get_status_display=lambda: "Posted",
-        )
         collateral = self.loan.collateral_items.first()
         event.principal_closing_lines = _Manager(
             SimpleNamespace(
@@ -211,7 +200,7 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         release = SimpleNamespace(
             pk=27,
             loan=self.loan,
-            accounting_event=event,
+            loan_event=event,
             release_number="RL-A-00001",
             effective_date=date(2026, 8, 3),
             is_full_release=True,
@@ -353,7 +342,7 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         release = SimpleNamespace(
             pk=28,
             loan=self.loan,
-            accounting_event=event,
+            loan_event=event,
             release_number="RL-A-00002",
             effective_date=date(2026, 8, 3),
             is_full_release=False,
@@ -372,15 +361,9 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
     def test_auction_notice_and_recovery_use_typed_projection_path(self):
         collateral = self.loan.collateral_items.first()
         notice = SimpleNamespace(notification_job_id=73)
-        outbox = SimpleNamespace(
-            dea_voucher_id=74,
-            dea_journal_entry_id=75,
-            get_status_display=lambda: "Posted",
-        )
         event = SimpleNamespace(
             effective_date=date(2026, 8, 5),
             payload_fingerprint="auction-recovery-71",
-            outbox=outbox,
         )
         auction_item = SimpleNamespace(
             collateral_item_id=collateral.pk,
@@ -399,8 +382,8 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             notice_date=date(2026, 8, 4),
             scheduled_date=date(2026, 8, 5),
             notice=notice,
-            accounting_event_id=72,
-            accounting_event=event,
+            loan_event_id=72,
+            loan_event=event,
             buyer_name="Test Buyer",
             buyer_reference="BUY-1",
             principal_amount=Decimal("10000"),

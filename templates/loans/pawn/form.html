@@ -1,7 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}{% if loan %}Edit {{ loan.loan_number }}{% else %}Create PawnLoan draft{% endif %}{% endblock %}
 {% block workspace_content %}
-<div class="mb-4"><a class="small text-decoration-none" href="{% url 'loans:pawn_loan_list' %}">&larr; PawnLoan drafts</a><h1 class="h3 mt-2">{% if loan %}Edit {{ loan.loan_number }}{% else %}Create PawnLoan draft{% endif %}</h1><p class="text-muted">Saving creates only an editable draft. It does not approve, disburse, or post accounting.</p></div>
+<div class="mb-4"><a class="small text-decoration-none" href="{% url 'loans:pawn_loan_list' %}">&larr; PawnLoan drafts</a><h1 class="h3 mt-2">{% if loan %}Edit {{ loan.loan_number }}{% else %}Create PawnLoan draft{% endif %}</h1><p class="text-muted">Saving creates only an editable draft. It does not approve, disburse, or activate the loan.</p></div>
 <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
   {% if form.errors or formset.errors or formset.non_form_errors %}<div class="alert alert-danger" role="alert" tabindex="-1" data-pawn-draft-error-summary><strong>The draft was not saved.</strong> Correct the highlighted loan or collateral fields below and submit again.</div>{% endif %}
   {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}

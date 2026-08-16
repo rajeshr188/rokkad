@@ -14,12 +14,12 @@
   </div>
 </div>
 
-<div class="alert alert-secondary" role="status">Values shown here derive from FundingLoan operational evidence. Accounting effects occur only through the workflow's supported accounting boundary.</div>
+<div class="alert alert-secondary" role="status">Values shown here derive from immutable FundingLoan operational evidence.</div>
 
 {% if draft %}
 <h2 class="h5">Activation readiness</h2>
 {% if draft.ready %}
-<div class="alert alert-success">Draft terms and collateral pass the current activation policy. Servicing and accounting remain unavailable.</div>
+<div class="alert alert-success">Draft terms and collateral pass the current activation policy. Servicing remains unavailable until activation.</div>
 {% else %}
 <div class="alert alert-warning"><ul class="mb-0">{% for blocker in draft.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>
 {% endif %}

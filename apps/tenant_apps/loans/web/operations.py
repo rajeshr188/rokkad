@@ -5,12 +5,10 @@ from django.shortcuts import render
 
 from apps.tenant_apps.loans.access import loans_setup_required
 from apps.tenant_apps.loans.filters import (
-    PawnLoanAccountingOutboxFilter,
     PawnLoanNoticeFilter,
 )
 from apps.tenant_apps.loans.models import (
     LoanRiskAlert,
-    PawnLoanAccountingOutbox,
     PawnLoanNotice,
 )
 from apps.tenant_apps.loans.selectors import (
@@ -29,11 +27,6 @@ from apps.tenant_apps.loans.services.risk_whatsapp_pilot import assess_risk_what
 
 @loans_setup_required
 def pawn_operations_console(request):
-    outboxes = PawnLoanAccountingOutbox.objects.filter(
-        event__loan__workspace=request.loans_workspace
-    ).select_related("event", "event__loan").order_by("-updated_at", "-pk")
-    outbox_filter = PawnLoanAccountingOutboxFilter(request.GET, queryset=outboxes)
-    page_obj = Paginator(outbox_filter.qs, 50).get_page(request.GET.get("page"))
     risk_notice_rows = build_pawn_loan_notice_rows(
         PawnLoanNotice.objects.filter(
             workspace=request.loans_workspace,
@@ -42,9 +35,6 @@ def pawn_operations_console(request):
     )
     risk_email_pilot = assess_risk_email_pilot()
     return render(request, "loans/setup/operations_console.html", {
-        "outbox_filter": outbox_filter,
-        "outboxes": page_obj.object_list,
-        "page_obj": page_obj,
         "snapshot": get_pawn_loan_operations_snapshot(),
         "email_provider": get_email_provider_readiness(),
         "latest_risk_notice_success": next((row for row in risk_notice_rows if row.status == "SENT"), None),

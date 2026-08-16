@@ -22,7 +22,7 @@ from apps.tenant_apps.loans.services import (
 
 def _pawn_auction_for_workspace(request, pk):
     return get_object_or_404(
-        PawnLoanAuction.objects.select_related("loan", "loan__workspace", "accounting_event__outbox").prefetch_related("items__collateral_item"),
+        PawnLoanAuction.objects.select_related("loan", "loan__workspace", "loan_event").prefetch_related("items__collateral_item"),
         pk=pk, workspace=request.loans_workspace,
     )
 
@@ -122,7 +122,7 @@ def pawn_loan_auction_complete(request, auction_pk):
         except (PawnAuctionError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, f"Auction {auction.auction_number} completed and recovery queued through DEA.")
+            messages.success(request, f"Auction {auction.auction_number} completed and recovery recorded.")
             return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
     return _render_action(
         request,
@@ -155,7 +155,6 @@ def pawn_loan_auction_reverse(request, auction_pk):
         auction.loan,
         form,
         "Reverse auction recovery",
-        "Administrator-only. Accounting and custody are restored through compensating evidence.",
+        "Administrator-only. Loan balances and custody are restored through compensating evidence.",
         {"auction": auction},
     )
-

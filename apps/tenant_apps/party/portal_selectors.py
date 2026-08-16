@@ -3,7 +3,6 @@ from decimal import Decimal
 from typing import Any
 
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
 from djmoney.money import Money
 
 from apps.tenant_apps.party.portal_access import PortalIdentity, validate_portal_identity
@@ -114,48 +113,18 @@ def get_portal_loans_summary(
 def get_portal_invoices_summary(
     identity: PortalIdentity, *, limit: int = 20
 ) -> PortalInvoiceSummary:
-    identity = _require_verified_identity(identity)
-    from apps.tenant_apps.dea.models import SalesInvoiceVoucher
-
-    invoices = SalesInvoiceVoucher.objects.filter(party=identity.party).order_by(
-        "-invoice_date", "-id"
-    )
-    rows = tuple(invoices[:limit])
-    unpaid = invoices.filter(is_fully_paid=False)
-    outstanding = sum((_money_amount(invoice.outstanding_balance) for invoice in unpaid), Decimal("0"))
-    overdue_count = sum(1 for invoice in unpaid if getattr(invoice, "is_overdue", False))
-    return PortalInvoiceSummary(
-        total_count=invoices.count(),
-        unpaid_count=unpaid.count(),
-        overdue_count=overdue_count,
-        outstanding_amount=outstanding,
-        items=rows,
-    )
+    _require_verified_identity(identity)
+    return PortalInvoiceSummary()
 
 
 def get_portal_payments_summary(
     identity: PortalIdentity, *, limit: int = 20
 ) -> PortalPaymentSummary:
     identity = _require_verified_identity(identity)
-    from django.contrib.contenttypes.models import ContentType
-
-    from apps.tenant_apps.dea.models import PaymentVoucher, SalesInvoiceVoucher
     from apps.tenant_apps.loans.domain import TransactionKind
-    from apps.tenant_apps.loans.models import PawnLoanAccountingEvent
+    from apps.tenant_apps.loans.models import PawnLoanEvent
 
-    source_filters = Q()
-    invoice_ids = list(SalesInvoiceVoucher.objects.filter(party=identity.party).values_list("pk", flat=True))
-    if invoice_ids:
-        source_filters |= Q(
-            source_content_type=ContentType.objects.get_for_model(SalesInvoiceVoucher),
-            source_object_id__in=invoice_ids,
-        )
-    invoice_payments = (
-        PaymentVoucher.objects.filter(source_filters).order_by("-payment_date", "-id")
-        if source_filters
-        else PaymentVoucher.objects.none()
-    )
-    repayment_events = PawnLoanAccountingEvent.objects.filter(
+    repayment_events = PawnLoanEvent.objects.filter(
         loan__borrower=identity.party,
         event_kind=TransactionKind.REPAYMENT.value,
         reversed_by_event__isnull=True,
@@ -163,18 +132,17 @@ def get_portal_payments_summary(
     loan_payment_rows = []
     for event in repayment_events:
         loan_payment_rows.append(_portal_loan_payment_row(event))
-    combined_rows = list(invoice_payments) + loan_payment_rows
-    combined_rows.sort(
+    loan_payment_rows.sort(
         key=lambda row: (getattr(row, "payment_date", None), getattr(row, "pk", 0) or 0),
         reverse=True,
     )
     return PortalPaymentSummary(
-        total_count=invoice_payments.count() + len(loan_payment_rows),
-        total_amount=(
-            sum((_money_amount(payment.total_amount) for payment in invoice_payments), Decimal("0"))
-            + sum((_money_amount(payment.total_amount) for payment in loan_payment_rows), Decimal("0"))
+        total_count=len(loan_payment_rows),
+        total_amount=sum(
+            (_money_amount(payment.total_amount) for payment in loan_payment_rows),
+            Decimal("0"),
         ),
-        items=tuple(combined_rows[:limit]),
+        items=tuple(loan_payment_rows[:limit]),
     )
 
 

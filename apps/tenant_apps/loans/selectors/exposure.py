@@ -4,16 +4,12 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     LoanRepaymentStructure,
     PawnLoanState,
 )
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
 from apps.tenant_apps.loans.domain.interest import calculate_period_interest
-from apps.tenant_apps.loans.services.pawn_tranches import (
-    get_pawn_principal_tranche_balances,
-)
 from .obligation_state import (
     ObligationAmount,
     calculate_obligation_state_as_of,
@@ -42,7 +38,7 @@ class PawnLoanExposure:
     overdue: ExposureComponent
     recorded_total_due: Decimal
     total_economic_exposure: Decimal
-    accounting_receivable: Decimal
+    cash_receivable_basis: Decimal
     maturity_payoff: Decimal
     ltv_exposure_basis: Decimal
     projection_periods: tuple[tuple[date, date, Decimal], ...]
@@ -74,14 +70,8 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
     overdue = obligation_state.overdue
     scheduled_remaining = obligation_state.remaining
     findings = list(obligation_state.integrity_findings)
-    recognition = getattr(loan.policy_snapshot, "accounting_recognition", None)
-    accounting_interest = (
-        balance.interest_outstanding
-        if recognition == AccountingRecognition.ACCRUAL.value
-        else Decimal("0")
-    )
-    accounting_receivable = (
-        balance.principal_outstanding + accounting_interest + balance.fees_outstanding
+    cash_receivable_basis = (
+        balance.principal_outstanding + balance.fees_outstanding
     )
     recorded_total = balance.total_due
     total_economic = recorded_total + projected_interest
@@ -122,7 +112,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         overdue=overdue,
         recorded_total_due=recorded_total,
         total_economic_exposure=total_economic,
-        accounting_receivable=accounting_receivable,
+        cash_receivable_basis=cash_receivable_basis,
         maturity_payoff=maturity_payoff,
         ltv_exposure_basis=ltv_basis,
         projection_periods=previews,
@@ -132,6 +122,11 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
 
 
 def _project_interest_periods(loan, as_of_date):
+    # Import lazily to avoid selectors <-> services package initialization cycles.
+    from apps.tenant_apps.loans.services.pawn_tranches import (
+        get_pawn_principal_tranche_balances,
+    )
+
     last = loan.interest_accruals.exclude(
         release_catch_up__reversal__isnull=False
     ).order_by("-period_number").first()
@@ -143,7 +138,7 @@ def _project_interest_periods(loan, as_of_date):
         period_end = min(full_end, as_of_date)
         full_days = Decimal((full_end - period_start).days + 1)
         event_dates = tuple(
-            loan.accounting_events.filter(
+            loan.loan_events.filter(
                 effective_date__gt=period_start,
                 effective_date__lte=period_end,
             ).values_list("effective_date", flat=True).distinct().order_by("effective_date")

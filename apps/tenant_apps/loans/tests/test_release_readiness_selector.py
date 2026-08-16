@@ -149,7 +149,7 @@ class PawnLoanReleaseReadinessTests(SimpleTestCase):
         )
         self.assertIsNone(readiness.minimum_settlement)
 
-    def test_missing_rate_appraisal_and_posting_readiness_are_actionable(self):
+    def test_missing_rate_and_appraisal_are_actionable(self):
         missing_rate = lambda **_kwargs: SimpleNamespace(
             status=RATE_MISSING,
             rate=None,
@@ -157,7 +157,7 @@ class PawnLoanReleaseReadinessTests(SimpleTestCase):
         readiness = calculate_pawn_loan_release_readiness(
             self._loan(),
             collateral_items=(self._item(1, appraisal=None),),
-            balance=self._balance(posting_ready=False),
+            balance=self._balance(),
             policy_snapshot=self._policy(
                 ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL
             ),
@@ -169,7 +169,6 @@ class PawnLoanReleaseReadinessTests(SimpleTestCase):
         self.assertEqual(
             {blocker.code for blocker in readiness.blockers},
             {
-                "ACCOUNTING_NOT_READY",
                 "METAL_RATE_MISSING_RATE",
                 "LATEST_APPRAISAL_REQUIRED",
             },
@@ -211,13 +210,11 @@ class PawnLoanReleaseReadinessTests(SimpleTestCase):
         principal="10000",
         interest="0",
         fees="0",
-        posting_ready=True,
     ):
         return SimpleNamespace(
             principal_outstanding=Decimal(principal),
             interest_outstanding=Decimal(interest),
             fees_outstanding=Decimal(fees),
-            posting_ready=posting_ready,
         )
 
     def _item(

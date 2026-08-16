@@ -16,11 +16,6 @@ class PartialMonthMethod(StringEnum):
     SLAB = "SLAB"
 
 
-class AccountingRecognition(StringEnum):
-    CASH = "CASH"
-    ACCRUAL = "ACCRUAL"
-
-
 class ValuationMethod(StringEnum):
     CALCULATED_METAL_VALUE = "CALCULATED_METAL_VALUE"
     LATEST_APPRAISAL = "LATEST_APPRAISAL"
@@ -51,7 +46,6 @@ class WorkspacePolicyDefaults:
     partial_month_cutoff_days: int = 15
     partial_month_lower_fraction: Decimal = Decimal("0.5")
     capitalization_interval_periods: int = 12
-    accounting_recognition: AccountingRecognition = AccountingRecognition.CASH
     valuation_method: ValuationMethod = ValuationMethod.CALCULATED_METAL_VALUE
     maximum_ltv_ratio: Decimal = Decimal("0.80")
     rounding_method: RoundingMethod = RoundingMethod.PER_ACCRUAL_PERIOD
@@ -68,7 +62,6 @@ class LicensePolicyOverrides:
     partial_month_cutoff_days: int | None = None
     partial_month_lower_fraction: Decimal | None = None
     capitalization_interval_periods: int | None = None
-    accounting_recognition: AccountingRecognition | None = None
     valuation_method: ValuationMethod | None = None
     maximum_ltv_ratio: Decimal | None = None
     rounding_method: RoundingMethod | None = None
@@ -96,7 +89,6 @@ class ResolvedLoanPolicy:
     partial_month_cutoff_days: int
     partial_month_lower_fraction: Decimal
     capitalization_interval_periods: int
-    accounting_recognition: AccountingRecognition
     valuation_method: ValuationMethod
     maximum_ltv_ratio: Decimal
     rounding_method: RoundingMethod
@@ -126,7 +118,6 @@ class DisbursalPolicySnapshot(ResolvedLoanPolicy):
             "partial_month_cutoff_days": self.partial_month_cutoff_days,
             "partial_month_lower_fraction": str(self.partial_month_lower_fraction),
             "capitalization_interval_periods": self.capitalization_interval_periods,
-            "accounting_recognition": self.accounting_recognition.value,
             "valuation_method": self.valuation_method.value,
             "maximum_ltv_ratio": str(self.maximum_ltv_ratio),
             "rounding_method": self.rounding_method.value,
@@ -145,9 +136,6 @@ class DisbursalPolicySnapshot(ResolvedLoanPolicy):
             ),
             capitalization_interval_periods=int(
                 payload["capitalization_interval_periods"]
-            ),
-            accounting_recognition=AccountingRecognition(
-                payload["accounting_recognition"]
             ),
             valuation_method=ValuationMethod(payload["valuation_method"]),
             maximum_ltv_ratio=Decimal(payload["maximum_ltv_ratio"]),

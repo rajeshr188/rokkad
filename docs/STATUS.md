@@ -8,6 +8,206 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: Accounting-era cutover code and tests are retired. The PawnLoan
+  cutover selector and command are deleted. Party portal invoices now return an
+  explicit empty unsupported summary, portal payments use only `PawnLoanEvent`,
+  and Party merge no longer imports DEA mappings. Party, Loans, Notify v2, and
+  Rates current runtime have no DEA, tenant-Accounting, or Standalone-Accounting
+  imports. Twenty-eight focused Loans tests, compilation, Django checks, and
+  migration-drift checks pass; Party merge tests passed before the legacy
+  multi-tenant suite exceeded its setup timeout.
+
+- 2026-08-17: Remaining risk/exposure/report accounting vocabulary is removed.
+  `cash_receivable_basis` and `OVERDUE_INTERPRETATION_VARIANCE` now describe the
+  actual Loans concepts. Report bundles and exports no longer carry delivery
+  status or empty posting-event state; report/runbook UI now presents operational
+  integrity and contains no DEA retry procedure. Thirty-three focused risk,
+  report, export, and boundary tests pass.
+
+- 2026-08-17: Loans accounting-delivery readiness is removed rather than kept
+  as an always-successful compatibility layer. Balance objects no longer expose
+  posting readiness/blockers; release and portfolio selectors no longer branch
+  on them; reversal preflight has no accounting mode; dead reconciliation UI
+  and accounting-labelled event/document copy are removed. Forty-six focused
+  balance, release, report, document, and boundary tests pass.
+
+- 2026-08-17: Loans has no current DEA dependency or DEA-shaped compatibility
+  contract. Stale DEA queue messages, the unused report inspector parameter,
+  voucher/journal test fixtures, document outboxes, and integration-mode test
+  preferences are removed. Thirty focused report/document/boundary tests pass.
+  DEA names remain only in historical Loans migrations and explicit retirement
+  guards pending the clean development migration baseline. Generic accounting
+  labels and always-ready posting fields remain the next terminology cleanup.
+
+- 2026-08-17: The now-constant interest-recognition concept is fully removed
+  from current Loans code and schema. Migration `loans.0063` drops it from
+  economic policies and disbursal snapshots; domain contracts, balances,
+  lifecycle payloads, setup forms, and tests no longer expose accounting
+  recognition. Operational accrual rows and compound capitalization remain.
+  Migration application, 13 focused policy/balance tests, Django checks,
+  migration-drift checks, source guards, and diff validation pass. The broader
+  tenant suite reached eight passing tests before its two-minute setup limit.
+
+- 2026-08-16: The always-ready accounting-readiness compatibility API is fully
+  deleted. No PawnLoan lifecycle service imports or calls it, package exports
+  are removed, its dedicated compatibility tests are deleted, and a boundary
+  guard prevents restoration. Lifecycle services retain their own operational
+  validation. Thirty-seven focused tests, compilation, Django checks, migration
+  drift, and diff validation pass. `accounting_recognition` remains temporarily
+  Interest recognition is now cash-only. Operational monthly accrual rows and
+  contractual compound capitalization remain Loans-owned economic behavior,
+  not accounting-app dependencies.
+
+- 2026-08-16: All nine current Loans relationships named `accounting_event`
+  are now `loan_event`: disbursal snapshot, interest accrual, three allocation/
+  principal line models, release and release reversal, auction and auction
+  reversal. Migrations `0060` and `0061` preserve existing data through field
+  renames and refresh ordering/uniqueness state. Both migrations applied cleanly;
+  36 focused tests and the highest-risk auction completion/reversal tenant test
+  pass. The full pawn service module exceeded the two-minute setup limit without
+  reporting a test failure.
+
+- 2026-08-16: The auction operational coverage gap is closed. A real tenant
+  integration test now proves sent Notify v2 notice evidence, auction start,
+  exact recovery, immutable recovery allocation, loan closure, collateral
+  disposal, auction reversal, exact compensating allocation, custody restoration,
+  and loan reopening without DEA/outbox assertions. The test passes. Remaining
+  Phase 4 work has neutralized persisted `accounting_event` field names and
+  compatibility readiness terminology without changing stored evidence.
+
+- 2026-08-16: Loans-only renewal and auction integration coverage is restored
+  without accounting. Renewal verifies request-key idempotency, one renewal,
+  source settlement-event ownership, successor opening-event ownership,
+  successor activation, and the expected principal carry-forward. Auction
+  verifies overdue eligibility, Notify v2 notice-job evidence, request-key
+  idempotency, single-auction persistence, and reasoned cancellation. Both real
+  tenant tests pass. Auction completion/reversal remains a narrower follow-up.
+
+- 2026-08-16: Remaining executable Loans UI tests no longer import or create
+  deleted `PawnLoanAccountingEvent`/outbox models. Report, statement, PDF, and
+  workspace-isolation fixtures now use `PawnLoanEvent`; three setup-console
+  tests dedicated solely to outbox failure listing/retry were removed. Real
+  Notify v2 notice delivery coverage remains. Direct converted UI execution
+  reached four scenarios with one stale display assertion before the expensive
+  multi-schema run timed out; that assertion was removed because Party statement
+  evidence intentionally shows event/correction state, not delivery state.
+
+- 2026-08-16: The uncollectible 2,300-line accounting-era disbursal integration
+  suite is retired; it depended directly on deleted outbox types and DEA voucher/
+  journal models. Operational disbursal, accrual, repayment allocation, reversal,
+  and release evidence remains covered by the passing pawn-draft service suite;
+  replacement renewal/auction integration coverage is tracked as an explicit
+  gap. Notice fixtures now use `PawnLoanEvent`, document fixtures no longer fake
+  outboxes, and configurable document contracts replace accounting delivery/
+  reference bindings with Loans-owned event/document evidence. Nine document
+  tests pass.
+
+- 2026-08-16: Accounting delivery-handler compatibility is removed from every
+  PawnLoan financial lifecycle API and from immutable event recording. Real
+  Notify v2 notice-delivery handlers remain unchanged. The operational pawn
+  draft/economics suite was converted to event-only calls and all 28 focused
+  draft/boundary tests pass while retaining allocation, reversal, release, and
+  immutability assertions. The monolithic accounting-era disbursal test module
+  remains the next major conversion target.
+
+- 2026-08-16: Phase 4 legacy event-module shims are removed. Immutable event
+  recording now lives directly in `services/event_recording.py`, frozen event
+  payloads live in `integrations/event_payloads.py`, and their internal public
+  types use `LoanEvent*` terminology. The deleted `accounting_outbox.py` and
+  `dea_payloads.py` paths are guarded by boundary tests. Thirty-one focused
+  tests, Django checks, migration-drift checks, compilation, and diff validation
+  pass. Mixed accounting-era lifecycle tests remain the next conversion slice.
+
+- 2026-08-16: Loans Phase 4 now exposes the event spine through neutral runtime
+  names: `PawnLoan.loan_events`, `record_loan_event`, `event_recording`, and
+  `event_payloads`. Migration `0059_rename_loan_event_relations` updates the
+  reverse relations without replacing event data. Four obsolete DEA/voucher
+  report tests were removed while operational report coverage was retained;
+  29 focused tests, Django checks, migration-drift checks, and diff validation
+  pass. The old implementation filenames remain temporary internal shims.
+
+- 2026-08-16: All Loans runtime imports, annotations, queries, documents, and
+  obligation relations now use `PawnLoanEvent`; the temporary
+  `PawnLoanAccountingEvent` alias/export is removed. Historical migrations and
+  mixed stale tests are the only remaining old-name references. Twenty-six
+  focused boundary/registration/readiness/balance/cutover tests pass.
+
+- 2026-08-16: Phase 4 began by renaming the preserved model from
+  `PawnLoanAccountingEvent` to canonical `PawnLoanEvent`. Migration
+  `0058_rename_pawnloanaccountingevent_pawnloanevent` applied successfully and
+  preserves the existing table data through Django's model rename operation.
+  Event recording and obligation model references use the neutral identity;
+  a temporary Python alias keeps mixed call sites working. Twenty-three focused
+  tests, Django checks, migration-drift checks, and diff validation pass.
+
+- 2026-08-16: Dead DEA voucher/journal inspection and accounting-delivery issue
+  classification are removed from Loans reports. The two pure DEA contract/
+  readiness test modules are deleted; operational portfolio, daily activity,
+  correction, custody, duplicate-event, and renewal report coverage remains.
+  Eleven focused operational report/boundary tests pass. Mixed historical
+  lifecycle/UI tests still need accounting assertions removed rather than
+  wholesale deletion.
+
+- 2026-08-16: `PawnLoanAccountingOutbox` is removed from current Loans models
+  and migration `0057_retire_accounting_outbox` drops its index and table. The
+  obsolete delivery-status enum and dedicated outbox service test are deleted,
+  all runtime ORM prefetch/select paths were detached from the relation, and
+  the migration applied successfully to the retained test database. Twenty-two
+  focused tests, Django checks, and migration-drift checks pass.
+
+- 2026-08-16: Lifecycle result objects for disbursal, repayment, accrual,
+  capitalization, release, auction, renewal, and reversal no longer expose
+  outbox fields. Delivery diagnostics, retry controls, delivery messages, and
+  DEA references are removed from Loans web and document surfaces. Balances
+  ignore retired delivery state unconditionally. Thirty-five lifecycle/
+  boundary tests and the final 21-test focused suite pass; Django checks and
+  diff validation pass. The dormant model is ready for schema removal.
+
+- 2026-08-16: Loans lifecycle event recording no longer creates accounting
+  outbox rows, schedules delivery, invokes handlers, or supports retry. The
+  retry service and URL are removed. Existing lifecycle result shapes receive
+  a non-persistent `RECORDED` compatibility value while their outbox fields are
+  removed incrementally. Twenty focused retirement/readiness/balance/cutover
+  tests and Django checks pass.
+
+- 2026-08-16: Accounting-retirement Phase 3 has removed every direct runtime
+  Loans-to-DEA import. The DEA delivery adapter and receivable reconciliation
+  selector are deleted; operational reports no longer call DEA or expose
+  posting health, DEA references, or delivery state. Cutover readiness now
+  checks Loans migrations, numbering, and operational acknowledgements only.
+  The standalone Django check and eight focused boundary/cutover tests pass.
+  The temporary outbox model/write path remains for the next schema-safe slice.
+
+- 2026-08-16: Accounting-retirement Phase 2 removed the accounting integration
+  mode and its operational/cutover setup blocker. Normal Loans balances and
+  financial actions no longer fail because an accounting delivery is pending;
+  automatic outbox delivery is disabled unless an explicit handler is supplied.
+  The focused boundary, readiness, balance, and cutover suite passes all 19
+  tests. Delivery/reconciliation compatibility state remains for Phase 3.
+
+- 2026-08-16: Accounting-retirement Phase 2 has removed external accounting as
+  a loan-action gate. The temporary readiness API is now an always-ready,
+  DEA-free compatibility wrapper; no period, ledger, or account mapping can
+  block disbursal, repayment, accrual, capitalization, release, renewal, or
+  auction workflows. Borrower-account setup service, route, view, template,
+  exports, and UI messaging are removed. Fourteen focused boundary/readiness/
+  balance tests pass, and direct Loans runtime DEA imports fell from six files
+  to four delivery/reconciliation/reporting targets.
+
+- 2026-08-16: Accounting-retirement Phase 1 evidence classification is
+  documented. The Loans accounting-event model is confirmed as the current
+  canonical economic event spine and will be preserved before neutral renaming;
+  its DEA outbox is delivery-only retirement state. New boundary tests freeze
+  the six-file direct DEA import surface and confirm target runtime apps have no
+  direct Standalone Accounting imports.
+
+- 2026-08-16: On branch `no-tenants-no-acc`, accounting retirement is now an
+  accepted product decision. The constitution and ADR explicitly narrow Rokkad
+  to an operational lending system with immutable Loans-owned evidence and no
+  vouchers, journals, ledgers, or financial statements. Phase 1 is active:
+  preserve and characterize the current Loans event spine before removing DEA
+  delivery, readiness, reconciliation, and accounting terminology.
+
 - 2026-08-16: Party-native test-fixture conversion has started. Fixed sale,
   fixed purchase, unfixed sale, and unfixed purchase DEA service suites no
   longer import or construct Contact customers; they use Party directly and

@@ -26,7 +26,6 @@ from apps.tenant_apps.loans.access import (
 )
 from apps.tenant_apps.loans.domain import (
     LoanDocumentKind,
-    LoanOutboxStatus,
     PawnLoanState,
     TransactionKind,
 )
@@ -152,8 +151,7 @@ from apps.tenant_apps.loans.models import (
     PawnCollateralItem,
     PawnCollateralPhoto,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanAuction,
     PawnLoanEconomicPolicy,
     PawnLoanFeePolicy,
@@ -174,12 +172,10 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_risk_assessment,
     get_pawn_loan_series_navigation,
     get_physical_verification_detail,
-    reconcile_pawn_loan_receivable,
 )
 from apps.tenant_apps.loans.services import (
     DocumentLayoutServiceError,
     LicenseSeriesError,
-    LoanAccountingOutboxError,
     LoanDocumentLayoutService,
     LoanOperationalNoticeError,
     NumberAllocationError,
@@ -212,7 +208,6 @@ from apps.tenant_apps.loans.services import (
     render_storage_location_label,
     renew_license,
     retire_product_version,
-    retry_failed_outbox_event,
     seed_default_loan_products,
     start_physical_verification,
     transfer_expired_draft_setup,
@@ -1048,16 +1043,16 @@ def _preview_document_payload(request, revision):
         source = get_object_or_404(PawnLoan, pk=request.GET.get("loan"), workspace=workspace) if request.GET.get("loan") else PawnLoan.objects.filter(workspace=workspace, approval_snapshots__isnull=False).order_by("-pk").first()
         return PawnLoanDocumentProjectionBuilder.loan_ticket(source) if source else None
     if kind == "repayment_receipt":
-        source = PawnLoanAccountingEvent.objects.filter(loan__workspace=workspace, event_kind=TransactionKind.REPAYMENT.value).select_related("loan__workspace", "loan__license", "loan__borrower", "outbox").order_by("-pk").first()
+        source = PawnLoanEvent.objects.filter(loan__workspace=workspace, event_kind=TransactionKind.REPAYMENT.value).select_related("loan__workspace", "loan__license", "loan__borrower").order_by("-pk").first()
         return PawnLoanDocumentProjectionBuilder.repayment_receipt(source) if source else None
     if kind == "release_memo":
-        source = PawnLoanRelease.objects.filter(workspace=workspace).select_related("loan__workspace", "loan__license", "loan__borrower", "accounting_event", "accounting_event__outbox").prefetch_related("items__collateral_item").order_by("-pk").first()
+        source = PawnLoanRelease.objects.filter(workspace=workspace).select_related("loan__workspace", "loan__license", "loan__borrower", "loan_event").prefetch_related("items__collateral_item").order_by("-pk").first()
         return PawnLoanDocumentProjectionBuilder.release_memo(source) if source else None
     if kind in {"auction_notice", "auction_recovery"}:
-        source = PawnLoanAuction.objects.filter(workspace=workspace).select_related("loan__workspace", "loan__license", "loan__borrower", "accounting_event", "accounting_event__outbox", "notice").prefetch_related("items__collateral_item").order_by("-pk").first()
+        source = PawnLoanAuction.objects.filter(workspace=workspace).select_related("loan__workspace", "loan__license", "loan__borrower", "loan_event", "notice").prefetch_related("items__collateral_item").order_by("-pk").first()
         if not source: return None
         return PawnLoanDocumentProjectionBuilder.auction_notice(source) if kind == "auction_notice" else PawnLoanDocumentProjectionBuilder.auction_recovery_memo(source)
-    source = PawnLoanRenewal.objects.filter(workspace=workspace).select_related("source_loan__workspace", "source_loan__license", "source_loan__borrower", "successor_loan", "settlement_event__outbox", "opening_event__outbox").order_by("-pk").first()
+    source = PawnLoanRenewal.objects.filter(workspace=workspace).select_related("source_loan__workspace", "source_loan__license", "source_loan__borrower", "successor_loan", "settlement_event", "opening_event").order_by("-pk").first()
     return PawnLoanDocumentProjectionBuilder.renewal_memo(source) if source else None
 
 
@@ -1160,12 +1155,11 @@ def pawn_loan_kfs_schedule_pdf(request, pk):
 @loans_workspace_required
 def pawn_repayment_receipt_pdf(request, pk, event_pk):
     event = get_object_or_404(
-        PawnLoanAccountingEvent.objects.select_related(
+        PawnLoanEvent.objects.select_related(
             "loan",
             "loan__workspace",
             "loan__license",
             "loan__borrower",
-            "outbox",
             "reversed_by_event",
         ),
         pk=event_pk,
@@ -1176,7 +1170,7 @@ def pawn_repayment_receipt_pdf(request, pk, event_pk):
     payload = PawnLoanDocumentProjectionBuilder.repayment_receipt(event)
     response = _configurable_document_response(
         request, payload=payload, loan=event.loan,
-        source_type="PawnLoanAccountingEvent", source_id=event.pk,
+        source_type="PawnLoanEvent", source_id=event.pk,
         source_fingerprint=event.payload_fingerprint,
     )
     if response is not None:
@@ -1192,8 +1186,8 @@ def pawn_release_memo_pdf(request, release_pk):
             "loan",
             "loan__license",
             "loan__borrower",
-            "accounting_event",
-            "accounting_event__outbox",
+            "loan_event",
+            "loan_event",
             "reversal",
         ).prefetch_related("items__collateral_item"),
         pk=release_pk,
@@ -1203,7 +1197,7 @@ def pawn_release_memo_pdf(request, release_pk):
     response = _configurable_document_response(
         request, payload=payload, loan=release.loan,
         source_type="PawnLoanRelease", source_id=release.pk,
-        source_fingerprint=release.accounting_event.payload_fingerprint,
+        source_fingerprint=release.loan_event.payload_fingerprint,
     )
     if response is not None:
         return response
@@ -1222,14 +1216,14 @@ def pawn_loan_detail(request, pk):
         "can_administer": _can_administer(request),
         "can_manage_storage": _can_manage_storage(request),
         "notice_rows": get_pawn_loan_notice_rows(loan),
-        "auctions": loan.auctions.select_related("accounting_event__outbox").order_by("-attempt_number"),
+        "auctions": loan.auctions.select_related("loan_event").order_by("-attempt_number"),
         "renewals": PawnLoanRenewal.objects.filter(
             Q(source_loan=loan) | Q(successor_loan=loan)
         ).select_related(
             "source_loan",
             "successor_loan",
-            "settlement_event__outbox",
-            "opening_event__outbox",
+            "settlement_event",
+            "opening_event",
         ),
     }
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value}:
@@ -1253,10 +1247,6 @@ def pawn_loan_detail(request, pk):
             context["risk_assessment"] = get_pawn_loan_risk_assessment(loan.pk, as_of_date=context["today"])
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["risk_error"] = str(exc)
-        try:
-            context["receivable_reconciliation"] = reconcile_pawn_loan_receivable(loan.pk, as_of_date=context["today"])
-        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
-            context["reconciliation_error"] = str(exc)
     if loan.state == PawnLoanState.ACTIVE.value:
         try:
             context["accrual_previews"] = preview_pawn_loan_accruals(
@@ -1266,7 +1256,7 @@ def pawn_loan_detail(request, pk):
             )
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["accrual_error"] = str(exc)
-    context["accounting_rows"] = _accounting_rows(
+    context["event_rows"] = _event_rows(
         loan,
         can_administer=context["can_administer"],
     )
@@ -1571,7 +1561,7 @@ def pawn_loan_auction_recovery_pdf(request, auction_pk):
         response = _configurable_document_response(
             request, payload=payload, loan=auction.loan,
             source_type="PawnLoanAuction", source_id=auction.pk,
-            source_fingerprint=auction.accounting_event.payload_fingerprint,
+            source_fingerprint=auction.loan_event.payload_fingerprint,
         )
         if response is not None: return response
         result = PawnLoanDocumentService.render_auction_recovery_memo(auction)
@@ -1612,24 +1602,6 @@ def pawn_loan_transfer_setup(request, pk):
             messages.success(request, "Draft moved to active license setup and requires approval again.")
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return render(request, "loans/pawn/transition_form.html", {"loan": loan, "form": form, "action_label": "Transfer setup"})
-
-
-@loans_setup_required
-@require_POST
-def pawn_outbox_retry(request, pk):
-    outbox = get_object_or_404(
-        PawnLoanAccountingOutbox.objects.select_related("event__loan"),
-        pk=pk,
-        event__loan__workspace=request.loans_workspace,
-    )
-    try:
-        retry_failed_outbox_event(outbox.pk)
-        messages.success(request, f"Accounting outbox event #{outbox.pk} queued for retry.")
-    except LoanAccountingOutboxError as exc:
-        messages.error(request, str(exc))
-    if request.POST.get("next") == "operations":
-        return redirect("loans:pawn_operations_console")
-    return redirect("loans:pawn_loan_detail", pk=outbox.event.loan_id)
 
 
 @require_POST
@@ -1727,7 +1699,6 @@ from apps.tenant_apps.loans.web.pawn_draft_actions import (
     pawn_loan_update,
 )
 from apps.tenant_apps.loans.web.pawn_financial_actions import (
-    pawn_borrower_account_setup,
     pawn_loan_accrue,
     pawn_loan_capitalize,
     pawn_loan_disburse,
@@ -2153,9 +2124,9 @@ def _pawn_loan_for_workspace(request, pk):
             "collateral_items__storage_movements__moved_by",
             "interest_accruals__lines__collateral_item",
             "change_log__actor",
-            "accounting_events__outbox",
-            "accounting_events__reversed_by_event",
-            "accounting_events__repayment_allocation_lines__collateral_item",
+            "loan_events",
+            "loan_events__reversed_by_event",
+            "loan_events__repayment_allocation_lines__collateral_item",
             "releases__items__collateral_item",
             "approval_snapshots",
         ),
@@ -2171,7 +2142,7 @@ def _pawn_auction_for_workspace(request, pk):
             "loan__workspace",
             "loan__license",
             "loan__borrower",
-            "accounting_event__outbox",
+            "loan_event",
         ).prefetch_related("items__collateral_item"),
         pk=pk,
         workspace=request.loans_workspace,
@@ -2186,8 +2157,8 @@ def _pawn_renewal_for_workspace(request, pk):
             "source_loan__license",
             "source_loan__borrower",
             "successor_loan",
-            "settlement_event__outbox",
-            "opening_event__outbox",
+            "settlement_event",
+            "opening_event",
         ),
         pk=pk,
         workspace=request.loans_workspace,
@@ -2206,16 +2177,9 @@ def _primary_action(loan, context):
         return {
             "label": "Disburse loan",
             "url": reverse("loans:pawn_loan_disburse", args=[loan.pk]),
-            "message": "Record disbursal to activate the loan and queue DEA posting.",
+            "message": "Record disbursal to activate the loan.",
         }
     if loan.state == PawnLoanState.ACTIVE.value:
-        balance = context.get("balance")
-        if balance and not balance.posting_ready:
-            return {
-                "label": "Resolve accounting delivery",
-                "url": "#accounting-delivery",
-                "message": "A pending or failed accounting event blocks dependent operations.",
-            }
         return {
             "label": "Record repayment",
             "url": reverse("loans:pawn_loan_repay", args=[loan.pk]),
@@ -2223,8 +2187,8 @@ def _primary_action(loan, context):
         }
     if loan.state == PawnLoanState.CLOSED.value:
         return {
-            "label": "Review accounting history",
-            "url": "#accounting-delivery",
+            "label": "Review event history",
+            "url": "#business-events",
             "message": "This loan is closed. Administrators can reverse eligible events in order.",
         }
     return None
@@ -2247,10 +2211,10 @@ def _can_manage_storage(request):
     )
 
 
-def _accounting_rows(loan, *, can_administer):
+def _event_rows(loan, *, can_administer):
     events = tuple(
-        loan.accounting_events.select_related(
-            "outbox", "reversed_by_event", "loan__workspace"
+        loan.loan_events.select_related(
+            "reversed_by_event", "loan__workspace"
         ).order_by("-effective_date", "-pk")
     )
     latest_event_id = next(
@@ -2264,10 +2228,9 @@ def _accounting_rows(loan, *, can_administer):
     )
     rows = []
     for event in events:
-        outbox = event.outbox
         try:
             reversed_event = event.reversed_by_event
-        except PawnLoanAccountingEvent.DoesNotExist:
+        except PawnLoanEvent.DoesNotExist:
             reversed_event = None
         readiness = assess_pawn_loan_event_reversal(
             event, latest_event_id=latest_event_id
@@ -2275,12 +2238,9 @@ def _accounting_rows(loan, *, can_administer):
         rows.append(
             {
                 "event": event,
-                "outbox": outbox,
-                "can_retry": can_administer and outbox.status == LoanOutboxStatus.FAILED.value,
                 "can_reverse": can_administer and readiness.can_reverse,
                 "reversal_blocker": readiness.blocker,
                 "reversed_event": reversed_event,
-                "accounting_mode": readiness.accounting_mode,
             }
         )
     return rows

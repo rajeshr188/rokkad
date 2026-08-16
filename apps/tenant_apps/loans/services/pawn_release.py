@@ -7,7 +7,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     CollateralCustodyState,
     PawnLoanEventKind,
     PawnLoanState,
@@ -19,8 +18,7 @@ from apps.tenant_apps.loans.models import (
     PawnCollateralCustodyEvent,
     PawnCollateralItem,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanInterestAccrual,
     PawnLoanPrincipalClosingLine,
     PawnLoanRelease,
@@ -31,12 +29,8 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
     get_pawn_loan_release_readiness,
 )
-from apps.tenant_apps.loans.services.accounting_outbox import (
-    DeliveryHandler,
-    record_loan_accounting_event,
-)
-from apps.tenant_apps.loans.services.accounting_readiness import (
-    require_pawn_loan_accounting_readiness,
+from apps.tenant_apps.loans.services.event_recording import (
+    record_loan_event,
 )
 from apps.tenant_apps.loans.services.number_allocation import allocate_release_number
 from apps.tenant_apps.loans.services.pawn_disbursal import (
@@ -69,8 +63,7 @@ class PawnReleaseError(ValueError):
 class PawnFullReleaseResult:
     loan: PawnLoan
     release: PawnLoanRelease
-    accounting_event: PawnLoanAccountingEvent
-    outbox: PawnLoanAccountingOutbox
+    loan_event: PawnLoanEvent
     already_released: bool = False
 
 
@@ -138,7 +131,6 @@ def release_pawn_loan_in_full(
     settlement_amount,
     request_key: str,
     actor=None,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> PawnFullReleaseResult:
     """Settle an active loan and return every item in one durable transaction."""
     loan = _locked_loan(loan_id)
@@ -153,8 +145,7 @@ def release_pawn_loan_in_full(
         return PawnFullReleaseResult(
             loan,
             existing,
-            existing.accounting_event,
-            existing.accounting_event.outbox,
+            existing.loan_event,
             True,
         )
     if loan.state != PawnLoanState.ACTIVE.value:
@@ -205,7 +196,6 @@ def release_pawn_loan_in_full(
             principal_amount,
             balance.capitalized_interest_principal_outstanding,
         )
-        recognition = loan.policy_snapshot.accounting_recognition
         try:
             tranche_balances = get_pawn_principal_tranche_balances(loan)
         except PawnTrancheBalanceError as exc:
@@ -217,20 +207,6 @@ def release_pawn_loan_in_full(
             raise PawnReleaseError(
                 "Full-release item principal does not reconcile to original principal."
             )
-        require_pawn_loan_accounting_readiness(
-            loan,
-            effective_date=effective_date,
-            requires_fee_income=fee_amount > 0,
-            requires_interest_receivable=(
-                recognition == AccountingRecognition.ACCRUAL.value
-                and interest_amount > 0
-            ),
-            requires_unearned_interest=(
-                recognition == AccountingRecognition.ACCRUAL.value
-                and partial_accrual is not None
-                and partial_accrual.advance_interest_applied > 0
-            ),
-        )
     except PawnReleaseError:
         raise
     except Exception as exc:
@@ -243,7 +219,6 @@ def release_pawn_loan_in_full(
             loan,
             preview=partial_accrual,
             actor=actor,
-            delivery_handler=delivery_handler,
         )
     payload = release_receipt_payload(
         loan,
@@ -258,15 +233,13 @@ def release_pawn_loan_in_full(
         "request_key": request_key,
         "release_number": allocation.value,
         "is_full_release": True,
-        "accounting_recognition": recognition,
     }
-    event, outbox = record_loan_accounting_event(
+    event, _ = record_loan_event(
         loan.pk,
         event_kind=TransactionKind.RELEASE_RECEIPT,
         effective_date=effective_date,
         payload=payload,
         actor=actor,
-        delivery_handler=delivery_handler,
     )
     allocate_event_to_obligations(
         source_event=event,
@@ -288,7 +261,7 @@ def release_pawn_loan_in_full(
         start=1,
     ):
         PawnLoanPrincipalClosingLine.objects.create(
-            accounting_event=event,
+            loan_event=event,
             collateral_item_id=row.collateral_item_id,
             allocation_order=order,
             monthly_interest_rate=row.monthly_interest_rate,
@@ -310,7 +283,7 @@ def release_pawn_loan_in_full(
             readiness,
             catch_up_interest=catch_up_interest,
         ),
-        accounting_event=event,
+        loan_event=event,
         catch_up_accrual=catch_up_row,
         created_by=actor,
     )
@@ -364,7 +337,7 @@ def release_pawn_loan_in_full(
         actor=actor,
         metadata={"release_id": release.pk},
     )
-    return PawnFullReleaseResult(loan, release, event, outbox)
+    return PawnFullReleaseResult(loan, release, event)
 
 
 def release_pawn_loan_partially(
@@ -374,7 +347,6 @@ def release_pawn_loan_partially(
     settlement_amount,
     request_key: str,
     actor=None,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> PawnFullReleaseResult:
     """Fail closed: collateral return requires full release or renewal."""
     raise PawnReleaseError(
@@ -482,11 +454,10 @@ def _request_key(value):
     return value
 
 
-def _record_release_accrual(loan, *, preview, actor, delivery_handler):
+def _record_release_accrual(loan, *, preview, actor):
     """Persist the release-day partial period before its settlement event."""
     policy = loan.policy_snapshot
     event = None
-    outbox = None
     if should_record_pawn_accrual_event(preview, policy):
         payload = accrual_payload(
             loan,
@@ -496,13 +467,12 @@ def _record_release_accrual(loan, *, preview, actor, delivery_handler):
         ).to_dict()
         payload["accrual"] = build_pawn_accrual_detail(preview, policy)
         payload["accrual"]["release_catch_up"] = True
-        event, outbox = record_loan_accounting_event(
+        event, _ = record_loan_event(
             loan.pk,
             event_kind=TransactionKind.INTEREST_ACCRUAL,
             effective_date=preview.period_end,
             payload=payload,
             actor=actor,
-            delivery_handler=delivery_handler,
         )
     accrual = PawnLoanInterestAccrual.objects.create(
         loan=loan,
@@ -513,7 +483,7 @@ def _record_release_accrual(loan, *, preview, actor, delivery_handler):
         calculation_base=preview.calculation_base,
         unrounded_interest=preview.unrounded_interest,
         recognized_interest=preview.recognized_interest,
-        accounting_event=event,
+        loan_event=event,
         finalized_by=actor,
     )
     persist_pawn_accrual_lines(accrual, preview)
@@ -528,8 +498,7 @@ def _record_release_accrual(loan, *, preview, actor, delivery_handler):
             "period_fraction": str(preview.period_fraction),
             "recognized_interest": str(preview.recognized_interest),
             "release_catch_up": True,
-            "accounting_event_id": event.pk if event else None,
-            "outbox_id": outbox.pk if outbox else None,
+            "loan_event_id": event.pk if event else None,
         },
     )
     return accrual

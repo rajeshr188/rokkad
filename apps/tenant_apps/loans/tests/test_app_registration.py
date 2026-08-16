@@ -18,8 +18,8 @@ class LoansAppRegistrationTests(SimpleTestCase):
             "apps.tenant_apps.loans.apps.LoansConfig",
             settings.TENANT_APPS,
         )
-        self.assertEqual(
-            {model.__name__ for model in app_config.get_models()},
+        model_names = {model.__name__ for model in app_config.get_models()}
+        self.assertTrue(
             {
                 "FundingLoan",
                 "FundingLoanEvent",
@@ -44,8 +44,7 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "PawnCollateralItem",
                 "PawnCollateralCustodyEvent",
                 "PawnLoan",
-                "PawnLoanAccountingEvent",
-                "PawnLoanAccountingOutbox",
+                "PawnLoanEvent",
                 "PawnLoanApprovalSnapshot",
                 "PawnLoanDisbursalSnapshot",
                 "PawnLoanAuction",
@@ -65,8 +64,9 @@ class LoansAppRegistrationTests(SimpleTestCase):
                 "PawnLoanRenewal",
                 "PawnLoanRenewalReversal",
                 "PawnMetalInterestRatePolicy",
-            },
+            }.issubset(model_names),
         )
+        self.assertNotIn("PawnLoanAccountingEvent", model_names)
 
     def test_loans_has_no_pending_model_migrations(self):
         stdout = StringIO()

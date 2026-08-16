@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.tenant_apps.dea.models import PartyAccountMapping, PartyAccountMappingStatus
 from apps.tenant_apps.party.models import (
     Party,
     PartyAddress,
@@ -29,7 +28,6 @@ class PartyMergeResult:
     identifiers_moved: int = 0
     documents_moved: int = 0
     relationships_moved: int = 0
-    account_mappings_moved: int = 0
     skipped: list[str] = field(default_factory=list)
 
 
@@ -56,7 +54,6 @@ def merge_parties(*, target, source, actor=None):
     identifiers_moved = _move_identifiers(target, source)
     documents_moved = source.documents.update(party=target)
     relationships_moved, relationship_skips = _move_relationships(target, source)
-    account_mappings_moved = _move_account_mappings(target, source)
     _archive_source_party(target, source, actor=actor)
 
     return PartyMergeResult(
@@ -68,7 +65,6 @@ def merge_parties(*, target, source, actor=None):
         identifiers_moved=identifiers_moved,
         documents_moved=documents_moved,
         relationships_moved=relationships_moved,
-        account_mappings_moved=account_mappings_moved,
         skipped=role_skips + relationship_skips,
     )
 
@@ -84,22 +80,6 @@ def _merge_conflicts(target, source):
         if target_identifier and target_identifier.value != identifier.value:
             conflicts.append(
                 f"Identifier conflict for {identifier.get_identifier_type_display()}."
-            )
-
-    target_mapping_keys = set(
-        PartyAccountMapping.objects.filter(
-            party=target,
-            status=PartyAccountMappingStatus.ACTIVE,
-        ).values_list("role_key", "purpose", "event_type")
-    )
-    for role_key, purpose, event_type in PartyAccountMapping.objects.filter(
-        party=source,
-        status=PartyAccountMappingStatus.ACTIVE,
-    ).values_list("role_key", "purpose", "event_type"):
-        if (role_key, purpose, event_type) in target_mapping_keys:
-            conflicts.append(
-                f"DEA account mapping conflict for {role_key}/{purpose}"
-                f"{'/' + event_type if event_type else ''}."
             )
 
     return conflicts
@@ -246,10 +226,6 @@ def _move_relationships(target, source):
         relationship.save(update_fields=["to_party", "updated_at"])
         moved += 1
     return moved, skipped
-
-
-def _move_account_mappings(target, source):
-    return PartyAccountMapping.objects.filter(party=source).update(party=target)
 
 
 def _archive_source_party(target, source, actor=None):

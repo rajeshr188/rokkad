@@ -37,8 +37,8 @@ def get_pawn_principal_tranche_balances(
     else:
         opening_lines = tuple(
             PawnLoanPrincipalOpeningLine.objects.filter(
-                accounting_event__loan=loan,
-                accounting_event__reversed_by_event__isnull=True,
+                loan_event__loan=loan,
+                loan_event__reversed_by_event__isnull=True,
             ).order_by("allocation_order")
         )
         if not opening_lines:
@@ -84,21 +84,21 @@ def get_pawn_principal_tranche_balances(
 
     lines = (
         PawnLoanRepaymentAllocationLine.objects.filter(
-            accounting_event__loan=loan,
-            accounting_event__reversed_by_event__isnull=True,
+            loan_event__loan=loan,
+            loan_event__reversed_by_event__isnull=True,
         )
-        .select_related("accounting_event")
+        .select_related("loan_event")
         .order_by(
-            "accounting_event__effective_date",
-            "accounting_event_id",
+            "loan_event__effective_date",
+            "loan_event_id",
             "allocation_order",
         )
     )
     if as_of_date is not None:
-        lines = lines.filter(accounting_event__effective_date__lte=as_of_date)
-    for _event_id, event_lines_iter in groupby(lines, key=lambda line: line.accounting_event_id):
+        lines = lines.filter(loan_event__effective_date__lte=as_of_date)
+    for _event_id, event_lines_iter in groupby(lines, key=lambda line: line.loan_event_id):
         event_lines = tuple(event_lines_iter)
-        event = event_lines[0].accounting_event
+        event = event_lines[0].loan_event
         values = event.payload.get("values") or {}
         expected_principal = Decimal(
             str(values.get("original_principal", values.get("principal", "0")))

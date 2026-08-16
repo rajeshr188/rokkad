@@ -8,7 +8,6 @@ from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     CollateralMetal,
     FeeCalculationType,
     InterestMethod,
@@ -86,7 +85,6 @@ class PawnEconomicPolicyServiceTests(TenantTestCase):
             partial_month_cutoff_days=15,
             partial_month_lower_fraction=Decimal("0.5"),
             capitalization_interval_periods=12,
-            accounting_recognition=AccountingRecognition.ACCRUAL,
             currency_quantum=Decimal("0.01"),
             effective_from=date(2026, 6, 1),
             actor=self.user,
@@ -106,10 +104,6 @@ class PawnEconomicPolicyServiceTests(TenantTestCase):
         self.assertEqual(resolved, license_policy)
         self.assertEqual(resolved.interest_method, InterestMethod.COMPOUND.value)
         self.assertEqual(resolved.partial_month_method, PartialMonthMethod.SLAB.value)
-        self.assertEqual(
-            resolved.accounting_recognition,
-            AccountingRecognition.ACCRUAL.value,
-        )
         self.assertEqual(fallback, workspace_policy)
 
     def test_complete_configuration_creates_policy_and_both_rates(self):

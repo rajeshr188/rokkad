@@ -164,14 +164,6 @@ def calculate_pawn_loan_release_readiness(
                 unknown_id,
             )
         )
-    if not balance.posting_ready:
-        blockers.append(
-            ReleaseReadinessBlocker(
-                "ACCOUNTING_NOT_READY",
-                "Resolve every pending or failed accounting event before release.",
-            )
-        )
-
     quantum = Decimal(str(policy_snapshot.currency_quantum))
     method = policy_snapshot.valuation_method
     rate_cache = {}

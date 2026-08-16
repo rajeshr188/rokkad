@@ -1,4 +1,4 @@
-"""Canonical PawnLoan balance, settlement, and posting-readiness selectors."""
+"""Canonical PawnLoan balance and settlement selectors."""
 
 import calendar
 from dataclasses import dataclass
@@ -9,11 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
-    LoanOutboxStatus,
     TransactionKind,
-)
-from apps.tenant_apps.loans.integrations.accounting_policy import (
-    is_dea_integration_enabled,
 )
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 
@@ -24,14 +20,6 @@ DEFAULT_QUANTUM = Decimal("0.01")
 
 class PawnLoanBalanceSelectorError(ValueError):
     pass
-
-
-@dataclass(frozen=True)
-class PostingBlocker:
-    event_id: int
-    event_kind: str
-    status: str
-    message: str
 
 
 @dataclass(frozen=True)
@@ -58,14 +46,11 @@ class PawnLoanBalance:
     fees_outstanding: Decimal
     total_due: Decimal
     interest_method: str | None
-    accounting_recognition: str | None
     is_overdue: bool
     financially_settled: bool
     collateral_partially_returned: bool
     collateral_return_complete: bool
     closure_ready: bool
-    posting_ready: bool
-    posting_blockers: tuple[PostingBlocker, ...]
 
 
 def get_pawn_loan_balance(loan_or_id, *, as_of_date: date) -> PawnLoanBalance:
@@ -77,7 +62,7 @@ def get_pawn_loan_balance(loan_or_id, *, as_of_date: date) -> PawnLoanBalance:
     try:
         loan = (
             PawnLoan.objects.select_related("policy_snapshot", "workspace")
-            .prefetch_related("collateral_items", "accounting_events__outbox")
+            .prefetch_related("collateral_items", "loan_events")
             .get(pk=loan_id, workspace_id=workspace_id)
         )
     except PawnLoan.DoesNotExist as exc:
@@ -86,11 +71,11 @@ def get_pawn_loan_balance(loan_or_id, *, as_of_date: date) -> PawnLoanBalance:
         ) from exc
     return calculate_pawn_loan_balance(
         loan,
-        events=tuple(loan.accounting_events.all()),
+        events=tuple(loan.loan_events.all()),
         collateral_items=tuple(loan.collateral_items.all()),
         policy_snapshot=_optional_policy_snapshot(loan),
         as_of_date=as_of_date,
-        pending_delivery_blocks=is_dea_integration_enabled(loan.workspace),
+        pending_delivery_blocks=False,
     )
 
 
@@ -116,17 +101,10 @@ def calculate_pawn_loan_balance(
         "fees_assessed": ZERO,
         "fees_paid": ZERO,
     }
-    posting_blockers = []
     for event in sorted(events, key=lambda item: (item.effective_date, item.pk or 0)):
         if event.effective_date > as_of_date:
             continue
         _apply_event(totals, event)
-        blocker = _posting_blocker(event)
-        if blocker and not (
-            blocker.status == LoanOutboxStatus.PENDING.value
-            and not pending_delivery_blocks
-        ):
-            posting_blockers.append(blocker)
 
     quantum = Decimal(str(getattr(policy_snapshot, "currency_quantum", DEFAULT_QUANTUM)))
     _validate_nonnegative_totals(totals)
@@ -208,14 +186,11 @@ def calculate_pawn_loan_balance(
         fees_outstanding=_money(fees_outstanding, quantum),
         total_due=_money(total_due, quantum),
         interest_method=getattr(policy_snapshot, "interest_method", None),
-        accounting_recognition=getattr(policy_snapshot, "accounting_recognition", None),
         is_overdue=as_of_date > due_date and total_due > ZERO,
         financially_settled=financially_settled,
         collateral_partially_returned=collateral_partially_returned,
         collateral_return_complete=collateral_return_complete,
         closure_ready=financially_settled and collateral_return_complete,
-        posting_ready=not posting_blockers,
-        posting_blockers=tuple(posting_blockers),
     )
 
 
@@ -284,26 +259,6 @@ def _apply_event(totals, event):
     elif kind == TransactionKind.INTEREST_CAPITALIZATION:
         totals["principal_capitalized"] += interest
         totals["interest_capitalized"] += interest
-
-
-def _posting_blocker(event):
-    try:
-        outbox = event.outbox
-    except (ObjectDoesNotExist, AttributeError):
-        return PostingBlocker(
-            event.pk,
-            event.event_kind,
-            "MISSING",
-            "Accounting outbox record is missing.",
-        )
-    if outbox.status == LoanOutboxStatus.POSTED.value:
-        return None
-    return PostingBlocker(
-        event.pk,
-        event.event_kind,
-        outbox.status,
-        outbox.last_error or f"Accounting delivery is {outbox.status.lower()}.",
-    )
 
 
 def _amount(values, key):

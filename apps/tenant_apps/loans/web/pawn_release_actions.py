@@ -19,7 +19,7 @@ from apps.tenant_apps.loans.services import (
 def _pawn_loan_for_workspace(request, pk):
     return get_object_or_404(
         PawnLoan.objects.select_related("borrower", "license", "series").prefetch_related(
-            "collateral_items", "accounting_events__outbox"
+            "collateral_items", "loan_events"
         ),
         pk=pk,
         workspace=request.loans_workspace,
@@ -62,8 +62,7 @@ def pawn_loan_release_full(request, pk):
                 f"Release {result.release.release_number} completed: "
                 f"{result.release.settlement_amount} collected, "
                 f"{result.release.items.count()} collateral item(s) returned, "
-                f"loan closed. Accounting delivery: "
-                f"{result.outbox.get_status_display()}.",
+                "loan closed.",
             )
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return render(

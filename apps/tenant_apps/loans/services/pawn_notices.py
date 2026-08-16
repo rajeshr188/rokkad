@@ -216,7 +216,7 @@ def _locked_loan(loan_id):
         return (
             PawnLoan.objects.select_for_update()
             .select_related("workspace", "borrower")
-            .prefetch_related("collateral_items", "accounting_events__outbox", "releases")
+            .prefetch_related("collateral_items", "loan_events", "releases")
             .get(pk=loan_id, workspace_id=workspace_id)
         )
     except PawnLoan.DoesNotExist as exc:

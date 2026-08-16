@@ -10,7 +10,6 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     InterestMethod,
     PartialMonthMethod,
     PawnLoanEventKind,
@@ -25,19 +24,15 @@ from apps.tenant_apps.loans.integrations import accrual_payload, capitalization_
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     PawnLoan,
-    PawnLoanAccountingEvent,
+    PawnLoanEvent,
     PawnLoanDisbursalSnapshot,
     PawnLoanInterestAccrual,
     PawnLoanInterestAccrualLine,
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
-from apps.tenant_apps.loans.services.accounting_outbox import (
-    DeliveryHandler,
-    record_loan_accounting_event,
-)
-from apps.tenant_apps.loans.services.accounting_readiness import (
-    require_pawn_loan_accounting_readiness,
+from apps.tenant_apps.loans.services.event_recording import (
+    record_loan_event,
 )
 from apps.tenant_apps.loans.services.pawn_disbursal import (
     assert_pawn_loan_financial_actions_allowed,
@@ -82,15 +77,13 @@ class AccrualLinePreview:
 @dataclass(frozen=True)
 class AccrualFinalizationResult:
     accrual: PawnLoanInterestAccrual
-    accounting_event: PawnLoanAccountingEvent | None
-    outbox: object | None
+    loan_event: PawnLoanEvent | None
     already_finalized: bool = False
 
 
 @dataclass(frozen=True)
 class CapitalizationResult:
-    accounting_event: PawnLoanAccountingEvent
-    outbox: object
+    loan_event: PawnLoanEvent
     amount: Decimal
     already_recorded: bool = False
 
@@ -246,7 +239,7 @@ def _itemized_accrual_lines(
     try:
         disbursal = loan.disbursal_snapshot
     except PawnLoanDisbursalSnapshot.DoesNotExist:
-        opening_event = loan.accounting_events.filter(
+        opening_event = loan.loan_events.filter(
             event_kind=TransactionKind.RENEWAL_OPENING.value,
             reversed_by_event__isnull=True,
         ).first()
@@ -303,7 +296,7 @@ def _itemized_accrual_lines(
         for row in (
             PawnLoanInterestAccrualLine.objects.filter(accrual__loan=loan)
             .exclude(
-                accrual__accounting_event__reversed_by_event__isnull=False
+                accrual__loan_event__reversed_by_event__isnull=False
             )
             .values("collateral_item_id")
             .annotate(total=Sum("advance_interest_applied"))
@@ -374,16 +367,14 @@ def finalize_pawn_loan_accrual(
     *,
     period_number: int,
     actor=None,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> AccrualFinalizationResult:
     loan = _locked_loan(loan_id)
     existing = loan.interest_accruals.filter(period_number=period_number).first()
     if existing:
-        event = existing.accounting_event
+        event = existing.loan_event
         return AccrualFinalizationResult(
             existing,
             event,
-            event.outbox if event else None,
             True,
         )
     if period_number < 1:
@@ -404,23 +395,12 @@ def finalize_pawn_loan_accrual(
                 "The requested period is not the next eligible completed period."
             )
         policy = loan.policy_snapshot
-        if (
-            preview.calculated_interest > 0
-            and policy.accounting_recognition == AccountingRecognition.ACCRUAL.value
-        ):
-            require_pawn_loan_accounting_readiness(
-                loan,
-                effective_date=preview.period_end,
-                requires_interest_receivable=preview.recognized_interest > 0,
-                requires_unearned_interest=preview.advance_interest_applied > 0,
-            )
     except PawnInterestError:
         raise
     except Exception as exc:
         raise PawnInterestError(str(exc)) from exc
 
     event = None
-    outbox = None
     if should_record_pawn_accrual_event(preview, loan.policy_snapshot):
         payload = accrual_payload(
             loan,
@@ -431,13 +411,12 @@ def finalize_pawn_loan_accrual(
         payload["accrual"] = build_pawn_accrual_detail(
             preview, loan.policy_snapshot
         )
-        event, outbox = record_loan_accounting_event(
+        event, _ = record_loan_event(
             loan.pk,
             event_kind=TransactionKind.INTEREST_ACCRUAL,
             effective_date=preview.period_end,
             payload=payload,
             actor=actor,
-            delivery_handler=delivery_handler,
         )
     accrual = PawnLoanInterestAccrual.objects.create(
         loan=loan,
@@ -448,7 +427,7 @@ def finalize_pawn_loan_accrual(
         calculation_base=preview.calculation_base,
         unrounded_interest=preview.unrounded_interest,
         recognized_interest=preview.recognized_interest,
-        accounting_event=event,
+        loan_event=event,
         finalized_by=actor,
     )
     persist_pawn_accrual_lines(accrual, preview)
@@ -470,11 +449,10 @@ def finalize_pawn_loan_accrual(
             "advance_interest_applied": _decimal_string(
                 preview.advance_interest_applied
             ),
-            "accounting_event_id": event.pk if event else None,
-            "outbox_id": outbox.pk if outbox else None,
+            "loan_event_id": event.pk if event else None,
         },
     )
-    return AccrualFinalizationResult(accrual, event, outbox)
+    return AccrualFinalizationResult(accrual, event)
 
 
 def persist_pawn_accrual_lines(accrual, preview):
@@ -494,10 +472,7 @@ def persist_pawn_accrual_lines(accrual, preview):
 
 
 def should_record_pawn_accrual_event(preview, policy):
-    return preview.recognized_interest > 0 or (
-        preview.advance_interest_applied > 0
-        and policy.accounting_recognition == AccountingRecognition.ACCRUAL.value
-    )
+    return preview.recognized_interest > 0
 
 
 @transaction.atomic
@@ -506,17 +481,15 @@ def capitalize_pawn_loan_interest(
     *,
     through_period_number: int,
     actor=None,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> CapitalizationResult:
     loan = _locked_loan(loan_id)
-    existing = loan.accounting_events.filter(
+    existing = loan.loan_events.filter(
         event_kind=TransactionKind.INTEREST_CAPITALIZATION.value,
         payload__capitalization__through_period_number=through_period_number,
     ).first()
     if existing:
         return CapitalizationResult(
             existing,
-            existing.outbox,
             Decimal(existing.payload["values"]["interest"]),
             True,
         )
@@ -532,12 +505,6 @@ def capitalize_pawn_loan_interest(
         amount = balance.interest_outstanding
         if amount <= 0:
             raise PawnInterestError("There is no unpaid interest to capitalize.")
-        if policy.accounting_recognition == AccountingRecognition.ACCRUAL.value:
-            require_pawn_loan_accounting_readiness(
-                loan,
-                effective_date=boundary.period_end,
-                requires_interest_receivable=True,
-            )
     except PawnLoanInterestAccrual.DoesNotExist as exc:
         raise PawnInterestError(
             "The capitalization boundary accrual has not been finalized."
@@ -555,15 +522,13 @@ def capitalize_pawn_loan_interest(
     payload["capitalization"] = {
         "through_period_number": through_period_number,
         "capitalization_interval_periods": policy.capitalization_interval_periods,
-        "accounting_recognition": policy.accounting_recognition,
     }
-    event, outbox = record_loan_accounting_event(
+    event, _ = record_loan_event(
         loan.pk,
         event_kind=TransactionKind.INTEREST_CAPITALIZATION,
         effective_date=boundary.period_end,
         payload=payload,
         actor=actor,
-        delivery_handler=delivery_handler,
     )
     LoanChangeLog.objects.create(
         loan=loan,
@@ -574,11 +539,10 @@ def capitalize_pawn_loan_interest(
         metadata={
             "through_period_number": through_period_number,
             "amount": _decimal_string(amount),
-            "accounting_event_id": event.pk,
-            "outbox_id": outbox.pk,
+            "loan_event_id": event.pk,
         },
     )
-    return CapitalizationResult(event, outbox, amount)
+    return CapitalizationResult(event, amount)
 
 
 def _tenant_loan(loan_id):
@@ -619,7 +583,7 @@ def _partial_fraction(policy, period_start, period_end):
 def _capitalized_boundaries(loan):
     return {
         int(event.payload["capitalization"]["through_period_number"])
-        for event in loan.accounting_events.filter(
+        for event in loan.loan_events.filter(
             event_kind=TransactionKind.INTEREST_CAPITALIZATION.value
         )
         if event.payload.get("capitalization")
@@ -663,7 +627,6 @@ def build_pawn_accrual_detail(preview, policy):
             for line in preview.lines
         ],
         "is_partial": preview.is_partial,
-        "accounting_recognition": policy.accounting_recognition,
     }
 
 

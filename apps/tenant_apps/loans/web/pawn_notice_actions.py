@@ -22,7 +22,7 @@ from apps.tenant_apps.loans.services import (
 def _pawn_loan_for_workspace(request, pk):
     return get_object_or_404(
         PawnLoan.objects.select_related("borrower", "license", "series").prefetch_related(
-            "collateral_items", "accounting_events__outbox"
+            "collateral_items", "loan_events"
         ),
         pk=pk,
         workspace=request.loans_workspace,

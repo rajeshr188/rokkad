@@ -1,4 +1,4 @@
-"""Canonical PawnLoan operational reports and cross-boundary reconciliation."""
+"""Canonical PawnLoan operational reports and integrity findings."""
 
 from dataclasses import dataclass
 from datetime import date
@@ -6,10 +6,8 @@ from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from apps.tenant_apps.dea import facade as dea_facade
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
-    LoanOutboxStatus,
     PawnLoanState,
     TransactionKind,
 )
@@ -39,7 +37,6 @@ class PawnLoanReconciliationIssue:
     message: str
     loan: object
     event: object | None = None
-    outbox: object | None = None
     collateral_item: object | None = None
     action: str = "Review the loan and its source records."
 
@@ -54,7 +51,6 @@ class PawnLoanEventReportRow:
     fees: Decimal
     correction_status: str
     correction_event_id: int | None
-    delivery_status: str
 
 
 @dataclass(frozen=True)
@@ -66,7 +62,6 @@ class PawnLoanReportBundle:
     releases: tuple[object, ...]
     renewals: tuple[object, ...]
     custody_items: tuple[object, ...]
-    posting_events: tuple[object, ...]
     issues: tuple[PawnLoanReconciliationIssue, ...]
     license_expiry: tuple[object, ...] = ()
 
@@ -119,7 +114,7 @@ class PawnLoanReportBundle:
     def daily_activity(self):
         rows = []
         for row in self.portfolio:
-            for event in row.loan.accounting_events.all():
+            for event in row.loan.loan_events.all():
                 if event.effective_date != self.as_of_date:
                     continue
                 original_kind = (event.payload.get("reversal") or {}).get(
@@ -157,7 +152,7 @@ class PawnLoanReportBundle:
         return tuple(
             event
             for row in self.portfolio
-            for event in row.loan.accounting_events.all()
+            for event in row.loan.loan_events.all()
             if event.event_kind == event_kind
         )
 
@@ -203,10 +198,9 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
             "collateral_items__custody_history",
             "collateral_items__current_storage_location",
             "collateral_items__release_items__release__reversal",
-            "accounting_events__outbox",
-            "accounting_events__reversed_by_event",
-            "accounting_events__principal_closing_lines__collateral_item",
-            "accounting_events__principal_opening_lines__collateral_item",
+            "loan_events__reversed_by_event",
+            "loan_events__principal_closing_lines__collateral_item",
+            "loan_events__principal_opening_lines__collateral_item",
             "interest_accruals",
             "releases__items",
             "renewal_as_source__successor_loan",
@@ -228,22 +222,20 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
     return build_pawn_loan_reports(
         loans,
         as_of_date=as_of_date,
-        dea_inspector=dea_facade.inspect_pawn_loan_accounting_reference,
         license_expiry=license_rows,
     )
 
 
-def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector, license_expiry=()):
+def build_pawn_loan_reports(loans, *, as_of_date, license_expiry=()):
     portfolio = []
     accruals = []
     repayments = []
     releases = []
     renewals = []
     custody_items = []
-    posting_events = []
     issues = []
     for loan in loans:
-        events = tuple(loan.accounting_events.all())
+        events = tuple(loan.loan_events.all())
         collateral = tuple(loan.collateral_items.all())
         balance = None
         balance_error = ""
@@ -275,12 +267,7 @@ def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector, license_expiry=
         if renewal is not None:
             renewals.append(renewal)
         custody_items.extend(collateral)
-        for event in events:
-            try:
-                posting_events.append(event.outbox)
-            except (AttributeError, ObjectDoesNotExist):
-                pass
-        issues.extend(_loan_issues(loan, events, collateral, balance, dea_inspector))
+        issues.extend(_loan_issues(loan, events, collateral, balance))
     return PawnLoanReportBundle(
         as_of_date=as_of_date,
         portfolio=tuple(portfolio),
@@ -289,7 +276,6 @@ def build_pawn_loan_reports(loans, *, as_of_date, dea_inspector, license_expiry=
         releases=tuple(releases),
         renewals=tuple(renewals),
         custody_items=tuple(custody_items),
-        posting_events=tuple(posting_events),
         issues=tuple(issues),
         license_expiry=tuple(license_expiry),
     )
@@ -307,10 +293,9 @@ def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartySta
             "collateral_items__custody_history",
             "collateral_items__current_storage_location",
             "collateral_items__release_items__release__reversal",
-            "accounting_events__outbox",
-            "accounting_events__reversed_by_event",
-            "accounting_events__principal_closing_lines__collateral_item",
-            "accounting_events__principal_opening_lines__collateral_item",
+            "loan_events__reversed_by_event",
+            "loan_events__principal_closing_lines__collateral_item",
+            "loan_events__principal_opening_lines__collateral_item",
             "interest_accruals", "releases__items", "renewal_as_source__successor_loan",
         )
         .order_by("loan_number")
@@ -318,13 +303,12 @@ def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartySta
     report = build_pawn_loan_reports(
         loans,
         as_of_date=as_of_date,
-        dea_inspector=dea_facade.inspect_pawn_loan_accounting_reference,
     )
     transactions = tuple(sorted(
         (
             event
             for row in report.portfolio
-            for event in row.loan.accounting_events.all()
+            for event in row.loan.loan_events.all()
             if event.effective_date <= as_of_date
         ),
         key=lambda event: (event.effective_date, event.pk),
@@ -332,7 +316,7 @@ def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartySta
     return PawnPartyStatement(party, as_of_date, report.portfolio, transactions)
 
 
-def _loan_issues(loan, events, collateral, balance, dea_inspector):
+def _loan_issues(loan, events, collateral, balance):
     issues = []
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value} and not any(
         event.event_kind
@@ -356,7 +340,7 @@ def _loan_issues(loan, events, collateral, balance, dea_inspector):
         if intent in seen_intents:
             issues.append(
                 _issue(
-                    "DUPLICATE_ACCOUNTING_INTENT",
+                    "DUPLICATE_EVENT_INTENT",
                     loan,
                     "More than one source event has the same kind and economic payload.",
                     event=event,
@@ -364,7 +348,6 @@ def _loan_issues(loan, events, collateral, balance, dea_inspector):
                 )
             )
         seen_intents.add(intent)
-        issues.extend(_event_issues(loan, event, dea_inspector))
     issues.extend(_custody_issues(loan, collateral))
     issues.extend(_principal_evidence_issues(loan, events, collateral))
     renewal_completed = bool(collateral) and all(
@@ -388,120 +371,9 @@ def _loan_issues(loan, events, collateral, balance, dea_inspector):
                 "CLOSED_LOAN_NOT_RECONCILED",
                 loan,
                 "Closed loan does not have zero balance and completed release or renewal custody.",
-                action="Review releases, custody history, and accounting reversals.",
+                action="Review releases, custody history, and event reversals.",
             )
         )
-    return issues
-
-
-def _event_issues(loan, event, dea_inspector):
-    try:
-        outbox = event.outbox
-    except (AttributeError, ObjectDoesNotExist):
-        return [
-            _issue(
-                "MISSING_ACCOUNTING_OUTBOX",
-                loan,
-                "Accounting source event has no durable delivery record.",
-                event=event,
-                action="Escalate for data repair before further servicing.",
-            )
-        ]
-    if (
-        event.payload_fingerprint != outbox.payload_fingerprint
-        or event.idempotency_key != outbox.idempotency_key
-        or event.payload != outbox.payload
-    ):
-        return [
-            _issue(
-                "OUTBOX_PAYLOAD_MISMATCH",
-                loan,
-                "Accounting source intent and durable outbox payload differ.",
-                event=event,
-                outbox=outbox,
-                action="Escalate for immutable source/outbox reconciliation.",
-            )
-        ]
-    if outbox.status == LoanOutboxStatus.FAILED.value:
-        return [
-            _issue(
-                "FAILED_ACCOUNTING_DELIVERY",
-                loan,
-                outbox.last_error or "Accounting delivery failed.",
-                event=event,
-                outbox=outbox,
-                action="Correct setup if needed, then retry this outbox event.",
-            )
-        ]
-    if outbox.status in {
-        LoanOutboxStatus.PENDING.value,
-        LoanOutboxStatus.PROCESSING.value,
-    }:
-        return [
-            _issue(
-                "PENDING_ACCOUNTING_DELIVERY",
-                loan,
-                "Accounting delivery has not completed.",
-                severity="WARNING",
-                event=event,
-                outbox=outbox,
-                action="Wait for delivery or inspect operations diagnostics if stale.",
-            )
-        ]
-    if not _requires_dea_reference(event):
-        if outbox.dea_voucher_id is not None or outbox.dea_journal_entry_id is not None:
-            return [
-                _issue(
-                    "UNEXPECTED_DEA_REFERENCE",
-                    loan,
-                    "Operational-only event unexpectedly references DEA records.",
-                    event=event,
-                    outbox=outbox,
-                )
-            ]
-        return []
-    if outbox.dea_voucher_id is None or outbox.dea_journal_entry_id is None:
-        return [
-            _issue(
-                "MISSING_DEA_REFERENCE",
-                loan,
-                "Posted accounting event is missing its DEA voucher or journal reference.",
-                event=event,
-                outbox=outbox,
-                action="Inspect delivery evidence before retrying or reversing.",
-            )
-        ]
-    source_event_id = event.reversal_of_id or event.pk
-    evidence = dea_inspector(
-        voucher_id=outbox.dea_voucher_id,
-        journal_entry_id=outbox.dea_journal_entry_id,
-        source_event_id=source_event_id,
-    )
-    if evidence is None:
-        return [
-            _issue(
-                "DEA_INSPECTION_UNAVAILABLE",
-                loan,
-                "DEA returned no accounting-reference inspection result.",
-                event=event,
-                outbox=outbox,
-                action="Inspect the Loans-to-DEA reconciliation adapter.",
-            )
-        ]
-    issues = []
-    checks = (
-        (not evidence.voucher_exists, "DEA_VOUCHER_MISSING", "Referenced DEA voucher does not exist."),
-        (not evidence.journal_exists, "DEA_JOURNAL_MISSING", "Referenced DEA journal entry does not exist."),
-        (evidence.voucher_exists and not evidence.source_matches, "DEA_SOURCE_MISMATCH", "DEA voucher points to a different source event."),
-        (evidence.journal_exists and not evidence.journal_matches_voucher, "DEA_JOURNAL_MISMATCH", "DEA journal entry belongs to a different voucher."),
-        (evidence.voucher_exists and evidence.voucher_status not in {"POSTED", "REVERSED", "CORRECTED"}, "DEA_VOUCHER_NOT_FINAL", "Referenced DEA voucher is not in a final accounting state."),
-        (evidence.debit_total != evidence.credit_total, "DEA_VOUCHER_UNBALANCED", "DEA voucher debit and credit totals differ."),
-        (evidence.source_voucher_count > 1, "DUPLICATE_DEA_ACCOUNTING", "Source event has more than one non-draft DEA voucher."),
-        (evidence.voucher_exists and evidence.debit_total != _event_amount(event), "BALANCE_VOUCHER_MISMATCH", "Source-event economic total differs from the DEA voucher total."),
-    )
-    for failed, code, message in checks:
-        if failed:
-            issues.append(_issue(code, loan, message, event=event, outbox=outbox))
     return issues
 
 
@@ -662,48 +534,6 @@ def _custody_issue(loan, item, message):
     )
 
 
-def _requires_dea_reference(event):
-    if event.event_kind in {
-        TransactionKind.INTEREST_ACCRUAL.value,
-        TransactionKind.INTEREST_CAPITALIZATION.value,
-    }:
-        detail_key = (
-            "accrual"
-            if event.event_kind == TransactionKind.INTEREST_ACCRUAL.value
-            else "capitalization"
-        )
-        return (event.payload.get(detail_key) or {}).get("accounting_recognition") != "CASH"
-    if event.event_kind == TransactionKind.RELEASE_RECEIPT.value:
-        return _event_amount(event) != ZERO
-    if event.event_kind == TransactionKind.RENEWAL_OPENING.value:
-        return False
-    if event.event_kind == TransactionKind.RENEWAL_SETTLEMENT.value:
-        values = event.payload.get("values") or {}
-        renewal = event.payload.get("renewal") or {}
-        source_control = Decimal(
-            str(renewal.get("source_control_principal", "0"))
-        )
-        successor_control = Decimal(
-            str(renewal.get("successor_control_principal", "0"))
-        )
-        return any(
-            amount != ZERO
-            for amount in (
-                source_control - successor_control,
-                Decimal(str(values.get("interest", "0"))),
-                Decimal(str(values.get("fees", "0"))),
-                Decimal(str(renewal.get("successor_advance_interest", "0"))),
-                Decimal(str(renewal.get("successor_deducted_fees", "0"))),
-            )
-        )
-    if event.event_kind == TransactionKind.REVERSAL.value:
-        try:
-            return event.reversal_of.outbox.dea_voucher_id is not None
-        except ObjectDoesNotExist:
-            return True
-    return True
-
-
 def _event_amount(event):
     values = event.payload.get("values") or {}
     kind = event.event_kind
@@ -736,8 +566,6 @@ def _event_amount(event):
 def _portfolio_status(loan, balance):
     if loan.state != PawnLoanState.ACTIVE.value or not balance:
         return loan.state
-    if not balance.posting_ready:
-        return "ACCOUNTING_BLOCKED"
     if balance.is_overdue:
         return "OVERDUE"
     if balance.closure_ready:
@@ -775,10 +603,6 @@ def _event_report_row(event, *, as_of_date=None):
         correction_status = "REVERSED" if reversed_by else "CURRENT"
         correction_event_id = reversed_by.pk if reversed_by else None
         amount = _report_event_amount(event)
-    try:
-        delivery_status = event.outbox.status
-    except (AttributeError, ObjectDoesNotExist):
-        delivery_status = "MISSING"
     return PawnLoanEventReportRow(
         event=event,
         activity=activity,
@@ -788,7 +612,6 @@ def _event_report_row(event, *, as_of_date=None):
         fees=sign * Decimal(str(values.get("fees", "0"))),
         correction_status=correction_status,
         correction_event_id=correction_event_id,
-        delivery_status=delivery_status,
     )
 
 

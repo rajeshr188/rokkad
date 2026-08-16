@@ -13,7 +13,6 @@ from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 from django_tenants.utils import schema_context
 
-from apps.configuration.services import PreferenceService
 from apps.orgs.models import Company, Membership, Role
 from apps.tenant_apps.loans.domain import LoanDocumentKind, TransactionKind
 from apps.tenant_apps.loans.models import (
@@ -21,8 +20,7 @@ from apps.tenant_apps.loans.models import (
     LoanNumberSequence,
     LoanSeries,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanEconomicPolicy,
     PawnLoanInterestAccrual,
     PawnLoanInterestAccrualLine,
@@ -33,7 +31,7 @@ from apps.tenant_apps.loans.models import (
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
 from apps.tenant_apps.loans.services import (
-    record_loan_accounting_event,
+    record_loan_event,
     seed_default_loan_products,
 )
 from apps.tenant_apps.loans.services.pawn_draft_split import (
@@ -85,11 +83,6 @@ class PawnDraftUiTests(TenantTestCase):
         static_url.start()
         self.addCleanup(static_url.stop)
         self.owner = self.tenant.owner
-        PreferenceService.set_workspace(
-            self.tenant,
-            "accounting__integration_mode",
-            "DEA",
-        )
         self.client = TenantClient(self.tenant)
         self.client.force_login(self.owner)
         self.party = Party.objects.create(display_name="Draft Borrower")
@@ -468,7 +461,7 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertEqual(selected.loan_id, new_loan.pk)
         self.assertEqual(selected.public_id, selected_public_id)
         self.assertTrue(selected.photos.filter(pk=selected_photo_id).exists())
-        self.assertEqual(new_loan.accounting_events.count(), 0)
+        self.assertEqual(new_loan.loan_events.count(), 0)
 
     def test_invalid_create_rerenders_without_consuming_number(self):
         license, series = self._configured_setup()
@@ -564,8 +557,8 @@ class PawnDraftUiTests(TenantTestCase):
         response = self.client.get(reverse("loans:pawn_loan_reports"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Reports &amp; reconciliation")
-        self.assertContains(response, "Actionable reconciliation")
+        self.assertContains(response, "Operational reports")
+        self.assertContains(response, "Actionable integrity findings")
         self.assertContains(response, "Active, due &amp; overdue")
         self.assertContains(response, "Communication")
         self.assertContains(response, "Finalized accruals")
@@ -573,7 +566,6 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertContains(response, "Releases")
         self.assertContains(response, "Release and renew")
         self.assertContains(response, "Collateral custody")
-        self.assertContains(response, "Posting health")
         self.assertContains(response, "Every format below is rendered from the same")
         for section in (
             "active", "daily", "interest_due", "overdue",
@@ -598,7 +590,7 @@ class PawnDraftUiTests(TenantTestCase):
             loan_date=date(2026, 1, 1),
             tenure_months=1,
         )
-        event = PawnLoanAccountingEvent.objects.create(
+        PawnLoanEvent.objects.create(
             loan=loan,
             event_kind="DISBURSAL",
             effective_date=date(2026, 1, 1),
@@ -608,13 +600,6 @@ class PawnDraftUiTests(TenantTestCase):
             payload_fingerprint="9" * 64,
             idempotency_key="overdue-report-disbursal",
             created_by=self.owner,
-        )
-        PawnLoanAccountingOutbox.objects.create(
-            event=event,
-            idempotency_key="overdue-report-outbox",
-            payload=event.payload,
-            payload_fingerprint=event.payload_fingerprint,
-            status="PENDING",
         )
 
         response = self.client.get(reverse("loans:pawn_loan_reports"))
@@ -628,7 +613,7 @@ class PawnDraftUiTests(TenantTestCase):
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
-        future = PawnLoanAccountingEvent.objects.create(
+        future = PawnLoanEvent.objects.create(
             loan=loan,
             event_kind="REPAYMENT",
             effective_date=date(2026, 8, 5),
@@ -640,13 +625,6 @@ class PawnDraftUiTests(TenantTestCase):
             idempotency_key="future-party-statement",
             created_by=self.owner,
         )
-        PawnLoanAccountingOutbox.objects.create(
-            event=future,
-            idempotency_key="future-party-statement",
-            payload=future.payload,
-            payload_fingerprint=future.payload_fingerprint,
-            status="PENDING",
-        )
         url = reverse("loans:pawn_party_statement", args=[loan.borrower_id])
 
         earlier = self.client.get(url, {"as_of": "2026-08-04"})
@@ -655,14 +633,13 @@ class PawnDraftUiTests(TenantTestCase):
         self.assertNotContains(earlier, f"Event #{future.pk}")
         self.assertContains(included, f"Event #{future.pk}")
         self.assertContains(included, "CURRENT")
-        self.assertContains(included, "PENDING")
 
     def test_essential_pdf_routes_use_workspace_scoped_immutable_sources(self):
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         loan = PawnLoan.objects.get()
         self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
-        repayment = PawnLoanAccountingEvent.objects.create(
+        repayment = PawnLoanEvent.objects.create(
             loan=loan,
             event_kind="REPAYMENT",
             effective_date=date(2026, 8, 3),
@@ -680,16 +657,7 @@ class PawnDraftUiTests(TenantTestCase):
             idempotency_key="receipt-fixture",
             created_by=self.owner,
         )
-        PawnLoanAccountingOutbox.objects.create(
-            event=repayment,
-            idempotency_key="receipt-fixture",
-            payload=repayment.payload,
-            payload_fingerprint="receipt-fixture",
-            status="POSTED",
-            dea_voucher_id=101,
-            dea_journal_entry_id=102,
-        )
-        release_event = PawnLoanAccountingEvent.objects.create(
+        release_event = PawnLoanEvent.objects.create(
             loan=loan,
             event_kind="RELEASE_RECEIPT",
             effective_date=date(2026, 8, 3),
@@ -709,7 +677,7 @@ class PawnDraftUiTests(TenantTestCase):
             principal_amount=Decimal("10000"),
             interest_amount=Decimal("0"),
             fee_amount=Decimal("0"),
-            accounting_event=release_event,
+            loan_event=release_event,
             created_by=self.owner,
         )
         PawnLoanReleaseItem.objects.create(
@@ -760,7 +728,7 @@ class PawnDraftUiTests(TenantTestCase):
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         loan = PawnLoan.objects.get()
         item = loan.collateral_items.get()
-        event = PawnLoanAccountingEvent.objects.create(
+        event = PawnLoanEvent.objects.create(
             loan=loan,
             event_kind="REPAYMENT",
             effective_date=date(2026, 8, 2),
@@ -875,46 +843,6 @@ class PawnDraftUiTests(TenantTestCase):
             actor=self.owner,
         )
 
-    def test_disbursal_blocker_guides_admin_through_borrower_account_setup(self):
-        license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
-        loan = PawnLoan.objects.get()
-        self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
-
-        disbursement = self.client.get(
-            reverse("loans:pawn_loan_disburse", args=[loan.pk])
-        )
-
-        setup_url = reverse("loans:pawn_borrower_account_setup", args=[loan.pk])
-        self.assertContains(disbursement, "Accounting setup required")
-        self.assertContains(disbursement, "BORROWER_RECEIVABLE_REQUIRED")
-        self.assertContains(disbursement, setup_url)
-
-        setup = self.client.get(setup_url)
-        self.assertContains(setup, "Set up borrower accounting")
-        self.assertContains(setup, "BORROWER_LOAN_RECEIVABLE")
-
-        result = SimpleNamespace(
-            mapping_created=True,
-            account="DR0001 | Draft Borrower",
-        )
-        with patch(
-            "apps.tenant_apps.loans.web.pawn_financial_actions.ensure_pawn_borrower_accounting",
-            return_value=result,
-        ) as command:
-            response = self.client.post(setup_url)
-
-        self.assertRedirects(
-            response,
-            reverse("loans:pawn_loan_disburse", args=[loan.pk]),
-            fetch_redirect_response=False,
-        )
-        command.assert_called_once_with(
-            loan.pk,
-            actor=self.owner,
-            request=response.wsgi_request,
-        )
-
     def test_active_detail_exposes_complete_staff_lifecycle_and_repayment_command(self):
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
@@ -925,8 +853,6 @@ class PawnDraftUiTests(TenantTestCase):
             interest_outstanding=Decimal("200.00"),
             fees_outstanding=Decimal("0.00"),
             total_due=Decimal("10200.00"),
-            posting_ready=True,
-            posting_blockers=(),
         )
         with (
             patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
@@ -1072,23 +998,20 @@ class PawnDraftUiTests(TenantTestCase):
             actor=self.owner,
         )
 
-    def test_deferred_correction_ui_exposes_only_newest_event_and_requires_confirmation(self):
+    def test_correction_ui_exposes_only_newest_event_and_requires_confirmation(self):
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         loan.refresh_from_db()
-        PreferenceService.set_workspace(
-            self.tenant, "accounting__integration_mode", "DEFERRED"
-        )
-        disbursal, _ = record_loan_accounting_event(
+        disbursal, _ = record_loan_event(
             loan.pk,
             event_kind=TransactionKind.DISBURSAL,
             effective_date=date(2026, 8, 1),
             payload={"values": {"principal": "10000.00"}},
             actor=self.owner,
         )
-        repayment, _ = record_loan_accounting_event(
+        repayment, _ = record_loan_event(
             loan.pk,
             event_kind=TransactionKind.REPAYMENT,
             effective_date=date(2026, 8, 2),
@@ -1106,8 +1029,6 @@ class PawnDraftUiTests(TenantTestCase):
             interest_outstanding=Decimal("0.00"),
             fees_outstanding=Decimal("0.00"),
             total_due=Decimal("9000.00"),
-            posting_ready=True,
-            posting_blockers=(),
         )
         with (
             patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
@@ -1120,7 +1041,7 @@ class PawnDraftUiTests(TenantTestCase):
                 )
             )
 
-        self.assertContains(detail, "Business events and accounting delivery")
+        self.assertContains(detail, "Business events")
         self.assertContains(detail, "Correct newest event", count=1)
         self.assertContains(detail, f"Reverse later event #{repayment.pk} first.")
         self.assertNotContains(
@@ -1129,8 +1050,6 @@ class PawnDraftUiTests(TenantTestCase):
         )
         self.assertContains(action, "Correction preflight")
         self.assertContains(action, "This event is currently the next safe correction target")
-        self.assertContains(action, "Accounting mode")
-        self.assertContains(action, "DEFERRED")
 
         missing_confirmation = self.client.post(
             reverse("loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk]),
@@ -1154,7 +1073,7 @@ class PawnDraftUiTests(TenantTestCase):
         )
         reversal = repayment.reversed_by_event
         self.assertEqual(reversal.payload["reversal"]["reason"], "Duplicate receipt")
-        self.assertEqual(reversal.outbox.status, "PENDING")
+        self.assertEqual(reversal.reversal_of_id, repayment.pk)
 
     def test_active_loan_notice_form_dispatches_service_owned_command(self):
         license, series = self._configured_setup()

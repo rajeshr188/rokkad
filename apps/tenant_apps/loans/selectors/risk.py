@@ -54,6 +54,6 @@ def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date):
         days_past_due=delinquency.assessment.days_past_due,
         ltv_ratio=collateral.ltv.ltv_ratio,
         valuation_blockers=collateral.ltv.blockers,
-        accounting_variance=delinquency.overdue_variance,
+        overdue_interpretation_variance=delinquency.overdue_variance,
         policy=policy,
     )

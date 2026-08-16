@@ -1,4 +1,4 @@
-"""Strict newest-first PawnLoan accounting-event reversal workflow."""
+"""Strict newest-first PawnLoan event reversal workflow."""
 
 from dataclasses import dataclass
 from django.core.exceptions import ObjectDoesNotExist
@@ -7,26 +7,21 @@ from django.utils import timezone
 
 from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
 from apps.tenant_apps.loans.domain import (
-    LoanOutboxStatus,
     PawnLoanEventKind,
     PawnLoanState,
     TransactionKind,
 )
 from apps.tenant_apps.loans.integrations import reversal_payload
-from apps.tenant_apps.loans.integrations.accounting_policy import (
-    get_accounting_integration_mode,
-)
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
-    PawnLoanAccountingEvent,
+    PawnLoanEvent,
     PawnCollateralCustodyEvent,
     PawnCollateralItem,
     PawnLoanReleaseReversal,
     current_tenant_workspace_id,
 )
-from apps.tenant_apps.loans.services.accounting_outbox import (
-    DeliveryHandler,
-    record_loan_accounting_event,
+from apps.tenant_apps.loans.services.event_recording import (
+    record_loan_event,
 )
 from apps.tenant_apps.loans.services.obligations import (
     reverse_event_obligation_allocations,
@@ -57,36 +52,33 @@ class PawnReversalError(ValueError):
 
 @dataclass(frozen=True)
 class PawnReversalResult:
-    original_event: PawnLoanAccountingEvent
-    reversal_event: PawnLoanAccountingEvent
-    outbox: object
+    original_event: PawnLoanEvent
+    reversal_event: PawnLoanEvent
     already_reversed: bool = False
     release_reversal: PawnLoanReleaseReversal | None = None
-    catch_up_reversal_event: PawnLoanAccountingEvent | None = None
+    catch_up_reversal_event: PawnLoanEvent | None = None
 
 
 @dataclass(frozen=True)
 class PawnReversalReadiness:
     can_reverse: bool
-    accounting_mode: str
     latest_event_id: int | None
     blocker: str = ""
 
 
 def assess_pawn_loan_event_reversal(
-    original: PawnLoanAccountingEvent,
+    original: PawnLoanEvent,
     *,
     latest_event_id: int | None = None,
     allow_auction_recovery: bool = False,
     allow_renewal: bool = False,
 ) -> PawnReversalReadiness:
     """Explain whether this immutable event is the next safe correction target."""
-    mode = get_accounting_integration_mode(original.loan.workspace)
     if original.event_kind not in REVERSIBLE_EVENT_KINDS:
-        return PawnReversalReadiness(False, mode, latest_event_id, "This event kind cannot be reversed.")
+        return PawnReversalReadiness(False, latest_event_id, "This event kind cannot be reversed.")
     if original.event_kind == TransactionKind.AUCTION_RECOVERY.value and not allow_auction_recovery:
         return PawnReversalReadiness(
-            False, mode, latest_event_id,
+            False, latest_event_id,
             "Use the auction reversal workflow so recovery and custody are corrected together.",
         )
     if original.event_kind in {
@@ -94,14 +86,14 @@ def assess_pawn_loan_event_reversal(
         TransactionKind.RENEWAL_OPENING.value,
     } and not allow_renewal:
         return PawnReversalReadiness(
-            False, mode, latest_event_id,
+            False, latest_event_id,
             "Use the renewal reversal workflow so both loans and custody are corrected together.",
         )
     if _existing_reversal(original):
-        return PawnReversalReadiness(False, mode, latest_event_id, "This event is already reversed.")
+        return PawnReversalReadiness(False, latest_event_id, "This event is already reversed.")
     if latest_event_id is None:
         latest = (
-            original.loan.accounting_events.exclude(event_kind=TransactionKind.REVERSAL.value)
+            original.loan.loan_events.exclude(event_kind=TransactionKind.REVERSAL.value)
             .filter(reversed_by_event__isnull=True)
             .order_by("-effective_date", "-pk")
             .first()
@@ -110,25 +102,10 @@ def assess_pawn_loan_event_reversal(
     if latest_event_id != original.pk:
         return PawnReversalReadiness(
             False,
-            mode,
             latest_event_id,
             f"Reverse later event #{latest_event_id} first." if latest_event_id else "No unreversed source event remains.",
         )
-    status = original.outbox.status
-    if mode == "DEFERRED" and status == LoanOutboxStatus.PENDING.value:
-        return PawnReversalReadiness(True, mode, latest_event_id)
-    if mode == "DEA" and status == LoanOutboxStatus.POSTED.value:
-        return PawnReversalReadiness(True, mode, latest_event_id)
-    if status == LoanOutboxStatus.POSTED.value:
-        blocker = (
-            "This source already has a DEA effect. Use a controlled DEA-enabled correction "
-            "so its voucher is reversed as well."
-        )
-    elif status == LoanOutboxStatus.PENDING.value:
-        blocker = "This event must finish DEA posting before it can be reversed."
-    else:
-        blocker = f"Resolve the {original.outbox.get_status_display().lower()} accounting delivery first."
-    return PawnReversalReadiness(False, mode, latest_event_id, blocker)
+    return PawnReversalReadiness(True, latest_event_id)
 
 
 @transaction.atomic
@@ -137,7 +114,6 @@ def reverse_pawn_loan_event(
     *,
     reason: str,
     actor,
-    delivery_handler: DeliveryHandler | None = None,
     allow_auction_recovery: bool = False,
     allow_renewal: bool = False,
 ) -> PawnReversalResult:
@@ -174,7 +150,6 @@ def reverse_pawn_loan_event(
         return PawnReversalResult(
             original,
             existing,
-            existing.outbox,
             True,
             release_reversal,
             (
@@ -213,13 +188,12 @@ def reverse_pawn_loan_event(
     payload["reversal"]["original_effective_date"] = (
         original.effective_date.isoformat()
     )
-    reversal, outbox = record_loan_accounting_event(
+    reversal, _ = record_loan_event(
         original.loan_id,
         event_kind=TransactionKind.REVERSAL,
         effective_date=effective_date,
         payload=payload,
         actor=actor,
-        delivery_handler=delivery_handler,
         reversal_of=original,
     )
     reverse_event_obligation_allocations(
@@ -241,11 +215,10 @@ def reverse_pawn_loan_event(
             effective_date=effective_date,
             reason=reason,
             actor=actor,
-            delivery_handler=delivery_handler,
         )
         release_reversal = PawnLoanReleaseReversal.objects.create(
             release=release,
-            accounting_event=reversal,
+            loan_event=reversal,
             catch_up_reversal_event=catch_up_reversal,
             reason=reason,
             created_by=actor,
@@ -286,7 +259,6 @@ def reverse_pawn_loan_event(
             "original_event_id": original.pk,
             "original_event_kind": original.event_kind,
             "reversal_event_id": reversal.pk,
-            "outbox_id": outbox.pk,
             "effective_date": effective_date.isoformat(),
             "release_id": release.pk if release else None,
             "release_reversal_id": (
@@ -300,7 +272,6 @@ def reverse_pawn_loan_event(
     return PawnReversalResult(
         original,
         reversal,
-        outbox,
         False,
         release_reversal,
         catch_up_reversal,
@@ -312,7 +283,7 @@ def _validate_release_reversal(original):
         release = original.release
     except ObjectDoesNotExist as exc:
         raise PawnReversalError(
-            "Release accounting event is missing its immutable release document."
+            "Release event is missing its immutable release document."
         ) from exc
     expected_state = (
         PawnLoanState.CLOSED.value
@@ -344,19 +315,8 @@ def _validate_release_reversal(original):
                 "Collateral custody changed after release and cannot be restored safely."
             )
     catch_up = release.catch_up_accrual
-    if catch_up and catch_up.accounting_event:
-        catch_up_status = catch_up.accounting_event.outbox.status
-        mode = get_accounting_integration_mode(original.loan.workspace)
-        catch_up_ready = (
-            mode == "DEA" and catch_up_status == LoanOutboxStatus.POSTED.value
-        ) or (
-            mode == "DEFERRED" and catch_up_status == LoanOutboxStatus.PENDING.value
-        )
-        if not catch_up_ready:
-            raise PawnReversalError(
-                "Release catch-up accrual is not correction-ready in the current accounting mode."
-            )
-        if _existing_reversal(catch_up.accounting_event):
+    if catch_up and catch_up.loan_event:
+        if _existing_reversal(catch_up.loan_event):
             raise PawnReversalError(
                 "Release catch-up accrual was already reversed independently."
             )
@@ -371,12 +331,11 @@ def _reverse_release_catch_up(
     effective_date,
     reason,
     actor,
-    delivery_handler,
 ):
     accrual = release.catch_up_accrual
-    if not accrual or not accrual.accounting_event:
+    if not accrual or not accrual.loan_event:
         return None
-    original = accrual.accounting_event
+    original = accrual.loan_event
     payload = reversal_payload(
         release.loan,
         effective_date=effective_date,
@@ -386,13 +345,12 @@ def _reverse_release_catch_up(
         reason=reason,
     ).to_dict()
     payload["reversal"]["release_id"] = release.pk
-    reversal, _outbox = record_loan_accounting_event(
+    reversal, _ = record_loan_event(
         release.loan_id,
         event_kind=TransactionKind.REVERSAL,
         effective_date=effective_date,
         payload=payload,
         actor=actor,
-        delivery_handler=delivery_handler,
         reversal_of=original,
     )
     return reversal
@@ -433,13 +391,13 @@ def _locked_original_event(event_id):
         raise PawnReversalError("PawnLoan reversal requires an active tenant schema.")
     try:
         return (
-            PawnLoanAccountingEvent.objects.select_for_update()
+            PawnLoanEvent.objects.select_for_update()
             .select_related("loan", "loan__workspace")
             .get(pk=event_id, loan__workspace_id=workspace_id)
         )
-    except PawnLoanAccountingEvent.DoesNotExist as exc:
+    except PawnLoanEvent.DoesNotExist as exc:
         raise PawnReversalError(
-            "PawnLoan accounting event was not found in the active workspace."
+            "PawnLoan event was not found in the active workspace."
         ) from exc
 
 

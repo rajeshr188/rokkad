@@ -5,12 +5,9 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Q
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     InterestMethod,
-    LoanOutboxStatus,
     PawnLoanEventKind,
     PawnLoanState,
     PartialMonthMethod,
@@ -25,17 +22,12 @@ from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     LoanPolicySnapshot,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanDisbursalSnapshot,
     current_tenant_workspace_id,
 )
-from apps.tenant_apps.loans.services.accounting_outbox import (
-    DeliveryHandler,
-    record_loan_accounting_event,
-)
-from apps.tenant_apps.loans.services.accounting_readiness import (
-    require_pawn_loan_accounting_readiness,
+from apps.tenant_apps.loans.services.event_recording import (
+    record_loan_event,
 )
 from apps.tenant_apps.loans.services.obligations import (
     persist_disbursal_repayment_schedule,
@@ -51,8 +43,7 @@ class PawnDisbursalError(ValueError):
 class PawnDisbursalResult:
     loan: PawnLoan
     policy_snapshot: LoanPolicySnapshot
-    accounting_event: PawnLoanAccountingEvent
-    outbox: PawnLoanAccountingOutbox
+    loan_event: PawnLoanEvent
     disbursal_snapshot: PawnLoanDisbursalSnapshot | None = None
     already_disbursed: bool = False
 
@@ -63,15 +54,8 @@ def disburse_pawn_loan(
     *,
     effective_date: date,
     actor=None,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> PawnDisbursalResult:
-    """Activate an approved loan and enqueue its once-only disbursal intent.
-
-    The outer transaction makes the state change, immutable policy snapshot,
-    source accounting event, outbox row, and audit row all-or-nothing.  Actual
-    voucher/journal creation remains in DEA and is attempted after commit by
-    the outbox delivery seam.
-    """
+    """Activate an approved loan and record its once-only operational event."""
     loan = _locked_loan(loan_id)
     if loan.state == PawnLoanState.ACTIVE.value:
         return _existing_disbursal_result(loan)
@@ -83,22 +67,8 @@ def disburse_pawn_loan(
         raise PawnDisbursalError("Approved PawnLoan is missing its approval snapshot.")
     economics = _approved_economics(loan, approval_snapshot)
     resolved_policy = _approved_disbursal_policy(economics)
-    recognition = resolved_policy.accounting_recognition.value
-
     try:
         assert_series_can_issue(loan.series, as_of_date=effective_date)
-        require_pawn_loan_accounting_readiness(
-            loan,
-            effective_date=effective_date,
-            requires_fee_income=(
-                economics is not None and economics["deducted_fees"] > 0
-            ),
-            requires_unearned_interest=(
-                economics is not None
-                and economics["advance_interest"] > 0
-                and recognition == "ACCRUAL"
-            ),
-        )
     except Exception as exc:
         if isinstance(exc, PawnDisbursalError):
             raise
@@ -123,19 +93,17 @@ def disburse_pawn_loan(
         payload["disbursal"] = {
             "approval_snapshot_id": approval_snapshot.pk,
             "policy_snapshot_id": policy_snapshot.pk,
-            "accounting_recognition": policy_snapshot.accounting_recognition,
             "advance_interest_periods": economics["advance_interest_periods"],
             "monthly_interest": str(economics["monthly_interest"]),
             "tranches": economics["evidence"].get("tranches", []),
             "fees": economics["evidence"].get("fees", []),
         }
-    event, outbox = record_loan_accounting_event(
+    event, _ = record_loan_event(
         loan.pk,
         event_kind=TransactionKind.DISBURSAL,
         effective_date=effective_date,
         payload=payload,
         actor=actor,
-        delivery_handler=delivery_handler,
     )
     repayment_schedule = persist_disbursal_repayment_schedule(
         loan,
@@ -150,7 +118,7 @@ def disburse_pawn_loan(
             loan=loan,
             approval_snapshot=approval_snapshot,
             policy_snapshot=policy_snapshot,
-            accounting_event=event,
+            loan_event=event,
             gross_principal=economics["gross_principal"],
             monthly_interest=economics["monthly_interest"],
             advance_interest_periods=economics["advance_interest_periods"],
@@ -173,9 +141,8 @@ def disburse_pawn_loan(
         metadata={
             "effective_date": effective_date.isoformat(),
             "policy_snapshot_id": policy_snapshot.pk,
-            "accounting_event_id": event.pk,
-            "outbox_id": outbox.pk,
-            "idempotency_key": outbox.idempotency_key,
+            "loan_event_id": event.pk,
+            "idempotency_key": event.idempotency_key,
             "disbursal_snapshot_id": (
                 disbursal_snapshot.pk if disbursal_snapshot is not None else None
             ),
@@ -183,7 +150,7 @@ def disburse_pawn_loan(
         },
     )
     return PawnDisbursalResult(
-        loan, policy_snapshot, event, outbox, disbursal_snapshot
+        loan, policy_snapshot, event, disbursal_snapshot
     )
 
 
@@ -192,29 +159,12 @@ def assert_pawn_loan_financial_actions_allowed(
     *,
     lock: bool = True,
 ) -> PawnLoan:
-    """Block financial actions while posting is unresolved.
+    """Load and optionally lock the loan for an operational financial action.
 
     Mutation commands retain the default row lock. Read-only previews must pass
     ``lock=False`` so they remain safe outside an atomic request.
     """
-    loan = _locked_loan(loan_id) if lock else _tenant_loan(loan_id)
-    from apps.tenant_apps.loans.integrations.accounting_policy import (
-        is_dea_integration_enabled,
-    )
-
-    blocking_statuses = [
-        LoanOutboxStatus.PROCESSING.value,
-        LoanOutboxStatus.FAILED.value,
-    ]
-    if is_dea_integration_enabled(loan.workspace):
-        blocking_statuses.append(LoanOutboxStatus.PENDING.value)
-    if loan.accounting_events.filter(
-        Q(outbox__isnull=True) | Q(outbox__status__in=blocking_statuses)
-    ).exists():
-        raise PawnDisbursalError(
-            "PawnLoan financial actions are blocked by missing, failed, or unresolved accounting evidence."
-        )
-    return loan
+    return _locked_loan(loan_id) if lock else _tenant_loan(loan_id)
 
 
 def _locked_loan(loan_id: int) -> PawnLoan:
@@ -252,7 +202,6 @@ def _persist_policy_snapshot(loan: PawnLoan, resolved_policy=None) -> LoanPolicy
         "partial_month_cutoff_days": policy.partial_month_cutoff_days,
         "partial_month_lower_fraction": policy.partial_month_lower_fraction,
         "capitalization_interval_periods": policy.capitalization_interval_periods,
-        "accounting_recognition": policy.accounting_recognition.value,
         "valuation_method": policy.valuation_method.value,
         "maximum_ltv_ratio": policy.maximum_ltv_ratio,
         "rounding_method": policy.rounding_method.value,
@@ -317,7 +266,6 @@ def _approved_disbursal_policy(economics):
         "partial_month_cutoff_days",
         "partial_month_lower_fraction",
         "capitalization_interval_periods",
-        "accounting_recognition",
         "valuation_method",
         "maximum_ltv_ratio",
         "rounding_method",
@@ -336,9 +284,6 @@ def _approved_disbursal_policy(economics):
             capitalization_interval_periods=int(
                 evidence["capitalization_interval_periods"]
             ),
-            accounting_recognition=AccountingRecognition(
-                evidence["accounting_recognition"]
-            ),
             valuation_method=ValuationMethod(evidence["valuation_method"]),
             maximum_ltv_ratio=Decimal(str(evidence["maximum_ltv_ratio"])),
             rounding_method=RoundingMethod(evidence["rounding_method"]),
@@ -351,7 +296,7 @@ def _approved_disbursal_policy(economics):
 
 def _existing_disbursal_result(loan: PawnLoan) -> PawnDisbursalResult:
     try:
-        event = loan.accounting_events.get(event_kind=TransactionKind.DISBURSAL.value)
+        event = loan.loan_events.get(event_kind=TransactionKind.DISBURSAL.value)
         snapshot = loan.policy_snapshot
         try:
             disbursal_snapshot = loan.disbursal_snapshot
@@ -360,16 +305,14 @@ def _existing_disbursal_result(loan: PawnLoan) -> PawnDisbursalResult:
         return PawnDisbursalResult(
             loan=loan,
             policy_snapshot=snapshot,
-            accounting_event=event,
-            outbox=event.outbox,
+            loan_event=event,
             disbursal_snapshot=disbursal_snapshot,
             already_disbursed=True,
         )
     except (
-        PawnLoanAccountingEvent.DoesNotExist,
-        PawnLoanAccountingOutbox.DoesNotExist,
+        PawnLoanEvent.DoesNotExist,
         LoanPolicySnapshot.DoesNotExist,
     ) as exc:
         raise PawnDisbursalError(
-            "Active PawnLoan is missing its required disbursal accounting records."
+            "Active PawnLoan is missing its required disbursal event records."
         ) from exc

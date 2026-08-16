@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 import io
 import json
 import fitz
@@ -41,8 +41,6 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnCollateralItem,
     PawnLoanApprovalSnapshot,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
     PawnLoanEconomicPolicy,
     PawnLoanNotice,
     PawnMetalInterestRatePolicy,
@@ -487,7 +485,6 @@ class LoansSetupUiTests(TenantTestCase):
                 "configuration-partial_month_cutoff_days": "15",
                 "configuration-partial_month_lower_fraction": "0.5",
                 "configuration-capitalization_interval_periods": "12",
-                "configuration-accounting_recognition": "CASH",
                 "configuration-rounding_method": "PER_ACCRUAL_PERIOD",
                 "configuration-currency_quantum": "0.01",
                 "configuration-gold_monthly_interest_rate": "2",
@@ -504,7 +501,6 @@ class LoansSetupUiTests(TenantTestCase):
         policy = PawnLoanEconomicPolicy.objects.get()
         self.assertEqual(policy.interest_method, "COMPOUND")
         self.assertEqual(policy.partial_month_method, "SLAB")
-        self.assertEqual(policy.accounting_recognition, "CASH")
         self.assertEqual(PawnMetalInterestRatePolicy.objects.count(), 2)
         page = self.tenant_get(reverse("loans:pawn_economics_setup"))
         self.assertContains(page, "PawnLoan economic policies")
@@ -631,216 +627,6 @@ class LoansSetupUiTests(TenantTestCase):
         get_object_or_404.assert_called_once_with(
             LoanLicense, pk=999, workspace=self.tenant
         )
-
-    def test_operations_console_surfaces_mvp_blockers_and_audit_evidence(self):
-        license, series = self._configured_setup()
-        loan = self._loan(license, series, "PL-A-00001", state="APPROVED")
-        event = PawnLoanAccountingEvent.objects.create(
-            loan=loan,
-            event_kind="DISBURSAL",
-            effective_date=date(2026, 8, 1),
-            payload={"values": {"principal": "10000.00"}},
-            payload_fingerprint="event-fingerprint",
-            idempotency_key="operations-event-1",
-            created_by=self.owner,
-        )
-        outbox = PawnLoanAccountingOutbox.objects.create(
-            event=event,
-            idempotency_key="operations-outbox-1",
-            payload={"event": "DISBURSAL"},
-            payload_fingerprint="outbox-fingerprint",
-            status="FAILED",
-            attempt_count=2,
-            last_error="DEA posting unavailable",
-        )
-        stale_event = PawnLoanAccountingEvent.objects.create(
-            loan=loan,
-            event_kind="INTEREST_ACCRUAL",
-            effective_date=date(2026, 8, 2),
-            payload={},
-            payload_fingerprint="stale-event-fingerprint",
-            idempotency_key="operations-event-2",
-            created_by=self.owner,
-        )
-        PawnLoanAccountingOutbox.objects.create(
-            event=stale_event,
-            idempotency_key="operations-outbox-2",
-            payload={},
-            payload_fingerprint="stale-outbox-fingerprint",
-            status="PROCESSING",
-            claimed_at=timezone.now() - timedelta(minutes=30),
-        )
-        release_sequence = LoanNumberSequence.objects.get(
-            series=series,
-            document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE.value,
-        )
-        release_sequence.next_number = release_sequence.maximum_number + 1
-        release_sequence.save(update_fields=["next_number"])
-        LoanChangeLog.objects.create(
-            loan=loan,
-            event_kind="APPROVED",
-            from_state="DRAFT",
-            to_state="APPROVED",
-            actor=self.owner,
-        )
-
-        response = self.tenant_get(reverse("loans:pawn_operations_console"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "PawnLoan operations console")
-        self.assertContains(response, "Ready to allocate")
-        self.assertContains(response, "EXHAUSTED")
-        self.assertContains(response, "Stale processing claims need support review")
-        self.assertContains(response, "DEA posting unavailable")
-        self.assertContains(response, loan.loan_number)
-        self.assertContains(response, "Accounting setup by serviceable loan")
-        self.assertContains(response, "Recent lifecycle audit")
-        self.assertContains(response, reverse("loans:pawn_outbox_retry", args=[outbox.pk]))
-        self.assertContains(response, reverse("loans:pawn_operations_runbook"))
-
-        runbook = self.tenant_get(reverse("loans:pawn_operations_runbook"))
-        self.assertContains(runbook, "Scheduled risk reassessment")
-        self.assertContains(runbook, "tenant_command reassess_pawn_loans")
-        self.assertContains(runbook, "selected=0")
-        self.assertContains(runbook, "non-zero process exit")
-
-    def test_notice_and_delivery_diagnostics_filter_and_paginate(self):
-        license, series = self._configured_setup()
-        loan = self._loan(license, series, "PL-UP2-00001")
-        scheduled_for = timezone.now()
-        for sequence in range(51):
-            PawnLoanNotice.objects.create(
-                workspace=self.tenant,
-                loan=loan,
-                notice_kind="REPAYMENT_REMINDER",
-                channel="EMAIL",
-                request_key=f"up2-notice-{sequence}",
-                scheduled_for=scheduled_for,
-                recipient_name=f"Recipient {sequence}",
-                recipient_email=f"recipient-{sequence}@example.com",
-                payload_snapshot={},
-                created_by=self.owner,
-            )
-        special_notice = PawnLoanNotice.objects.create(
-            workspace=self.tenant,
-            loan=loan,
-            notice_kind="INTEREST_DUE",
-            channel="EMAIL",
-            request_key="up2-notice-special",
-            scheduled_for=scheduled_for,
-            recipient_name="Special Notice Recipient",
-            recipient_email="special@example.com",
-            payload_snapshot={},
-            created_by=self.owner,
-        )
-
-        notice_page = self.client.get(
-            reverse("loans:pawn_loan_notice_list"),
-            {"notice_kind": "REPAYMENT_REMINDER"},
-        )
-        self.assertEqual(notice_page.context["page_obj"].paginator.count, 51)
-        self.assertEqual(len(notice_page.context["notice_rows"]), 50)
-        self.assertContains(
-            notice_page,
-            "?notice_kind=REPAYMENT_REMINDER&amp;page=2",
-        )
-        notice_filtered = self.client.get(
-            reverse("loans:pawn_loan_notice_list"),
-            {
-                "q": "Special Notice Recipient",
-                "notice_kind": "INTEREST_DUE",
-                "channel": "EMAIL",
-                "delivery_status": "MISSING",
-                "scheduled_date_from": scheduled_for.date().isoformat(),
-                "scheduled_date_to": scheduled_for.date().isoformat(),
-            },
-        )
-        self.assertEqual(notice_filtered.context["page_obj"].paginator.count, 1)
-        self.assertEqual(
-            notice_filtered.context["notice_rows"][0].notice,
-            special_notice,
-        )
-        self.assertEqual(notice_filtered.context["notice_rows"][0].status, "MISSING")
-        self.assertContains(notice_filtered, "Missing")
-
-        effective_date = date(2026, 8, 10)
-        for sequence in range(51):
-            event = PawnLoanAccountingEvent.objects.create(
-                loan=loan,
-                event_kind="DISBURSAL",
-                effective_date=effective_date,
-                payload={},
-                payload_fingerprint=f"up2-event-fingerprint-{sequence}",
-                idempotency_key=f"up2-event-{sequence}",
-                created_by=self.owner,
-            )
-            PawnLoanAccountingOutbox.objects.create(
-                event=event,
-                idempotency_key=f"up2-outbox-{sequence}",
-                payload={},
-                payload_fingerprint=f"up2-outbox-fingerprint-{sequence}",
-                status="FAILED",
-                last_error=(
-                    "SPECIAL DELIVERY FAILURE"
-                    if sequence == 50
-                    else f"Delivery failure {sequence}"
-                ),
-            )
-
-        outbox_page = self.client.get(
-            reverse("loans:pawn_operations_console"),
-            {"status": "FAILED"},
-        )
-        self.assertEqual(outbox_page.context["page_obj"].paginator.count, 51)
-        self.assertEqual(len(outbox_page.context["outboxes"]), 50)
-        self.assertContains(outbox_page, "?status=FAILED&amp;page=2")
-        outbox_filtered = self.client.get(
-            reverse("loans:pawn_operations_console"),
-            {
-                "q": "SPECIAL DELIVERY FAILURE",
-                "status": "FAILED",
-                "event_kind": "DISBURSAL",
-                "effective_date_from": effective_date.isoformat(),
-                "effective_date_to": effective_date.isoformat(),
-            },
-        )
-        self.assertEqual(outbox_filtered.context["page_obj"].paginator.count, 1)
-        self.assertContains(outbox_filtered, "SPECIAL DELIVERY FAILURE")
-
-    def test_operations_retry_returns_to_console(self):
-        license, series = self._configured_setup()
-        loan = self._loan(license, series, "PL-A-00002")
-        event = PawnLoanAccountingEvent.objects.create(
-            loan=loan,
-            event_kind="DISBURSAL",
-            effective_date=date(2026, 8, 1),
-            payload={},
-            payload_fingerprint="retry-event-fingerprint",
-            idempotency_key="operations-retry-event",
-            created_by=self.owner,
-        )
-        outbox = PawnLoanAccountingOutbox.objects.create(
-            event=event,
-            idempotency_key="operations-retry-outbox",
-            payload={},
-            payload_fingerprint="retry-outbox-fingerprint",
-            status="FAILED",
-        )
-
-        with patch(
-            "apps.tenant_apps.loans.views.retry_failed_outbox_event"
-        ) as retry:
-            response = self.tenant_post(
-                reverse("loans:pawn_outbox_retry", args=[outbox.pk]),
-                {"next": "operations"},
-            )
-
-        self.assertRedirects(
-            response,
-            reverse("loans:pawn_operations_console"),
-            fetch_redirect_response=False,
-        )
-        retry.assert_called_once_with(outbox.pk)
 
     def test_operations_pages_require_owner_or_admin(self):
         member = get_user_model().objects.create_user(
@@ -1114,7 +900,7 @@ class LoansSetupUiTests(TenantTestCase):
 
         detail = self.tenant_get(reverse("loans:funding_loan_read_detail", args=[funding_loan.pk]))
         self.assertContains(detail, "pass the current activation policy")
-        self.assertContains(detail, "Servicing and accounting remain unavailable")
+        self.assertContains(detail, "Servicing remains unavailable until activation")
 
         rejected = self.tenant_post(
             reverse("loans:funding_loan_draft_cancel", args=[funding_loan.pk]),

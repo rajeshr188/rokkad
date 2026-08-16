@@ -13,8 +13,7 @@ from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanSeries,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanNotice,
     PawnPhysicalVerificationSession,
     PawnStorageLocation,
@@ -402,58 +401,3 @@ class PawnLoanNoticeFilter(django_filters.FilterSet):
             job_id for job_id, state in states.items() if state.status == value
         )
         return queryset.filter(notification_job_id__in=matching_ids)
-
-
-class PawnLoanAccountingOutboxFilter(django_filters.FilterSet):
-    q = django_filters.CharFilter(
-        method="filter_search",
-        label="Search",
-        widget=forms.TextInput(
-            attrs={
-                "class": "form-control",
-                "placeholder": "Loan, event, key, or error...",
-            }
-        ),
-    )
-    status = django_filters.ChoiceFilter(
-        choices=PawnLoanAccountingOutbox._meta.get_field("status").choices,
-        empty_label="All delivery states",
-        widget=forms.Select(attrs={"class": "form-select"}),
-    )
-    event_kind = django_filters.ChoiceFilter(
-        field_name="event__event_kind",
-        choices=PawnLoanAccountingEvent._meta.get_field("event_kind").choices,
-        empty_label="All event kinds",
-        label="Event kind",
-        widget=forms.Select(attrs={"class": "form-select"}),
-    )
-    effective_date_from = django_filters.DateFilter(
-        field_name="event__effective_date",
-        lookup_expr="gte",
-        label="Effective from",
-        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
-    )
-    effective_date_to = django_filters.DateFilter(
-        field_name="event__effective_date",
-        lookup_expr="lte",
-        label="Effective to",
-        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
-    )
-
-    class Meta:
-        model = PawnLoanAccountingOutbox
-        fields = ()
-
-    def filter_search(self, queryset, name, value):
-        value = value.strip()
-        if not value:
-            return queryset
-        query = (
-            Q(event__loan__loan_number__icontains=value)
-            | Q(event__idempotency_key__icontains=value)
-            | Q(idempotency_key__icontains=value)
-            | Q(last_error__icontains=value)
-        )
-        if value.isdigit():
-            query |= Q(pk=int(value)) | Q(event_id=int(value))
-        return queryset.filter(query)

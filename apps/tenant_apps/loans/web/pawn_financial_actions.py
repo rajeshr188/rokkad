@@ -13,12 +13,11 @@ from apps.tenant_apps.loans.forms import (
     PawnAccrualForm, PawnCapitalizationForm, PawnDisbursalForm,
     PawnRepaymentForm, PawnReversalForm,
 )
-from apps.tenant_apps.loans.models import PawnLoan, PawnLoanAccountingEvent
+from apps.tenant_apps.loans.models import PawnLoan, PawnLoanEvent
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
 from apps.tenant_apps.loans.services import (
-    PawnBorrowerAccountingSetupError, assess_pawn_loan_accounting_readiness,
     assess_pawn_loan_event_reversal, capitalize_pawn_loan_interest,
-    disburse_pawn_loan, ensure_pawn_borrower_accounting,
+    disburse_pawn_loan,
     finalize_pawn_loan_accrual, preview_pawn_loan_accruals,
     preview_pawn_loan_repayment, record_pawn_loan_repayment,
     reverse_pawn_loan_event,
@@ -28,7 +27,7 @@ from apps.tenant_apps.loans.services import (
 def _pawn_loan_for_workspace(request, pk):
     return get_object_or_404(
         PawnLoan.objects.select_related("borrower", "license", "series").prefetch_related(
-            "collateral_items", "accounting_events__outbox"
+            "collateral_items", "loan_events"
         ),
         pk=pk,
         workspace=request.loans_workspace,
@@ -87,61 +86,15 @@ def pawn_loan_disburse(request, pk):
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, f"{loan.loan_number} disbursed and queued for accounting.")
+            messages.success(request, f"{loan.loan_number} disbursed successfully.")
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
-    readiness = None
-    readiness_error = ""
-    effective_date = (
-        form.cleaned_data.get("effective_date")
-        if form.is_bound and form.is_valid()
-        else timezone.localdate()
-    )
-    try:
-        readiness = assess_pawn_loan_accounting_readiness(
-            loan,
-            effective_date=effective_date,
-        )
-    except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
-        readiness_error = str(exc)
     return _render_action(
         request,
         loan,
         form,
         "Disburse loan",
-        "This posts the approved principal through DEA and activates the loan.",
-        {
-            "accounting_readiness": readiness,
-            "accounting_readiness_error": readiness_error,
-            "can_administer": _can_administer(request),
-        },
-    )
-
-
-@loans_setup_required
-def pawn_borrower_account_setup(request, pk):
-    loan = _pawn_loan_for_workspace(request, pk)
-    if request.method == "POST":
-        try:
-            result = ensure_pawn_borrower_accounting(
-                loan.pk,
-                actor=request.user,
-                request=request,
-            )
-        except PawnBorrowerAccountingSetupError as exc:
-            messages.error(request, str(exc))
-        else:
-            if result.mapping_created:
-                messages.success(
-                    request,
-                    f"Borrower accounting account {result.account} is ready.",
-                )
-            else:
-                messages.info(request, "The borrower accounting mapping was already ready.")
-            return redirect("loans:pawn_loan_disburse", pk=loan.pk)
-    return render(
-        request,
-        "loans/pawn/borrower_account_setup.html",
-        {"loan": loan},
+        "This records the approved disbursal and activates the loan.",
+        {"can_administer": _can_administer(request)},
     )
 
 
@@ -171,15 +124,13 @@ def pawn_loan_repay(request, pk):
             form.add_error(None, str(exc))
         else:
             if repayment_preview is None:
-                delivery = result.outbox.get_status_display()
                 allocation = result.allocation
                 messages.success(
                     request,
                     "Repayment "
                     f"{allocation.amount_received} recorded: fees {allocation.fees}, "
                     f"overdue interest {allocation.overdue_interest}, current interest "
-                    f"{allocation.current_interest}, principal {allocation.principal}. "
-                    f"Accounting delivery: {delivery}.",
+                    f"{allocation.current_interest}, principal {allocation.principal}.",
                 )
                 return redirect("loans:pawn_loan_detail", pk=loan.pk)
     balance = _safe_balance(loan)
@@ -226,14 +177,9 @@ def pawn_loan_accrue(request, pk):
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            disposition = (
-                result.outbox.get_status_display()
-                if result.outbox is not None
-                else "No accounting event required by the cash-recognition policy"
-            )
             messages.success(
                 request,
-                f"Interest accrual finalized. Accounting disposition: {disposition}.",
+                "Interest accrual finalized.",
             )
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return _render_action(
@@ -263,7 +209,7 @@ def pawn_loan_capitalize(request, pk):
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, "Interest capitalization recorded and queued.")
+            messages.success(request, "Interest capitalization recorded.")
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return _render_action(
         request,
@@ -277,7 +223,7 @@ def pawn_loan_capitalize(request, pk):
 def pawn_loan_reverse_event(request, pk, event_pk):
     loan = _pawn_loan_for_workspace(request, pk)
     event = get_object_or_404(
-        PawnLoanAccountingEvent.objects.select_related("outbox", "loan__workspace"),
+        PawnLoanEvent.objects.select_related("loan__workspace"),
         pk=event_pk,
         loan=loan,
     )
@@ -294,17 +240,12 @@ def pawn_loan_reverse_event(request, pk, event_pk):
             form.add_error(None, str(exc))
         else:
             balance = _safe_balance(loan)
-            disposition = (
-                "Accounting delivery is deferred."
-                if readiness.accounting_mode == "DEFERRED"
-                else "The compensating event is queued through DEA."
-            )
             balance_text = (
                 f" Resulting Loans total due is {balance.total_due}." if balance else ""
             )
             messages.success(
                 request,
-                f"Reversal event #{result.reversal_event.pk} recorded.{balance_text} {disposition}",
+                f"Reversal event #{result.reversal_event.pk} recorded.{balance_text}",
             )
             return redirect("loans:pawn_loan_detail", pk=loan.pk)
     return _render_action(
@@ -314,11 +255,10 @@ def pawn_loan_reverse_event(request, pk, event_pk):
         f"Reverse {event.get_event_kind_display()}",
         "Administrator-only. Correct events newest-first; the original evidence is never edited.",
         {
-            "accounting_event": event,
+            "loan_event": event,
             "balance": _safe_balance(loan),
             "reversal_readiness": readiness,
             "reversal_values": (event.payload.get("values") or {}).items(),
             "custody_items": loan.collateral_items.all(),
         },
     )
-

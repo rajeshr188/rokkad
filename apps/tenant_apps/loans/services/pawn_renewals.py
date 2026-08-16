@@ -11,7 +11,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     CollateralCustodyState,
     PawnLoanEventKind,
     PawnLoanRenewalMode,
@@ -32,8 +31,7 @@ from apps.tenant_apps.loans.models import (
     PawnCollateralCustodyEvent,
     PawnCollateralItem,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanInterestAccrual,
     PawnLoanPrincipalClosingLine,
     PawnLoanPrincipalOpeningLine,
@@ -45,12 +43,8 @@ from apps.tenant_apps.loans.selectors import (
     get_pawn_loan_balance,
     get_pawn_loan_release_readiness,
 )
-from apps.tenant_apps.loans.services.accounting_outbox import (
-    DeliveryHandler,
-    record_loan_accounting_event,
-)
-from apps.tenant_apps.loans.services.accounting_readiness import (
-    require_pawn_loan_accounting_readiness,
+from apps.tenant_apps.loans.services.event_recording import (
+    record_loan_event,
 )
 from apps.tenant_apps.loans.services.pawn_disbursal import (
     assert_pawn_loan_financial_actions_allowed,
@@ -106,10 +100,8 @@ class PawnRenewalResult:
     renewal: PawnLoanRenewal
     source_loan: PawnLoan
     successor_loan: PawnLoan
-    settlement_event: PawnLoanAccountingEvent
-    settlement_outbox: PawnLoanAccountingOutbox
-    opening_event: PawnLoanAccountingEvent
-    opening_outbox: PawnLoanAccountingOutbox
+    settlement_event: PawnLoanEvent
+    opening_event: PawnLoanEvent
     already_renewed: bool = False
 
 
@@ -117,9 +109,9 @@ class PawnRenewalResult:
 class PawnRenewalReversalResult:
     renewal: PawnLoanRenewal
     reversal: PawnLoanRenewalReversal
-    settlement_reversal_event: PawnLoanAccountingEvent
-    opening_reversal_event: PawnLoanAccountingEvent
-    catch_up_reversal_event: PawnLoanAccountingEvent | None
+    settlement_reversal_event: PawnLoanEvent
+    opening_reversal_event: PawnLoanEvent
+    catch_up_reversal_event: PawnLoanEvent | None
     already_reversed: bool = False
 
 
@@ -397,7 +389,6 @@ def renew_pawn_loan(
     additional_photo_uploads: tuple = (),
     expected_preview_fingerprint: str | None = None,
     actor=None,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> PawnRenewalResult:
     source = _locked_loan(source_loan_id)
     request_key = _request_key(request_key)
@@ -416,7 +407,7 @@ def renew_pawn_loan(
     existing = PawnLoanRenewal.objects.filter(
         workspace_id=source.workspace_id,
         request_key=request_key,
-    ).select_related("source_loan", "successor_loan", "settlement_event__outbox", "opening_event__outbox").first()
+    ).select_related("source_loan", "successor_loan", "settlement_event", "opening_event").first()
     if existing:
         if existing.source_loan_id != source.pk:
             raise PawnRenewalError("Renewal request key belongs to another source loan.")
@@ -430,9 +421,7 @@ def renew_pawn_loan(
             existing.source_loan,
             existing.successor_loan,
             existing.settlement_event,
-            existing.settlement_event.outbox,
             existing.opening_event,
-            existing.opening_event.outbox,
             True,
         )
     try:
@@ -504,7 +493,6 @@ def renew_pawn_loan(
                 source,
                 preview=partial,
                 actor=actor,
-                delivery_handler=delivery_handler,
             )
             if partial
             else None
@@ -555,22 +543,6 @@ def renew_pawn_loan(
             raise PawnRenewalError(
                 f"Successor principal {successor_principal} exceeds the allowed collateral-backed amount {allowed_principal}."
             )
-        require_pawn_loan_accounting_readiness(
-            source,
-            effective_date=renewal_date,
-            requires_fee_income=balance.fees_outstanding > 0,
-            requires_interest_receivable=(
-                source.policy_snapshot.accounting_recognition
-                == AccountingRecognition.ACCRUAL.value
-                and balance.interest_outstanding > 0
-            ),
-            requires_unearned_interest=(
-                source.policy_snapshot.accounting_recognition
-                == AccountingRecognition.ACCRUAL.value
-                and partial is not None
-                and partial.advance_interest_applied > 0
-            ),
-        )
     except PawnRenewalError:
         raise
     except Exception as exc:
@@ -648,32 +620,6 @@ def renew_pawn_loan(
         raise PawnRenewalError(
             "Renewal economics changed after preview; calculate and review it again."
         )
-    require_pawn_loan_accounting_readiness(
-        source,
-        effective_date=renewal_date,
-        requires_fee_income=(
-            balance.fees_outstanding > 0
-            or successor_economics["deducted_fees"] > 0
-        ),
-        requires_interest_receivable=(
-            source.policy_snapshot.accounting_recognition
-            == AccountingRecognition.ACCRUAL.value
-            and balance.interest_outstanding > 0
-        ),
-        requires_unearned_interest=(
-            (
-                source.policy_snapshot.accounting_recognition
-                == AccountingRecognition.ACCRUAL.value
-                and partial is not None
-                and partial.advance_interest_applied > 0
-            )
-            or (
-                successor_policy.accounting_recognition
-                == AccountingRecognition.ACCRUAL.value
-                and successor_economics["advance_interest"] > 0
-            )
-        ),
-    )
 
     capitalized_paid = min(
         principal_paid,
@@ -690,18 +636,8 @@ def renew_pawn_loan(
             "Release and renew cannot carry capitalized interest until it has "
             "explicit successor-item attribution. Settle it before renewal."
         )
-    source_control = (
-        balance.principal_outstanding
-        if source.policy_snapshot.accounting_recognition
-        == AccountingRecognition.ACCRUAL.value
-        else balance.original_principal_outstanding
-    )
-    successor_control = (
-        successor_principal
-        if successor_policy.accounting_recognition
-        == AccountingRecognition.ACCRUAL.value
-        else successor_original
-    )
+    source_control = balance.principal_outstanding
+    successor_control = successor_principal
     renewal_number = f"REN-{source.loan_number}"
     settlement_payload = renewal_settlement_payload(
         source,
@@ -725,10 +661,6 @@ def renew_pawn_loan(
         "successor_principal": str(successor_principal),
         "source_control_principal": str(source_control),
         "successor_control_principal": str(successor_control),
-        "accounting_recognition": source.policy_snapshot.accounting_recognition,
-        "successor_accounting_recognition": (
-            successor_policy.accounting_recognition
-        ),
         "successor_advance_interest": str(
             successor_economics["advance_interest"]
         ),
@@ -736,20 +668,19 @@ def renew_pawn_loan(
             successor_economics["deducted_fees"]
         ),
         "catch_up_event_id": (
-            catch_up.accounting_event_id if catch_up is not None else None
+            catch_up.loan_event_id if catch_up is not None else None
         ),
         "retained_source_item_ids": list(retained_item_ids),
         "returned_source_item_ids": [
             item.pk for item in items if item.pk not in retained_item_ids
         ],
     }
-    settlement_event, settlement_outbox = record_loan_accounting_event(
+    settlement_event, _ = record_loan_event(
         source.pk,
         event_kind=TransactionKind.RENEWAL_SETTLEMENT,
         effective_date=renewal_date,
         payload=settlement_payload,
         actor=actor,
-        delivery_handler=delivery_handler,
     )
     allocate_event_to_obligations(
         source_event=settlement_event,
@@ -771,7 +702,7 @@ def renew_pawn_loan(
         start=1,
     ):
         PawnLoanPrincipalClosingLine.objects.create(
-            accounting_event=settlement_event,
+            loan_event=settlement_event,
             collateral_item_id=row.collateral_item_id,
             allocation_order=order,
             monthly_interest_rate=row.monthly_interest_rate,
@@ -797,7 +728,6 @@ def renew_pawn_loan(
         "successor_economics": {
             "approval_snapshot_id": approval.pk,
             "policy_snapshot_id": successor_policy.pk,
-            "accounting_recognition": successor_policy.accounting_recognition,
             "advance_interest_periods": successor_economics[
                 "advance_interest_periods"
             ],
@@ -808,13 +738,12 @@ def renew_pawn_loan(
             "fees": successor_economics["evidence"].get("fees", []),
         },
     }
-    opening_event, opening_outbox = record_loan_accounting_event(
+    opening_event, _ = record_loan_event(
         successor.pk,
         event_kind=TransactionKind.RENEWAL_OPENING,
         effective_date=renewal_date,
         payload=opening_payload,
         actor=actor,
-        delivery_handler=delivery_handler,
     )
     persist_disbursal_repayment_schedule(
         successor,
@@ -831,7 +760,7 @@ def renew_pawn_loan(
         )
     for order, item in enumerate(successor_items, start=1):
         PawnLoanPrincipalOpeningLine.objects.create(
-            accounting_event=opening_event,
+            loan_event=opening_event,
             collateral_item=item,
             predecessor_collateral_item=item.renewed_from,
             allocation_order=order,
@@ -986,9 +915,7 @@ def renew_pawn_loan(
         source,
         successor,
         settlement_event,
-        settlement_outbox,
         opening_event,
-        opening_outbox,
     )
 
 
@@ -998,7 +925,6 @@ def reverse_pawn_loan_renewal(
     *,
     reason: str,
     actor,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> PawnRenewalReversalResult:
     renewal = _locked_renewal(renewal_id)
     reason = str(reason or "").strip()
@@ -1063,21 +989,18 @@ def reverse_pawn_loan_renewal(
         renewal.opening_event_id,
         reason=reason,
         actor=actor,
-        delivery_handler=delivery_handler,
         allow_renewal=True,
     )
     settlement_result = reverse_pawn_loan_event(
         renewal.settlement_event_id,
         reason=reason,
         actor=actor,
-        delivery_handler=delivery_handler,
         allow_renewal=True,
     )
     catch_up_reversal = _reverse_catch_up(
         renewal,
         reason=reason,
         actor=actor,
-        delivery_handler=delivery_handler,
     )
     reversal = PawnLoanRenewalReversal.objects.create(
         renewal=renewal,
@@ -1161,9 +1084,8 @@ def reverse_pawn_loan_renewal(
     )
 
 
-def _record_renewal_accrual(loan, *, preview, actor, delivery_handler):
+def _record_renewal_accrual(loan, *, preview, actor):
     event = None
-    outbox = None
     if should_record_pawn_accrual_event(preview, loan.policy_snapshot):
         payload = accrual_payload(
             loan,
@@ -1175,13 +1097,12 @@ def _record_renewal_accrual(loan, *, preview, actor, delivery_handler):
             preview, loan.policy_snapshot
         )
         payload["accrual"]["renewal_catch_up"] = True
-        event, outbox = record_loan_accounting_event(
+        event, _ = record_loan_event(
             loan.pk,
             event_kind=TransactionKind.INTEREST_ACCRUAL,
             effective_date=preview.period_end,
             payload=payload,
             actor=actor,
-            delivery_handler=delivery_handler,
         )
     accrual = PawnLoanInterestAccrual.objects.create(
         loan=loan,
@@ -1192,7 +1113,7 @@ def _record_renewal_accrual(loan, *, preview, actor, delivery_handler):
         calculation_base=preview.calculation_base,
         unrounded_interest=preview.unrounded_interest,
         recognized_interest=preview.recognized_interest,
-        accounting_event=event,
+        loan_event=event,
         finalized_by=actor,
     )
     persist_pawn_accrual_lines(accrual, preview)
@@ -1205,18 +1126,17 @@ def _record_renewal_accrual(loan, *, preview, actor, delivery_handler):
         metadata={
             "period_number": preview.period_number,
             "renewal_catch_up": True,
-            "accounting_event_id": event.pk if event else None,
-            "outbox_id": outbox.pk if outbox else None,
+            "loan_event_id": event.pk if event else None,
         },
     )
     return accrual
 
 
-def _reverse_catch_up(renewal, *, reason, actor, delivery_handler):
+def _reverse_catch_up(renewal, *, reason, actor):
     accrual = renewal.catch_up_accrual
-    if not accrual or not accrual.accounting_event_id:
+    if not accrual or not accrual.loan_event_id:
         return None
-    original = accrual.accounting_event
+    original = accrual.loan_event
     payload = reversal_payload(
         renewal.source_loan,
         effective_date=timezone.localdate(),
@@ -1226,13 +1146,12 @@ def _reverse_catch_up(renewal, *, reason, actor, delivery_handler):
         reason=reason,
     ).to_dict()
     payload["reversal"]["renewal_id"] = renewal.pk
-    event, _ = record_loan_accounting_event(
+    event, _ = record_loan_event(
         renewal.source_loan_id,
         event_kind=TransactionKind.REVERSAL,
         effective_date=timezone.localdate(),
         payload=payload,
         actor=actor,
-        delivery_handler=delivery_handler,
         reversal_of=original,
     )
     reverse_event_obligation_allocations(
@@ -1291,7 +1210,6 @@ def _successor_policy_from_approval(successor, economics):
         "partial_month_cutoff_days",
         "partial_month_lower_fraction",
         "capitalization_interval_periods",
-        "accounting_recognition",
         "valuation_method",
         "maximum_ltv_ratio",
         "rounding_method",
@@ -1314,7 +1232,6 @@ def _successor_policy_from_approval(successor, economics):
             capitalization_interval_periods=int(
                 evidence["capitalization_interval_periods"]
             ),
-            accounting_recognition=evidence["accounting_recognition"],
             valuation_method=evidence["valuation_method"],
             maximum_ltv_ratio=Decimal(str(evidence["maximum_ltv_ratio"])),
             rounding_method=evidence["rounding_method"],
@@ -1474,9 +1391,9 @@ def _locked_renewal(renewal_id):
                 "source_loan",
                 "source_loan__workspace",
                 "successor_loan",
-                "settlement_event__outbox",
-                "opening_event__outbox",
-                "catch_up_accrual__accounting_event__outbox",
+                "settlement_event",
+                "opening_event",
+                "catch_up_accrual__loan_event",
             )
             .get(pk=renewal_id, workspace_id=workspace_id)
         )

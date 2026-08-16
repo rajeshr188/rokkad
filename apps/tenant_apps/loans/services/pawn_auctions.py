@@ -1,4 +1,4 @@
-"""PawnLoan auction/recovery commands with custody and accounting evidence."""
+"""PawnLoan auction/recovery commands with custody and loan-event evidence."""
 
 from dataclasses import dataclass
 from datetime import date
@@ -11,7 +11,6 @@ from django.utils import timezone
 
 from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     CollateralCustodyState,
     PawnLoanAuctionState,
     PawnLoanEventKind,
@@ -32,8 +31,7 @@ from apps.tenant_apps.loans.models import (
     PawnCollateralCustodyEvent,
     PawnCollateralItem,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanAuction,
     PawnLoanAuctionItem,
     PawnLoanAuctionReversal,
@@ -41,8 +39,7 @@ from apps.tenant_apps.loans.models import (
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
-from apps.tenant_apps.loans.services.accounting_outbox import DeliveryHandler, record_loan_accounting_event
-from apps.tenant_apps.loans.services.accounting_readiness import require_pawn_loan_accounting_readiness
+from apps.tenant_apps.loans.services.event_recording import record_loan_event
 from apps.tenant_apps.loans.services.pawn_disbursal import assert_pawn_loan_financial_actions_allowed
 from apps.tenant_apps.loans.services.pawn_interest import (
     build_pawn_accrual_detail,
@@ -68,8 +65,7 @@ class PawnAuctionError(ValueError):
 class PawnAuctionCompletionResult:
     loan: PawnLoan
     auction: PawnLoanAuction
-    accounting_event: PawnLoanAccountingEvent
-    outbox: PawnLoanAccountingOutbox
+    loan_event: PawnLoanEvent
     already_completed: bool = False
 
 
@@ -77,8 +73,8 @@ class PawnAuctionCompletionResult:
 class PawnAuctionReversalResult:
     auction: PawnLoanAuction
     reversal: PawnLoanAuctionReversal
-    recovery_reversal_event: PawnLoanAccountingEvent
-    catch_up_reversal_event: PawnLoanAccountingEvent | None
+    recovery_reversal_event: PawnLoanEvent
+    catch_up_reversal_event: PawnLoanEvent | None
     already_reversed: bool = False
 
 
@@ -218,7 +214,6 @@ def complete_pawn_loan_auction(
     buyer_name: str,
     buyer_reference: str = "",
     actor,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> PawnAuctionCompletionResult:
     auction = _locked_auction(auction_id)
     loan = auction.loan
@@ -231,7 +226,7 @@ def complete_pawn_loan_auction(
         if auction.recovery_amount != amount or auction.buyer_name != buyer_name:
             raise PawnAuctionError("Completed auction instructions do not match recorded evidence.")
         return PawnAuctionCompletionResult(
-            loan, auction, auction.accounting_event, auction.accounting_event.outbox, True
+            loan, auction, auction.loan_event, True
         )
     if auction.state != PawnLoanAuctionState.IN_PROGRESS.value:
         raise PawnAuctionError("Only an auction in progress can be completed.")
@@ -250,7 +245,6 @@ def complete_pawn_loan_auction(
             loan,
             preview=partial,
             actor=actor,
-            delivery_handler=delivery_handler,
         ) if partial else None
         balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
         if amount != balance.total_due:
@@ -258,21 +252,6 @@ def complete_pawn_loan_auction(
                 "Auction recovery must exactly clear the current debt of "
                 f"{balance.total_due}; shortfall write-off and surplus distribution are not supported yet."
             )
-        require_pawn_loan_accounting_readiness(
-            loan,
-            effective_date=effective_date,
-            requires_fee_income=balance.fees_outstanding > 0,
-            requires_interest_receivable=(
-                loan.policy_snapshot.accounting_recognition == AccountingRecognition.ACCRUAL.value
-                and balance.interest_outstanding > 0
-            ),
-            requires_unearned_interest=(
-                loan.policy_snapshot.accounting_recognition
-                == AccountingRecognition.ACCRUAL.value
-                and partial is not None
-                and partial.advance_interest_applied > 0
-            ),
-        )
     except PawnAuctionError:
         raise
     except Exception as exc:
@@ -295,16 +274,14 @@ def complete_pawn_loan_auction(
         "auction_number": auction.auction_number,
         "buyer_name": buyer_name,
         "buyer_reference": str(buyer_reference or "").strip(),
-        "accounting_recognition": loan.policy_snapshot.accounting_recognition,
         "full_debt_recovery": True,
     }
-    event, outbox = record_loan_accounting_event(
+    event, _ = record_loan_event(
         loan.pk,
         event_kind=TransactionKind.AUCTION_RECOVERY,
         effective_date=effective_date,
         payload=payload,
         actor=actor,
-        delivery_handler=delivery_handler,
     )
     allocate_event_to_obligations(
         source_event=event,
@@ -327,7 +304,7 @@ def complete_pawn_loan_auction(
     auction.principal_amount = balance.principal_outstanding
     auction.interest_amount = balance.interest_outstanding
     auction.fee_amount = balance.fees_outstanding
-    auction.accounting_event = event
+    auction.loan_event = event
     auction.catch_up_accrual = catch_up
     auction.save()
     for item in collateral:
@@ -369,9 +346,9 @@ def complete_pawn_loan_auction(
         actor,
         from_state=PawnLoanState.ACTIVE.value,
         to_state=PawnLoanState.CLOSED.value,
-        metadata={"accounting_event_id": event.pk, "outbox_id": outbox.pk},
+        metadata={"loan_event_id": event.pk},
     )
-    return PawnAuctionCompletionResult(loan, auction, event, outbox)
+    return PawnAuctionCompletionResult(loan, auction, event)
 
 
 @transaction.atomic
@@ -380,7 +357,6 @@ def reverse_pawn_loan_auction(
     *,
     reason: str,
     actor,
-    delivery_handler: DeliveryHandler | None = None,
 ) -> PawnAuctionReversalResult:
     auction = _locked_auction(auction_id)
     _require_administrator(actor, auction.workspace)
@@ -397,11 +373,11 @@ def reverse_pawn_loan_auction(
         return PawnAuctionReversalResult(
             auction,
             existing,
-            existing.accounting_event,
+            existing.loan_event,
             existing.catch_up_reversal_event,
             True,
         )
-    if auction.state != PawnLoanAuctionState.COMPLETED.value or not auction.accounting_event_id:
+    if auction.state != PawnLoanAuctionState.COMPLETED.value or not auction.loan_event_id:
         raise PawnAuctionError("Only a completed auction can be reversed.")
     if auction.loan.state != PawnLoanState.CLOSED.value:
         raise PawnAuctionError("Auction reversal requires the loan to remain closed.")
@@ -418,15 +394,14 @@ def reverse_pawn_loan_auction(
     from apps.tenant_apps.loans.services.pawn_reversal import reverse_pawn_loan_event
 
     recovery_result = reverse_pawn_loan_event(
-        auction.accounting_event_id,
+        auction.loan_event_id,
         reason=reason,
         actor=actor,
-        delivery_handler=delivery_handler,
         allow_auction_recovery=True,
     )
     catch_up_reversal_event = None
-    if auction.catch_up_accrual_id and auction.catch_up_accrual.accounting_event_id:
-        original = auction.catch_up_accrual.accounting_event
+    if auction.catch_up_accrual_id and auction.catch_up_accrual.loan_event_id:
+        original = auction.catch_up_accrual.loan_event
         payload = reversal_payload(
             auction.loan,
             effective_date=timezone.localdate(),
@@ -436,18 +411,17 @@ def reverse_pawn_loan_auction(
             reason=reason,
         ).to_dict()
         payload["reversal"]["auction_id"] = auction.pk
-        catch_up_reversal_event, _ = record_loan_accounting_event(
+        catch_up_reversal_event, _ = record_loan_event(
             auction.loan_id,
             event_kind=TransactionKind.REVERSAL,
             effective_date=timezone.localdate(),
             payload=payload,
             actor=actor,
-            delivery_handler=delivery_handler,
             reversal_of=original,
         )
     reversal = PawnLoanAuctionReversal.objects.create(
         auction=auction,
-        accounting_event=recovery_result.reversal_event,
+        loan_event=recovery_result.reversal_event,
         catch_up_reversal_event=(
             catch_up_reversal_event
         ),
@@ -487,10 +461,9 @@ def reverse_pawn_loan_auction(
     )
 
 
-def _record_auction_accrual(loan, *, preview, actor, delivery_handler):
+def _record_auction_accrual(loan, *, preview, actor):
     policy = loan.policy_snapshot
     event = None
-    outbox = None
     if should_record_pawn_accrual_event(preview, policy):
         payload = accrual_payload(
             loan,
@@ -500,13 +473,12 @@ def _record_auction_accrual(loan, *, preview, actor, delivery_handler):
         ).to_dict()
         payload["accrual"] = build_pawn_accrual_detail(preview, policy)
         payload["accrual"]["auction_catch_up"] = True
-        event, outbox = record_loan_accounting_event(
+        event, _ = record_loan_event(
             loan.pk,
             event_kind=TransactionKind.INTEREST_ACCRUAL,
             effective_date=preview.period_end,
             payload=payload,
             actor=actor,
-            delivery_handler=delivery_handler,
         )
     accrual = PawnLoanInterestAccrual.objects.create(
         loan=loan,
@@ -517,7 +489,7 @@ def _record_auction_accrual(loan, *, preview, actor, delivery_handler):
         calculation_base=preview.calculation_base,
         unrounded_interest=preview.unrounded_interest,
         recognized_interest=preview.recognized_interest,
-        accounting_event=event,
+        loan_event=event,
         finalized_by=actor,
     )
     persist_pawn_accrual_lines(accrual, preview)
@@ -531,8 +503,7 @@ def _record_auction_accrual(loan, *, preview, actor, delivery_handler):
             "period_number": preview.period_number,
             "recognized_interest": str(preview.recognized_interest),
             "auction_catch_up": True,
-            "accounting_event_id": event.pk if event else None,
-            "outbox_id": outbox.pk if outbox else None,
+            "loan_event_id": event.pk if event else None,
         },
     )
     return accrual

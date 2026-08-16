@@ -7,13 +7,13 @@ from apps.tenant_apps.rates.models import Rate
 from .models import (
     CollateralAppraisal, LoanMonitoringPolicy, LoanRiskSnapshot,
     ObligationAllocation, PawnCollateralItem, PawnLoan,
-    PawnLoanAccountingEvent, RepaymentObligation,
+    PawnLoanEvent, RepaymentObligation,
     RepaymentScheduleChange, RepaymentScheduleVersion,
 )
 
 
 LOAN_SOURCES = (
-    PawnLoan, PawnLoanAccountingEvent, RepaymentScheduleVersion,
+    PawnLoan, PawnLoanEvent, RepaymentScheduleVersion,
     RepaymentObligation, ObligationAllocation, RepaymentScheduleChange,
     PawnCollateralItem, CollateralAppraisal,
 )

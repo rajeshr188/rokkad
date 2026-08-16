@@ -193,7 +193,7 @@ def _source_fingerprint(loan_id, workspace_id, as_of_date):
     )
     payload = {"as_of": as_of_date.isoformat(), "loan": {k: str(v) for k, v in loan.items()}}
     model = PawnLoan
-    for name, relation in (("events", model.accounting_events.rel.related_model), ("schedules", model.repayment_schedules.rel.related_model), ("obligations", model.repayment_obligations.rel.related_model), ("allocations", model.obligation_allocations.rel.related_model), ("schedule_changes", model.repayment_schedule_changes.rel.related_model)):
+    for name, relation in (("events", model.loan_events.rel.related_model), ("schedules", model.repayment_schedules.rel.related_model), ("obligations", model.repayment_obligations.rel.related_model), ("allocations", model.obligation_allocations.rel.related_model), ("schedule_changes", model.repayment_schedule_changes.rel.related_model)):
         values = relation.objects.filter(loan_id=loan_id).aggregate(count=Count("pk"), max_pk=Max("pk"))
         payload[name] = values
     item_model = model.collateral_items.rel.related_model

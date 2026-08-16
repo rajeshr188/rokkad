@@ -69,7 +69,7 @@ class PawnLoanReportExportTests(SimpleTestCase):
         self.assertEqual(dataset.rows[1][9], "CURRENT")
         self.assertEqual(dataset.rows[1][7], Decimal("250.00"))
 
-    def test_daily_export_retains_correction_and_delivery_evidence(self):
+    def test_daily_export_retains_correction_evidence(self):
         event = SimpleNamespace(
             pk=22,
             effective_date=date(2026, 8, 3),
@@ -87,7 +87,6 @@ class PawnLoanReportExportTests(SimpleTestCase):
                     amount="-500.00",
                     correction_status="COMPENSATION",
                     correction_event_id=21,
-                    delivery_status="PENDING",
                 ),
             ),
         )
@@ -95,7 +94,7 @@ class PawnLoanReportExportTests(SimpleTestCase):
         dataset = build_pawn_loan_report_dataset(report, "daily")
 
         self.assertIn("Correction status", dataset.columns)
-        self.assertEqual(dataset.rows[0][6:], ("COMPENSATION", 21, "PENDING"))
+        self.assertEqual(dataset.rows[0][6:], ("COMPENSATION", 21))
 
     def test_unknown_export_format_is_rejected(self):
         with self.assertRaises(PawnLoanReportExportError):

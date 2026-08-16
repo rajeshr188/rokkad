@@ -1,19 +1,9 @@
 import uuid
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
-from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.dea.models import (
-    Account,
-    AccountType_Ext,
-    EntityType,
-    PartyAccountMapping,
-    PartyAccountPurpose,
-    TransactionType_DE,
-)
 from apps.tenant_apps.party.models import (
     Party,
     PartyAddress,
@@ -142,47 +132,3 @@ class PartyMergeTests(TenantTestCase):
 
         self.assertEqual(document.party, target)
         self.assertEqual(document.identifier, target_identifier)
-
-    def test_merge_refuses_conflicting_account_mapping(self):
-        self._seed_account_masters()
-        customer = Customer.objects.create(firstname="Account", lastname="Holder")
-        account_type = AccountType_Ext.objects.get(description="Debtor")
-        entity = EntityType.objects.get(name="Person")
-        first_account = Account.objects.create(
-            contact=customer,
-            AccountType_Ext=account_type,
-            entity=entity,
-        )
-        second_account = Account.objects.create(
-            contact=customer,
-            AccountType_Ext=account_type,
-            entity=entity,
-        )
-        target = Party.objects.create(party_code="P-ACCT-T", display_name="Target")
-        source = Party.objects.create(party_code="P-ACCT-S", display_name="Source")
-        PartyAccountMapping.objects.create(
-            party=target,
-            role_key="CUSTOMER",
-            purpose=PartyAccountPurpose.CUSTOMER_RECEIVABLE,
-            account=first_account,
-        )
-        PartyAccountMapping.objects.create(
-            party=source,
-            role_key="CUSTOMER",
-            purpose=PartyAccountPurpose.CUSTOMER_RECEIVABLE,
-            account=second_account,
-        )
-
-        with self.assertRaises(ValidationError):
-            merge_parties(target=target, source=source)
-
-    def _seed_account_masters(self):
-        debtor_code, _ = TransactionType_DE.objects.get_or_create(
-            XactTypeCode="Dr",
-            defaults={"name": "Debit"},
-        )
-        AccountType_Ext.objects.get_or_create(
-            description="Debtor",
-            defaults={"XactTypeCode": debtor_code},
-        )
-        EntityType.objects.get_or_create(name="Person")

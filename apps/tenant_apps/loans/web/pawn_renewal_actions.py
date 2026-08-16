@@ -35,7 +35,7 @@ def _pawn_loan_for_workspace(request, pk):
 
 def _pawn_renewal_for_workspace(request, pk):
     return get_object_or_404(
-        PawnLoanRenewal.objects.select_related("source_loan", "source_loan__workspace", "successor_loan", "settlement_event__outbox", "opening_event__outbox"),
+        PawnLoanRenewal.objects.select_related("source_loan", "source_loan__workspace", "successor_loan", "settlement_event", "opening_event"),
         pk=pk, workspace=request.loans_workspace,
     )
 
@@ -234,10 +234,7 @@ def pawn_loan_renew(request, pk):
                     f"source loan closed, successor {result.successor_loan.loan_number} active; "
                     f"{len(snapshot.get('returned_source_item_ids') or [])} item(s) returned, "
                     f"{len(snapshot.get('retained_source_item_ids') or [])} retained, "
-                    f"{len(snapshot.get('additional_successor_item_ids') or [])} added. "
-                    f"Accounting delivery: settlement "
-                    f"{result.settlement_outbox.get_status_display()}, successor opening "
-                    f"{result.opening_outbox.get_status_display()}.",
+                    f"{len(snapshot.get('additional_successor_item_ids') or [])} added.",
                 )
                 return redirect("loans:pawn_loan_detail", pk=result.successor_loan.pk)
     return render(

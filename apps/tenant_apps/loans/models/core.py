@@ -8,14 +8,12 @@ from django.db.models import F, Q
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     CollateralCustodyState,
     CollateralMetal,
     DisbursalPolicySnapshot,
     FeeCalculationType,
     InterestMethod,
     LoanDocumentKind,
-    LoanOutboxStatus,
     PartialMonthMethod,
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
@@ -184,11 +182,6 @@ class PawnLoanEconomicPolicy(models.Model):
         default=Decimal("0.5"),
     )
     capitalization_interval_periods = models.PositiveSmallIntegerField(default=12)
-    accounting_recognition = models.CharField(
-        max_length=16,
-        choices=enum_choices(AccountingRecognition),
-        default=AccountingRecognition.CASH.value,
-    )
     rounding_method = models.CharField(
         max_length=32,
         choices=enum_choices(RoundingMethod),
@@ -275,9 +268,6 @@ class PawnLoanEconomicPolicy(models.Model):
                 partial_month_cutoff_days=self.partial_month_cutoff_days,
                 partial_month_lower_fraction=self.partial_month_lower_fraction,
                 capitalization_interval_periods=self.capitalization_interval_periods,
-                accounting_recognition=AccountingRecognition(
-                    self.accounting_recognition
-                ),
                 valuation_method=ValuationMethod(self.valuation_method),
                 maximum_ltv_ratio=self.maximum_ltv_ratio,
                 rounding_method=RoundingMethod(self.rounding_method),
@@ -820,10 +810,6 @@ class LoanPolicySnapshot(models.Model):
         default=Decimal("0.5"),
     )
     capitalization_interval_periods = models.PositiveSmallIntegerField(default=12)
-    accounting_recognition = models.CharField(
-        max_length=16,
-        choices=enum_choices(AccountingRecognition),
-    )
     valuation_method = models.CharField(
         max_length=48,
         choices=enum_choices(ValuationMethod),
@@ -867,9 +853,6 @@ class LoanPolicySnapshot(models.Model):
                 partial_month_cutoff_days=self.partial_month_cutoff_days,
                 partial_month_lower_fraction=self.partial_month_lower_fraction,
                 capitalization_interval_periods=self.capitalization_interval_periods,
-                accounting_recognition=AccountingRecognition(
-                    self.accounting_recognition
-                ),
                 valuation_method=ValuationMethod(self.valuation_method),
                 maximum_ltv_ratio=self.maximum_ltv_ratio,
                 rounding_method=RoundingMethod(self.rounding_method),
@@ -964,11 +947,12 @@ class PawnLoanApprovalSnapshot(models.Model):
         raise ValidationError("Approval snapshots cannot be deleted.")
 
 
-class PawnLoanAccountingEvent(models.Model):
+class PawnLoanEvent(models.Model):
+    """Immutable Loans-owned evidence for a financial lifecycle event."""
     loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
-        related_name="accounting_events",
+        related_name="loan_events",
     )
     event_kind = models.CharField(
         max_length=32,
@@ -990,7 +974,7 @@ class PawnLoanAccountingEvent(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="pawn_loan_accounting_events",
+        related_name="pawn_loan_events",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -1037,8 +1021,8 @@ class PawnLoanDisbursalSnapshot(models.Model):
         on_delete=models.PROTECT,
         related_name="disbursal_snapshot",
     )
-    accounting_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+    loan_event = models.OneToOneField(
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="disbursal_snapshot",
     )
@@ -1082,10 +1066,10 @@ class PawnLoanDisbursalSnapshot(models.Model):
         if self.loan_id and self.policy_snapshot_id:
             if self.policy_snapshot.loan_id != self.loan_id:
                 raise ValidationError("Policy snapshot must belong to this PawnLoan.")
-        if self.loan_id and self.accounting_event_id:
-            if self.accounting_event.loan_id != self.loan_id:
-                raise ValidationError("Accounting event must belong to this PawnLoan.")
-            if self.accounting_event.event_kind != TransactionKind.DISBURSAL.value:
+        if self.loan_id and self.loan_event_id:
+            if self.loan_event.loan_id != self.loan_id:
+                raise ValidationError("Loan event must belong to this PawnLoan.")
+            if self.loan_event.event_kind != TransactionKind.DISBURSAL.value:
                 raise ValidationError("Disbursal snapshot requires a disbursal event.")
         if self.gross_principal is not None and (
             self.net_disbursed is not None
@@ -1108,42 +1092,6 @@ class PawnLoanDisbursalSnapshot(models.Model):
         raise ValidationError("Disbursal snapshots cannot be deleted.")
 
 
-class PawnLoanAccountingOutbox(models.Model):
-    event = models.OneToOneField(
-        PawnLoanAccountingEvent,
-        on_delete=models.PROTECT,
-        related_name="outbox",
-    )
-    idempotency_key = models.CharField(max_length=180, unique=True)
-    payload = models.JSONField()
-    payload_fingerprint = models.CharField(max_length=64)
-    contract_version = models.PositiveSmallIntegerField(default=1)
-    status = models.CharField(
-        max_length=16,
-        choices=enum_choices(LoanOutboxStatus),
-        default=LoanOutboxStatus.PENDING.value,
-        db_index=True,
-    )
-    attempt_count = models.PositiveIntegerField(default=0)
-    available_at = models.DateTimeField(default=timezone.now, db_index=True)
-    claimed_at = models.DateTimeField(null=True, blank=True)
-    delivered_at = models.DateTimeField(null=True, blank=True)
-    last_error = models.TextField(blank=True, default="")
-    dea_voucher_id = models.PositiveBigIntegerField(null=True, blank=True)
-    dea_journal_entry_id = models.PositiveBigIntegerField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ("id",)
-        indexes = [
-            models.Index(
-                fields=("status", "available_at"),
-                name="loans_outbox_due_idx",
-            ),
-        ]
-
-
 class PawnLoanInterestAccrual(models.Model):
     """Immutable, currency-rounded monthly interest recognition row."""
 
@@ -1159,8 +1107,8 @@ class PawnLoanInterestAccrual(models.Model):
     calculation_base = models.DecimalField(max_digits=30, decimal_places=12)
     unrounded_interest = models.DecimalField(max_digits=30, decimal_places=12)
     recognized_interest = models.DecimalField(max_digits=18, decimal_places=4)
-    accounting_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+    loan_event = models.OneToOneField(
+        PawnLoanEvent,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -1285,8 +1233,8 @@ class PawnLoanInterestAccrualLine(models.Model):
 class PawnLoanRepaymentAllocationLine(models.Model):
     """Immutable principal movement against one collateral tranche."""
 
-    accounting_event = models.ForeignKey(
-        PawnLoanAccountingEvent,
+    loan_event = models.ForeignKey(
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="repayment_allocation_lines",
     )
@@ -1302,14 +1250,14 @@ class PawnLoanRepaymentAllocationLine(models.Model):
     balance_after = models.DecimalField(max_digits=18, decimal_places=4)
 
     class Meta:
-        ordering = ("accounting_event_id", "allocation_order")
+        ordering = ("loan_event_id", "allocation_order")
         constraints = [
             models.UniqueConstraint(
-                fields=("accounting_event", "collateral_item"),
+                fields=("loan_event", "collateral_item"),
                 name="loans_repayment_event_item_uniq",
             ),
             models.UniqueConstraint(
-                fields=("accounting_event", "allocation_order"),
+                fields=("loan_event", "allocation_order"),
                 name="loans_repayment_event_order_uniq",
             ),
             models.CheckConstraint(
@@ -1327,14 +1275,14 @@ class PawnLoanRepaymentAllocationLine(models.Model):
 
     def clean(self):
         super().clean()
-        if self.accounting_event_id and self.collateral_item_id:
-            if self.accounting_event.loan_id != self.collateral_item.loan_id:
+        if self.loan_event_id and self.collateral_item_id:
+            if self.loan_event.loan_id != self.collateral_item.loan_id:
                 raise ValidationError(
                     "Repayment allocation collateral must belong to the event PawnLoan."
                 )
-            if self.accounting_event.event_kind != TransactionKind.REPAYMENT.value:
+            if self.loan_event.event_kind != TransactionKind.REPAYMENT.value:
                 raise ValidationError(
-                    "Repayment allocation requires a repayment accounting event."
+                    "Repayment allocation requires a repayment loan event."
                 )
         if (
             self.balance_before is not None
@@ -1359,8 +1307,8 @@ class PawnLoanRepaymentAllocationLine(models.Model):
 class PawnLoanPrincipalClosingLine(models.Model):
     """Immutable item-principal settlement for release or renewal closure."""
 
-    accounting_event = models.ForeignKey(
-        PawnLoanAccountingEvent,
+    loan_event = models.ForeignKey(
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="principal_closing_lines",
     )
@@ -1376,14 +1324,14 @@ class PawnLoanPrincipalClosingLine(models.Model):
     balance_after = models.DecimalField(max_digits=18, decimal_places=4)
 
     class Meta:
-        ordering = ("accounting_event_id", "allocation_order")
+        ordering = ("loan_event_id", "allocation_order")
         constraints = [
             models.UniqueConstraint(
-                fields=("accounting_event", "collateral_item"),
+                fields=("loan_event", "collateral_item"),
                 name="loans_close_event_item_uniq",
             ),
             models.UniqueConstraint(
-                fields=("accounting_event", "allocation_order"),
+                fields=("loan_event", "allocation_order"),
                 name="loans_close_event_order_uniq",
             ),
             models.CheckConstraint(
@@ -1403,12 +1351,12 @@ class PawnLoanPrincipalClosingLine(models.Model):
 
     def clean(self):
         super().clean()
-        if self.accounting_event_id and self.collateral_item_id:
-            if self.accounting_event.loan_id != self.collateral_item.loan_id:
+        if self.loan_event_id and self.collateral_item_id:
+            if self.loan_event.loan_id != self.collateral_item.loan_id:
                 raise ValidationError(
                     "Closing-line collateral must belong to the event PawnLoan."
                 )
-            if self.accounting_event.event_kind not in {
+            if self.loan_event.event_kind not in {
                 TransactionKind.RELEASE_RECEIPT.value,
                 TransactionKind.RENEWAL_SETTLEMENT.value,
             }:
@@ -1436,8 +1384,8 @@ class PawnLoanPrincipalClosingLine(models.Model):
 class PawnLoanPrincipalOpeningLine(models.Model):
     """Immutable initial item-principal evidence for a renewal successor."""
 
-    accounting_event = models.ForeignKey(
-        PawnLoanAccountingEvent,
+    loan_event = models.ForeignKey(
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="principal_opening_lines",
     )
@@ -1458,10 +1406,10 @@ class PawnLoanPrincipalOpeningLine(models.Model):
     principal_opened = models.DecimalField(max_digits=18, decimal_places=4)
 
     class Meta:
-        ordering = ("accounting_event_id", "allocation_order")
+        ordering = ("loan_event_id", "allocation_order")
         constraints = [
             models.UniqueConstraint(
-                fields=("accounting_event", "allocation_order"),
+                fields=("loan_event", "allocation_order"),
                 name="loans_open_event_order_uniq",
             ),
             models.CheckConstraint(
@@ -1477,12 +1425,12 @@ class PawnLoanPrincipalOpeningLine(models.Model):
 
     def clean(self):
         super().clean()
-        if self.accounting_event_id and self.collateral_item_id:
-            if self.accounting_event.loan_id != self.collateral_item.loan_id:
+        if self.loan_event_id and self.collateral_item_id:
+            if self.loan_event.loan_id != self.collateral_item.loan_id:
                 raise ValidationError(
                     "Opening-line collateral must belong to the successor PawnLoan."
                 )
-            if self.accounting_event.event_kind != TransactionKind.RENEWAL_OPENING.value:
+            if self.loan_event.event_kind != TransactionKind.RENEWAL_OPENING.value:
                 raise ValidationError("Opening lines require a renewal-opening event.")
         if self.predecessor_collateral_item_id and self.collateral_item_id:
             if self.predecessor_collateral_item_id == self.collateral_item_id:
@@ -1528,8 +1476,8 @@ class PawnLoanRelease(models.Model):
     interest_amount = models.DecimalField(max_digits=18, decimal_places=4)
     fee_amount = models.DecimalField(max_digits=18, decimal_places=4)
     valuation_snapshot = models.JSONField(default=dict)
-    accounting_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+    loan_event = models.OneToOneField(
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="release",
     )
@@ -1908,13 +1856,13 @@ class PawnLoanReleaseReversal(models.Model):
         on_delete=models.PROTECT,
         related_name="reversal",
     )
-    accounting_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+    loan_event = models.OneToOneField(
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="release_reversal",
     )
     catch_up_reversal_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+        PawnLoanEvent,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -1941,17 +1889,17 @@ class PawnLoanReleaseReversal(models.Model):
         errors = {}
         if not str(self.reason or "").strip():
             errors["reason"] = "A reversal reason is required."
-        if self.release_id and self.accounting_event_id:
+        if self.release_id and self.loan_event_id:
             if (
-                self.accounting_event.reversal_of_id
-                != self.release.accounting_event_id
+                self.loan_event.reversal_of_id
+                != self.release.loan_event_id
             ):
-                errors["accounting_event"] = (
+                errors["loan_event"] = (
                     "Release reversal event must compensate the release event."
                 )
         if self.catch_up_reversal_event_id and self.release_id:
             catch_up_event_id = (
-                self.release.catch_up_accrual.accounting_event_id
+                self.release.catch_up_accrual.loan_event_id
                 if self.release.catch_up_accrual_id
                 else None
             )
@@ -2091,7 +2039,7 @@ class PawnLoanNotice(models.Model):
 
 
 class PawnLoanAuction(models.Model):
-    """Loan-owned recovery process; accounting remains an immutable event."""
+    """Loan-owned recovery process backed by an immutable loan event."""
 
     workspace = models.ForeignKey(
         "orgs.Company", on_delete=models.PROTECT, related_name="pawn_loan_auctions"
@@ -2118,8 +2066,8 @@ class PawnLoanAuction(models.Model):
     principal_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
     interest_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
     fee_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
-    accounting_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+    loan_event = models.OneToOneField(
+        PawnLoanEvent,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -2169,7 +2117,7 @@ class PawnLoanAuction(models.Model):
                 "principal_amount": self.principal_amount,
                 "interest_amount": self.interest_amount,
                 "fee_amount": self.fee_amount,
-                "accounting_event": self.accounting_event_id,
+                "loan_event": self.loan_event_id,
                 "completed_at": self.completed_at,
                 "buyer_name": self.buyer_name,
             }
@@ -2213,9 +2161,9 @@ class PawnLoanAuctionItem(models.Model):
 
 class PawnLoanAuctionReversal(models.Model):
     auction = models.OneToOneField(PawnLoanAuction, on_delete=models.PROTECT, related_name="reversal")
-    accounting_event = models.OneToOneField(PawnLoanAccountingEvent, on_delete=models.PROTECT, related_name="auction_reversal")
+    loan_event = models.OneToOneField(PawnLoanEvent, on_delete=models.PROTECT, related_name="auction_reversal")
     catch_up_reversal_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+        PawnLoanEvent,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -2236,8 +2184,8 @@ class PawnLoanAuctionReversal(models.Model):
             raise ValidationError("PawnLoan auction reversals are immutable.")
         if not str(self.reason or "").strip():
             raise ValidationError({"reason": "A reversal reason is required."})
-        if self.auction_id and self.accounting_event_id and self.accounting_event.reversal_of_id != self.auction.accounting_event_id:
-            raise ValidationError({"accounting_event": "Auction reversal must compensate the recovery event."})
+        if self.auction_id and self.loan_event_id and self.loan_event.reversal_of_id != self.auction.loan_event_id:
+            raise ValidationError({"loan_event": "Auction reversal must compensate the recovery event."})
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -2280,12 +2228,12 @@ class PawnLoanRenewal(models.Model):
     )
     valuation_snapshot = models.JSONField(default=dict)
     settlement_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="renewal_settlement",
     )
     opening_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="renewal_opening",
     )
@@ -2368,17 +2316,17 @@ class PawnLoanRenewalReversal(models.Model):
         PawnLoanRenewal, on_delete=models.PROTECT, related_name="reversal"
     )
     settlement_reversal_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="renewal_settlement_reversal",
     )
     opening_reversal_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+        PawnLoanEvent,
         on_delete=models.PROTECT,
         related_name="renewal_opening_reversal",
     )
     catch_up_reversal_event = models.OneToOneField(
-        PawnLoanAccountingEvent,
+        PawnLoanEvent,
         null=True,
         blank=True,
         on_delete=models.PROTECT,

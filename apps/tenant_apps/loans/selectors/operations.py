@@ -3,14 +3,11 @@
 from dataclasses import dataclass
 from datetime import timedelta
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     LoanDocumentKind,
-    LoanOutboxStatus,
     PawnLoanState,
     TransactionKind,
 )
@@ -19,12 +16,8 @@ from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanRiskSnapshot,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     current_tenant_workspace_id,
-)
-from apps.tenant_apps.loans.services.accounting_readiness import (
-    assess_pawn_loan_accounting_readiness,
 )
 
 
@@ -41,13 +34,6 @@ class SequenceHealthRow:
 
 
 @dataclass(frozen=True)
-class AccountingSetupRow:
-    loan: object
-    ready: bool
-    blockers: tuple[object, ...]
-
-
-@dataclass(frozen=True)
 class OperationsBlocker:
     code: str
     message: str
@@ -58,11 +44,7 @@ class OperationsBlocker:
 @dataclass(frozen=True)
 class PawnLoanOperationsSnapshot:
     generated_at: object
-    outbox_counts: dict
-    failed_events: tuple[object, ...]
-    stale_processing_events: tuple[object, ...]
     sequence_rows: tuple[SequenceHealthRow, ...]
-    accounting_rows: tuple[AccountingSetupRow, ...]
     recent_reversals: tuple[object, ...]
     recent_audit_events: tuple[object, ...]
     active_loan_count: int
@@ -70,16 +52,8 @@ class PawnLoanOperationsSnapshot:
     last_successful_risk_assessment_at: object | None
 
     @property
-    def failed_count(self):
-        return self.outbox_counts.get(LoanOutboxStatus.FAILED.value, 0)
-
-    @property
     def sequence_blocker_count(self):
         return sum(row.status != "READY" for row in self.sequence_rows)
-
-    @property
-    def accounting_blocker_count(self):
-        return sum(not row.ready for row in self.accounting_rows)
 
 
 def get_pawn_loan_operations_snapshot(
@@ -93,38 +67,10 @@ def get_pawn_loan_operations_snapshot(
     if workspace_id is None:
         raise ValueError("PawnLoan operations diagnostics require an active tenant schema.")
     now = timezone.now()
-    outboxes = PawnLoanAccountingOutbox.objects.filter(
-        event__loan__workspace_id=workspace_id
-    )
-    outbox_counts = {
-        status.value: outboxes.filter(status=status.value).count()
-        for status in LoanOutboxStatus
-    }
-    failed = tuple(
-        outboxes.filter(status=LoanOutboxStatus.FAILED.value)
-        .select_related("event", "event__loan")
-        .order_by("-updated_at")[:failed_limit]
-    )
-    stale = tuple(
-        outboxes.filter(
-            status=LoanOutboxStatus.PROCESSING.value,
-            claimed_at__lt=now - stale_after,
-        )
-        .select_related("event", "event__loan")
-        .order_by("claimed_at")[:failed_limit]
-    )
     licenses = tuple(
         LoanLicense.objects.filter(workspace_id=workspace_id)
         .prefetch_related("series__number_sequences")
         .order_by("license_number")
-    )
-    loans = tuple(
-        PawnLoan.objects.filter(
-            workspace_id=workspace_id,
-            state__in=[PawnLoanState.APPROVED.value, PawnLoanState.ACTIVE.value],
-        )
-        .select_related("borrower", "license", "policy_snapshot")
-        .order_by("loan_number")
     )
     active_loans = PawnLoan.objects.filter(
         workspace_id=workspace_id,
@@ -136,17 +82,13 @@ def get_pawn_loan_operations_snapshot(
     )
     return PawnLoanOperationsSnapshot(
         generated_at=now,
-        outbox_counts=outbox_counts,
-        failed_events=failed,
-        stale_processing_events=stale,
         sequence_rows=_sequence_health(licenses),
-        accounting_rows=_accounting_health(loans),
         recent_reversals=tuple(
-            PawnLoanAccountingEvent.objects.filter(
+            PawnLoanEvent.objects.filter(
                 loan__workspace_id=workspace_id,
                 event_kind=TransactionKind.REVERSAL.value,
             )
-            .select_related("loan", "reversal_of", "created_by", "outbox")
+            .select_related("loan", "reversal_of", "created_by")
             .order_by("-created_at")[:reversal_limit]
         ),
         recent_audit_events=tuple(
@@ -216,34 +158,7 @@ def _sequence_status(license, series, sequence):
     return "READY", "Ready to allocate."
 
 
-def _accounting_health(loans):
-    rows = []
-    for loan in loans:
-        try:
-            recognition = loan.policy_snapshot.accounting_recognition
-        except ObjectDoesNotExist:
-            recognition = None
-        try:
-            readiness = assess_pawn_loan_accounting_readiness(
-                loan,
-                effective_date=timezone.localdate(),
-                requires_interest_receivable=(
-                    recognition == AccountingRecognition.ACCRUAL.value
-                ),
-            )
-            rows.append(AccountingSetupRow(loan, readiness.ready, readiness.blockers))
-        except Exception as exc:
-            blocker = OperationsBlocker(
-                code="ACCOUNTING_CHECK_FAILED",
-                message=str(exc),
-                action_label="Review accounting setup",
-            )
-            rows.append(AccountingSetupRow(loan, False, (blocker,)))
-    return tuple(rows)
-
-
 __all__ = [
-    "AccountingSetupRow",
     "PawnLoanOperationsSnapshot",
     "OperationsBlocker",
     "SequenceHealthRow",

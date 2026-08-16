@@ -16,12 +16,16 @@ class RiskAssessmentTests(SimpleTestCase):
         return assess_pawn_loan_risk(**values)
 
     def test_thresholds_are_explainable_and_composable(self):
-        result = self.assess(days_past_due=90, ltv_ratio=Decimal("0.91"), accounting_variance=True)
+        result = self.assess(
+            days_past_due=90,
+            ltv_ratio=Decimal("0.91"),
+            overdue_interpretation_variance=True,
+        )
         self.assertEqual(result.performance_class, "SUBSTANDARD")
         self.assertEqual(result.severity, "CRITICAL")
         self.assertIn("DPD_SUBSTANDARD", result.flags)
         self.assertIn("LTV_CRITICAL", result.flags)
-        self.assertIn("ACCOUNTING_VARIANCE", result.flags)
+        self.assertIn("OVERDUE_INTERPRETATION_VARIANCE", result.flags)
         self.assertEqual(len(result.flags), len(result.explanations))
 
     def test_missing_valuation_is_not_healthy(self):

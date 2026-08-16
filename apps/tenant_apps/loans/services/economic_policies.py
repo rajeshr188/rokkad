@@ -11,7 +11,6 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     CollateralMetal,
     FeeCalculationType,
     InterestMethod,
@@ -88,7 +87,6 @@ def create_pawn_loan_economic_policy(
     partial_month_cutoff_days: int = 15,
     partial_month_lower_fraction: Decimal = Decimal("0.5"),
     capitalization_interval_periods: int = 12,
-    accounting_recognition: AccountingRecognition | str = AccountingRecognition.CASH,
     rounding_method: RoundingMethod | str = RoundingMethod.PER_ACCRUAL_PERIOD,
     currency_quantum: Decimal = Decimal("0.01"),
     effective_from: date | None = None,
@@ -108,7 +106,6 @@ def create_pawn_loan_economic_policy(
         partial_month_cutoff_days=partial_month_cutoff_days,
         partial_month_lower_fraction=partial_month_lower_fraction,
         capitalization_interval_periods=capitalization_interval_periods,
-        accounting_recognition=AccountingRecognition(accounting_recognition).value,
         rounding_method=RoundingMethod(rounding_method).value,
         currency_quantum=currency_quantum,
         effective_from=effective_from or timezone.localdate(),

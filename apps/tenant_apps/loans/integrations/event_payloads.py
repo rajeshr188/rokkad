@@ -1,4 +1,4 @@
-"""Stable PawnLoan-to-DEA event contracts; this module never posts accounting."""
+"""Stable frozen payload contracts for PawnLoan lifecycle events."""
 
 from __future__ import annotations
 
@@ -8,16 +8,15 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from apps.tenant_apps.dea import facade as dea_facade
 from apps.tenant_apps.loans.domain import TransactionKind
 
 
-class LoanDeaPayloadError(ValueError):
-    """Raised when an accounting event contract is incomplete or inconsistent."""
+class LoanEventPayloadError(ValueError):
+    """Raised when a lifecycle-event contract is incomplete or inconsistent."""
 
 
 @dataclass(frozen=True)
-class PawnLoanDeaPayload:
+class LoanEventPayload:
     loan_id: int
     loan_number: str
     borrower_id: int
@@ -33,21 +32,21 @@ class PawnLoanDeaPayload:
 
     def __post_init__(self):
         if self.loan_id <= 0 or self.borrower_id <= 0:
-            raise LoanDeaPayloadError("Loan and borrower source identities are required.")
+            raise LoanEventPayloadError("Loan and borrower source identities are required.")
         if not self.loan_number:
-            raise LoanDeaPayloadError("Official loan number is required.")
+            raise LoanEventPayloadError("Official loan number is required.")
         if not self.values:
-            raise LoanDeaPayloadError("At least one economic value is required.")
+            raise LoanEventPayloadError("At least one economic value is required.")
         for name, amount in self.values.items():
             if not name or Decimal(str(amount)) < 0:
-                raise LoanDeaPayloadError("Economic values must be named and non-negative.")
+                raise LoanEventPayloadError("Economic values must be named and non-negative.")
         if self.event_kind == TransactionKind.REVERSAL:
             if (
                 not self.reversal_of_event_id
                 or not self.reversal_of_event_kind
                 or not self.reversal_reason.strip()
             ):
-                raise LoanDeaPayloadError(
+                raise LoanEventPayloadError(
                     "Reversal requires original event identity, kind, and reason."
                 )
 
@@ -58,7 +57,7 @@ class PawnLoanDeaPayload:
             "model": "PawnLoan",
             "loan_id": self.loan_id,
             "loan_number": self.loan_number,
-            "accounting_event_id": self.source_event_id,
+            "loan_event_id": self.source_event_id,
         }
 
     @property
@@ -69,7 +68,7 @@ class PawnLoanDeaPayload:
 
     @property
     def idempotency_key(self):
-        return f"loans:dea:{self.loan_id}:{self.event_kind.value}:{self.fingerprint}"
+        return f"loans:event:{self.loan_id}:{self.event_kind.value}:{self.fingerprint}"
 
     def to_dict(self):
         return {
@@ -285,7 +284,7 @@ def reversal_payload(
 ):
     original_kind = TransactionKind(original_event_kind)
     if original_kind == TransactionKind.REVERSAL:
-        raise LoanDeaPayloadError("A reversal cannot reverse another reversal directly.")
+        raise LoanEventPayloadError("A reversal cannot reverse another reversal directly.")
     return _payload(
         loan,
         TransactionKind.REVERSAL,
@@ -298,18 +297,8 @@ def reversal_payload(
     )
 
 
-def resolve_borrower_account(loan, *, create=False):
-    """Resolve through DEA's public facade; posting remains DEA-owned."""
-    return dea_facade.resolve_party_account(
-        loan.borrower,
-        role_key="BORROWER",
-        purpose="BORROWER_LOAN_RECEIVABLE",
-        create=create,
-    )
-
-
 def _payload(loan, kind, effective_date, values, source_event_id, **kwargs):
-    return PawnLoanDeaPayload(
+    return LoanEventPayload(
         loan_id=loan.pk,
         loan_number=loan.loan_number,
         borrower_id=loan.borrower_id,

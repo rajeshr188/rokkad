@@ -10,7 +10,6 @@ from django_tenants.utils import schema_context
 
 from apps.orgs.models import Company
 from apps.tenant_apps.loans.domain import (
-    AccountingRecognition,
     CollateralCustodyState,
     CollateralMetal,
     InterestMethod,
@@ -248,7 +247,6 @@ class LoansCoreModelTests(TenantTestCase):
             partial_month_cutoff_days=15,
             partial_month_lower_fraction=Decimal("0.5000"),
             capitalization_interval_periods=12,
-            accounting_recognition=AccountingRecognition.CASH.value,
             valuation_method=ValuationMethod.CALCULATED_METAL_VALUE.value,
             maximum_ltv_ratio=Decimal("0.8000"),
             rounding_method=RoundingMethod.PER_ACCRUAL_PERIOD.value,

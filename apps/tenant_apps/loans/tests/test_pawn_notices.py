@@ -12,7 +12,6 @@ from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
 from apps.tenant_apps.loans.domain import (
-    LoanOutboxStatus,
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
     PawnLoanNoticeStatus,
@@ -24,8 +23,7 @@ from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanSeries,
     PawnLoan,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
+    PawnLoanEvent,
     PawnLoanNotice,
     PawnCollateralItem,
     LoanOperationalNotice,
@@ -106,7 +104,7 @@ class PawnLoanNoticeTests(TenantTestCase):
             created_by=self.actor,
             updated_by=self.actor,
         )
-        event = PawnLoanAccountingEvent.objects.create(
+        PawnLoanEvent.objects.create(
             loan=self.loan,
             event_kind=TransactionKind.DISBURSAL.value,
             effective_date=self.loan.loan_date,
@@ -114,13 +112,6 @@ class PawnLoanNoticeTests(TenantTestCase):
             payload_fingerprint="d" * 64,
             idempotency_key=f"notice-disbursal-{uuid.uuid4().hex}",
             created_by=self.actor,
-        )
-        PawnLoanAccountingOutbox.objects.create(
-            event=event,
-            idempotency_key=f"notice-outbox-{uuid.uuid4().hex}",
-            payload=event.payload,
-            payload_fingerprint=event.payload_fingerprint,
-            status=LoanOutboxStatus.POSTED.value,
         )
 
     def test_notice_intent_creates_notify_job_without_duplicating_delivery_state(self):

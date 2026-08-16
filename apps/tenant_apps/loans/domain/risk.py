@@ -29,7 +29,7 @@ class PawnLoanRiskAssessment:
     fingerprint: str
 
 
-def assess_pawn_loan_risk(*, as_of_date, maturity_date, days_past_due, ltv_ratio, valuation_blockers=(), accounting_variance=False, policy):
+def assess_pawn_loan_risk(*, as_of_date, maturity_date, days_past_due, ltv_ratio, valuation_blockers=(), overdue_interpretation_variance=False, policy):
     flags, explanations = [], []
     days_to_maturity = (maturity_date - as_of_date).days
     if days_to_maturity < 0:
@@ -51,11 +51,11 @@ def assess_pawn_loan_risk(*, as_of_date, maturity_date, days_past_due, ltv_ratio
         else: code = None
         if code:
             flags.append(code); explanations.append(f"Monitoring LTV {ltv_ratio} triggered {code.lower().replace('_', ' ')}.")
-    if accounting_variance:
-        flags.append("ACCOUNTING_VARIANCE"); explanations.append("Contractual and legacy/accounting overdue interpretations differ.")
+    if overdue_interpretation_variance:
+        flags.append("OVERDUE_INTERPRETATION_VARIANCE"); explanations.append("Contractual schedule and recorded-balance overdue interpretations differ.")
     severity = _severity(flags)
     action = {"CRITICAL": "IMMEDIATE_REVIEW", "HIGH": "PRIORITY_REVIEW", "MEDIUM": "MONITOR", "LOW": "NONE"}[severity]
-    payload = {"as_of": as_of_date.isoformat(), "maturity": maturity_date.isoformat(), "dpd": days_past_due, "ltv": str(ltv_ratio) if ltv_ratio is not None else None, "blockers": list(valuation_blockers), "variance": accounting_variance, "policy": policy.identity, "flags": flags}
+    payload = {"as_of": as_of_date.isoformat(), "maturity": maturity_date.isoformat(), "dpd": days_past_due, "ltv": str(ltv_ratio) if ltv_ratio is not None else None, "blockers": list(valuation_blockers), "overdue_interpretation_variance": overdue_interpretation_variance, "policy": policy.identity, "flags": flags}
     fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return PawnLoanRiskAssessment(as_of_date, days_to_maturity, performance, tuple(flags), severity, action, tuple(explanations), policy.identity, fingerprint)
 
@@ -63,6 +63,6 @@ def assess_pawn_loan_risk(*, as_of_date, maturity_date, days_past_due, ltv_ratio
 def _severity(flags):
     values = set(flags)
     if values & {"LTV_CRITICAL", "DPD_SUBSTANDARD"}: return "CRITICAL"
-    if values & {"LTV_BREACH", "VALUATION_UNKNOWN", "ACCOUNTING_VARIANCE", "PAST_MATURITY"}: return "HIGH"
+    if values & {"LTV_BREACH", "VALUATION_UNKNOWN", "OVERDUE_INTERPRETATION_VARIANCE", "PAST_MATURITY"}: return "HIGH"
     if values & {"LTV_WARNING", "PAYMENT_OVERDUE", "MATURITY_APPROACHING"}: return "MEDIUM"
     return "LOW"
