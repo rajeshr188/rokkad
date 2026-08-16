@@ -8,6 +8,14 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: Deterministic two-Workspace runtime smoke fixtures now exist via
+  `seed_rls_smoke_workspaces`. The command is development-only, refuses an
+  unsafe database role or incomplete RLS metadata, and idempotently creates two
+  Workspaces with one Rates proof row each. Running it twice through
+  `rokkad_runtime` passed: no context sees zero rows, each Workspace sees only
+  its own row, and attempted cross-Workspace updates affect zero rows. The local
+  fixtures are Workspace IDs 1 and 2 (`rls-smoke-one`, `rls-smoke-two`).
+
 - 2026-08-17: Production-shaped runtime-role validation passes against the
   rebuilt local shared-schema database. The ordinary Django connection is
   `rokkad_runtime`: it is neither superuser nor `BYPASSRLS`, has no database or

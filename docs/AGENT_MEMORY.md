@@ -8,6 +8,14 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+The deterministic local RLS smoke command is `seed_rls_smoke_workspaces`. It
+requires DEBUG, a restricted default connection, and complete RLS metadata. It
+idempotently maintains `rls-smoke-one` and `rls-smoke-two` plus one Workspace-
+owned RateSource each, then proves no-context invisibility, same-Workspace
+visibility, and zero-row cross-Workspace updates. Local fixture IDs were 1 and
+2 on 2026-08-17. Do not broaden this command into general demo data or allow it
+to run under production settings.
+
 Runtime-role checkpoint (2026-08-17): the ordinary local Django connection is
 `rokkad_runtime`, which is NOSUPERUSER/NOBYPASSRLS, cannot create databases or
 roles, and owns zero application tables. All 95 surviving business tables have
