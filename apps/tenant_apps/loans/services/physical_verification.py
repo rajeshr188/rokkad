@@ -94,6 +94,7 @@ def start_physical_verification(*, scope_location_id, actor):
     PawnPhysicalVerificationExpectation.objects.bulk_create(
         [
             PawnPhysicalVerificationExpectation(
+                workspace_id=workspace_id,
                 session=session,
                 collateral_item=item,
                 expected_location_id=item.current_storage_location_id,

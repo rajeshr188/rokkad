@@ -336,6 +336,7 @@ def save_funding_loan_draft_inputs(
     FundingLoanDraftCollateral.objects.bulk_create(
         [
             FundingLoanDraftCollateral(
+                workspace_id=funding_loan.workspace_id,
                 funding_loan=funding_loan,
                 collateral_item=item,
                 selected_collateral_value=value_by_item[item.pk],

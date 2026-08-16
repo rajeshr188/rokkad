@@ -8,6 +8,18 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Current checkpoint (2026-08-17): the no-tenants/no-accounting development
+baseline is rebuilt. Commit `319c399` is the pre-baseline recovery point. The
+new project-owned graph contains 14 compact model migrations, four explicit RLS
+migrations, and one Loans database-guard migration. An empty rehearsal database migrated from
+zero with 95 forced-RLS policies and 38 current Loans triggers. Use
+`django_project.settings.migration` for owner-only migrations and
+`django_project.settings.test` for tests; never run schema creation through the
+restricted runtime role. The four RLS tests and 394 Loans tests pass. Any test
+or document below that prescribes django-tenants, DEA/accounting, Girvi,
+Contact, or Product as active architecture is historical unless restated in a
+newer checkpoint.
+
 The django-tenants package declaration and all project Python imports are now
 removed. Standard shared-schema PostgreSQL settings are active and specialized
 Loans numbering/funding concurrency tests pass with transaction-local

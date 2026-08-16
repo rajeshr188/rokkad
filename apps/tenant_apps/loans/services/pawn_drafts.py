@@ -407,6 +407,7 @@ def _validated_collateral(loan, inputs, *, resolved=None):
             rate_policy = resolved.rate_policies[index] if resolved else None
             model = PawnCollateralItem(
                 pk=item.collateral_item_id,
+                workspace_id=loan.workspace_id,
                 loan=loan,
                 description=item.description,
                 metal=CollateralMetal(item.metal).value,

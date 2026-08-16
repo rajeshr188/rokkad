@@ -75,26 +75,24 @@ class AccountingRetirementBoundaryTests(SimpleTestCase):
         models_source = (LOANS_ROOT / "models" / "core.py").read_text(
             encoding="utf-8"
         )
-        migration = (
-            LOANS_ROOT / "migrations" / "0057_retire_accounting_outbox.py"
-        ).read_text(encoding="utf-8")
+        baseline = (LOANS_ROOT / "migrations" / "0001_initial.py").read_text(
+            encoding="utf-8"
+        )
 
         self.assertNotIn("class PawnLoanAccountingOutbox", models_source)
-        self.assertIn("DeleteModel", migration)
+        self.assertNotIn("PawnLoanAccountingOutbox", baseline)
 
     def test_event_spine_has_neutral_canonical_model_name(self):
         models_source = (LOANS_ROOT / "models" / "core.py").read_text(
             encoding="utf-8"
         )
-        migration = (
-            LOANS_ROOT
-            / "migrations"
-            / "0058_rename_pawnloanaccountingevent_pawnloanevent.py"
-        ).read_text(encoding="utf-8")
+        baseline = (LOANS_ROOT / "migrations" / "0001_initial.py").read_text(
+            encoding="utf-8"
+        )
 
-        self.assertIn("class PawnLoanEvent(models.Model):", models_source)
-        self.assertIn("RenameModel", migration)
-        self.assertIn('new_name="PawnLoanEvent"', migration)
+        self.assertIn("class PawnLoanEvent(WorkspaceOwnedModel):", models_source)
+        self.assertIn("name='PawnLoanEvent'", baseline)
+        self.assertNotIn("PawnLoanAccountingEvent", baseline)
 
     def test_runtime_no_longer_uses_old_event_model_name(self):
         offenders = []
@@ -157,13 +155,11 @@ class AccountingRetirementBoundaryTests(SimpleTestCase):
             if "AccountingRecognition" in source or "accounting_recognition" in source:
                 offenders.append(path.relative_to(LOANS_ROOT).as_posix())
 
-        migration = (
-            LOANS_ROOT
-            / "migrations"
-            / "0063_remove_loanpolicysnapshot_accounting_recognition_and_more.py"
-        ).read_text(encoding="utf-8")
+        baseline = (LOANS_ROOT / "migrations" / "0001_initial.py").read_text(
+            encoding="utf-8"
+        )
         self.assertEqual(offenders, [])
-        self.assertEqual(migration.count("migrations.RemoveField("), 2)
+        self.assertNotIn("accounting_recognition", baseline)
 
     def test_runtime_has_no_accounting_delivery_readiness_contract(self):
         forbidden = (

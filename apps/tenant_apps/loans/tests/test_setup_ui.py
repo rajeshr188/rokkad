@@ -284,8 +284,8 @@ class LoansSetupUiTests(WorkspaceTestCase):
                 "document_type": "loan_ticket",
                 "issue_kind": LoanDocumentIssue.Kind.REGENERATED,
                 "profile_scope": LoanDocumentIssue.PrintProfileSource.BUILT_IN,
-                "issued_date_from": issued_at.date().isoformat(),
-                "issued_date_to": issued_at.date().isoformat(),
+                "issued_date_from": timezone.localdate(issued_at).isoformat(),
+                "issued_date_to": timezone.localdate(issued_at).isoformat(),
             },
         )
         self.assertEqual(list(filtered.context["issues"]), [special_issue])

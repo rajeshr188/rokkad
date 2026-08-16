@@ -8,6 +8,24 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: The development-only migration history has been rebuilt from the
+  surviving shared-schema model state. Recovery commit `319c399` preserves the
+  complete pre-baseline state. The nine project apps now have 14 compact model
+  migrations, followed by four explicit forced-RLS migrations and one Loans
+  database-guard migration. A fresh isolated database
+  `rokkad_baseline_rehearsal_20260817_no_tenants_no_acc` migrated successfully
+  from zero with 95 canonical policies on 95 forced-RLS tables. The 38 current
+  Loans PostgreSQL immutability/projection triggers are retained in one audited
+  post-initial migration; transitional backfills, deleted-model operations,
+  and retired accounting migrations are not part of the new baseline.
+  `makemigrations --check`, Django system checks, the four restricted-role RLS
+  tests, and all 394 Loans tests pass. Baseline testing also fixed three
+  `bulk_create()` paths that bypassed automatic Workspace assignment. The
+  repository-wide default suite still contains separate historical intent-test
+  debt referring to retired DEA, Girvi, Product, Contact, and tenant-schema
+  surfaces; those tests must be retired or rewritten, not used to restore the
+  deleted architecture.
+
 - 2026-08-17: The shared-schema Workspace/RLS tenancy ADR is accepted and its
   removal plan is active. A registry-derived correction finds 95 concrete
   models across Party, Loans, Notify v2, and Rates; 35 initially had direct

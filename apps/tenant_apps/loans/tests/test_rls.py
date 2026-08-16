@@ -8,7 +8,7 @@ from django.test import TransactionTestCase
 from apps.orgs.models import Company
 from apps.tenancy.context import workspace_context
 
-from ..models import LoanLicense, LoanSeries
+from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
 
 
 class LoansRLSIsolationTests(TransactionTestCase):

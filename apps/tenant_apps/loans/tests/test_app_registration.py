@@ -9,14 +9,14 @@ from django.test import SimpleTestCase
 class LoansAppRegistrationTests(SimpleTestCase):
     databases = {"default"}
 
-    def test_loans_is_registered_as_a_tenant_app(self):
+    def test_loans_is_registered_as_a_shared_schema_app(self):
         app_config = apps.get_app_config("loans")
 
         self.assertEqual(app_config.name, "apps.tenant_apps.loans")
         self.assertEqual(app_config.__class__.__name__, "LoansConfig")
         self.assertIn(
             "apps.tenant_apps.loans.apps.LoansConfig",
-            settings.TENANT_APPS,
+            settings.INSTALLED_APPS,
         )
         model_names = {model.__name__ for model in app_config.get_models()}
         self.assertTrue(

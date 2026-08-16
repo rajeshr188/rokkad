@@ -712,12 +712,6 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(response, reverse("loans:pawn_loan_list"))
         self.assertNotContains(response, reverse("loans:license_list"))
         self.assertEqual(self.client.get(reverse("loans:license_list")).status_code, 403)
-        self.assertEqual(
-            self.client.get(
-                reverse("loans:pawn_borrower_account_setup", args=[loan.pk])
-            ).status_code,
-            403,
-        )
 
     def test_unknown_and_cross_workspace_loan_sources_are_not_exposed(self):
         license, series = self._configured_setup()

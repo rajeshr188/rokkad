@@ -6,10 +6,10 @@ from django.apps import apps
 WORKSPACE_APP_LABELS = frozenset({"party", "loans", "notify_v2", "rates"})
 RLS_PROTECTED_APP_LABELS = WORKSPACE_APP_LABELS
 RLS_MIGRATION_BY_APP = {
-    "loans": "0067_enable_workspace_rls",
-    "notify_v2": "0011_enable_workspace_rls",
-    "party": "0009_enable_workspace_rls",
-    "rates": "0006_enable_workspace_rls",
+    "loans": "0003_enable_workspace_rls",
+    "notify_v2": "0003_enable_workspace_rls",
+    "party": "0002_enable_workspace_rls",
+    "rates": "0002_enable_workspace_rls",
 }
 
 
