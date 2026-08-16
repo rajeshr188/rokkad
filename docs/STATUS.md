@@ -8,6 +8,19 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: Post-baseline retirement cleanup is complete. Eight historical
+  phase/source-snapshot test files and the obsolete unimplemented Rates DRF API
+  test were removed. Current suites pass independently: Loans 394, Party 74,
+  Rates 14, control plane/accounts/onboarding/subscriptions/tenancy 153, and
+  project/Notify v2/architecture/importing 142 (777 total). Cleanup uncovered
+  and fixed active residue: Party merge/accounting UI references, undefined
+  Notify settings database state, missing onboarding logging, dashboard links
+  to retired Contact, an undefined dashboard Workspace variable, and 298 lines
+  of dead lazy DEA forwarding handlers in Orgs. Old accounting/commodity/report
+  bookmarks still resolve deterministically to HTTP 410 without importing DEA.
+  Data import/export now derives its model registry from the four surviving
+  shared-schema Workspace apps rather than the empty `TENANT_APPS` setting.
+
 - 2026-08-17: The development-only migration history has been rebuilt from the
   surviving shared-schema model state. Recovery commit `319c399` preserves the
   complete pre-baseline state. The nine project apps now have 14 compact model

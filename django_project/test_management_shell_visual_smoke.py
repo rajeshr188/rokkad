@@ -89,11 +89,10 @@ class ManagementShellVisualSmokeTests(SimpleTestCase):
         html = self._render_management_shell()
 
         forbidden_tenant_routes = (
-            "girvi:girvi_dashboard",
             "party:party_list",
-            "dea_business_events_dashboard",
-            "dea_reports_hub",
-            "product_product_home",
+            "loans:pawn_loan_list",
+            "notify_v2_batch_list",
+            "rate_list",
         )
         for route_name in forbidden_tenant_routes:
             with self.subTest(route_name=route_name):

@@ -630,7 +630,9 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		with open("templates/components/navigation/sidebar.html", "r") as f:
 			sidebar_html = f.read()
 
-		self.assertIn("dea_entry_view", sidebar_html)
+		self.assertIn("data_view", sidebar_html)
+		self.assertIn("girvi_loan_view", sidebar_html)
+		self.assertNotIn("dea_entry_view", sidebar_html)
 		self.assertNotIn("sales_invoice_view", sidebar_html)
 		self.assertNotIn("purchase_order_view", sidebar_html)
 		self.assertNotIn("purchase_invoice_view", sidebar_html)
@@ -1637,7 +1639,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		mock_audit.assert_called_once()
 
 	def test_onboarding_workspace_create_uses_control_plane_records_and_callbacks(self):
-		company = SimpleNamespace(name="Acme Workspace")
+		company = SimpleNamespace(name="Acme Workspace", save=MagicMock())
 
 		class FakeForm:
 			def save(self, commit=False):
@@ -1665,13 +1667,14 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 			)
 
 		self.assertIs(created_company, company)
-		self.assertEqual(provisioning_mode, "fresh")
+		self.assertEqual(provisioning_mode, "shared")
 		self.assertEqual(company.schema_name, "acme_workspace")
 		self.assertEqual(company.creator, user)
 		self.assertEqual(company.owner, user)
 		mock_ctx.assert_called_once()
-		provision_workspace.assert_called_once_with(company)
-		seed_workspace_defaults.assert_called_once_with(company)
+		company.save.assert_called_once_with()
+		provision_workspace.assert_not_called()
+		seed_workspace_defaults.assert_not_called()
 		mock_role_get.assert_called_once_with(name="Owner")
 		mock_domain_create.assert_called_once_with(
 			tenant=company,

@@ -399,10 +399,7 @@ class NotifyV2WebhookTests(SimpleTestCase):
         )
 
     @patch("apps.tenant_apps.notify_v2.views.get_whatsapp_cloud_credentials")
-    @patch("apps.tenant_apps.notify_v2.views.connection")
-    def test_whatsapp_cloud_webhook_verification_returns_challenge(self, mock_connection, mock_credentials):
-        mock_connection.schema_name = "tenant_one"
-        mock_connection.tenant.pk = 1
+    def test_whatsapp_cloud_webhook_verification_returns_challenge(self, mock_credentials):
         mock_credentials.return_value = SimpleNamespace(webhook_verify_token="verify-me")
         request = self.factory.get(
             "/notify-v2/webhooks/whatsapp/cloud/",
@@ -413,6 +410,7 @@ class NotifyV2WebhookTests(SimpleTestCase):
             },
         )
 
+        request.workspace = SimpleNamespace(pk=1)
         response = whatsapp_cloud_webhook(request)
 
         self.assertEqual(response.status_code, 200)
@@ -424,10 +422,7 @@ class NotifyV2WebhookTests(SimpleTestCase):
     )
     @patch("apps.tenant_apps.notify_v2.views.process_whatsapp_cloud_webhook")
     @patch("apps.tenant_apps.notify_v2.views.get_whatsapp_cloud_credentials")
-    @patch("apps.tenant_apps.notify_v2.views.connection")
-    def test_whatsapp_cloud_webhook_authenticates_and_routes_status_payload(self, mock_connection, mock_credentials, mock_process):
-        mock_connection.schema_name = "tenant_one"
-        mock_connection.tenant.pk = 1
+    def test_whatsapp_cloud_webhook_authenticates_and_routes_status_payload(self, mock_credentials, mock_process):
         mock_credentials.return_value = SimpleNamespace(app_secret="app-secret", phone_number_id="phone-123")
         mock_process.return_value = {"received_statuses": 1, "matched_jobs": 1}
         payload = {
@@ -461,6 +456,7 @@ class NotifyV2WebhookTests(SimpleTestCase):
             HTTP_X_HUB_SIGNATURE_256=signature,
         )
 
+        request.workspace = SimpleNamespace(pk=1)
         response = whatsapp_cloud_webhook(request)
         response_payload = json.loads(response.content)
 
@@ -478,16 +474,14 @@ class NotifyV2WebhookTests(SimpleTestCase):
         WHATSAPP_CLOUD_PHONE_NUMBER_ID="phone-123",
     )
     @patch("apps.tenant_apps.notify_v2.views.get_whatsapp_cloud_credentials")
-    @patch("apps.tenant_apps.notify_v2.views.connection")
-    def test_whatsapp_cloud_webhook_rejects_unsigned_post(self, mock_connection, mock_credentials):
-        mock_connection.schema_name = "tenant_one"
-        mock_connection.tenant.pk = 1
+    def test_whatsapp_cloud_webhook_rejects_unsigned_post(self, mock_credentials):
         mock_credentials.return_value = SimpleNamespace(app_secret="app-secret", phone_number_id="phone-123")
         request = self.factory.post(
             "/notify-v2/webhooks/whatsapp/cloud/",
             data="{}",
             content_type="application/json",
         )
+        request.workspace = SimpleNamespace(pk=1)
         response = whatsapp_cloud_webhook(request)
         self.assertEqual(response.status_code, 403)
 
@@ -508,9 +502,13 @@ class NotifyV2WebhookProcessingTests(TestCase):
                 "id": "wamid-1", "status": "delivered", "timestamp": "123"
             }]}}]}]
         }
-        summary = process_whatsapp_cloud_webhook(
-            payload, phone_number_id="phone-1", signature_digest="a" * 64
-        )
+        with patch(
+            "apps.tenant_apps.notify_v2.services.delivery_service.current_workspace_id",
+            return_value=1,
+        ):
+            summary = process_whatsapp_cloud_webhook(
+                payload, phone_number_id="phone-1", signature_digest="a" * 64
+            )
         self.assertEqual(summary["matched_jobs"], 1)
         self.assertEqual(summary["duplicate_statuses"], 0)
         receipt.save.assert_called_once()
@@ -524,9 +522,13 @@ class NotifyV2WebhookProcessingTests(TestCase):
         payload = {"entry": [{"changes": [{"value": {"statuses": [{
             "id": "wamid-1", "status": "delivered", "timestamp": "123"
         }]}}]}]}
-        summary = process_whatsapp_cloud_webhook(
-            payload, phone_number_id="phone-1", signature_digest="a" * 64
-        )
+        with patch(
+            "apps.tenant_apps.notify_v2.services.delivery_service.current_workspace_id",
+            return_value=1,
+        ):
+            summary = process_whatsapp_cloud_webhook(
+                payload, phone_number_id="phone-1", signature_digest="a" * 64
+            )
         self.assertEqual(summary["duplicate_statuses"], 1)
         mock_receipt_filter.return_value.update.assert_called_once()
         mock_job_lock.assert_not_called()
@@ -544,8 +546,8 @@ class WhatsAppCloudReadinessTests(SimpleTestCase):
         receipts.filter.return_value.count.return_value = 0
         receipts.count.return_value = 3
         with patch(
-            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.connection",
-            SimpleNamespace(schema_name="tenant_one", tenant=SimpleNamespace(pk=1)),
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.current_workspace_id",
+            return_value=1,
         ), patch(
             "apps.tenant_apps.notify_v2.services.whatsapp_readiness.get_whatsapp_cloud_integration",
             return_value=SimpleNamespace(is_enabled=True),
@@ -574,8 +576,8 @@ class WhatsAppCloudReadinessTests(SimpleTestCase):
         receipts.filter.return_value.count.return_value = 2
         receipts.count.return_value = 2
         with patch(
-            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.connection",
-            SimpleNamespace(schema_name="tenant_one", tenant=SimpleNamespace(pk=1)),
+            "apps.tenant_apps.notify_v2.services.whatsapp_readiness.current_workspace_id",
+            return_value=1,
         ), patch(
             "apps.tenant_apps.notify_v2.services.whatsapp_readiness.get_whatsapp_cloud_integration",
             return_value=None,
@@ -733,6 +735,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.get("/notify-v2/batches/")
         request.user = self.user
+        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
 
         response = batch_list(request)
 
@@ -781,6 +784,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.get("/notify-v2/batches/7/")
         request.user = self.user
+        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
 
         response = batch_detail(request, pk=7)
 
@@ -799,6 +803,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.post("/notify-v2/batches/7/send/")
         request.user = self.user
+        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
 
         response = batch_send_digital(request, pk=7)
 
@@ -828,6 +833,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.get("/notify-v2/batches/7/artifacts.zip")
         request.user = self.user
+        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
 
         response = batch_download_artifacts(request, pk=7)
 
@@ -847,8 +853,10 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         print_request = self.factory.post("/notify-v2/batches/7/mark-printed/")
         print_request.user = self.user
+        print_request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
         posted_request = self.factory.post("/notify-v2/batches/7/mark-posted/")
         posted_request.user = self.user
+        posted_request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
 
         print_response = batch_mark_printed(print_request, pk=7)
         posted_response = batch_mark_posted(posted_request, pk=7)
@@ -858,60 +866,10 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
         batch.mark_printed.assert_called_once_with()
         batch.mark_posted.assert_called_once_with()
 
-    @patch("apps.tenant_apps.girvi.views.prints.create_girvi_reminder_batch")
-    @patch("apps.tenant_apps.girvi.views.prints.GivenLoan")
-    def _retired_notify_print_v2_redirects_to_batch_detail(self, mock_given_loan, mock_create_batch):
-        request = self.factory.post(
-            "/girvi/outdatedloans/notify-v2/",
-            data={"selection": ["1", "2"], "loan_kind": "given", "medium_type": "E"},
-        )
-        request.user = self.user
-
-        loan_one = self._build_loan(pk=1, loan_id="GL-001", borrower_name="Asha", amount="1000.00")
-        loan_two = self._build_loan(pk=2, loan_id="GL-002", borrower_name="Bina", amount="500.00")
-        filtered = MagicMock(name="selected_loans")
-        filtered.order_by.return_value = [loan_one, loan_two]
-        filtered.count.return_value = 2
-        mock_given_loan.objects.filter.return_value.filter.return_value = filtered
-        mock_create_batch.return_value = SimpleNamespace(
-            batch=SimpleNamespace(pk=11, get_absolute_url=lambda: "/notify-v2/batches/11/"),
-        )
-
-        response = notify_print_v2(request)
-
-        self.assertIsInstance(response, HttpResponseRedirect)
-        self.assertEqual(response.url, "/notify-v2/batches/11/")
-        self.assertEqual(mock_create_batch.call_args.kwargs["channel"], NotificationJob.Channel.EMAIL)
-
-    @patch("apps.tenant_apps.girvi.views.prints.create_girvi_reminder_batch")
-    @patch("apps.tenant_apps.girvi.views.prints.GivenLoan")
-    def _retired_notify_print_v2_sets_hx_redirect_for_htmx_requests(
-        self, mock_given_loan, mock_create_batch
-    ):
-        request = self.factory.post(
-            "/girvi/outdatedloans/notify-v2/",
-            data={"selection": ["1", "2"], "loan_kind": "given", "medium_type": "E"},
-            HTTP_HX_REQUEST="true",
-        )
-        request.user = self.user
-
-        loan_one = self._build_loan(pk=1, loan_id="GL-001", borrower_name="Asha", amount="1000.00")
-        loan_two = self._build_loan(pk=2, loan_id="GL-002", borrower_name="Bina", amount="500.00")
-        filtered = MagicMock(name="selected_loans")
-        filtered.order_by.return_value = [loan_one, loan_two]
-        filtered.count.return_value = 2
-        mock_given_loan.objects.filter.return_value.filter.return_value = filtered
-        mock_create_batch.return_value = SimpleNamespace(
-            preview=SimpleNamespace(borrower_count=2),
-            batch=SimpleNamespace(pk=11, get_absolute_url=lambda: "/notify-v2/batches/11/"),
-        )
-
-        response = notify_print_v2(request)
-
-        self.assertEqual(response.status_code, 204)
-        self.assertEqual(response["HX-Redirect"], "/notify-v2/batches/11/")
 
     @patch("apps.tenant_apps.notify_v2.views.render")
+    @patch("apps.tenant_apps.notify_v2.views.assess_whatsapp_cloud_readiness")
+    @patch("apps.tenant_apps.notify_v2.views._notify_settings_summary")
     @patch("apps.tenant_apps.notify_v2.views.NotificationRecipient.objects.filter")
     @patch("apps.tenant_apps.notify_v2.views.NotificationTemplate.objects.filter")
     @patch("apps.tenant_apps.notify_v2.views.NotificationPolicy.objects.filter")
@@ -927,16 +885,24 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
         mock_policy_filter,
         mock_template_filter,
         mock_recipient_filter,
+        mock_settings_summary,
+        mock_readiness,
         mock_render,
     ):
         mock_event_type_filter.return_value.count.return_value = 4
         mock_policy_filter.return_value.count.return_value = 3
         mock_template_filter.return_value.count.return_value = 7
         mock_recipient_filter.return_value.count.return_value = 12
+        mock_settings_summary.return_value = {
+            "whatsapp_provider": "cloud",
+            "has_whatsapp_cloud_phone_id": True,
+        }
+        mock_readiness.return_value = SimpleNamespace(ready=True, blockers=())
         mock_render.return_value = HttpResponse("ok")
 
         request = self.factory.get("/notify-v2/settings/")
         request.user = self.user
+        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
 
         response = settings_overview(request)
 

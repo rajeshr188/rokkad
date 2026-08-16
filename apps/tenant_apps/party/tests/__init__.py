@@ -1,1 +1,1 @@
-
+"""Party behavioral tests."""

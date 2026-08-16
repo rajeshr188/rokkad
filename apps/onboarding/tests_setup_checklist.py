@@ -27,12 +27,7 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
             metrics=WorkspaceSetupMetrics(
                 member_count=1,
                 invitation_count=0,
-                accounting_period_count=0,
-                ledger_count=0,
-                opening_balance_count=0,
                 party_count=0,
-                product_count=0,
-                stock_count=0,
                 rate_count=0,
                 transaction_count=0,
             ),
@@ -40,12 +35,12 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
         items = self._items_by_key(checklist)
 
         self.assertEqual(COMPLETE, items["business_profile"].status)
-        self.assertEqual(INCOMPLETE, items["accounting_setup"].status)
+        self.assertEqual(INCOMPLETE, items["parties"].status)
         self.assertEqual(INCOMPLETE, items["invite_team"].status)
         self.assertEqual(1, checklist.completed_count)
-        self.assertEqual(9, checklist.total_count)
+        self.assertEqual(4, checklist.total_count)
         self.assertFalse(checklist.is_complete)
-        self.assertEqual(11, checklist.completion_percentage)
+        self.assertEqual(25, checklist.completion_percentage)
 
     def test_complete_metrics_mark_every_setup_item_complete(self):
         checklist = build_workspace_setup_checklist(
@@ -53,12 +48,7 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
             metrics=WorkspaceSetupMetrics(
                 member_count=2,
                 invitation_count=0,
-                accounting_period_count=1,
-                ledger_count=1,
-                opening_balance_count=1,
                 party_count=1,
-                product_count=1,
-                stock_count=1,
                 rate_count=1,
                 transaction_count=1,
             ),
@@ -69,14 +59,9 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
         self.assertEqual(
             {
                 "business_profile",
-                "accounting_setup",
-                "opening_balances",
                 "parties",
-                "products",
-                "opening_stock",
                 "invite_team",
                 "rates",
-                "first_transaction",
             },
             {item.key for item in checklist.items if item.is_complete},
         )
@@ -87,12 +72,7 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
             metrics=WorkspaceSetupMetrics(
                 member_count=None,
                 invitation_count=None,
-                accounting_period_count=None,
-                ledger_count=None,
-                opening_balance_count=None,
                 party_count=None,
-                product_count=None,
-                stock_count=None,
                 rate_count=None,
                 transaction_count=None,
             ),
@@ -100,10 +80,9 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
         items = self._items_by_key(checklist)
 
         self.assertEqual(INCOMPLETE, items["business_profile"].status)
-        self.assertEqual(UNKNOWN, items["accounting_setup"].status)
-        self.assertEqual(UNKNOWN, items["opening_balances"].status)
+        self.assertEqual(UNKNOWN, items["parties"].status)
         self.assertEqual(UNKNOWN, items["invite_team"].status)
-        self.assertEqual(8, checklist.unknown_count)
+        self.assertEqual(3, checklist.unknown_count)
         self.assertEqual(0, checklist.completed_count)
 
     def test_pending_invitation_counts_toward_team_setup(self):
@@ -112,12 +91,7 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
             metrics=WorkspaceSetupMetrics(
                 member_count=1,
                 invitation_count=1,
-                accounting_period_count=0,
-                ledger_count=0,
-                opening_balance_count=0,
                 party_count=0,
-                product_count=0,
-                stock_count=0,
                 rate_count=0,
                 transaction_count=0,
             ),
@@ -142,9 +116,10 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
 
         self.assertEqual(1, metrics.member_count)
         self.assertEqual(1, metrics.invitation_count)
-        self.assertEqual(2, metrics.product_count)
-        self.assertEqual(6, metrics.transaction_count)
+        self.assertEqual(1, metrics.party_count)
+        self.assertEqual(2, metrics.rate_count)
+        self.assertEqual(1, metrics.transaction_count)
         self.assertGreaterEqual(safe_queryset_count.call_count, 2)
-        safe_model_count.assert_any_call("dea", "AccountingPeriod")
         safe_model_count.assert_any_call("party", "Party")
-        safe_model_count.assert_any_call("girvi", "GivenLoan")
+        safe_model_count.assert_any_call("rates", "Rate")
+        safe_model_count.assert_any_call("loans", "PawnLoanEvent")

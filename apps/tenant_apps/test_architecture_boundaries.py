@@ -46,40 +46,19 @@ class ArchitectureBoundaryTests(SimpleTestCase):
 
         self.assertEqual(violations, [])
 
-    def test_apps_use_dea_public_facade_only(self):
-        files = _runtime_python_files("contact", "girvi", "purchase", "sales")
+    def test_surviving_apps_do_not_import_retired_apps(self):
+        files = _runtime_python_files("party", "loans", "notify_v2", "rates")
         self.assert_no_forbidden_imports(
             files,
             forbidden_prefixes=[
-                "apps.tenant_apps.dea.models",
-                "apps.tenant_apps.dea.posting",
-                "apps.tenant_apps.dea.services",
+                "apps.tenant_apps.dea",
+                "apps.tenant_apps.accounting",
+                "apps.tenant_apps.standalone_accounting",
+                "apps.tenant_apps.girvi",
+                "apps.tenant_apps.contact",
+                "apps.tenant_apps.product",
+                "apps.tenant_apps.savings_scheme",
+                "apps.tenant_apps.terms",
             ],
-            allowed_imports={"apps.tenant_apps.dea.facade"},
-        )
-
-    def test_contact_uses_girvi_public_facade_only(self):
-        files = _runtime_python_files("contact")
-        self.assert_no_forbidden_imports(
-            files,
-            forbidden_prefixes=[
-                "apps.tenant_apps.girvi.models",
-                "apps.tenant_apps.girvi.service_modules",
-                "apps.tenant_apps.girvi.views",
-                "apps.tenant_apps.girvi.transitions",
-            ],
-            allowed_imports={"apps.tenant_apps.girvi.facade"},
-        )
-
-    def test_dea_uses_girvi_public_facade_only(self):
-        files = _runtime_python_files("dea")
-        self.assert_no_forbidden_imports(
-            files,
-            forbidden_prefixes=[
-                "apps.tenant_apps.girvi.models",
-                "apps.tenant_apps.girvi.service_modules",
-                "apps.tenant_apps.girvi.views",
-                "apps.tenant_apps.girvi.transitions",
-            ],
-            allowed_imports={"apps.tenant_apps.girvi.facade"},
+            allowed_imports=set(),
         )

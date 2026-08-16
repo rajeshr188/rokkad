@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
+from apps.tenancy.context import current_workspace_id
 
 from .access import notify_v2_action_required, notify_v2_admin_required
 
@@ -118,7 +119,7 @@ def _read_artifact_bytes(artifact):
 
 
 def _notify_settings_summary():
-    workspace_id = getattr(getattr(connection, "tenant", None), "pk", None)
+    workspace_id = current_workspace_id()
     integration = get_whatsapp_cloud_integration(workspace_id) if workspace_id else None
     return {
         "whatsapp_provider": "cloud",

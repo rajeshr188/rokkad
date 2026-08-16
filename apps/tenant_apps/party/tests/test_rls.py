@@ -7,7 +7,7 @@ from django.test import TransactionTestCase
 from apps.orgs.models import Company
 from apps.tenancy.context import workspace_context
 
-from ..models import Party
+from apps.tenant_apps.party.models import Party
 
 
 class PartyRLSIsolationTests(TransactionTestCase):

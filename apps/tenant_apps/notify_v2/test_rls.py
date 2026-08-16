@@ -7,7 +7,7 @@ from django.test import TransactionTestCase
 from apps.orgs.models import Company
 from apps.tenancy.context import workspace_context
 
-from .models import NotificationEventType
+from apps.tenant_apps.notify_v2.models import NotificationEventType
 
 
 class NotifyV2RLSIsolationTests(TransactionTestCase):

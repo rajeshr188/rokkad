@@ -22,7 +22,7 @@ CANONICAL_PARTY_ROLES = (
     CanonicalPartyRole("EMPLOYEE", "Employee", "Party connected to payroll, advances, or reimbursements.", 80),
     CanonicalPartyRole("AGENT", "Agent", "Party acting on behalf of another party or workspace.", 90),
     CanonicalPartyRole("BROKER", "Broker", "Party facilitating deals or transactions.", 100),
-    CanonicalPartyRole("BANK", "Bank", "Bank as a counterparty, separate from DEA bank accounts.", 110),
+    CanonicalPartyRole("BANK", "Bank", "Bank as a business counterparty.", 110),
     CanonicalPartyRole("TRANSPORTER", "Transporter", "Party responsible for transport or logistics.", 120),
     CanonicalPartyRole(
         "INSURANCE_PROVIDER",

@@ -5,8 +5,8 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import RequestFactory, SimpleTestCase, override_settings
 
-from .middleware import RateMiddleware
-from .models import Rate, RateSource
+from apps.tenant_apps.rates.middleware import RateMiddleware
+from apps.tenant_apps.rates.models import Rate, RateSource
 
 
 class RateWorkspaceIsolationTests(SimpleTestCase):

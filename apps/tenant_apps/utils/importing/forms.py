@@ -1,17 +1,16 @@
 from django import forms
 from django.apps import apps
-from django.conf import settings
 from import_export.formats import base_formats
+
+from apps.tenancy.registry import WORKSPACE_APP_LABELS
 
 
 def tenant_app_configs():
-    """Resolve TENANT_APPS entries whether they name a module or AppConfig class."""
-    configured = set(settings.TENANT_APPS)
+    """Return the surviving shared-schema business application configs."""
     return tuple(
         config
         for config in apps.get_app_configs()
-        if config.name in configured
-        or f"{config.__class__.__module__}.{config.__class__.__name__}" in configured
+        if config.label in WORKSPACE_APP_LABELS
     )
 
 

@@ -346,7 +346,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             {% block title %}Tenant Smoke{% endblock %}
             {% block workspace_content %}<section id="tenant-smoke">Tenant shell</section>{% endblock %}
             """,
-            request=_request("/dea/", url_name="dea_home"),
+            request=_request("/loans/", url_name="pawn_loan_list"),
             context={
                 "in_tenant": False,
                 "show_sidebar": False,
@@ -368,7 +368,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             {% block title %}Tenant Auth Smoke{% endblock %}
             {% block workspace_content %}<section id="tenant-auth-smoke">Tenant shell</section>{% endblock %}
             """,
-            request=_authenticated_request("/dea/", url_name="dea_home"),
+            request=_authenticated_request("/loans/", url_name="pawn_loan_list"),
             context={
                 "in_tenant": True,
                 "show_sidebar": False,
@@ -399,11 +399,11 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
                     action_label="Review profile",
                 ),
                 SimpleNamespace(
-                    key="opening_balances",
-                    title="Opening balances",
-                    description="Record opening balances.",
+                    key="rates",
+                    title="Rates",
+                    description="Configure operational rates.",
                     status="incomplete",
-                    action_label="Add opening balances",
+                    action_label="Configure rates",
                 ),
                 SimpleNamespace(
                     key="parties",
@@ -456,14 +456,12 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("50%", html)
         self.assertIn("1/2 complete", html)
         self.assertIn("mgmt-setup-hero", html)
-        self.assertIn("Opening balances", html)
+        self.assertIn("Rates", html)
         self.assertIn("Parties", html)
         self.assertIn("Dismiss", html)
         self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
-        self.assertIn(reverse("dea_opening_balance_wizard"), html)
+        self.assertIn(reverse("rate_list"), html)
         self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)
-        self.assertIn(reverse("workspace_slug_accounting", kwargs={"workspace_slug": workspace.schema_name}), html)
-        self.assertNotIn('href="/dea/dashboard/"', html)
 
     def test_workspace_settings_setup_page_renders_checklist(self):
         workspace = _workspace()
@@ -480,11 +478,11 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
                     action_label="Review profile",
                 ),
                 SimpleNamespace(
-                    key="first_transaction",
-                    title="First transaction",
-                    description="Create the first business event.",
+                    key="rates",
+                    title="Rates",
+                    description="Configure operational rates.",
                     status="incomplete",
-                    action_label="Create transaction",
+                    action_label="Configure rates",
                 ),
                 SimpleNamespace(
                     key="parties",
@@ -521,10 +519,10 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
 
         self.assertIn("Workspace setup", html)
         self.assertIn("1/2 complete", html)
-        self.assertIn("First transaction", html)
+        self.assertIn("Rates", html)
         self.assertIn("Parties", html)
         self.assertIn("Mark setup complete", html)
         self.assertIn("Dismiss dashboard card", html)
         self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
-        self.assertIn(reverse("dea_business_events_dashboard"), html)
+        self.assertIn(reverse("rate_list"), html)
         self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)

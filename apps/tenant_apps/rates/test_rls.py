@@ -8,7 +8,7 @@ from apps.orgs.models import Company
 from apps.tenancy.checks import check_restricted_runtime_role, check_workspace_rls
 from apps.tenancy.context import workspace_context
 
-from .models import RateSource
+from apps.tenant_apps.rates.models import RateSource
 
 
 class RateRLSIsolationTests(TransactionTestCase):

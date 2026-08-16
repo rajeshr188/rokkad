@@ -5,7 +5,7 @@ from django.test import SimpleTestCase
 
 from apps.tenancy.models import WorkspaceOwnedModel
 
-from .models import (
+from apps.tenant_apps.notify_v2.models import (
     NotificationEvent,
     NotificationEventType,
     NotificationJob,

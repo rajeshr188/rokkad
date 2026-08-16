@@ -2,6 +2,8 @@
 Onboarding Views - Step-by-step guided user onboarding
 """
 
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
@@ -17,6 +19,9 @@ from .forms import (
     TourPreferencesForm,
 )
 from .models import OnboardingChoice, OnboardingProgress
+
+
+logger = logging.getLogger(__name__)
 
 def _provision_company_schema(company):
     """Compatibility helper: Workspaces now share one database schema."""

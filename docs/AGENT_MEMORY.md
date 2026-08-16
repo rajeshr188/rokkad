@@ -8,6 +8,16 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Current test checkpoint (2026-08-17): stale phase/source-snapshot tests for the
+retired tenant/accounting architecture are removed. The independently executed
+current suites total 777 passing tests: Loans 394, Party 74, Rates 14, control
+plane 153, and project/Notify v2/boundary/importing 142. Orgs contains no lazy
+DEA forwarding imports; retired workspace accounting/commodity/report aliases
+are HTTP 410 bindings only. Party has no accounting tab or account-mapping
+merge contract. Notify webhook/readiness/settings code and tests use explicit
+Workspace context. Import/export discovers Party, Loans, Notify v2, and Rates
+through `WORKSPACE_APP_LABELS`, never `TENANT_APPS`.
+
 Current checkpoint (2026-08-17): the no-tenants/no-accounting development
 baseline is rebuilt. Commit `319c399` is the pre-baseline recovery point. The
 new project-owned graph contains 14 compact model migrations, four explicit RLS

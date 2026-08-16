@@ -11,7 +11,6 @@ from apps.tenancy.testing import WorkspaceClient, WorkspaceTestCase
 
 from apps.tenant_apps.party import views as party_views
 from apps.orgs.models import Membership, Role
-from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.party.models import (
     Party,
     PartyAddress,
@@ -113,7 +112,7 @@ class PartyUITests(WorkspaceTestCase):
         user = self._login_workspace_user("party-ui-noaccess", "NoAccess")
         request = self.factory.get(reverse("party:party_list"))
         request.user = user
-        request.tenant = self.tenant
+        request.workspace = self.tenant
 
         with self.assertRaises(PermissionDenied):
             party_views.party_list(request)
@@ -149,7 +148,7 @@ class PartyUITests(WorkspaceTestCase):
         user = self._login_workspace_user("party-ui-export-member", "Member")
         request = self.factory.get(reverse("party:party_list"), {"_export": "csv"})
         request.user = user
-        request.tenant = self.tenant
+        request.workspace = self.tenant
 
         with self.assertRaisesMessage(PermissionDenied, "Party export permission is required."):
             party_views.party_list(request)
@@ -217,7 +216,7 @@ class PartyUITests(WorkspaceTestCase):
         user = self._login_workspace_user("party-ui-create-noaccess", "NoAccess")
         request = self.factory.post(reverse("party:party_create"))
         request.user = user
-        request.tenant = self.tenant
+        request.workspace = self.tenant
 
         with self.assertRaises(PermissionDenied):
             party_views.party_create(request)
@@ -293,14 +292,14 @@ class PartyUITests(WorkspaceTestCase):
         )
         self.assertFalse(Party.objects.filter(party_code="P1016").exists())
 
-    def test_party_detail_displays_accounts_tab_without_mappings(self):
+    def test_party_detail_has_no_retired_accounting_tab(self):
         party = Party.objects.create(party_code="P1003", display_name="Nira Retail")
 
         response = self.client.get(reverse("party:party_detail", args=[party.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Accounts / Ledger")
-        self.assertContains(response, "No account mappings found.")
+        self.assertNotContains(response, "Accounts / Ledger")
+        self.assertNotContains(response, "account mappings")
         self.assertContains(response, "Save Photo")
         self.assertContains(response, "Merge")
 
@@ -333,97 +332,10 @@ class PartyUITests(WorkspaceTestCase):
         user = self._login_workspace_user("party-ui-edit-noaccess", "NoAccess")
         request = self.factory.get(reverse("party:party_update", args=[party.pk]))
         request.user = user
-        request.tenant = self.tenant
+        request.workspace = self.tenant
 
         with self.assertRaises(PermissionDenied):
             party_views.party_update(request, party.pk)
-
-    def _retired_party_detail_girvi_loans_tab(self):
-        party = Party.objects.create(party_code="P1020", display_name="Loan Party")
-        customer = Customer.objects.create(firstname="Loan", lastname="Customer", party=party)
-
-        license_record = License.objects.create(
-            name="Loan Party License",
-            license_number=f"LPL-{uuid.uuid4().hex[:6]}",
-        )
-        given_series = Series.objects.create(
-            license=license_record,
-            name="Given Series",
-            prefix="LG",
-            loan_type=Series.LoanType.GIVEN,
-        )
-        taken_series = Series.objects.create(
-            license=license_record,
-            name="Taken Series",
-            prefix="LT",
-            loan_type=Series.LoanType.TAKEN,
-        )
-
-        active_given = GivenLoan.objects.create(
-            loan_id="LG0001",
-            series=given_series,
-            borrower=customer,
-            status="Draft",
-        )
-        LoanItem.objects.create(
-            loan=active_given,
-            itemtype="Gold",
-            quantity=1,
-            weight=Decimal("10.000"),
-            purity=Decimal("91.60"),
-            loanamount=Decimal("1000.00"),
-            interestrate=Decimal("2.00"),
-            itemdesc="Ring",
-        )
-        active_given.status = "ActiveCurrent"
-        active_given.save(update_fields=["status"])
-
-        closed_given = GivenLoan.objects.create(
-            loan_id="LG0002",
-            series=given_series,
-            borrower=customer,
-            status="Draft",
-        )
-        LoanItem.objects.create(
-            loan=closed_given,
-            itemtype="Gold",
-            quantity=1,
-            weight=Decimal("5.000"),
-            purity=Decimal("91.60"),
-            loanamount=Decimal("500.00"),
-            interestrate=Decimal("2.00"),
-            itemdesc="Chain",
-        )
-        closed_given.status = "Closed"
-        closed_given.save(update_fields=["status"])
-        Release.objects.create(
-            loan=closed_given,
-            created_by=self.user,
-            released_by=customer,
-        )
-
-        TakenLoan.objects.create(
-            loan_id="LT0001",
-            series=taken_series,
-            lender=customer,
-            status="Closed",
-        )
-
-        response = self.client.get(reverse("party:party_detail", args=[party.pk]), {"tab": "loans"})
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Active Loans")
-        self.assertContains(response, "Closed Loans")
-        self.assertContains(response, "Payments")
-        self.assertContains(response, "Notices")
-        self.assertContains(response, "Active Outstanding")
-        self.assertContains(response, "Final Outstanding")
-        self.assertContains(response, "Collateral Items")
-        self.assertContains(response, "LG0001")
-        self.assertContains(response, "LG0002")
-        self.assertContains(response, "LT0001")
-        self.assertContains(response, "Repay")
-        self.assertContains(response, "Form H")
 
     def test_party_role_add_and_end(self):
         party = Party.objects.create(party_code="P1004", display_name="Ravi")
@@ -465,13 +377,13 @@ class PartyUITests(WorkspaceTestCase):
 
         add_request = self.factory.post(reverse("party:party_role_add", args=[party.pk]))
         add_request.user = user
-        add_request.tenant = self.tenant
+        add_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_role_add(add_request, party.pk)
 
         end_request = self.factory.post(reverse("party:party_role_end", args=[party.pk, role.pk]))
         end_request.user = user
-        end_request.tenant = self.tenant
+        end_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_role_end(end_request, party.pk, role.pk)
 
@@ -519,13 +431,13 @@ class PartyUITests(WorkspaceTestCase):
 
         update_request = self.factory.post(reverse("party:party_photo_update", args=[party.pk]))
         update_request.user = user
-        update_request.tenant = self.tenant
+        update_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_profile_photo_update(update_request, party.pk)
 
         remove_request = self.factory.post(reverse("party:party_photo_remove", args=[party.pk]))
         remove_request.user = user
-        remove_request.tenant = self.tenant
+        remove_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_profile_photo_remove(remove_request, party.pk)
 
@@ -586,7 +498,7 @@ class PartyUITests(WorkspaceTestCase):
 
         save_request = self.factory.post(reverse("party:party_contact_add", args=[party.pk]))
         save_request.user = user
-        save_request.tenant = self.tenant
+        save_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_contact_save(save_request, party.pk)
 
@@ -594,7 +506,7 @@ class PartyUITests(WorkspaceTestCase):
             reverse("party:party_contact_delete", args=[party.pk, contact.pk])
         )
         delete_request.user = user
-        delete_request.tenant = self.tenant
+        delete_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_contact_delete(delete_request, party.pk, contact.pk)
 
@@ -685,7 +597,7 @@ class PartyUITests(WorkspaceTestCase):
 
         save_request = self.factory.post(reverse("party:party_address_add", args=[party.pk]))
         save_request.user = user
-        save_request.tenant = self.tenant
+        save_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_address_save(save_request, party.pk)
 
@@ -693,7 +605,7 @@ class PartyUITests(WorkspaceTestCase):
             reverse("party:party_address_delete", args=[party.pk, address.pk])
         )
         delete_request.user = user
-        delete_request.tenant = self.tenant
+        delete_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_address_delete(delete_request, party.pk, address.pk)
 
@@ -733,7 +645,7 @@ class PartyUITests(WorkspaceTestCase):
 
         save_request = self.factory.post(reverse("party:party_identifier_add", args=[party.pk]))
         save_request.user = user
-        save_request.tenant = self.tenant
+        save_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_identifier_save(save_request, party.pk)
 
@@ -741,7 +653,7 @@ class PartyUITests(WorkspaceTestCase):
             reverse("party:party_identifier_delete", args=[party.pk, identifier.pk])
         )
         delete_request.user = user
-        delete_request.tenant = self.tenant
+        delete_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_identifier_delete(delete_request, party.pk, identifier.pk)
 
@@ -785,7 +697,7 @@ class PartyUITests(WorkspaceTestCase):
 
         save_request = self.factory.post(reverse("party:party_document_add", args=[party.pk]))
         save_request.user = user
-        save_request.tenant = self.tenant
+        save_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_document_save(save_request, party.pk)
 
@@ -793,7 +705,7 @@ class PartyUITests(WorkspaceTestCase):
             reverse("party:party_document_delete", args=[party.pk, document.pk])
         )
         delete_request.user = user
-        delete_request.tenant = self.tenant
+        delete_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_document_delete(delete_request, party.pk, document.pk)
 
@@ -854,7 +766,7 @@ class PartyUITests(WorkspaceTestCase):
 
         save_request = self.factory.post(reverse("party:party_relationship_add", args=[party.pk]))
         save_request.user = user
-        save_request.tenant = self.tenant
+        save_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_relationship_save(save_request, party.pk)
 
@@ -862,7 +774,7 @@ class PartyUITests(WorkspaceTestCase):
             reverse("party:party_relationship_delete", args=[party.pk, relationship.pk])
         )
         delete_request.user = user
-        delete_request.tenant = self.tenant
+        delete_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_relationship_delete(
                 delete_request,
@@ -920,7 +832,7 @@ class PartyUITests(WorkspaceTestCase):
             {"source_party": source.pk, "confirm": "on"},
         )
         request.user = user
-        request.tenant = self.tenant
+        request.workspace = self.tenant
 
         with self.assertRaises(PermissionDenied):
             party_views.party_merge(request, target.pk)

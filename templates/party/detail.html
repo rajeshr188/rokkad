@@ -39,7 +39,6 @@
     <li class="nav-item"><button class="nav-link {% if active_tab == 'relationships' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#relationships" type="button">Relationships</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'contacts' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#contacts" type="button">Contacts</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'addresses' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#addresses" type="button">Addresses</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'accounts' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#accounts" type="button">Accounts / Ledger</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'transactions' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#transactions" type="button">Transactions</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'loans' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#loans" type="button">Loans</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'kyc' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#kyc" type="button">Documents / KYC</button></li>
@@ -500,8 +499,8 @@
                     <h2 class="h6 mb-2">Merge Guardrails</h2>
                     <ul class="small mb-0">
                         <li>The duplicate party is archived, not deleted.</li>
-                        <li>Contacts, addresses, documents, relationships, roles, and non-conflicting account mappings are moved.</li>
-                        <li>Conflicting legacy customers, identifiers, or DEA account mappings stop the merge.</li>
+                        <li>Contacts, addresses, documents, relationships, and roles are moved.</li>
+                        <li>Conflicting identifiers or duplicate relationships stop the merge.</li>
                     </ul>
                 </div>
             </div>
