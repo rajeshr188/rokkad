@@ -53,6 +53,7 @@ This folder is the living documentation system. Historical notes, audits, and su
 
 ## Implementation Docs
 
+- [Django schema tenancy to PostgreSQL RLS migration guide](implementation/django-schema-tenancy-to-postgresql-rls-guide.md)
 - [Dependency policy](implementation/dependency-policy.md)
 - [DEA vouchers](implementation/dea-vouchers.md)
 - [Girvi services](implementation/girvi-services.md)

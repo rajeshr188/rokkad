@@ -8,6 +8,13 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+The reusable migration runbook is
+`docs/implementation/django-schema-tenancy-to-postgresql-rls-guide.md`. Use it
+when planning another schema-tenancy to shared-schema PostgreSQL RLS cutover.
+It deliberately distinguishes empty development rebuilds from production data
+migrations and treats direct ownership, transaction-local context, forced RLS,
+restricted runtime roles, and adversarial verification as one security change.
+
 The deterministic local RLS smoke command is `seed_rls_smoke_workspaces`. It
 requires DEBUG, a restricted default connection, and complete RLS metadata. It
 idempotently maintains `rls-smoke-one` and `rls-smoke-two` plus one Workspace-

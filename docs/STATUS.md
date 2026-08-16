@@ -8,6 +8,14 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: A reusable end-to-end migration guide now documents how to move a
+  Django SaaS project from schema-per-tenant storage to a shared PostgreSQL
+  schema protected by forced RLS. It covers target invariants, inventory,
+  direct ownership, transaction-local context, policy SQL, two-role database
+  configuration, runtime conversion, bulk operations, migration-baseline
+  rebuilding, package removal, production-vs-development cutovers,
+  adversarial verification, rollback, failure modes, and completion criteria.
+
 - 2026-08-17: Deterministic two-Workspace runtime smoke fixtures now exist via
   `seed_rls_smoke_workspaces`. The command is development-only, refuses an
   unsafe database role or incomplete RLS metadata, and idempotently creates two
