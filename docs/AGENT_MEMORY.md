@@ -1,12 +1,77 @@
 ---
 status: active
 owner: project
-updated: 2026-08-16
+updated: 2026-08-17
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
 
 # Agent Memory
+
+The django-tenants package declaration and all project Python imports are now
+removed. Standard shared-schema PostgreSQL settings are active and specialized
+Loans numbering/funding concurrency tests pass with transaction-local
+Workspace context. A funding bulk-create ownership omission found by that gate
+is fixed. This does not mean database isolation is complete: forced PostgreSQL
+RLS policies and a restricted runtime database role are the next phase. Rates
+is now the proof aggregate: migration `rates.0006` enables and forces the
+canonical `workspace_isolation` policy on RateSource and Rate. Its adversarial
+tests assume a real temporary `NOSUPERUSER NOBYPASSRLS` role and prove no-
+context, cross-Workspace DML, raw SQL, and bulk-write behavior. Do not infer
+project-wide RLS coverage from this proof; Loans still needs policy rollout and
+production runtime-role provisioning. The registry/metadata
+layer is now implemented and accounts for
+all 95 models. Party migration `0009` also enables/forces RLS on all ten Party
+tables and passes restricted-role adversarial reads and bulk-write rejection.
+Notify v2 migration `0011` now enables/forces the same policy across all eleven
+notification/provider evidence tables and passes restricted-role no-context,
+cross-Workspace read, and bulk-write rejection tests.
+
+Loans migration `0067` completes forced RLS across all 72 Loans tables. SQL
+inspection proves the migration emits 72 table operations, and restricted-role
+tests cover no-context root/child reads, Workspace-scoped reads, and spoofed
+child bulk-write rejection. The active registry and metadata checks therefore
+cover all 95 surviving Party, Loans, Notify v2, and Rates models. Do not claim a
+deployment is RLS-safe until its web and worker connections use the separately
+provisioned restricted runtime role; owner/superuser connections still bypass
+RLS by PostgreSQL design.
+
+The existing local `fresh_clean` database is not a valid shared-schema
+baseline: it marks historical Loans migrations applied but lacks corresponding
+public tables. The first local RLS apply failed on the missing
+`loans_collateralappraisal` table and rolled back atomically; the four RLS
+migrations remain unapplied. Do not make the RLS operation skip missing tables
+and do not fake these migrations. Fresh test databases pass all 95-table gates,
+so create a new clean development database (or explicitly approve replacing
+the old one), run ordinary migrations as the owner, then provision/connect the
+restricted runtime role.
+
+The clean database rebuild is complete without deleting the old database.
+Development settings now target `rokkad_shared_dev`; ordinary migrations build
+it from zero, all four RLS migrations are applied, the database metadata check
+passes, and PostgreSQL reports 95 canonical policies on 95 forced-RLS tables.
+`fresh_clean` remains untouched. The application still connects locally as the
+migration owner until a password-managed restricted runtime login is supplied;
+do not mistake enabled policies for effective isolation on an owner/superuser
+connection.
+
+The local two-role split is complete. Default development connections use the
+restricted `rokkad_runtime` login, which is not a superuser, cannot bypass RLS,
+cannot create databases/roles, and owns no application tables. Schema commands
+must explicitly use `--settings django_project.settings.migration`; tests use
+`--settings django_project.settings.test` so the owner can create/drop only the
+disposable test database, while adversarial DML switches to restricted roles.
+Production must provide distinct `DB_RUNTIME_*` and `DB_MIGRATION_*` secrets;
+never expose migration-owner credentials to web or worker processes.
+
+django-tenants is now completely absent from the current runtime and local
+virtual environment. Do not reinstall it. Whole-runtime scans cover accounts,
+apps, project settings, helpers, pages, templates, README, AGENTS, and
+requirements; they find no import, mixin, router, schema context/switch, or
+`migrate_schemas` guidance. Historical architecture documents may mention the
+retired system as history. `WorkspaceTestCase` has no schema-method shim, and
+Workspace selection clearing uses a nullable profile preference rather than a
+synthetic public Workspace.
 
 On branch `no-tenants-no-acc`, the accepted target removes all accounting:
 DEA, tenant Accounting, and Standalone Accounting will be retired. Rokkad is an
@@ -140,15 +205,84 @@ fixtures, Operations Console delivery-health lists, or retry-route tests. Party
 statement evidence shows immutable event and correction state; it does not show
 an accounting delivery status. Notify v2 delivery diagnostics remain valid.
 
-On the `no-tenants` branch, the proposed tenancy direction is a clean
+On `no-tenants-no-acc`, the accepted tenancy direction is a clean
 development-stage replacement of `django-tenants` with ordinary global
 Workspace control-plane models, direct non-null Workspace ownership on every
 tenant row, PostgreSQL forced RLS under a restricted runtime role, and one
 transaction-scoped Workspace context primitive for HTTP, tasks, commands, and
-tests. The proposed ADR is
+tests. The accepted ADR is
 `docs/adr/2026-08-14-shared-schema-workspace-rls-tenancy.md`; implementation is
-not authorized until it is reviewed and accepted. Existing schema-tenancy and
-hybrid recommendations are historical evidence on this branch, not the target.
+active. `apps.tenancy` owns the abstract `WorkspaceOwnedModel` and the
+transaction-scoped `workspace_context(workspace_id)` primitive. Do not remove
+the `django-tenants` backend until direct ownership, runtime conversion, and
+isolation gates all pass. The authoritative registry count is 95 surviving
+business models, not the earlier stale count of 90.
+Existing schema-tenancy and hybrid recommendations are historical evidence on
+this branch, not the target.
+`orgs.Company` and `orgs.Domain` are now ordinary Django models; neither
+inherits django-tenants mixins. `Company.schema_name` is temporarily retained
+as the routing slug compatibility column, exposed through `Company.slug`, and
+must be renamed only after callers stop using schema terminology. Workspace
+archive/delete no longer provisions or drops PostgreSQL schemas. Workspace
+creation and onboarding no longer clone, create, or seed tenant schemas.
+Control-plane writes use ordinary atomic transactions; the legacy
+`_public_schema_context` name is temporarily retained as a transaction wrapper
+for test and caller compatibility, not schema switching.
+`SecureWorkspaceMiddleware` no longer calls `connection.set_tenant`, resets a
+schema, or asks django-tenants for Domain/URLConf models. It resolves the
+ordinary `orgs.Domain`, authorizes membership/subscription access, sets
+`request.workspace` (plus temporary `request.tenant` compatibility), and keeps
+`workspace_context(workspace.id)` active until response or exception cleanup.
+All ten current Party models now have direct, non-null Workspace ownership via
+`WorkspaceOwnedModel`. Party codes, sequence keys, and role-type keys are
+Workspace-scoped; child models propagate their parent's Workspace and
+relationships reject cross-Workspace references. Transitional migrations
+`party.0006`-`0008` add nullable ownership, backfill from the active legacy
+tenant, then enforce non-null ownership. The backfill may skip only an empty
+schema and must fail if unowned rows exist without an explicit Workspace.
+RateSource and Rate also have direct, non-null ownership through transitional
+migrations `rates.0003`-`0005`. Rate-source relationships reject Workspace
+mismatches, quote uniqueness includes Workspace, form choices fail closed when
+context is absent, and all live Rates cache keys include the Workspace ID.
+All eleven Notify v2 models now carry direct Workspace ownership. The event
+type, policy, template, recipient, batch, event, job, artifact, attempt, and
+webhook evidence chain propagates parent ownership and rejects mixed Workspace
+relationships. Keys, delivery/provider identifiers, and webhook replay keys
+are Workspace-scoped. Webhook receipts no longer store `tenant_schema`, and
+Notify v2 readiness, webhook processing, delivery, and admin guards use active
+Workspace context rather than connection schema state. Transitional migrations
+are `notify_v2.0007`-`0010`.
+All 72 concrete Loans models now expose a direct, non-null Workspace field.
+Thirty-eight child/evidence models gained ownership through migrations
+`loans.0064`-`0066`; the legacy tenant backfill is empty-schema-safe and fails
+closed on unowned rows without a tenant Workspace. This closes model-field
+coverage across all 95 surviving business models, but not the tenancy removal:
+Loans schema-switching services/tests, Workspace-scoped uniqueness and
+relationships, RLS policies, runtime-role verification, and the clean baseline
+still remain.
+The runtime database now uses Django's standard PostgreSQL backend and no
+database router. Party, Loans, Rates, and Notify v2 are shared/public apps;
+`TENANT_APPS` is empty. Tenant-specific storage, static finder, cache key,
+logging filter, and test runner configuration are removed. Loans production
+services contain no django-tenants/schema-context import. `WorkspaceTestCase`
+is the replacement test primitive, with the first 38 document, license,
+print-profile, and product tests passing on a fresh ordinary Django database.
+Do not restore schema switching to make unconverted tests pass; migrate those
+tests and remaining orgs/Party/subscription commands and helpers instead.
+Production modules now contain no direct `django_tenants` import. Canonical
+request resolution reads `request.workspace`, Party portal audit ownership
+falls back to `PartyPortalAccess.workspace`, Company admin is ordinary Django
+admin, and seed commands address Workspace IDs through `workspace_context`.
+The schema-parity command is retired. Do not remove the dependency until legacy
+TenantTestCase/TenantClient tests and the historical migration import are
+converted or replaced by the clean baseline.
+The project no longer declares or imports django-tenants. `WorkspaceTestCase`
+and `WorkspaceClient` replace the schema-era test primitives, and the historical
+`orgs.0008` migration no longer imports the package validator. The locally
+installed wheel may still exist in the developer virtualenv but is not part of
+project configuration or requirements. Convert the two remaining concurrency
+tests' `connection.set_tenant`/`set_schema_to_public` calls to explicit
+`workspace_context` before treating all legacy test behavior as migrated.
 
 Rokkad follows KISS (Keep It Simple, Stupid). Choose the smallest coherent
 design that meets the current business need, prefer ordinary Django and existing

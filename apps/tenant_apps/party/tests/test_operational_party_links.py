@@ -1,8 +1,7 @@
 import uuid
 
 from django.contrib.auth import get_user_model
-from django.db import connection
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.notify_v2.models import NotificationRecipient
 from apps.tenant_apps.party.models import Party
@@ -11,7 +10,7 @@ from apps.tenant_apps.party.models import Party
 User = get_user_model()
 
 
-class OperationalPartyLinkTests(TenantTestCase):
+class OperationalPartyLinkTests(WorkspaceTestCase):
     test_schema_name = f"party_ops_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -37,7 +36,6 @@ class OperationalPartyLinkTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.party = Party.objects.create(display_name="Linked Customer")
 
     def test_notify_v2_recipient_is_party_owned(self):

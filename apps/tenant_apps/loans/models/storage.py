@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
+from apps.tenancy.models import WorkspaceOwnedModel
+
 from .core import current_tenant_workspace_id
 
 
@@ -101,7 +103,7 @@ class PawnStorageLocation(models.Model):
         return f"{self.code} · {self.name}"
 
 
-class PawnCollateralStorageMovement(models.Model):
+class PawnCollateralStorageMovement(WorkspaceOwnedModel):
     class Kind(models.TextChoices):
         PLACEMENT = "PLACEMENT", "Initial placement"
         TRANSFER = "TRANSFER", "Storage transfer"

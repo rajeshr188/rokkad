@@ -14,8 +14,7 @@ from django.db import DatabaseError, connection, transaction
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
-from django_tenants.test.client import TenantClient
+from apps.tenancy.testing import WorkspaceClient, WorkspaceTestCase
 
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.models import (
@@ -65,7 +64,7 @@ TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="rokkad-collateral-media-")
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     },
 )
-class PawnCollateralMediaTests(TenantTestCase):
+class PawnCollateralMediaTests(WorkspaceTestCase):
     test_schema_name = f"loans_media_{uuid.uuid4().hex[:8]}"
     test_domain = f"loans-media-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -97,7 +96,6 @@ class PawnCollateralMediaTests(TenantTestCase):
         # The process-level lazy storage may have been initialized by the
         # production manifest backend before this class override took effect.
         staticfiles_storage._wrapped = StaticFilesStorage()
-        connection.set_tenant(self.tenant)
         self.owner = self.tenant.owner
         role, _ = Role.objects.get_or_create(name="Owner")
         Membership.objects.get_or_create(
@@ -135,7 +133,7 @@ class PawnCollateralMediaTests(TenantTestCase):
             net_weight=Decimal("2.0000"),
             purity_percentage=Decimal("91.6000"),
         )
-        self.client = TenantClient(self.tenant)
+        self.client = WorkspaceClient(self.tenant)
         self.client.force_login(self.owner)
 
     @staticmethod

@@ -5,7 +5,6 @@ from django.shortcuts import redirect
 from django.urls import resolve
 from django.utils import timezone
 from django.contrib import messages
-from django_tenants.utils import get_public_schema_name
 from apps.orgs.tenant_context import resolve_request_workspace
 from apps.subscriptions.services import SubscriptionAccessService
 
@@ -120,7 +119,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
             return None
 
         # Skip public schema
-        if workspace.schema_name == get_public_schema_name():
+        if workspace.schema_name == "public":
             return None
 
         # Centralized subscription evaluation.

@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from django.db import connection, transaction
-from django_tenants.utils import get_public_schema_name, schema_context
+from django.db import transaction
 
 from apps.orgs.audit import AuditLog
 from apps.tenant_apps.party.models import PartyPortalAccess
@@ -110,7 +109,11 @@ def _log_portal_access_event(
     workspace,
     previous_status,
 ) -> None:
-    workspace = _resolve_workspace(workspace=workspace, request=request)
+    workspace = _resolve_workspace(
+        workspace=workspace,
+        request=request,
+        grant=grant,
+    )
     data = {
         "party_id": grant.party_id,
         "target_user_id": grant.user_id,
@@ -122,36 +125,22 @@ def _log_portal_access_event(
         f"Portal access for party {grant.party_id} changed from "
         f"{previous_status} to {grant.status}."
     )
-    with schema_context(get_public_schema_name()):
-        AuditLog.log(
-            action,
-            user=actor,
-            company=workspace,
-            description=description,
-            data=data,
-            request=request,
-            success=True,
-        )
+    AuditLog.log(
+        action,
+        user=actor,
+        company=workspace,
+        description=description,
+        data=data,
+        request=request,
+        success=True,
+    )
 
 
-def _resolve_workspace(*, workspace, request):
+def _resolve_workspace(*, workspace, request, grant):
     if workspace is not None:
         return workspace
 
-    request_workspace = getattr(request, "tenant", None)
-    if _is_workspace_tenant(request_workspace):
+    request_workspace = getattr(request, "workspace", None)
+    if request_workspace is not None:
         return request_workspace
-
-    connection_workspace = getattr(connection, "tenant", None)
-    if _is_workspace_tenant(connection_workspace):
-        return connection_workspace
-
-    return None
-
-
-def _is_workspace_tenant(value) -> bool:
-    return bool(
-        value is not None
-        and getattr(value, "schema_name", None)
-        and value.schema_name != get_public_schema_name()
-    )
+    return grant.workspace

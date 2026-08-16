@@ -20,9 +20,9 @@ This file is the operating contract for Codex, Copilot, and other AI coding agen
 
 ## Project Summary
 
-Rokkad is a SaaS mini ERP for small businesses where accounting is central. Business events become vouchers. Posted vouchers create immutable journal entries. Corrections happen through reversals.
-
-Modules include accounting, loans, inventory, sales, purchase, commodity management, workspace management, subscription, authorization, onboarding, and customer portal.
+Rokkad is a shared-schema SaaS pawn-lending application. Its supported business
+apps are Party, Loans, Notify v2, and Rates. PostgreSQL forced RLS isolates
+Workspace-owned rows under a restricted runtime role.
 
 ## Documentation Rules
 
@@ -56,9 +56,13 @@ Before implementing meaningful work:
 
 ## Migration Rules
 
-- For tenant app model changes, use the `migrate_schemas` command from `django-tenants`.
-- For shared app model changes, use `migrate_schemas --shared`.
-- Do not rely on plain `migrate` for project migration guidance unless the task explicitly targets a non-tenant local check.
+- Use ordinary Django migrations through the owner-only settings module:
+  `python manage.py migrate --settings django_project.settings.migration`.
+- Web and worker processes must use the restricted runtime database role.
+- Tests use `--settings django_project.settings.test`; adversarial RLS DML must
+  execute under a restricted role.
+- New Workspace-owned tables require direct non-null ownership, forced RLS,
+  registry coverage, and isolation tests.
 
 ## What Not To Do
 
@@ -68,7 +72,8 @@ Before implementing meaningful work:
 - Do not mutate posted accounting entries.
 - Do not mix workspace/global data accidentally.
 - Do not make inventory, commodity, and accounting inconsistent.
-- Do not bypass DEA for ledger effects.
+- Do not reintroduce retired accounting, DEA, Girvi, Product, Contact, or legacy
+  Notify dependencies.
 
 ## Documentation Steward Responsibilities
 

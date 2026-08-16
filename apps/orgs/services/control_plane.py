@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from allauth.account.models import EmailAddress
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils.text import slugify
-from django_tenants.utils import get_public_schema_name, remove_www, schema_context
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import Company, CompanyInvitation, Domain, Membership, Role
@@ -14,8 +14,10 @@ from apps.orgs.services.membership_capacity import (
 from apps.orgs.services import role_policy
 
 
-def _public_schema_context():
-    return schema_context(get_public_schema_name())
+def _control_plane_transaction():
+    """Open one ordinary atomic control-plane transaction."""
+
+    return transaction.atomic()
 
 
 def assert_verified_invitation_identity(*, invitation, user):
@@ -37,8 +39,8 @@ def assert_verified_invitation_identity(*, invitation, user):
 
 
 def create_workspace_from_form(*, form, user, request):
-    """Create workspace and owner membership in public schema."""
-    with _public_schema_context():
+    """Create Workspace, domain, and owner membership atomically."""
+    with _control_plane_transaction():
         company = form.save(commit=False)
         company.schema_name = build_schema_name(company.name)
         company.creator = user
@@ -47,7 +49,7 @@ def create_workspace_from_form(*, form, user, request):
             raise ValidationError("Workspace schema name already exists.")
         company.save()
 
-        domain = remove_www(request.get_host().split(":")[0]).lower()
+        domain = request.get_host().split(":")[0].lower().removeprefix("www.")
         company_domain = f"{company.schema_name}.{domain}"
         if Domain.objects.filter(domain=company_domain).exists():
             raise ValidationError("Workspace domain already exists.")
@@ -72,26 +74,19 @@ def create_onboarding_workspace_from_form(
     form,
     user,
     request,
-    provision_workspace,
-    seed_workspace_defaults,
+    provision_workspace=None,
+    seed_workspace_defaults=None,
 ):
-    """Create an onboarding workspace through the orgs control plane.
-
-    This preserves the legacy onboarding schema naming and tenant provisioning
-    behavior while moving company/domain/membership creation out of the view.
-    """
-    with _public_schema_context():
-        # Do not wrap tenant schema creation/migration in an outer atomic block.
-        # PostgreSQL can reject later ALTER TABLE operations when earlier seed
-        # data leaves pending FK trigger events in the same transaction.
+    """Create an onboarding Workspace without provisioning a database schema."""
+    with _control_plane_transaction():
         company = form.save(commit=False)
-        company.schema_name = company.name.lower().replace(" ", "_")
+        company.schema_name = build_schema_name(company.name)
         company.creator = user
         company.owner = user
-        provisioning_mode = provision_workspace(company)
-        seed_workspace_defaults(company)
+        company.save()
+        provisioning_mode = "shared"
 
-        domain = remove_www(request.get_host().split(":")[0]).lower()
+        domain = request.get_host().split(":")[0].lower().removeprefix("www.")
         company_domain = f"{company.schema_name}.{domain}"
         Domain.objects.create(tenant=company, domain=company_domain, is_primary=True)
 
@@ -107,14 +102,14 @@ def build_schema_name(name):
         raise ValidationError("Workspace name must contain letters or numbers.")
     if schema_name[0].isdigit():
         schema_name = f"ws_{schema_name}"
-    if schema_name == get_public_schema_name():
-        raise ValidationError("Workspace schema name cannot be public.")
+    if schema_name == "public":
+        raise ValidationError("Workspace slug cannot be public.")
     return schema_name[:63]
 
 
 def save_workspace_update_form(*, form, actor, request):
     """Save workspace updates in public schema."""
-    with _public_schema_context():
+    with _control_plane_transaction():
         company = form.save()
 
     AuditLog.log(
@@ -130,7 +125,7 @@ def save_workspace_update_form(*, form, actor, request):
 
 def archive_workspace(*, company, actor, request):
     """Archive workspace in public schema."""
-    with _public_schema_context():
+    with _control_plane_transaction():
         company.archive()
 
     AuditLog.log(
@@ -145,7 +140,7 @@ def archive_workspace(*, company, actor, request):
 
 def restore_workspace(*, company, actor, request):
     """Restore an archived workspace without recreating or changing its schema."""
-    with _public_schema_context():
+    with _control_plane_transaction():
         company.restore()
 
     AuditLog.log(
@@ -167,7 +162,7 @@ def create_membership(*, user, company, role, request, actor=None, invite_reason
         extra_slots=1,
     )
 
-    with _public_schema_context():
+    with _control_plane_transaction():
         membership, created = Membership.objects.get_or_create(
             user=user,
             company=company,
@@ -198,7 +193,7 @@ def remove_membership(*, membership, actor, request):
     company = membership.company
     removed_user = membership.user
 
-    with _public_schema_context():
+    with _control_plane_transaction():
         membership.delete()
 
     AuditLog.log(
@@ -230,7 +225,7 @@ def change_membership_role(*, membership, new_role, actor, request):
     company = membership.company
     target_user = membership.user
 
-    with _public_schema_context():
+    with _control_plane_transaction():
         membership.role = new_role
         membership.save(update_fields=["role"])
 
@@ -259,7 +254,7 @@ def send_team_invitation(*, form, actor, company, request):
         extra_slots=1,
     )
 
-    with _public_schema_context():
+    with _control_plane_transaction():
         invitation = form.save()
 
     AuditLog.log(
@@ -286,7 +281,7 @@ def send_onboarding_team_invitations(
     invited_invitations = []
     failed_invitations = []
 
-    with _public_schema_context():
+    with _control_plane_transaction():
         role = Role.objects.get(name=role_name)
         role_policy.assert_can_invite_role(
             actor=actor,
@@ -322,7 +317,7 @@ def send_onboarding_team_invitations(
 
 def accept_invitation(*, invitation, user, request):
     """Accept invitation in public schema and ensure membership exists."""
-    with _public_schema_context():
+    with _control_plane_transaction():
         assert_verified_invitation_identity(invitation=invitation, user=user)
         existing = Membership.objects.filter(user=user, company=invitation.company).exists()
         if not existing:
@@ -353,7 +348,7 @@ def accept_invitation(*, invitation, user, request):
 
 def decline_invitation(*, invitation, actor, request):
     """Decline invitation in public schema."""
-    with _public_schema_context():
+    with _control_plane_transaction():
         invitation.mark_declined()
 
     AuditLog.log(
@@ -369,7 +364,7 @@ def decline_invitation(*, invitation, actor, request):
 
 def revoke_invitation(*, invitation, actor, request):
     """Revoke invitation in public schema."""
-    with _public_schema_context():
+    with _control_plane_transaction():
         invitation.mark_revoked()
 
     AuditLog.log(

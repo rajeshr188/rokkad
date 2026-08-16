@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError, IntegrityError, connection, transaction
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
@@ -36,7 +36,7 @@ from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
-class FundingLoanPersistenceTests(TenantTestCase):
+class FundingLoanPersistenceTests(WorkspaceTestCase):
     test_schema_name = f"funding_persistence_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -61,7 +61,6 @@ class FundingLoanPersistenceTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         User = get_user_model()
         self.actor = User.objects.create_user(
             username=f"funding-actor-{uuid.uuid4().hex[:8]}",

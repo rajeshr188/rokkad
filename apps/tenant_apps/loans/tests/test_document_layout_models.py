@@ -4,8 +4,7 @@ from datetime import date
 from types import SimpleNamespace
 
 from django.core.exceptions import ValidationError
-from django.db import connection
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.documents import (
     DocumentLayoutValidator,
@@ -29,7 +28,7 @@ from apps.tenant_apps.loans.services import (
 from apps.tenant_apps.loans.services.print_profiles import ResolvedPrintProfile
 
 
-class LoanDocumentLayoutPersistenceTests(TenantTestCase):
+class LoanDocumentLayoutPersistenceTests(WorkspaceTestCase):
     test_schema_name = f"loan_docs_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -55,7 +54,6 @@ class LoanDocumentLayoutPersistenceTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.actor = self.tenant.owner
         self.license = LoanLicense.objects.create(
             workspace=self.tenant,

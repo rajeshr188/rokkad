@@ -12,7 +12,6 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
-from django_tenants.models import DomainMixin, TenantMixin
 from invitations import signals
 from invitations.adapters import get_invitations_adapter
 from invitations.app_settings import app_settings
@@ -29,7 +28,10 @@ class CompanyManager(models.Manager):
         return super().get_queryset()
 
 
-class Company(TenantMixin):
+class Company(models.Model):
+    # Transitional routing key. It remains named schema_name until all callers
+    # move to the shared-schema Workspace slug contract.
+    schema_name = models.CharField(max_length=63, unique=True, db_index=True)
     name = models.CharField(_("Name"), max_length=200, unique=True)
     theme = ColorField(default="#FF0000")
     logo = models.ImageField(upload_to="company_logos/", null=True, blank=True)
@@ -54,10 +56,6 @@ class Company(TenantMixin):
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)  # Soft delete flag
 
-    auto_create_schema = True
-    # Guard destructive schema drops behind explicit hard-delete flow.
-    auto_drop_schema = False
-
     objects = CompanyManager()  # Use custom manager
     all_objects = models.Manager()  # Include soft-deleted instances
 
@@ -79,8 +77,14 @@ class Company(TenantMixin):
     def get_absolute_url(self):
         return reverse("workspace_detail", kwargs={"workspace_id": self.id})
 
+    @property
+    def slug(self):
+        """Compatibility routing slug during the schema-name rename."""
+
+        return self.schema_name
+
     def archive(self):
-        """Soft-delete workspace while preserving schema/data for recovery."""
+        """Soft-delete a Workspace while preserving its owned rows."""
         if self.is_deleted:
             return
         self.is_deleted = True
@@ -93,7 +97,7 @@ class Company(TenantMixin):
         self.archive()
 
     def hard_delete(self, force=False):
-        """Permanently remove workspace row and schema when explicitly allowed."""
+        """Permanently remove an explicitly authorized Workspace row."""
         if self.schema_name == "public":
             raise ValueError("Public workspace cannot be hard deleted")
 
@@ -107,8 +111,7 @@ class Company(TenantMixin):
                 "Hard delete is disabled. Set ALLOW_COMPANY_HARD_DELETE=True to enable."
             )
 
-        self.auto_drop_schema = True
-        return super(Company, self).delete()
+        return super().delete()
 
     def restore(self):
         """Restore archived workspace."""
@@ -118,8 +121,17 @@ class Company(TenantMixin):
         self.save(update_fields=["is_deleted", "updated_at"])
 
 
-class Domain(DomainMixin):
-    pass
+class Domain(models.Model):
+    domain = models.CharField(max_length=253, unique=True, db_index=True)
+    tenant = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="domains",
+    )
+    is_primary = models.BooleanField(default=True, db_index=True)
+
+    def __str__(self):
+        return self.domain
 
 
 class CompanyOwnership(models.Model):

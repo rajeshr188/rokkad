@@ -8,6 +8,8 @@ from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
 
+from apps.tenancy.models import WorkspaceOwnedModel
+
 from apps.tenant_apps.loans.domain.future_funding import (
     FundingLoanEventKind,
     FundingLoanState,
@@ -16,7 +18,7 @@ from apps.tenant_apps.loans.domain.future_funding import (
 from .core import PawnCollateralItem, current_tenant_workspace_id, enum_choices
 
 
-class ImmutableEvidenceModel(models.Model):
+class ImmutableEvidenceModel(WorkspaceOwnedModel):
     class Meta:
         abstract = True
 
@@ -133,7 +135,7 @@ class FundingLoan(models.Model):
         return super().save(*args, **kwargs)
 
 
-class FundingLoanDraftTerms(models.Model):
+class FundingLoanDraftTerms(WorkspaceOwnedModel):
     funding_loan = models.OneToOneField(
         FundingLoan,
         on_delete=models.CASCADE,
@@ -176,7 +178,7 @@ class FundingLoanDraftTerms(models.Model):
         ]
 
 
-class FundingLoanDraftCollateral(models.Model):
+class FundingLoanDraftCollateral(WorkspaceOwnedModel):
     funding_loan = models.ForeignKey(
         FundingLoan,
         on_delete=models.CASCADE,
@@ -431,7 +433,7 @@ class FundingPledge(ImmutableEvidenceModel):
                 )
 
 
-class FundingPledgeItem(models.Model):
+class FundingPledgeItem(WorkspaceOwnedModel):
     funding_pledge = models.ForeignKey(
         FundingPledge,
         on_delete=models.PROTECT,

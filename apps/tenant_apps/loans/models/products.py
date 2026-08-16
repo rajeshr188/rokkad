@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
 
+from apps.tenancy.models import WorkspaceOwnedModel
+
 from apps.tenant_apps.loans.domain import (
     LoanAmortisationMethod,
     LoanExtraPaymentRule,
@@ -64,7 +66,7 @@ class LoanProduct(models.Model):
         return f"{self.code} - {self.name}"
 
 
-class LoanProductVersion(models.Model):
+class LoanProductVersion(WorkspaceOwnedModel):
     product = models.ForeignKey(
         LoanProduct, on_delete=models.PROTECT, related_name="versions"
     )
@@ -130,10 +132,6 @@ class LoanProductVersion(models.Model):
                 name="loans_product_ready_idx",
             )
         ]
-
-    @property
-    def workspace_id(self):
-        return self.product.workspace_id
 
     def clean(self):
         super().clean()

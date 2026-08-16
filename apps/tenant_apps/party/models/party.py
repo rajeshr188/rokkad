@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models, transaction
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+from apps.tenancy.context import current_workspace_id
+from apps.tenancy.models import WorkspaceOwnedModel
 
 
 def party_profile_photo_upload_to(instance, filename):
@@ -11,12 +13,18 @@ def party_profile_photo_upload_to(instance, filename):
     return f"party_profile_photos/{uuid.uuid4()}.{ext}"
 
 
-class PartyCodeSequence(models.Model):
-    key = models.CharField(max_length=32, unique=True)
+class PartyCodeSequence(WorkspaceOwnedModel):
+    key = models.CharField(max_length=32)
     next_number = models.PositiveIntegerField(default=1)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "key"],
+                name="party_sequence_workspace_key_uniq",
+            ),
+        ]
         verbose_name = _("Party Code Sequence")
         verbose_name_plural = _("Party Code Sequences")
 
@@ -24,7 +32,7 @@ class PartyCodeSequence(models.Model):
         return f"{self.key}: {self.next_number}"
 
 
-class Party(models.Model):
+class Party(WorkspaceOwnedModel):
     class PartyType(models.TextChoices):
         INDIVIDUAL = "INDIVIDUAL", _("Individual")
         ORGANIZATION = "ORGANIZATION", _("Organization")
@@ -51,10 +59,9 @@ class Party(models.Model):
 
     party_code = models.CharField(
         max_length=32,
-        unique=True,
         db_index=True,
         blank=True,
-        help_text="Tenant-scoped party code. Unique inside each tenant schema.",
+        help_text="Workspace-scoped party code.",
     )
     party_type = models.CharField(
         max_length=32,
@@ -112,6 +119,7 @@ class Party(models.Model):
     class Meta:
         ordering = ("display_name", "party_code")
         indexes = [
+            models.Index(fields=["workspace", "party_code"]),
             models.Index(fields=["status", "party_type"]),
             models.Index(fields=["normalized_name"]),
             models.Index(fields=["tax_pan"]),
@@ -119,6 +127,12 @@ class Party(models.Model):
         ]
         verbose_name = _("Party")
         verbose_name_plural = _("Parties")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "party_code"],
+                name="party_workspace_code_uniq",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.display_name} ({self.party_code})"
@@ -131,21 +145,29 @@ class Party(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.party_code:
-            self.party_code = generate_party_code()
+            workspace_id = self.workspace_id or current_workspace_id()
+            self.party_code = generate_party_code(workspace_id=workspace_id)
         if not self.normalized_name:
             self.normalized_name = slugify(self.display_name or "").replace("-", " ")
         super().save(*args, **kwargs)
 
 
-def generate_party_code(prefix="P"):
+def generate_party_code(*, workspace_id, prefix="P"):
     with transaction.atomic():
         sequence, _created = (
             PartyCodeSequence.objects.select_for_update()
-            .get_or_create(key="PARTY", defaults={"next_number": 1})
+            .get_or_create(
+                workspace_id=workspace_id,
+                key="PARTY",
+                defaults={"next_number": 1},
+            )
         )
         while True:
             candidate = f"{prefix}-{sequence.next_number:06d}"
             sequence.next_number += 1
-            if not Party.objects.filter(party_code=candidate).exists():
+            if not Party.objects.filter(
+                workspace_id=workspace_id,
+                party_code=candidate,
+            ).exists():
                 sequence.save(update_fields=["next_number", "updated_at"])
                 return candidate

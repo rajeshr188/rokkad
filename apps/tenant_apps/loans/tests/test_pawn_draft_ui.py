@@ -6,12 +6,9 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
 from django.test import override_settings
 from django.urls import reverse
-from django_tenants.test.cases import TenantTestCase
-from django_tenants.test.client import TenantClient
-from django_tenants.utils import schema_context
+from apps.tenancy.testing import WorkspaceClient, WorkspaceTestCase
 
 from apps.orgs.models import Company, Membership, Role
 from apps.tenant_apps.loans.domain import LoanDocumentKind, TransactionKind
@@ -47,7 +44,7 @@ from apps.tenant_apps.loans.services.pawn_draft_split import (
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     },
 )
-class PawnDraftUiTests(TenantTestCase):
+class PawnDraftUiTests(WorkspaceTestCase):
     test_schema_name = f"loans_draft_ui_{uuid.uuid4().hex[:8]}"
     test_domain = f"loans-draft-ui-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -75,7 +72,6 @@ class PawnDraftUiTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         static_url = patch(
             "django.templatetags.static.StaticNode.handle_simple",
             side_effect=lambda path: f"/static/{path}",
@@ -83,7 +79,7 @@ class PawnDraftUiTests(TenantTestCase):
         static_url.start()
         self.addCleanup(static_url.stop)
         self.owner = self.tenant.owner
-        self.client = TenantClient(self.tenant)
+        self.client = WorkspaceClient(self.tenant)
         self.client.force_login(self.owner)
         self.party = Party.objects.create(display_name="Draft Borrower")
         self.product_version = seed_default_loan_products()[0]
@@ -740,15 +736,13 @@ class PawnDraftUiTests(TenantTestCase):
             idempotency_key="p12-cross-workspace-event",
             created_by=self.owner,
         )
-        with schema_context("public"):
-            other_workspace = Company(
-                name=f"P12 Foreign {uuid.uuid4().hex[:8]}",
-                schema_name=f"p12_foreign_{uuid.uuid4().hex[:8]}",
-                owner=self.owner,
-                creator=self.owner,
-            )
-            other_workspace.auto_create_schema = False
-            other_workspace.save()
+        other_workspace = Company(
+            name=f"P12 Foreign {uuid.uuid4().hex[:8]}",
+            schema_name=f"p12_foreign_{uuid.uuid4().hex[:8]}",
+            owner=self.owner,
+            creator=self.owner,
+        )
+        other_workspace.save()
         PawnLoan.objects.filter(pk=loan.pk).update(workspace=other_workspace)
         LoanLicense.objects.filter(pk=license.pk).update(workspace=other_workspace)
 

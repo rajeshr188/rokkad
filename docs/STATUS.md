@@ -1,12 +1,165 @@
 ---
 status: active
 owner: project
-updated: 2026-08-16
+updated: 2026-08-17
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
 
 # Status
+
+- 2026-08-17: The shared-schema Workspace/RLS tenancy ADR is accepted and its
+  removal plan is active. A registry-derived correction finds 95 concrete
+  models across Party, Loans, Notify v2, and Rates; 35 initially had direct
+  Workspace ownership and 60 required conversion before the `django-tenants`
+  backend could be safely removed. The earlier 90/37/53 inventory was stale.
+  Phase 1 has started: `apps.tenancy` now provides the abstract direct-ownership
+  model and transaction-local PostgreSQL `workspace_context`; its validation,
+  database-setting, and conflicting-nested-context tests pass.
+  Phase 2 control-plane conversion has started: Company and Domain are ordinary
+  Django models, schema auto-create/drop behavior is removed, and migration
+  `orgs.0025` removes the django-tenants schema validator while preserving the
+  temporary routing column. Thirteen workspace lifecycle/invitation tests pass.
+  Onboarding and control-plane creation no longer clone/provision schemas, and
+  the Company post-save tenant seeding signal is removed. Fourteen focused
+  lifecycle, invitation, and onboarding creation tests pass.
+  SecureWorkspaceMiddleware now establishes transaction-scoped Workspace
+  context without schema switching; Domain resolution uses the ordinary Domain
+  model and public requests clear Workspace state. Twenty-five focused context
+  and middleware tests pass.
+  Party is the first surviving business aggregate converted to direct,
+  non-null Workspace ownership. All ten Party models inherit the shared
+  ownership contract; root identifiers and role keys are unique per Workspace,
+  child and cross-Party relationships reject Workspace mismatches, and Party
+  role seeding is explicitly Workspace-scoped. Transitional migrations
+  `party.0006`-`0008` add, backfill, and enforce ownership. The backfill is a
+  no-op only for an empty schema and fails closed for unowned rows without a
+  tenant Workspace. Django checks, migration drift, and seven focused Party/
+  tenancy tests pass.
+  Rates is also converted: RateSource and Rate have direct ownership, Rate
+  quotes are unique per Workspace, Rate rejects a source owned by another
+  Workspace, form choices fail closed without context, and middleware/signal
+  cache keys include the Workspace ID. Transitional migrations
+  `rates.0003`-`0005` pass from an existing test database. Forty-one surviving
+  concrete business models still required direct ownership at that checkpoint.
+  Notify v2 is now converted across its entire eleven-model evidence graph.
+  Ten previously schema-owned models gained direct Workspace ownership; the
+  existing WhatsApp integration now uses the same context contract. Parent/
+  child saves reject mixed Workspace chains, formerly global keys and provider
+  identifiers are Workspace-scoped, webhook receipts no longer persist a
+  tenant-schema label, and readiness, webhook, admin, and delivery runtime code
+  no longer reads database schema state. Transitional migrations
+  `notify_v2.0007`-`0010` apply cleanly. A subsequent registry check corrected
+  the remaining Loans count from 31 to 38.
+  All 38 formerly schema-owned Loans child/evidence models now inherit direct
+  ownership; every one of Loans' 72 concrete models exposes a non-null
+  Workspace field. Migrations `loans.0064`-`0066` add, backfill, and enforce
+  the columns and apply successfully across the legacy test schemas. Loans'
+  active schema-switching services and legacy tenant tests remain a separate
+  runtime-conversion step; direct ownership alone does not complete RLS safety.
+  The shared-schema settings cutover is now active: Party, Loans, Rates, and
+  Notify v2 are in `SHARED_APPS`, `TENANT_APPS` is empty, Django uses the
+  standard PostgreSQL backend with no tenant router, ordinary file/static/cache
+  and logging configuration replaces django-tenants helpers, and the obsolete
+  tenant-aware test runner is deleted. The four remaining Loans production
+  services no longer use `schema_context`; their audit writes remain inside the
+  caller's ordinary transaction and Workspace context. A new WorkspaceTestCase
+  replaces TenantTestCase for the first four converted service suites, and all
+  38 tests pass from a freshly created standard shared-schema test database.
+  Remaining django-tenants imports are compatibility/test/command cleanup and
+  must be removed before deleting the dependency.
+  Production Python now has no direct `django_tenants` import. Request
+  Workspace resolution uses `request.workspace`; Party portal audits use the
+  grant's direct Workspace owner; subscription middleware and Orgs views no
+  longer ask django-tenants for a public-schema name; Company admin no longer
+  inherits TenantAdminMixin. Workspace seeding uses `--workspace-id` plus
+  `workspace_context`, global permission seeding is ordinary, and the obsolete
+  schema-parity command is deleted. Seventeen focused context/access tests pass.
+  The package remains temporarily because legacy tests and historical migration
+  imports still reference it; those are the next removal boundary.
+  The django-tenants dependency declaration is now removed. Historical
+  migration `orgs.0008` no longer imports its schema validator, the unused
+  legacy settings module is deleted, and Party/Loans TenantTestCase and
+  TenantClient imports are converted to WorkspaceTestCase/WorkspaceClient.
+  Sixteen focused Orgs/Party tests pass on a fresh standard database. The two
+  specialized Loans concurrency suites now use per-connection Workspace
+  context and both pass. Their conversion exposed and fixed a shared-schema
+  write defect: FundingPledgeItem bulk creation now sets Workspace ownership
+  explicitly. Twenty-nine route/architecture intent tests also pass, Django
+  checks report no issues, migration state has no drift, and project Python and
+  requirements contain no django-tenants dependency/import. PostgreSQL RLS is
+  now proven on the Rates aggregate through migration `rates.0006`. The
+  reusable migration operation enables and forces the canonical
+  `workspace_isolation` policy with matching `USING` and `WITH CHECK`
+  predicates. Nine focused context/RLS tests pass under an actual temporary
+  `NOSUPERUSER NOBYPASSRLS` role, proving missing-context denial, scoped ORM
+  and raw-SQL reads, scoped update/delete, and rejection of cross-Workspace
+  bulk inserts. At that proof checkpoint, Rates was the only protected
+  aggregate. The authoritative registry and system checks now
+  account for all 95 surviving models and validate direct non-null ownership;
+  database checks compare the active rollout registry to PostgreSQL RLS/FORCE
+  and policy metadata. A deploy-only check rejects superuser, BYPASSRLS, and
+  table-owner runtime connections. The owner/runtime role contract and grant
+  procedure are documented in `docs/implementation/postgresql-runtime-role.md`.
+  Party is the second protected aggregate: migration `party.0009` enables and
+  forces the policy on all ten Party tables, and restricted-role tests prove
+  no-context denial, cross-Workspace read isolation, and rejection of spoofed
+  bulk inserts. Ten focused registry/RLS tests pass. Production runtime-role
+  creation remains a deployment operation and was not executed locally.
+  Notify v2 is now the third protected aggregate: migration `notify_v2.0011`
+  enables and forces the canonical policy on all eleven notification/provider
+  evidence tables. Restricted-role tests prove missing-context denial,
+  cross-Workspace event-type reads, and rejection of spoofed bulk inserts.
+  This checkpoint covers 23 of 95 surviving models, and all 12 focused
+  registry/RLS tests pass without migration drift. Loans migration
+  `0067` completes the policy rollout across its 72 root, child, and evidence
+  tables through the reusable app-state operation. SQL inspection confirms
+  exactly 72 `ENABLE ROW LEVEL SECURITY` statements. The active registry and
+  PostgreSQL metadata gate now cover all 95 surviving business models.
+  Restricted-role Loans tests prove missing-context denial for both License and
+  Series rows, Workspace-scoped reads, and rejection of a spoofed cross-
+  Workspace child bulk insert. All 14 focused registry/RLS tests pass. Code and
+  migrations are RLS-complete; creating the permanent runtime role and using it
+  for deployed web/worker connections remains an external deployment step.
+  Applying the policies to the existing `fresh_clean` development database was
+  intentionally stopped by the fail-closed migration because that database
+  records historical Loans migrations as applied while the corresponding
+  public-schema tables (for example `loans_collateralappraisal`) do not exist.
+  The RLS migration transaction rolled back and all four RLS migrations remain
+  unapplied locally. Fresh test databases create all 95 tables and pass the
+  complete metadata gate, so the code path is sound; the existing database is
+  legacy-schema state and now requires the planned clean development database
+  rebuild rather than skipped policies or fake migrations.
+  A new non-destructive development database, `rokkad_shared_dev`, has now
+  replaced `fresh_clean` in development settings; the old database remains
+  untouched. Ordinary Django migrations built the new database successfully
+  from zero, including all four RLS migrations. The database metadata check
+  passes and PostgreSQL reports exactly 95 `workspace_isolation` policies on 95
+  tables with both RLS and FORCE RLS enabled. The remaining operational step is
+  to provision a password-managed restricted runtime login and use it for web/
+  worker connections while retaining the current owner only for migrations.
+  That local role split is now complete. `rokkad_runtime` is a LOGIN role with
+  `NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`, owns no
+  application tables, and has only schema/table/sequence DML grants plus owner-
+  established default privileges. Default development connections now use
+  `DB_RUNTIME_USER`/`DB_RUNTIME_PASSWORD`; Django confirms the active user is
+  `rokkad_runtime` with superuser and BYPASSRLS both false, and the tenancy
+  deployment check passes. Owner-only `migration` and `test` settings isolate
+  schema changes and disposable test-database creation from web/worker
+  settings. Four focused registry/Loans RLS tests pass through the new test
+  settings. Production must supply distinct runtime and migration secrets.
+  The final django-tenants cleanup is complete: the wheel is uninstalled from
+  `.venv314`, a whole-runtime scan finds no package import, mixin, router,
+  schema-context, schema-switch, or `migrate_schemas` reference, and the
+  Workspace test helper no longer installs no-op connection methods. The last
+  missed imports in `accounts.views` and the dormant Cloudflare storage helper
+  are removed; clearing Workspace selection now stores `None` rather than
+  looking up a synthetic public-schema Company. README and AGENTS migration
+  guidance now describe shared-schema RLS and ordinary owner-only migrations.
+  Twenty-nine focused control-plane, Party, Loans, and registry tests pass with
+  the package absent. A broader mixed 51-test run exposed six pre-existing stale
+  configuration/invitation intent expectations tied to retired Girvi or older
+  routes; these are test-debt failures, not django-tenants imports.
 
 - 2026-08-17: Product, Savings Scheme, and tenant Terms are unregistered and
   physically removed with their migrations and Product templates. Product

@@ -2,15 +2,9 @@
 Onboarding Views - Step-by-step guided user onboarding
 """
 
-import logging
-
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.management import call_command
 from django.shortcuts import redirect, render
-from django_tenants.clone import CloneSchema
-from django_tenants.utils import schema_exists
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.services import control_plane
@@ -24,48 +18,17 @@ from .forms import (
 )
 from .models import OnboardingChoice, OnboardingProgress
 
-logger = logging.getLogger(__name__)
-
-
 def _provision_company_schema(company):
-    """Provision tenant schema, cloning from a template when configured."""
-    template_schema = getattr(settings, "ONBOARDING_TEMPLATE_SCHEMA", "")
-    template_schema = template_schema.strip() if template_schema else ""
-    clone_mode = getattr(settings, "ONBOARDING_TEMPLATE_CLONE_MODE", "NODATA")
-    clone_mode = (clone_mode or "NODATA").upper().strip()
+    """Compatibility helper: Workspaces now share one database schema."""
 
-    # Default behavior: normal tenant save with auto_create_schema=True.
-    if not template_schema:
-        company.save()
-        return "fresh"
-
-    # Safety fallback for misconfiguration: proceed with fresh schema.
-    if not schema_exists(template_schema):
-        logger.warning(
-            "ONBOARDING_TEMPLATE_SCHEMA '%s' not found; falling back to fresh schema",
-            template_schema,
-        )
-        company.save()
-        return "fresh"
-
-    if template_schema == company.schema_name:
-        logger.warning(
-            "ONBOARDING_TEMPLATE_SCHEMA equals target schema '%s'; falling back to fresh schema",
-            company.schema_name,
-        )
-        company.save()
-        return "fresh"
-
-    # Clone path: save tenant row without auto schema creation, then clone from template.
-    company.auto_create_schema = False
     company.save()
-    CloneSchema().clone_schema(template_schema, company.schema_name, clone_mode=clone_mode)
-    return "cloned"
+    return "shared"
 
 
 def _seed_company_schema_defaults(company):
-    """Run explicit tenant seed for onboarding-created workspace."""
-    call_command("seed_tenant_defaults", schema=company.schema_name)
+    """Compatibility no-op until Workspace-owned seed rows are converted."""
+
+    return None
 
 
 def get_or_create_progress(user):

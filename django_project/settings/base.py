@@ -31,7 +31,6 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 SHARED_APPS = [
-    "django_tenants",  # mandatory
     "apps.orgs",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -67,21 +66,21 @@ SHARED_APPS = [
     # Local
     "accounts",
     "apps.configuration",
+    "apps.tenancy.apps.TenancyConfig",
     "apps.onboarding",  # User onboarding flow
     "apps.subscriptions",
     "pages",
     "invitations",
+    "apps.tenant_apps.party",
+    "apps.tenant_apps.loans.apps.LoansConfig",
+    "apps.tenant_apps.rates",
+    "apps.tenant_apps.notify_v2",
     "slick_reporting",
     "django_cleanup.apps.CleanupConfig",
     "viewflow",
 ]
 
-TENANT_APPS = [
-    "apps.tenant_apps.party",
-    "apps.tenant_apps.loans.apps.LoansConfig",
-    "apps.tenant_apps.rates",
-    "apps.tenant_apps.notify_v2",
-]
+TENANT_APPS = []
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
@@ -167,7 +166,7 @@ TEMPLATES = [
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
 DATABASES = {
     "default": {
-        "ENGINE": "django_tenants.postgresql_backend",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": env("DB_NAME"),
         "USER": env("DB_USER"),
         "PASSWORD": env("DB_PASSWORD"),
@@ -176,10 +175,7 @@ DATABASES = {
     }
 }
 
-DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
-
-# Ensure test database setup uses tenant-aware schema migration flow.
-TEST_RUNNER = "django_project.test_runner.TenantAwareDiscoverRunner"
+DATABASE_ROUTERS = ()
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
@@ -241,15 +237,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # https://whitenoise.readthedocs.io/en/latest/django.html
 STORAGES = {
     "default": {
-        "BACKEND": "django_tenants.files.storage.TenantFileSystemStorage",
-        # "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
 STATICFILES_FINDERS = [
-    "django_tenants.staticfiles.finders.TenantFileSystemFinder",  # Must be first
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     # "compressor.finders.CompressorFinder",
@@ -351,8 +345,6 @@ CACHES = {
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
-        "KEY_FUNCTION": "django_tenants.cache.make_key",
-        "REVERSE_KEY_FUNCTION": "django_tenants.cache.reverse_key",
     },
     "select2": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -423,17 +415,12 @@ MESSAGE_TAGS = {
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "filters": {
-        "tenant_context": {
-            "()": "django_tenants.log.TenantContextFilter",
-        },
-    },
     "formatters": {
         "verbose": {
-            "format": "[%(schema_name)s] %(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(name)s %(message)s"
+            "format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(name)s %(message)s"
         },
         "simple": {
-            "format": "[%(schema_name)s] %(levelname)s %(asctime)s %(message)s",
+            "format": "%(levelname)s %(asctime)s %(message)s",
         },
     },
     "handlers": {
@@ -441,12 +428,10 @@ LOGGING = {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "simple",
-            "filters": ["tenant_context"],
         },
         "mail_admins": {
             "level": "ERROR",
             "class": "django.utils.log.AdminEmailHandler",
-            "filters": ["tenant_context"],
             "formatter": "verbose",
         },
     },

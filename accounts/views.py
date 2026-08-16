@@ -1,9 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
-from django_tenants.utils import get_public_schema_name
-
-from apps.orgs.models import Company
 from apps.orgs.tenant_context import resolve_request_workspace
 
 from .forms import UserProfileForm
@@ -54,48 +51,26 @@ def switch_workspace(request, workspace_id):
 
 @login_required
 def clear_workspace(request):
-    """
-    Clear/reset workspace to public schema.
+    """Clear the user's selected Workspace navigation preference."""
 
-    Allows user to:
-    - Return to public (root) workspace
-    - Reset workspace selection
-    - Access workspace selector again
-    """
-    try:
-        # Get public schema
-        public = Company.objects.get(schema_name=get_public_schema_name())
+    current_workspace = resolve_request_workspace(
+        request,
+        allow_profile_fallback=True,
+    )
+    request.user.profile.set_workspace(None)
 
-        # Store current workspace for logging
-        current_workspace = resolve_request_workspace(
-            request,
-            include_public=True,
-            allow_profile_fallback=True,
-        )
+    from apps.orgs.models import AuditLog
 
-        # Reset to public workspace
-        request.user.profile.set_workspace(public)
-
-        # Log the action
-        from apps.orgs.models import AuditLog
-
-        AuditLog.log(
-            "WORKSPACE_CLEAR",
-            user=request.user,
-            company=current_workspace,
-            description=f'Cleared workspace (was: {current_workspace.name if current_workspace else "None"})',
-            request=request,
-            success=True,
-        )
-
-        messages.success(
-            request, "Workspace cleared. You can now select a different one."
-        )
-        return redirect("workspace_selector")
-
-    except Company.DoesNotExist:
-        messages.error(request, "Unable to clear workspace. Please try again.")
-        return redirect("dashboard")
+    AuditLog.log(
+        "WORKSPACE_CLEAR",
+        user=request.user,
+        company=current_workspace,
+        description=f'Cleared workspace (was: {current_workspace.name if current_workspace else "None"})',
+        request=request,
+        success=True,
+    )
+    messages.success(request, "Workspace cleared. You can now select a different one.")
+    return redirect("workspace_selector")
 
 
 @login_required

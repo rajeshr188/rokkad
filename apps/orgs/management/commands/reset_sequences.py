@@ -9,7 +9,6 @@ Usage:
 """
 from django.core.management.base import BaseCommand
 from django.db import connection
-from django_tenants.utils import get_public_schema_name
 
 
 class Command(BaseCommand):
@@ -45,7 +44,7 @@ class Command(BaseCommand):
         elif options["schemas"]:
             schemas_to_reset = options["schemas"]
         else:
-            schemas_to_reset = [get_public_schema_name()]
+            schemas_to_reset = ["public"]
 
         total_reset = 0
         for schema in schemas_to_reset:

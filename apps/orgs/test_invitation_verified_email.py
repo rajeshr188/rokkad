@@ -27,7 +27,7 @@ class InvitationVerifiedEmailTests(SimpleTestCase):
         membership_query = SimpleNamespace(exists=lambda: True)
 
         with patch(
-            "apps.orgs.services.control_plane._public_schema_context",
+            "apps.orgs.services.control_plane._control_plane_transaction",
             return_value=contextlib.nullcontext(),
         ), patch.object(
             control_plane.EmailAddress.objects,
@@ -59,7 +59,7 @@ class InvitationVerifiedEmailTests(SimpleTestCase):
         unverified_query = SimpleNamespace(exists=lambda: False)
 
         with patch(
-            "apps.orgs.services.control_plane._public_schema_context",
+            "apps.orgs.services.control_plane._control_plane_transaction",
             return_value=contextlib.nullcontext(),
         ), patch.object(
             control_plane.EmailAddress.objects,
@@ -90,7 +90,7 @@ class InvitationVerifiedEmailTests(SimpleTestCase):
         user = self._user(email="other@example.com")
 
         with patch(
-            "apps.orgs.services.control_plane._public_schema_context",
+            "apps.orgs.services.control_plane._control_plane_transaction",
             return_value=contextlib.nullcontext(),
         ), patch.object(
             control_plane.EmailAddress.objects,

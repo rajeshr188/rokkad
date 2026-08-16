@@ -19,7 +19,7 @@ def _route_prefixes(patterns):
 
 
 class SaaSRouteIntentTests(SimpleTestCase):
-    def test_active_urlconfs_match_current_django_tenants_settings(self):
+    def test_active_urlconfs_match_shared_schema_routing_settings(self):
         self.assertEqual(settings.ROOT_URLCONF, "django_project.tenant_urls")
         self.assertEqual(settings.PUBLIC_SCHEMA_URLCONF, "django_project.urls")
 
@@ -228,10 +228,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "/data-tools/export/",
             "/girvi/deletemultiple/",
             "/rates/rates/",
-            "/product/",
             "/notify/noticegroup/",
             "/notify-v2/",
-            "/dea/",
         )
 
         for path in tenant_only_paths:
@@ -245,17 +243,14 @@ class SaaSRouteIntentTests(SimpleTestCase):
         self.assertEqual(
             tenant_prefixes,
             {
-                "accounting/",
                 "party/",
                 "contact/",
                 "data-tools/",
                 "girvi/",
                 "loans/",
                 "rates/",
-                "product/",
                 "notify/",
                 "notify-v2/",
-                "dea/",
                 "portal/",
             },
         )
@@ -267,10 +262,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
             "/data-tools/export/": "export_form",
             "/girvi/deletemultiple/": "girvi_retired_path",
             "/rates/rates/": "rate_list",
-            "/product/": "product_product_home",
             "/notify/noticegroup/": "notify_noticegroup_list",
             "/notify-v2/": "notify_v2_index",
-            "/dea/": "dea_home",
         }
 
         for path, route_name in path_cases.items():

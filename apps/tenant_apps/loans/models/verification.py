@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
+from apps.tenancy.models import WorkspaceOwnedModel
+
 
 class PawnPhysicalVerificationSession(models.Model):
     class Status(models.TextChoices):
@@ -60,7 +62,7 @@ class PawnPhysicalVerificationSession(models.Model):
         raise ValidationError("Verification sessions cannot be deleted.")
 
 
-class PawnPhysicalVerificationExpectation(models.Model):
+class PawnPhysicalVerificationExpectation(WorkspaceOwnedModel):
     session = models.ForeignKey(
         PawnPhysicalVerificationSession,
         on_delete=models.PROTECT,
@@ -99,7 +101,7 @@ class PawnPhysicalVerificationExpectation(models.Model):
         raise ValidationError("Verification expectations cannot be deleted.")
 
 
-class PawnPhysicalVerificationObservation(models.Model):
+class PawnPhysicalVerificationObservation(WorkspaceOwnedModel):
     class Classification(models.TextChoices):
         FOUND = "FOUND", "Found"
         MISSING = "MISSING", "Missing"
@@ -165,7 +167,7 @@ class PawnPhysicalVerificationObservation(models.Model):
         raise ValidationError("Verification observations cannot be deleted.")
 
 
-class PawnPhysicalVerificationResolution(models.Model):
+class PawnPhysicalVerificationResolution(WorkspaceOwnedModel):
     class Outcome(models.TextChoices):
         CONFIRMED_FOUND = "CONFIRMED_FOUND", "Confirmed found"
         LOCATION_CORRECTED = "LOCATION_CORRECTED", "Location corrected"

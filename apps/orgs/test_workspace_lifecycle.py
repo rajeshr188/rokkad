@@ -150,7 +150,7 @@ class WorkspaceLifecycleServiceTests(SimpleTestCase):
         request = SimpleNamespace()
 
         with patch(
-            "apps.orgs.services.control_plane._public_schema_context"
+            "apps.orgs.services.control_plane._control_plane_transaction"
         ) as public_context, patch(
             "apps.orgs.services.control_plane.AuditLog.log"
         ):
@@ -171,7 +171,7 @@ class WorkspaceLifecycleServiceTests(SimpleTestCase):
         request = SimpleNamespace()
 
         with patch(
-            "apps.orgs.services.control_plane._public_schema_context"
+            "apps.orgs.services.control_plane._control_plane_transaction"
         ) as public_context, patch(
             "apps.orgs.services.control_plane.AuditLog.log"
         ):

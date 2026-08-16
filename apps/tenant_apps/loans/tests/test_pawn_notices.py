@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.db import DatabaseError, connection, transaction
 from django.core.management import call_command
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import (
     PawnLoanNoticeChannel,
@@ -47,7 +47,7 @@ from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
-class PawnLoanNoticeTests(TenantTestCase):
+class PawnLoanNoticeTests(WorkspaceTestCase):
     test_schema_name = f"loans_notices_{uuid.uuid4().hex[:8]}"
     test_domain = f"loans-notices-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -71,7 +71,6 @@ class PawnLoanNoticeTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.actor = get_user_model().objects.create_user(
             username=f"notice-{uuid.uuid4().hex[:8]}",
             email=f"notice-{uuid.uuid4().hex[:8]}@example.com",

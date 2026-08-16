@@ -1,8 +1,7 @@
 import uuid
 
 from django.contrib.auth import get_user_model
-from django.db import connection
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.party.models import (
     Party,
@@ -20,7 +19,7 @@ from apps.tenant_apps.party.services.party_merge import merge_parties
 User = get_user_model()
 
 
-class PartyMergeTests(TenantTestCase):
+class PartyMergeTests(WorkspaceTestCase):
     test_schema_name = f"party_merge_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -46,7 +45,6 @@ class PartyMergeTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
 
     def test_merge_moves_profile_children_and_archives_source(self):
         target = Party.objects.create(

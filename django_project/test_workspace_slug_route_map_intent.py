@@ -62,7 +62,7 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
         middleware = _read("apps/orgs/middleware_v2.py")
         models = _read("apps/orgs/models.py")
 
-        self.assertIn("Domain mapping through `django-tenants` `Domain`", plan)
+        self.assertIn("Domain mapping through the ordinary shared `orgs.Domain` model", plan)
         self.assertIn("/workspace/<id>/settings/...", plan)
         self.assertIn("User profile fallback", plan)
         self.assertIn("WORKSPACE_ID_PATTERNS", middleware)
@@ -85,7 +85,7 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
         ):
             self.assertIn(expected, plan)
 
-        self.assertIn("class Company(TenantMixin):", models)
+        self.assertIn("class Company(models.Model):", models)
         self.assertIn("schema_name", plan)
         self.assertNotIn("slug = models.SlugField", models)
 

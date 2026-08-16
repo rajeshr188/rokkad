@@ -8,12 +8,12 @@ ALLOWED_HOSTS = [
 
 DATABASES = {
     "default": {
-        "ENGINE": "django_tenants.postgresql_backend",
-        "NAME": "fresh_clean",#"prod-rehearsal",  # "NAME": "rokkad.com",
-        "USER": "postgres",
-        "PASSWORD": "kanchan",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "rokkad_shared_dev",
+        "USER": env("DB_RUNTIME_USER", default="rokkad_runtime"),
+        "PASSWORD": env("DB_RUNTIME_PASSWORD", default=env("DB_PASSWORD")),
+        "HOST": env("DB_HOST"),
+        "PORT": env("DB_PORT"),
     }
 }
 

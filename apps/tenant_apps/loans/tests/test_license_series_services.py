@@ -4,8 +4,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import connection
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import LoanDocumentKind
 from apps.tenant_apps.loans.models import LoanLicense, LoanNumberSequence
@@ -23,7 +22,7 @@ from apps.tenant_apps.loans.services import (
 )
 
 
-class LicenseSeriesServiceTests(TenantTestCase):
+class LicenseSeriesServiceTests(WorkspaceTestCase):
     test_schema_name = f"loans_license_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -48,7 +47,6 @@ class LicenseSeriesServiceTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.user = get_user_model().objects.create_user(
             username=f"license-user-{uuid.uuid4().hex[:8]}",
             email=f"license-user-{uuid.uuid4().hex[:8]}@example.com",

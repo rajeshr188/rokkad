@@ -10,61 +10,19 @@ related: []
 
 Living project documentation now starts at [docs/README.md](docs/README.md).
 
-Rokkad is a schema-per-tenant Django application for finance/inventory workflows, including Girvi (loan) flows, accounting (DEA), product/inventory, notifications, purchasing, and sales.
-
-The project is built on `django-tenants`, with explicit tenant bootstrap and seeding commands for deterministic tenant provisioning.
-
-Yes, I can access the project files. This project is **Rokkad**, a multi-tenant Django business application for finance, pawn/girvi lending, inventory, accounting, purchases, sales, notifications, and workspace management.
-
-At a high level, it is a **schema-per-tenant SaaS-style Django app** using `django-tenants`. Each company/workspace gets its own PostgreSQL schema, while shared/public apps handle users, companies, onboarding, subscriptions, invitations, and permissions.
-
-The main business domain appears to be **Girvi**, meaning pawn/gold-loan style workflows. The app tracks:
-
-- Loans given to customers against pledged items
-- Loans taken/repledged against existing collateral
-- Gold/silver item weights, purity, valuation, custody, release, renewal, split/merge flows
-- Loan lifecycle states, interest accrual, payments, notices, labels, PDFs, statements, and inventory checks
-
-The project also includes a substantial accounting system under **DEA**. That handles:
-
-- Chart of accounts
-- Ledgers and accounts
-- Journal entries
-- Payment vouchers
-- Expense vouchers
-- Sales/purchase invoice vouchers
-- Trial balance, balance sheet, P&L, income statement, cash flow
-- Accounting periods, opening balances, reconciliation, audit trails
-
-There is also a product/inventory system for jewelry-like stock:
-
-- Categories such as gold/silver
-- Product types and variants
-- Attributes and attribute values
-- Stock, stock lots, stock items
-- Purchase posting into inventory
-- Weight/touch/net weight calculations
-
-The shared/platform side includes:
-
-- `apps/orgs`: company/tenant model, domains, memberships, roles, invitations
-- `apps/onboarding`: workspace creation/provisioning
-- `apps/subscriptions`: Razorpay-backed subscriptions/billing
-- `accounts`: custom user/account handling
-- `django_project/settings`: tenant-aware Django configuration
-- `templates`, `static`, HTMX, Bootstrap/crispy forms for the UI
-
-So the shortest description is:
-
-**Rokkad is a multi-tenant Django ERP/finance platform, specialized for Indian jewelry/girvi businesses, combining pawn-loan management, gold/silver inventory, double-entry accounting, purchases/sales, customer workflows, notifications, and subscription-based workspace management.**
+Rokkad is a shared-schema Django SaaS application for operational pawn lending.
+Its supported business apps are Party, Loans, Notify v2, and Rates. Every
+business row has direct Workspace ownership, and PostgreSQL forced row-level
+security isolates Workspaces under a restricted runtime database role.
 
 
 ## What This Project Includes
 
-- Multi-tenant architecture with PostgreSQL schemas (`public` + per-tenant schemas)
-- Workspace/company onboarding with optional template-schema cloning
-- Explicit and idempotent seeding for public and tenant defaults
-- Tenant parity validation command to detect seed drift
+- Shared-schema multi-Workspace architecture with PostgreSQL forced RLS
+- Workspace/company onboarding, membership, invitations, and subscriptions
+- Explicit Workspace-scoped seeding
+- Pawn-loan lifecycle, collateral custody, funding, documents, and evidence
+- Party master data, Notify v2 delivery evidence, and Workspace Rates
 - Invitation and membership flows (`django-invitations` + custom org models)
 - Auth and social auth via `django-allauth`
 - Object-level permissions via `django-guardian`
@@ -73,19 +31,19 @@ So the shortest description is:
 ## Tech Stack
 
 - Python (project currently uses Django `6.0.3`)
-- PostgreSQL (`django_tenants.postgresql_backend`)
-- Django apps: orgs, onboarding, subscriptions, accounts, tenant domain apps
+- PostgreSQL using Django's standard backend plus forced RLS
+- Django apps: orgs, onboarding, subscriptions, accounts, Party, Loans, Notify v2, Rates
 - Frontend tooling: Django templates, HTMX, crispy forms, select2
 - Infra/runtime: WhiteNoise, Redis cache support, Docker files, GitHub Actions CI smoke workflow
 
 ## Repository Highlights
 
-- `apps/orgs`: tenant model (`Company`), domains, memberships, roles, permissions, seed commands
-- `apps/onboarding`: workspace onboarding and provisioning flow
-- `apps/tenant_apps/*`: tenant-scoped business apps (`girvi`, `dea`, `product`, `rates`, `terms`, `notify`, etc.)
+- `apps/orgs`: Workspace, domains, memberships, roles, permissions, and invitations
+- `apps/onboarding`: Workspace onboarding flow
+- `apps/tenant_apps/*`: Workspace-owned Party, Loans, Notify v2, and Rates apps
+- `apps/tenancy`: Workspace context, ownership registry, RLS operations, and checks
 - `django_project/settings`: environment-based settings (`base`, `dev`)
 - `django_project/docs`: architecture and operations documentation
-- `.github/workflows/tenant-seed-smoke.yml`: CI smoke for tenant bootstrap + seeding parity
 
 ## Quick Start (Local)
 
@@ -129,9 +87,14 @@ DEBUG=True
 SECRET_KEY=replace-me
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 
-DB_NAME=dea-kiss-v2
+DB_NAME=rokkad_shared_dev
 DB_USER=postgres
-DB_PASSWORD=postgres
+DB_PASSWORD=owner-password
+DB_RUNTIME_USER=rokkad_runtime
+DB_RUNTIME_PASSWORD=runtime-password
+DB_MIGRATION_USER=postgres
+DB_MIGRATION_PASSWORD=owner-password
+DB_MIGRATION_NAME=rokkad_shared_dev
 DB_HOST=127.0.0.1
 DB_PORT=5432
 
@@ -153,10 +116,11 @@ CLOUDFLARE_R2_BUCKET_ENDPOINT=http://localhost:9000
 
 ### 3) Prepare database
 
-Create PostgreSQL database and run shared migrations:
+Create the PostgreSQL database and run ordinary Django migrations through the
+owner-only settings module:
 
 ```bash
-python manage.py migrate_schemas --shared --noinput
+python manage.py migrate --settings django_project.settings.migration --noinput
 ```
 
 Create superuser:
@@ -173,13 +137,13 @@ Public/shared defaults:
 python manage.py seed_public_defaults
 ```
 
-Tenant defaults for one schema:
+Workspace defaults for one Workspace:
 
 ```bash
-python manage.py seed_tenant_defaults --schema <tenant_schema>
+python manage.py seed_tenant_defaults --workspace-id <workspace_id>
 ```
 
-All tenant schemas:
+All Workspaces:
 
 ```bash
 python manage.py seed_all_tenants
@@ -193,15 +157,15 @@ python manage.py runserver
 
 Open `http://127.0.0.1:8000`.
 
-## Tenant Provisioning And Seeding Flow
+## Workspace Provisioning And Seeding Flow
 
 The project uses explicit, command-driven seeding rather than migration side effects.
 
 At a high level:
 
-1. Create/clone tenant schema during onboarding.
-2. Run `seed_tenant_defaults` immediately after provisioning.
-3. Validate expected canonical seed records via parity checks.
+1. Create the ordinary global Workspace during onboarding.
+2. Run Workspace-scoped seed commands through `workspace_context`.
+3. Validate expected canonical seed records through shared-schema checks.
 
 Primary docs:
 
@@ -211,25 +175,25 @@ Primary docs:
 ## Important Management Commands
 
 - `python manage.py seed_public_defaults`
-- `python manage.py seed_tenant_defaults --schema <schema_name>`
+- `python manage.py seed_tenant_defaults --workspace-id <workspace_id>`
 - `python manage.py seed_all_tenants --dry-run`
 - `python manage.py seed_all_tenants --continue-on-error`
-- `python manage.py check_tenant_seed_parity --baseline-schema <schema_name> --fail-on-drift`
+- Schema-parity checks are retired; shared-schema isolation is verified through Workspace/RLS gates.
 - `python manage.py setup_permissions`
 
-## Testing (django-tenants)
+## Testing
 
-`manage.py test` is configured with a tenant-aware test runner:
-
-- `TEST_RUNNER = "django_project.test_runner.TenantAwareDiscoverRunner"`
-
-This runner prepares test schemas using `migrate_schemas` semantics (schema-aware setup for `public` and tenant apps), rather than relying on plain non-tenant migration behavior.
+Tests use Django's ordinary runner and the owner-backed test settings only to
+create/drop the disposable shared-schema test database. Workspace isolation
+tests explicitly assume a restricted `NOSUPERUSER NOBYPASSRLS` role for DML.
 
 Example:
 
-- `python manage.py test apps.tenant_apps.girvi.tests -v 2`
+- `python manage.py test apps.tenant_apps.loans.tests --settings django_project.settings.test -v 2`
 
-Note: seeing migration lines during tests is expected. The important part is that migrations run in tenant schema context (for example, log lines prefixed with `[standard:public]`).
+Seeing migration lines during tests is expected. The important isolation gate
+is that all Workspace tables have forced RLS and no-context queries expose no
+business rows.
 
 ## CI Smoke Validation
 

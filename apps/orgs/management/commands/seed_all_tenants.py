@@ -1,10 +1,10 @@
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
-from django_tenants.utils import get_public_schema_name, get_tenant_model
+from apps.orgs.models import Company
 
 
 class Command(BaseCommand):
-    help = "Seed defaults for all tenant schemas using seed_tenant_defaults."
+    help = "Seed defaults for all active Workspaces."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -26,39 +26,37 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         continue_on_error = options["continue_on_error"]
 
-        TenantModel = get_tenant_model()
-        schemas = list(
-            TenantModel.objects.exclude(schema_name=get_public_schema_name())
-            .values_list("schema_name", flat=True)
+        workspace_ids = list(
+            Company.objects.filter(is_deleted=False).values_list("pk", flat=True)
         )
 
-        self.stdout.write(self.style.NOTICE(f"Found {len(schemas)} tenant schemas"))
+        self.stdout.write(self.style.NOTICE(f"Found {len(workspace_ids)} Workspaces"))
 
         if dry_run:
-            for schema_name in schemas:
-                self.stdout.write(f"Would seed schema: {schema_name}")
+            for workspace_id in workspace_ids:
+                self.stdout.write(f"Would seed Workspace: {workspace_id}")
             return
 
         seeded = 0
         failed = []
 
-        for schema_name in schemas:
-            self.stdout.write(f"Seeding schema: {schema_name}")
+        for workspace_id in workspace_ids:
+            self.stdout.write(f"Seeding Workspace: {workspace_id}")
             try:
                 call_command(
                     "seed_tenant_defaults",
-                    schema=schema_name,
+                    workspace_id=workspace_id,
                     skip_rates=options["skip_rates"],
                 )
                 seeded += 1
             except Exception as exc:  # noqa: BLE001
-                failed.append((schema_name, str(exc)))
-                self.stderr.write(self.style.ERROR(f"Failed: {schema_name} -> {exc}"))
+                failed.append((workspace_id, str(exc)))
+                self.stderr.write(self.style.ERROR(f"Failed: {workspace_id} -> {exc}"))
                 if not continue_on_error:
                     break
 
         self.stdout.write(self.style.SUCCESS(f"Seeded schemas: {seeded}"))
         if failed:
             self.stderr.write(self.style.ERROR(f"Failed schemas: {len(failed)}"))
-            for schema_name, error in failed:
-                self.stderr.write(f"- {schema_name}: {error}")
+            for workspace_id, error in failed:
+                self.stderr.write(f"- {workspace_id}: {error}")

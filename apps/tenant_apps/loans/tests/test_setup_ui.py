@@ -9,12 +9,10 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
-from django_tenants.test.client import TenantClient
+from apps.tenancy.testing import WorkspaceClient, WorkspaceTestCase
 
 from apps.tenant_apps.loans.access import assert_loans_setup_access
 from apps.tenant_apps.loans.domain import CollateralCustodyState, CollateralMetal, LoanDocumentKind
@@ -68,7 +66,7 @@ from apps.tenant_apps.loans.services import (
         },
     },
 )
-class LoansSetupUiTests(TenantTestCase):
+class LoansSetupUiTests(WorkspaceTestCase):
     test_schema_name = f"loans_setup_{uuid.uuid4().hex[:8]}"
     test_domain = f"loans-setup-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -100,7 +98,6 @@ class LoansSetupUiTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         static_url = patch(
             "django.templatetags.static.StaticNode.handle_simple",
             side_effect=lambda path: f"/static/{path}",
@@ -108,7 +105,7 @@ class LoansSetupUiTests(TenantTestCase):
         static_url.start()
         self.addCleanup(static_url.stop)
         self.owner = self.tenant.owner
-        self.client = TenantClient(self.tenant)
+        self.client = WorkspaceClient(self.tenant)
         self.client.force_login(self.owner)
 
     def tenant_get(self, url):
@@ -200,7 +197,7 @@ class LoansSetupUiTests(TenantTestCase):
             company=self.tenant,
             role=member_role,
         )
-        member_client = TenantClient(self.tenant)
+        member_client = WorkspaceClient(self.tenant)
         member_client.force_login(member)
 
         response = member_client.post(

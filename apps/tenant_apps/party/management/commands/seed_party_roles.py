@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django_tenants.utils import schema_context
-
+from apps.orgs.models import Company
+from apps.tenancy.context import workspace_context
 from apps.tenant_apps.party.services import seed_party_roles
 
 
@@ -10,8 +10,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--schema",
-            help="Tenant schema name. If omitted, uses the current connection schema.",
+            "--workspace-id",
+            type=int,
+            required=True,
+            help="Workspace id that owns the canonical Party roles.",
         )
         parser.add_argument(
             "--dry-run",
@@ -20,17 +22,14 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        schema_name = options.get("schema")
+        workspace = Company.objects.get(pk=options["workspace_id"])
 
         if options["dry_run"]:
             self.stdout.write("Would seed canonical party roles.")
             return
 
-        if schema_name:
-            with schema_context(schema_name):
-                result = self._seed()
-        else:
-            result = self._seed()
+        with workspace_context(workspace.id):
+            result = self._seed(workspace)
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -39,6 +38,6 @@ class Command(BaseCommand):
             )
         )
 
-    def _seed(self):
+    def _seed(self, workspace):
         with transaction.atomic():
-            return seed_party_roles()
+            return seed_party_roles(workspace=workspace)

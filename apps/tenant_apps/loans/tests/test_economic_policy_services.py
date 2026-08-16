@@ -4,8 +4,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import connection
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import (
     CollateralMetal,
@@ -27,7 +26,7 @@ from apps.tenant_apps.loans.services import (
 )
 
 
-class PawnEconomicPolicyServiceTests(TenantTestCase):
+class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
     test_schema_name = f"loans_economics_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -52,7 +51,6 @@ class PawnEconomicPolicyServiceTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.user = get_user_model().objects.create_user(
             username=f"economics-user-{uuid.uuid4().hex[:8]}",
             email=f"economics-user-{uuid.uuid4().hex[:8]}@example.com",

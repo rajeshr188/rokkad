@@ -3,10 +3,9 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from django.db import connection
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.urls import Resolver404, resolve, reverse
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.party.models import Party, PartyDocument, PartyPortalAccess
 from apps.tenant_apps.party.portal_access import (
@@ -46,7 +45,7 @@ TEST_STORAGES = {
 }
 
 
-class PartyPortalAccessTests(TenantTestCase):
+class PartyPortalAccessTests(WorkspaceTestCase):
     test_schema_name = f"party_portal_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -72,7 +71,6 @@ class PartyPortalAccessTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.user = User.objects.create_user(
             username=f"portal-user-{uuid.uuid4().hex[:8]}",
             email="portal-user@example.com",

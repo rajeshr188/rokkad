@@ -5,9 +5,9 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.db.models import Count, Exists, F, OuterRef
 from django.db.models.functions import Lower
-from django_tenants.utils import get_public_schema_name, schema_context
 
 from apps.orgs.models import (
     Company,
@@ -50,9 +50,9 @@ def _source_reference_counts():
 
 def collect_saas_foundation_inventory():
     """Return public-schema consistency counts without mutating data."""
-    public_schema = get_public_schema_name()
+    public_schema = "public"
 
-    with schema_context(public_schema):
+    with transaction.atomic():
         companies = Company.all_objects.exclude(schema_name=public_schema)
         owner_membership = Membership.objects.filter(
             company_id=OuterRef("pk"),
@@ -183,4 +183,3 @@ class Command(BaseCommand):
 
         if options["fail_on_findings"] and finding_count:
             raise SystemExit(1)
-

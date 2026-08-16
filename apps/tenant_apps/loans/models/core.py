@@ -3,10 +3,12 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import connection, models
+from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
 
+from apps.tenancy.context import current_workspace_id
+from apps.tenancy.models import WorkspaceOwnedModel
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
     CollateralMetal,
@@ -32,10 +34,7 @@ def enum_choices(enum_class):
 
 
 def current_tenant_workspace_id():
-    tenant = getattr(connection, "tenant", None)
-    if tenant is None or getattr(connection, "schema_name", "public") == "public":
-        return None
-    return getattr(tenant, "pk", None)
+    return current_workspace_id()
 
 
 class LoanLicense(models.Model):
@@ -106,7 +105,7 @@ class LoanLicense(models.Model):
         return self.expires_on < (as_of_date or timezone.localdate())
 
 
-class LoanSeries(models.Model):
+class LoanSeries(WorkspaceOwnedModel):
     license = models.ForeignKey(
         LoanLicense,
         on_delete=models.PROTECT,
@@ -132,10 +131,6 @@ class LoanSeries(models.Model):
                 name="loans_series_active_idx",
             ),
         ]
-
-    @property
-    def workspace_id(self):
-        return self.license.workspace_id
 
     def __str__(self):
         return f"{self.license.license_number}/{self.code}"
@@ -444,7 +439,7 @@ def _validate_policy_scope(policy, *, label):
         raise ValidationError(errors)
 
 
-class LoanNumberSequence(models.Model):
+class LoanNumberSequence(WorkspaceOwnedModel):
     series = models.ForeignKey(
         LoanSeries,
         on_delete=models.PROTECT,
@@ -651,7 +646,7 @@ class PawnLoan(models.Model):
         return self.loan_number
 
 
-class PawnCollateralItem(models.Model):
+class PawnCollateralItem(WorkspaceOwnedModel):
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     loan = models.ForeignKey(
         PawnLoan,
@@ -788,7 +783,7 @@ class PawnCollateralItem(models.Model):
         return super().save(*args, **kwargs)
 
 
-class LoanPolicySnapshot(models.Model):
+class LoanPolicySnapshot(WorkspaceOwnedModel):
     loan = models.OneToOneField(
         PawnLoan,
         on_delete=models.PROTECT,
@@ -866,7 +861,7 @@ class LoanPolicySnapshot(models.Model):
         return super().save(*args, **kwargs)
 
 
-class LoanChangeLog(models.Model):
+class LoanChangeLog(WorkspaceOwnedModel):
     loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
@@ -907,7 +902,7 @@ class LoanChangeLog(models.Model):
         ]
 
 
-class PawnLoanApprovalSnapshot(models.Model):
+class PawnLoanApprovalSnapshot(WorkspaceOwnedModel):
     loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
@@ -947,7 +942,7 @@ class PawnLoanApprovalSnapshot(models.Model):
         raise ValidationError("Approval snapshots cannot be deleted.")
 
 
-class PawnLoanEvent(models.Model):
+class PawnLoanEvent(WorkspaceOwnedModel):
     """Immutable Loans-owned evidence for a financial lifecycle event."""
     loan = models.ForeignKey(
         PawnLoan,
@@ -1003,7 +998,7 @@ class PawnLoanEvent(models.Model):
         ]
 
 
-class PawnLoanDisbursalSnapshot(models.Model):
+class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
     """Immutable gross-to-net evidence for one PawnLoan disbursal."""
 
     loan = models.OneToOneField(
@@ -1092,7 +1087,7 @@ class PawnLoanDisbursalSnapshot(models.Model):
         raise ValidationError("Disbursal snapshots cannot be deleted.")
 
 
-class PawnLoanInterestAccrual(models.Model):
+class PawnLoanInterestAccrual(WorkspaceOwnedModel):
     """Immutable, currency-rounded monthly interest recognition row."""
 
     loan = models.ForeignKey(
@@ -1159,7 +1154,7 @@ class PawnLoanInterestAccrual(models.Model):
         raise ValidationError("Finalized PawnLoan interest accruals cannot be deleted.")
 
 
-class PawnLoanInterestAccrualLine(models.Model):
+class PawnLoanInterestAccrualLine(WorkspaceOwnedModel):
     """Immutable collateral-tranche calculation behind one accrual header."""
 
     accrual = models.ForeignKey(
@@ -1230,7 +1225,7 @@ class PawnLoanInterestAccrualLine(models.Model):
         raise ValidationError("PawnLoan accrual lines cannot be deleted.")
 
 
-class PawnLoanRepaymentAllocationLine(models.Model):
+class PawnLoanRepaymentAllocationLine(WorkspaceOwnedModel):
     """Immutable principal movement against one collateral tranche."""
 
     loan_event = models.ForeignKey(
@@ -1304,7 +1299,7 @@ class PawnLoanRepaymentAllocationLine(models.Model):
         raise ValidationError("PawnLoan repayment allocation lines cannot be deleted.")
 
 
-class PawnLoanPrincipalClosingLine(models.Model):
+class PawnLoanPrincipalClosingLine(WorkspaceOwnedModel):
     """Immutable item-principal settlement for release or renewal closure."""
 
     loan_event = models.ForeignKey(
@@ -1381,7 +1376,7 @@ class PawnLoanPrincipalClosingLine(models.Model):
         raise ValidationError("PawnLoan principal closing lines cannot be deleted.")
 
 
-class PawnLoanPrincipalOpeningLine(models.Model):
+class PawnLoanPrincipalOpeningLine(WorkspaceOwnedModel):
     """Immutable initial item-principal evidence for a renewal successor."""
 
     loan_event = models.ForeignKey(
@@ -1552,7 +1547,7 @@ class PawnLoanRelease(models.Model):
         raise ValidationError("PawnLoan releases cannot be deleted.")
 
 
-class PawnLoanReleaseItem(models.Model):
+class PawnLoanReleaseItem(WorkspaceOwnedModel):
     release = models.ForeignKey(
         PawnLoanRelease,
         on_delete=models.PROTECT,
@@ -1596,7 +1591,7 @@ class PawnLoanReleaseItem(models.Model):
         raise ValidationError("PawnLoan release items cannot be deleted.")
 
 
-class PawnCollateralCustodyEvent(models.Model):
+class PawnCollateralCustodyEvent(WorkspaceOwnedModel):
     collateral_item = models.ForeignKey(
         PawnCollateralItem,
         on_delete=models.PROTECT,
@@ -1848,7 +1843,7 @@ class PawnCollateralCustodyEvent(models.Model):
         raise ValidationError("Collateral custody events cannot be deleted.")
 
 
-class PawnLoanReleaseReversal(models.Model):
+class PawnLoanReleaseReversal(WorkspaceOwnedModel):
     """Immutable compensation record; the original release is never edited."""
 
     release = models.OneToOneField(
@@ -2138,7 +2133,7 @@ class PawnLoanAuction(models.Model):
         raise ValidationError("PawnLoan auctions cannot be deleted.")
 
 
-class PawnLoanAuctionItem(models.Model):
+class PawnLoanAuctionItem(WorkspaceOwnedModel):
     auction = models.ForeignKey(PawnLoanAuction, on_delete=models.PROTECT, related_name="items")
     collateral_item = models.ForeignKey(PawnCollateralItem, on_delete=models.PROTECT, related_name="auction_items")
     snapshot = models.JSONField(default=dict)
@@ -2159,7 +2154,7 @@ class PawnLoanAuctionItem(models.Model):
         raise ValidationError("PawnLoan auction items cannot be deleted.")
 
 
-class PawnLoanAuctionReversal(models.Model):
+class PawnLoanAuctionReversal(WorkspaceOwnedModel):
     auction = models.OneToOneField(PawnLoanAuction, on_delete=models.PROTECT, related_name="reversal")
     loan_event = models.OneToOneField(PawnLoanEvent, on_delete=models.PROTECT, related_name="auction_reversal")
     catch_up_reversal_event = models.OneToOneField(
@@ -2311,7 +2306,7 @@ class PawnLoanRenewal(models.Model):
         raise ValidationError("PawnLoan renewals cannot be deleted.")
 
 
-class PawnLoanRenewalReversal(models.Model):
+class PawnLoanRenewalReversal(WorkspaceOwnedModel):
     renewal = models.OneToOneField(
         PawnLoanRenewal, on_delete=models.PROTECT, related_name="reversal"
     )

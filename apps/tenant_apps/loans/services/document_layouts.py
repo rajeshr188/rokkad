@@ -6,7 +6,6 @@ from pathlib import Path
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
-from django_tenants.utils import get_public_schema_name, schema_context
 
 from apps.orgs.audit import AuditLog
 from apps.tenant_apps.loans.documents import DocumentAssetValidator, DocumentLayoutValidator
@@ -27,7 +26,7 @@ class DocumentLayoutServiceError(ValueError):
 def _require_workspace(workspace_id):
     active = current_tenant_workspace_id()
     if active is None:
-        raise DocumentLayoutServiceError("Document layout operations require an active tenant schema.")
+        raise DocumentLayoutServiceError("Document layout operations require an active Workspace context.")
     if active != workspace_id:
         raise DocumentLayoutServiceError("Document layout object belongs to another workspace.")
 
@@ -36,21 +35,19 @@ class LoanDocumentLayoutService:
     @staticmethod
     def audit_fixed_recovery(*, workspace, source_type, source_id, actor=None, request=None):
         _require_workspace(workspace.pk)
-        with schema_context(get_public_schema_name()):
-            AuditLog.log(
-                "DATA_EXPORT", user=actor, company=workspace,
-                description=f"Used fixed document recovery for {source_type}:{source_id}.",
-                data={"entity": "loan_document_fixed_recovery", "source_type": source_type, "source_id": str(source_id)},
-                request=request, success=True,
-            )
+        AuditLog.log(
+            "DATA_EXPORT", user=actor, company=workspace,
+            description=f"Used fixed document recovery for {source_type}:{source_id}.",
+            data={"entity": "loan_document_fixed_recovery", "source_type": source_type, "source_id": str(source_id)},
+            request=request, success=True,
+        )
 
     @staticmethod
     def audit_legacy_profile_recovery(
         *, workspace, source_type, source_id, actor=None, request=None
     ):
         _require_workspace(workspace.pk)
-        with schema_context(get_public_schema_name()):
-            AuditLog.log(
+        AuditLog.log(
                 "DATA_EXPORT", user=actor, company=workspace,
                 description=(
                     f"Used legacy print-profile compatibility rendering for "
@@ -62,7 +59,7 @@ class LoanDocumentLayoutService:
                     "source_id": str(source_id),
                 },
                 request=request, success=True,
-            )
+        )
 
     @staticmethod
     def find_official_issue(
@@ -275,8 +272,7 @@ class LoanDocumentLayoutService:
         )
         issue.artifact.save(Path(filename).name, ContentFile(render_result.pdf), save=False)
         issue.save()
-        with schema_context(get_public_schema_name()):
-            AuditLog.log(
+        AuditLog.log(
                 "DATA_CREATE", user=actor, company=workspace,
                 description=f"Issued {document_type} for {source_type}:{source_id}.",
                 data={"entity": "loan_document_issue", "issue_id": issue.pk,
@@ -284,16 +280,15 @@ class LoanDocumentLayoutService:
                       "print_profile_hash": issue.print_profile_hash,
                       "print_profile_source_scope": issue.print_profile_source_scope,
                       "prior_issue_id": issue.prior_issue_id}, success=True,
-            )
+        )
         return issue
 
     @staticmethod
     def _audit(layout, actor, request, verb, data):
-        with schema_context(get_public_schema_name()):
-            AuditLog.log("SETTINGS_UPDATE", user=actor, company=layout.workspace,
-                         description=f"Loan document layout {verb}: {layout.name}.",
-                         data={"entity": "loan_document_layout", "layout_id": layout.pk, "event": verb, **data},
-                         request=request, success=True)
+        AuditLog.log("SETTINGS_UPDATE", user=actor, company=layout.workspace,
+                     description=f"Loan document layout {verb}: {layout.name}.",
+                     data={"entity": "loan_document_layout", "layout_id": layout.pk, "event": verb, **data},
+                     request=request, success=True)
 
 
 __all__ = ["DocumentLayoutServiceError", "LoanDocumentLayoutService"]

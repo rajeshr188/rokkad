@@ -3,8 +3,6 @@
 from django import forms
 from django.contrib import admin
 from django.contrib import messages
-from django_tenants.admin import TenantAdminMixin
-from django_tenants.utils import get_public_schema_name
 
 from .models import AuditLog, Company, Domain, Membership, Role
 
@@ -13,7 +11,7 @@ class PublicTenantOnlyMixin:
     """Allow Access to Public Tenant Only."""
 
     def _only_public_tenant_access(self, request):
-        return True if request.tenant.schema_name == get_public_schema_name() else False
+        return getattr(request, "workspace", None) is None
 
     def has_view_permission(self, request, view=None):
         return self._only_public_tenant_access(request)
@@ -61,7 +59,7 @@ class CompanyAdminForm(forms.ModelForm):
 
 
 @admin.register(Company)
-class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
+class CompanyAdmin(admin.ModelAdmin):
     form = CompanyAdminForm
     list_display = ("name", "owner", "theme", "logo", "is_deleted")
     search_fields = ["name"]

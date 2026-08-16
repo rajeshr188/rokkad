@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
 
+from apps.tenancy.models import WorkspaceOwnedModel
+
 from .core import LoanLicense, current_tenant_workspace_id
 
 
@@ -19,7 +21,7 @@ def loan_license_document_upload(instance, filename):
     )
 
 
-class LoanLicenseRevision(models.Model):
+class LoanLicenseRevision(WorkspaceOwnedModel):
     class Kind(models.TextChoices):
         INITIAL = "INITIAL", "Initial issue"
         AMENDMENT = "AMENDMENT", "Amendment"
@@ -92,10 +94,6 @@ class LoanLicenseRevision(models.Model):
                 name="loans_licrev_expiry_idx",
             ),
         ]
-
-    @property
-    def workspace_id(self):
-        return self.license.workspace_id
 
     @property
     def has_document(self):

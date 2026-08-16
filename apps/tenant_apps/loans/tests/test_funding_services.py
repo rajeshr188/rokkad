@@ -6,7 +6,8 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError, close_old_connections, connection, transaction
 from django.test import TransactionTestCase
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
+from apps.tenancy.context import without_workspace_context, workspace_context
 
 from apps.orgs.models import Company, Domain
 from apps.tenant_apps.loans.domain import CollateralCustodyState, CollateralMetal, PawnLoanState
@@ -75,7 +76,7 @@ class FailingOutboundAdapter:
         raise RuntimeError(f"delivery failed for {funding_loan_id}:{operation}")
 
 
-class FundingLoanServiceTests(TenantTestCase):
+class FundingLoanServiceTests(WorkspaceTestCase):
     test_schema_name = f"funding_services_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -100,7 +101,6 @@ class FundingLoanServiceTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.actor = get_user_model().objects.create_user(
             username=f"funding-service-{uuid.uuid4().hex[:8]}",
             email=f"funding-service-{uuid.uuid4().hex[:8]}@example.com",
@@ -936,19 +936,15 @@ class FundingLoanServiceTests(TenantTestCase):
         with self.assertRaisesRegex(FundingLoanSelectorError, "not found"):
             get_funding_loan_detail(funding_loan.pk + 1000)
 
-        connection.set_schema_to_public()
-        try:
+        with without_workspace_context():
             with self.assertRaisesRegex(FundingLoanSelectorError, "active tenant"):
                 get_funding_loan_summaries()
-        finally:
-            connection.set_tenant(self.tenant)
 
 
 class FundingLoanConcurrencyTests(TransactionTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        connection.set_schema_to_public()
         token = uuid.uuid4().hex[:8]
         User = get_user_model()
         cls.owner = User.objects.create_user(username=f"funding-race-owner-{token}")
@@ -958,7 +954,7 @@ class FundingLoanConcurrencyTests(TransactionTestCase):
             owner=cls.owner,
             creator=cls.owner,
         )
-        cls.tenant.save(verbosity=0)
+        cls.tenant.save()
         cls.domain = Domain.objects.create(
             tenant=cls.tenant,
             domain=f"{cls.tenant.schema_name}.test.com",
@@ -967,16 +963,16 @@ class FundingLoanConcurrencyTests(TransactionTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        connection.set_schema_to_public()
         cls.domain.delete()
-        cls.tenant.delete(force_drop=True)
+        cls.tenant.delete()
         super().tearDownClass()
 
     def _fixture_teardown(self):
         pass
 
     def setUp(self):
-        connection.set_tenant(self.tenant)
+        context = workspace_context(self.tenant.pk)
+        context.__enter__()
         token = uuid.uuid4().hex[:8]
         self.actor = get_user_model().objects.create_user(
             username=f"funding-race-actor-{token}"
@@ -1027,13 +1023,14 @@ class FundingLoanConcurrencyTests(TransactionTestCase):
             )
             for _ in range(2)
         )
+        context.__exit__(None, None, None)
 
     def _activate_in_own_connection(self, funding_loan_id):
         close_old_connections()
         try:
-            connection.set_tenant(self.tenant)
-            try:
-                result = activate_funding_loan(
+            with workspace_context(self.tenant.pk):
+                try:
+                    result = activate_funding_loan(
                     ActivateFundingLoan(
                         workspace_id=self.tenant.pk,
                         funding_loan_id=funding_loan_id,
@@ -1052,9 +1049,9 @@ class FundingLoanConcurrencyTests(TransactionTestCase):
                     ),
                     actor=self.actor,
                 )
-                return "OK", result.funding_loan.pk
-            except FundingLoanServiceError as exc:
-                return "REJECTED", str(exc)
+                    return "OK", result.funding_loan.pk
+                except FundingLoanServiceError as exc:
+                    return "REJECTED", str(exc)
         finally:
             close_old_connections()
 
@@ -1067,9 +1064,10 @@ class FundingLoanConcurrencyTests(TransactionTestCase):
                 )
             )
 
-        connection.set_tenant(self.tenant)
         self.collateral.refresh_from_db()
-        self.assertEqual(sum(status == "OK" for status, _ in results), 1)
+        self.assertEqual(
+            sum(status == "OK" for status, _ in results), 1, msg=results
+        )
         self.assertEqual(sum(status == "REJECTED" for status, _ in results), 1)
         self.assertEqual(
             FundingLoan.objects.filter(state=FundingLoanState.ACTIVE.value).count(),

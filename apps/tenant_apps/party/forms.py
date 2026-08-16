@@ -12,6 +12,7 @@ from .models import (
     PartyRole,
     PartyRoleType,
 )
+from apps.tenancy.context import current_workspace_id
 
 
 CONTROL_CLASS = "form-control"
@@ -124,9 +125,14 @@ class PartyRoleForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["role_type"].queryset = PartyRoleType.objects.filter(
-            is_active=True
-        ).order_by("sort_order", "label")
+        workspace_id = current_workspace_id()
+        queryset = PartyRoleType.objects.none()
+        if workspace_id is not None:
+            queryset = PartyRoleType.objects.filter(
+                workspace_id=workspace_id,
+                is_active=True,
+            )
+        self.fields["role_type"].queryset = queryset.order_by("sort_order", "label")
 
 
 class PartyProfilePhotoForm(forms.ModelForm):

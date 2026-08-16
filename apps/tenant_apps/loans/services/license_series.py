@@ -9,7 +9,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
-from django_tenants.utils import get_public_schema_name, schema_context
 
 from apps.orgs.audit import AuditLog
 from apps.tenant_apps.loans.domain import LoanDocumentKind
@@ -425,8 +424,7 @@ def _validated_license_document(uploaded):
 
 def _audit_license_revision(revision, *, actor, request=None):
     workspace = revision.license.workspace
-    with schema_context(get_public_schema_name()):
-        AuditLog.log(
+    AuditLog.log(
             "SETTINGS_UPDATE",
             user=actor,
             company=workspace,
@@ -444,7 +442,7 @@ def _audit_license_revision(revision, *, actor, request=None):
             },
             request=request,
             success=True,
-        )
+    )
 
 
 def _sequence_configuration(sequence: LoanNumberSequence) -> dict:
@@ -459,8 +457,7 @@ def _audit_sequence_configuration(
     *, sequence, actor, request, created, old_configuration, new_configuration
 ) -> None:
     workspace = sequence.series.license.workspace
-    with schema_context(get_public_schema_name()):
-        AuditLog.log(
+    AuditLog.log(
             "SETTINGS_UPDATE",
             user=actor,
             company=workspace,
@@ -475,4 +472,4 @@ def _audit_sequence_configuration(
             },
             request=request,
             success=True,
-        )
+    )

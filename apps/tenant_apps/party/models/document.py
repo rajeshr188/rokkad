@@ -1,8 +1,10 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
+from apps.tenancy.models import WorkspaceOwnedModel
 
 
-class PartyIdentifier(models.Model):
+class PartyIdentifier(WorkspaceOwnedModel):
     class IdentifierType(models.TextChoices):
         PAN = "PAN", _("PAN")
         AADHAAR = "AADHAAR", _("Aadhaar")
@@ -47,12 +49,16 @@ class PartyIdentifier(models.Model):
     def __str__(self):
         return f"{self.party} - {self.identifier_type}"
 
+    def save(self, *args, **kwargs):
+        self.workspace_id = self.party.workspace_id
+        super().save(*args, **kwargs)
+
 
 def party_document_upload_to(instance, filename):
     return f"party_documents/{instance.party_id}/{filename}"
 
 
-class PartyDocument(models.Model):
+class PartyDocument(WorkspaceOwnedModel):
     class DocumentType(models.TextChoices):
         KYC = "KYC", _("KYC")
         TAX = "TAX", _("Tax")
@@ -93,3 +99,9 @@ class PartyDocument(models.Model):
 
     def __str__(self):
         return f"{self.party} - {self.title}"
+
+    def save(self, *args, **kwargs):
+        self.workspace_id = self.party.workspace_id
+        if self.identifier_id and self.identifier.workspace_id != self.workspace_id:
+            raise ValidationError("Document identifier must belong to the same Workspace.")
+        super().save(*args, **kwargs)

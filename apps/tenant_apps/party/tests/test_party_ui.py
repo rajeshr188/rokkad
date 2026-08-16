@@ -5,11 +5,9 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
-from django_tenants.test.cases import TenantTestCase
-from django_tenants.test.client import TenantClient
+from apps.tenancy.testing import WorkspaceClient, WorkspaceTestCase
 
 from apps.tenant_apps.party import views as party_views
 from apps.orgs.models import Membership, Role
@@ -38,7 +36,7 @@ User = get_user_model()
         },
     },
 )
-class PartyUITests(TenantTestCase):
+class PartyUITests(WorkspaceTestCase):
     test_schema_name = f"party_ui_{uuid.uuid4().hex[:8]}"
     test_domain = f"party-ui-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -71,8 +69,7 @@ class PartyUITests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
-        self.client = TenantClient(self.tenant)
+        self.client = WorkspaceClient(self.tenant)
         self.factory = RequestFactory()
         self.user = User.objects.get(username="party-ui-owner")
         self.client.login(username="party-ui-owner", password="testpass123")
@@ -189,7 +186,6 @@ class PartyUITests(TenantTestCase):
             },
         )
 
-        connection.set_tenant(self.tenant)
         party = Party.objects.get(display_name="Mehta Supplies")
         self.assertEqual(response.status_code, 302)
         self.assertEqual(party.party_code, "P-000001")
@@ -263,7 +259,6 @@ class PartyUITests(TenantTestCase):
                 "status": Party.PartyStatus.ACTIVE,
             },
         )
-        connection.set_tenant(self.tenant)
         party = Party.objects.get(display_name="Relation Party")
 
         self.assertEqual(response.status_code, 302)
@@ -290,7 +285,6 @@ class PartyUITests(TenantTestCase):
                 "status": Party.PartyStatus.ACTIVE,
             },
         )
-        connection.set_tenant(self.tenant)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(
@@ -446,7 +440,6 @@ class PartyUITests(TenantTestCase):
             },
         )
 
-        connection.set_tenant(self.tenant)
         role = PartyRole.objects.get(party=party, role_type=role_type)
         self.assertEqual(add_response.status_code, 302)
         self.assertEqual(role.segment, "RETAIL")
@@ -455,7 +448,6 @@ class PartyUITests(TenantTestCase):
         end_response = self.client.post(
             reverse("party:party_role_end", args=[party.pk, role.pk])
         )
-        connection.set_tenant(self.tenant)
         role.refresh_from_db()
 
         self.assertEqual(end_response.status_code, 302)
@@ -495,7 +487,6 @@ class PartyUITests(TenantTestCase):
             reverse("party:party_photo_update", args=[party.pk]),
             {"profile_photo": image},
         )
-        connection.set_tenant(self.tenant)
         party.refresh_from_db()
 
         self.assertEqual(upload_response.status_code, 302)
@@ -504,7 +495,6 @@ class PartyUITests(TenantTestCase):
         remove_response = self.client.post(
             reverse("party:party_photo_remove", args=[party.pk])
         )
-        connection.set_tenant(self.tenant)
         party.refresh_from_db()
 
         self.assertEqual(remove_response.status_code, 302)
@@ -518,7 +508,6 @@ class PartyUITests(TenantTestCase):
             reverse("party:party_photo_update", args=[party.pk]),
             {"image_data": image_data},
         )
-        connection.set_tenant(self.tenant)
         party.refresh_from_db()
 
         self.assertEqual(response.status_code, 302)
@@ -552,7 +541,6 @@ class PartyUITests(TenantTestCase):
                 "is_primary": "on",
             },
         )
-        connection.set_tenant(self.tenant)
         first = PartyContactMethod.objects.get(value="+919999999999")
         party.refresh_from_db()
 
@@ -570,7 +558,6 @@ class PartyUITests(TenantTestCase):
                 "is_primary": "on",
             },
         )
-        connection.set_tenant(self.tenant)
         first.refresh_from_db()
         second = PartyContactMethod.objects.get(value="+918888888888")
         party.refresh_from_db()
@@ -583,7 +570,6 @@ class PartyUITests(TenantTestCase):
         delete_response = self.client.post(
             reverse("party:party_contact_delete", args=[party.pk, second.pk])
         )
-        connection.set_tenant(self.tenant)
         party.refresh_from_db()
 
         self.assertEqual(delete_response.status_code, 302)
@@ -624,7 +610,6 @@ class PartyUITests(TenantTestCase):
                 "is_primary": "on",
             },
         )
-        connection.set_tenant(self.tenant)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Enter a valid phone number")
@@ -642,7 +627,6 @@ class PartyUITests(TenantTestCase):
                 "is_primary": "on",
             },
         )
-        connection.set_tenant(self.tenant)
         party.refresh_from_db()
 
         self.assertEqual(response.status_code, 302)
@@ -679,7 +663,6 @@ class PartyUITests(TenantTestCase):
                 "is_default": "on",
             },
         )
-        connection.set_tenant(self.tenant)
 
         addresses = PartyAddress.objects.filter(
             party=party,
@@ -731,7 +714,6 @@ class PartyUITests(TenantTestCase):
                 "expires_on": "",
             },
         )
-        connection.set_tenant(self.tenant)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(
@@ -786,7 +768,6 @@ class PartyUITests(TenantTestCase):
                 "expires_on": "",
             },
         )
-        connection.set_tenant(self.tenant)
         document = PartyDocument.objects.get(party=party)
 
         self.assertEqual(response.status_code, 302)
@@ -829,7 +810,6 @@ class PartyUITests(TenantTestCase):
                 "is_active": "on",
             },
         )
-        connection.set_tenant(self.tenant)
         relationship = PartyRelationship.objects.get(from_party=party, to_party=related)
 
         self.assertEqual(add_response.status_code, 302)
@@ -848,7 +828,6 @@ class PartyUITests(TenantTestCase):
                 "is_active": "",
             },
         )
-        connection.set_tenant(self.tenant)
         relationship.refresh_from_db()
 
         self.assertEqual(update_response.status_code, 302)
@@ -859,7 +838,6 @@ class PartyUITests(TenantTestCase):
         delete_response = self.client.post(
             reverse("party:party_relationship_delete", args=[party.pk, relationship.pk])
         )
-        connection.set_tenant(self.tenant)
 
         self.assertEqual(delete_response.status_code, 302)
         self.assertFalse(PartyRelationship.objects.filter(pk=relationship.pk).exists())
@@ -904,7 +882,6 @@ class PartyUITests(TenantTestCase):
                 "is_active": "on",
             },
         )
-        connection.set_tenant(self.tenant)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Select a valid choice")
@@ -923,7 +900,6 @@ class PartyUITests(TenantTestCase):
             reverse("party:party_merge", args=[target.pk]),
             {"source_party": source.pk, "confirm": "on"},
         )
-        connection.set_tenant(self.tenant)
         source.refresh_from_db()
 
         self.assertEqual(response.status_code, 302)

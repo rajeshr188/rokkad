@@ -10,9 +10,10 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template import Context, Template
 from django.utils import timezone
-from django.db import connection, transaction
+from django.db import transaction
 from django.db.models import F
 
+from apps.tenancy.context import current_workspace_id
 from apps.tenant_apps.notify_v2.models import NotificationArtifact, NotificationAttemptLog, NotificationJob, WhatsAppCloudWebhookReceipt
 from apps.tenant_apps.notify_v2.services.whatsapp_integration import get_whatsapp_cloud_credentials
 
@@ -298,11 +299,14 @@ def process_whatsapp_cloud_webhook(payload: dict, *, phone_number_id: str, signa
 					default=str,
 				).encode()
 				payload_hash = hashlib.sha256(canonical).hexdigest()
+				workspace_id = current_workspace_id()
+				if workspace_id is None:
+					raise RuntimeError("WhatsApp webhook processing requires Workspace context.")
 				receipt, created = WhatsAppCloudWebhookReceipt.objects.get_or_create(
+					workspace_id=workspace_id,
 					event_key=payload_hash,
 					defaults={
 						"payload_hash": payload_hash,
-						"tenant_schema": connection.schema_name,
 						"phone_number_id": phone_number_id,
 						"provider_message_id": message_id,
 						"external_status": (status_event.get("status") or "unknown").strip().lower(),

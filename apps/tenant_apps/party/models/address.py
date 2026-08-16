@@ -1,9 +1,10 @@
 from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
+from apps.tenancy.models import WorkspaceOwnedModel
 
 
-class PartyAddress(models.Model):
+class PartyAddress(WorkspaceOwnedModel):
     class AddressType(models.TextChoices):
         REGISTERED = "REGISTERED", _("Registered")
         BILLING = "BILLING", _("Billing")
@@ -54,3 +55,7 @@ class PartyAddress(models.Model):
     def __str__(self):
         parts = [self.line1, self.line2, self.area, self.city, self.postal_code]
         return ", ".join(part for part in parts if part)
+
+    def save(self, *args, **kwargs):
+        self.workspace_id = self.party.workspace_id
+        super().save(*args, **kwargs)

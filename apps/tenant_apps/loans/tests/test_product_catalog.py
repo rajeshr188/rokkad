@@ -2,8 +2,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import connection
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import LoanProductVersionStatus
 from apps.tenant_apps.loans.models import LoanProduct, LoanProductVersion
@@ -16,7 +15,7 @@ from apps.tenant_apps.loans.services import (
 )
 
 
-class LoanProductCatalogTests(TenantTestCase):
+class LoanProductCatalogTests(WorkspaceTestCase):
     test_schema_name = f"loan_products_{uuid.uuid4().hex[:8]}"
     test_domain = f"loan-products-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -40,7 +39,6 @@ class LoanProductCatalogTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
 
     def test_seed_creates_four_draft_versions_idempotently(self):
         first = seed_default_loan_products()

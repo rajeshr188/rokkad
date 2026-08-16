@@ -9,7 +9,6 @@ from django.db import IntegrityError
 from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.urls import reverse
-from django_tenants.utils import get_public_schema_name
 
 from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
 from apps.orgs.models import Company, CompanyInvitation, Membership
@@ -27,6 +26,10 @@ from apps.orgs.views import CompanyPreferenceBuilder, _assert_workspace_access
 from apps.orgs import views as org_views
 from apps.orgs import signals as org_signals
 from apps.orgs.tenant_context import resolve_request_workspace
+
+
+def get_public_schema_name():
+	return "public"
 
 
 class SecureWorkspaceMiddlewareTests(SimpleTestCase):
@@ -66,8 +69,7 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 		fake_filtered = SimpleNamespace(first=lambda: workspace)
 		request = SimpleNamespace(path="/w/acme_workspace/parties/")
 
-		with patch("apps.orgs.middleware_v2.connection.set_schema_to_public"), \
-			 patch.object(Company.objects, "filter", return_value=fake_filtered) as mock_filter:
+		with patch.object(Company.objects, "filter", return_value=fake_filtered) as mock_filter:
 			resolved = self.middleware._resolve_workspace_from_path(request)
 
 		self.assertIs(resolved, workspace)
@@ -79,8 +81,7 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 	def test_resolve_workspace_from_path_ignores_public_schema_slug(self):
 		request = SimpleNamespace(path=f"/w/{get_public_schema_name()}/")
 
-		with patch("apps.orgs.middleware_v2.connection.set_schema_to_public"), \
-			 patch.object(Company.objects, "filter") as mock_filter:
+		with patch.object(Company.objects, "filter") as mock_filter:
 			resolved = self.middleware._resolve_workspace_from_path(request)
 
 		self.assertIsNone(resolved)
@@ -158,18 +159,18 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 
 
 class TenantContextResolverTests(SimpleTestCase):
-	def test_prefers_request_tenant(self):
+	def test_prefers_request_workspace(self):
 		request = SimpleNamespace(
-			tenant=SimpleNamespace(schema_name="tenant_a"),
+			workspace=SimpleNamespace(schema_name="workspace_a"),
 			user=SimpleNamespace(is_authenticated=False),
 		)
 		workspace = resolve_request_workspace(request)
-		self.assertEqual(workspace.schema_name, "tenant_a")
+		self.assertEqual(workspace.schema_name, "workspace_a")
 
 	def test_does_not_fallback_to_profile_workspace_by_default(self):
 		profile_workspace = SimpleNamespace(schema_name="tenant_b")
 		request = SimpleNamespace(
-			tenant=None,
+			workspace=None,
 			user=SimpleNamespace(
 				is_authenticated=True,
 				profile=SimpleNamespace(workspace=profile_workspace),
@@ -181,7 +182,7 @@ class TenantContextResolverTests(SimpleTestCase):
 	def test_profile_fallback_only_when_opted_in(self):
 		profile_workspace = SimpleNamespace(schema_name="tenant_b")
 		request = SimpleNamespace(
-			tenant=None,
+			workspace=None,
 			user=SimpleNamespace(
 				is_authenticated=True,
 				profile=SimpleNamespace(workspace=profile_workspace),
@@ -190,21 +191,21 @@ class TenantContextResolverTests(SimpleTestCase):
 		workspace = resolve_request_workspace(request, allow_profile_fallback=True)
 		self.assertEqual(workspace.schema_name, "tenant_b")
 
-	def test_excludes_public_workspace_by_default(self):
+	def test_missing_request_workspace_returns_none(self):
 		request = SimpleNamespace(
-			tenant=SimpleNamespace(schema_name=get_public_schema_name()),
+			workspace=None,
 			user=SimpleNamespace(is_authenticated=False),
 		)
 		workspace = resolve_request_workspace(request)
 		self.assertIsNone(workspace)
 
-	def test_includes_public_workspace_when_requested(self):
+	def test_include_public_does_not_invent_a_workspace(self):
 		request = SimpleNamespace(
-			tenant=SimpleNamespace(schema_name=get_public_schema_name()),
+			workspace=None,
 			user=SimpleNamespace(is_authenticated=False),
 		)
 		workspace = resolve_request_workspace(request, include_public=True)
-		self.assertEqual(workspace.schema_name, get_public_schema_name())
+		self.assertIsNone(workspace)
 
 
 class PermissionResolutionTests(SimpleTestCase):
@@ -1018,7 +1019,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		company = SimpleNamespace(id=9)
 
 		with patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role", side_effect=ValidationError("denied")) as mock_policy, \
-			 patch("apps.orgs.services.control_plane._public_schema_context") as mock_ctx:
+			 patch("apps.orgs.services.control_plane._control_plane_transaction") as mock_ctx:
 			with self.assertRaises(ValidationError):
 				control_plane.send_team_invitation(
 					form=form,
@@ -1612,7 +1613,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		user = SimpleNamespace(id=7, email="owner@example.com")
 		owner_role = SimpleNamespace(name="Owner")
 
-		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
+		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()) as mock_ctx, \
 			 patch.object(control_plane.Company.all_objects, "filter", return_value=SimpleNamespace(exists=lambda: False)), \
 			 patch.object(control_plane.Domain.objects, "filter", return_value=SimpleNamespace(exists=lambda: False)), \
 			 patch.object(control_plane.Domain.objects, "create") as mock_domain_create, \
@@ -1649,7 +1650,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		provision_workspace = MagicMock(return_value="fresh")
 		seed_workspace_defaults = MagicMock()
 
-		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
+		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()) as mock_ctx, \
 			 patch.object(control_plane.Domain.objects, "create") as mock_domain_create, \
 			 patch.object(control_plane.Role.objects, "get", return_value=owner_role) as mock_role_get, \
 			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create:
@@ -1694,7 +1695,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		)
 		failure = ValidationError("duplicate")
 
-		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
+		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()) as mock_ctx, \
 			 patch.object(control_plane.Role.objects, "get", return_value=member_role) as mock_role_get, \
 			 patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role") as assert_can_invite, \
 			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity") as mock_capacity, \
@@ -1726,7 +1727,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		self.assertEqual(result["failed"][0]["email"], "b@example.com")
 		self.assertIs(result["failed"][0]["error"], failure)
 
-	def test_membership_mutations_occur_in_public_schema_context(self):
+	def test_membership_mutations_occur_in_control_plane_transaction(self):
 		membership = SimpleNamespace(
 			company=SimpleNamespace(id=9),
 			user=SimpleNamespace(email="member@example.com"),
@@ -1738,7 +1739,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		role = SimpleNamespace(name="Admin")
 		old_role = membership.role
 
-		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()) as mock_ctx, \
+		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()) as mock_ctx, \
 			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity") as mock_capacity, \
 			 patch("apps.orgs.services.control_plane.ensure_role_change_within_capacity") as mock_role_capacity, \
 			 patch.object(control_plane.Membership.objects, "get_or_create", return_value=(membership, True)), \
@@ -1783,7 +1784,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 
 		with patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role") as mock_policy, \
 			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity", side_effect=ValidationError("limit reached")), \
-			 patch("apps.orgs.services.control_plane._public_schema_context") as mock_ctx:
+			 patch("apps.orgs.services.control_plane._control_plane_transaction") as mock_ctx:
 			with self.assertRaises(ValidationError):
 				control_plane.send_team_invitation(
 					form=form,
@@ -1813,7 +1814,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 
 		fake_membership_filter = SimpleNamespace(exists=lambda: True)
 
-		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()), \
+		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()), \
 			 patch("apps.orgs.services.control_plane.assert_verified_invitation_identity"), \
 			 patch.object(control_plane.Membership.objects, "filter", return_value=fake_membership_filter), \
 			 patch("apps.orgs.services.control_plane.AuditLog.log") as mock_audit:
@@ -1838,7 +1839,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 
 		fake_membership_filter = SimpleNamespace(exists=lambda: False)
 
-		with patch("apps.orgs.services.control_plane._public_schema_context", return_value=contextlib.nullcontext()), \
+		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()), \
 			 patch("apps.orgs.services.control_plane.assert_verified_invitation_identity"), \
 			 patch.object(control_plane.Membership.objects, "filter", return_value=fake_membership_filter), \
 			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity", side_effect=ValidationError("limit reached")), \

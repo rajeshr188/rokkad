@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from django.db import transaction
 from django.db.models import Max
-from django_tenants.utils import get_public_schema_name, schema_context
 
 from apps.orgs.audit import AuditLog
 
@@ -174,10 +173,9 @@ def create_product_version_draft(product_id, *, actor=None, request=None, **term
 
 def _audit_product_status(version, *, actor, request, action):
     workspace = version.product.workspace
-    with schema_context(get_public_schema_name()):
-        AuditLog.log(
+    AuditLog.log(
             "SETTINGS_UPDATE", user=actor, company=workspace,
             description=f"{action.title()} loan product {version.product.code} v{version.version}.",
             data={"entity": "loan_product_version", "product_id": version.product_id, "version_id": version.pk, "version": version.version, "status": version.status, "action": action},
             request=request, success=True,
-        )
+    )

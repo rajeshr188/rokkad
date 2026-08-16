@@ -2,7 +2,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection, transaction
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.party.models import (
     Party,
@@ -16,7 +16,7 @@ from apps.tenant_apps.party.models import (
 User = get_user_model()
 
 
-class PartyModelTests(TenantTestCase):
+class PartyModelTests(WorkspaceTestCase):
     test_schema_name = f"party_models_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -42,7 +42,6 @@ class PartyModelTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
 
     def test_create_individual_party(self):
         party = Party.objects.create(

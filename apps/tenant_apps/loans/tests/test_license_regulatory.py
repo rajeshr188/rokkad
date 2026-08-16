@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import DatabaseError, connection, transaction
 from django.test import override_settings
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
 from apps.tenant_apps.loans.models import LoanLicenseRevision, PawnLoan
@@ -31,7 +31,7 @@ TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="rokkad-license-regulatory-")
 
 
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
-class LoanLicenseRegulatoryTests(TenantTestCase):
+class LoanLicenseRegulatoryTests(WorkspaceTestCase):
     test_schema_name = f"loans_regulatory_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -61,7 +61,6 @@ class LoanLicenseRegulatoryTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.user = get_user_model().objects.create_user(
             username=f"regulatory-user-{uuid.uuid4().hex[:8]}",
             email=f"regulatory-{uuid.uuid4().hex[:8]}@example.com",

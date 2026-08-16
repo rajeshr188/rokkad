@@ -6,7 +6,8 @@ from django.contrib.auth import get_user_model
 from django.core.management.color import no_style
 from django.db import close_old_connections, connection
 from django.test import TransactionTestCase
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
+from apps.tenancy.context import workspace_context
 
 from apps.orgs.models import Company, Domain
 from apps.onboarding.models import OnboardingProgress
@@ -23,7 +24,7 @@ from apps.tenant_apps.loans.services import (
 )
 
 
-class NumberAllocationTests(TenantTestCase):
+class NumberAllocationTests(WorkspaceTestCase):
     test_schema_name = f"loans_number_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -48,7 +49,6 @@ class NumberAllocationTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.user = get_user_model().objects.create_user(
             username=f"number-user-{uuid.uuid4().hex[:8]}",
             email=f"number-user-{uuid.uuid4().hex[:8]}@example.com",
@@ -125,7 +125,6 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        connection.set_schema_to_public()
         User = get_user_model()
         with connection.cursor() as cursor:
             for sql in connection.ops.sequence_reset_sql(
@@ -144,7 +143,7 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
             owner=owner,
             creator=owner,
         )
-        cls.tenant.save(verbosity=0)
+        cls.tenant.save()
         cls.domain = Domain.objects.create(
             tenant=cls.tenant,
             domain=f"{cls.tenant.schema_name}.test.com",
@@ -153,9 +152,8 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        connection.set_schema_to_public()
         cls.domain.delete()
-        cls.tenant.delete(force_drop=True)
+        cls.tenant.delete()
         super().tearDownClass()
 
     def _fixture_teardown(self):
@@ -164,28 +162,32 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
         pass
 
     def setUp(self):
-        connection.set_tenant(self.tenant)
-        self.user = get_user_model().objects.create_user(
-            username=f"concurrency-user-{uuid.uuid4().hex[:8]}",
-            email=f"concurrency-user-{uuid.uuid4().hex[:8]}@example.com",
-        )
-        license = create_license(
-            workspace=self.tenant,
-            name="Concurrent License",
-            license_number=f"PBL-C-{uuid.uuid4().hex[:8]}",
-            issued_on=date(2026, 1, 1),
-            expires_on=date(2027, 1, 1),
-            actor=self.user,
-        )
-        self.series = create_series(license=license, name="Concurrent", code="C")
-        configure_sequence(
-            series=self.series,
-            document_kind=LoanDocumentKind.PAWN_LOAN,
-            prefix="PL-C-",
-            width=4,
-            maximum_number=10,
-            actor=self.user,
-        )
+        context = workspace_context(self.tenant.pk)
+        context.__enter__()
+        try:
+            self.user = get_user_model().objects.create_user(
+                username=f"concurrency-user-{uuid.uuid4().hex[:8]}",
+                email=f"concurrency-user-{uuid.uuid4().hex[:8]}@example.com",
+            )
+            license = create_license(
+                workspace=self.tenant,
+                name="Concurrent License",
+                license_number=f"PBL-C-{uuid.uuid4().hex[:8]}",
+                issued_on=date(2026, 1, 1),
+                expires_on=date(2027, 1, 1),
+                actor=self.user,
+            )
+            self.series = create_series(license=license, name="Concurrent", code="C")
+            configure_sequence(
+                series=self.series,
+                document_kind=LoanDocumentKind.PAWN_LOAN,
+                prefix="PL-C-",
+                width=4,
+                maximum_number=10,
+                actor=self.user,
+            )
+        finally:
+            context.__exit__(None, None, None)
 
     def test_concurrent_allocations_serialize_on_the_sequence_row(self):
         series_id = self.series.pk
@@ -193,9 +195,9 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
         def allocate_in_own_connection(_):
             close_old_connections()
             try:
-                connection.set_tenant(self.tenant)
-                series = self.series.__class__.objects.get(pk=series_id)
-                return allocate_pawn_loan_number(series=series).value
+                with workspace_context(self.tenant.pk):
+                    series = self.series.__class__.objects.get(pk=series_id)
+                    return allocate_pawn_loan_number(series=series).value
             finally:
                 close_old_connections()
 

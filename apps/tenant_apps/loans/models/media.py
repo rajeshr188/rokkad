@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from apps.tenancy.models import WorkspaceOwnedModel
+
 
 def collateral_photo_upload_to(instance, filename):
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
@@ -13,7 +15,7 @@ def collateral_photo_upload_to(instance, filename):
     )
 
 
-class PawnCollateralPhoto(models.Model):
+class PawnCollateralPhoto(WorkspaceOwnedModel):
     class WorkflowSource(models.TextChoices):
         DRAFT = "DRAFT", "Draft capture"
         RENEWAL = "RENEWAL", "Release and renew"
@@ -66,7 +68,7 @@ class PawnCollateralPhoto(models.Model):
         raise ValidationError("Collateral photographs cannot be deleted.")
 
 
-class PawnCollateralLabelIssue(models.Model):
+class PawnCollateralLabelIssue(WorkspaceOwnedModel):
     class Action(models.TextChoices):
         PREVIEW = "PREVIEW", "Preview"
         PRINT = "PRINT", "Print or reprint"

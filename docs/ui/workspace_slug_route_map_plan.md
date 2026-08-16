@@ -52,7 +52,7 @@ The desired future route family is:
 
 Current workspace identity sources:
 
-- Domain mapping through `django-tenants` `Domain`.
+- Domain mapping through the ordinary shared `orgs.Domain` model.
 - Path workspace id extraction for `/orgs/workspace/<id>/...`,
   `/orgs/company/<id>/...`, and `/workspace/<id>/settings/...`.
 - User profile fallback during the current transition.

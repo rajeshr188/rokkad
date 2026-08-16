@@ -4,8 +4,10 @@ from decimal import Decimal
 from django.db import models
 from django.urls import reverse
 
+from apps.tenancy.models import WorkspaceOwnedModel
 
-class RateSource(models.Model):
+
+class RateSource(WorkspaceOwnedModel):
     name = models.CharField(max_length=30)
     location = models.CharField(max_length=30)
     tax_included = models.BooleanField(default=False)
@@ -14,7 +16,7 @@ class RateSource(models.Model):
         return self.name
 
 
-class Rate(models.Model):
+class Rate(WorkspaceOwnedModel):
     class Metal(models.TextChoices):
         GOLD = "Gold", "Gold"
         SILVER = "Silver", "Silver"
@@ -44,7 +46,23 @@ class Rate(models.Model):
     rate_source = models.ForeignKey("RateSource", on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ["metal", "currency", "timestamp", "purity"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "metal", "currency", "timestamp", "purity"],
+                name="rates_rate_workspace_quote_uniq",
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.rate_source_id:
+            source_workspace_id = self.rate_source.workspace_id
+            if self.workspace_id is None:
+                self.workspace_id = source_workspace_id
+            elif self.workspace_id != source_workspace_id:
+                from django.core.exceptions import ValidationError
+
+                raise ValidationError("Rate and rate source must share a Workspace.")
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f" {self.timestamp.date()} {self.metal} {self.purity} {self.buying_rate}"

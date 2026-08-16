@@ -462,6 +462,7 @@ def activate_funding_loan(
         pledge_items = FundingPledgeItem.objects.bulk_create(
             [
                 FundingPledgeItem(
+                    workspace_id=funding_loan.workspace_id,
                     funding_pledge=pledge,
                     collateral_item=item,
                     source_pawn_loan_id=item.loan_id,

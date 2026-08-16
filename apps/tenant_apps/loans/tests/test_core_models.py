@@ -5,8 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection, transaction
-from django_tenants.test.cases import TenantTestCase
-from django_tenants.utils import schema_context
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.orgs.models import Company
 from apps.tenant_apps.loans.domain import (
@@ -32,7 +31,7 @@ from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
 
 
-class LoansCoreModelTests(TenantTestCase):
+class LoansCoreModelTests(WorkspaceTestCase):
     test_schema_name = f"loans_core_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 
@@ -57,7 +56,6 @@ class LoansCoreModelTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         User = get_user_model()
         self.user = User.objects.create_user(
             username=f"loans-owner-{uuid.uuid4().hex[:8]}",
@@ -109,8 +107,7 @@ class LoansCoreModelTests(TenantTestCase):
             creator=self.user,
         )
         workspace.auto_create_schema = False
-        with schema_context("public"):
-            workspace.save()
+        workspace.save()
         return workspace
 
     def build_loan(self, **overrides):

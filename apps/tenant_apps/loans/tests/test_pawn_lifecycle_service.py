@@ -5,9 +5,8 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import CollateralMetal, LoanDocumentKind, PawnLoanEventKind, PawnLoanState
 from apps.tenant_apps.loans.models import CollateralAppraisal, LoanLicense, LoanNumberSequence, LoanSeries, PawnLoanApprovalSnapshot
@@ -26,7 +25,7 @@ from apps.tenant_apps.loans.services import (
 from apps.tenant_apps.party.models import Party
 
 
-class PawnLifecycleServiceTests(TenantTestCase):
+class PawnLifecycleServiceTests(WorkspaceTestCase):
     test_schema_name = f"loans_lifecycle_{uuid.uuid4().hex[:8]}"
     test_domain = f"loans-lifecycle-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -50,7 +49,6 @@ class PawnLifecycleServiceTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.actor = get_user_model().objects.create_user(
             username=f"lifecycle-{uuid.uuid4().hex[:8]}",
             email=f"lifecycle-{uuid.uuid4().hex[:8]}@example.com",

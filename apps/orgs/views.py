@@ -11,7 +11,6 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
-from django_tenants.utils import get_public_schema_name
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
 from render_block import render_block_to_string
@@ -193,7 +192,7 @@ def _get_workspace_from_query(request):
 
 
 def _get_workspace_from_slug(workspace_slug):
-    if workspace_slug == get_public_schema_name():
+    if workspace_slug == "public":
         raise Http404("Workspace not found")
     return get_object_or_404(
         Company,
@@ -1243,7 +1242,7 @@ def workspace_delete(request, workspace_id=None, company_id=None):
         # Do not leave the actor's profile pointing at an inaccessible tenant.
         if getattr(request.user.profile, "workspace", None) == company:
             request.user.profile.workspace = Company.objects.get(
-                schema_name=get_public_schema_name()
+                schema_name="public"
             )
             request.user.profile.save(update_fields=["workspace"])
 
@@ -1264,7 +1263,7 @@ def workspace_delete(request, workspace_id=None, company_id=None):
 def archived_workspaces(request):
     """List archived workspaces that the actor is allowed to restore."""
     workspaces = Company.all_objects.filter(is_deleted=True).exclude(
-        schema_name=get_public_schema_name()
+        schema_name="public"
     )
     if not is_platform_admin(request.user):
         workspaces = workspaces.filter(owner=request.user)

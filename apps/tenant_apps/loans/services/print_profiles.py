@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from django.db import transaction
 from django.utils import timezone
-from django_tenants.utils import get_public_schema_name, schema_context
 
 from apps.orgs.audit import AuditLog
 from apps.tenant_apps.loans.documents import (
@@ -307,8 +306,7 @@ class LoanDocumentPrintProfileService:
 
     @staticmethod
     def _audit(profile, actor, request, verb, data):
-        with schema_context(get_public_schema_name()):
-            AuditLog.log(
+        AuditLog.log(
                 "SETTINGS_UPDATE",
                 user=actor,
                 company=profile.workspace,
@@ -321,7 +319,7 @@ class LoanDocumentPrintProfileService:
                 },
                 request=request,
                 success=True,
-            )
+        )
 
 
 __all__ = [

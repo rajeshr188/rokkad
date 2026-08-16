@@ -4,9 +4,8 @@ from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import connection
 from django.test import SimpleTestCase
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.documents import (
@@ -89,7 +88,7 @@ class PrintProfileContractTests(SimpleTestCase):
                 self.assertEqual(profile.included_surfaces, surfaces)
 
 
-class PrintProfilePersistenceTests(TenantTestCase):
+class PrintProfilePersistenceTests(WorkspaceTestCase):
     test_schema_name = f"loans_print_profile_{uuid.uuid4().hex[:8]}"
     test_domain = f"loans-print-profile-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -118,7 +117,6 @@ class PrintProfilePersistenceTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.actor = self.tenant.owner
         self.license = LoanLicense.objects.create(
             workspace=self.tenant,

@@ -9,7 +9,6 @@ import zipfile
 from django.conf import settings
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
-from django.db import connection
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -145,17 +144,17 @@ def index(_request):
 def settings_overview(request):
     settings_summary = _notify_settings_summary()
     whatsapp_readiness = assess_whatsapp_cloud_readiness()
-    tenant = getattr(request, "tenant", None)
+    workspace = getattr(request, "workspace", None)
     can_manage_admin_models = bool(
-        request.user.is_staff and tenant and getattr(tenant, "schema_name", "public") != "public"
+        request.user.is_staff and workspace
     )
     context = {
         "notify_settings": settings_summary,
         "whatsapp_readiness": whatsapp_readiness,
         "can_manage_admin_models": can_manage_admin_models,
         "can_manage_whatsapp": bool(
-            tenant and (is_platform_admin(request.user) or tenant.owner_id == request.user.pk or
-                        get_workspace_role_name(request.user, tenant) in {"Owner", "Admin"})
+            workspace and (is_platform_admin(request.user) or workspace.owner_id == request.user.pk or
+                        get_workspace_role_name(request.user, workspace) in {"Owner", "Admin"})
         ),
         "counts": {
             "event_types": NotificationEventType.objects.filter(is_active=True).count(),
@@ -200,8 +199,8 @@ def whatsapp_cloud_integration_setup(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def whatsapp_cloud_webhook(request):
-    workspace_id = getattr(getattr(connection, "tenant", None), "pk", None)
-    if getattr(connection, "schema_name", "public") == "public" or not workspace_id:
+    workspace_id = getattr(getattr(request, "workspace", None), "pk", None)
+    if not workspace_id:
         return JsonResponse({"ok": False, "error": "tenant_route_required"}, status=403)
     try:
         credentials = get_whatsapp_cloud_credentials(workspace_id, require_enabled=True)

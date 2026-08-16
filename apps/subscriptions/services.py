@@ -3,7 +3,6 @@ from typing import Any, Optional
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django_tenants.utils import get_public_schema_name
 
 
 def build_billing_account_defaults(subscription: Any) -> dict[str, Any]:
@@ -267,7 +266,7 @@ class SubscriptionAccessService:
         if workspace is None:
             return AccessDecision(False, "NO_WORKSPACE", "No workspace selected.")
 
-        if getattr(workspace, "schema_name", None) == get_public_schema_name():
+        if getattr(workspace, "schema_name", None) == "public":
             return AccessDecision(True, "PUBLIC_WORKSPACE", "")
 
         if membership is None:

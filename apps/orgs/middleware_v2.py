@@ -14,25 +14,26 @@ import re
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import DisallowedHost
-from django.db import connection
 from django.http import HttpResponseRedirect
 from django.urls import reverse, set_urlconf
 from django.utils.deprecation import MiddlewareMixin
-from django_tenants.utils import (
-    get_public_schema_name,
-    get_public_schema_urlconf,
-    get_tenant_domain_model,
-    remove_www,
-)
 
 from apps.orgs.audit import AuditLog
-from apps.orgs.models import Company, Membership
+from apps.orgs.models import Company, Domain, Membership
 from apps.orgs.permissions import is_platform_admin
 from apps.subscriptions.services import SubscriptionAccessService
+from apps.tenancy.context import workspace_context
 
 logger = logging.getLogger(__name__)
 
 subscription_access_service = SubscriptionAccessService()
+PUBLIC_WORKSPACE_SLUG = "public"
+
+
+def get_public_schema_name():
+    """Temporary terminology bridge while schema_name callers become slug callers."""
+
+    return PUBLIC_WORKSPACE_SLUG
 
 
 class SecureWorkspaceMiddleware(MiddlewareMixin):
@@ -211,40 +212,56 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         return HttpResponseRedirect(reverse("workspace_selector"))
 
     def _set_public_context(self, request):
-        """Set request context to public schema and URLConf."""
-        connection.set_schema_to_public()
-        request.urlconf = getattr(
-            settings, "PUBLIC_SCHEMA_URLCONF", get_public_schema_urlconf()
-        )
+        """Clear Workspace context for a global/control-plane request."""
+        self._close_workspace_context(request)
+        request.workspace = None
+        request.tenant = None
+        request.urlconf = settings.ROOT_URLCONF
         set_urlconf(request.urlconf)
 
     def _set_tenant_context(self, request, workspace):
-        """Set request context to tenant schema and tenant URLConf."""
-        connection.set_tenant(workspace)
+        """Establish explicit shared-schema Workspace context."""
+        context_manager = workspace_context(workspace.id)
+        context_manager.__enter__()
+        request._workspace_context_manager = context_manager
+        request.workspace = workspace
         request.tenant = workspace
         request.urlconf = settings.ROOT_URLCONF
         set_urlconf(request.urlconf)
 
+    def _close_workspace_context(self, request, exc=None):
+        context_manager = getattr(request, "_workspace_context_manager", None)
+        if context_manager is None:
+            return
+        request._workspace_context_manager = None
+        if exc is None:
+            context_manager.__exit__(None, None, None)
+        else:
+            context_manager.__exit__(type(exc), exc, exc.__traceback__)
+
+    def process_response(self, request, response):
+        self._close_workspace_context(request)
+        return response
+
+    def process_exception(self, request, exception):
+        self._close_workspace_context(request, exception)
+        return None
+
     def _resolve_workspace_from_domain(self, request):
         """Resolve workspace from request hostname via Domain model."""
-        connection.set_schema_to_public()
-
         try:
-            hostname = remove_www(request.get_host().split(":")[0]).lower()
+            hostname = request.get_host().split(":")[0].lower().removeprefix("www.")
         except DisallowedHost:
             logger.warning("Disallowed host header encountered during tenant resolution")
             return None
 
-        domain_model = get_tenant_domain_model()
-        domain = domain_model.objects.select_related("tenant").filter(domain=hostname).first()
+        domain = Domain.objects.select_related("tenant").filter(domain=hostname).first()
         if domain:
             return domain.tenant
         return None
 
     def _resolve_workspace_from_path(self, request):
         """Resolve workspace from known id or slug path patterns."""
-        connection.set_schema_to_public()
-
         workspace_id = self._extract_workspace_id_from_path(request.path)
         if workspace_id:
             return Company.objects.filter(id=workspace_id, is_deleted=False).first()

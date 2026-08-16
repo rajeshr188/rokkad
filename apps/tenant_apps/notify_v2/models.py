@@ -1,12 +1,24 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import connection
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.tenancy.models import WorkspaceOwnedModel
 
-class TimestampedModel(models.Model):
+
+def _inherit_workspace(instance, *parents):
+    workspace_ids = {parent.workspace_id for parent in parents if parent is not None}
+    if len(workspace_ids) > 1:
+        raise ValidationError("Related notification records must share a Workspace.")
+    parent_workspace_id = next(iter(workspace_ids), None)
+    if instance.workspace_id is None:
+        instance.workspace_id = parent_workspace_id
+    elif parent_workspace_id is not None and instance.workspace_id != parent_workspace_id:
+        raise ValidationError("Notification record conflicts with its parent Workspace.")
+
+
+class TimestampedModel(WorkspaceOwnedModel):
     created = models.DateTimeField(auto_now_add=True, editable=False)
     modified = models.DateTimeField(auto_now=True, editable=False)
 
@@ -24,7 +36,7 @@ class NotificationEventType(TimestampedModel):
         HR = "HR", "Human Resources"
         GENERAL = "GENERAL", "General"
 
-    key = models.CharField(max_length=100, unique=True)
+    key = models.CharField(max_length=100)
     name = models.CharField(max_length=150)
     domain = models.CharField(max_length=20, choices=Domain.choices)
     description = models.TextField(blank=True)
@@ -36,6 +48,12 @@ class NotificationEventType(TimestampedModel):
         ordering = ["domain", "sort_order", "name"]
         indexes = [
             models.Index(fields=["domain", "is_active"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "key"],
+                name="notify_v2_workspace_event_type_key_uniq",
+            )
         ]
 
     def __str__(self):
@@ -55,7 +73,8 @@ class WhatsAppCloudIntegration(TimestampedModel):
     """Workspace-owned Meta WhatsApp Cloud API configuration."""
 
     workspace = models.OneToOneField(
-        "orgs.Company", on_delete=models.PROTECT, related_name="whatsapp_cloud_integration"
+        "orgs.Company", editable=False, on_delete=models.PROTECT,
+        related_name="whatsapp_cloud_integration"
     )
     api_version = models.CharField(max_length=16, default="v20.0")
     phone_number_id = models.CharField(max_length=64)
@@ -72,9 +91,7 @@ class WhatsAppCloudIntegration(TimestampedModel):
         return f"WhatsApp Cloud for workspace {self.workspace_id}"
 
     def clean(self):
-        tenant_id = getattr(getattr(connection, "tenant", None), "pk", None)
-        if tenant_id and self.workspace_id != tenant_id:
-            raise ValidationError("WhatsApp Cloud integration must belong to the active workspace.")
+        super().clean()
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -111,10 +128,14 @@ class NotificationPolicy(TimestampedModel):
         ordering = ["event_type", "priority", "channel"]
         constraints = [
             models.UniqueConstraint(
-                fields=["event_type", "channel"],
+                fields=["workspace", "event_type", "channel"],
                 name="notify_v2_unique_policy_per_event_channel",
             )
         ]
+
+    def save(self, *args, **kwargs):
+        _inherit_workspace(self, self.event_type)
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.event_type.key} → {self.get_channel_display()}"
@@ -148,6 +169,10 @@ class NotificationRecipient(TimestampedModel):
     def __str__(self):
         return self.name_snapshot or f"Recipient {self.pk}"
 
+    def save(self, *args, **kwargs):
+        _inherit_workspace(self, self.party if self.party_id else None)
+        return super().save(*args, **kwargs)
+
 class NotificationTemplate(TimestampedModel):
     Channel = NotificationChannel
     RendererType = NotificationRenderer
@@ -176,10 +201,14 @@ class NotificationTemplate(TimestampedModel):
         ordering = ["event_type", "channel", "locale", "-version"]
         constraints = [
             models.UniqueConstraint(
-                fields=["event_type", "channel", "locale", "version"],
+                fields=["workspace", "event_type", "channel", "locale", "version"],
                 name="notify_v2_unique_template_version",
             )
         ]
+
+    def save(self, *args, **kwargs):
+        _inherit_workspace(self, self.event_type)
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.event_type.key} [{self.channel}] v{self.version}"
@@ -226,6 +255,10 @@ class NotificationBatch(TimestampedModel):
 
     def get_absolute_url(self):
         return reverse("notify_v2_batch_detail", args=[self.pk])
+
+    def save(self, *args, **kwargs):
+        _inherit_workspace(self, self.event_type)
+        return super().save(*args, **kwargs)
 
     def mark_rendered(self, *, save=True):
         self.status = self.Status.RENDERED
@@ -285,6 +318,15 @@ class NotificationEvent(TimestampedModel):
     def __str__(self):
         return f"{self.event_type.key} for {self.recipient}"
 
+    def save(self, *args, **kwargs):
+        _inherit_workspace(
+            self,
+            self.event_type,
+            self.recipient,
+            self.batch if self.batch_id else None,
+        )
+        return super().save(*args, **kwargs)
+
 
 class NotificationJob(TimestampedModel):
     Channel = NotificationChannel
@@ -328,11 +370,11 @@ class NotificationJob(TimestampedModel):
         ordering = ["scheduled_for", "created"]
         constraints = [
             models.UniqueConstraint(
-                fields=["event", "channel"],
+                fields=["workspace", "event", "channel"],
                 name="notify_v2_unique_job_per_event_channel",
             ),
             models.UniqueConstraint(
-                fields=["provider_message_id"],
+                fields=["workspace", "provider_message_id"],
                 condition=models.Q(channel="WHATSAPP") & ~models.Q(provider_message_id=""),
                 name="notify_v2_unique_whatsapp_provider_id",
             ),
@@ -343,6 +385,15 @@ class NotificationJob(TimestampedModel):
 
     def __str__(self):
         return f"{self.event.event_type.key} [{self.channel}]"
+
+    def save(self, *args, **kwargs):
+        _inherit_workspace(
+            self,
+            self.event,
+            self.batch if self.batch_id else None,
+            self.template if self.template_id else None,
+        )
+        return super().save(*args, **kwargs)
 
     def _record_transition(self, *, to_status, message="", provider_payload=None, save=True):
         previous_status = self.status
@@ -420,11 +471,15 @@ class NotificationArtifact(TimestampedModel):
     class Meta:
         ordering = ["job", "artifact_type", "-created"]
 
+    def save(self, *args, **kwargs):
+        _inherit_workspace(self, self.job)
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.job} → {self.artifact_type}"
 
 
-class NotificationAttemptLog(models.Model):
+class NotificationAttemptLog(WorkspaceOwnedModel):
     job = models.ForeignKey(
         NotificationJob,
         on_delete=models.CASCADE,
@@ -443,17 +498,20 @@ class NotificationAttemptLog(models.Model):
     def __str__(self):
         return f"Attempt {self.attempt_number} for job {self.job_id}"
 
+    def save(self, *args, **kwargs):
+        _inherit_workspace(self, self.job)
+        return super().save(*args, **kwargs)
 
-class WhatsAppCloudWebhookReceipt(models.Model):
+
+class WhatsAppCloudWebhookReceipt(WorkspaceOwnedModel):
     """Replay-safe tenant evidence for one authenticated Cloud API status event."""
 
     class ProcessingStatus(models.TextChoices):
         PROCESSED = "PROCESSED", "Processed"
         UNKNOWN_JOB = "UNKNOWN_JOB", "Unknown job"
 
-    event_key = models.CharField(max_length=64, unique=True)
+    event_key = models.CharField(max_length=64)
     payload_hash = models.CharField(max_length=64)
-    tenant_schema = models.CharField(max_length=63)
     phone_number_id = models.CharField(max_length=64)
     provider_message_id = models.CharField(max_length=150, db_index=True)
     external_status = models.CharField(max_length=32)
@@ -477,3 +535,13 @@ class WhatsAppCloudWebhookReceipt(models.Model):
         indexes = [
             models.Index(fields=("processing_status", "received_at"), name="notify_wa_receipt_status_idx"),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "event_key"),
+                name="notify_v2_workspace_webhook_event_uniq",
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        _inherit_workspace(self, self.job if self.job_id else None)
+        return super().save(*args, **kwargs)

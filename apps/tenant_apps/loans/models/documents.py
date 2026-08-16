@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
+from apps.tenancy.models import WorkspaceOwnedModel
+
 from .core import LoanLicense, LoanSeries, current_tenant_workspace_id
 
 
@@ -49,7 +51,7 @@ class LoanDocumentLayout(models.Model):
         return super().save(*args, **kwargs)
 
 
-class LoanDocumentLayoutRevision(models.Model):
+class LoanDocumentLayoutRevision(WorkspaceOwnedModel):
     class State(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
         PUBLISHED = "PUBLISHED", "Published"
@@ -73,10 +75,6 @@ class LoanDocumentLayoutRevision(models.Model):
             models.UniqueConstraint(fields=("layout", "version"), name="loans_doc_revision_version_uniq"),
             models.CheckConstraint(condition=Q(version__gt=0), name="loans_doc_revision_version_positive"),
         ]
-
-    @property
-    def workspace_id(self):
-        return self.layout.workspace_id
 
     def clean(self):
         active = current_tenant_workspace_id()
@@ -209,7 +207,7 @@ class LoanDocumentPrintProfile(models.Model):
         return super().save(*args, **kwargs)
 
 
-class LoanDocumentPrintProfileRevision(models.Model):
+class LoanDocumentPrintProfileRevision(WorkspaceOwnedModel):
     class State(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
         PUBLISHED = "PUBLISHED", "Published"
@@ -244,10 +242,6 @@ class LoanDocumentPrintProfileRevision(models.Model):
                 condition=Q(version__gt=0), name="loans_print_rev_version_pos"
             ),
         ]
-
-    @property
-    def workspace_id(self):
-        return self.profile.workspace_id
 
     def clean(self):
         active = current_tenant_workspace_id()

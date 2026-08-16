@@ -116,11 +116,13 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
                 "workspace_select",
                 "workspace_create",
                 "workspace_list",
+                "archived_workspaces",
                 "workspace_detail",
                 "workspace_setup",
                 "workspace_setup_state",
                 "workspace_update",
                 "workspace_delete",
+                "workspace_restore",
                 "workspace_preferences",
                 "team_invitations",
                 "team_accept_invitation",
@@ -265,7 +267,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         )
 
         self.assertIn("@receiver(invite_accepted)", signals_content)
-        self.assertIn("Membership.objects.get_or_create", signals_content)
+        self.assertIn("control_plane.create_membership(", signals_content)
         self.assertIn("PendingInvitation.objects.get_or_create", signals_content)
         self.assertNotIn("profile.workspace", signals_content)
         self.assertNotIn("AuditLog", signals_content)
@@ -307,7 +309,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
             "def team_accept_invitation(request, key):",
             "if not request.user.is_authenticated:",
             "return AcceptInvite.as_view()(request, key=key)",
-            "invitation.email.lower() != request.user.email.lower()",
+            "invitation.email.casefold() != request.user.email.casefold()",
             "current_state != CompanyInvitation.Status.PENDING",
             "control_plane.accept_invitation(",
             "request.user.profile.workspace = invitation.company",
@@ -338,15 +340,15 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         policy_before_mutation_pairs = (
             (
                 "role_policy.assert_can_invite_role(",
-                "with _public_schema_context():\n        invitation = form.save()",
+                "with _control_plane_transaction():\n        invitation = form.save()",
             ),
             (
                 "role_policy.assert_can_remove_membership(",
-                "with _public_schema_context():\n        membership.delete()",
+                "with _control_plane_transaction():\n        membership.delete()",
             ),
             (
                 "role_policy.assert_can_change_role(",
-                "with _public_schema_context():\n        membership.role = new_role",
+                "with _control_plane_transaction():\n        membership.role = new_role",
             ),
         )
         for policy_call, mutation_start in policy_before_mutation_pairs:

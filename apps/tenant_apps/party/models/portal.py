@@ -2,9 +2,10 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from apps.tenancy.models import WorkspaceOwnedModel
 
 
-class PartyPortalAccess(models.Model):
+class PartyPortalAccess(WorkspaceOwnedModel):
     class Status(models.TextChoices):
         INVITED = "INVITED", _("Invited")
         ACTIVE = "ACTIVE", _("Active")
@@ -51,6 +52,10 @@ class PartyPortalAccess(models.Model):
 
     def __str__(self):
         return f"{self.user} -> {self.party} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        self.workspace_id = self.party.workspace_id
+        super().save(*args, **kwargs)
 
     def activate(self, *, save=True):
         self.status = self.Status.ACTIVE

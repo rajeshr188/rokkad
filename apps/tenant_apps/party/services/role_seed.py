@@ -39,12 +39,13 @@ CANONICAL_PARTY_ROLES = (
 )
 
 
-def seed_party_roles():
+def seed_party_roles(*, workspace):
     created = 0
     updated = 0
 
     for role in CANONICAL_PARTY_ROLES:
         _obj, was_created = PartyRoleType.objects.update_or_create(
+            workspace=workspace,
             key=role.key,
             defaults={
                 "label": role.label,

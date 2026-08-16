@@ -4,6 +4,8 @@ from django.urls import reverse_lazy
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Div, HTML, Layout, Row, Submit
 
+from apps.tenancy.context import current_workspace_id
+
 from .models import Rate, RateSource
 
 
@@ -18,6 +20,12 @@ class RateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        workspace_id = current_workspace_id()
+        self.fields["rate_source"].queryset = (
+            RateSource.objects.filter(workspace_id=workspace_id)
+            if workspace_id is not None
+            else RateSource.objects.none()
+        )
         self.fields["rate_source"].empty_label = "Select a rate source"
         self.fields["buying_rate"].help_text = "Buying rate for the selected metal and purity."
         self.fields["selling_rate"].help_text = "Selling rate for the selected metal and purity."

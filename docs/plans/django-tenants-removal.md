@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: active
 owner: project
 updated: 2026-08-14
 tags: [plan, tenancy, django-tenants, rls, migration]
@@ -15,8 +15,7 @@ Workspace, Membership, RBAC, subscriptions, domain routing, archive semantics,
 and domain/accounting evidence as ordinary SaaS concepts. Replace schema
 isolation with explicit Workspace ownership and PostgreSQL RLS.
 
-This plan authorizes no runtime implementation until the related ADR is
-accepted.
+Runtime implementation is authorized by the accepted related ADR.
 
 ## Definition Of Done
 
@@ -257,8 +256,7 @@ absent from runtime and dependencies.
 
 ## Current State
 
-Planning only. No runtime implementation is authorized until the proposed ADR
-is reviewed and accepted. The first authoritative Phase 0 registry/coupling
+Execution is active on `no-tenants-no-acc`. The first authoritative Phase 0 registry/coupling
 baseline is recorded in
 `docs/implementation/django-tenants-removal-phase0-inventory.md`: 212 tenant-app
 models are registered, 35 have direct Workspace ownership, and 177 still depend

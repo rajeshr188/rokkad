@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 owner: project
 updated: 2026-08-14
 tags: [adr, tenancy, postgresql, rls, workspace, migration]
@@ -9,7 +9,7 @@ related: [../implementation/tenancy-architecture-audit-rls-vs-django-tenants.md,
 # Shared-Schema Workspace Tenancy With PostgreSQL RLS
 
 Date: 2026-08-14
-Status: Proposed
+Status: Accepted
 Owners: Project Owner, Platform Architecture
 
 ## Summary

@@ -1,8 +1,10 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
+from apps.tenancy.models import WorkspaceOwnedModel
 
 
-class PartyRelationship(models.Model):
+class PartyRelationship(WorkspaceOwnedModel):
     class RelationshipType(models.TextChoices):
         CONTACT_PERSON = "CONTACT_PERSON", _("Contact Person")
         EMPLOYER = "EMPLOYER", _("Employer")
@@ -53,3 +55,9 @@ class PartyRelationship(models.Model):
 
     def __str__(self):
         return f"{self.from_party} -> {self.to_party} ({self.relationship_type})"
+
+    def save(self, *args, **kwargs):
+        if self.from_party.workspace_id != self.to_party.workspace_id:
+            raise ValidationError("Related Parties must belong to the same Workspace.")
+        self.workspace_id = self.from_party.workspace_id
+        super().save(*args, **kwargs)

@@ -3,9 +3,9 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.db import connection
 from django.utils import timezone
 
+from apps.tenancy.context import current_workspace_id
 from apps.tenant_apps.notify_v2.models import NotificationJob, WhatsAppCloudWebhookReceipt
 from .whatsapp_integration import get_whatsapp_cloud_credentials, get_whatsapp_cloud_integration, WhatsAppIntegrationError
 
@@ -21,9 +21,9 @@ class WhatsAppCloudReadiness:
 
 def assess_whatsapp_cloud_readiness(*, receipt_grace=timedelta(hours=24)):
     blockers = []
-    workspace_id = getattr(getattr(connection, "tenant", None), "pk", None)
-    if getattr(connection, "schema_name", "public") == "public" or not workspace_id:
-        blockers.append("WhatsApp readiness must run inside a tenant schema.")
+    workspace_id = current_workspace_id()
+    if not workspace_id:
+        blockers.append("WhatsApp readiness requires an active Workspace context.")
     integration = get_whatsapp_cloud_integration(workspace_id) if workspace_id else None
     if integration is None:
         blockers.append("WhatsApp Cloud is not configured for this workspace.")

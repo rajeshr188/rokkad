@@ -11,10 +11,10 @@ ALLOWED_HOSTS = ["*", "rokkad.com", "www.rokkad.com"]
 
 DATABASES = {
     "default": {
-        "ENGINE": "django_tenants.postgresql_backend",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": env("DB_NAME"),
-        "USER": env("DB_USER"),
-        "PASSWORD": env("DB_PASSWORD"),
+        "USER": env("DB_RUNTIME_USER", default=env("DB_USER")),
+        "PASSWORD": env("DB_RUNTIME_PASSWORD", default=env("DB_PASSWORD")),
         "HOST": env("DB_HOST"),
         "PORT": env("DB_PORT"),
     }

@@ -3,19 +3,21 @@ from pathlib import Path
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django_tenants.utils import get_public_schema_name, schema_context
 
+from apps.orgs.models import Company
+from apps.tenancy.context import workspace_context
 from apps.tenant_apps.party.services import seed_party_roles
 
 
 class Command(BaseCommand):
-    help = "Seed tenant-schema defaults for a specific schema."
+    help = "Seed Workspace-owned defaults for one Workspace."
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--schema",
+            "--workspace-id",
+            type=int,
             required=True,
-            help="Tenant schema name to seed.",
+            help="Workspace primary key to seed.",
         )
         parser.add_argument(
             "--dry-run",
@@ -39,14 +41,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        schema_name = options["schema"].strip()
+        workspace_id = options["workspace_id"]
         dry_run = options["dry_run"]
-
-        if schema_name == get_public_schema_name():
-            raise CommandError(
-                "seed_tenant_defaults does not operate on public schema. "
-                "Use seed_public_defaults for public data."
-            )
+        try:
+            workspace = Company.all_objects.get(pk=workspace_id)
+        except Company.DoesNotExist as exc:
+            raise CommandError(f"Workspace {workspace_id} does not exist.") from exc
 
         fixtures_dir = Path("apps/tenant_apps")
         fixture_paths = {
@@ -63,7 +63,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.NOTICE(
-                f"Tenant seed start: schema={schema_name}, actions={', '.join(actions) or 'none'}"
+                f"Workspace seed start: workspace={workspace_id}, actions={', '.join(actions) or 'none'}"
             )
         )
 
@@ -71,19 +71,19 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Dry run mode. No changes applied."))
             return
 
-        with schema_context(schema_name):
+        with workspace_context(workspace_id):
             with transaction.atomic():
                 if "seed_rates" in actions:
                     # Keep call compatible with existing migration/fixture name.
                     self._load_fixture_if_exists(fixture_paths["rates"])
 
                 if "seed_party" in actions:
-                    self._seed_party_defaults()
+                    self._seed_party_defaults(workspace)
 
                 if "seed_notify_v2" in actions:
                     self._seed_notify_v2_defaults()
 
-        self.stdout.write(self.style.SUCCESS(f"Tenant seed completed for schema={schema_name}"))
+        self.stdout.write(self.style.SUCCESS(f"Workspace seed completed for workspace={workspace_id}"))
 
     def _load_fixture_if_exists(self, fixture_path):
         if not fixture_path.exists():
@@ -95,8 +95,8 @@ class Command(BaseCommand):
         self.stdout.write(f"Loading fixture: {fixture_path}")
         call_command("loaddata", str(fixture_path), verbosity=0)
 
-    def _seed_party_defaults(self):
-        result = seed_party_roles()
+    def _seed_party_defaults(self, workspace):
+        result = seed_party_roles(workspace=workspace)
         self.stdout.write(
             self.style.SUCCESS(
                 "Party roles ready: "

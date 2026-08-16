@@ -1,10 +1,12 @@
 from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
+from apps.tenancy.models import WorkspaceOwnedModel
 
 
-class PartyRoleType(models.Model):
-    key = models.CharField(max_length=64, unique=True, db_index=True)
+class PartyRoleType(WorkspaceOwnedModel):
+    key = models.CharField(max_length=64, db_index=True)
     label = models.CharField(max_length=128)
     description = models.TextField(blank=True)
     is_system = models.BooleanField(default=False, db_index=True)
@@ -15,6 +17,12 @@ class PartyRoleType(models.Model):
         ordering = ("sort_order", "label")
         verbose_name = _("Party Role Type")
         verbose_name_plural = _("Party Role Types")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "key"],
+                name="party_role_type_workspace_key_uniq",
+            ),
+        ]
 
     def __str__(self):
         return self.label
@@ -24,7 +32,7 @@ class PartyRoleType(models.Model):
         super().save(*args, **kwargs)
 
 
-class PartyRole(models.Model):
+class PartyRole(WorkspaceOwnedModel):
     class RoleStatus(models.TextChoices):
         ACTIVE = "ACTIVE", _("Active")
         INACTIVE = "INACTIVE", _("Inactive")
@@ -75,3 +83,9 @@ class PartyRole(models.Model):
 
     def __str__(self):
         return f"{self.party} - {self.role_type}"
+
+    def save(self, *args, **kwargs):
+        if self.party.workspace_id != self.role_type.workspace_id:
+            raise ValidationError("Party role type must belong to the same Workspace.")
+        self.workspace_id = self.party.workspace_id
+        super().save(*args, **kwargs)

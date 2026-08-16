@@ -6,9 +6,8 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
@@ -67,7 +66,7 @@ from apps.tenant_apps.notify_v2.models import NotificationJob
 from apps.tenant_apps.rates.models import Rate, RateSource
 
 
-class PawnDraftServiceTests(TenantTestCase):
+class PawnDraftServiceTests(WorkspaceTestCase):
     test_schema_name = f"loans_draft_{uuid.uuid4().hex[:8]}"
     test_domain = f"loans-draft-{uuid.uuid4().hex[:8]}.test.com"
 
@@ -91,7 +90,6 @@ class PawnDraftServiceTests(TenantTestCase):
 
     def setUp(self):
         super().setUp()
-        connection.set_tenant(self.tenant)
         self.actor = get_user_model().objects.create_user(
             username=f"draft-actor-{uuid.uuid4().hex[:8]}",
             email=f"draft-actor-{uuid.uuid4().hex[:8]}@example.com",

@@ -1,9 +1,10 @@
 from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
+from apps.tenancy.models import WorkspaceOwnedModel
 
 
-class PartyContactMethod(models.Model):
+class PartyContactMethod(WorkspaceOwnedModel):
     class ContactType(models.TextChoices):
         PHONE = "PHONE", _("Phone")
         MOBILE = "MOBILE", _("Mobile")
@@ -46,5 +47,6 @@ class PartyContactMethod(models.Model):
         return f"{self.party} - {self.contact_type}: {self.value}"
 
     def save(self, *args, **kwargs):
+        self.workspace_id = self.party.workspace_id
         self.normalized_value = self.value.strip().lower()
         super().save(*args, **kwargs)
